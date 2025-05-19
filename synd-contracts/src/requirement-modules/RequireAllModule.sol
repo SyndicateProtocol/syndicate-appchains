@@ -16,10 +16,10 @@ contract RequireAllModule is IRequirementModule, Ownable {
 
     // Events
     /// @notice Emitted when a permission check is added
-    event PermissionCheckAdded(address indexed check);
+    event PermissionCheckAdded(address indexed check); //#olympix-ignore-missing-events-assertion
 
     /// @notice Emitted when a permission check is removed
-    event PermissionCheckRemoved(address indexed check);
+    event PermissionCheckRemoved(address indexed check); //#olympix-ignore-missing-events-assertion
 
     // Errors
     /// @notice Thrown when a permission check fails
@@ -40,6 +40,7 @@ contract RequireAllModule is IRequirementModule, Ownable {
      * @notice Initializes the contract with an admin address
      * @param admin The address of the admin who can add/remove checks
      */
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(address admin) Ownable(admin) {}
 
     /**
