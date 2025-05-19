@@ -18,8 +18,10 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
 
     /**
      * @dev Constructor that sets the admin address.
+     * @dev param _admin is validated in AllowlistSequencingModule constructor.
      * @param _admin The address of the admin who can modify the allowlist.
      */
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(address _admin) AllowlistSequencingModule(_admin) {}
 
     /**
@@ -48,6 +50,7 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
      * @param _syndicateSequencerChain The syndicate sequencer chain address
      * @param data The transaction data to process.
      */
+    //#olympix-ignore-reentrancy-events
     function processTransaction(address _syndicateSequencerChain, bytes calldata data)
         external
         onlyAllowed
@@ -65,6 +68,7 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
      * @param _syndicateSequencerChain The syndicate sequencer chain address
      * @param data The transaction data to process.
      */
+    //#olympix-ignore-reentrancy-events
     function processTransactionRaw(address _syndicateSequencerChain, bytes calldata data)
         external
         onlyAllowed
@@ -82,6 +86,7 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
      * @param _syndicateSequencerChain The syndicate sequencer chain address
      * @param data The array of transaction data to process.
      */
+    //#olympix-ignore-reentrancy-events
     function processBulkTransactions(address _syndicateSequencerChain, bytes[] calldata data)
         external
         onlyAllowed
