@@ -102,3 +102,70 @@ The Syndicate Sequencer Chain democratizes the sequencing process by:
 By abstracting sequencing functionality from stacks like Arbitrum Orbit and Optimism Stack, the Syndicate Sequencer Chain enables greater experimentation with appchains and rollups while maintaining the security and efficiency benefits of these scaling solutions.
 
 This approach moves the ecosystem toward a more open, flexible, and democratic model for transaction sequencing, which is a critical component of the decentralized future of blockchain scaling.
+
+## Configuration Management System
+
+The Syndicate Sequencer Chain includes a robust configuration management system implemented through three key components in the `config` folder:
+
+### ArbChainConfig
+
+The `ArbChainConfig` contract serves as a configuration store for Arbitrum rollup parameters. It provides:
+
+- **Immutable Configuration Storage**: Stores critical chain parameters that cannot be changed after initialization, including:
+
+  - Chain IDs (both sequencing and appchain)
+  - Arbitrum bridge and inbox addresses
+  - Settlement and sequencing parameters
+  - Allowed settlement addresses
+
+- **Mutable Configuration Parameters**: Maintains updatable parameters like:
+
+  - RPC URLs for the sequencing chain
+  - Block explorer URLs
+  - Other non-critical configuration values
+
+- **Ownership Control**: Implements secure ownership mechanisms for parameter updates
+
+- **Proxy Pattern Support**: Designed to work with OpenZeppelin's proxy pattern for upgradeability
+
+### ArbConfigManager
+
+The `ArbConfigManager` contract manages the deployment and upgrading of `ArbChainConfig` instances:
+
+- **Deterministic Deployment**: Uses CREATE2 for deploying `ArbChainConfig` proxies with predictable addresses
+
+- **Beacon Proxy Pattern**: Implements the Beacon Proxy pattern to enable synchronized upgrades of all deployed configurations
+
+- **Centralized Upgrade Management**: Provides a single point for upgrading the implementation for all proxies
+
+- **Address Registry**: Maintains a mapping of chain IDs to deployed proxy addresses
+
+- **Chain-Specific Configuration**: Enables creation of custom configurations for each chain while sharing the same implementation
+
+### ArbConfigManagerFactory
+
+The `ArbConfigManagerFactory` enables consistent deployment of `ArbConfigManager` instances across different environments:
+
+- **Cross-Chain Consistency**: Ensures that `ArbConfigManager` can be deployed with the same address on different chains
+
+- **Deterministic Deployment**: Uses CREATE2 to generate predictable addresses based on a provided salt
+
+- **Address Prediction**: Allows calculation of deployment addresses before actual deployment
+
+- **Factory Pattern**: Implements a clean factory pattern for deploying configuration managers
+
+## How the Configuration System Integrates with Syndicate Sequencer Chain
+
+The configuration management system is a critical infrastructure component that:
+
+1. **Standardizes Chain Configuration**: Provides a consistent way to store and access chain-specific parameters needed by the sequencer
+
+2. **Enables Multi-Chain Support**: Allows the Syndicate Sequencer Chain to interact with multiple Arbitrum rollups, each with unique configuration
+
+3. **Supports Governance**: The ownership model enables decentralized governance of configuration parameters
+
+4. **Facilitates Upgrades**: The upgradeability pattern allows for improvements to the configuration contracts without disrupting existing deployments
+
+5. **Ensures Deterministic Addressing**: CREATE2-based deployment ensures that configurations can be found at predictable addresses, simplifying cross-chain interactions
+
+This configuration system acts as the backbone for the Syndicate Sequencer Chain's multi-chain capabilities, allowing it to correctly route transactions and interact with different Arbitrum-based rollups while maintaining separation and security between chains.
