@@ -45,6 +45,10 @@ contract SyndicateFactory is AccessControl {
     mapping(uint256 => bool) private _usedChainIds;
 
     constructor(address admin) {
+        if (admin == address(0)) {
+            revert ZeroAddress();
+        }
+
         // Set up initial roles
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, admin);
@@ -97,12 +101,13 @@ contract SyndicateFactory is AccessControl {
     }
 
     /// @notice Creates a new SyndicateSequencerChain contract with a permission module
-    /// @param appChainId the app chain the contract refers to (0 for auto-increment)
+    /// @param appChainId The app chain the contract refers to (0 for auto-increment)
     /// @param admin The address that will be the admin
     /// @param permissionModule The address of the permission module
     /// @param salt The salt to use for the deployment
     /// @return sequencerChain The address of the newly created SyndicateSequencerChain
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
+    //#olympix-ignore-reentrancy-events
     function createSyndicateSequencerChain(
         uint256 appChainId,
         address admin,
@@ -140,13 +145,14 @@ contract SyndicateFactory is AccessControl {
         return (deployedAddress, actualChainId);
     }
 
-    /// @notice Creates SyndicateSequencerChain with RequireAllModule
+    /// @notice Creates a SyndicateSequencerChain with RequireAllModule
     /// @param admin The address that will be the default admin role
     /// @param appChainId The app chain ID (0 for auto-increment)
     /// @param salt The salt to use for the deployment
     /// @return sequencerChain The address of the newly created SyndicateSequencerChain
     /// @return permissionModule The address of the newly created RequireAllModule
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
+    //#olympix-ignore-reentrancy-events
     function createSyndicateSequencerChainWithRequireAllModule(address admin, uint256 appChainId, bytes32 salt)
         public
         zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
@@ -160,13 +166,14 @@ contract SyndicateFactory is AccessControl {
         return (sequencerChain, permissionModule, actualChainId);
     }
 
-    /// @notice Creates SyndicateSequencerChain with RequireAnyModule
+    /// @notice Creates a SyndicateSequencerChain with RequireAnyModule
     /// @param admin The address that will be the default admin role
     /// @param appChainId The app chain ID (0 for auto-increment)
     /// @param salt The salt to use for the deployment
     /// @return sequencerChain The address of the newly created SyndicateSequencerChain
     /// @return permissionModule The address of the newly created RequireAnyModule
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
+    //#olympix-ignore-reentrancy-events
     function createSyndicateSequencerChainWithRequireAnyModule(address admin, uint256 appChainId, bytes32 salt)
         public
         zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)

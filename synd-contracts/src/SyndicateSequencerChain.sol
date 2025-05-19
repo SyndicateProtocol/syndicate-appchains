@@ -15,21 +15,24 @@ contract SyndicateSequencerChain is SequencingModuleChecker {
 
     /// @notice Constructs the SyndicateSequencerChain contract.
     /// @param _appChainId The ID of the App chain that this contract is sequencing transactions for.
+    //#olympix-ignore-missing-revert-reason-tests
     constructor(uint256 _appChainId) SequencingModuleChecker() {
-        // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
+        // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
         require(_appChainId != 0, "App chain ID cannot be 0");
         appChainId = _appChainId;
     }
 
     /// @notice Processes a single compressed transaction.
     /// @param data The compressed transaction data.
+    //#olympix-ignore-required-tx-origin
     function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
         emit TransactionProcessed(msg.sender, data);
     }
 
-    /// @notice process transactions
+    /// @notice Process transactions
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data The transaction data
+    //#olympix-ignore-required-tx-origin
     function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
         emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
@@ -37,12 +40,14 @@ contract SyndicateSequencerChain is SequencingModuleChecker {
     /// @notice Processes multiple transactions in bulk.
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data An array of transaction data.
+    //#olympix-ignore-reentrancy-events
     function processBulkTransactions(bytes[] calldata data) external {
         uint256 dataCount = data.length;
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            isAllowed(msg.sender, tx.origin, data[i]);
+            bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
+            if (!isAllowed) revert TransactionOrProposerNotAllowed();
 
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
@@ -51,7 +56,7 @@ contract SyndicateSequencerChain is SequencingModuleChecker {
     /// @notice Prepends a zero byte to the transaction data
     /// @dev This helps op-translator identify uncompressed data
     /// @param _data The original transaction data
-    /// @return bytes The transaction data
+    /// @return bytes The transaction data with a zero byte prepended
     function prependZeroByte(bytes calldata _data) internal pure returns (bytes memory) {
         return abi.encodePacked(bytes1(0x00), _data);
     }

@@ -221,7 +221,7 @@ library AddressStructuredLinkedList {
      */
     function _pop(List storage self, bool _direction) private returns (address) {
         address adj;
-        (, adj) = getAdjacent(self, _HEAD, _direction);
+        (, adj) = getAdjacent(self, _HEAD, _direction); //#olympix-ignore-unused-return-function-call
         return remove(self, adj);
     }
 

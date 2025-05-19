@@ -5,9 +5,8 @@ import {SyndicateSequencerChain} from "../SyndicateSequencerChain.sol";
 
 /**
  * @title SyndicateSequencerChainWithDecayingPriority
- * @notice This is an example on how to extend the SyndicateSequencerChain.
- * It is not necessarily a feature implemented in Syndicate Sequencer.
- * It only serves as example and does not purport that this will be added in the future.
+ * @notice Extension of SyndicateSequencerChain that implements a decaying priority mechanism for transactions.
+ * This is only an example implementation. Not for production use.
  */
 contract SyndicateSequencerChainWithDecayingPriority is SyndicateSequencerChain {
     /// @notice The constant rate at which priority decays (10 units per second)
@@ -18,11 +17,13 @@ contract SyndicateSequencerChainWithDecayingPriority is SyndicateSequencerChain 
 
     /// @notice Constructs the SyndicateSequencerChainWithDecayingPriority contract.
     /// @param _appChainId The ID of the App chain that this contract is sequencing transactions for.
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(uint256 _appChainId) SyndicateSequencerChain(_appChainId) {}
 
     /// @notice Processes a single compressed transaction with priority.
     /// @param data The compressed transaction data.
     /// @param priority The initial priority of the transaction.
+    //#olympix-ignore-required-tx-origin
     function processTransactionRaw(bytes calldata data, uint256 priority)
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
@@ -38,27 +39,29 @@ contract SyndicateSequencerChainWithDecayingPriority is SyndicateSequencerChain 
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
     {
-        emit TransactionProcessed(msg.sender, prependZeroByte(data), priority, block.timestamp);
+        emit TransactionProcessed(msg.sender, prependZeroByte(data), priority, block.timestamp); //#olympix-ignore-external-call-potential-out-of-gas
     }
 
     /// @notice Processes multiple transactions in bulk with individual priorities.
     /// @dev Prepends a zero byte to each transaction data to signal uncompressed data
     /// @param data An array of transaction data.
     /// @param priorities An array of priorities for the transactions.
+    //#olympix-ignore-reentrancy-events
     function processBulkTransactions(bytes[] calldata data, uint256[] calldata priorities) external {
         uint256 dataCount = data.length;
         require(dataCount == priorities.length, "Data and priority arrays must have the same length");
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            isAllowed(msg.sender, tx.origin, data[i]);
+            bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
+            if (!isAllowed) revert TransactionOrProposerNotAllowed();
 
-            emit TransactionProcessed(msg.sender, prependZeroByte(data[i]), priorities[i], block.timestamp);
+            emit TransactionProcessed(msg.sender, prependZeroByte(data[i]), priorities[i], block.timestamp); //#olympix-ignore-external-call-potential-out-of-gas
         }
     }
 
     /// @notice Calculate the effective priority after decay based on time elapsed
-    /// @dev This is just a read function for calculation. It is not used anywhere on purpose.
+    /// @dev This is just a read function for calculation. It is not used internally by the contract.
     /// @param originalPriority The original priority of the transaction
     /// @param submittedTimestamp The timestamp when the transaction was submitted
     /// @param currentTimestamp The current timestamp to calculate the decay against

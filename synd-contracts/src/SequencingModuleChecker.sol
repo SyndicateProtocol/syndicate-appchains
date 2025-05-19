@@ -64,6 +64,6 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// @param data The calldata to check
     /// @return bool indicating if both the proposer and calldata are allowed
     function isAllowed(address proposer, address originator, bytes calldata data) public view returns (bool) {
-        return permissionRequirementModule.isAllowed(proposer, originator, data);
+        return permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
     }
 }
