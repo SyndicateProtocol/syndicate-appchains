@@ -32,7 +32,7 @@ services:
       - SEQUENCING_START_BLOCK={{ sequencing_start_block }}
       - SETTLEMENT_START_BLOCK={{ settlement_start_block }}
       - MCHAIN_RPC_URL=ws://mchain:8050
-      - ARBITRUM_IGNORE_DELAYED_MESSAGES={% set ignore_delayed = 'true' if chain_name == 'dream' else 'false' %}{{ ignore_delayed }}
+      - ARBITRUM_IGNORE_DELAYED_MESSAGES={{ ignore_delayed_messages }}
       - SETTLEMENT_DELAY=60
       - METRICS_PORT=9090
     ports:
