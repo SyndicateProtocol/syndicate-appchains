@@ -222,12 +222,6 @@ impl Batcher {
             return Ok(());
         }
 
-        let max_size = self.max_batch_size.as_u64() as usize;
-        if batch.len() >= max_size {
-            error!(%self.chain_id, "Batch size ({}) exceeds limit ({})", batch.len(), max_size);
-            return Err(BatchError::BatchTooLarge(batch.len(), max_size));
-        }
-
         let submission_start = Instant::now();
         if let Err(e) = self.send_batch(batch).await {
             // Don't reset the compressor here, because we want to retry the same batch
