@@ -12,15 +12,10 @@ contract SyndicateStorage is AccessControl {
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
-    // [Olympix Warning: tx.origin usage] Removed tx.origin check as it's redundant with AccessControl
-    // The MANAGER_ROLE already provides sufficient authorization control, and tx.origin checks can be
-    // problematic for legitimate contract interactions. If additional security is needed, consider
-    // implementing a more robust authorization mechanism using msg.sender.
-
     /// @notice Emits a EpochRangeProcessed indicating the range of epochs that have been processed
     /// @param startEpochNumber The starting epoch number
     /// @param endEpochNumber The ending epoch number
-    event EpochRangeProcessed(uint256 indexed startEpochNumber, uint256 indexed endEpochNumber);
+    event EpochRangeProcessed(uint256 indexed startEpochNumber, uint256 indexed endEpochNumber); //#olympix-ignore-missing-events-assertion
 
     /// @notice Constructor that sets up the default admin and manager roles
     /// @param admin The address that will be the default admin role
