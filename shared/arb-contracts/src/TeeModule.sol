@@ -11,29 +11,61 @@ using ECDSA for bytes32;
 using MessageHashUtils for bytes32;
 
 interface IL1Block {
-    function timestamp() external view returns (uint256);
+    function number() external view returns (uint64);
+    function timestamp() external view returns (uint64);
     function hash() external view returns (bytes32);
 }
 
 struct TeeTrustedInput {
+    // appchain - requires a full node
     bytes32 appchainConfigHash;
+    bytes32 appchainStartBlockHash;
+    bytes32 appchainDelayedMessagesHash;
+    // sequencing chain - requires a full node
+    bytes32 seqConfigHash;
+    bytes32 seqStartBlockHash;
+    bytes32 seqDelayedMessagesHash;
+    // settlement & l1 chains - do not require full nodes
+    uint64 setStartBlockNumber;
+    uint64 setEndBlockNumber;
+    uint64 l1StartBlockNumber;
+    uint64 l1EndBlockNumber;
     bytes32 setEndBlockHash;
     bytes32 l1EndBlockHash;
-    bytes32 appchainStartBlockHash;
 }
 
 struct PendingAssertion {
+    // appchain
     bytes32 blockHash;
     bytes32 sendRoot;
+    bytes32 delayedMessagesHash;
+    // sequencing chain
+    bytes32 seqBlockHash;
+    bytes32 seqDelayedMessagesHash;
 }
 
 function hash_input(TeeTrustedInput storage a) view returns (bytes32) {
-    return
-        keccak256(abi.encodePacked(a.appchainConfigHash, a.setEndBlockHash, a.l1EndBlockHash, a.appchainStartBlockHash));
+    return keccak256(
+        abi.encodePacked(
+            a.appchainConfigHash,
+            a.appchainStartBlockHash,
+            a.appchainDelayedMessagesHash,
+            a.seqConfigHash,
+            a.seqStartBlockHash,
+            a.seqDelayedMessagesHash,
+            a.setStartBlockNumber,
+            a.setEndBlockNumber,
+            a.setEndBlockHash,
+            a.l1StartBlockNumber,
+            a.l1EndBlockNumber,
+            a.l1EndBlockHash
+        )
+    );
 }
 
 function equals(PendingAssertion calldata a, PendingAssertion storage b) view returns (bool) {
-    return a.blockHash == b.blockHash && a.sendRoot == b.sendRoot;
+    return a.blockHash == b.blockHash && a.sendRoot == b.sendRoot && a.delayedMessagesHash == b.delayedMessagesHash
+        && a.seqBlockHash == b.seqBlockHash && a.seqDelayedMessagesHash == b.seqDelayedMessagesHash;
 }
 
 event TeeKeysRevoked();
@@ -43,6 +75,8 @@ event TeeProgramAdded(bytes32 hash);
 event TeeProgramRemoved(bytes32 hash);
 
 event TeeAppchainConfigHash(bytes32 hash);
+
+event TeeSeqConfigHash(bytes32 hash);
 
 event TeeHacked(uint256);
 
@@ -71,10 +105,36 @@ contract TeeModule is Ownable {
      * @param appchainConfigHash_ Hash of the appchain configuration data passed to the TEE
      * Note that the AssertionPoster must be owned by the TeeModule for closing the challenge window to work properly
      */
-    constructor(AssertionPoster poster_, bytes32 appchainConfigHash_) {
+    constructor(
+        AssertionPoster poster_,
+        bytes32 appchainConfigHash_,
+        bytes32 appchainStartBlockHash_,
+        bytes32 appchainDelayedMessagesHash_,
+        bytes32 seqConfigHash_,
+        bytes32 seqStartBlockHash_,
+        bytes32 seqDelayedMessagesHash_,
+        uint64 setStartBlockNumber_,
+        uint64 l1StartBlockNumber_
+    ) {
         poster = poster_;
+
+        // appchain
         teeTrustedInput.appchainConfigHash = appchainConfigHash_;
+        teeTrustedInput.appchainStartBlockHash = appchainStartBlockHash_;
+        teeTrustedInput.appchainDelayedMessagesHash = appchainDelayedMessagesHash_;
         emit TeeAppchainConfigHash(appchainConfigHash_);
+
+        // sequencing chain
+        teeTrustedInput.seqConfigHash = seqConfigHash_;
+        teeTrustedInput.seqStartBlockHash = seqStartBlockHash_;
+        teeTrustedInput.seqDelayedMessagesHash = seqDelayedMessagesHash_;
+        emit TeeSeqConfigHash(seqConfigHash_);
+
+        // settlement & l1 chains
+        teeTrustedInput.setStartBlockNumber = setStartBlockNumber_;
+        teeTrustedInput.l1StartBlockNumber = l1StartBlockNumber_;
+
+        closeChallengeWindow();
     }
 
     function closeChallengeWindow() public {
@@ -84,11 +144,38 @@ contract TeeModule is Ownable {
             l1block.timestamp() > challengeWindowEnd, "cannot close challenge window - insufficient time has passed"
         );
         if (pendingAssertions.length > 0) {
+            // appchain
+            teeTrustedInput.appchainDelayedMessagesHash = pendingAssertions[0].delayedMessagesHash;
             teeTrustedInput.appchainStartBlockHash = pendingAssertions[0].blockHash;
+
+            // sequencing chain
+            teeTrustedInput.seqDelayedMessagesHash = pendingAssertions[0].seqDelayedMessagesHash;
+            teeTrustedInput.seqStartBlockHash = pendingAssertions[0].seqBlockHash;
+            teeTrustedInput.setStartBlockNumber = teeTrustedInput.setEndBlockNumber + 1;
+
+            // l1 chain
+            teeTrustedInput.l1StartBlockNumber = teeTrustedInput.l1EndBlockNumber + 1;
+
             poster.postAssertion(pendingAssertions[0].blockHash, pendingAssertions[0].sendRoot);
         }
-        teeTrustedInput.setEndBlockHash = blockhash(block.number - 1);
+
+        // only process settlement blocks up to the l1 timestamp
+        uint64 delta = (uint64(block.timestamp) - l1block.timestamp()) / 2;
+
+        // blockhash only works for the most recent 256 blocks, use 255 instead of 256 just in case
+        if (delta > 255) {
+            delta = 255;
+        }
+
+        // settlement chain
+        teeTrustedInput.setEndBlockNumber = uint64(block.number) - delta;
+        teeTrustedInput.setEndBlockHash = blockhash(teeTrustedInput.setEndBlockNumber);
+        require(teeTrustedInput.setEndBlockHash != 0, "unexpected blockhash of 0");
+
+        // l1 chain
+        teeTrustedInput.l1EndBlockNumber = l1block.number();
         teeTrustedInput.l1EndBlockHash = l1block.hash();
+
         challengeWindowEnd = block.timestamp + challengeWindowDuration;
     }
 
@@ -182,5 +269,10 @@ contract TeeModule is Ownable {
     function setAppchainConfigHash(bytes32 hash) external onlyOwner {
         teeTrustedInput.appchainConfigHash = hash;
         emit TeeAppchainConfigHash(hash);
+    }
+
+    function setSeqConfigHash(bytes32 hash) external onlyOwner {
+        teeTrustedInput.seqConfigHash = hash;
+        emit TeeSeqConfigHash(hash);
     }
 }
