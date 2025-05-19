@@ -23,7 +23,13 @@ $ forge test
 #### Run coverage test:
 
 ```shell
-forge coverage
+forge coverage --ir-minimum --no-match-coverage "(script|test)"
+```
+
+or
+
+```shell
+make test-coverage
 ```
 
 ## Certora Verification

@@ -44,3 +44,5 @@ test-events-limit :; forge test --match-contract SyndicateSequencerChainEventLim
 docs-pre-audit-gen :; forge doc --build --out docs-pre-audit
 
 docs-pre-audit-serve :; forge doc --serve --out docs-pre-audit
+
+test-coverage :; forge coverage --ir-minimum --no-match-coverage "(script|test)"
