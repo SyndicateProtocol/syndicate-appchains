@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
+import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -16,6 +16,18 @@ contract MockIsAllowed is IPermissionModule {
 
     function isAllowed(address, address, bytes calldata) external view override returns (bool) {
         return allowed;
+    }
+}
+
+contract DirectMockModule is IPermissionModule {
+    mapping(bytes => bool) public allowedData;
+
+    function setAllowed(bytes memory data, bool allowed) external {
+        allowedData[data] = allowed;
+    }
+
+    function isAllowed(address, address, bytes calldata data) external view override returns (bool) {
+        return allowedData[data];
     }
 }
 
@@ -109,6 +121,147 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         }
 
         chain.processBulkTransactions(validTxns);
+    }
+
+    function testConstructorWithZeroAppChainId() public {
+        vm.expectRevert("App chain ID cannot be 0");
+        new SyndicateSequencingChain(0);
+    }
+
+    function testProcessBulkTransactionsWithMixedPermissions() public {
+        // Deploy a module we can directly control
+        DirectMockModule directMock = new DirectMockModule();
+
+        // Set up the chain with our custom module
+        vm.startPrank(admin);
+        chain.updateRequirementModule(address(directMock));
+        vm.stopPrank();
+
+        // Prepare test data
+        bytes[] memory mixedTxns = new bytes[](3);
+        mixedTxns[0] = abi.encode("transaction 1");
+        mixedTxns[1] = abi.encode("transaction 2");
+        mixedTxns[2] = abi.encode("transaction 3");
+
+        // Configure mock to allow the first transaction but not the second
+        directMock.setAllowed(mixedTxns[0], true);
+        directMock.setAllowed(mixedTxns[1], false);
+        // Don't set anything for the third tx since it won't reach it
+
+        // Now the test should revert with the right error
+        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
+        chain.processBulkTransactions(mixedTxns);
+    }
+
+    function testProcessBulkTransactionsAllAllowed() public {
+        // Deploy a module we can directly control
+        DirectMockModule directMock = new DirectMockModule();
+
+        // Set up the chain with our custom module
+        vm.startPrank(admin);
+        chain.updateRequirementModule(address(directMock));
+        vm.stopPrank();
+
+        // Prepare test data
+        bytes[] memory txns = new bytes[](3);
+        txns[0] = abi.encode("transaction 1");
+        txns[1] = abi.encode("transaction 2");
+        txns[2] = abi.encode("transaction 3");
+
+        // Configure mock to allow all transactions
+        directMock.setAllowed(txns[0], true);
+        directMock.setAllowed(txns[1], true);
+        directMock.setAllowed(txns[2], true);
+
+        // Expect events for all transactions
+        for (uint256 i = 0; i < txns.length; i++) {
+            vm.expectEmit(true, false, false, true);
+            emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), txns[i]));
+        }
+
+        // Process all transactions
+        chain.processBulkTransactions(txns);
+    }
+
+    function testProcessBulkTransactionsBranchCoverage() public {
+        // Deploy a module we can directly control
+        DirectMockModule directMock = new DirectMockModule();
+
+        // Set up the chain with our custom module
+        vm.startPrank(admin);
+        chain.updateRequirementModule(address(directMock));
+        vm.stopPrank();
+
+        // Part 1: Test the failure branch
+        bytes[] memory failingTxns = new bytes[](2);
+        failingTxns[0] = abi.encode("allowed tx");
+        failingTxns[1] = abi.encode("disallowed tx");
+
+        directMock.setAllowed(failingTxns[0], true);
+        directMock.setAllowed(failingTxns[1], false);
+
+        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
+        chain.processBulkTransactions(failingTxns);
+
+        // Part 2: Test the success branch
+        bytes[] memory successTxns = new bytes[](2);
+        successTxns[0] = abi.encode("allowed tx 1");
+        successTxns[1] = abi.encode("allowed tx 2");
+
+        directMock.setAllowed(successTxns[0], true);
+        directMock.setAllowed(successTxns[1], true);
+
+        // Expect events for successful transactions
+        for (uint256 i = 0; i < successTxns.length; i++) {
+            vm.expectEmit(true, false, false, true);
+            emit SyndicateSequencingChain.TransactionProcessed(
+                address(this), abi.encodePacked(bytes1(0x00), successTxns[i])
+            );
+        }
+
+        chain.processBulkTransactions(successTxns);
+    }
+
+    function testOnlyWhenAllowedModifierBranches() public {
+        // Deploy a module we can directly control
+        DirectMockModule directMock = new DirectMockModule();
+
+        // Set up the chain with our custom module
+        vm.startPrank(admin);
+        chain.updateRequirementModule(address(directMock));
+        vm.stopPrank();
+
+        bytes memory allowedData = abi.encode("allowed data");
+        bytes memory disallowedData = abi.encode("disallowed data");
+
+        // Configure permissions
+        directMock.setAllowed(allowedData, true);
+        directMock.setAllowed(disallowedData, false);
+
+        // Test 1: Failure path of onlyWhenAllowed (processTransactionRaw)
+        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
+        chain.processTransactionRaw(disallowedData);
+
+        // Test 2: Success path of onlyWhenAllowed (processTransactionRaw)
+        vm.expectEmit(true, false, false, true);
+        emit SyndicateSequencingChain.TransactionProcessed(address(this), allowedData);
+        chain.processTransactionRaw(allowedData);
+
+        // Test 3: Failure path of onlyWhenAllowed (processTransaction)
+        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
+        chain.processTransaction(disallowedData);
+
+        // Test 4: Success path of onlyWhenAllowed (processTransaction)
+        vm.expectEmit(true, false, false, true);
+        emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), allowedData));
+        chain.processTransaction(allowedData);
+    }
+
+    function testProcessBulkTransactionsWithEmptyArray() public {
+        bytes[] memory emptyArray = new bytes[](0);
+
+        // This should execute without errors or events
+        chain.processBulkTransactions(emptyArray);
     }
 }
 
