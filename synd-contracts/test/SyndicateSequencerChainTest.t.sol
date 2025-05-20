@@ -6,6 +6,7 @@ import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 contract MockIsAllowed is IPermissionModule {
     bool allowed;
@@ -16,6 +17,12 @@ contract MockIsAllowed is IPermissionModule {
 
     function isAllowed(address, address, bytes calldata) external view override returns (bool) {
         return allowed;
+    }
+}
+
+contract MockIsAllowedWithInvalidData is IPermissionModule {
+    function isAllowed(address, address, bytes calldata data) external view override returns (bool) {
+        return keccak256(data) != keccak256(abi.encode("invalid"));
     }
 }
 
@@ -109,6 +116,49 @@ contract SyndicateSequencerChainTest is SyndicateSequencerChainTestSetUp {
         }
 
         chain.processBulkTransactions(validTxns);
+    }
+
+    function testProcessBulkTransactionsOnlyEmitsValidTransactionsAsEvents() public {
+        // Set up a new chain instance with a mock permission module
+        vm.startPrank(admin);
+        SyndicateSequencerChain chainWithInvalidDataPermissionModule = new SyndicateSequencerChain(10042002);
+        chainWithInvalidDataPermissionModule.initialize(admin, address(new MockIsAllowedWithInvalidData()));
+        vm.stopPrank();
+
+        // Prepare transaction data
+        bytes[] memory txns = new bytes[](3);
+        txns[0] = abi.encode("valid");
+        txns[1] = abi.encode("invalid");
+        txns[2] = abi.encode("valid");
+
+        // Record logs before calling the function
+        vm.recordLogs();
+        chainWithInvalidDataPermissionModule.processBulkTransactions(txns);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        // Get event signature hash
+        bytes32 expectedSig = keccak256("TransactionProcessed(address,bytes)");
+
+        // Track how many valid events we saw
+        uint256 validEventCount = 0;
+
+        for (uint256 i = 0; i < logs.length; i++) {
+            Vm.Log memory log = logs[i];
+
+            if (log.topics.length > 0 && log.topics[0] == expectedSig) {
+                // Decode data to make sure it's not for the "invalid" txn
+                (, bytes memory emittedData) = abi.decode(log.data, (address, bytes));
+
+                if (keccak256(emittedData) == keccak256(abi.encodePacked(bytes1(0x00), abi.encode("invalid")))) {
+                    fail();
+                }
+
+                validEventCount++;
+            }
+        }
+
+        // Ensure only valid transaction events were emitted
+        assertEq(validEventCount, 2, "Expected 2 TransactionProcessed events for valid transactions");
     }
 }
 
