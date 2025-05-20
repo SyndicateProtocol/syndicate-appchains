@@ -1,6 +1,6 @@
 # `Syndicate-Appchains` Monorepo
 
-The monorepo for the Syndicate Appchains stack. Contains the appchain translator, sequencer, smart contracts, RPC node, dev environments, and more!
+The monorepo for the Syndicate Appchains stack. Contains the Appchain translator, sequencer, smart contracts, RPC node, dev environments, and more!
 
 ## Docker
 

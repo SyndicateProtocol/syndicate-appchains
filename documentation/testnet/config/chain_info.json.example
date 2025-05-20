@@ -1,12 +1,12 @@
 [
     {
-        "chain-name": "amino",
+        "chain-name": "Some Chain Name",
         "parent-chain-id": 84532,
         "parent-chain-is-arbitrum": false,
-        "sequencer-url": "https://rpc.testnet.amino.syndicate.io",
+        "sequencer-url": "https://rpc.testnet.some-chain.syndicate.io",
         "has-genesis-state": false,
         "chain-config": {
-            "chainId": 63824,
+            "chainId": 12345,
             "homesteadBlock": 0,
             "daoForkBlock": null,
             "daoForkSupport": true,
@@ -30,7 +30,7 @@
             "AllowDebugPrecompiles": false,
             "DataAvailabilityCommittee": false,
             "InitialArbOSVersion": 32,
-            "InitialChainOwner": "0x5e2BAac714b9BF2680647F963996fF42228F7333",
+            "InitialChainOwner": "0x123123123123123123123123123123123123123123",
             "GenesisBlockNum": 0,
             "MaxCodeSize": 24576,
             "MaxInitCodeSize": 49152
