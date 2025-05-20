@@ -64,15 +64,13 @@ pub struct Config {
     value_parser = humantime::parse_duration)]
     pub wallet_nonce_ttl: Duration,
 
-    // TODO re-check the default value
     /// Duration after which a transaction is considered finalized
-    #[arg(long, env = "FINALIZATION_DURATION", default_value = "5m",
+    #[arg(long, env = "FINALIZATION_DURATION", default_value = "15m",
     value_parser = humantime::parse_duration)]
     pub finalization_duration: Duration,
 
-    // TODO re-check the default value
     /// Interval at which a background task checks for finalized transactions
-    #[arg(long, env = "FINALIZATION_CHECKER_INTERVAL", default_value = "5m",
+    #[arg(long, env = "FINALIZATION_CHECKER_INTERVAL", default_value = "1m",
     value_parser = humantime::parse_duration)]
     pub finalization_checker_interval: Duration,
 }
