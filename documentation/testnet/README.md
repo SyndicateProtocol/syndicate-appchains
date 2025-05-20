@@ -1,4 +1,4 @@
-# Run a Syndicate Appchain RPC Node
+# Run a Testnet Syndicate Appchain RPC Node
 
 A Syndicate Appchain RPC Node is comprised of 3 components: `translator`, `mchain`, and [`nitro`](https://github.com/OffchainLabs/nitro). This guide explains how to run them together in docker to operate your own RPC node for a Syndicate appchain.
 
@@ -23,7 +23,7 @@ Other:
 - Docker version 28+
 - Access to pull `translator` and `mchain` images from `ghcr.io/syndicateprotocol/syndicate-appchains/` (private) registry
 - Access to Syndicate's sequencing json-rpc API, in order to forward `eth_sendRawTransaction` requests there
-- Ingestors running for the Settlement and Sequencing chains, see docs for running your own ingestors here
+- Ingestors running for the Settlement and Sequencing chains, docs provided at `./run-an-ingestor.md`
 
 ## Chain Config
 

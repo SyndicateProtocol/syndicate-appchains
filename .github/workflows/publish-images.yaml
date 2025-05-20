@@ -1,3 +1,7 @@
+# This workflow builds and publishes all docker images to our container registry.
+# By default it publishes the `latest` tag, but you can specify a different tag to use.
+# You can also specify a service to build and publish, or leave blank to build and publish all services.
+
 name: Publish Service Images
 
 on:

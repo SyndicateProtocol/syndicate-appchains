@@ -1,3 +1,5 @@
+# This workflow is run on every release. It builds and publishes all docker images to our container registry.
+
 name: Publish Release Images
 
 on:

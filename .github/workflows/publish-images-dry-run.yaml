@@ -1,3 +1,6 @@
+# This workflow is run on every `main` PR and simply makes sure that our docker image builds succeed.
+# It does not actually publish the images anywhere.
+
 name: Publish Service Images (Dry Run)
 
 on:
