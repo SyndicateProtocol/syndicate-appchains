@@ -1,7 +1,5 @@
-//! TC Sequencer is a service that processes and validates transactions
-//! before submitting them to TC for sending to the Appchain.
-//!
-//! It provides a JSON-RPC interface for submitting transactions and checking service health.
+//! The Batch Sequencer is a service that processes and validates transactions
+//! before submitting them to the Appchain.
 
 use batcher::{batcher::run_batcher, metrics::BatcherMetrics};
 use eyre::Result;
@@ -19,7 +17,6 @@ async fn main() -> Result<()> {
     // Initialize logging
     set_global_default_subscriber()?;
 
-    // Parse config
     let config = BatchSequencerConfig::initialize();
     info!("BatchSequencerConfig: {:?}", config);
 
@@ -27,7 +24,6 @@ async fn main() -> Result<()> {
     let metrics = BatcherMetrics::new(&mut metrics_state.registry);
     tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
 
-    // Start batcher
     let batcher_handle = run_batcher(&config.batcher, config.sequencing_address, metrics).await?;
 
     #[allow(clippy::expect_used)]
