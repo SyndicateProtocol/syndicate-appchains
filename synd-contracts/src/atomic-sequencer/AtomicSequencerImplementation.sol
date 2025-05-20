@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {SyndicateSequencerChain} from "src/SyndicateSequencerChain.sol";
+import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 
 /// @title AtomicSequencerImplementation
 /// @notice Implementation contract containing the logic for atomic sequencing
@@ -16,7 +16,7 @@ contract AtomicSequencerImplementation {
     /// @param transactions Array of transactions corresponding to each chain
     /// @param isRaw Array indicating whether each transaction should use raw processing
     function processTransactionsAtomically(
-        SyndicateSequencerChain[] calldata chains,
+        SyndicateSequencingChain[] calldata chains,
         bytes[] calldata transactions,
         bool[] calldata isRaw
     ) external {
@@ -38,7 +38,7 @@ contract AtomicSequencerImplementation {
     /// @param chains Array of Syndicate chains
     /// @param transactions Array of transaction arrays corresponding to each chain
     function processBulkTransactionsAtomically(
-        SyndicateSequencerChain[] calldata chains,
+        SyndicateSequencingChain[] calldata chains,
         bytes[][] calldata transactions
     ) external {
         if (chains.length == 0 || chains.length != transactions.length) {

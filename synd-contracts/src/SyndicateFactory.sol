@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {SyndicateSequencerChain} from "./SyndicateSequencerChain.sol";
+import {SyndicateSequencingChain} from "./SyndicateSequencingChain.sol";
 import {RequireAllModule} from "./requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "./requirement-modules/RequireAnyModule.sol";
 import {IRequirementModule} from "./interfaces/IRequirementModule.sol";
@@ -9,13 +9,13 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title SyndicateFactory
-/// @notice Factory contract for creating SyndicateSequencerChain and related contracts
+/// @notice Factory contract for creating SyndicateSequencingChain and related contracts
 /// with namespace management and auto-incrementing chain IDs
 contract SyndicateFactory is AccessControl {
-    /// @notice Emitted when a new SyndicateSequencerChain is created
-    event SyndicateSequencerChainCreated(
+    /// @notice Emitted when a new SyndicateSequencingChain is created
+    event SyndicateSequencingChainCreated(
         uint256 indexed appChainId,
-        address indexed syndicateSequencerChainAddress,
+        address indexed SyndicateSequencingChainAddress,
         address indexed permissionModuleAddress
     );
 
@@ -100,15 +100,15 @@ contract SyndicateFactory is AccessControl {
         _;
     }
 
-    /// @notice Creates a new SyndicateSequencerChain contract with a permission module
+    /// @notice Creates a new SyndicateSequencingChain contract with a permission module
     /// @param appChainId The app chain the contract refers to (0 for auto-increment)
     /// @param admin The address that will be the admin
     /// @param permissionModule The address of the permission module
     /// @param salt The salt to use for the deployment
-    /// @return sequencerChain The address of the newly created SyndicateSequencerChain
+    /// @return sequencingChain The address of the newly created SyndicateSequencingChain
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencerChain(
+    function createSyndicateSequencingChain(
         uint256 appChainId,
         address admin,
         IRequirementModule permissionModule,
@@ -121,7 +121,7 @@ contract SyndicateFactory is AccessControl {
             address(permissionModule)
         )
         validateChainId(appChainId == 0 ? _getNextChainId() : appChainId, appChainId != 0)
-        returns (address sequencerChain, uint256 actualChainId)
+        returns (address sequencingChain, uint256 actualChainId)
     {
         // Determine the actual chain ID to use
         actualChainId = appChainId == 0 ? _getNextChainId() : appChainId;
@@ -137,69 +137,69 @@ contract SyndicateFactory is AccessControl {
         bytes memory bytecode = getBytecode(actualChainId);
         address deployedAddress = Create2.deploy(0, salt, bytecode);
 
-        SyndicateSequencerChain newSequencerChain = SyndicateSequencerChain(deployedAddress);
-        newSequencerChain.initialize(admin, address(permissionModule));
+        SyndicateSequencingChain newSequencingChain = SyndicateSequencingChain(deployedAddress);
+        newSequencingChain.initialize(admin, address(permissionModule));
 
-        emit SyndicateSequencerChainCreated(actualChainId, deployedAddress, address(permissionModule));
+        emit SyndicateSequencingChainCreated(actualChainId, deployedAddress, address(permissionModule));
 
         return (deployedAddress, actualChainId);
     }
 
-    /// @notice Creates a SyndicateSequencerChain with RequireAllModule
+    /// @notice Creates a SyndicateSequencingChain with RequireAllModule
     /// @param admin The address that will be the default admin role
     /// @param appChainId The app chain ID (0 for auto-increment)
     /// @param salt The salt to use for the deployment
-    /// @return sequencerChain The address of the newly created SyndicateSequencerChain
+    /// @return sequencingChain The address of the newly created SyndicateSequencingChain
     /// @return permissionModule The address of the newly created RequireAllModule
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencerChainWithRequireAllModule(address admin, uint256 appChainId, bytes32 salt)
+    function createSyndicateSequencingChainWithRequireAllModule(address admin, uint256 appChainId, bytes32 salt)
         public
         zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
-        returns (address sequencerChain, IRequirementModule permissionModule, uint256 actualChainId)
+        returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId)
     {
         permissionModule = IRequirementModule(new RequireAllModule(admin));
-        (sequencerChain, actualChainId) = createSyndicateSequencerChain(appChainId, admin, permissionModule, salt);
+        (sequencingChain, actualChainId) = createSyndicateSequencingChain(appChainId, admin, permissionModule, salt);
 
-        emit SyndicateSequencerChainCreated(actualChainId, sequencerChain, address(permissionModule));
+        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 
-        return (sequencerChain, permissionModule, actualChainId);
+        return (sequencingChain, permissionModule, actualChainId);
     }
 
-    /// @notice Creates a SyndicateSequencerChain with RequireAnyModule
+    /// @notice Creates a SyndicateSequencingChain with RequireAnyModule
     /// @param admin The address that will be the default admin role
     /// @param appChainId The app chain ID (0 for auto-increment)
     /// @param salt The salt to use for the deployment
-    /// @return sequencerChain The address of the newly created SyndicateSequencerChain
+    /// @return sequencingChain The address of the newly created SyndicateSequencingChain
     /// @return permissionModule The address of the newly created RequireAnyModule
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencerChainWithRequireAnyModule(address admin, uint256 appChainId, bytes32 salt)
+    function createSyndicateSequencingChainWithRequireAnyModule(address admin, uint256 appChainId, bytes32 salt)
         public
         zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
-        returns (address sequencerChain, IRequirementModule permissionModule, uint256 actualChainId)
+        returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId)
     {
         permissionModule = IRequirementModule(new RequireAnyModule(admin));
-        (sequencerChain, actualChainId) = createSyndicateSequencerChain(appChainId, admin, permissionModule, salt);
+        (sequencingChain, actualChainId) = createSyndicateSequencingChain(appChainId, admin, permissionModule, salt);
 
-        emit SyndicateSequencerChainCreated(actualChainId, sequencerChain, address(permissionModule));
+        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 
-        return (sequencerChain, permissionModule, actualChainId);
+        return (sequencingChain, permissionModule, actualChainId);
     }
 
-    /// @notice Computes the address of the SyndicateSequencerChain contract
+    /// @notice Computes the address of the SyndicateSequencingChain contract
     /// @param salt The salt to use for the deployment
     /// @param chainId The ID of the app chain
-    /// @return The address of the SyndicateSequencerChain contract
-    function computeSequencerChainAddress(bytes32 salt, uint256 chainId) public view returns (address) {
+    /// @return The address of the SyndicateSequencingChain contract
+    function computeSequencingChainAddress(bytes32 salt, uint256 chainId) public view returns (address) {
         return Create2.computeAddress(salt, keccak256(getBytecode(chainId)));
     }
 
-    /// @notice Returns the bytecode of the SyndicateSequencerChain contract
+    /// @notice Returns the bytecode of the SyndicateSequencingChain contract
     /// @param chainId The ID of the app chain
-    /// @return The bytecode of the SyndicateSequencerChain contract
+    /// @return The bytecode of the SyndicateSequencingChain contract
     function getBytecode(uint256 chainId) public pure returns (bytes memory) {
-        return abi.encodePacked(type(SyndicateSequencerChain).creationCode, abi.encode(chainId));
+        return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId));
     }
 
     /// @notice Get the next available auto-generated chain ID in the namespace

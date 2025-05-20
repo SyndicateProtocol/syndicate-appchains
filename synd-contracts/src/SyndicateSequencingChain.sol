@@ -3,17 +3,17 @@ pragma solidity 0.8.25;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 
-/// @title SyndicateSequencerChain
+/// @title SyndicateSequencingChain
 /// @notice The core contract for sequencing transactions using a modular architecture
 /// to determine the address that is allowed to sequence and whether the calldata is allowed.
-contract SyndicateSequencerChain is SequencingModuleChecker {
+contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appChainId;
 
     /// @notice Emitted when a new transaction is processed.
     event TransactionProcessed(address indexed sender, bytes data);
 
-    /// @notice Constructs the SyndicateSequencerChain contract.
+    /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appChainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-missing-revert-reason-tests
     constructor(uint256 _appChainId) SequencingModuleChecker() {

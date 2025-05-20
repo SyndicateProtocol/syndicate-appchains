@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {SyndicateSequencerChain} from "../SyndicateSequencerChain.sol";
+import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
 
 /**
- * @title SyndicateSequencerChainWithDecayingPriority
- * @notice Extension of SyndicateSequencerChain that implements a decaying priority mechanism for transactions.
+ * @title SyndicateSequencingChainWithDecayingPriority
+ * @notice Extension of SyndicateSequencingChain that implements a decaying priority mechanism for transactions.
  * This is only an example implementation. Not for production use.
  */
-contract SyndicateSequencerChainWithDecayingPriority is SyndicateSequencerChain {
+contract SyndicateSequencingChainWithDecayingPriority is SyndicateSequencingChain {
     /// @notice The constant rate at which priority decays (10 units per second)
     uint256 public constant PRIORITY_DECAY_RATE = 10;
 
     /// @notice Emitted when a new transaction is processed with priority and timestamp
     event TransactionProcessed(address indexed sender, bytes data, uint256 originalPriority, uint256 timestamp);
 
-    /// @notice Constructs the SyndicateSequencerChainWithDecayingPriority contract.
+    /// @notice Constructs the SyndicateSequencingChainWithDecayingPriority contract.
     /// @param _appChainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-no-parameter-validation-in-constructor
-    constructor(uint256 _appChainId) SyndicateSequencerChain(_appChainId) {}
+    constructor(uint256 _appChainId) SyndicateSequencingChain(_appChainId) {}
 
     /// @notice Processes a single compressed transaction with priority.
     /// @param data The compressed transaction data.

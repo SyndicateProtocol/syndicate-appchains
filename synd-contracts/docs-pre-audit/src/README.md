@@ -49,7 +49,7 @@ forge coverage
 ### Running Specs
 
 ```bash
-certoraRun certora/conf/SyndicateSequencerChain.conf
+certoraRun certora/conf/SyndicateSequencingChain.conf
 ```
 
 ### Troubleshooting
@@ -119,10 +119,10 @@ $ make deploy-syndicate-factory
 
 ### Syndicate Exo
 
-| Contract Name           | Address                                                                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract Name           | Address                                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | SyndicateFactory        | `SyndicateFactory` [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
-| WalletPoolWrapperModule | [0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8](https://syndicate-exo.explorer.alchemy.com/address/0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8)                                     |
+| WalletPoolWrapperModule | [0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8](https://syndicate-exo.explorer.alchemy.com/address/0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8)                    |
 
 ### Base Sepolia
 

@@ -2,8 +2,8 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {SyndicateSequencerChainWithDecayingPriority} from
-    "src/extensions/SyndicateSequencerChainWithDecayingPriority.sol";
+import {SyndicateSequencingChainWithDecayingPriority} from
+    "src/extensions/SyndicateSequencingChainWithDecayingPriority.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -22,8 +22,8 @@ contract MockIsAllowed is IPermissionModule {
 }
 
 // Base test contract that sets up the common infrastructure
-contract SyndicateSequencerChainWithDecayingPriorityTestSetUp is Test {
-    SyndicateSequencerChainWithDecayingPriority public chain;
+contract SyndicateSequencingChainWithDecayingPriorityTestSetUp is Test {
+    SyndicateSequencingChainWithDecayingPriority public chain;
     RequireAllModule public requireAllModule;
     RequireAnyModule public requireAnyModule;
     address public admin;
@@ -35,14 +35,14 @@ contract SyndicateSequencerChainWithDecayingPriorityTestSetUp is Test {
         vm.startPrank(admin);
         requireAllModule = new RequireAllModule(admin);
         requireAnyModule = new RequireAnyModule(admin);
-        chain = new SyndicateSequencerChainWithDecayingPriority(appChainId);
+        chain = new SyndicateSequencingChainWithDecayingPriority(appChainId);
         chain.initialize(admin, address(requireAllModule));
         vm.stopPrank();
     }
 }
 
 // Main test contract inheriting from the setup
-contract SyndicateSequencerChainWithDecayingPriorityTest is SyndicateSequencerChainWithDecayingPriorityTestSetUp {
+contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencingChainWithDecayingPriorityTestSetUp {
     // Test data
     bytes public testData1 = abi.encode("test transaction data 1");
     bytes public testData2 = abi.encode("test transaction data 2");
@@ -78,7 +78,7 @@ contract SyndicateSequencerChainWithDecayingPriorityTest is SyndicateSequencerCh
     function testConstructorRevertsWithZeroChainId() public {
         // Verify that constructor reverts with chain ID 0
         vm.expectRevert("App chain ID cannot be 0");
-        new SyndicateSequencerChainWithDecayingPriority(0);
+        new SyndicateSequencingChainWithDecayingPriority(0);
     }
 
     // PROCESS TRANSACTION TESTS
@@ -262,8 +262,8 @@ contract SyndicateSequencerChainWithDecayingPriorityTest is SyndicateSequencerCh
 }
 
 // Additional test contracts for view function testing
-contract SyndicateSequencerChainWithDecayingPriorityViewRequireAllTest is
-    SyndicateSequencerChainWithDecayingPriorityTestSetUp
+contract SyndicateSequencingChainWithDecayingPriorityViewRequireAllTest is
+    SyndicateSequencingChainWithDecayingPriorityTestSetUp
 {
     MockIsAllowed mockRequireAll1;
     MockIsAllowed mockRequireAll2;
@@ -287,8 +287,8 @@ contract SyndicateSequencerChainWithDecayingPriorityViewRequireAllTest is
     }
 }
 
-contract SyndicateSequencerChainWithDecayingPriorityViewRequireAnyTest is
-    SyndicateSequencerChainWithDecayingPriorityTestSetUp
+contract SyndicateSequencingChainWithDecayingPriorityViewRequireAnyTest is
+    SyndicateSequencingChainWithDecayingPriorityTestSetUp
 {
     MockIsAllowed mockRequireAny1;
     MockIsAllowed mockRequireAny2;

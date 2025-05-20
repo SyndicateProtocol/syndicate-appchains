@@ -55,7 +55,7 @@ make test-coverage
 ### Running Specs
 
 ```bash
-certoraRun certora/conf/SyndicateSequencerChain.conf
+certoraRun certora/conf/SyndicateSequencingChain.conf
 ```
 
 ### Troubleshooting

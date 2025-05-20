@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {SyndicateSequencerChain} from "src/SyndicateSequencerChain.sol";
+import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -19,8 +19,8 @@ contract MockIsAllowed is IPermissionModule {
     }
 }
 
-contract SyndicateSequencerChainTestSetUp is Test {
-    SyndicateSequencerChain public chain;
+contract SyndicateSequencingChainTestSetUp is Test {
+    SyndicateSequencingChain public chain;
     RequireAllModule public permissionModule;
     RequireAnyModule public permissionModuleAny;
     address public admin;
@@ -32,13 +32,13 @@ contract SyndicateSequencerChainTestSetUp is Test {
         vm.startPrank(admin);
         permissionModule = new RequireAllModule(admin);
         permissionModuleAny = new RequireAnyModule(admin);
-        chain = new SyndicateSequencerChain(appChainId);
+        chain = new SyndicateSequencingChain(appChainId);
         chain.initialize(admin, address(permissionModule));
         vm.stopPrank();
     }
 }
 
-contract SyndicateSequencerChainTest is SyndicateSequencerChainTestSetUp {
+contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     function testProcessRawTransaction() public {
         bytes memory validTxn = abi.encode("valid transaction");
 
@@ -47,7 +47,7 @@ contract SyndicateSequencerChainTest is SyndicateSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencerChain.TransactionProcessed(address(this), validTxn);
+        emit SyndicateSequencingChain.TransactionProcessed(address(this), validTxn);
 
         chain.processTransactionRaw(validTxn);
     }
@@ -85,7 +85,7 @@ contract SyndicateSequencerChainTest is SyndicateSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencerChain.TransactionProcessed(address(this), expectedTx);
+        emit SyndicateSequencingChain.TransactionProcessed(address(this), expectedTx);
 
         chain.processTransaction(_data);
     }
@@ -103,7 +103,7 @@ contract SyndicateSequencerChainTest is SyndicateSequencerChainTestSetUp {
         for (uint256 i = 0; i < validTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
 
-            emit SyndicateSequencerChain.TransactionProcessed(
+            emit SyndicateSequencingChain.TransactionProcessed(
                 address(this), abi.encodePacked(bytes1(0x00), validTxns[i])
             );
         }
@@ -112,7 +112,7 @@ contract SyndicateSequencerChainTest is SyndicateSequencerChainTestSetUp {
     }
 }
 
-contract SyndicateSequencerChainViewRequireAllTest is SyndicateSequencerChainTestSetUp {
+contract SyndicateSequencingChainViewRequireAllTest is SyndicateSequencingChainTestSetUp {
     MockIsAllowed mockRequireAll1;
     MockIsAllowed mockRequireAll2;
 
@@ -135,7 +135,7 @@ contract SyndicateSequencerChainViewRequireAllTest is SyndicateSequencerChainTes
     }
 }
 
-contract SyndicateSequencerChainViewRequireAnyTest is SyndicateSequencerChainTestSetUp {
+contract SyndicateSequencingChainViewRequireAnyTest is SyndicateSequencingChainTestSetUp {
     MockIsAllowed mockRequireAny1;
     MockIsAllowed mockRequireAny2;
 

@@ -1,4 +1,4 @@
-using SyndicateSequencerChain as syndicateChain;
+using SyndicateSequencingChain as syndicateChain;
 
 methods {
     function syndicateChain.isAllowed(address, address, bytes) external returns (bool) envfree;

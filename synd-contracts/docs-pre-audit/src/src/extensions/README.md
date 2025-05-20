@@ -1,4 +1,3 @@
-
-
 # Contents
-- [SyndicateSequencerChainWithDecayingPriority](SyndicateSequencerChainWithDecayingPriority.sol/contract.SyndicateSequencerChainWithDecayingPriority.md)
+
+- [SyndicateSequencingChainWithDecayingPriority](SyndicateSequencingChainWithDecayingPriority.sol/contract.SyndicateSequencingChainWithDecayingPriority.md)

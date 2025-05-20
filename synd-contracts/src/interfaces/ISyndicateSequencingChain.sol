@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-/// @title ISyndicateSequencerChain
-/// @notice Interface for the SyndicateSequencerChain contract
-interface ISyndicateSequencerChain {
+/// @title ISyndicateSequencingChain
+/// @notice Interface for the SyndicateSequencingChain contract
+interface ISyndicateSequencingChain {
     /// @notice Process a transaction
     /// @param data The transaction data to process
     function processTransaction(bytes calldata data) external;

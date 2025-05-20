@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {SyndicateSequencerChain} from "src/SyndicateSequencerChain.sol";
+import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 import {SyndicateFactory} from "src/SyndicateFactory.sol";
@@ -25,18 +25,18 @@ contract DeploySyndicateFactory is Script {
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
 
         // create new contracts
-        (address sequencerChain, IRequirementModule permissionModule,) =
-            syndicateFactory.createSyndicateSequencerChainWithRequireAllModule(admin, appChainId, bytes32(appChainId));
+        (address sequencingChain, IRequirementModule permissionModule,) =
+            syndicateFactory.createSyndicateSequencingChainWithRequireAllModule(admin, appChainId, bytes32(appChainId));
 
-        console.log("Deployed SyndicateSequencerChain", sequencerChain);
+        console.log("Deployed SyndicateSequencingChain", sequencingChain);
         console.log("Deployed RequireAllModule", address(permissionModule));
 
         vm.stopBroadcast();
     }
 }
 
-contract DeploySyndicateSequencerChainPlusSetupWithAlwaysAllowModule is Script {
-    SyndicateSequencerChain public sequencerChain;
+contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script {
+    SyndicateSequencingChain public sequencingChain;
     RequireAllModule public permissionModule;
     uint256 public appChainId;
 
@@ -51,9 +51,9 @@ contract DeploySyndicateSequencerChainPlusSetupWithAlwaysAllowModule is Script {
         console.log("Deployed RequireAllModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencerChain = new SyndicateSequencerChain(appChainId);
-        sequencerChain.initialize(admin, address(permissionModule));
-        console.log("Deployed SyndicateSequencerChain", address(sequencerChain));
+        sequencingChain = new SyndicateSequencingChain(appChainId);
+        sequencingChain.initialize(admin, address(permissionModule));
+        console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 
         // Deploy and add always allowed module
         AlwaysAllowedModule alwaysAllowedModule = new AlwaysAllowedModule();

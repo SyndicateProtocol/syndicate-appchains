@@ -3,7 +3,7 @@
 The Smart contracts we intend to have the audit are the following:
 
 - [SyndicateFactory](src/src/SyndicateFactory.sol/contract.SyndicateFactory.md)
-- [SyndicateSequencerChain](src/src/SyndicateSequencerChain.sol/contract.SyndicateSequencerChain.md)
+- [SyndicateSequencingChain](src/src/SyndicateSequencingChain.sol/contract.SyndicateSequencingChain.md)
 - [SequencingModuleChecker](src/src/SequencingModuleChecker.sol/abstract.SequencingModuleChecker.md)
 - [AllowlistSequencingModule](src/src/sequencing-modules/AllowlistSequencingModule.sol/contract.AllowlistSequencingModule.md)
 - [WalletPoolWrapperModule](src/src/sequencing-modules/WalletPoolWrapperModule.sol/contract.WalletPoolWrapperModule.md)
@@ -45,7 +45,7 @@ The Syndicate Sequencer Chain consists of several interconnected contracts:
 
 ### Core Components:
 
-1. **SyndicateSequencerChain**:
+1. **SyndicateSequencingChain**:
 
    - Central contract that processes and orders transactions
    - Interfaces with various requirement modules
@@ -83,7 +83,7 @@ The Syndicate Sequencer Chain consists of several interconnected contracts:
    Then the following steps are executed:
 
    - validators called sequencers will submit transactions to the Metabase sequencer chain
-   - These transactions are received by the SyndicateSequencerChain
+   - These transactions are received by the SyndicateSequencingChain
    - The SequencingModuleChecker validates them against all requirement modules
    - If approved, transactions are sequenced in a deterministic order
    - Batches are created and submitted to the Layer 1 for settlement
