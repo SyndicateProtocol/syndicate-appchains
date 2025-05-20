@@ -6,7 +6,7 @@ It consists of a `common` crate and 2 component crates: `synd-slotter` and `synd
 standalone binary that is also required.
 
 The `synd-mchain` server must be available at the `mchain` rpc url prior to starting the translator -
-see the provided `docker-compose.yaml` file for more information.
+see the provided `documentation/local/docker-compose.yml` file for more information.
 
 #### Mockchain configuration
 
