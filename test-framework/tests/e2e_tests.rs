@@ -385,9 +385,10 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
                 Duration::from_secs(10)
             );
 
-            // 2. Poster service posts
+            // 2. Proposer service proposes
             let client = reqwest::Client::new();
-            let response = client.post(format!("{}/post", components.poster_url)).send().await?;
+            let response =
+                client.post(format!("{}/propose", components.proposer_url)).send().await?;
             assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
 
             // 3. Execute transaction (usually done by end-user)

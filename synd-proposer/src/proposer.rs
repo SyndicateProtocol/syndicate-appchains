@@ -60,8 +60,9 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
     let polling_task: JoinHandle<Result<()>> =
         tokio::spawn(async move { proposer_polling.main_loop().await });
 
-    // Start HTTP server with /post endpoint // TODO(SEQ-948)
-    let app = Router::new().route("/post", post(post_assertion_handler)).with_state(proposer_http);
+    // Start HTTP server with /propose endpoint
+    let app =
+        Router::new().route("/propose", post(post_assertion_handler)).with_state(proposer_http);
     let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port)).await?;
 
     let server_task = tokio::spawn(async move {
@@ -76,7 +77,7 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
 }
 
 async fn post_assertion_handler(State(proposer): State<Arc<Proposer>>) -> Response {
-    match proposer.fetch_and_post().await {
+    match proposer.fetch_block_and_post().await {
         Ok(_) => (StatusCode::OK, "Assertion posted successfully").into_response(),
         Err(err) => {
             error!("Handler error: {:?}", err);
@@ -91,7 +92,7 @@ impl Proposer {
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             interval.tick().await;
-            self.fetch_and_post().await?;
+            self.fetch_block_and_post().await?;
         }
     }
 
@@ -121,12 +122,11 @@ impl Proposer {
         Ok(())
     }
 
-    async fn fetch_and_post(&self) -> Result<()> {
-        // TODO (SEQ-948)
+    async fn fetch_block_and_post(&self) -> Result<()> {
         match self.fetch_block().await {
             Ok(block) => {
                 if let Err(err) = self.post_assertion(block).await {
-                    error!("Failed to post assertion: {:?}", err); // TODO (SEQ-948)
+                    error!("Failed to post assertion: {:?}", err);
                 }
             }
             Err(err) => {
