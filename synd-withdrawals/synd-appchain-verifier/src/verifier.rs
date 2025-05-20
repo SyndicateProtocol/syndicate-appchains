@@ -61,13 +61,11 @@ impl Verifier {
         settlement_chain_input: &SettlementChainInput,
     ) -> Result<(Vec<VerifierOutput>, B256), VerifierError> {
         // Validate blocks
-        info!("Validating sequencing chain blocks");
         self.validate_blocks(
             sequencing_chain_input.start_block_number,
             &sequencing_chain_input.blocks,
             sequencing_chain_input.end_block_hash,
         )?;
-        info!("Validating settlement chain blocks");
         self.validate_blocks(
             settlement_chain_input.start_block_number,
             &settlement_chain_input.blocks,
@@ -75,20 +73,16 @@ impl Verifier {
         )?;
 
         // Validate receipts
-        info!("Validating sequencing chain receipts");
         self.validate_receipts(&sequencing_chain_input.receipts, &sequencing_chain_input.blocks)?;
-        info!("Validating settlement chain receipts");
         self.validate_receipts(&settlement_chain_input.receipts, &settlement_chain_input.blocks)?;
 
         // Validate delayed messages
-        info!("Validating delayed messages");
         self.validate_delayed_messages(
             &settlement_chain_input.unused_delayed_messages,
             settlement_chain_input.unused_delayed_messages_hash,
         )?;
 
         // Generate output
-        info!("Generating output");
         self.generate_output(sequencing_chain_input, settlement_chain_input)
     }
 
@@ -241,7 +235,6 @@ impl Verifier {
                     self.settlement_delay <=
                     sequencing_chain_input.blocks[seq_block_index].header.timestamp
             {
-                info!("Processing previous unused delayed messages");
                 let mut current_delayed_messages = settlement_chain_input.unused_delayed_messages
                     [delayed_messages_index]
                     .delayed_messages
@@ -256,7 +249,6 @@ impl Verifier {
                     self.settlement_delay <=
                     sequencing_chain_input.blocks[seq_block_index].header.timestamp
             {
-                info!("Processing settlement blocks");
                 // Include settlement blocks that belong to current slot
                 let partial_block = convert_block_to_partial_block(
                     &settlement_chain_input.blocks[set_block_index],
@@ -267,8 +259,6 @@ impl Verifier {
                 delayed_messages.append(&mut current_delayed_messages);
                 set_block_index += 1;
             }
-
-            info!("Processing sequencing blocks");
 
             let seq_partial_block = convert_block_to_partial_block(
                 &sequencing_chain_input.blocks[seq_block_index],
@@ -310,21 +300,17 @@ impl Verifier {
             });
         }
 
-        info!("Processing unused delayed messages");
         // Push delayed messages that are not included to the unused delayed messages vector
         let mut unused_delayed_messages: Vec<DelayedMessageBlock> =
             settlement_chain_input.unused_delayed_messages[delayed_messages_index..].to_vec();
 
         while set_block_index < settlement_chain_input.blocks.len() {
-            info!("Processing remaining settlement blocks");
             let partial_block = convert_block_to_partial_block(
                 &settlement_chain_input.blocks[set_block_index],
                 &settlement_chain_input.receipts[set_block_index],
             );
-            info!("Processing delayed messages");
             let delayed_messages =
                 self.arbitrum_adapter.process_delayed_messages(&partial_block)?;
-            info!("Adding delayed messages to unused delayed messages vector");
             let delayed_message_block = DelayedMessageBlock {
                 timestamp: settlement_chain_input.blocks[set_block_index].header.timestamp,
                 delayed_messages,
@@ -333,11 +319,9 @@ impl Verifier {
             set_block_index += 1;
         }
 
-        info!("Generating output hash");
         let unused_delayed_messages_hash =
             keccak256(serde_json::to_string(&unused_delayed_messages).unwrap());
 
-        info!("Returning output");
         Ok((verifier_outputs, unused_delayed_messages_hash))
     }
 
