@@ -152,6 +152,7 @@ mod tests {
             chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
+            0,
             |_| async { CheckFinalizationResult::Done },
         );
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
@@ -189,6 +190,7 @@ mod tests {
             chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
+            0,
             |_| async { CheckFinalizationResult::Done },
         );
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());

@@ -78,6 +78,7 @@ impl MaestroService {
                     *chain_id,
                     self.config.finalization_checker_interval,
                     self.config.finalization_duration,
+                    self.config.max_resubmission_retries,
                     move |raw_tx: &[u8]| {
                         let provider = provider_clone.clone();
                         let tx_data = raw_tx.to_vec();
@@ -713,6 +714,7 @@ mod tests {
             wallet_nonce_ttl: Duration::from_secs(3),
             finalization_duration: Duration::from_secs(10),
             finalization_checker_interval: Duration::from_secs(1),
+            max_resubmission_retries: 3,
         };
 
         // Create service

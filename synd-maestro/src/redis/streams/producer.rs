@@ -4,7 +4,7 @@
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisError};
 use std::{self, time::Duration};
 use tokio::{task::JoinHandle, time::MissedTickBehavior};
-use tracing::{debug, error};
+use tracing::{debug, error, trace};
 
 /// Base key for Redis transaction streams
 /// Format: `synd-maestro:transactions:{chain_id}`
@@ -39,9 +39,11 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 ///         1,
 ///         Duration::from_secs(60 * 60 * 24),
 ///         Duration::from_secs(60 * 60 * 24),
+///         5, // max_resubmission_retries
+///         |_raw_tx: &[u8]| async { CheckFinalizationResult::Done },
 ///     );
 ///     let tx_data = vec![0x01, 0x02, 0x03];
-///     let id = producer.enqueue_transaction(tx_data).await.unwrap();
+///     let id = producer.enqueue_transaction(&tx_data).await.unwrap();
 /// }
 /// ```
 #[derive(Debug)]
@@ -59,6 +61,8 @@ impl StreamProducer {
     /// * `chain_id` - The chain identifier this producer will write to
     /// * `finalization_checker_interval` - How often to check for finalized transactions
     /// * `finalization_duration` - Duration after which a transaction is considered finalized
+    /// * `max_resubmission_retries` - Maximum number of times a transaction can be re-submitted
+    /// * `handle_finalized_tx` - Callback to check if a transaction is finalized
     ///
     /// # Returns
     /// A new `StreamProducer` instance configured for the specified chain
@@ -67,6 +71,7 @@ impl StreamProducer {
         chain_id: u64,
         finalization_checker_interval: Duration,
         finalization_duration: Duration,
+        max_resubmission_retries: u32,
         handle_finalized_tx: F,
     ) -> Self
     where
@@ -79,6 +84,7 @@ impl StreamProducer {
             stream_key.clone(),
             finalization_checker_interval,
             finalization_duration,
+            max_resubmission_retries,
             handle_finalized_tx,
         );
         Self { conn, stream_key, _finalization_checker_handle }
@@ -102,7 +108,11 @@ impl StreamProducer {
     /// * Stream write operation fails
     /// * Connection is dropped
     pub async fn enqueue_transaction(&self, raw_tx: &[u8]) -> Result<String, RedisError> {
-        let id: String = self.conn.clone().xadd(&self.stream_key, "*", &[("data", raw_tx)]).await?;
+        let id: String = self
+            .conn
+            .clone()
+            .xadd(&self.stream_key, "*", &[("data", raw_tx), ("retries", b"0")])
+            .await?;
         debug!(%self.stream_key, %id, "Enqueued transaction");
         Ok(id)
     }
@@ -124,6 +134,7 @@ pub enum CheckFinalizationResult {
 /// * `stream_key` - Key of the Redis stream to check
 /// * `finalization_checker_interval` - How often to check for old entries
 /// * `finalization_duration` - Maximum age of entries to keep
+/// * `max_resubmission_retries` - Maximum number of times a transaction can be re-submitted
 /// * `check_finalization` - Function to call with each entry's raw data, this will decide whether
 ///   to resubmit the transaction or not
 ///
@@ -134,6 +145,7 @@ fn start_finalization_checker<F, Fut>(
     stream_key: String,
     finalization_checker_interval: Duration,
     finalization_duration: Duration,
+    max_resubmission_retries: u32,
     check_finalization: F,
 ) -> JoinHandle<()>
 where
@@ -161,11 +173,6 @@ where
             let result: Result<Vec<(String, Vec<(String, Vec<u8>)>)>, RedisError> =
                 conn.xrange(&stream_key, "-", &max_id).await;
 
-            if let Err(e) = result {
-                debug!(%stream_key, %e, "Failed to fetch old entries");
-                continue;
-            }
-
             let entries = match result {
                 Ok(entries) => entries,
                 Err(e) => {
@@ -173,43 +180,86 @@ where
                     continue;
                 }
             };
+
             if entries.is_empty() {
                 continue;
             }
 
             // Collect IDs for deletion and call XDEL on all of them
             let ids: Vec<String> = entries.iter().map(|(id, _)| id.clone()).collect();
-            match conn.xdel::<_, _, usize>(&stream_key, &ids).await {
-                Ok(count) => debug!(%stream_key, count, "Deleted processed entries"),
-                Err(e) => {
-                    debug!(%stream_key, %e, "Failed to delete processed entries");
-                    continue
-                }
+            if let Err(e) = conn.xdel::<_, _, usize>(&stream_key, &ids).await {
+                error!(%stream_key, %e, "Failed to delete processed entries");
+                continue;
             }
+            trace!(%stream_key, count = ids.len(), "Deleted entries");
 
             // Process each entry with the callback function
-            for (id, fields) in &entries {
-                // Find and process the "data" field
-                if let Some(field_value) =
-                    fields.iter().find_map(|(name, value)| (name == "data").then_some(value))
-                {
-                    debug!(%stream_key, %id, "Processing old entry before deletion");
-                    match check_finalization(field_value).await {
-                        CheckFinalizationResult::Done => {
-                            debug!(%stream_key, %id, "Transaction finalized")
+            for (id, fields) in entries {
+                let mut data_field_value: Option<&[u8]> = None;
+                let mut retries_value: Option<u32> = None;
+
+                for (name, value) in &fields {
+                    match name.as_str() {
+                        "data" => data_field_value = Some(value),
+                        "retries" => {
+                            retries_value = String::from_utf8(value.clone())
+                                .ok()
+                                .and_then(|s| s.parse::<u32>().ok());
                         }
-                        CheckFinalizationResult::ReSubmit => {
-                            let resubmission_id = conn
-                                .clone()
-                                .xadd(&stream_key, "*", &[("data", field_value)])
-                                .await
-                                .unwrap_or_else(|e| {
-                                    error!(%stream_key, %id, %e, "Failed to resubmit transaction");
-                                    "failed-to-resubmit".to_string()
-                                });
-                            debug!(%stream_key, %resubmission_id, "Transaction not finalized, re-submitting with id {}", resubmission_id);
+                        _ => {
+                            error!(%stream_key, entry_id = %id, "Unexpected field: {}", name);
                         }
-                    };
+                    }
+                }
+                let (data, retries) = match (data_field_value, retries_value) {
+                    (Some(data), Some(retry_count)) => (data, retry_count),
+                    _ => {
+                        error!(%stream_key, entry_id = %id, "Missing required fields: data or retries");
+                        continue;
+                    }
+                };
+                if retries >= max_resubmission_retries {
+                    debug!(%stream_key, entry_id = %id, retries, "Max resubmission retries reached. Transaction will not be re-submitted.");
+                    continue;
+                }
+
+                trace!(%stream_key, entry_id = %id, retries, "Checking tx for finalization");
+                match check_finalization(data).await {
+                    CheckFinalizationResult::Done => {
+                        debug!(%stream_key, entry_id = %id, "Transaction finalized (callback returned Done)");
+                    }
+                    CheckFinalizationResult::ReSubmit => {
+                        match conn
+                            .clone()
+                            .xadd::<&String, &str, &str, &[u8], String>(
+                                &stream_key,
+                                "*",
+                                &[
+                                    ("data", data),
+                                    ("retries", (retries + 1).to_string().as_bytes()),
+                                ],
+                            )
+                            .await
+                        {
+                            Ok(new_id) => {
+                                debug!(
+                                    %stream_key,
+                                    original_id = %id,
+                                    resubmission_id = %new_id,
+                                    retries = retries+1,
+                                    "Transaction not finalized, re-submitting."
+                                );
+                            }
+                            Err(e) => {
+                                error!(
+                                    %stream_key,
+                                    original_id = %id,
+                                    error = %e,
+                                    "Failed to resubmit transaction."
+                                );
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -233,28 +283,35 @@ mod tests {
     async fn test_stream_finalization_checker() {
         // This test verifies the behavior of the `start_finalization_checker` with conditional
         // logic in the callback and ensures items with future-dated IDs are not processed.
+        // It also tests the max_resubmission_retries logic.
         // 1. It populates a Redis stream with 5 initial entries (intended to be "old") and 1
         //    "extra" entry with a far-future ID (intended to remain unprocessed by this test run).
-        // 2. It starts the finalization checker with a short interval (100ms) and finalization
-        //    duration (50ms).
+        //    All entries are added with "retries: 0".
+        // 2. It starts the finalization checker with a short interval (100ms), finalization
+        //    duration (50ms), and max_resubmission_retries (e.g., 1).
         // 3. The test waits for 150ms, allowing the checker to run effectively once.
-        // 4. In this run, the checker should: a. Identify only the 5 "old" entries (those with IDs
-        //    older than `now - 50ms`). b. The "extra" entry with the future ID should NOT be
-        //    selected for processing. c. Delete the 5 selected "old" entries from the stream. d.
-        //    Invoke the provided callback for each of these 5 "old" entries.
+        // 4. In this run, the checker should: a. Identify only the 5 "old" entries. b. The "extra"
+        //    entry with the future ID should NOT be selected. c. Delete the 5 selected "old"
+        //    entries from the stream via XDEL. d. Invoke the provided callback for each of these 5
+        //    "old" entries.
         // 5. The callback logic for the 5 processed entries is conditional:
         //    - For the first 2 invocations, it returns `CheckFinalizationResult::ReSubmit`.
         //    - For the next 3 invocations, it returns `CheckFinalizationResult::Done`.
-        // 6. `start_finalization_checker` implementation details for callback results:
-        //    - `Done` arm: Does NOT re-submit the item. Item remains deleted from its original ID.
-        //    - `ReSubmit` arm: DOES re-submit the item via XADD (it gets a new ID).
-        // 7. Consequently: a. The `callback_counter` should be incremented 5 times (only the "old"
-        //    items processed). b. The `callback_data` should store the data of these 5 invocations.
-        //    c. The stream should contain 3 entries at the end:
-        //       - The 2 items for which `ReSubmit` was returned (re-added with new IDs).
-        //       - The 1 "extra" item (which was never processed or deleted).
-        //       - The 3 items for which `Done` was returned will not be in the stream from their
-        //         original IDs.
+        // 6. `start_finalization_checker` behavior with `max_resubmission_retries = 1`:
+        //    - Item 0 (test-0, retries=0): Callback `ReSubmit`. `0 < 1` is true. Re-submitted with
+        //      `retries = 1`.
+        //    - Item 1 (test-1, retries=0): Callback `ReSubmit`. `0 < 1` is true. Re-submitted with
+        //      `retries = 1`.
+        //    - Item 2 (test-2, retries=0): Callback `Done`. Not re-submitted.
+        //    - Item 3 (test-3, retries=0): Callback `Done`. Not re-submitted.
+        //    - Item 4 (test-4, retries=0): Callback `Done`. Not re-submitted.
+        // 7. Consequently: a. The `callback_counter` should be incremented 5 times. b. The
+        //    `callback_data` should store the data of these 5 invocations. c. The stream should
+        //    contain 3 entries at the end:
+        //       - The 2 items for which `ReSubmit` was returned and allowed by retry limit
+        //         (re-added with new IDs and retries=1).
+        //       - The 1 "extra" item (which was never processed or deleted, retries=0).
+        //       - The 3 items for which `Done` was returned are not re-added.
 
         // Setup Redis connection
         let (_redis, redis_url) = start_redis().await.unwrap();
@@ -268,12 +325,22 @@ mod tests {
 
         // Add some test data
         for i in 0..5 {
-            let _: String =
-                conn_clone.xadd(stream_key, "*", &[("data", format!("test-{}", i))]).await.unwrap();
+            let _: String = conn_clone
+                .xadd(
+                    stream_key,
+                    "*",
+                    &[("data", format!("test-{}", i).as_bytes()), ("retries", b"0" as &[u8])],
+                )
+                .await
+                .unwrap();
         }
         // add an extra entry that shouldn't be included in the finalization check
         let _: String = conn_clone
-            .xadd(stream_key, "9999999999999-0", &[("data", "test-extra".to_string())])
+            .xadd(
+                stream_key,
+                "9999999999999-0",
+                &[("data", "test-extra".to_string().as_bytes()), ("retries", b"0" as &[u8])],
+            )
             .await
             .unwrap();
 
@@ -288,12 +355,14 @@ mod tests {
         // Start finalization checker with short intervals for testing
         let finalization_checker_interval = Duration::from_millis(100);
         let finalization_duration = Duration::from_millis(50);
+        let max_resubmission_retries = 1; // Test with 1 retry allowed
 
         let _finalization_checker_handle = start_finalization_checker(
             conn.clone(),
             stream_key.to_string(),
             finalization_checker_interval,
             finalization_duration,
+            max_resubmission_retries,
             move |data: &[u8]| {
                 // Create static reference to avoid lifetime issues
                 let data = data.to_vec();
@@ -343,13 +412,112 @@ mod tests {
         let stream_len: usize = conn_clone.xlen(stream_key).await.unwrap();
         // After one run:
         // - 5 items processed (test-0 to test-4).
-        // - 2 items ('ReSubmit' from callback for test-0, test-1) are re-added.
+        // - 2 items ('ReSubmit' from callback for test-0, test-1) are re-added (with retries = 1).
         // - 3 items ('Done' from callback for test-2, test-3, test-4) are deleted and not re-added.
-        // - 1 "extra" item (test-extra) was never processed because its ID is in the future.
+        // - 1 "extra" item (test-extra, with retries = 0) was never processed because its ID is in
+        //   the future.
         // Stream length should be 2 (re-submitted) + 1 (extra) = 3.
         assert_eq!(
             stream_len, 3,
-            "Stream should contain 2 re-submitted entries and 1 extra, unprocessed entry"
+            "Stream should contain 2 re-submitted entries (retries=1) and 1 extra, unprocessed entry (retries=0)"
         );
+    }
+
+    #[tokio::test]
+    async fn test_transaction_max_retries_behavior() {
+        // This test verifies that a transaction is retried once when max_resubmission_retries is 1,
+        // and then dropped on the subsequent processing attempt.
+        // 1. Set max_resubmission_retries = 1.
+        // 2. Add one entry with retries = 0.
+        // 3. Callback always returns ReSubmit.
+        // 4. After 1st cycle: entry is re-submitted with retries = 1. Callback invoked once.
+        // 5. After 2nd cycle: entry with retries = 1 is dropped. Callback not invoked again. Stream
+        //    empty.
+
+        let (_redis, redis_url) = start_redis().await.unwrap();
+        let client = redis::Client::open(redis_url.as_str()).unwrap();
+        let conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut conn_clone_for_setup = conn.clone();
+        let mut conn_clone_for_assert = conn.clone();
+
+        let stream_key = "test:max_retries_behavior:stream";
+        let max_resubmission_retries = 1;
+        let item_data = b"single_retry_item_data";
+
+        // Add initial entry
+        let _: String = conn_clone_for_setup
+            .xadd(stream_key, "*", &[("data", item_data as &[u8]), ("retries", b"0" as &[u8])])
+            .await
+            .unwrap();
+
+        let callback_invocations = Arc::new(AtomicUsize::new(0));
+        let finalization_callback = {
+            let counter_clone = Arc::clone(&callback_invocations);
+            move |_data: &[u8]| {
+                let inner_counter_clone = Arc::clone(&counter_clone);
+                async move {
+                    inner_counter_clone.fetch_add(1, Ordering::SeqCst);
+                    CheckFinalizationResult::ReSubmit
+                }
+            }
+        };
+
+        let finalization_checker_interval = Duration::from_millis(100);
+        let finalization_duration = Duration::from_millis(50);
+
+        let _checker_handle = start_finalization_checker(
+            conn.clone(),
+            stream_key.to_string(),
+            finalization_checker_interval,
+            finalization_duration,
+            max_resubmission_retries,
+            finalization_callback,
+        );
+
+        // Wait for the first finalization cycle
+        sleep(Duration::from_millis(150)).await; // interval (100) + duration (50)
+
+        // Assertions after 1st cycle
+        assert_eq!(
+            callback_invocations.load(Ordering::SeqCst),
+            1,
+            "Callback should be invoked once after the first cycle"
+        );
+
+        #[allow(clippy::type_complexity)]
+        let stream_entries_after_1st_cycle: Vec<(String, Vec<(String, Vec<u8>)>)> =
+            conn_clone_for_assert.xrange(stream_key, "-", "+").await.unwrap();
+        assert_eq!(
+            stream_entries_after_1st_cycle.len(),
+            1,
+            "Stream should contain 1 entry after the first cycle"
+        );
+
+        let (_, fields) = &stream_entries_after_1st_cycle[0];
+        let mut found_data: Option<&[u8]> = None;
+        let mut found_retries: Option<String> = None;
+        for (name, value) in fields {
+            match name.as_str() {
+                "data" => found_data = Some(value),
+                "retries" => found_retries = Some(String::from_utf8(value.clone()).unwrap()),
+                _ => {}
+            }
+        }
+        assert_eq!(found_data.unwrap(), item_data, "Data mismatch after 1st cycle");
+        assert_eq!(found_retries.unwrap(), "1", "Retries should be 1 after 1st cycle");
+
+        // Wait for the second finalization cycle
+        sleep(Duration::from_millis(150)).await; // interval (100) + duration (50)
+
+        // Assertions after 2nd cycle
+        assert_eq!(
+            callback_invocations.load(Ordering::SeqCst),
+            1,
+            "Callback should still be invoked only once after the second cycle"
+        );
+
+        let stream_len_after_2nd_cycle: usize =
+            conn_clone_for_assert.xlen(stream_key).await.unwrap();
+        assert_eq!(stream_len_after_2nd_cycle, 0, "Stream should be empty after the second cycle");
     }
 }

@@ -307,6 +307,7 @@ mod tests {
             chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
+            0,
             |_| async { CheckFinalizationResult::Done },
         );
 
@@ -384,6 +385,7 @@ mod tests {
             config.chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
+            0,
             |_| async { CheckFinalizationResult::Done },
         );
 

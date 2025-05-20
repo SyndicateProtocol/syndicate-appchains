@@ -18,7 +18,7 @@ use tracing::{debug, error};
 
 /// Configuration for Maestro
 #[allow(clippy::doc_markdown)]
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 #[command(version, about, long_about = None)]
 pub struct Config {
     /// Port to listen on
@@ -73,6 +73,10 @@ pub struct Config {
     #[arg(long, env = "FINALIZATION_CHECKER_INTERVAL", default_value = "1m",
     value_parser = humantime::parse_duration)]
     pub finalization_checker_interval: Duration,
+
+    /// Maximum number of resubmission retries
+    #[arg(long, env = "MAX_RESUBMISSION_RETRIES", default_value = "3")]
+    pub max_resubmission_retries: u32,
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
@@ -156,22 +160,5 @@ impl Config {
             provider_map.insert(resp_chain_id, provider);
         }
         Ok(provider_map)
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            port: 8080,
-            metrics_port: 8081,
-            redis_url: String::new(),
-            chain_rpc_urls: HashMap::new(),
-            validation_timeout: Duration::from_secs(5),
-            skip_validation: false,
-            waiting_txn_ttl: Default::default(),
-            wallet_nonce_ttl: Default::default(),
-            finalization_duration: Duration::from_secs(5 * 60),
-            finalization_checker_interval: Duration::from_secs(5 * 60),
-        }
     }
 }
