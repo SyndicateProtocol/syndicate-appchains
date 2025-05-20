@@ -18,7 +18,7 @@ use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
 };
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug)]
 pub struct Docker(Child);
@@ -60,8 +60,44 @@ impl Drop for Docker {
     fn drop(&mut self) {
         if let Ok(None) = self.0.try_wait() {
             if let Some(pid) = self.0.id() {
-                _ = std::process::Command::new("kill").arg(pid.to_string()).spawn();
+                info!("Attempting to stop Docker container process (PID: {}) via Drop", pid);
+                match std::process::Command::new("kill")
+                    .arg(pid.to_string())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                {
+                    Ok(kill_proc) => {
+                        match kill_proc.wait_with_output() {
+                            Ok(output) => {
+                                if output.status.success() {
+                                    info!("Successfully sent SIGTERM to PID {} and kill command exited.", pid);
+                                } else {
+                                    warn!(
+                                        "Kill command for PID {} completed with error. Status: {}. Stderr: {}. Stdout: {}",
+                                        pid,
+                                        output.status,
+                                        String::from_utf8_lossy(&output.stderr),
+                                        String::from_utf8_lossy(&output.stdout)
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                warn!("Failed to wait for kill command for PID {}: {}", pid, e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to spawn kill command for PID {}: {}", pid, e);
+                    }
+                }
+            } else {
+                info!(
+                    "Docker process for Drop had no PID, likely already exited or failed to start."
+                );
             }
+        } else {
+            info!("Docker process for Drop already exited or was not running.");
         }
     }
 }

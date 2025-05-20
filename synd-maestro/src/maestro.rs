@@ -682,7 +682,6 @@ mod tests {
     }
 
     // Helper to create a test service with real Redis and mock RPC
-    // TODO(SEQ-904): Fix lingering Redis container bug
     async fn create_test_service() -> (MaestroService, MockServer, MockServer, Docker) {
         // Start Redis
         let (redis_container, redis_url) = start_redis().await.unwrap();
@@ -755,7 +754,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_producer() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test chain ID
         let chain_id = 4u64;
@@ -789,7 +788,7 @@ mod tests {
     #[tokio::test]
     async fn test_enqueue_raw_transaction() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -827,7 +826,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cached_or_rpc_nonce_cache_hit() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -855,7 +854,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cached_or_rpc_nonce_cache_miss() {
         // Create test service
-        let (service, mock_server_4, _, _) = create_test_service().await;
+        let (service, mock_server_4, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -882,7 +881,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_nonce_from_rpc_missing_provider() {
         // Create test service with mock servers
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data - use a chain ID that doesn't have a provider
         let chain_id = 9999u64; // Not in our config
@@ -904,7 +903,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_nonce_from_rpc_provider_error() {
         // Create test service
-        let (service, mock_server_4, _, _) = create_test_service().await;
+        let (service, mock_server_4, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -945,7 +944,7 @@ mod tests {
     #[tokio::test]
     async fn test_increment_wallet_nonce() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -987,7 +986,7 @@ mod tests {
     #[tokio::test]
     async fn test_nonce_ttl() {
         // Create test service
-        let (service, _, _, _redis) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1021,7 +1020,7 @@ mod tests {
     #[tokio::test]
     async fn test_multi_chain_independence() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data for two different chains
         let chain_id1 = 4u64;
@@ -1054,7 +1053,7 @@ mod tests {
     #[tokio::test]
     async fn test_invalid_cached_nonce() {
         // Create test service
-        let (service, mock_server_4, _, _) = create_test_service().await;
+        let (service, mock_server_4, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1094,7 +1093,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_cache_for_transaction() {
         // Create test service
-        let (service, _, _, _redis) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1134,7 +1133,7 @@ mod tests {
     #[tokio::test]
     async fn test_put_gap_transaction_on_cache() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1167,7 +1166,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_gap_transaction_from_cache() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1236,7 +1235,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_empty() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1255,7 +1254,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_with_transactions() {
         // Create test service
-        let (service, _, _, _redis) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1376,7 +1375,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_with_non_sequential_nonces() {
         // Create test service
-        let (service, _, _, _redis) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1473,7 +1472,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_invalid_transaction() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1524,7 +1523,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_equal_nonce() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1582,7 +1581,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_lower_nonce() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1637,7 +1636,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_higher_nonce() {
         // Create test service
-        let (service, _, _, _redis) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1692,7 +1691,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_background_processing() {
         // Create test service
-        let (service, _, _, _redis) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1806,7 +1805,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_gaps() {
         // Create test service
-        let (service, _, _, _redis) = create_test_service().await;
+        let (service, _, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1965,7 +1964,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_receipt_found() {
-            let (service, mock_server, _, _) = create_test_service().await;
+            let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 10u64;
             let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
@@ -1983,7 +1982,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_receipt_not_found_nonce_matches_resubmit() {
-            let (service, mock_server, _, _) = create_test_service().await;
+            let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 11u64;
             let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
@@ -2010,7 +2009,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_receipt_not_found_nonce_differs_done() {
-            let (service, mock_server, _, _) = create_test_service().await;
+            let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 12u64;
             let rpc_nonce = 13u64; // Different from tx_nonce
@@ -2027,7 +2026,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_receipt_not_found_get_nonce_fails_done() {
-            let (service, mock_server, _, _) = create_test_service().await;
+            let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 14u64;
             let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
@@ -2043,7 +2042,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_get_receipt_fails_done() {
-            let (service, mock_server, _, _) = create_test_service().await;
+            let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 15u64;
             let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
