@@ -1,3 +1,6 @@
+# This workflow is run on every new release of the `Syndicate Appchains` stack. It builds and publishes all Docker images to our container registry.
+
+
 name: Publish Release Images
 
 on:
@@ -16,32 +19,5 @@ jobs:
       dry_run: false
       runner_label: vip-large-01
       service: "" # all services
+      tag: ${{ github.event.release.tag_name }}
     secrets: inherit
-
-  cloud-run-deployment:
-    ## **NOTE**: Intentionally disabling for now while sequencer is deprioritized. Content is useful. TODO(SEQ-793)
-    if: ${{ false }}
-    needs: [docker]
-    runs-on: vip-large
-    permissions:
-      contents: "read"
-      id-token: "write"
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure Google Cloud credentials
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: projects/112197761096/locations/global/workloadIdentityPools/cloud-run-github-pool/providers/id-001
-          service_account: "cloud-run-service-account@metabased-testnet.iam.gserviceaccount.com"
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Trigger Cloud Run Deployment
-        run: |
-          gcloud builds triggers run deploy-metabased-sequencer \
-            --region=global \
-            --project=metabased-testnet \
-            --branch=${GITHUB_REF#refs/heads/}
