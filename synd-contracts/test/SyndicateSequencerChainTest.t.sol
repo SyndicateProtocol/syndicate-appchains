@@ -119,28 +119,24 @@ contract SyndicateSequencerChainTest is SyndicateSequencerChainTestSetUp {
     }
 
     function testProcessBulkTransactionsOnlyEmitsValidTransactionsAsEvents() public {
-        // Set up a new chain instance with a mock permission module
         vm.startPrank(admin);
         SyndicateSequencerChain chainWithInvalidDataPermissionModule = new SyndicateSequencerChain(10042002);
         chainWithInvalidDataPermissionModule.initialize(admin, address(new MockIsAllowedWithInvalidData()));
         vm.stopPrank();
 
-        // Prepare transaction data
         bytes[] memory txns = new bytes[](3);
         txns[0] = abi.encode("valid");
         txns[1] = abi.encode("invalid");
         txns[2] = abi.encode("valid");
 
-        // Record logs before calling the function
         vm.recordLogs();
         chainWithInvalidDataPermissionModule.processBulkTransactions(txns);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        // Get event signature hash
         bytes32 expectedSig = keccak256("TransactionProcessed(address,bytes)");
 
-        // Track how many valid events we saw
         uint256 validEventCount = 0;
+        uint256 expectedValidEventCount = 2;
 
         for (uint256 i = 0; i < logs.length; i++) {
             Vm.Log memory log = logs[i];
@@ -157,8 +153,7 @@ contract SyndicateSequencerChainTest is SyndicateSequencerChainTestSetUp {
             }
         }
 
-        // Ensure only valid transaction events were emitted
-        assertEq(validEventCount, 2, "Expected 2 TransactionProcessed events for valid transactions");
+        assertEq(validEventCount, expectedValidEventCount, "Wrong amount of valid transaction events emitted");
     }
 }
 
