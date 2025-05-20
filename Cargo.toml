@@ -5,7 +5,6 @@ members = [
   "shared/test-utils",
   "synd-batch-sequencer",
   "synd-batch-sequencer/crates/batcher",
-  "synd-batch-sequencer/crates/tc-client",
   "synd-chain-ingestor",
   "synd-maestro",
   "synd-mchain",
