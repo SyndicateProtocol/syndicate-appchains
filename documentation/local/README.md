@@ -1,6 +1,7 @@
 # Run a Syndicate Appchain RPC Node Locally
 
-Use the provided config files and docker-compose file to build and run an Appchain RPC node locally.
+Use the provided config files and Docker Compose file to build and run a Syndicate Appchain RPC node locally.
+
 
 ## Appchain Config
 
