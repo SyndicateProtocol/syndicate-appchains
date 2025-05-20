@@ -6,7 +6,7 @@ use crate::components::{
     chain_ingestor::ChainIngestorConfig,
     configuration::{setup_config_manager, ConfigurationOptions, ContractVersion},
     maestro::MaestroConfig,
-    poster::PosterConfig,
+    poster::ProposerConfig,
     timer::TestTimer,
     translator::TranslatorConfig,
 };
@@ -323,7 +323,7 @@ impl TestComponents {
 
         let (poster, poster_url) = if options.pre_loaded.is_some() {
             info!("Starting poster...");
-            let poster_config = PosterConfig {
+            let poster_config = ProposerConfig {
                 assertion_poster_contract_address: options.pre_loaded.as_ref().map_or(
                     Address::ZERO,
                     |version| match version {

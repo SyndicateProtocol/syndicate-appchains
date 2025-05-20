@@ -1,4 +1,4 @@
-//! The `config` module handles configuration parsing for the Syndicate poster.
+//! The `config` module handles configuration parsing for the Syndicate Proposer.
 
 use alloy::primitives::Address;
 use clap::Parser;
@@ -6,7 +6,7 @@ use shared::parse::{parse_address, parse_url};
 use std::{fmt::Debug, time::Duration};
 use url::Url;
 
-/// Configuration for the Syndicate Poster
+/// Configuration for the Syndicate Proposer
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Config {
@@ -23,19 +23,19 @@ pub struct Config {
     pub assertion_poster_contract_address: Address,
 
     /// Private key    
-    #[arg(short = 'k', long, env = "POSTER_PRIVATE_KEY")]
+    #[arg(short = 'k', long, env = "PROPOSER_PRIVATE_KEY")]
     pub private_key: String,
 
     /// The interval between each block polling
-    #[arg( long, env = "POSTER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
+    #[arg( long, env = "PROPOSER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
     pub polling_interval: Duration,
 
-    /// Port for Poster
-    #[arg(short = 'p', long, env = "POSTER_PORT", default_value_t = 8080)]
+    /// Port for Proposer
+    #[arg(short = 'p', long, env = "PROPOSER_PORT", default_value_t = 8080)]
     pub port: u16,
 
     /// Port for metrics
-    #[arg(short = 'm', long, env = "POSTER_METRICS_PORT", default_value_t = 9292)]
+    #[arg(short = 'm', long, env = "PROPOSER_METRICS_PORT", default_value_t = 9292)]
     pub metrics_port: u16,
 }
 

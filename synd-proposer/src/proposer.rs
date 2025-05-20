@@ -1,7 +1,7 @@
-//!  The `poster` polls information from the appchain on a `polling_interval` frequency and posts to
-//! the settlement chain
+//!  The `synd-proposer` polls information from the appchain on a `polling_interval` frequency and
+//! posts to the settlement chain
 
-use crate::{config::Config, metrics::PosterMetrics, types::NitroBlock};
+use crate::{config::Config, metrics::ProposerMetrics, types::NitroBlock};
 use alloy::{
     network::EthereumWallet,
     providers::{Provider as _, ProviderBuilder, RootProvider, WalletProvider as _},
@@ -24,15 +24,15 @@ use tokio::{net::TcpListener, task::JoinHandle};
 use tracing::{error, info};
 
 #[derive(Debug)]
-struct Poster {
+struct Proposer {
     appchain_provider: RootProvider,
     polling_interval: Duration,
     assertion_poster: AssertionPosterInstance<(), FilledProvider>,
-    metrics: PosterMetrics,
+    metrics: ProposerMetrics,
 }
 
-/// Starts the poster loop
-pub async fn run(config: Config, metrics: PosterMetrics) -> Result<()> {
+/// Starts the Proposer loop
+pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
     let appchain_provider =
         ProviderBuilder::default().connect(config.appchain_rpc_url.as_str()).await?;
     let signer = PrivateKeySigner::from_str(&config.private_key)
@@ -45,7 +45,7 @@ pub async fn run(config: Config, metrics: PosterMetrics) -> Result<()> {
     let assertion_poster =
         AssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);
 
-    let poster = Arc::new(Poster {
+    let proposer = Arc::new(Proposer {
         appchain_provider,
         polling_interval: config.polling_interval,
         assertion_poster,
@@ -53,15 +53,15 @@ pub async fn run(config: Config, metrics: PosterMetrics) -> Result<()> {
     });
 
     // Clone for both tasks
-    let poster_polling = Arc::clone(&poster);
-    let poster_http = Arc::clone(&poster);
+    let proposer_polling = Arc::clone(&proposer);
+    let proposer_http = Arc::clone(&proposer);
 
     // Start polling loop
     let polling_task: JoinHandle<Result<()>> =
-        tokio::spawn(async move { poster_polling.main_loop().await });
+        tokio::spawn(async move { proposer_polling.main_loop().await });
 
-    // Start HTTP server with /post endpoint
-    let app = Router::new().route("/post", post(post_assertion_handler)).with_state(poster_http);
+    // Start HTTP server with /post endpoint // TODO(SEQ-948)
+    let app = Router::new().route("/post", post(post_assertion_handler)).with_state(proposer_http);
     let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port)).await?;
 
     let server_task = tokio::spawn(async move {
@@ -75,8 +75,8 @@ pub async fn run(config: Config, metrics: PosterMetrics) -> Result<()> {
     Ok(())
 }
 
-async fn post_assertion_handler(State(poster): State<Arc<Poster>>) -> Response {
-    match poster.fetch_and_post().await {
+async fn post_assertion_handler(State(proposer): State<Arc<Proposer>>) -> Response {
+    match proposer.fetch_and_post().await {
         Ok(_) => (StatusCode::OK, "Assertion posted successfully").into_response(),
         Err(err) => {
             error!("Handler error: {:?}", err);
@@ -86,7 +86,7 @@ async fn post_assertion_handler(State(poster): State<Arc<Poster>>) -> Response {
     }
 }
 
-impl Poster {
+impl Proposer {
     async fn main_loop(&self) -> Result<()> {
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
@@ -122,10 +122,11 @@ impl Poster {
     }
 
     async fn fetch_and_post(&self) -> Result<()> {
+        // TODO (SEQ-948)
         match self.fetch_block().await {
             Ok(block) => {
                 if let Err(err) = self.post_assertion(block).await {
-                    error!("Failed to post assertion: {:?}", err);
+                    error!("Failed to post assertion: {:?}", err); // TODO (SEQ-948)
                 }
             }
             Err(err) => {

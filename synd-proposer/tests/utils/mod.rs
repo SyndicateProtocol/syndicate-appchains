@@ -1,4 +1,4 @@
-//! Utils for the poster integration tests
+//! Utils for the proposer integration tests
 
 use alloy::{
     network::EthereumWallet,

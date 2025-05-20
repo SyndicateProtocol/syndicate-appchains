@@ -1,11 +1,11 @@
-# Synd-Poster
+# Synd-Proposer
 
-The Syndicate Poster is responsible for extracting the appchain root state and submitting assertions to the settlement chain.
+The Syndicate Proposer is responsible for extracting the appchain root state and submitting assertions to the settlement chain.
 
 ## Example command
 
-Sample CLI invocation of the `synd-poster` profile:
+Sample CLI invocation of the `synd-proposer` profile:
 
 ```
-cargo run -p synd-poster --
+cargo run -p synd-proposer --
 ```

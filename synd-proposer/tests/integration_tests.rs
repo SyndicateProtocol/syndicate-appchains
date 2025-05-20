@@ -1,4 +1,4 @@
-//! Integration tests for the poster
+//! Integration tests for the Proposer
 pub mod utils;
 use alloy::{
     consensus::Transaction,
@@ -14,7 +14,7 @@ use eyre::Result;
 use jsonrpsee::types::ErrorObjectOwned;
 use prometheus_client::registry::Registry;
 use std::{str::FromStr, time::Duration};
-use synd_poster::{config::Config, metrics::PosterMetrics, poster, types::NitroBlock};
+use synd_proposer::{config::Config, metrics::ProposerMetrics, proposer, types::NitroBlock};
 use test_utils::{port_manager::PortManager, wait_until};
 use tokio::time::sleep;
 use url::Url;
@@ -25,7 +25,7 @@ fn init() {
 }
 
 #[tokio::test]
-async fn e2e_poster_test() -> Result<()> {
+async fn e2e_proposer_test() -> Result<()> {
     let set_port = PortManager::instance().next_port().await;
     let app_port = PortManager::instance().next_port().await;
     let poster_port = PortManager::instance().next_port().await;
@@ -61,9 +61,9 @@ async fn e2e_poster_test() -> Result<()> {
     };
 
     let mut registry = Registry::default();
-    let metrics = PosterMetrics::new(&mut registry);
+    let metrics = ProposerMetrics::new(&mut registry);
 
-    let _poster_handler = tokio::spawn(poster::run(config, metrics));
+    let _poster_handler = tokio::spawn(proposer::run(config, metrics));
     sleep(Duration::from_secs(1)).await;
 
     let block_option = set_provider.get_block_by_number(BlockNumberOrTag::Latest).full().await?;

@@ -3,5 +3,5 @@
 
 pub mod config;
 pub mod metrics;
-pub mod poster;
+pub mod proposer;
 pub mod types;
