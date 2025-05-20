@@ -22,8 +22,9 @@ pub fn test_path(prefix: &str) -> String {
     let location = panic::Location::caller();
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
     let thread_id = thread::current().id();
+    let process_id = std::process::id();
 
-    let input = format!("{}:{}:{:?}", location, timestamp, thread_id);
+    let input = format!("{}:{}:{}:{:?}", location, timestamp, process_id, thread_id);
     let hash = keccak256(input.as_bytes());
     let hash_hex = alloy::hex::encode(hash);
 
