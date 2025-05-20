@@ -21,7 +21,7 @@ Two SSDs (we use GCP NAS right now):
 Other:
 
 - Docker version 28+
-- Access to pull images from `us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup` or `ghcr.io/syndicateprotocol/metabased-rollup` registries
+- Access to pull images from `us-central1-docker.pkg.dev/metabased-testnet/images/syndicate-appchains` or `ghcr.io/syndicateprotocol/syndicate-appchains` registries
 - Access to `synd-batch-sequencer` json-rpc API, in order to forward `eth_sendRawTransaction` requests there
 
 ## Chain Config

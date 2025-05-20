@@ -2,7 +2,7 @@
 
 use crate::{
     config::ConfigError::RpcUrlInvalidAddress,
-    errors::ConfigError,
+    errors::{ConfigError, ConfigError::ParseConfig},
     redis::ttl::{waiting_txn::WAITING_TXN_TTL, wallet_nonce::WALLET_NONCE_TTL},
 };
 use alloy::{
@@ -14,7 +14,7 @@ use alloy::{
 };
 use clap::Parser;
 use std::{collections::HashMap, time::Duration};
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 /// Configuration for Maestro
 #[allow(clippy::doc_markdown)]
@@ -98,7 +98,7 @@ impl Config {
     }
 
     /// Validates the configuration
-    pub async fn validate(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
+    pub async fn validate(&self) -> Result<HashMap<ChainId, Option<RpcProvider>>, ConfigError> {
         // Skip validation if requested
         if self.skip_validation {
             debug!("Skipping config validation");
@@ -117,9 +117,9 @@ impl Config {
     }
 
     /// Checks that all RPC URLs are accessible by making a test connection. Return usable providers
-    async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
+    async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, Option<RpcProvider>>, ConfigError> {
         // Validate RPC URLs by trying to connect to each one
-        let mut provider_map: HashMap<ChainId, RpcProvider> = HashMap::new();
+        let mut provider_map: HashMap<ChainId, Option<RpcProvider>> = HashMap::new();
 
         if self.chain_rpc_urls.is_empty() {
             return Ok(provider_map)
@@ -127,9 +127,28 @@ impl Config {
 
         for (chain_id, url) in &self.chain_rpc_urls {
             debug!(%chain_id, %url, "Sending test JSON-RPC request");
+            let configured_chain_id = chain_id.parse().map_err(|e| {
+                error!(%chain_id, %url, %e, "Failed to parse chain_id");
+                ParseConfig(e)
+            })?;
 
-            let provider = ProviderBuilder::new().connect(url).await?;
-            let resp_chain_id = provider.get_chain_id().await?;
+            let provider = match ProviderBuilder::new().connect(url).await {
+                Ok(provider) => provider,
+                Err(e) => {
+                    warn!(%chain_id, %url, %e, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
+                    provider_map.insert(configured_chain_id, None);
+                    continue; // Skip to next iteration
+                }
+            };
+
+            let resp_chain_id = match provider.get_chain_id().await {
+                Ok(id) => id,
+                Err(e) => {
+                    error!(%e, %chain_id, %url, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
+                    provider_map.insert(configured_chain_id, None);
+                    continue; // Skip to next iteration
+                }
+            };
 
             if resp_chain_id.to_string() != *chain_id {
                 return Err(ConfigError::RpcUrlInvalidChainId(
@@ -138,8 +157,9 @@ impl Config {
                     resp_chain_id.to_string(),
                 ));
             }
-            debug!(%chain_id, %url, "Successful JSON-RPC request");
-            provider_map.insert(resp_chain_id, provider);
+
+            debug!(%chain_id, %url, "Successful JSON-RPC request to RPC provider");
+            provider_map.insert(resp_chain_id, Some(provider));
         }
         Ok(provider_map)
     }
