@@ -2,13 +2,13 @@
 
 This is a service that ingests L2 transaction data, organizes the data into slots, builds blocks from the slots, and mines the blocks and makes them available to rollup frameworks.
 
-It consists of a `common` crate and 2 component crates: `synd-slotter` and `synd-block-builder`. Additionally, the `synd-chain-ingestor` is a 
+It consists of a `common` crate and 2 component crates: `synd-slotter` and `synd-block-builder`. Additionally, the `synd-chain-ingestor` is a
 standalone binary that is also required.
 
 The `synd-mchain` server must be available at the `mchain` rpc url prior to starting the translator -
 see the provided `documentation/local/docker-compose.yml` file for more information.
 
-#### Mockchain configuration
+## Mockchain configuration
 
 The mockchain has chain id 84532 and a genesis timestamp of 0.
 
@@ -43,11 +43,11 @@ The rollup precompile is installed at 0x5FbDB2315678afecb367f032d93F642f64180aa3
    }
 }
 
-#### Rust configuration
+## Rust configuration
 
 Make sure you are using the nightly rust toolkit
 
-```
+```sh
 rustup install nightly
 rustup component add rustfmt --toolchain nightly
 ```
@@ -58,27 +58,27 @@ rustup component add rustfmt --toolchain nightly
 
 Run all tests:
 
-```
+```sh
 cargo test --all
 ```
 
 Run unit tests
 
-```
+```sh
 cargo test --lib
 ```
 
 ### Setup for integration tests
 
-Our integration tests pull a docker image from github which requires some authorization setup.
+Our integration tests pull a Docker image from github which requires some authorization setup.
 
 1. Make sure you have a Personal Access Token (PAT) on github with the `read:packagesDownload` permission
    - https://github.com/settings/tokens
    - Pro tip: Check under `~/.git-credentials` if you have one generated already
 
-2. Run the following commands to login to docker with the PAT
+2. Run the following commands to login to Docker with the PAT
 
-```
+```sh
 export CR_PAT="<GITHUB-PAT>"
 echo $CR_PAT | docker login ghcr.io -u <GH_USERNAME> --password-stdin
 ```
@@ -87,7 +87,8 @@ echo $CR_PAT | docker login ghcr.io -u <GH_USERNAME> --password-stdin
 
 Run
 
-```
+```sh
 cargo make print-sample-command
 ```
+
 to see the CLI options needed to run the binary executable, which utilizes the different component crates and dependencies

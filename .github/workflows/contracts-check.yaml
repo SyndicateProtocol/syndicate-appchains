@@ -1,5 +1,5 @@
 # This workflow runs our Foundry tests and contract checks on the smart contracts in both `synd-contracts/src` and `shared/arb-contracts`.
-# Whenever a change is made in those directories, this wf makes sure everything still builds, passes tests, and that our Rust bindings are up to date.
+# Whenever a change is made in those directories, this workflow makes sure everything still builds, passes tests, and that our Rust bindings are up to date.
 # Keeping the Rust bindings up to date makes sure your Rust code always knows how to talk to your smart contracts correctly.
 # https://github.com/foundry-rs/foundry
 

@@ -6,16 +6,11 @@ A Syndicate "Ingestor" is a necessary component for running Syndicate Appchain R
 
 Below are the _minimum_ hardware requirements to run a readonly RPC node.
 
-CPU/Memory:
+- CPU: 0.5 cores
+- Memory: 256 MB
+- Storage: 10 GB
 
-- CPU: 500m
-- Memory: 256Mi
-
-Storage:
-
-- 10Gi
-
-> This data grows over time depending on chain activity, so consider enabling dynamic resizing if available.
+> The disk usage grows over time depending on chain activity, so consider enabling dynamic resizing if available.
 
 Other:
 
@@ -25,6 +20,6 @@ Other:
 
 ## Docker Compose
 
-Run your ingestors in docker, using the provided `./docker/ingestor-docker-compose.yml` file. Replace all of the templated values. Some of the values come from Syndicate, others will be your own values.
+Run your ingestors in Docker, using the provided `./docker/ingestor-docker-compose.yml` file. Replace all of the templated values. Some of the values come from Syndicate, others will be your own values.
 
-After running that docker compose file, the container logs will track the ingesting progress and indicate when the websocket is ready to use.
+After running that Docker Compose file, the container logs will track the ingesting progress and indicate when the websocket is ready to use.
