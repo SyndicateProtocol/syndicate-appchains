@@ -181,7 +181,10 @@ where
             let ids: Vec<String> = entries.iter().map(|(id, _)| id.clone()).collect();
             match conn.xdel::<_, _, usize>(&stream_key, &ids).await {
                 Ok(count) => debug!(%stream_key, count, "Deleted processed entries"),
-                Err(e) => debug!(%stream_key, %e, "Failed to delete processed entries"),
+                Err(e) => {
+                    debug!(%stream_key, %e, "Failed to delete processed entries");
+                    continue
+                }
             }
 
             // Process each entry with the callback function
