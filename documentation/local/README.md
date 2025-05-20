@@ -10,7 +10,7 @@ There are several example chain configs in the provided `./config` directory.
 
 Run all of the components together in docker, using the provided `./docker-compose.yml` file. Replace all of the templated values.
 
-```
+```sh
 docker compose build
 docker compose --env-file config/[burrata/manchego/cheddar].env up
 ```
@@ -19,6 +19,6 @@ docker compose --env-file config/[burrata/manchego/cheddar].env up
 
 Run the following to stop and clean up docker compose resources.
 
-```
+```sh
 docker compose down -v
 ```
