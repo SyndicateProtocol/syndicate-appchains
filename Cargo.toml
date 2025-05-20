@@ -9,14 +9,14 @@ members = [
   "synd-chain-ingestor",
   "synd-maestro",
   "synd-mchain",
-  "synd-poster",
   "synd-translator/bin/synd-translator",
   "synd-translator/crates/common",
   "synd-translator/crates/metrics",
   "synd-translator/crates/synd-block-builder",
   "synd-translator/crates/synd-slotter",
   "synd-translator/tests",
-  "synd-verifier",
+  "synd-withdrawals/synd-appchain-verifier",
+  "synd-withdrawals/synd-poster",
   "test-framework",
 ]
 
