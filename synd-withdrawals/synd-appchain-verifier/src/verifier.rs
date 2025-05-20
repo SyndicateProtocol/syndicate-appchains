@@ -21,7 +21,6 @@ use synd_block_builder::appchains::{
     arbitrum::arbitrum_adapter::ArbitrumAdapter,
     shared::sequencing_transaction_parser::SequencingTransactionParser,
 };
-use tracing::info;
 
 /// The `Verifier` struct is responsible for verifying a batch of blocks and creating a new mchain
 /// block.
@@ -828,7 +827,6 @@ nonce: 0xc7faaf72b783de68u64.into(),                             base_fee_per_ga
         if let Err(e) = set_global_default_subscriber() {
             println!("Failed to set global default subscriber: {}", e);
         }
-        info!("Testing verify and create output success");
         let mut verifier = Verifier::new(&VerifierConfig::default());
         verifier.settlement_delay = 104_602_917;
         let seq_blocks_and_receipts = mock_arbitrum_input();
