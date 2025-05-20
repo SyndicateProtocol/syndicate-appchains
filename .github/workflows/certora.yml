@@ -38,7 +38,7 @@ jobs:
       matrix:
         rule:
           [
-            "SyndicateSequencerChain",
+            "SyndicateSequencingChain",
             "AllowlistSequencingModule",
             "AtomicSequencer",
             "AtomicSequencerImplementation",
