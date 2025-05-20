@@ -1,4 +1,5 @@
-# This workflow is run on every release. It builds and publishes all docker images to our container registry.
+# This workflow is run on every new release of the `Syndicate Appchains` stack. It builds and publishes all Docker images to our container registry.
+
 
 name: Publish Release Images
 
