@@ -33,7 +33,7 @@ struct Batcher {
     /// Whether compression is enabled
     compression_enabled: bool,
     /// The max batch size for the batcher
-    max_batch_size: u64,
+    max_batch_size: usize,
     /// The Redis consumer for the batcher
     redis_consumer: StreamConsumer,
     /// The sequencing contract provider for the batcher
@@ -115,7 +115,7 @@ impl Batcher {
     ) -> Self {
         Self {
             compression_enabled: config.compression_enabled,
-            max_batch_size: config.max_batch_size.as_u64(),
+            max_batch_size: config.max_batch_size.as_u64() as usize,
             redis_consumer,
             sequencing_contract_provider,
             chain_id: config.chain_id,
@@ -155,7 +155,7 @@ impl Batcher {
                     false => uncompressed_batch(&txs, tx_bytes),
                 };
 
-                if proposed_batch.len() as u64 > self.max_batch_size {
+                if proposed_batch.len() > self.max_batch_size {
                     // If the current txs vector is empty, that means the transaction we are trying
                     // to add is too large to fit in a single batch by itself.
                     // We need to discard it or this loop will get stuck trying

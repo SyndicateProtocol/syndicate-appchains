@@ -48,10 +48,9 @@ impl SequencingBatch {
 ///
 /// * `SequencingBatch::Uncompressed(Vec<Vec<u8>>)` - The uncompressed batch
 pub fn uncompressed_batch(txs: &[Bytes], tx: &Bytes) -> SequencingBatch {
-    SequencingBatch::Uncompressed(vec![
-        txs.iter().flat_map(|tx| tx.as_ref()).copied().collect(),
-        tx.as_ref().to_vec(),
-    ])
+    let mut final_tx_list: Vec<Vec<u8>> = txs.iter().map(|t| t.to_vec()).collect();
+    final_tx_list.push(tx.to_vec());
+    SequencingBatch::Uncompressed(final_tx_list)
 }
 
 /// Compresses a list of transactions along with a new transaction using zlib compression.
@@ -107,6 +106,28 @@ mod tests {
 
     fn sample_txn(data: &[u8]) -> Bytes {
         Bytes::from(data.to_vec())
+    }
+
+    #[test]
+    fn test_uncompressed_batch() {
+        let tx1 = sample_txn(&[1, 1, 1]);
+        let tx2 = sample_txn(&[2, 2, 2]);
+        let new_tx = sample_txn(&[3, 3, 3]);
+
+        let existing_txs = vec![tx1.clone(), tx2.clone()];
+
+        let batch = uncompressed_batch(&existing_txs, &new_tx);
+        match batch {
+            SequencingBatch::Uncompressed(uncompressed_data) => {
+                assert_eq!(uncompressed_data.len(), 3);
+                assert_eq!(uncompressed_data[0], tx1.to_vec());
+                assert_eq!(uncompressed_data[1], tx2.to_vec());
+                assert_eq!(uncompressed_data[2], new_tx.to_vec());
+            }
+            _ => {
+                panic!("Expected Uncompressed batch for this test");
+            }
+        }
     }
 
     #[test]
