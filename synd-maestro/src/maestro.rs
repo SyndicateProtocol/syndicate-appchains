@@ -7,10 +7,8 @@ use crate::{
         InternalErrorType::{
             Other, RpcFailedToFetchWalletNonce, RpcMissing, TransactionSubmissionFailed,
         },
-        MaestroError,
-        MaestroError::WaitingTransaction,
-        MaestroRpcError,
-        MaestroRpcError::{InternalError, JsonRpcError},
+        MaestroError::{self, WaitingTransaction},
+        MaestroRpcError::{self, InternalError, JsonRpcError},
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
     redis::{
@@ -19,30 +17,22 @@ use crate::{
             waiting_transaction::{WaitingGapTxnExt, WaitingTransactionId},
             wallet_nonce::WalletNonceExt,
         },
-        streams::producer::StreamProducer,
+        streams::producer::{CheckFinalizationResult, StreamProducer},
     },
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope},
     hex,
-    primitives::{Address, Bytes, ChainId, B256},
+    primitives::{keccak256, Address, Bytes, ChainId, B256},
     providers::Provider,
 };
 use redis::aio::MultiplexedConnection;
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
-    tx_validation::decode_transaction,
+    tx_validation::{check_signature, decode_transaction},
 };
-use std::{
-    cmp::Ordering,
-    collections::{HashMap, VecDeque},
-    sync::Arc,
-};
-use tokio::{
-    sync::Mutex,
-    task::JoinHandle,
-    time::{Instant, MissedTickBehavior},
-};
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 use tracing::{debug, error, trace, warn};
 
 /// The service for filtering and directing transactions
@@ -52,16 +42,8 @@ pub struct MaestroService {
     // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
-    rpc_providers: HashMap<ChainId, Option<RpcProvider>>,
+    rpc_providers: HashMap<ChainId, RpcProvider>,
     config: Config,
-}
-
-#[derive(Debug)]
-struct PendingTransaction {
-    tx: TxEnvelope,
-    raw_tx: Bytes,
-    chain_id: ChainId,
-    timestamp: Instant,
 }
 
 impl MaestroService {
@@ -74,35 +56,36 @@ impl MaestroService {
         if rpc_providers.is_empty() {
             warn!("No RPC providers configured. This is probably undesirable");
         }
-        let producers = Self::create_redis_producers(&redis_conn, &config, &rpc_providers);
-
-        Ok(Self {
+        let mut res = Self {
             redis_conn,
             chain_wallets: Mutex::new(HashMap::new()),
-            producers,
+            producers: HashMap::new(),
             rpc_providers,
             config,
-        })
+        };
+        res.create_redis_producers();
+
+        Ok(res)
     }
 
-    fn create_redis_producers(
-        redis_conn: &MultiplexedConnection,
-        config: &Config,
-        rpc_providers: &HashMap<ChainId, Option<RpcProvider>>,
-    ) -> HashMap<ChainId, Arc<StreamProducer>> {
-        let mut producers = HashMap::new();
-        for chain_id in rpc_providers.keys() {
-            producers.insert(
+    fn create_redis_producers(&mut self) {
+        for (chain_id, provider) in &self.rpc_providers {
+            let provider_clone = provider.clone();
+            self.producers.insert(
                 *chain_id,
                 Arc::new(StreamProducer::new(
-                    redis_conn.clone(),
+                    self.redis_conn.clone(),
                     *chain_id,
-                    config.prune_interval,
-                    config.prune_max_age,
+                    self.config.finalization_checker_interval,
+                    self.config.finalization_duration,
+                    move |raw_tx: &[u8]| {
+                        let provider = provider_clone.clone();
+                        let tx_data = raw_tx.to_vec();
+                        async move { Self::handle_finalization(tx_data, &provider).await }
+                    },
                 )),
             );
         }
-        producers
     }
 
     async fn get_chain_wallet_lock(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
@@ -113,9 +96,42 @@ impl MaestroService {
 
     /// Checks if a given `chain_id` has a corresponding [`RpcProvider`] configured
     pub fn get_rpc_provider(&self, chain_id: &ChainId) -> Result<&RpcProvider, MaestroRpcError> {
-        match self.rpc_providers.get(chain_id) {
-            None | Some(None) => Err(InternalError(RpcMissing(*chain_id))),
-            Some(Some(provider)) => Ok(provider),
+        self.rpc_providers
+            .get(chain_id)
+            .map_or_else(|| Err(InternalError(RpcMissing(*chain_id))), Ok)
+    }
+
+    async fn handle_finalization(
+        raw_tx: Vec<u8>,
+        provider: &RpcProvider,
+    ) -> CheckFinalizationResult {
+        let tx_hash = keccak256(raw_tx.clone());
+        match provider.get_transaction_receipt(tx_hash).await {
+            Ok(Some(_tx_receipt)) => CheckFinalizationResult::Done,
+            Ok(None) => {
+                // safe to unwrap because we know the tx is valid
+                #[allow(clippy::unwrap_used)]
+                let tx = decode_transaction(&Bytes::from(raw_tx)).unwrap();
+                #[allow(clippy::unwrap_used)]
+                let signer = check_signature(&tx).unwrap();
+
+                match provider.get_transaction_count(signer).await {
+                    Ok(nonce) => {
+                        if nonce == tx.nonce() {
+                            return CheckFinalizationResult::ReSubmit;
+                        }
+                        CheckFinalizationResult::Done
+                    }
+                    Err(err) => {
+                        error!(%tx_hash, %err, "Failed to query RPC for nonce during finalization check");
+                        CheckFinalizationResult::Done
+                    }
+                }
+            }
+            Err(err) => {
+                error!(%tx_hash, %err, "Failed to query RPC for transaction receipt during finalization check");
+                CheckFinalizationResult::Done
+            }
         }
     }
 
@@ -693,12 +709,11 @@ mod tests {
             chain_rpc_urls,
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
-            prune_interval: Duration::from_secs(1),
-            prune_max_age: Duration::from_secs(1),
             metrics_port: 8090,
             waiting_txn_ttl: Duration::from_secs(20), // shorter than default
             wallet_nonce_ttl: Duration::from_secs(3),
-            finalization_interval: Duration::from_secs(5 * 60),
+            finalization_duration: Duration::from_secs(10),
+            finalization_checker_interval: Duration::from_secs(1),
         };
 
         // Create service
@@ -1870,5 +1885,175 @@ mod tests {
                 .is_empty(),
             "Transaction with gap should still be in waiting gap"
         );
+    }
+
+    mod handle_finalization_tests {
+        use super::*; // Brings in outer test helpers and main module items
+        use crate::redis::streams::producer::CheckFinalizationResult;
+        use alloy::primitives::{keccak256, B256};
+        use serde_json::json;
+        use test_utils::transaction::create_legacy_transaction;
+        use wiremock::{matchers::body_partial_json, Mock, ResponseTemplate}; // method is already in scope via super::* if needed
+
+        const TEST_CHAIN_ID_U64: u64 = 4;
+        // Address corresponding to the private key used in `create_legacy_transaction`
+        const KNOWN_SIGNER_ADDRESS_STR: &str = "0x90f79bf6eb2c4f870365e785982e1f101e93b906";
+
+        async fn setup_mock_receipt_response(
+            server: &MockServer,
+            tx_hash: B256,
+            receipt_json: Option<serde_json::Value>, // None means result is null
+            is_rpc_error: bool,
+        ) {
+            let mock_builder = Mock::given(method("POST")).and(body_partial_json(json!({
+                "method": "eth_getTransactionReceipt",
+                "params": [format!("{:#x}", tx_hash)]
+            })));
+
+            if is_rpc_error {
+                mock_builder
+                    .respond_with(ResponseTemplate::new(500).set_body_json(json!({
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "error": {"code": -32000, "message": "Receipt RPC error"},
+                    })))
+                    .mount(server)
+                    .await;
+            } else {
+                match receipt_json {
+                    Some(data) => {
+                        mock_builder
+                            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                                "jsonrpc": "2.0",
+                                "id": 1,
+                                "result": data
+                            })))
+                            .mount(server)
+                            .await;
+                    }
+                    None => {
+                        // Ok(None) from provider.get_transaction_receipt
+                        mock_builder
+                            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                                "jsonrpc": "2.0",
+                                "id": 1,
+                                "result": null
+                            })))
+                            .mount(server)
+                            .await;
+                    }
+                }
+            }
+        }
+
+        // Using existing set_up_mock_transaction_count for success cases
+        // Adding a specific helper for error cases for getTransactionCount
+        async fn setup_mock_nonce_error_response(server: &MockServer, wallet_address_str: &str) {
+            Mock::given(method("POST"))
+                .and(body_partial_json(json!({
+                    "method": "eth_getTransactionCount",
+                    "params": [wallet_address_str, "latest"]
+                })))
+                .respond_with(ResponseTemplate::new(500).set_body_json(json!({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "error": {"code": -32000, "message": "Nonce RPC error"}
+                })))
+                .mount(server)
+                .await;
+        }
+
+        #[tokio::test]
+        async fn test_receipt_found() {
+            let (service, mock_server, _, _) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 10u64;
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            let mock_receipt_data =
+                json!({"status": "0x1", "transactionHash": format!("{:#x}", tx_hash)});
+            setup_mock_receipt_response(&mock_server, tx_hash, Some(mock_receipt_data), false)
+                .await;
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::Done);
+        }
+
+        #[tokio::test]
+        async fn test_receipt_not_found_nonce_matches_resubmit() {
+            let (service, mock_server, _, _) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 11u64;
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            // Decode the transaction to get the actual signer address.
+            // This is necessary because create_legacy_transaction might use a random signer,
+            // making KNOWN_SIGNER_ADDRESS_STR unreliable for this specific mock.
+            let tx_for_signer_derivation = decode_transaction(&raw_tx_bytes)
+                .expect("Test setup: Failed to decode transaction for signer derivation");
+            let actual_signer = check_signature(&tx_for_signer_derivation)
+                .expect("Test setup: Failed to derive signer from transaction");
+            // Format as 0x-prefixed lowercase hex, which is standard for RPC calls.
+            let actual_signer_hex = format!("{:#x}", actual_signer);
+
+            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
+                                                                                   // Use the dynamically derived signer address for the mock setup.
+            set_up_mock_transaction_count(&mock_server, &actual_signer_hex, tx_nonce).await;
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::ReSubmit);
+        }
+
+        #[tokio::test]
+        async fn test_receipt_not_found_nonce_differs_done() {
+            let (service, mock_server, _, _) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 12u64;
+            let rpc_nonce = 13u64; // Different from tx_nonce
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
+            set_up_mock_transaction_count(&mock_server, KNOWN_SIGNER_ADDRESS_STR, rpc_nonce).await; // Nonce differs
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::Done);
+        }
+
+        #[tokio::test]
+        async fn test_receipt_not_found_get_nonce_fails_done() {
+            let (service, mock_server, _, _) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 14u64;
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
+            setup_mock_nonce_error_response(&mock_server, KNOWN_SIGNER_ADDRESS_STR).await; // Nonce call fails
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::Done);
+        }
+
+        #[tokio::test]
+        async fn test_get_receipt_fails_done() {
+            let (service, mock_server, _, _) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 15u64;
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            setup_mock_receipt_response(&mock_server, tx_hash, None, true).await; // Receipt call fails
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::Done);
+        }
     }
 }

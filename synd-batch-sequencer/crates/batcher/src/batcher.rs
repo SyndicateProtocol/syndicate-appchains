@@ -269,7 +269,7 @@ impl Batcher {
 mod tests {
     use super::*;
     use prometheus_client::registry::Registry;
-    use synd_maestro::redis::streams::producer::StreamProducer;
+    use synd_maestro::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
     use test_utils::{docker::start_redis, wait_until};
     use url::Url;
 
@@ -302,8 +302,13 @@ mod tests {
             .unwrap();
         let chain_id = 1;
         let redis_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
-        let producer =
-            StreamProducer::new(conn, chain_id, Duration::from_secs(60), Duration::from_secs(60));
+        let producer = StreamProducer::new(
+            conn,
+            chain_id,
+            Duration::from_secs(60),
+            Duration::from_secs(60),
+            |_| async { CheckFinalizationResult::Done },
+        );
 
         let test_data1 = b"test transaction data 1".to_vec();
         producer.enqueue_transaction(&test_data1).await.unwrap();
@@ -379,6 +384,7 @@ mod tests {
             config.chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
+            |_| async { CheckFinalizationResult::Done },
         );
 
         // Add 100 test transactions of ~50KB each

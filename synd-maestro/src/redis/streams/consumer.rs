@@ -126,7 +126,7 @@ impl StreamConsumer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::redis::streams::producer::StreamProducer;
+    use crate::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
     use std::time::Duration;
     use test_utils::docker::start_redis;
 
@@ -152,6 +152,7 @@ mod tests {
             chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
+            |_| async { CheckFinalizationResult::Done },
         );
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
 
@@ -188,6 +189,7 @@ mod tests {
             chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
+            |_| async { CheckFinalizationResult::Done },
         );
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
 
