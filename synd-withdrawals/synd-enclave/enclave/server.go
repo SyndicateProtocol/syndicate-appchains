@@ -21,7 +21,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/hf/nitrite"
@@ -229,118 +228,66 @@ func (s *Server) SetSignerKey(ctx context.Context, encrypted hexutil.Bytes) erro
 	return nil
 }
 
-type Address string
-type Bytes string
-type U256 string
-type FixedBytes32 string
-
-type DelayedMessage struct {
-	Kind      uint8   `json:"kind"`
-	Sender    Address `json:"sender"`
-	Data      Bytes   `json:"data"`
-	BaseFeeL1 U256    `json:"base_fee_l1"`
-}
-
-type Slot struct {
-	SeqBlockNumber uint64       `json:"seq_block_number"`
-	SeqBlockHash   FixedBytes32 `json:"seq_block_hash"`
-	SetBlockNumber uint64       `json:"set_block_number"`
-	SetBlockHash   FixedBytes32 `json:"set_block_hash"`
-}
-
-type MBlock struct {
-	Timestamp uint64           `json:"timestamp"`
-	Slot      Slot             `json:"slot"`
-	Payload   *PayloadWithMsgs `json:"payload,omitempty"` // optional
-}
-
-type PayloadWithMsgs struct {
-	Batch    Bytes            `json:"0"` // Tuple field index
-	Messages []DelayedMessage `json:"1"`
-}
-
-type TEEInput struct {
-	TrustlessInput TrustlessInput
-	TrustedInput   TrustedInput
-}
-
-type TrustlessInput struct {
-	L1Blocks         []types.Block
-	SettlementBlocks []types.Block
-	SequenceBlocks   []types.Block
-	PreImageData     [][]byte
-}
-
-type TrustedInput struct {
-	AppchainConfigHash          common.Hash
-	AppchainStartBlockHash      common.Hash
-	AppchainDelayedMessagesHash common.Hash
-	SeqConfigHash               common.Hash
-	SeqStartBlockHash           common.Hash
-	SeqDelayedMessagesHash      common.Hash
-	SetStartBlockNumber         uint64
-	SetEndBlockNumber           uint64
-	SetEndBlockHash             common.Hash
-	L1StartBlockNumber          uint64
-	L1EndBlockNumber            uint64
-	L1EndBlockHash              common.Hash
-}
-
-type PendingAssertion struct {
-	// appchain
-	LastAppchainBlockHash             common.Hash
-	LastAppchainSendRoot              common.Hash
-	UnusedAppchainDelayedMessagesHash common.Hash
-	// sequencing chain
-	LastSequencingBlockHash      common.Hash
-	UnusedSeqDelayedMessagesHash common.Hash
-	// settlement
-	LastSettlementBlockHash common.Hash
-	// l1 chain
-	LastL1BlockHash common.Hash
-}
-
-type TEEOutput struct {
-	PendingAssertions PendingAssertion
-	Signature         []byte
-}
-
-func (s *Server) Verify(ctx context.Context) (TEEOutput, error) {
+func (s *Server) Verify(ctx context.Context, verifyInput TEEInput) (TEEOutput, error) {
 	// 1. Sequencing chain verification
 	// 2. Sequencing chain block builder
 	// 3. Appchain verification
-	verifyAppchainOutput, err := VerifyAppchain(ctx, config, sequencingChainInput, settlementChainInput, appchainConfigHash)
+	sequencingChainInput := SequencingChainInput{}
+	settlementChainInput := SettlementChainInput{}
+	verifyAppchainOutput, err := VerifyAppchain(ctx, verifyInput.Config.AppchainVerifierConfig, sequencingChainInput, settlementChainInput, verifyInput.TrustedInput.AppchainConfigHash)
 	if err != nil {
-		return "", fmt.Errorf("failed to verify appchain: %w", err)
+		return TEEOutput{}, fmt.Errorf("failed to verify appchain: %w", err)
 	}
+	log.Info("Appchain verification successful", "output", verifyAppchainOutput)
 
 	// 4. Appchain block builder
 
 	// 5. Sign & return
+	return TEEOutput{}, nil
 }
 
-func VerifyAppchain(ctx context.Context, config string, sequencingChainInput string, settlementChainInput string, appchainConfigHash string) (VerifyAppchainOutput, error) {
+func VerifyAppchain(ctx context.Context, config AppchainVerifierConfig, sequencingChainInput SequencingChainInput, settlementChainInput SettlementChainInput, appchainConfigHash common.Hash) (VerifyAppchainOutput, error) {
+	configJson, err := json.Marshal(config)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	sequencingChainInputJson, err := json.Marshal(sequencingChainInput)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
+	}
+
+	settlementChainInputJson, err := json.Marshal(settlementChainInput)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal settlement chain input: %w", err)
+	}
+
+	appchainConfigHashJson, err := json.Marshal(appchainConfigHash)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal appchain config hash: %w", err)
+	}
+
 	cmd := exec.Command("cargo", "run", "--bin", "synd-appchain-verifier", "--",
-		"--config", config,
-		"--sequencing-chain-input", sequencingChainInput,
-		"--settlement-chain-input", settlementChainInput,
-		"--appchain-config-hash", appchainConfigHash,
+		"--config", string(configJson),
+		"--sequencing-chain-input", string(sequencingChainInputJson),
+		"--settlement-chain-input", string(settlementChainInputJson),
+		"--appchain-config-hash", string(appchainConfigHashJson),
 	)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
 	}
 
 	lines := strings.Split(string(out), "\n")
-	mblockLine := lines[len(lines)-1]
+	outputLine := lines[len(lines)-1]
 
-	var mblock MBlock
-	if err := json.Unmarshal([]byte(mblockLine), &mblock); err != nil {
-		return "", fmt.Errorf("failed to unmarshal MBlock: %w. Raw: %s", err, mblockLine)
+	var output VerifyAppchainOutput
+	if err := json.Unmarshal([]byte(outputLine), &output); err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to unmarshal MBlock: %w. Raw: %s", err, outputLine)
 	}
 
-	fmt.Println(mblock)
-	return string(out), nil
+	fmt.Println(output)
 
+	return output, nil
 }

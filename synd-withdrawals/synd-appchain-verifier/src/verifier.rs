@@ -2,7 +2,7 @@
 //! new `mchain` block
 
 use crate::{
-    config::VerifierConfig,
+    config::AppchainVerifierConfig,
     errors::VerifierError,
     types::{
         DelayedMessageBlock, L1IncomingMessage, L1IncomingMessageHeader, SequencingChainInput,
@@ -34,7 +34,7 @@ pub struct Verifier {
 
 impl Verifier {
     /// Create a new `Verifier`
-    pub fn new(config: &VerifierConfig) -> Self {
+    pub fn new(config: &AppchainVerifierConfig) -> Self {
         Self {
             arbitrum_adapter: ArbitrumAdapter {
                 transaction_parser: SequencingTransactionParser::new(
@@ -803,21 +803,21 @@ nonce: 0xc7faaf72b783de68u64.into(),                             base_fee_per_ga
 
     #[tokio::test]
     async fn test_validate_receipts_arbitrum() {
-        let verifier = Verifier::new(&VerifierConfig::default());
+        let verifier = Verifier::new(&AppchainVerifierConfig::default());
         let input = mock_arbitrum_input();
         verifier.validate_receipts(&input.receipts, &input.blocks).unwrap();
     }
 
     #[tokio::test]
     async fn test_validate_receipts_optimism() {
-        let verifier = Verifier::new(&VerifierConfig::default());
+        let verifier = Verifier::new(&AppchainVerifierConfig::default());
         let input = mock_op_input();
         verifier.validate_receipts(&input.receipts, &input.blocks).unwrap();
     }
 
     #[tokio::test]
     async fn test_validate_receipts_ethereum() {
-        let verifier = Verifier::new(&VerifierConfig::default());
+        let verifier = Verifier::new(&AppchainVerifierConfig::default());
         let input = mock_ethereum_input();
         verifier.validate_receipts(&input.receipts, &input.blocks).unwrap();
     }
@@ -827,7 +827,7 @@ nonce: 0xc7faaf72b783de68u64.into(),                             base_fee_per_ga
         if let Err(e) = set_global_default_subscriber() {
             println!("Failed to set global default subscriber: {}", e);
         }
-        let mut verifier = Verifier::new(&VerifierConfig::default());
+        let mut verifier = Verifier::new(&AppchainVerifierConfig::default());
         verifier.settlement_delay = 104_602_917;
         let seq_blocks_and_receipts = mock_arbitrum_input();
         let seq_input = &SequencingChainInput {
@@ -863,7 +863,7 @@ nonce: 0xc7faaf72b783de68u64.into(),                             base_fee_per_ga
 
     #[tokio::test]
     async fn test_verify_and_create_output_failure() {
-        let mut verifier = Verifier::new(&VerifierConfig::default());
+        let mut verifier = Verifier::new(&AppchainVerifierConfig::default());
         verifier.settlement_delay = 104_602_917;
         let seq_blocks_and_receipts = mock_arbitrum_input();
         let seq_input = &SequencingChainInput {
@@ -904,7 +904,7 @@ nonce: 0xc7faaf72b783de68u64.into(),                             base_fee_per_ga
 
     #[tokio::test]
     async fn test_missing_settlement_block() {
-        let verifier = Verifier::new(&VerifierConfig::default());
+        let verifier = Verifier::new(&AppchainVerifierConfig::default());
         let seq_blocks_and_receipts = mock_arbitrum_input();
         let seq_input = &SequencingChainInput {
             blocks: seq_blocks_and_receipts.blocks,

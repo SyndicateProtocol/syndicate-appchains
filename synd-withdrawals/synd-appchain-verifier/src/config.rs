@@ -1,4 +1,4 @@
-//! Configuration for the verifier
+//! Configuration for the appchain verifier
 
 use alloy::primitives::{keccak256, Address, B256};
 use clap::Parser;
@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 /// Configuration for the verifier
 #[derive(Parser, Clone, Debug, Hash, Serialize, Deserialize)]
-pub struct VerifierConfig {
+pub struct AppchainVerifierConfig {
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "SEQUENCING_CONTRACT_ADDRESS",
         value_parser = parse_address, default_value = "0x0000000000000000000000000000000000000000")]
@@ -37,7 +37,7 @@ pub struct VerifierConfig {
     pub settlement_delay: u64,
 }
 
-impl VerifierConfig {
+impl AppchainVerifierConfig {
     /// Hash the verifier config
     #[allow(clippy::unwrap_used)]
     pub fn hash_verifier_config_sha256(&self) -> B256 {
@@ -46,7 +46,7 @@ impl VerifierConfig {
     }
 }
 
-impl Default for VerifierConfig {
+impl Default for AppchainVerifierConfig {
     fn default() -> Self {
         Self {
             sequencing_contract_address: Address::ZERO,
