@@ -74,6 +74,7 @@ pub mod r#storageslot;
 pub mod r#strings;
 pub mod r#syndicatefactory;
 pub mod r#syndicatesequencerchain;
+pub mod r#mockisallowedwithinvaliddata;
 pub mod r#syndicatesequencerchainwithdecayingpriority;
 pub mod r#syndicatestorage;
 pub mod r#syndicatetoken;
