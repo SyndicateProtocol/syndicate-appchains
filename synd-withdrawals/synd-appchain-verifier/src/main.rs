@@ -4,7 +4,7 @@ use clap::Parser;
 use eyre::Result;
 use shared::logger::set_global_default_subscriber;
 use synd_appchain_verifier::{
-    config::VerifierConfig,
+    config::AppchainVerifierConfig,
     types::{SequencingChainInput, SettlementChainInput, VerifierOutput},
     verifier::Verifier,
 };
@@ -54,7 +54,7 @@ fn run() -> Result<(Vec<VerifierOutput>, B256)> {
     let settlement_chain_input: SettlementChainInput =
         serde_json::from_str(&args.settlement_chain_input)?;
 
-    let config: VerifierConfig = serde_json::from_str(&args.config)?;
+    let config: AppchainVerifierConfig = serde_json::from_str(&args.config)?;
 
     // Verify config hash matches config
     if args.appchain_config_hash != config.hash_verifier_config_sha256().to_string() {
