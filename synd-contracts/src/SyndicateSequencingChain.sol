@@ -47,9 +47,10 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
             bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
-            if (!isAllowed) revert TransactionOrProposerNotAllowed();
-
-            emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
+            if (isAllowed) {
+                // only emit the event if the transaction is allowed
+                emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
+            }
         }
     }
 

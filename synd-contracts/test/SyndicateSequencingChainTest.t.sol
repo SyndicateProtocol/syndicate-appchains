@@ -6,6 +6,7 @@ import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 contract MockIsAllowed is IPermissionModule {
     bool allowed;
@@ -16,6 +17,12 @@ contract MockIsAllowed is IPermissionModule {
 
     function isAllowed(address, address, bytes calldata) external view override returns (bool) {
         return allowed;
+    }
+}
+
+contract MockIsAllowedWithInvalidData is IPermissionModule {
+    function isAllowed(address, address, bytes calldata data) external view override returns (bool) {
+        return keccak256(data) != keccak256(abi.encode("invalid"));
     }
 }
 
@@ -128,31 +135,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         new SyndicateSequencingChain(0);
     }
 
-    function testProcessBulkTransactionsWithMixedPermissions() public {
-        // Deploy a module we can directly control
-        DirectMockModule directMock = new DirectMockModule();
-
-        // Set up the chain with our custom module
-        vm.startPrank(admin);
-        chain.updateRequirementModule(address(directMock));
-        vm.stopPrank();
-
-        // Prepare test data
-        bytes[] memory mixedTxns = new bytes[](3);
-        mixedTxns[0] = abi.encode("transaction 1");
-        mixedTxns[1] = abi.encode("transaction 2");
-        mixedTxns[2] = abi.encode("transaction 3");
-
-        // Configure mock to allow the first transaction but not the second
-        directMock.setAllowed(mixedTxns[0], true);
-        directMock.setAllowed(mixedTxns[1], false);
-        // Don't set anything for the third tx since it won't reach it
-
-        // Now the test should revert with the right error
-        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
-        chain.processBulkTransactions(mixedTxns);
-    }
-
     function testProcessBulkTransactionsAllAllowed() public {
         // Deploy a module we can directly control
         DirectMockModule directMock = new DirectMockModule();
@@ -200,7 +182,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         directMock.setAllowed(failingTxns[0], true);
         directMock.setAllowed(failingTxns[1], false);
 
-        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
         chain.processBulkTransactions(failingTxns);
 
         // Part 2: Test the success branch
@@ -220,6 +201,44 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         }
 
         chain.processBulkTransactions(successTxns);
+    }
+
+    function testProcessBulkTransactionsOnlyEmitsValidTransactionsAsEvents() public {
+        vm.startPrank(admin);
+        SyndicateSequencingChain chainWithInvalidDataPermissionModule = new SyndicateSequencingChain(10042002);
+        chainWithInvalidDataPermissionModule.initialize(admin, address(new MockIsAllowedWithInvalidData()));
+        vm.stopPrank();
+
+        bytes[] memory txns = new bytes[](3);
+        txns[0] = abi.encode("valid");
+        txns[1] = abi.encode("invalid");
+        txns[2] = abi.encode("valid");
+
+        vm.recordLogs();
+        chainWithInvalidDataPermissionModule.processBulkTransactions(txns);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        bytes32 expectedSig = keccak256("TransactionProcessed(address,bytes)");
+
+        uint256 validEventCount = 0;
+        uint256 expectedValidEventCount = 2;
+
+        for (uint256 i = 0; i < logs.length; i++) {
+            Vm.Log memory log = logs[i];
+
+            if (log.topics.length > 0 && log.topics[0] == expectedSig) {
+                // Decode data to make sure it's not for the "invalid" txn
+                (, bytes memory emittedData) = abi.decode(log.data, (address, bytes));
+
+                if (keccak256(emittedData) == keccak256(abi.encodePacked(bytes1(0x00), abi.encode("invalid")))) {
+                    fail();
+                }
+
+                validEventCount++;
+            }
+        }
+
+        assertEq(validEventCount, expectedValidEventCount, "Wrong amount of valid transaction events emitted");
     }
 
     function testOnlyWhenAllowedModifierBranches() public {

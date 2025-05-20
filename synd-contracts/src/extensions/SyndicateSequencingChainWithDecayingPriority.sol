@@ -54,9 +54,11 @@ contract SyndicateSequencingChainWithDecayingPriority is SyndicateSequencingChai
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
             bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
-            if (!isAllowed) revert TransactionOrProposerNotAllowed();
-
-            emit TransactionProcessed(msg.sender, prependZeroByte(data[i]), priorities[i], block.timestamp); //#olympix-ignore-external-call-potential-out-of-gas
+            if (isAllowed) {
+                // only emit the event if the transaction is allowed
+                //#olympix-ignore-external-call-potential-out-of-gas
+                emit TransactionProcessed(msg.sender, prependZeroByte(data[i]), priorities[i], block.timestamp);
+            }
         }
     }
 
