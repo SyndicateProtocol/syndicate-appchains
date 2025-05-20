@@ -1,0 +1,29 @@
+services:
+
+  settlement:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:{{ image_tag }}
+    container_name: settlement_ingestor
+    environment:
+      - RUST_LOG=warn
+      - PORT=8080
+      - DB_FILE=/datadir/ingestor.db
+      - START_BLOCK={{ settlement_start_block }}
+      - RPC_URL={{ settlement_chain_wss }}
+    ports:
+      - "8080"
+    volumes:
+      - {{ settlement_data_mount_point }}:/datadir
+
+  sequencing:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:{{ image_tag }}
+    container_name: sequencing_ingestor
+    environment:
+      - RUST_LOG=warn
+      - PORT=8080
+      - DB_FILE=/datadir/ingestor.db
+      - START_BLOCK={{ sequencing_start_block }}
+      - RPC_URL={{ sequencing_chain_wss }}
+    ports:
+      - "8080"
+    volumes:
+      - {{ sequencing_data_mount_point }}:/datadir
