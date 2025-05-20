@@ -339,7 +339,7 @@ impl TestComponents {
             (
                 Some(
                     start_component(
-                        "synd-poster",
+                        "synd-proposer",
                         poster_config.metrics_port,
                         poster_config.cli_args(),
                         Default::default(),

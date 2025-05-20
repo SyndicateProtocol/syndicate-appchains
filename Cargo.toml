@@ -8,7 +8,7 @@ members = [
   "synd-chain-ingestor",
   "synd-maestro",
   "synd-mchain",
-  "synd-poster",
+  "synd-proposer",
   "synd-translator/bin/synd-translator",
   "synd-translator/crates/common",
   "synd-translator/crates/metrics",

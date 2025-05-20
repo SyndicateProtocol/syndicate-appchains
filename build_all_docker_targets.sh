@@ -5,7 +5,7 @@ set -e # Exit immediately if a command exits with a non-zero status.
 # Format: "stage_name:image_tag"
 targets=(
     "synd-translator:synd-translator:latest"
-    "synd-poster:synd-poster:latest"
+    "synd-proposer:synd-proposer:latest"
     "synd-maestro:synd-maestro:latest"
     "synd-batch-sequencer:synd-batch-sequencer:latest"
     "synd-mchain:synd-mchain:latest"

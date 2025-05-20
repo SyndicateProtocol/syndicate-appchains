@@ -48,11 +48,11 @@ ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
 LABEL service=synd-translator
 
-FROM runtime-base AS synd-poster
+FROM runtime-base AS synd-proposer
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/synd-poster /usr/local/bin/synd-poster
-ENTRYPOINT ["/usr/local/bin/synd-poster"]
-LABEL service=synd-poster
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-proposer /usr/local/bin/synd-proposer
+ENTRYPOINT ["/usr/local/bin/synd-proposer"]
+LABEL service=synd-proposer
 
 FROM runtime-base AS synd-maestro
 ARG BUILD_PROFILE
