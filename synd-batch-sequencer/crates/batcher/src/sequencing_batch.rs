@@ -7,6 +7,53 @@ use rlp::RlpStream;
 use shared::zlib_compression::is_valid_cm_bits_8_only;
 use std::io::{Error, Write};
 
+/// A batch of transactions.
+#[derive(Debug, Clone)]
+pub enum SequencingBatch {
+    /// A batch of zlib compressed transactions.
+    Compressed(Vec<u8>),
+    /// A batch of uncompressed transactions.
+    Uncompressed(Vec<Vec<u8>>),
+}
+
+impl SequencingBatch {
+    /// Returns the length of the batch.
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Compressed(batch) => batch.len(),
+            Self::Uncompressed(batch) => batch.iter().map(|tx| tx.len()).sum(),
+        }
+    }
+
+    /// Returns true if the batch is empty.
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Compressed(batch) => batch.is_empty(),
+            Self::Uncompressed(batch) => batch.is_empty(),
+        }
+    }
+}
+
+/// Creates an uncompressed batch from a list of transactions and a new transaction.
+///
+/// This function takes an existing list of transactions and a new transaction, combines them
+/// into an RLP-encoded list, and returns the result as a vector of vectors of bytes.
+///
+/// # Arguments
+///
+/// * `txs` - A slice of existing transactions to be included in the batch
+/// * `tx` - A new transaction to be appended to the list
+///
+/// # Returns
+///
+/// * `SequencingBatch::Uncompressed(Vec<Vec<u8>>)` - The uncompressed batch
+pub fn uncompressed_batch(txs: &[Bytes], tx: &Bytes) -> SequencingBatch {
+    SequencingBatch::Uncompressed(vec![
+        txs.iter().flat_map(|tx| tx.as_ref()).copied().collect(),
+        tx.as_ref().to_vec(),
+    ])
+}
+
 /// Compresses a list of transactions along with a new transaction using zlib compression.
 ///
 /// This function takes an existing list of transactions and a new transaction, combines them
@@ -28,13 +75,13 @@ use std::io::{Error, Write};
 ///
 /// ```
 /// use alloy::primitives::Bytes;
-/// use batcher::batch_compression::compress_batch;
+/// use batcher::sequencing_batch::compress_batch;
 ///
 /// let existing_txs = [Bytes::from(vec![1, 2, 3])];
 /// let new_tx = Bytes::from(vec![4, 5, 6]);
 /// let compressed = compress_batch(&existing_txs, &new_tx).unwrap();
 /// ```
-pub fn compress_batch(txs: &[Bytes], tx: &Bytes) -> Result<Vec<u8>, Error> {
+pub fn compress_batch(txs: &[Bytes], tx: &Bytes) -> Result<SequencingBatch, Error> {
     let mut stream = RlpStream::new_list(txs.len() + 1);
     for t in txs {
         stream.append(&t.as_ref());
@@ -47,7 +94,7 @@ pub fn compress_batch(txs: &[Bytes], tx: &Bytes) -> Result<Vec<u8>, Error> {
 
     is_valid_cm_bits_8_only(&compressed)?;
 
-    Ok(compressed)
+    Ok(SequencingBatch::Compressed(compressed))
 }
 
 #[cfg(test)]
@@ -67,6 +114,10 @@ mod tests {
         let txn = sample_txn(&[0x10, 0x20, 0x30]);
         let compressed = compress_batch(&[], &txn).unwrap();
         assert!(!compressed.is_empty());
+        let compressed = match compressed {
+            SequencingBatch::Compressed(compressed) => compressed,
+            SequencingBatch::Uncompressed(_) => panic!("Expected compressed batch"),
+        };
 
         // Decompress and decode
         let mut decoder = ZlibDecoder::new(&compressed[..]);
@@ -85,6 +136,11 @@ mod tests {
 
         let compressed = compress_batch(&txns[..1], &txns[1]).unwrap();
         assert!(!compressed.is_empty());
+
+        let compressed = match compressed {
+            SequencingBatch::Compressed(compressed) => compressed,
+            SequencingBatch::Uncompressed(_) => panic!("Expected compressed batch"),
+        };
 
         // Decompress and check the RLP list
         let mut decoder = ZlibDecoder::new(&compressed[..]);
@@ -113,7 +169,11 @@ mod tests {
             sample_txn(&[0x01, 0x02, 0x03, 0x04]),
         ];
 
-        let compressed = compress_batch(&txns[..2], &txns[2]).unwrap();
+        let batch = compress_batch(&txns[..2], &txns[2]).unwrap();
+        let compressed = match batch {
+            SequencingBatch::Compressed(compressed) => compressed,
+            SequencingBatch::Uncompressed(_) => panic!("Expected compressed batch"),
+        };
         let mut decoder = ZlibDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
         decoder.read_to_end(&mut decompressed).unwrap();

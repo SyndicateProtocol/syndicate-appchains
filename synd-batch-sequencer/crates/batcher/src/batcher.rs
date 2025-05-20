@@ -1,6 +1,10 @@
 //! The Batcher service for the sequencer.
 
-use crate::{batch_compression::compress_batch, config::BatcherConfig, metrics::BatcherMetrics};
+use crate::{
+    config::BatcherConfig,
+    metrics::BatcherMetrics,
+    sequencing_batch::{compress_batch, uncompressed_batch, SequencingBatch},
+};
 use alloy::{
     network::EthereumWallet,
     primitives::{keccak256, Address, Bytes},
@@ -22,28 +26,6 @@ use synd_maestro::redis::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
 
-#[derive(Debug, Clone)]
-enum SequencingBatch {
-    Compressed(Vec<u8>),
-    Uncompressed(Vec<Vec<u8>>),
-}
-
-impl SequencingBatch {
-    fn len(&self) -> usize {
-        match self {
-            Self::Compressed(batch) => batch.len(),
-            Self::Uncompressed(batch) => batch.iter().map(|tx| tx.len()).sum(),
-        }
-    }
-
-    fn is_empty(&self) -> bool {
-        match self {
-            Self::Compressed(batch) => batch.is_empty(),
-            Self::Uncompressed(batch) => batch.is_empty(),
-        }
-    }
-}
-
 /// Batcher service
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -51,11 +33,11 @@ struct Batcher {
     /// Whether compression is enabled
     compression_enabled: bool,
     /// The max batch size for the batcher
-    max_batch_size: byte_unit::Byte,
+    max_batch_size: u64,
     /// The Redis consumer for the batcher
     redis_consumer: StreamConsumer,
-    /// The sequencing contract for the batcher
-    sequencing_contract: SyndicateSequencerChainInstance<(), FilledProvider>,
+    /// The sequencing contract provider for the batcher
+    sequencing_contract_provider: SyndicateSequencerChainInstance<(), FilledProvider>,
     /// The chain ID for the batcher
     chain_id: u64,
     /// The timeout for the batcher
@@ -92,10 +74,10 @@ pub async fn run_batcher(
     })?;
     let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
 
-    let sequencing_contract =
-        create_sequencing_contract(config, sequencing_contract_address).await?;
+    let sequencing_contract_provider =
+        create_sequencing_contract_provider(config, sequencing_contract_address).await?;
 
-    let mut batcher = Batcher::new(config, redis_consumer, sequencing_contract, metrics);
+    let mut batcher = Batcher::new(config, redis_consumer, sequencing_contract_provider, metrics);
 
     let handle = tokio::spawn({
         async move {
@@ -111,7 +93,7 @@ pub async fn run_batcher(
     Ok(handle)
 }
 
-async fn create_sequencing_contract(
+async fn create_sequencing_contract_provider(
     config: &BatcherConfig,
     sequencing_contract_address: Address,
 ) -> Result<SyndicateSequencerChainInstance<(), FilledProvider>, TransportError> {
@@ -124,22 +106,18 @@ async fn create_sequencing_contract(
     Ok(SyndicateSequencerChainInstance::new(sequencing_contract_address, sequencer_provider))
 }
 
-fn uncompressed_batch(txs: &[Bytes], tx: &Bytes) -> Vec<Vec<u8>> {
-    vec![txs.iter().flat_map(|tx| tx.as_ref()).copied().collect(), tx.as_ref().to_vec()]
-}
-
 impl Batcher {
     const fn new(
         config: &BatcherConfig,
         redis_consumer: StreamConsumer,
-        sequencing_contract: SyndicateSequencerChainInstance<(), FilledProvider>,
+        sequencing_contract_provider: SyndicateSequencerChainInstance<(), FilledProvider>,
         metrics: BatcherMetrics,
     ) -> Self {
         Self {
             compression_enabled: config.compression_enabled,
-            max_batch_size: config.max_batch_size,
+            max_batch_size: config.max_batch_size.as_u64(),
             redis_consumer,
-            sequencing_contract,
+            sequencing_contract_provider,
             chain_id: config.chain_id,
             timeout: config.timeout,
             metrics,
@@ -172,18 +150,19 @@ impl Batcher {
 
             // Process transactions until one doesn't fit
             while let Some(tx_bytes) = pending_txs.front() {
-                let proposed_batch = if self.compression_enabled {
-                    SequencingBatch::Compressed(compress_batch(&txs, tx_bytes)?)
-                } else {
-                    SequencingBatch::Uncompressed(uncompressed_batch(&txs, tx_bytes))
+                let proposed_batch = match self.compression_enabled {
+                    true => compress_batch(&txs, tx_bytes)?,
+                    false => uncompressed_batch(&txs, tx_bytes),
                 };
 
-                if proposed_batch.len() as u64 > self.max_batch_size.as_u64() {
-                    // If we are over the limit with just 1 tx, we need to throw the tx away
-                    // otherwise we will loop forever
+                if proposed_batch.len() as u64 > self.max_batch_size {
+                    // If the current txs vector is empty, that means the transaction we are trying
+                    // to add is too large to fit in a single batch by itself.
+                    // We need to discard it or this loop will get stuck trying
+                    // to add the same transaction over and over.
                     if txs.is_empty() {
                         let bad_tx = pending_txs.pop_front().unwrap_or_default();
-                        error!(%self.chain_id, "Transaction is too large to fit in the batch. Discarding. Tx hash: {}", keccak256(bad_tx));
+                        error!(%self.chain_id, tx_hash=%keccak256(bad_tx), "Transaction is too large to fit in the batch. Discarding");
                         continue;
                     }
 
@@ -195,9 +174,7 @@ impl Batcher {
 
                 uncompressed_size += tx_bytes.len();
                 debug!(
-                    %self.chain_id, "Adding transaction to batch: {:?} - batch size: {}",
-                    tx_bytes,
-                    proposed_batch.len()
+                    %self.chain_id, ?tx_bytes, batch_size = %proposed_batch.len(), "Adding transaction to batch",
                 );
                 batch = proposed_batch;
                 if let Some(tx) = pending_txs.pop_front() {
@@ -236,23 +213,24 @@ impl Batcher {
             %self.chain_id, "Batch sent - size: {} bytes",
             batch.len()
         );
-        let result = match batch {
+
+        let _ = match batch {
             SequencingBatch::Compressed(batch) => {
-                self.sequencing_contract.processTransactionRaw(Bytes::from(batch)).send().await
+                self.sequencing_contract_provider
+                    .processTransactionRaw(Bytes::from(batch))
+                    .send()
+                    .await
             }
             SequencingBatch::Uncompressed(batch) => {
-                self.sequencing_contract
+                self.sequencing_contract_provider
                     .processBulkTransactions(
                         batch.iter().map(|tx| Bytes::from(tx.clone())).collect(),
                     )
                     .send()
                     .await
             }
-        };
-        info!("Batch sent result: {:?}", result);
-        if let Err(e) = result {
-            return Err(BatchError::SendBatchFailed(e.to_string()));
         }
+        .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
 
         Ok(())
     }

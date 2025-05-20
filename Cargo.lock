@@ -1175,7 +1175,6 @@ dependencies = [
  "prometheus-client",
  "redis",
  "rlp 0.6.1",
- "serde_json",
  "shared",
  "synd-maestro",
  "test-utils",
