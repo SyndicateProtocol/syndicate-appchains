@@ -88,7 +88,7 @@ mod tests {
     // Avoid having to spin up unique Redis containers this way
     #[tokio::test]
     async fn test_cache() -> Result<(), eyre::Error> {
-        let (conn, redis_url, redis) = init_redis_and_get_connection().await;
+        let (conn, redis_url, _redis) = init_redis_and_get_connection().await;
         println!("redis url is {}", redis_url);
 
         test_set_get_wallet_nonce(conn.clone()).await;
@@ -99,8 +99,6 @@ mod tests {
         test_multiple_chains_independence(conn.clone()).await;
         test_high_load_scenario(conn.clone()).await;
         test_parallel_operations(redis_url.clone()).await;
-
-        drop(redis);
 
         Ok(())
     }

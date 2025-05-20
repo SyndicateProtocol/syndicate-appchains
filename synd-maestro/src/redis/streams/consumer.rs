@@ -156,7 +156,7 @@ mod tests {
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
 
         // Send transaction
-        producer.enqueue_transaction(test_data.clone()).await.unwrap();
+        producer.enqueue_transaction(&test_data).await.unwrap();
 
         // Receive and verify
         let received = consumer.recv(1, Duration::from_secs(1)).await.unwrap();
@@ -192,8 +192,8 @@ mod tests {
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
 
         // Send transactions
-        producer.enqueue_transaction(test_data1.clone()).await.unwrap();
-        producer.enqueue_transaction(test_data2.clone()).await.unwrap();
+        producer.enqueue_transaction(&test_data1).await.unwrap();
+        producer.enqueue_transaction(&test_data2).await.unwrap();
 
         // Receive and verify
         let received = consumer.recv(2, Duration::from_secs(1)).await.unwrap();

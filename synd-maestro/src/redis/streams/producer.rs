@@ -95,7 +95,7 @@ impl StreamProducer {
     /// * Redis connection fails
     /// * Stream write operation fails
     /// * Connection is dropped
-    pub async fn enqueue_transaction(&self, raw_tx: Vec<u8>) -> Result<String, RedisError> {
+    pub async fn enqueue_transaction(&self, raw_tx: &[u8]) -> Result<String, RedisError> {
         let id: String = self.conn.clone().xadd(&self.stream_key, "*", &[("data", raw_tx)]).await?;
         debug!(%self.stream_key, %id, "Enqueued transaction");
         Ok(id)

@@ -73,6 +73,11 @@ pub struct Config {
     #[arg(long, env = "WALLET_NONCE_TTL", default_value = WALLET_NONCE_TTL,
     value_parser = humantime::parse_duration)]
     pub wallet_nonce_ttl: Duration,
+
+    /// Interval at which to check for transaction finalization
+    #[arg(long, env = "FINALIZATION_INTERVAL", default_value = "5m",
+    value_parser = humantime::parse_duration)]
+    pub finalization_interval: Duration,
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
@@ -178,6 +183,7 @@ impl Default for Config {
             prune_max_age: Duration::from_secs(60 * 60 * 24),
             waiting_txn_ttl: Default::default(),
             wallet_nonce_ttl: Default::default(),
+            finalization_interval: Duration::from_secs(5 * 60),
         }
     }
 }

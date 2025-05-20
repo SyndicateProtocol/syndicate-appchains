@@ -306,7 +306,7 @@ mod tests {
             StreamProducer::new(conn, chain_id, Duration::from_secs(60), Duration::from_secs(60));
 
         let test_data1 = b"test transaction data 1".to_vec();
-        producer.enqueue_transaction(test_data1.clone()).await.unwrap();
+        producer.enqueue_transaction(&test_data1).await.unwrap();
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
         let mut batcher = Batcher::new(&config, redis_consumer, create_noop_sender(), metrics);
@@ -390,7 +390,7 @@ mod tests {
         }
         test_data.truncate(50 * 1024); // Ensure exact 50KB
         for _ in 0..100 {
-            producer.enqueue_transaction(test_data.clone()).await.unwrap();
+            producer.enqueue_transaction(&test_data).await.unwrap();
         }
 
         let mut registry = Registry::default();

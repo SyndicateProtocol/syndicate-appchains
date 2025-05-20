@@ -68,6 +68,7 @@ mod tests {
             prune_max_age: Duration::from_secs(60 * 60 * 24),
             waiting_txn_ttl: Duration::from_secs(20), // shorter than default
             wallet_nonce_ttl: Duration::from_secs(3),
+            finalization_interval: Duration::from_secs(5 * 60),
         };
 
         // Start the actual Maestro server with our mocked config

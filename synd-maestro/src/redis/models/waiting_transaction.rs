@@ -121,7 +121,7 @@ mod tests {
     // Avoid having to spin up unique Redis containers this way
     #[tokio::test]
     async fn test_cache() -> Result<(), eyre::Error> {
-        let (conn, _, redis) = init_redis_and_get_connection().await;
+        let (conn, _, _redis) = init_redis_and_get_connection().await;
 
         test_set_get_waiting_txn(conn.clone()).await;
         test_del_waiting_txn_key(conn.clone()).await;
@@ -132,8 +132,6 @@ mod tests {
         test_delete_nonexistent_key(conn.clone()).await;
         test_waiting_txn_expiration(conn.clone()).await;
         test_del_multiple_waiting_txn_key(conn.clone()).await;
-
-        drop(redis);
 
         Ok(())
     }

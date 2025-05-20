@@ -4872,6 +4872,7 @@ dependencies = [
  "bytes",
  "clap",
  "ctor",
+ "derivative",
  "eyre",
  "futures-util",
  "http",
