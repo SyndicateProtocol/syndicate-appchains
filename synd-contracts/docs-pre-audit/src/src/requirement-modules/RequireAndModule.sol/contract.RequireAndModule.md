@@ -1,0 +1,164 @@
+# RequireAndModule
+
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/7027a63d41514909f85c2d3245a5d979fd2c367a/src/requirement-modules/RequireAndModule.sol)
+
+**Inherits:**
+[IRequirementModule](/src/interfaces/IRequirementModule.sol/interface.IRequirementModule.md), Ownable
+
+A module that requires all checks to pass for both proposers, originator and calldata
+
+_This contract maintains a linked lists_
+
+## State Variables
+
+### permissionChecks
+
+List of permission checks addresses
+
+```solidity
+AddressStructuredLinkedList.List private permissionChecks;
+```
+
+## Functions
+
+### constructor
+
+Initializes the contract with an admin address
+
+```solidity
+constructor(address admin) Ownable(admin);
+```
+
+**Parameters**
+
+| Name    | Type      | Description                                        |
+| ------- | --------- | -------------------------------------------------- |
+| `admin` | `address` | The address of the admin who can add/remove checks |
+
+### isAllowed
+
+Checks if a proposer is allowed to submit a transaction
+
+_Runs through all proposer permission checks in the linked list_
+
+```solidity
+function isAllowed(address proposer, address originator, bytes calldata data) external view override returns (bool);
+```
+
+**Parameters**
+
+| Name         | Type      | Description                                                                         |
+| ------------ | --------- | ----------------------------------------------------------------------------------- |
+| `proposer`   | `address` | The address of the proposer to check                                                |
+| `originator` | `address` | The address of tx.origin. Useful to know the sender originator in wrapper contracts |
+| `data`       | `bytes`   | The calldata to be checked                                                          |
+
+**Returns**
+
+| Name     | Type   | Description                                               |
+| -------- | ------ | --------------------------------------------------------- |
+| `<none>` | `bool` | True if the proposer passes all checks, reverts otherwise |
+
+### addPermissionCheck
+
+Adds permission check address to the list
+
+_Can add to either the head or the tail of the list_
+
+```solidity
+function addPermissionCheck(address _address, bool addToHead) external onlyOwner;
+```
+
+**Parameters**
+
+| Name        | Type      | Description                                                   |
+| ----------- | --------- | ------------------------------------------------------------- |
+| `_address`  | `address` | The address of the check to add                               |
+| `addToHead` | `bool`    | True to add to the head of the list, false to add to the tail |
+
+### removePermissionCheck
+
+Removes permission check address from the list
+
+```solidity
+function removePermissionCheck(address _address) external onlyOwner;
+```
+
+**Parameters**
+
+| Name       | Type      | Description                        |
+| ---------- | --------- | ---------------------------------- |
+| `_address` | `address` | The address of the check to remove |
+
+### getAllPermissionChecks
+
+Gets all permission check addresses
+
+```solidity
+function getAllPermissionChecks() external view returns (address[] memory);
+```
+
+**Returns**
+
+| Name     | Type        | Description                                |
+| -------- | ----------- | ------------------------------------------ |
+| `<none>` | `address[]` | An array of all permission check addresses |
+
+## Events
+
+### PermissionCheckAdded
+
+Emitted when a permission check is added
+
+```solidity
+event PermissionCheckAdded(address indexed check);
+```
+
+### PermissionCheckRemoved
+
+Emitted when a permission check is removed
+
+```solidity
+event PermissionCheckRemoved(address indexed check);
+```
+
+## Errors
+
+### CheckFailed
+
+Thrown when a permission check fails
+
+```solidity
+error CheckFailed(address requireAddress, address proposer);
+```
+
+**Parameters**
+
+| Name             | Type      | Description                          |
+| ---------------- | --------- | ------------------------------------ |
+| `requireAddress` | `address` | The address of the check that failed |
+| `proposer`       | `address` | The address of the proposer          |
+
+### InvalidAddress
+
+Thrown when an invalid address is provided
+
+```solidity
+error InvalidAddress();
+```
+
+### AddressAlreadyExists
+
+Thrown when attempting to add an address that already exists
+
+```solidity
+error AddressAlreadyExists();
+```
+
+### AddressDoesNotExist
+
+Thrown when attempting to remove an address that doesn't exist
+
+```solidity
+error AddressDoesNotExist();
+```

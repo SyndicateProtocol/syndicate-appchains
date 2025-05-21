@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequencer/AtomicSequencer.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
 contract MockIsAllowed is IPermissionModule {
@@ -23,7 +23,7 @@ contract AtomicSequencerTest is Test {
     AtomicSequencer public atomicSequencer;
     SyndicateSequencingChain public chainA;
     SyndicateSequencingChain public chainB;
-    RequireAllModule public permissionModule;
+    RequireAndModule public permissionModule;
     address public admin;
     address public originalCaller;
 
@@ -32,14 +32,14 @@ contract AtomicSequencerTest is Test {
     function setUp() public {
         admin = address(0x1);
         originalCaller = address(0x2);
-        uint256 appChainIdA = 10042001;
-        uint256 appChainIdB = 10042002;
+        uint256 appchainIdA = 10042001;
+        uint256 appchainIdB = 10042002;
 
         vm.startPrank(admin);
-        permissionModule = new RequireAllModule(admin);
-        chainA = new SyndicateSequencingChain(appChainIdA);
+        permissionModule = new RequireAndModule(admin);
+        chainA = new SyndicateSequencingChain(appchainIdA);
         chainA.initialize(admin, address(permissionModule));
-        chainB = new SyndicateSequencingChain(appChainIdB);
+        chainB = new SyndicateSequencingChain(appchainIdB);
         chainB.initialize(admin, address(permissionModule));
         atomicSequencer = new AtomicSequencer();
         permissionModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
@@ -88,7 +88,7 @@ contract AtomicSequencerTest is Test {
         allTxns[1] = txnsB;
 
         bytes memory callData =
-            abi.encodeWithSignature("processBulkTransactionsAtomically(address[],bytes[][])", chains, allTxns);
+            abi.encodeWithSignature("processTransactionsBulkAtomically(address[],bytes[][])", chains, allTxns);
 
         vm.prank(originalCaller);
         (bool success,) = address(atomicSequencer).call(callData);

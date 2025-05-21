@@ -45,9 +45,27 @@ modifier SyndicateSequencingChainNotZero(address _SyndicateSequencingChain);
 | --------------------------- | --------- | ------------------------------------- |
 | `_SyndicateSequencingChain` | `address` | The syndicate sequencer chain address |
 
-### processTransaction
+### processTransactionUncompressed
 
 _Function to process a transaction._
+
+```solidity
+function processTransactionUncompressed(address _SyndicateSequencingChain, bytes calldata data)
+    external
+    onlyAllowed
+    SyndicateSequencingChainNotZero(_SyndicateSequencingChain);
+```
+
+**Parameters**
+
+| Name                        | Type      | Description                           |
+| --------------------------- | --------- | ------------------------------------- |
+| `_SyndicateSequencingChain` | `address` | The syndicate sequencer chain address |
+| `data`                      | `bytes`   | The transaction data to process.      |
+
+### processTransaction
+
+_Function to process a raw transaction._
 
 ```solidity
 function processTransaction(address _SyndicateSequencingChain, bytes calldata data)
@@ -63,30 +81,12 @@ function processTransaction(address _SyndicateSequencingChain, bytes calldata da
 | `_SyndicateSequencingChain` | `address` | The syndicate sequencer chain address |
 | `data`                      | `bytes`   | The transaction data to process.      |
 
-### processTransactionRaw
-
-_Function to process a raw transaction._
-
-```solidity
-function processTransactionRaw(address _SyndicateSequencingChain, bytes calldata data)
-    external
-    onlyAllowed
-    SyndicateSequencingChainNotZero(_SyndicateSequencingChain);
-```
-
-**Parameters**
-
-| Name                        | Type      | Description                           |
-| --------------------------- | --------- | ------------------------------------- |
-| `_SyndicateSequencingChain` | `address` | The syndicate sequencer chain address |
-| `data`                      | `bytes`   | The transaction data to process.      |
-
-### processBulkTransactions
+### processTransactionsBulk
 
 _Function to process bulk transactions._
 
 ```solidity
-function processBulkTransactions(address _SyndicateSequencingChain, bytes[] calldata data)
+function processTransactionsBulk(address _SyndicateSequencingChain, bytes[] calldata data)
     external
     onlyAllowed
     SyndicateSequencingChainNotZero(_SyndicateSequencingChain);

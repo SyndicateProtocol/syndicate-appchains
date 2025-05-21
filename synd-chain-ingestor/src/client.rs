@@ -18,7 +18,7 @@ use jsonrpsee::{
         traits::ToRpcParams,
         ClientError,
     },
-    ws_client::{WsClient, WsClientBuilder},
+    ws_client::{PingConfig, WsClient, WsClientBuilder},
 };
 use serde::de::DeserializeOwned;
 use shared::types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock};
@@ -337,6 +337,7 @@ impl IngestorProvider {
                     .max_response_size(u32::MAX)
                     .max_buffer_capacity_per_subscription(1024)
                     .request_timeout(timeout)
+                    .enable_ws_ping(PingConfig::default())
                     .build(url),
             )
             .await

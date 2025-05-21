@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 import {SyndicateFactory} from "src/SyndicateFactory.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 
 contract DeploySyndicateFactory is Script {
     SyndicateFactory public syndicateFactory;
-    uint256 public appChainId;
+    uint256 public appchainId;
 
     function run() public {
         vm.startBroadcast();
 
-        appChainId = 0; // TODO: Set the App chain ID
+        appchainId = 0; // TODO: Set the App chain ID
 
         // syndicate admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
@@ -26,10 +26,10 @@ contract DeploySyndicateFactory is Script {
 
         // create new contracts
         (address sequencingChain, IRequirementModule permissionModule,) =
-            syndicateFactory.createSyndicateSequencingChainWithRequireAllModule(admin, appChainId, bytes32(appChainId));
+            syndicateFactory.createSyndicateSequencingChainWithRequireAndModule(admin, appchainId, bytes32(appchainId));
 
         console.log("Deployed SyndicateSequencingChain", sequencingChain);
-        console.log("Deployed RequireAllModule", address(permissionModule));
+        console.log("Deployed RequireAndModule", address(permissionModule));
 
         vm.stopBroadcast();
     }
@@ -37,21 +37,21 @@ contract DeploySyndicateFactory is Script {
 
 contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script {
     SyndicateSequencingChain public sequencingChain;
-    RequireAllModule public permissionModule;
-    uint256 public appChainId;
+    RequireAndModule public permissionModule;
+    uint256 public appchainId;
 
     function run() public {
         vm.startBroadcast();
 
-        appChainId = 0; // TODO: Set the App chain ID
+        appchainId = 0; // TODO: Set the App chain ID
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
         // Deploy permission module first
-        permissionModule = new RequireAllModule(admin);
-        console.log("Deployed RequireAllModule", address(permissionModule));
+        permissionModule = new RequireAndModule(admin);
+        console.log("Deployed RequireAndModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencingChain = new SyndicateSequencingChain(appChainId);
+        sequencingChain = new SyndicateSequencingChain(appchainId);
         sequencingChain.initialize(admin, address(permissionModule));
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 

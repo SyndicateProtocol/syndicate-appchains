@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {SyndicateSequencingChainWithDecayingPriority} from
     "src/extensions/SyndicateSequencingChainWithDecayingPriority.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
-import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
+import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
+import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
 // Mock contract to test IsAllowed behavior
@@ -24,19 +24,19 @@ contract MockIsAllowed is IPermissionModule {
 // Base test contract that sets up the common infrastructure
 contract SyndicateSequencingChainWithDecayingPriorityTestSetUp is Test {
     SyndicateSequencingChainWithDecayingPriority public chain;
-    RequireAllModule public requireAllModule;
-    RequireAnyModule public requireAnyModule;
+    RequireAndModule public requireAndModule;
+    RequireOrModule public requireOrModule;
     address public admin;
 
     function setUp() public virtual {
         admin = address(0x1);
-        uint256 appChainId = 1234;
+        uint256 appchainId = 1234;
 
         vm.startPrank(admin);
-        requireAllModule = new RequireAllModule(admin);
-        requireAnyModule = new RequireAnyModule(admin);
-        chain = new SyndicateSequencingChainWithDecayingPriority(appChainId);
-        chain.initialize(admin, address(requireAllModule));
+        requireAndModule = new RequireAndModule(admin);
+        requireOrModule = new RequireOrModule(admin);
+        chain = new SyndicateSequencingChainWithDecayingPriority(appchainId);
+        chain.initialize(admin, address(requireAndModule));
         vm.stopPrank();
     }
 }
@@ -71,7 +71,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
 
     function testConstructorSetsCorrectValues() public view {
         // Verify the constructor sets the correct values
-        assertEq(chain.appChainId(), 1234);
+        assertEq(chain.appchainId(), 1234);
         assertEq(chain.PRIORITY_DECAY_RATE(), 10);
     }
 
@@ -86,7 +86,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
     function testProcessTransaction() public {
         // Set up permissions
         vm.startPrank(admin);
-        requireAllModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
+        requireAndModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // Current block timestamp will be used in the emitted event
@@ -102,13 +102,13 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         );
 
         // Process the transaction
-        chain.processTransaction(testData1, 150);
+        chain.processTransactionUncompressed(testData1, 150);
     }
 
     function testProcessRawTransaction() public {
         // Set up permissions
         vm.startPrank(admin);
-        requireAllModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
+        requireAndModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // Current block timestamp will be used in the emitted event
@@ -124,15 +124,15 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         );
 
         // Process the raw transaction
-        chain.processTransactionRaw(testData2, 200);
+        chain.processTransaction(testData2, 200);
     }
 
     // BULK TRANSACTION TESTS
 
-    function testProcessBulkTransactions() public {
+    function testProcessTransactionsBulk() public {
         // Set up permissions
         vm.startPrank(admin);
-        requireAllModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
+        requireAndModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // Current timestamp for event verification
@@ -147,13 +147,13 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         }
 
         // Process all transactions in bulk
-        chain.processBulkTransactions(testDataArray, testPriorityArray);
+        chain.processTransactionsBulk(testDataArray, testPriorityArray);
     }
 
-    function testProcessBulkTransactionsRevertsWithMismatchedArrays() public {
+    function testProcessTransactionsBulkRevertsWithMismatchedArrays() public {
         // Set up permissions
         vm.startPrank(admin);
-        requireAllModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
+        requireAndModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // Create priority array with incorrect length
@@ -163,7 +163,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
 
         // Expect revert due to array length mismatch
         vm.expectRevert("Data and priority arrays must have the same length");
-        chain.processBulkTransactions(testDataArray, shortPriorityArray);
+        chain.processTransactionsBulk(testDataArray, shortPriorityArray);
     }
 
     // PRIORITY DECAY CALCULATION TESTS
@@ -224,40 +224,40 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         address mockRequireAllAddr = address(new MockIsAllowed(false));
 
         vm.startPrank(admin);
-        requireAllModule.addPermissionCheck(mockRequireAllAddr, false);
+        requireAndModule.addPermissionCheck(mockRequireAllAddr, false);
         vm.stopPrank();
 
-        // Expect specific error from RequireAllModule
+        // Expect specific error from RequireAndModule
         vm.expectRevert(
-            abi.encodeWithSelector(RequireAllModule.CheckFailed.selector, mockRequireAllAddr, address(this))
+            abi.encodeWithSelector(RequireAndModule.CheckFailed.selector, mockRequireAllAddr, address(this))
         );
 
         // This should revert with CheckFailed
-        chain.processTransactionRaw(testData2, 1);
+        chain.processTransaction(testData2, 1);
     }
 
     function testProcessTransactionRequireAnyFailure() public {
         vm.startPrank(admin);
-        chain.updateRequirementModule(address(requireAnyModule));
-        requireAnyModule.addPermissionCheck(address(new MockIsAllowed(false)), false);
+        chain.updateRequirementModule(address(requireOrModule));
+        requireOrModule.addPermissionCheck(address(new MockIsAllowed(false)), false);
         vm.stopPrank();
 
         // Expect specific RequireAny module error
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
 
         // This should revert with CheckFailed
-        chain.processTransactionRaw(testData2, 1);
+        chain.processTransaction(testData2, 1);
     }
 
-    function testRequireAnyModuleWithOnePassingCheck() public {
+    function testRequireOrModuleWithOnePassingCheck() public {
         vm.startPrank(admin);
-        chain.updateRequirementModule(address(requireAnyModule));
-        requireAnyModule.addPermissionCheck(address(new MockIsAllowed(false)), false);
-        requireAnyModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
+        chain.updateRequirementModule(address(requireOrModule));
+        requireOrModule.addPermissionCheck(address(new MockIsAllowed(false)), false);
+        requireOrModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // This should work as at least one check passes
-        chain.processTransactionRaw(testData2, 1);
+        chain.processTransaction(testData2, 1);
     }
 }
 
@@ -274,13 +274,13 @@ contract SyndicateSequencingChainWithDecayingPriorityViewRequireAllTest is
         mockRequireAll2 = new MockIsAllowed(true);
 
         vm.startPrank(admin);
-        requireAllModule.addPermissionCheck(address(mockRequireAll1), false);
-        requireAllModule.addPermissionCheck(address(mockRequireAll2), false);
+        requireAndModule.addPermissionCheck(address(mockRequireAll1), false);
+        requireAndModule.addPermissionCheck(address(mockRequireAll2), false);
         vm.stopPrank();
     }
 
     function testGetAllRequirementsRequireAll() public view {
-        address[] memory allChecks = requireAllModule.getAllPermissionChecks();
+        address[] memory allChecks = requireAndModule.getAllPermissionChecks();
         assertEq(allChecks.length, 2);
         assertEq(allChecks[0], address(mockRequireAll1));
         assertEq(allChecks[1], address(mockRequireAll2));
@@ -300,15 +300,15 @@ contract SyndicateSequencingChainWithDecayingPriorityViewRequireAnyTest is
         mockRequireAny2 = new MockIsAllowed(true);
 
         vm.startPrank(admin);
-        chain.updateRequirementModule(address(requireAnyModule));
+        chain.updateRequirementModule(address(requireOrModule));
 
-        requireAnyModule.addPermissionCheck(address(mockRequireAny1), false);
-        requireAnyModule.addPermissionCheck(address(mockRequireAny2), false);
+        requireOrModule.addPermissionCheck(address(mockRequireAny1), false);
+        requireOrModule.addPermissionCheck(address(mockRequireAny2), false);
         vm.stopPrank();
     }
 
     function testGetAllRequirementsRequireAny() public view {
-        address[] memory allChecks = requireAnyModule.getAllPermissionChecks();
+        address[] memory allChecks = requireOrModule.getAllPermissionChecks();
         assertEq(allChecks.length, 2);
         assertEq(allChecks[0], address(mockRequireAny1));
         assertEq(allChecks[1], address(mockRequireAny2));

@@ -25,7 +25,6 @@ use contract_bindings::{
         syndicatesequencingchain::SyndicateSequencingChain::{
             self, SyndicateSequencingChainInstance,
         },
-        walletpoolwrappermodule::WalletPoolWrapperModule,
     },
 };
 use eyre::Result;
@@ -146,11 +145,6 @@ impl TestComponents {
         _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         let always_allowed_module_address = seq_provider.default_signer_address().create(1);
 
-        // Deploy wallet pool
-        let admin = seq_provider.default_signer_address();
-        _ = WalletPoolWrapperModule::deploy_builder(&seq_provider, admin).send().await?;
-        let wallet_pool_address = seq_provider.default_signer_address().create(2);
-
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
@@ -159,12 +153,6 @@ impl TestComponents {
             .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()
             .await?;
-
-        // Set up allowlist
-        let provider_clone = seq_provider.clone();
-        let wallet_pool_contract =
-            WalletPoolWrapperModule::new(wallet_pool_address, provider_clone);
-        _ = wallet_pool_contract.addToAllowlist(admin).send().await?;
 
         mine_block(&seq_provider, 0).await?;
 
@@ -397,7 +385,6 @@ impl TestComponents {
                 chain_id: options.appchain_chain_id,
                 redis_url: redis_url.clone(),
                 private_key: PRIVATE_KEY.to_string(),
-                wallet_pool_address,
                 sequencing_address: sequencing_contract_address,
                 sequencing_rpc_url: sequencing_anvil_url,
                 metrics_port: PortManager::instance().next_port().await,

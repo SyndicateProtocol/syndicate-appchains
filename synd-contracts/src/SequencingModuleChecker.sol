@@ -1,54 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IPermissionModule} from "./interfaces/IPermissionModule.sol";
 import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-interface ArbSys {
-    function arbBlockNumber() external view returns (uint256);
-}
-
-ArbSys constant arbsys = ArbSys(0x0000000000000000000000000000000000000064);
-
 /// @title SequencingModuleChecker
-/// @notice A simplified contract that delegates permission checks to modules
-
+/// @notice A contract that delegates permission checks to modular permission systems
+/// @dev This separation of concerns allows for flexible permission systems:
+/// 1. The SequencingModuleChecker manages the core permission interface
+/// 2. The permissionRequirementModule (typically RequireAndModule or RequireOrModule) handles the actual permission logic
+/// 3. This design allows for complex permission structures (AND/OR logic) that can be upgraded over time
+/// 4. The initialization pattern allows for proper setup of the permission system after deployment
 abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
-    /// @custom:storage-location
-    struct TxData {
-        bytes32 acc;
-        uint64 count;
-    }
-
-    // keccak256("syndicate.tx.data")
-    bytes32 public constant TX_DATA_STORAGE_LOCATION =
-        0xbcd134af035e52869741eb0221dfc8a26900a04521f5a2d44a59b675ea20a969;
-
-    function _getTxData() private pure returns (TxData storage $) {
-        assembly {
-            $.slot := TX_DATA_STORAGE_LOCATION
-        }
-    }
-
-    function txCount() public view returns (uint64) {
-        return _getTxData().count;
-    }
-
-    function txAcc() public view returns (bytes32) {
-        return _getTxData().acc;
-    }
-
-    /// @notice Emitted when a new transaction is processed.
-    event TransactionProcessed(address indexed sender, bytes data);
-
     /// @notice The requirement module that handles checks
     IPermissionModule public permissionRequirementModule;
 
     event RequirementModuleUpdated(address indexed newModule);
 
     error InvalidModuleAddress();
-    error TransactionOrProposerNotAllowed();
+    error TransactionOrSenderNotAllowed();
     error AlreadyInitialized();
 
     bool internal hasBeenInitialized = false;
@@ -60,6 +31,10 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     }
 
     /// @notice Initializes the contract with a new admin and a requirement module
+    /// @dev This two-step initialization process allows for proper setup of the contract:
+    /// 1. First deployed with a temporary admin (deployer)
+    /// 2. Then initialized with the permanent admin and requirement module
+    /// 3. Once initialized, it cannot be re-initialized (immutable pattern)
     /// @param admin The address of the new admin
     /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module
     function initialize(address admin, address _permissionRequirementModule) external onlyOwner {
@@ -82,6 +57,15 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
         emit RequirementModuleUpdated(_newModule);
     }
 
+    /// @notice Modifier to check if an address is allowed to submit txs based on the sender, origin and data
+    /// @param msgSender The address calling the function (msg.sender)
+    /// @param txOrigin The address that initiated the transaction (tx.origin)
+    /// @param data The calldata to check
+    modifier onlyWhenAllowed(address msgSender, address txOrigin, bytes calldata data) {
+        if (!isAllowed(msgSender, txOrigin, data)) revert TransactionOrSenderNotAllowed();
+        _;
+    }
+
     /// @notice Checks if both the proposer and calldata are allowed
     /// @param proposer The address to check
     /// @param originator The address of tx.origin.
@@ -89,45 +73,5 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// @return bool indicating if both the proposer and calldata are allowed
     function isAllowed(address proposer, address originator, bytes calldata data) public view returns (bool) {
         return permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
-    }
-
-    function transactionProcessed(bytes calldata data) internal returns (bool) {
-        if (!isAllowed(msg.sender, tx.origin, data)) {
-            return false;
-        }
-        _transactionProcessed(data);
-        return true;
-    }
-
-    function uncompressedTransactionProcessed(bytes calldata data) internal returns (bool) {
-        if (!isAllowed(msg.sender, tx.origin, data)) {
-            return false;
-        }
-        _transactionProcessed(prependZeroByte(data));
-        return true;
-    }
-
-    function _transactionProcessed(bytes memory data) private {
-        TxData storage txData = _getTxData();
-        uint256 blockNumber = block.number;
-        if (address(arbsys).code.length > 0) {
-            try arbsys.arbBlockNumber() returns (uint256 number) {
-                blockNumber = number;
-            } catch {}
-        }
-
-        txData.acc = keccak256(
-            abi.encodePacked(txData.acc, msg.sender, blockNumber, block.timestamp, txData.count, keccak256(data))
-        );
-        txData.count += 1;
-        emit TransactionProcessed(msg.sender, data);
-    }
-
-    /// @notice Prepends a zero byte to the transaction data
-    /// @dev This helps op-translator identify uncompressed data
-    /// @param _data The original transaction data
-    /// @return bytes The transaction data with a zero byte prepended
-    function prependZeroByte(bytes calldata _data) internal pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), _data);
     }
 }

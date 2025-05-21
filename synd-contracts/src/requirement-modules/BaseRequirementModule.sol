@@ -1,32 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {AddressStructuredLinkedList} from "src/LinkedList/AddressStructuredLinkedList.sol";
-import {IRequirementModule, IPermissionModule} from "src/interfaces/IRequirementModule.sol";
+import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title RequireAllModule
- * @notice A module that requires all checks to pass for both proposers, originator and calldata
- * @dev This contract maintains a linked lists
+ * @title BaseRequirementModule
+ * @notice Base abstract contract for requirement modules that share common functionality
+ * @dev Contains shared code for RequireAndModule and RequireOrModule
  */
-contract RequireAllModule is IRequirementModule, Ownable {
+abstract contract BaseRequirementModule is IRequirementModule, Ownable {
     /// @notice List of permission checks addresses
-    AddressStructuredLinkedList.List private permissionChecks;
+    AddressStructuredLinkedList.List internal permissionChecks;
 
     // Events
     /// @notice Emitted when a permission check is added
-    event PermissionCheckAdded(address indexed check); //#olympix-ignore-missing-events-assertion
+    //#olympix-ignore-missing-events-assertion
+    event PermissionCheckAdded(address indexed check);
 
     /// @notice Emitted when a permission check is removed
-    event PermissionCheckRemoved(address indexed check); //#olympix-ignore-missing-events-assertion
+    //#olympix-ignore-missing-events-assertion
+    event PermissionCheckRemoved(address indexed check);
 
     // Errors
-    /// @notice Thrown when a permission check fails
-    /// @param requireAddress The address of the check that failed
-    /// @param proposer The address of the proposer
-    error CheckFailed(address requireAddress, address proposer);
-
     /// @notice Thrown when an invalid address is provided
     error InvalidAddress();
 
@@ -44,41 +41,12 @@ contract RequireAllModule is IRequirementModule, Ownable {
     constructor(address admin) Ownable(admin) {}
 
     /**
-     * @notice Checks if a proposer is allowed to submit a transaction
-     * @dev Runs through all proposer permission checks in the linked list
-     * @param proposer The address of the proposer to check
-     * @param originator The address of tx.origin. Useful to know the sender originator in wrapper contracts
-     * @param data The calldata to be checked
-     * @return True if the proposer passes all checks, reverts otherwise
-     */
-    function isAllowed(address proposer, address originator, bytes calldata data)
-        external
-        view
-        override
-        returns (bool)
-    {
-        address currentCheck = AddressStructuredLinkedList.getHead(permissionChecks);
-
-        while (currentCheck != address(0)) {
-            if (!IPermissionModule(currentCheck).isAllowed(proposer, originator, data)) {
-                revert CheckFailed(currentCheck, proposer);
-            }
-
-            (bool exists, address nextCheck) = AddressStructuredLinkedList.getNextNode(permissionChecks, currentCheck);
-            if (!exists) break;
-            currentCheck = nextCheck;
-        }
-
-        return true;
-    }
-
-    /**
      * @notice Adds permission check address to the list
      * @dev Can add to either the head or the tail of the list
      * @param _address The address of the check to add
      * @param addToHead True to add to the head of the list, false to add to the tail
      */
-    function addPermissionCheck(address _address, bool addToHead) external onlyOwner {
+    function addPermissionCheck(address _address, bool addToHead) public virtual override onlyOwner {
         if (_address == address(0)) revert InvalidAddress();
         if (AddressStructuredLinkedList.nodeExists(permissionChecks, _address)) {
             revert AddressAlreadyExists();
@@ -99,7 +67,7 @@ contract RequireAllModule is IRequirementModule, Ownable {
      * @notice Removes permission check address from the list
      * @param _address The address of the check to remove
      */
-    function removePermissionCheck(address _address) external onlyOwner {
+    function removePermissionCheck(address _address) public virtual override onlyOwner {
         if (_address == address(0)) revert InvalidAddress();
         if (!AddressStructuredLinkedList.nodeExists(permissionChecks, _address)) {
             revert AddressDoesNotExist();
@@ -115,7 +83,7 @@ contract RequireAllModule is IRequirementModule, Ownable {
      * @notice Gets all permission check addresses
      * @return An array of all permission check addresses
      */
-    function getAllPermissionChecks() external view returns (address[] memory) {
+    function getAllPermissionChecks() external view virtual override returns (address[] memory) {
         uint256 size = AddressStructuredLinkedList.sizeOf(permissionChecks);
         address[] memory allChecks = new address[](size);
 
@@ -129,4 +97,15 @@ contract RequireAllModule is IRequirementModule, Ownable {
 
         return allChecks;
     }
+
+    /**
+     * @notice Checks if a sender is allowed to submit a transaction
+     * @dev Must be implemented by derived contracts (AND or OR logic)
+     */
+    function isAllowed(address msgSender, address txOrigin, bytes calldata data)
+        external
+        view
+        virtual
+        override
+        returns (bool);
 }

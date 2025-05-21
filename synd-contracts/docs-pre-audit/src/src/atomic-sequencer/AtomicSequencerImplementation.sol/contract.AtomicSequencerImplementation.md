@@ -26,12 +26,12 @@ function processTransactionsAtomically(
 | `transactions` | `bytes[]`                    | Array of transactions corresponding to each chain                   |
 | `isRaw`        | `bool[]`                     | Array indicating whether each transaction should use raw processing |
 
-### processBulkTransactionsAtomically
+### processTransactionsBulkAtomically
 
 Processes bulk transactions on multiple Syndicate chains atomically. Only used with encoded transactions.
 
 ```solidity
-function processBulkTransactionsAtomically(SyndicateSequencingChain[] calldata chains, bytes[][] calldata transactions)
+function processTransactionsBulkAtomically(SyndicateSequencingChain[] calldata chains, bytes[][] calldata transactions)
     external;
 ```
 

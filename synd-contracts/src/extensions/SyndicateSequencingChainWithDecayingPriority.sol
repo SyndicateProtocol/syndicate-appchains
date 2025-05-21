@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
 
@@ -9,15 +9,6 @@ import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
  * This is only an example implementation. Not for production use.
  */
 contract SyndicateSequencingChainWithDecayingPriority is SyndicateSequencingChain {
-    /// @notice Modifier to checks if an address is allowed to submit txs based on the sender, origin and data
-    /// @param proposer The address to check
-    /// @param originator The address of tx.origin. Useful to know the sender originator in wrapper contracts
-    /// @param data The calldata to check
-    modifier onlyWhenAllowed(address proposer, address originator, bytes calldata data) {
-        if (!isAllowed(proposer, originator, data)) revert TransactionOrProposerNotAllowed();
-        _;
-    }
-
     /// @notice The constant rate at which priority decays (10 units per second)
     uint256 public constant PRIORITY_DECAY_RATE = 10;
 
@@ -25,38 +16,36 @@ contract SyndicateSequencingChainWithDecayingPriority is SyndicateSequencingChai
     event TransactionProcessed(address indexed sender, bytes data, uint256 originalPriority, uint256 timestamp);
 
     /// @notice Constructs the SyndicateSequencingChainWithDecayingPriority contract.
-    /// @param _appChainId The ID of the App chain that this contract is sequencing transactions for.
+    /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-no-parameter-validation-in-constructor
-    constructor(uint256 _appChainId) SyndicateSequencingChain(_appChainId) {}
+    constructor(uint256 _appchainId) SyndicateSequencingChain(_appchainId) {}
 
     /// @notice Processes a single compressed transaction with priority.
     /// @param data The compressed transaction data.
     /// @param priority The initial priority of the transaction.
     //#olympix-ignore-required-tx-origin
-    function processTransactionRaw(bytes calldata data, uint256 priority)
+    function processTransaction(bytes calldata data, uint256 priority)
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
     {
         emit TransactionProcessed(msg.sender, data, priority, block.timestamp);
     }
 
-    /// @notice Processes a single transaction with priority, prepending a zero byte.
-    /// @dev Prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param data The transaction data
+    /// @notice Processes an uncompressed transaction with a zero byte prepended.
+    /// @param data The transaction data without the prepended zero byte.
     /// @param priority The initial priority of the transaction
-    function processTransaction(bytes calldata data, uint256 priority)
+    function processTransactionUncompressed(bytes calldata data, uint256 priority)
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
     {
         emit TransactionProcessed(msg.sender, prependZeroByte(data), priority, block.timestamp); //#olympix-ignore-external-call-potential-out-of-gas
     }
 
-    /// @notice Processes multiple transactions in bulk with individual priorities.
-    /// @dev Prepends a zero byte to each transaction data to signal uncompressed data
-    /// @param data An array of transaction data.
+    /// @notice Processes multiple uncompressed transactions in bulk.
+    /// @param data An array of transaction data without prepended zero bytes.
     /// @param priorities An array of priorities for the transactions.
     //#olympix-ignore-reentrancy-events
-    function processBulkTransactions(bytes[] calldata data, uint256[] calldata priorities) external {
+    function processTransactionsBulk(bytes[] calldata data, uint256[] calldata priorities) external {
         uint256 dataCount = data.length;
         require(dataCount == priorities.length, "Data and priority arrays must have the same length");
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 
@@ -23,7 +23,7 @@ contract AddBatchTransactionsToSyndicateSequencingChainContract is Script {
         // send 2 wei to the SyndicateSequencingChain contract
         transactionList[1] = abi.encode(recipient, uint256(2));
 
-        SyndicateSequencingChainContract.processBulkTransactions(transactionList);
+        SyndicateSequencingChainContract.processTransactionsBulk(transactionList);
 
         vm.stopBroadcast();
     }

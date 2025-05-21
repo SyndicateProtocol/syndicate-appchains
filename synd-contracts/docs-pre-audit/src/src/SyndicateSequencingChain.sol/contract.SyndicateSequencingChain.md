@@ -10,12 +10,12 @@ to determine the address that is allowed to sequence and whether the calldata is
 
 ## State Variables
 
-### appChainId
+### appchainId
 
 The ID of the App chain that this contract is sequencing transactions for.
 
 ```solidity
-uint256 public immutable appChainId;
+uint256 public immutable appchainId;
 ```
 
 ## Functions
@@ -25,21 +25,21 @@ uint256 public immutable appChainId;
 Constructs the SyndicateSequencingChain contract.
 
 ```solidity
-constructor(uint256 _appChainId) SequencingModuleChecker();
+constructor(uint256 _appchainId) SequencingModuleChecker();
 ```
 
 **Parameters**
 
 | Name          | Type      | Description                                                                |
 | ------------- | --------- | -------------------------------------------------------------------------- |
-| `_appChainId` | `uint256` | The ID of the App chain that this contract is sequencing transactions for. |
+| `_appchainId` | `uint256` | The ID of the App chain that this contract is sequencing transactions for. |
 
-### processTransactionRaw
+### processTransaction
 
 Processes a single compressed transaction.
 
 ```solidity
-function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data);
+function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data);
 ```
 
 **Parameters**
@@ -48,14 +48,14 @@ function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg
 | ------ | ------- | -------------------------------- |
 | `data` | `bytes` | The compressed transaction data. |
 
-### processTransaction
+### processTransactionUncompressed
 
 process transactions
 
 _It prepends a zero byte to the transaction data to signal uncompressed data_
 
 ```solidity
-function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data);
+function processTransactionUncompressed(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data);
 ```
 
 **Parameters**
@@ -64,14 +64,14 @@ function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.se
 | ------ | ------- | -------------------- |
 | `data` | `bytes` | The transaction data |
 
-### processBulkTransactions
+### processTransactionsBulk
 
 Processes multiple transactions in bulk.
 
 _It prepends a zero byte to the transaction data to signal uncompressed data_
 
 ```solidity
-function processBulkTransactions(bytes[] calldata data) external;
+function processTransactionsBulk(bytes[] calldata data) external;
 ```
 
 **Parameters**

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
-import {RequireAnyModule, Ownable} from "src/requirement-modules/RequireAnyModule.sol";
+import {RequireOrModule, BaseRequirementModule} from "src/requirement-modules/RequireOrModule.sol";
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
 import {Test} from "forge-std/Test.sol";
@@ -18,8 +20,8 @@ contract MockPermissionAllowedFalse is IPermissionModule {
     }
 }
 
-contract RequireAnyModuleTest is Test {
-    RequireAnyModule public module;
+contract RequireOrModuleTest is Test {
+    RequireOrModule public module;
     address public admin;
     address public nonAdmin;
 
@@ -33,7 +35,7 @@ contract RequireAnyModuleTest is Test {
     function setUp() public {
         admin = address(this);
         nonAdmin = address(0x456);
-        module = new RequireAnyModule(admin);
+        module = new RequireOrModule(admin);
     }
 
     // ----------------------
@@ -78,7 +80,7 @@ contract RequireAnyModuleTest is Test {
         vm.stopPrank();
 
         // Should fail if all checks fail
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
         module.isAllowed(address(this), address(0), emptyData);
     }
 
@@ -112,7 +114,7 @@ contract RequireAnyModuleTest is Test {
         vm.startPrank(admin);
         module.addPermissionCheck(checker, true);
 
-        vm.expectRevert(RequireAnyModule.AddressAlreadyExists.selector);
+        vm.expectRevert(BaseRequirementModule.AddressAlreadyExists.selector);
         module.addPermissionCheck(checker, true);
         vm.stopPrank();
     }
@@ -121,7 +123,7 @@ contract RequireAnyModuleTest is Test {
         address checker = address(new MockPermissionAllowedTrue());
 
         vm.startPrank(admin);
-        vm.expectRevert(RequireAnyModule.AddressDoesNotExist.selector);
+        vm.expectRevert(BaseRequirementModule.AddressDoesNotExist.selector);
         module.removePermissionCheck(checker);
         vm.stopPrank();
     }
@@ -170,14 +172,14 @@ contract RequireAnyModuleTest is Test {
 
     function testRevertsOnZeroAddressAddPermission() public {
         vm.startPrank(admin);
-        vm.expectRevert(RequireAnyModule.InvalidAddress.selector);
+        vm.expectRevert(BaseRequirementModule.InvalidAddress.selector);
         module.addPermissionCheck(address(0), true);
         vm.stopPrank();
     }
 
     function testRevertsOnZeroAddressRemovePermission() public {
         vm.startPrank(admin);
-        vm.expectRevert(RequireAnyModule.InvalidAddress.selector);
+        vm.expectRevert(BaseRequirementModule.InvalidAddress.selector);
         module.removePermissionCheck(address(0));
         vm.stopPrank();
     }
@@ -230,7 +232,7 @@ contract RequireAnyModuleTest is Test {
         // 2. Both fail: False only
         module.addPermissionCheck(permissionFalse, true);
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
         module.isAllowed(address(this), address(0), emptyData);
 
         vm.stopPrank();

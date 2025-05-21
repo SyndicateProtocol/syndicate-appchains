@@ -51,19 +51,19 @@ constructor(address admin);
 ### zeroValuesChainAndTwoAddressesNotAllowed
 
 ```solidity
-modifier zeroValuesChainAndTwoAddressesNotAllowed(uint256 appChainId, address firstAddrCheck, address secondAddrCheck);
+modifier zeroValuesChainAndTwoAddressesNotAllowed(uint256 appchainId, address firstAddrCheck, address secondAddrCheck);
 ```
 
 ### zeroValuesChainAndAddressNotAllowed
 
 ```solidity
-modifier zeroValuesChainAndAddressNotAllowed(uint256 appChainId, address addrCheck);
+modifier zeroValuesChainAndAddressNotAllowed(uint256 appchainId, address addrCheck);
 ```
 
 ### validateChainId
 
 ```solidity
-modifier validateChainId(uint256 appChainId, bool isManuallySpecified);
+modifier validateChainId(uint256 appchainId, bool isManuallySpecified);
 ```
 
 ### createSyndicateSequencingChain
@@ -72,18 +72,18 @@ Creates a new SyndicateSequencingChain contract with a permission module
 
 ```solidity
 function createSyndicateSequencingChain(
-    uint256 appChainId,
+    uint256 appchainId,
     address admin,
     IRequirementModule permissionModule,
     bytes32 salt
 )
     public
     zeroValuesChainAndTwoAddressesNotAllowed(
-        appChainId == 0 ? _getNextChainId() : appChainId,
+        appchainId == 0 ? _getNextChainId() : appchainId,
         admin,
         address(permissionModule)
     )
-    validateChainId(appChainId == 0 ? _getNextChainId() : appChainId, appChainId != 0)
+    validateChainId(appchainId == 0 ? _getNextChainId() : appchainId, appchainId != 0)
     returns (address sequencingChain, uint256 actualChainId);
 ```
 
@@ -91,7 +91,7 @@ function createSyndicateSequencingChain(
 
 | Name               | Type                 | Description                                                 |
 | ------------------ | -------------------- | ----------------------------------------------------------- |
-| `appChainId`       | `uint256`            | the app chain the contract refers to (0 for auto-increment) |
+| `appchainId`       | `uint256`            | the app chain the contract refers to (0 for auto-increment) |
 | `admin`            | `address`            | The address that will be the admin                          |
 | `permissionModule` | `IRequirementModule` | The address of the permission module                        |
 | `salt`             | `bytes32`            | The salt to use for the deployment                          |
@@ -103,14 +103,14 @@ function createSyndicateSequencingChain(
 | `sequencingChain` | `address` | The address of the newly created SyndicateSequencingChain |
 | `actualChainId`   | `uint256` | The chain ID that was used (auto-generated or specified)  |
 
-### createSyndicateSequencingChainWithRequireAllModule
+### createSyndicateSequencingChainWithRequireAndModule
 
-Creates SyndicateSequencingChain with RequireAllModule
+Creates SyndicateSequencingChain with RequireAndModule
 
 ```solidity
-function createSyndicateSequencingChainWithRequireAllModule(address admin, uint256 appChainId, bytes32 salt)
+function createSyndicateSequencingChainWithRequireAndModule(address admin, uint256 appchainId, bytes32 salt)
     public
-    zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
+    zeroValuesChainAndAddressNotAllowed(appchainId == 0 ? _getNextChainId() : appchainId, admin)
     returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId);
 ```
 
@@ -119,7 +119,7 @@ function createSyndicateSequencingChainWithRequireAllModule(address admin, uint2
 | Name         | Type      | Description                                     |
 | ------------ | --------- | ----------------------------------------------- |
 | `admin`      | `address` | The address that will be the default admin role |
-| `appChainId` | `uint256` | The app chain ID (0 for auto-increment)         |
+| `appchainId` | `uint256` | The app chain ID (0 for auto-increment)         |
 | `salt`       | `bytes32` | The salt to use for the deployment              |
 
 **Returns**
@@ -127,17 +127,17 @@ function createSyndicateSequencingChainWithRequireAllModule(address admin, uint2
 | Name               | Type                 | Description                                               |
 | ------------------ | -------------------- | --------------------------------------------------------- |
 | `sequencingChain`  | `address`            | The address of the newly created SyndicateSequencingChain |
-| `permissionModule` | `IRequirementModule` | The address of the newly created RequireAllModule         |
+| `permissionModule` | `IRequirementModule` | The address of the newly created RequireAndModule         |
 | `actualChainId`    | `uint256`            | The chain ID that was used (auto-generated or specified)  |
 
-### createSyndicateSequencingChainWithRequireAnyModule
+### createSyndicateSequencingChainWithRequireOrModule
 
-Creates SyndicateSequencingChain with RequireAnyModule
+Creates SyndicateSequencingChain with RequireOrModule
 
 ```solidity
-function createSyndicateSequencingChainWithRequireAnyModule(address admin, uint256 appChainId, bytes32 salt)
+function createSyndicateSequencingChainWithRequireOrModule(address admin, uint256 appchainId, bytes32 salt)
     public
-    zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
+    zeroValuesChainAndAddressNotAllowed(appchainId == 0 ? _getNextChainId() : appchainId, admin)
     returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId);
 ```
 
@@ -146,7 +146,7 @@ function createSyndicateSequencingChainWithRequireAnyModule(address admin, uint2
 | Name         | Type      | Description                                     |
 | ------------ | --------- | ----------------------------------------------- |
 | `admin`      | `address` | The address that will be the default admin role |
-| `appChainId` | `uint256` | The app chain ID (0 for auto-increment)         |
+| `appchainId` | `uint256` | The app chain ID (0 for auto-increment)         |
 | `salt`       | `bytes32` | The salt to use for the deployment              |
 
 **Returns**
@@ -154,7 +154,7 @@ function createSyndicateSequencingChainWithRequireAnyModule(address admin, uint2
 | Name               | Type                 | Description                                               |
 | ------------------ | -------------------- | --------------------------------------------------------- |
 | `sequencingChain`  | `address`            | The address of the newly created SyndicateSequencingChain |
-| `permissionModule` | `IRequirementModule` | The address of the newly created RequireAnyModule         |
+| `permissionModule` | `IRequirementModule` | The address of the newly created RequireOrModule          |
 | `actualChainId`    | `uint256`            | The chain ID that was used (auto-generated or specified)  |
 
 ### computeSequencingChainAddress
@@ -297,7 +297,7 @@ Emitted when a new SyndicateSequencingChain is created
 
 ```solidity
 event SyndicateSequencingChainCreated(
-    uint256 indexed appChainId, address indexed SyndicateSequencingChainAddress, address indexed permissionModuleAddress
+    uint256 indexed appchainId, address indexed SyndicateSequencingChainAddress, address indexed permissionModuleAddress
 );
 ```
 

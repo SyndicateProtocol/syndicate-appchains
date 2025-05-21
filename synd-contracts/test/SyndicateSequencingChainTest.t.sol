@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
-import {SequencingModuleChecker} from "src/SequencingModuleChecker.sol";
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
-import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
+import {SyndicateAccumulator} from "src/SyndicateAccumulator.sol";
+import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
+import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -22,7 +22,7 @@ contract MockIsAllowed is IPermissionModule {
 }
 
 contract MockIsAllowedWithInvalidData is IPermissionModule {
-    function isAllowed(address, address, bytes calldata data) external view override returns (bool) {
+    function isAllowed(address, address, bytes calldata data) external pure override returns (bool) {
         return keccak256(data) != keccak256(abi.encode("invalid"));
     }
 }
@@ -41,18 +41,18 @@ contract DirectMockModule is IPermissionModule {
 
 contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateSequencingChain public chain;
-    RequireAllModule public permissionModule;
-    RequireAnyModule public permissionModuleAny;
+    RequireAndModule public permissionModule;
+    RequireOrModule public permissionModuleAny;
     address public admin;
 
     function setUp() public virtual {
         admin = address(0x1);
-        uint256 appChainId = 10042001;
+        uint256 appchainId = 10042001;
 
         vm.startPrank(admin);
-        permissionModule = new RequireAllModule(admin);
-        permissionModuleAny = new RequireAnyModule(admin);
-        chain = new SyndicateSequencingChain(appChainId);
+        permissionModule = new RequireAndModule(admin);
+        permissionModuleAny = new RequireOrModule(admin);
+        chain = new SyndicateSequencingChain(appchainId);
         chain.initialize(admin, address(permissionModule));
         vm.stopPrank();
     }
@@ -67,9 +67,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SequencingModuleChecker.TransactionProcessed(address(this), validTxn);
+        emit SyndicateAccumulator.TransactionProcessed(address(this), validTxn);
 
-        chain.processTransactionRaw(validTxn);
+        chain.processTransaction(validTxn);
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -80,8 +80,8 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         permissionModule.addPermissionCheck(mockRequireAll, false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAllModule.CheckFailed.selector, mockRequireAll, address(this)));
-        chain.processTransactionRaw(validTxn);
+        vm.expectRevert(abi.encodeWithSelector(RequireAndModule.CheckFailed.selector, mockRequireAll, address(this)));
+        chain.processTransaction(validTxn);
     }
 
     function testProcessTransactionRequireAnyFailure() public {
@@ -92,8 +92,8 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         permissionModuleAny.addPermissionCheck(address(new MockIsAllowed(false)), false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
-        chain.processTransactionRaw(validTxn);
+        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
+        chain.processTransaction(validTxn);
     }
 
     function testProcessTransaction() public {
@@ -105,12 +105,12 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SequencingModuleChecker.TransactionProcessed(address(this), expectedTx);
+        emit SyndicateAccumulator.TransactionProcessed(address(this), expectedTx);
 
-        chain.processTransaction(_data);
+        chain.processTransactionUncompressed(_data);
     }
 
-    function testProcessBulkTransactions() public {
+    function testProcessTransactionsBulk() public {
         bytes[] memory validTxns = new bytes[](3);
         validTxns[0] = abi.encode("transaction 1");
         validTxns[1] = abi.encode("transaction 2");
@@ -123,12 +123,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         for (uint256 i = 0; i < validTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
 
-            emit SequencingModuleChecker.TransactionProcessed(
-                address(this), abi.encodePacked(bytes1(0x00), validTxns[i])
-            );
+            emit SyndicateAccumulator.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), validTxns[i]));
         }
 
-        chain.processBulkTransactions(validTxns);
+        chain.processTransactionsBulk(validTxns);
     }
 
     function testConstructorWithZeroAppChainId() public {
@@ -136,7 +134,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         new SyndicateSequencingChain(0);
     }
 
-    function testProcessBulkTransactionsAllAllowed() public {
+    function testProcessTransactionsBulkAllAllowed() public {
         // Deploy a module we can directly control
         DirectMockModule directMock = new DirectMockModule();
 
@@ -159,14 +157,14 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Expect events for all transactions
         for (uint256 i = 0; i < txns.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit SequencingModuleChecker.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), txns[i]));
+            emit SyndicateAccumulator.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), txns[i]));
         }
 
         // Process all transactions
-        chain.processBulkTransactions(txns);
+        chain.processTransactionsBulk(txns);
     }
 
-    function testProcessBulkTransactionsBranchCoverage() public {
+    function testProcessTransactionsBulkBranchCoverage() public {
         // Deploy a module we can directly control
         DirectMockModule directMock = new DirectMockModule();
 
@@ -183,7 +181,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         directMock.setAllowed(failingTxns[0], true);
         directMock.setAllowed(failingTxns[1], false);
 
-        chain.processBulkTransactions(failingTxns);
+        chain.processTransactionsBulk(failingTxns);
 
         // Part 2: Test the success branch
         bytes[] memory successTxns = new bytes[](2);
@@ -196,15 +194,15 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Expect events for successful transactions
         for (uint256 i = 0; i < successTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit SequencingModuleChecker.TransactionProcessed(
+            emit SyndicateAccumulator.TransactionProcessed(
                 address(this), abi.encodePacked(bytes1(0x00), successTxns[i])
             );
         }
 
-        chain.processBulkTransactions(successTxns);
+        chain.processTransactionsBulk(successTxns);
     }
 
-    function testProcessBulkTransactionsOnlyEmitsValidTransactionsAsEvents() public {
+    function testProcessTransactionsBulkOnlyEmitsValidTransactionsAsEvents() public {
         vm.startPrank(admin);
         SyndicateSequencingChain chainWithInvalidDataPermissionModule = new SyndicateSequencingChain(10042002);
         chainWithInvalidDataPermissionModule.initialize(admin, address(new MockIsAllowedWithInvalidData()));
@@ -216,7 +214,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         txns[2] = abi.encode("valid");
 
         vm.recordLogs();
-        chainWithInvalidDataPermissionModule.processBulkTransactions(txns);
+        chainWithInvalidDataPermissionModule.processTransactionsBulk(txns);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         bytes32 expectedSig = keccak256("TransactionProcessed(address,bytes)");
@@ -258,30 +256,30 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         directMock.setAllowed(allowedData, true);
         directMock.setAllowed(disallowedData, false);
 
-        // Test 1: Failure path of onlyWhenAllowed (processTransactionRaw)
-        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
-        chain.processTransactionRaw(disallowedData);
+        // Test 1: Failure path of onlyWhenAllowed (processTransaction)
+        vm.expectRevert(SequencingModuleChecker.TransactionOrSenderNotAllowed.selector);
+        chain.processTransaction(disallowedData);
 
-        // Test 2: Success path of onlyWhenAllowed (processTransactionRaw)
+        // Test 2: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
-        emit SequencingModuleChecker.TransactionProcessed(address(this), allowedData);
-        chain.processTransactionRaw(allowedData);
+        emit SyndicateAccumulator.TransactionProcessed(address(this), allowedData);
+        chain.processTransaction(allowedData);
 
         // Test 3: Failure path of onlyWhenAllowed (processTransaction)
-        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
-        chain.processTransaction(disallowedData);
+        vm.expectRevert(SequencingModuleChecker.TransactionOrSenderNotAllowed.selector);
+        chain.processTransactionUncompressed(disallowedData);
 
         // Test 4: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
-        emit SequencingModuleChecker.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), allowedData));
-        chain.processTransaction(allowedData);
+        emit SyndicateAccumulator.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), allowedData));
+        chain.processTransactionUncompressed(allowedData);
     }
 
-    function testProcessBulkTransactionsWithEmptyArray() public {
+    function testProcessTransactionsBulkWithEmptyArray() public {
         bytes[] memory emptyArray = new bytes[](0);
 
         // This should execute without errors or events
-        chain.processBulkTransactions(emptyArray);
+        chain.processTransactionsBulk(emptyArray);
     }
 }
 

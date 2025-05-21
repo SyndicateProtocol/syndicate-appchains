@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 
@@ -27,9 +27,9 @@ contract AtomicSequencerImplementation {
 
         for (uint256 i = 0; i < chains.length; i++) {
             if (isRaw[i]) {
-                chains[i].processTransactionRaw(transactions[i]);
-            } else {
                 chains[i].processTransaction(transactions[i]);
+            } else {
+                chains[i].processTransactionUncompressed(transactions[i]);
             }
         }
     }
@@ -37,7 +37,7 @@ contract AtomicSequencerImplementation {
     /// @notice Processes bulk transactions on multiple Syndicate chains atomically. Only used with encoded transactions.
     /// @param chains Array of Syndicate chains
     /// @param transactions Array of transaction arrays corresponding to each chain
-    function processBulkTransactionsAtomically(
+    function processTransactionsBulkAtomically(
         SyndicateSequencingChain[] calldata chains,
         bytes[][] calldata transactions
     ) external {
@@ -46,7 +46,7 @@ contract AtomicSequencerImplementation {
         }
 
         for (uint256 i = 0; i < chains.length; i++) {
-            chains[i].processBulkTransactions(transactions[i]);
+            chains[i].processTransactionsBulk(transactions[i]);
         }
     }
 }

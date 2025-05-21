@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {SyndicateStorage} from "src/backfill/SyndicateStorage.sol";
@@ -10,7 +10,7 @@ contract SyndicateStorageTest is Test {
     address public admin;
     address public manager;
     address public nonAuthorized;
-    uint256 public appChainId;
+    uint256 public appchainId;
 
     // Event to test against
     event EpochRangeProcessed(uint256 indexed startEpochNumber, uint256 indexed endEpochNumber);
@@ -19,10 +19,10 @@ contract SyndicateStorageTest is Test {
         admin = address(1);
         manager = address(2);
         nonAuthorized = address(3);
-        appChainId = 123;
+        appchainId = 123;
 
         // Deploy the contract
-        syndicateStorage = new SyndicateStorage(admin, manager, appChainId);
+        syndicateStorage = new SyndicateStorage(admin, manager, appchainId);
     }
 
     // ======== Constructor Tests ========
@@ -32,8 +32,8 @@ contract SyndicateStorageTest is Test {
         assertTrue(syndicateStorage.hasRole(syndicateStorage.DEFAULT_ADMIN_ROLE(), admin));
         assertTrue(syndicateStorage.hasRole(syndicateStorage.MANAGER_ROLE(), manager));
 
-        // Check appChainId is set correctly
-        assertEq(syndicateStorage.appChainId(), appChainId);
+        // Check appchainId is set correctly
+        assertEq(syndicateStorage.appchainId(), appchainId);
 
         // Check initial index is zero
         assertEq(syndicateStorage.indexFromBlock(), 0);
@@ -41,12 +41,12 @@ contract SyndicateStorageTest is Test {
 
     function testConstructorZeroAdmin() public {
         vm.expectRevert("Admin address cannot be 0");
-        new SyndicateStorage(address(0), manager, appChainId);
+        new SyndicateStorage(address(0), manager, appchainId);
     }
 
     function testConstructorZeroManager() public {
         vm.expectRevert("Manager address cannot be 0");
-        new SyndicateStorage(admin, address(0), appChainId);
+        new SyndicateStorage(admin, address(0), appchainId);
     }
 
     function testConstructorZeroAppChainId() public {
