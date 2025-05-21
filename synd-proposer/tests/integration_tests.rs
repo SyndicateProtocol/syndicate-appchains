@@ -94,7 +94,7 @@ async fn e2e_proposer_test() -> Result<()> {
 
     assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
     let body = response.text().await?;
-    assert!(body.contains("Assertion proposed successfully"), "Unexpected response body: {}", body);
+    assert!(body.contains("Assertion posted successfully"), "Unexpected response body: {}", body);
 
     wait_until!(
         {
