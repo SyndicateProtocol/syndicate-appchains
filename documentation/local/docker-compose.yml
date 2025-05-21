@@ -13,11 +13,11 @@ services:
       target: synd-chain-ingestor
       dockerfile: Dockerfile
     volumes:
-      - ./chains:/chains
+      - ./:/chains
     environment:
       - DB_FILE=/chains/5113.db
       - START_BLOCK=0
-      - RPC_URL=wss://syndicate-exo.g.alchemy.com/v2/nYkJi2K0LszDqj8jzWY-rMJmK9ugf0oF
+      - RPC_URL={{ SEQUENCING_RPC_URL }}
 
   set-ingestor:
     build:
@@ -25,12 +25,12 @@ services:
       target: synd-chain-ingestor
       dockerfile: Dockerfile
     volumes:
-      - ./chains:/chains
+      - ./:/chains
     environment:
 #     - RUST_LOG=debug
       - DB_FILE=/chains/84532.db
       - START_BLOCK=20000000
-      - RPC_URL=wss://base-sepolia.g.alchemy.com/v2/nYkJi2K0LszDqj8jzWY-rMJmK9ugf0oF
+      - RPC_URL={{ SETTLEMENT_RPC_URL }}
 
   healthcheck:
     image: curlimages/curl:8.13.0
@@ -69,6 +69,6 @@ services:
       healthcheck:
         condition: service_healthy
     volumes:
-      - .:/cfg:ro
+      - ./config:/cfg:ro
     ports:
       - 8545:8545
