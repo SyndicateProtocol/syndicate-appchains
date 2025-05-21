@@ -2,7 +2,7 @@
 
 use clap::{command, Parser};
 use humantime::parse_duration;
-use jsonrpsee::server::Server;
+use jsonrpsee::server::{PingConfig, Server};
 use shared::{
     logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
@@ -74,6 +74,7 @@ async fn main() {
     info!("starting synd-chain-ingestor server on {}", cfg.port);
     let _handle = Server::builder()
         .ws_only()
+        .enable_ws_ping(PingConfig::default())
         .build(format!("0.0.0.0:{}", cfg.port))
         .await
         .unwrap()

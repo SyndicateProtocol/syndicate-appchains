@@ -9,7 +9,6 @@ batcher   = { workspace = true }
 clap      = { workspace = true }
 eyre      = { workspace = true }
 shared    = { workspace = true }
-tc-client = { workspace = true }
 thiserror = { workspace = true }
 tokio     = { workspace = true, features = ["signal"] }
 tracing   = { workspace = true }
