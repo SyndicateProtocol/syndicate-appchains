@@ -12,6 +12,7 @@ use synd_block_builder::appchains::{
     arbitrum::arbitrum_adapter::ArbitrumAdapter,
     shared::sequencing_transaction_parser::SequencingTransactionParser,
 };
+use tracing::debug;
 
 /// The `Verifier` struct is responsible for verifying a batch of blocks and creating a new mchain
 /// block.
@@ -70,9 +71,9 @@ impl Verifier {
         settlement_chain_input: &SettlementChainInput,
     ) -> Result<VerifierOutput, VerifierError> {
         // TODO: Implement output generation
-        println!("Generating output");
-        println!("Sequencing chain input {:?}", sequencing_chain_input);
-        println!("Settlement chain input {:?}", settlement_chain_input);
+        debug!("Generating output");
+        debug!("Sequencing chain input {:?}", sequencing_chain_input);
+        debug!("Settlement chain input {:?}", settlement_chain_input);
         Ok(VerifierOutput { block_verifier_inputs: vec![], batch_count: 0 })
     }
 }

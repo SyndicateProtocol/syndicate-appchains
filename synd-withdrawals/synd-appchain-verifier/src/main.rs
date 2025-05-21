@@ -55,6 +55,9 @@ fn run() -> Result<(Vec<VerifierOutput>, B256)> {
     let settlement_chain_input: SettlementChainInput =
         serde_json::from_str(&args.settlement_chain_input)?;
 
+    debug!("Sequencing chain input: {:?}", sequencing_chain_input);
+    debug!("Settlement chain input: {:?}", settlement_chain_input);
+
     let config: AppchainVerifierConfig = serde_json::from_str(&args.config)?;
 
     // Verify config hash matches config
@@ -62,7 +65,7 @@ fn run() -> Result<(Vec<VerifierOutput>, B256)> {
         return Err(eyre::eyre!("Config hash mismatch"));
     }
 
-    let verifier = Verifier::new(&config);
+    let _verifier = Verifier::new(&config);
     // Ok(verifier.verify_and_create_output(&sequencing_chain_input, &settlement_chain_input)?)
     Ok((vec![], B256::ZERO))
 }
