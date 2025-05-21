@@ -245,7 +245,7 @@ contract DeployArbConfigManagerForExitingChains is Script {
         uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(privateKey);
         vm.startBroadcast(privateKey);
-        factory.deployArbConfigManager(deployer, keccak256("ARB_CONFIG_MANAGER_v1"));
+        factory.deployArbConfigManager(deployer, keccak256("ARB_CONFIG_MANAGER"));
         vm.stopBroadcast();
     }
 }
@@ -258,7 +258,7 @@ contract DeployArbConfigManager is Script {
         address owner = vm.envAddress("OWNER_ADDRESS");
 
         // Use a fixed salt to ensure consistency across chains
-        bytes32 salt = keccak256("ARB_CONFIG_MANAGER_v1");
+        bytes32 salt = keccak256("ARB_CONFIG_MANAGER");
 
         console2.log("Deployer address:", deployer);
         console2.log("Owner address:", owner);
