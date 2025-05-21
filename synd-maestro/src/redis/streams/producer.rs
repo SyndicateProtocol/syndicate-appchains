@@ -1,6 +1,7 @@
 //! This module provides the producer implementation for Redis streams used to queue
 //! and process transactions across different chains.
 
+use alloy::primitives::keccak256;
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisError};
 use std::{self, time::Duration};
 use tokio::{task::JoinHandle, time::MissedTickBehavior};
@@ -108,13 +109,61 @@ impl StreamProducer {
     /// * Stream write operation fails
     /// * Connection is dropped
     pub async fn enqueue_transaction(&self, raw_tx: &[u8]) -> Result<String, RedisError> {
-        let id: String = self
-            .conn
+        Self::add_to_stream(&self.conn, &self.stream_key, raw_tx, 0).await
+    }
+
+    async fn add_to_stream(
+        conn: &MultiplexedConnection,
+        stream_key: &str,
+        raw_tx: &[u8],
+        retries: u32,
+    ) -> Result<String, RedisError> {
+        let id: String = conn
             .clone()
-            .xadd(&self.stream_key, "*", &[("data", raw_tx), ("retries", b"0")])
+            .xadd(stream_key, "*", &[("data", raw_tx), ("retries", retries.to_string().as_bytes())])
             .await?;
-        debug!(%self.stream_key, %id, "Enqueued transaction");
+        debug!(%stream_key, %id, "Enqueued transaction");
         Ok(id)
+    }
+
+    /// Get all transactions that are older than the finalization duration, deletes them from the
+    /// stream and returns them
+    async fn get_finalized_transactions(
+        conn: &mut MultiplexedConnection,
+        stream_key: &str,
+        finalization_ms: u128,
+    ) -> Result<Vec<(String, Vec<(String, Vec<u8>)>)>, RedisError> {
+        #[allow(clippy::unwrap_used)] // safe to unwrap
+        let current_time =
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
+        let min_time = current_time - finalization_ms;
+        let max_id = format!("{}-0", min_time);
+
+        // Use XRANGE to get all entries that are older than finalization_duration
+        #[allow(clippy::type_complexity)]
+        let result: Result<Vec<(String, Vec<(String, Vec<u8>)>)>, RedisError> =
+            conn.xrange(stream_key, "-", &max_id).await;
+
+        let entries = match result {
+            Ok(entries) => entries,
+            Err(e) => {
+                error!(%stream_key, %e, "Failed to fetch old entries");
+                return Err(e);
+            }
+        };
+
+        if entries.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Collect IDs for deletion and call XDEL on all of them
+        let ids: Vec<String> = entries.iter().map(|(id, _)| id.clone()).collect();
+        if let Err(e) = conn.xdel::<_, _, usize>(&stream_key, &ids).await {
+            error!(%stream_key, %e, "Failed to delete processed entries");
+            return Err(e);
+        }
+        trace!(%stream_key, count = ids.len(), "Deleted entries");
+        Ok(entries)
     }
 }
 
@@ -125,6 +174,46 @@ pub enum CheckFinalizationResult {
     ReSubmit,
     /// Done processing the transaction, will not be re-submitted
     Done,
+}
+
+/// Parses the fields from a Redis stream entry.
+///
+/// # Arguments
+/// * `fields` - The fields from the stream entry.
+/// * `stream_key` - The key of the Redis stream (for logging purposes).
+/// * `id` - The ID of the stream entry (for logging purposes).
+///
+/// # Returns
+/// An `Option` containing a tuple of `(&[u8], u32)` representing the data and retries
+/// if both fields are present and valid. Otherwise, returns `None`.
+fn parse_stream_entry<'a>(
+    fields: &'a [(String, Vec<u8>)],
+    stream_key: &str,
+    id: &str,
+) -> Option<(&'a [u8], u32)> {
+    let mut data_field_value: Option<&'a [u8]> = None;
+    let mut retries_value: Option<u32> = None;
+
+    for (name, value) in fields {
+        match name.as_str() {
+            "data" => data_field_value = Some(value),
+            "retries" => {
+                retries_value =
+                    String::from_utf8(value.clone()).ok().and_then(|s| s.parse::<u32>().ok());
+            }
+            _ => {
+                error!(%stream_key, entry_id = %id, "Unexpected field: {}", name);
+            }
+        }
+    }
+
+    match (data_field_value, retries_value) {
+        (Some(data), Some(retry_count)) => Some((data, retry_count)),
+        _ => {
+            error!(%stream_key, entry_id = %id, "Missing required fields: data or retries");
+            None
+        }
+    }
 }
 
 /// Starts a background task to check for finalized transactions from the Redis stream
@@ -160,20 +249,13 @@ where
         loop {
             interval_timer.tick().await;
 
-            #[allow(clippy::unwrap_used)] // safe to unwrap
-            let current_time = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis();
-            let min_time = current_time - finalization_ms;
-            let max_id = format!("{}-0", min_time);
-
-            // Use XRANGE to get all entries that are older than finalization_duration
-            #[allow(clippy::type_complexity)]
-            let result: Result<Vec<(String, Vec<(String, Vec<u8>)>)>, RedisError> =
-                conn.xrange(&stream_key, "-", &max_id).await;
-
-            let entries = match result {
+            let entries = match StreamProducer::get_finalized_transactions(
+                &mut conn,
+                &stream_key,
+                finalization_ms,
+            )
+            .await
+            {
                 Ok(entries) => entries,
                 Err(e) => {
                     error!(%stream_key, %e, "Failed to fetch old entries");
@@ -181,45 +263,15 @@ where
                 }
             };
 
-            if entries.is_empty() {
-                continue;
-            }
-
-            // Collect IDs for deletion and call XDEL on all of them
-            let ids: Vec<String> = entries.iter().map(|(id, _)| id.clone()).collect();
-            if let Err(e) = conn.xdel::<_, _, usize>(&stream_key, &ids).await {
-                error!(%stream_key, %e, "Failed to delete processed entries");
-                continue;
-            }
-            trace!(%stream_key, count = ids.len(), "Deleted entries");
-
-            // Process each entry with the callback function
+            // Process each entry with the `check_finalization`` callback function
             for (id, fields) in entries {
-                let mut data_field_value: Option<&[u8]> = None;
-                let mut retries_value: Option<u32> = None;
-
-                for (name, value) in &fields {
-                    match name.as_str() {
-                        "data" => data_field_value = Some(value),
-                        "retries" => {
-                            retries_value = String::from_utf8(value.clone())
-                                .ok()
-                                .and_then(|s| s.parse::<u32>().ok());
-                        }
-                        _ => {
-                            error!(%stream_key, entry_id = %id, "Unexpected field: {}", name);
-                        }
-                    }
-                }
-                let (data, retries) = match (data_field_value, retries_value) {
-                    (Some(data), Some(retry_count)) => (data, retry_count),
-                    _ => {
-                        error!(%stream_key, entry_id = %id, "Missing required fields: data or retries");
-                        continue;
-                    }
+                let (data, retries) = match parse_stream_entry(&fields, &stream_key, &id) {
+                    Some((data, retries)) => (data, retries),
+                    None => continue,
                 };
                 if retries >= max_resubmission_retries {
-                    debug!(%stream_key, entry_id = %id, retries, "Max resubmission retries reached. Transaction will not be re-submitted.");
+                    let tx_hash = keccak256(data);
+                    debug!(%stream_key, entry_id = %id, %tx_hash, %retries, "Max resubmission retries reached. Transaction will not be re-submitted.");
                     continue;
                 }
 
@@ -229,35 +281,16 @@ where
                         debug!(%stream_key, entry_id = %id, "Transaction finalized (callback returned Done)");
                     }
                     CheckFinalizationResult::ReSubmit => {
-                        match conn
-                            .clone()
-                            .xadd::<&String, &str, &str, &[u8], String>(
-                                &stream_key,
-                                "*",
-                                &[
-                                    ("data", data),
-                                    ("retries", (retries + 1).to_string().as_bytes()),
-                                ],
-                            )
-                            .await
+                        if let Err(e) =
+                            StreamProducer::add_to_stream(&conn, &stream_key, data, retries + 1)
+                                .await
                         {
-                            Ok(new_id) => {
-                                debug!(
-                                    %stream_key,
-                                    original_id = %id,
-                                    resubmission_id = %new_id,
-                                    retries = retries+1,
-                                    "Transaction not finalized, re-submitting."
-                                );
-                            }
-                            Err(e) => {
-                                error!(
-                                    %stream_key,
-                                    original_id = %id,
-                                    error = %e,
-                                    "Failed to resubmit transaction."
-                                );
-                            }
+                            error!(
+                                %stream_key,
+                                original_id = %id,
+                                error = %e,
+                                "Failed to resubmit transaction."
+                            );
                         }
                     }
                 }
