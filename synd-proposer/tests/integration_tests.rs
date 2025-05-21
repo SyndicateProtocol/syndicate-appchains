@@ -84,17 +84,17 @@ async fn e2e_proposer_test() -> Result<()> {
     assert_eq!(nitro_block.hash, decode.blockHash);
     assert_eq!(nitro_block.send_root, decode.sendRoot);
 
-    // Trigger the /post endpoint
+    // Trigger the /propose endpoint
     let client = reqwest::Client::new();
     let response = client
-        .post(format!("http://localhost:{}/post", proposer_port))
+        .post(format!("http://localhost:{}/propose", proposer_port))
         .send()
         .await
-        .expect("Failed to send POST to /post");
+        .expect("Failed to send POST to /propose");
 
     assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
     let body = response.text().await?;
-    assert!(body.contains("Assertion posted successfully"), "Unexpected response body: {}", body);
+    assert!(body.contains("Assertion proposed successfully"), "Unexpected response body: {}", body);
 
     wait_until!(
         {
