@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 use std::time::Duration;
 
