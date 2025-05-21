@@ -124,6 +124,7 @@ $ make deploy-based-sequencerchain-frame
 | SyndicateFactory        | TODO: deploy new `SyndicateFactory` [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
 | WalletPoolWrapperModule | [0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8](https://syndicate-exo.explorer.alchemy.com/address/0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8) |
 | ArbConfigManagerFactory | [0x4CC2c0a57D3615dc7aBb6bE9586f19666a6Fa913](https://syndicate-exo.explorer.alchemy.com/address/0x4CC2c0a57D3615dc7aBb6bE9586f19666a6Fa913) |
+| ArbConfigManager        | [0xdf76aFe1057789d64e069C5cd1D3AfA5565c3d86](https://syndicate-exo.explorer.alchemy.com/address/0xdf76aFe1057789d64e069C5cd1D3AfA5565c3d86) |
 
 ### ETH Holesky
 

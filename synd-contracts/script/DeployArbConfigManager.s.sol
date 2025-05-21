@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {ArbConfigManagerFactory} from "src/config/ArbConfigManagerFactory.sol";
+import {ArbConfigManager} from "src/config/ArbConfigManager.sol";
 
 contract DeployArbConfigManagerFactory is Script {
     function run() public {
@@ -34,13 +35,13 @@ contract DeployArbConfigManagerForExitingChains is Script {
         address[] allowedSettlementAddresses;
     }
 
-    ChainConfig[11] public chainConfigs;
+    function run() public {
+        ArbConfigManager manager = ArbConfigManager(0xdf76aFe1057789d64e069C5cd1D3AfA5565c3d86);
+        address owner = vm.addr(vm.envUint("DEPLOYER_PRIVATE_KEY"));
+        uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(privateKey);
 
-    ArbConfigManagerFactory factory = ArbConfigManagerFactory(0x4CC2c0a57D3615dc7aBb6bE9586f19666a6Fa913);
-
-    address owner = vm.addr(vm.envUint("DEPLOYER_PRIVATE_KEY"));
-
-    function setup() public {
+        ChainConfig[11] memory chainConfigs;
         chainConfigs[0] = ChainConfig({
             name: "manchego",
             owner: owner,
@@ -239,13 +240,28 @@ contract DeployArbConfigManagerForExitingChains is Script {
             appchainBlockExplorerUrl: "https://selene.explorer.testnet.syndicate.io/",
             allowedSettlementAddresses: new address[](0)
         });
-    }
 
-    function run() public {
-        uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployer = vm.addr(privateKey);
         vm.startBroadcast(privateKey);
-        factory.deployArbConfigManager(deployer, keccak256("ARB_CONFIG_MANAGER"));
+        for (uint256 i = 0; i < chainConfigs.length; i++) {
+            ChainConfig memory chainConfig = chainConfigs[i];
+            address arbChainConfigAddress = manager.createArbChainConfig(
+                chainConfig.owner,
+                chainConfig.chainId,
+                chainConfig.sequencingChainId,
+                chainConfig.arbitrumBridgeAddress,
+                chainConfig.arbitrumInboxAddress,
+                chainConfig.arbitrumIgnoreDelayedMessages,
+                chainConfig.settlementDelay,
+                chainConfig.settlementStartBlock,
+                chainConfig.sequencingContractAddress,
+                chainConfig.sequencingStartBlock,
+                chainConfig.initialAppchainOwner,
+                chainConfig.sequencingChainRpcUrl,
+                chainConfig.appchainBlockExplorerUrl,
+                chainConfig.allowedSettlementAddresses
+            );
+            console2.log("ArbChainConfig for chain", chainConfig.name, "deployed to:", arbChainConfigAddress);
+        }
         vm.stopBroadcast();
     }
 }
