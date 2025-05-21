@@ -9,14 +9,13 @@ import {ArbConfigManager} from "src/config/ArbConfigManager.sol";
 contract DeployArbConfigManagerFactory is Script {
     function run() public {
         uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployer = vm.addr(privateKey);
         vm.startBroadcast(privateKey);
         new ArbConfigManagerFactory();
         vm.stopBroadcast();
     }
 }
 
-contract DeployArbConfigManagerForExitingChains is Script {
+contract DeployArbConfigManagerForExistingChains is Script {
     struct ChainConfig {
         string name;
         uint256 chainId;
@@ -36,7 +35,6 @@ contract DeployArbConfigManagerForExitingChains is Script {
         ArbConfigManager manager = ArbConfigManager(0xdf76aFe1057789d64e069C5cd1D3AfA5565c3d86);
         address owner = vm.addr(vm.envUint("DEPLOYER_PRIVATE_KEY"));
         uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployer = vm.addr(privateKey);
         uint256 sequencingChainId = 5113;
         string memory sequencingChainRpcUrl = "";
 

@@ -22,7 +22,7 @@ pub mod r#context;
 pub mod r#create2;
 pub mod r#deployarbconfigmanager;
 pub mod r#deployarbconfigmanagerfactory;
-pub mod r#deployarbconfigmanagerforexitingchains;
+pub mod r#deployarbconfigmanagerforexistingchains;
 pub mod r#deploysyndicatefactory;
 pub mod r#deploysyndicatesequencerchainplussetupwithalwaysallowmodule;
 pub mod r#deploysyndicatefactorydirect;
