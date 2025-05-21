@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.29;
 
-import {RequireAllModule, Ownable} from "src/requirement-modules/RequireAllModule.sol";
+import {RequireAllModule, BaseRequirementModule} from "src/requirement-modules/RequireAllModule.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
 import {Test} from "forge-std/Test.sol";
@@ -89,7 +90,7 @@ contract RequireAllModuleTest is Test {
         vm.startPrank(admin);
         module.addPermissionCheck(checker, true);
 
-        vm.expectRevert(RequireAllModule.AddressAlreadyExists.selector);
+        vm.expectRevert(BaseRequirementModule.AddressAlreadyExists.selector);
         module.addPermissionCheck(checker, true);
         vm.stopPrank();
     }
@@ -98,7 +99,7 @@ contract RequireAllModuleTest is Test {
         address checker = address(new MockIsAllowedTrue());
 
         vm.startPrank(admin);
-        vm.expectRevert(RequireAllModule.AddressDoesNotExist.selector);
+        vm.expectRevert(BaseRequirementModule.AddressDoesNotExist.selector);
         module.removePermissionCheck(checker);
         vm.stopPrank();
     }
@@ -144,14 +145,14 @@ contract RequireAllModuleTest is Test {
 
     function testRevertsOnZeroAddressAddPermission() public {
         vm.startPrank(admin);
-        vm.expectRevert(RequireAllModule.InvalidAddress.selector);
+        vm.expectRevert(BaseRequirementModule.InvalidAddress.selector);
         module.addPermissionCheck(address(0), true);
         vm.stopPrank();
     }
 
     function testRevertsOnZeroAddressRemovePermission() public {
         vm.startPrank(admin);
-        vm.expectRevert(RequireAllModule.InvalidAddress.selector);
+        vm.expectRevert(BaseRequirementModule.InvalidAddress.selector);
         module.removePermissionCheck(address(0));
         vm.stopPrank();
     }

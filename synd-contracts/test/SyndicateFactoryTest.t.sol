@@ -5,7 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {SyndicateFactory} from "src/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
-import {RequireAllModule, IRequirementModule} from "src/requirement-modules/RequireAllModule.sol";
+import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+
+import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 
 contract SyndicateFactoryTest is Test {
