@@ -316,9 +316,7 @@ where
 
                 trace!(%stream_key, entry_id = %id, retries, "Checking tx for finalization");
                 match check_finalization(data).await {
-                    CheckFinalizationResult::Done => {
-                        debug!(%stream_key, entry_id = %id, "Transaction finalized (callback returned Done)");
-                    }
+                    CheckFinalizationResult::Done => {} // do nothing
                     CheckFinalizationResult::ReSubmit => {
                         if let Err(e) =
                             StreamProducer::add_to_stream(&conn, &stream_key, data, retries + 1)
