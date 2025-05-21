@@ -1,3 +1,6 @@
+# This workflow runs on PRs to `main` to confirm that all Docker images will build successfully. It does not actually push the images to the registry.
+# It does not actually publish the images anywhere.
+
 name: Publish Service Images (Dry Run)
 
 on:

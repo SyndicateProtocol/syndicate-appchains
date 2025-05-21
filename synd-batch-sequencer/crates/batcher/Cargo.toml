@@ -22,7 +22,6 @@ redis             = { workspace = true, features = ["streams", "tokio-comp"] }
 rlp               = { workspace = true }
 shared            = { workspace = true }
 synd-maestro      = { workspace = true }
-tc-client         = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true }
 tracing           = { workspace = true }

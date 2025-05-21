@@ -1,3 +1,8 @@
+# This workflow runs our Foundry tests and contract checks on the smart contracts in both `synd-contracts/src` and `shared/arb-contracts`.
+# Whenever a change is made in those directories, this workflow makes sure everything still builds, passes tests, and that our Rust bindings are up to date.
+# Keeping the Rust bindings up to date makes sure your Rust code always knows how to talk to your smart contracts correctly.
+# https://github.com/foundry-rs/foundry
+
 name: Foundry Tests
 
 on:
@@ -63,7 +68,7 @@ jobs:
           forge test -vvv
         id: test
 
-      # when generating the bindings:
+      # when generating the Rust bindings below:
       # --force flag to clear the cache and artifacts folder and recompile
       # -C to create bindings only for a specific directory
 
