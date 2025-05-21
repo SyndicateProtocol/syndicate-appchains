@@ -162,7 +162,7 @@ contract WalletPoolWrapperModuleTest is Test {
         assertEq(mockSequencingChain2.lastProcessedData(), testData2);
     }
 
-    function testProcessTransactionRaw() public {
+    function testProcessTransaction() public {
         vm.prank(allowedWallet);
 
         // Expect the event to be emitted
@@ -184,7 +184,7 @@ contract WalletPoolWrapperModuleTest is Test {
         walletPoolWrapper.processTransaction(address(0), testData);
     }
 
-    function testProcessBulkTransactions() public {
+    function testProcessTransactionsBulk() public {
         vm.prank(allowedWallet);
 
         // Expect the event to be emitted
@@ -202,7 +202,7 @@ contract WalletPoolWrapperModuleTest is Test {
         assertEq(mockSequencingChain.lastProcessedBulkData(2), testBulkData[2]);
     }
 
-    function testProcessBulkTransactionsWithZeroAddress() public {
+    function testProcessTransactionsBulkWithZeroAddress() public {
         vm.prank(allowedWallet);
 
         // Expect the call to revert with ZeroSequencerAddressNotAllowed error
@@ -210,7 +210,7 @@ contract WalletPoolWrapperModuleTest is Test {
         walletPoolWrapper.processTransactionsBulk(address(0), testBulkData);
     }
 
-    function testProcessBulkTransactionsFromNonAllowedWallet() public {
+    function testProcessTransactionsBulkFromNonAllowedWallet() public {
         vm.prank(nonAllowedWallet);
 
         // Expect the call to revert

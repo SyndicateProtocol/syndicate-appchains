@@ -28,7 +28,7 @@ rule onlyAllowlistedCanProcessTransaction() {
 /**
  * Rule 2: Only allowlisted addresses can use processTransaction
  */
-rule onlyAllowlistedCanProcessTransactionRaw() {
+rule onlyAllowlistedCanProcessTransaction() {
     env e;
     address SyndicateSequencingChain;
     bytes data;
@@ -46,7 +46,7 @@ rule onlyAllowlistedCanProcessTransactionRaw() {
 /**
  * Rule 3: Only allowlisted addresses can use processTransactionsBulk
  */
-rule onlyAllowlistedCanProcessBulkTransactions() {
+rule onlyAllowlistedCanProcessTransactionsBulk() {
     env e;
     address SyndicateSequencingChain;
     bytes[] data;

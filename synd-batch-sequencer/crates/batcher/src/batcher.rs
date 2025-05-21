@@ -217,13 +217,13 @@ impl Batcher {
         let _ = match batch {
             SequencingBatch::Compressed(batch) => {
                 self.sequencing_contract_provider
-                    .processTransactionRaw(Bytes::from(batch))
+                    .processTransactionUncompressed(Bytes::from(batch))
                     .send()
                     .await
             }
             SequencingBatch::Uncompressed(batch) => {
                 self.sequencing_contract_provider
-                    .processBulkTransactions(
+                    .processTransactionsBulk(
                         batch.iter().map(|tx| Bytes::from(tx.clone())).collect(),
                     )
                     .send()

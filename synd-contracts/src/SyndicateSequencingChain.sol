@@ -35,7 +35,8 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         emit TransactionProcessed(msg.sender, data);
     }
 
-    /// @notice Processes multiple uncompressed transactions in bulk.
+    /// @notice Processes an uncompressed transaction.
+    /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data An array of transaction data without prepended zero bytes.
     //#olympix-ignore-required-tx-origin
     function processTransactionUncompressed(bytes calldata data)

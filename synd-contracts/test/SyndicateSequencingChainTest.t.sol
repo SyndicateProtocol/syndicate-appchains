@@ -109,7 +109,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         chain.processTransactionUncompressed(_data);
     }
 
-    function testProcessBulkTransactions() public {
+    function testProcessTransactionsBulk() public {
         bytes[] memory validTxns = new bytes[](3);
         validTxns[0] = abi.encode("transaction 1");
         validTxns[1] = abi.encode("transaction 2");
@@ -135,7 +135,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         new SyndicateSequencingChain(0);
     }
 
-    function testProcessBulkTransactionsAllAllowed() public {
+    function testProcessTransactionsBulkAllAllowed() public {
         // Deploy a module we can directly control
         DirectMockModule directMock = new DirectMockModule();
 
@@ -165,7 +165,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         chain.processTransactionsBulk(txns);
     }
 
-    function testProcessBulkTransactionsBranchCoverage() public {
+    function testProcessTransactionsBulkBranchCoverage() public {
         // Deploy a module we can directly control
         DirectMockModule directMock = new DirectMockModule();
 
@@ -203,7 +203,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         chain.processTransactionsBulk(successTxns);
     }
 
-    function testProcessBulkTransactionsOnlyEmitsValidTransactionsAsEvents() public {
+    function testProcessTransactionsBulkOnlyEmitsValidTransactionsAsEvents() public {
         vm.startPrank(admin);
         SyndicateSequencingChain chainWithInvalidDataPermissionModule = new SyndicateSequencingChain(10042002);
         chainWithInvalidDataPermissionModule.initialize(admin, address(new MockIsAllowedWithInvalidData()));
@@ -276,7 +276,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         chain.processTransactionUncompressed(allowedData);
     }
 
-    function testProcessBulkTransactionsWithEmptyArray() public {
+    function testProcessTransactionsBulkWithEmptyArray() public {
         bytes[] memory emptyArray = new bytes[](0);
 
         // This should execute without errors or events

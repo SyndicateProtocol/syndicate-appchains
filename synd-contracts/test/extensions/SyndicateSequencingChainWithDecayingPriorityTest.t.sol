@@ -129,7 +129,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
 
     // BULK TRANSACTION TESTS
 
-    function testProcessBulkTransactions() public {
+    function testProcessTransactionsBulk() public {
         // Set up permissions
         vm.startPrank(admin);
         requireAndModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
@@ -150,7 +150,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         chain.processTransactionsBulk(testDataArray, testPriorityArray);
     }
 
-    function testProcessBulkTransactionsRevertsWithMismatchedArrays() public {
+    function testProcessTransactionsBulkRevertsWithMismatchedArrays() public {
         // Set up permissions
         vm.startPrank(admin);
         requireAndModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
