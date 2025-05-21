@@ -2,43 +2,12 @@
 
 use crate::errors::VerifierError;
 use alloy::{
-    consensus::{Receipt as AlloyReceipt, RlpEncodableReceipt, TxReceipt},
-    eips::{Encodable2718, Typed2718},
     primitives::{keccak256, Address, Bytes, B256, U256},
     rpc::types::EIP1186AccountProofResponse,
     sol_types::SolValue as _,
 };
 use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
-
-/// A typed receipt for RLP and EIP-2718 encoding.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypedReceipt {
-    /// The type of the receipt (0 = legacy).
-    pub ty: u8,
-    /// The underlying receipt data.
-    pub receipt: AlloyReceipt,
-}
-
-impl Typed2718 for TypedReceipt {
-    fn ty(&self) -> u8 {
-        self.ty
-    }
-}
-
-impl Encodable2718 for TypedReceipt {
-    fn encode_2718_len(&self) -> usize {
-        (if self.ty != 0 { 1 } else { 0 }) +
-            self.receipt.rlp_encoded_length_with_bloom(&self.receipt.bloom())
-    }
-
-    fn encode_2718(&self, out: &mut dyn alloy::rlp::BufMut) {
-        if self.ty != 0 {
-            out.put_u8(self.ty);
-        }
-        self.receipt.rlp_encode_with_bloom(&self.receipt.bloom(), out)
-    }
-}
 
 /// Settlement chain input
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,9 +21,10 @@ pub struct SettlementChainInput {
 }
 
 impl SettlementChainInput {
+    /// Validate the settlement chain input
     pub fn validate(&self) -> Result<(), VerifierError> {
         let mut acc = self.start_accumulator;
-        for delayed_message in self.delayed_messages.iter() {
+        for delayed_message in &self.delayed_messages {
             acc = delayed_message.accumulate(acc);
         }
         if acc != self.delayed_messages_accumulator {
@@ -229,6 +199,7 @@ pub struct L1IncomingMessageHeader {
 }
 
 impl L1IncomingMessage {
+    /// Hash the message
     pub fn hash(&self) -> B256 {
         let message_hash = keccak256(&self.l2msg);
         keccak256(
@@ -245,6 +216,7 @@ impl L1IncomingMessage {
         )
     }
 
+    /// Accumulate the message
     pub fn accumulate(&self, acc: B256) -> B256 {
         let message_hash = self.hash();
         keccak256((acc, message_hash).abi_encode_packed())
@@ -266,6 +238,7 @@ pub struct SyndBatch {
 }
 
 impl SyndBatch {
+    /// Hash the batch
     pub fn hash(&self) -> B256 {
         keccak256(
             (self.batch_number, self.block_number, self.timestamp, &self.payload)
@@ -273,6 +246,7 @@ impl SyndBatch {
         )
     }
 
+    /// Accumulate the batch
     pub fn accumulate(&self, acc: B256) -> B256 {
         keccak256((acc, self.hash()).abi_encode_packed())
     }
