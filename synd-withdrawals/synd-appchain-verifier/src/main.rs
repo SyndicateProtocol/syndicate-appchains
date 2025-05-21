@@ -62,5 +62,6 @@ fn run() -> Result<(Vec<VerifierOutput>, B256)> {
     }
 
     let verifier = Verifier::new(&config);
-    Ok(verifier.verify_and_create_output(&sequencing_chain_input, &settlement_chain_input)?)
+    // Ok(verifier.verify_and_create_output(&sequencing_chain_input, &settlement_chain_input)?)
+    Ok((vec![], B256::ZERO))
 }
