@@ -10,7 +10,7 @@ methods {
 /**
  * Rule 1: Only allowlisted addresses can use processTransactionUncompressed
  */
-rule onlyAllowlistedCanProcessTransaction() {
+rule onlyAllowlistedCanProcessTransactionUncompressed() {
     env e;
     address SyndicateSequencingChain;
     bytes data;

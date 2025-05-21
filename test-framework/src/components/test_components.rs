@@ -25,7 +25,6 @@ use contract_bindings::{
         syndicatesequencingchain::SyndicateSequencingChain::{
             self, SyndicateSequencingChainInstance,
         },
-        walletpoolwrappermodule::WalletPoolWrapperModule,
     },
 };
 use eyre::Result;
