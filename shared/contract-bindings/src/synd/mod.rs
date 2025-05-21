@@ -75,6 +75,7 @@ pub mod r#strings;
 pub mod r#syndicatefactory;
 pub mod r#syndicatesequencingchain;
 pub mod r#directmockmodule;
+pub mod r#mockisallowedwithinvaliddata;
 pub mod r#syndicatesequencingchainwithdecayingpriority;
 pub mod r#syndicatestorage;
 pub mod r#syndicatetoken;
