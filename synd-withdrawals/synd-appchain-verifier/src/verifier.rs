@@ -70,6 +70,7 @@ impl Verifier {
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
     ) -> Result<VerifierOutput, VerifierError> {
+        // TODO (SEQ-769): Implement Appchain Verifier Component
         // TODO: Implement output generation
         debug!("Generating output");
         debug!("Sequencing chain input {:?}", sequencing_chain_input);

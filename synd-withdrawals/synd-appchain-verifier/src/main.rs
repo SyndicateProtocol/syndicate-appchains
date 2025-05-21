@@ -45,6 +45,8 @@ fn main() {
 }
 
 fn run() -> Result<(Vec<VerifierOutput>, B256)> {
+    // TODO (SEQ-769): Implement Appchain Verifier Component
+
     set_global_default_subscriber()?;
 
     let args = VerifierCliArgs::parse();

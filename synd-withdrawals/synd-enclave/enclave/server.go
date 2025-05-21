@@ -229,7 +229,7 @@ func (s *Server) SetSignerKey(ctx context.Context, encrypted hexutil.Bytes) erro
 }
 
 func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput TEEInput) (TEEOutput, error) {
-	// TODO: Implement
+	// TODO (SEQ-961): Implement Sequencing Chain Verifier Component
 	// Sequencing chain verification
 	// Sequencing chain block builder
 	// Sign & return
@@ -237,7 +237,7 @@ func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput TEEInput
 }
 
 func (s *Server) VerifyAppchain(ctx context.Context, verifyInput TEEInput) (TEEOutput, error) {
-	// TODO: Implement
+	// TODO (SEQ-769): Implement Appchain Verifier Component
 	sequencingChainInput := SequencingChainInput{}
 	settlementChainInput := SettlementChainInput{}
 	// Appchain verification

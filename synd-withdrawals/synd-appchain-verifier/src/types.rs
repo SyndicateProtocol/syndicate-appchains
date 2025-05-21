@@ -260,6 +260,7 @@ mod tests {
     use std::str::FromStr;
 
     #[tokio::test]
+    // TODO (SEQ-769): Implement Appchain Verifier Component
     // TODO: fix test
     #[ignore]
     async fn test_verify_account_proof_response() {
