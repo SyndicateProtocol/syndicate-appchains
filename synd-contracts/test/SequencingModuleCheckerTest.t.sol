@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.29;
 
 import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";

@@ -42,22 +42,22 @@ pub mod ShortStrings {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212205c16cbd4a61b20769aa31d996bb6c6d02ccd4cbb3f64b40f339ea140f6f8214c64736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220b4db753267166185cd5c50365cd7c168da4f9912a26fee9fba7dc8afaf283c3964736f6c634300081d0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \\\x16\xCB\xD4\xA6\x1B v\x9A\xA3\x1D\x99k\xB6\xC6\xD0,\xCDL\xBB?d\xB4\x0F3\x9E\xA1@\xF6\xF8!LdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB4\xDBu2g\x16a\x85\xCD\\P6\\\xD7\xC1h\xDAO\x99\x12\xA2o\xEE\x9F\xBA}\xC8\xAF\xAF(<9dsolcC\0\x08\x1D\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea26469706673582212205c16cbd4a61b20769aa31d996bb6c6d02ccd4cbb3f64b40f339ea140f6f8214c64736f6c63430008190033
+    ///0x60806040525f80fdfea2646970667358221220b4db753267166185cd5c50365cd7c168da4f9912a26fee9fba7dc8afaf283c3964736f6c634300081d0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \\\x16\xCB\xD4\xA6\x1B v\x9A\xA3\x1D\x99k\xB6\xC6\xD0,\xCDL\xBB?d\xB4\x0F3\x9E\xA1@\xF6\xF8!LdsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB4\xDBu2g\x16a\x85\xCD\\P6\\\xD7\xC1h\xDAO\x99\x12\xA2o\xEE\x9F\xBA}\xC8\xAF\xAF(<9dsolcC\0\x08\x1D\x003",
     );
     /**Custom error with signature `InvalidShortString()` and selector `0xb3512b0c`.
 ```solidity

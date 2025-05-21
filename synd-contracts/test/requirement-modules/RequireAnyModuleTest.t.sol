@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.29;
 
 import {RequireAnyModule, Ownable} from "src/requirement-modules/RequireAnyModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";

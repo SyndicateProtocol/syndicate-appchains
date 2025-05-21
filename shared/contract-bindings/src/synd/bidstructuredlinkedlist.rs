@@ -22,22 +22,22 @@ pub mod BidStructuredLinkedList {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220b17efa0fdd879bde71afbef92d25b2168559b5467951e8e8abb9ab7cc580f1b264736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220792ebfa7a2c9fc65ed45912657d2b43e160a72acd5e769aca30aa8f4027ccf0d64736f6c634300081d0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB1~\xFA\x0F\xDD\x87\x9B\xDEq\xAF\xBE\xF9-%\xB2\x16\x85Y\xB5FyQ\xE8\xE8\xAB\xB9\xAB|\xC5\x80\xF1\xB2dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 y.\xBF\xA7\xA2\xC9\xFCe\xEDE\x91&W\xD2\xB4>\x16\nr\xAC\xD5\xE7i\xAC\xA3\n\xA8\xF4\x02|\xCF\rdsolcC\0\x08\x1D\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220b17efa0fdd879bde71afbef92d25b2168559b5467951e8e8abb9ab7cc580f1b264736f6c63430008190033
+    ///0x60806040525f80fdfea2646970667358221220792ebfa7a2c9fc65ed45912657d2b43e160a72acd5e769aca30aa8f4027ccf0d64736f6c634300081d0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB1~\xFA\x0F\xDD\x87\x9B\xDEq\xAF\xBE\xF9-%\xB2\x16\x85Y\xB5FyQ\xE8\xE8\xAB\xB9\xAB|\xC5\x80\xF1\xB2dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 y.\xBF\xA7\xA2\xC9\xFCe\xEDE\x91&W\xD2\xB4>\x16\nr\xAC\xD5\xE7i\xAC\xA3\n\xA8\xF4\x02|\xCF\rdsolcC\0\x08\x1D\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`BidStructuredLinkedList`](self) contract instance.

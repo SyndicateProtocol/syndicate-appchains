@@ -22,22 +22,22 @@ pub mod AddressStructuredLinkedList {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea264697066735822122046fd95cd728b0c10c92d49a624731da94872c11701718761260aa21f3c5bc6a064736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea264697066735822122031c7271bbbbbb632d1d63add317bc30bf245c9451bdc5bf8ef792cef4dca56d564736f6c634300081d0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 F\xFD\x95\xCDr\x8B\x0C\x10\xC9-I\xA6$s\x1D\xA9Hr\xC1\x17\x01q\x87a&\n\xA2\x1F<[\xC6\xA0dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 1\xC7'\x1B\xBB\xBB\xB62\xD1\xD6:\xDD1{\xC3\x0B\xF2E\xC9E\x1B\xDC[\xF8\xEFy,\xEFM\xCAV\xD5dsolcC\0\x08\x1D\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea264697066735822122046fd95cd728b0c10c92d49a624731da94872c11701718761260aa21f3c5bc6a064736f6c63430008190033
+    ///0x60806040525f80fdfea264697066735822122031c7271bbbbbb632d1d63add317bc30bf245c9451bdc5bf8ef792cef4dca56d564736f6c634300081d0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 F\xFD\x95\xCDr\x8B\x0C\x10\xC9-I\xA6$s\x1D\xA9Hr\xC1\x17\x01q\x87a&\n\xA2\x1F<[\xC6\xA0dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 1\xC7'\x1B\xBB\xBB\xB62\xD1\xD6:\xDD1{\xC3\x0B\xF2E\xC9E\x1B\xDC[\xF8\xEFy,\xEFM\xCAV\xD5dsolcC\0\x08\x1D\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`AddressStructuredLinkedList`](self) contract instance.
