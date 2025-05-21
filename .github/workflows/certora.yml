@@ -97,8 +97,8 @@ jobs:
       - name: Install solc
         run: |
           pipx install solc-select
-          solc-select install 0.8.25
-          solc-select use 0.8.25
+          solc-select install 0.8.29
+          solc-select use 0.8.29
           ls ~/.solc-select/artifacts/
           which solc
 
