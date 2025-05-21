@@ -46,7 +46,12 @@ func (c *Client) SetSignerKey(ctx context.Context, encrypted hexutil.Bytes) erro
 	return c.callContext(ctx, nil, "setSignerKey", encrypted)
 }
 
-func (c *Client) Verify(ctx context.Context, input TEEInput) (TEEOutput, error) {
+func (c *Client) VerifySequencingChain(ctx context.Context, input TEEInput) (TEEOutput, error) {
 	var result TEEOutput
-	return result, c.callContext(ctx, &result, "verify", input)
+	return result, c.callContext(ctx, &result, "verifySequencingChain", input)
+}
+
+func (c *Client) VerifyAppchain(ctx context.Context, input TEEInput) (TEEOutput, error) {
+	var result TEEOutput
+	return result, c.callContext(ctx, &result, "verifyAppchain", input)
 }
