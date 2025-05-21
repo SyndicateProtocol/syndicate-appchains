@@ -10,9 +10,6 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appChainId;
 
-    /// @notice Emitted when a new transaction is processed.
-    event TransactionProcessed(address indexed sender, bytes data);
-
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appChainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-missing-revert-reason-tests
@@ -26,7 +23,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
     function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
-        emit TransactionProcessed(msg.sender, data);
+        transactionProcessed(msg.sender, data);
     }
 
     /// @notice Process transactions
@@ -34,7 +31,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @param data The transaction data
     //#olympix-ignore-required-tx-origin
     function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
-        emit TransactionProcessed(msg.sender, prependZeroByte(data));
+        transactionProcessed(msg.sender, prependZeroByte(data));
     }
 
     /// @notice Processes multiple transactions in bulk.
@@ -49,7 +46,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
             bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed
-                emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
+                transactionProcessed(msg.sender, prependZeroByte(data[i]));
             }
         }
     }

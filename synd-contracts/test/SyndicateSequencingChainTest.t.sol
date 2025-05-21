@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
+import {SequencingModuleChecker} from "src/SequencingModuleChecker.sol";
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
@@ -66,7 +67,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), validTxn);
+        emit SequencingModuleChecker.TransactionProcessed(address(this), validTxn);
 
         chain.processTransactionRaw(validTxn);
     }
@@ -104,7 +105,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), expectedTx);
+        emit SequencingModuleChecker.TransactionProcessed(address(this), expectedTx);
 
         chain.processTransaction(_data);
     }
@@ -122,7 +123,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         for (uint256 i = 0; i < validTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
 
-            emit SyndicateSequencingChain.TransactionProcessed(
+            emit SequencingModuleChecker.TransactionProcessed(
                 address(this), abi.encodePacked(bytes1(0x00), validTxns[i])
             );
         }
@@ -158,7 +159,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Expect events for all transactions
         for (uint256 i = 0; i < txns.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), txns[i]));
+            emit SequencingModuleChecker.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), txns[i]));
         }
 
         // Process all transactions
@@ -195,7 +196,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Expect events for successful transactions
         for (uint256 i = 0; i < successTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit SyndicateSequencingChain.TransactionProcessed(
+            emit SequencingModuleChecker.TransactionProcessed(
                 address(this), abi.encodePacked(bytes1(0x00), successTxns[i])
             );
         }
@@ -263,7 +264,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Test 2: Success path of onlyWhenAllowed (processTransactionRaw)
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), allowedData);
+        emit SequencingModuleChecker.TransactionProcessed(address(this), allowedData);
         chain.processTransactionRaw(allowedData);
 
         // Test 3: Failure path of onlyWhenAllowed (processTransaction)
@@ -272,7 +273,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Test 4: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), allowedData));
+        emit SequencingModuleChecker.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), allowedData));
         chain.processTransaction(allowedData);
     }
 

@@ -65,22 +65,22 @@ pub mod Errors {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220a0d239409980c15ac73bf8bc949cdb90cf620a05abe30342ec9ec3ee4e624db464736f6c63430008190033
+    ///0x608060405234601d57600e6021565b6008602c823930815050600890f35b6027565b60405190565b5f80fdfe60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA0\xD29@\x99\x80\xC1Z\xC7;\xF8\xBC\x94\x9C\xDB\x90\xCFb\n\x05\xAB\xE3\x03B\xEC\x9E\xC3\xEENbM\xB4dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`\x08`,\x8290\x81PP`\x08\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220a0d239409980c15ac73bf8bc949cdb90cf620a05abe30342ec9ec3ee4e624db464736f6c63430008190033
+    ///0x60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA0\xD29@\x99\x80\xC1Z\xC7;\xF8\xBC\x94\x9C\xDB\x90\xCFb\n\x05\xAB\xE3\x03B\xEC\x9E\xC3\xEENbM\xB4dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD",
     );
     /**Custom error with signature `FailedCall()` and selector `0xd6bda275`.
 ```solidity
