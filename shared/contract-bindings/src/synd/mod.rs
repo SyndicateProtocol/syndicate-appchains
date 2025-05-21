@@ -21,6 +21,7 @@ pub mod r#beaconproxy;
 pub mod r#context;
 pub mod r#create2;
 pub mod r#deployarbconfigmanager;
+pub mod r#deployarbconfigmanagerfactory;
 pub mod r#deploysyndicatefactory;
 pub mod r#deploysyndicatesequencingchainplussetupwithalwaysallowmodule;
 pub mod r#deploysyndicatefactorydirect;

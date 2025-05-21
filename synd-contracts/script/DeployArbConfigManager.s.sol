@@ -5,6 +5,16 @@ import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {ArbConfigManagerFactory} from "src/config/ArbConfigManagerFactory.sol";
 
+contract DeployArbConfigManagerFactory is Script {
+    function run() public {
+        uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(privateKey);
+        vm.startBroadcast(privateKey);
+        new ArbConfigManagerFactory();
+        vm.stopBroadcast();
+    }
+}
+
 contract DeployArbConfigManager is Script {
     function run() public {
         // Get deployer information from environment
