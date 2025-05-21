@@ -1,4 +1,4 @@
-//! Configuration for the appchain verifier
+//! Configuration for the `synd-appchain-verifier`
 
 use alloy::primitives::{keccak256, Address, B256};
 use clap::Parser;

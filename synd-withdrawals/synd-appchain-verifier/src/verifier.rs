@@ -18,16 +18,16 @@ use synd_block_builder::appchains::{
 #[derive(Default, Debug, Clone)]
 pub struct Verifier {
     /// The adapter for the sequencing chain
-    arbitrum_adapter: ArbitrumAdapter,
+    _arbitrum_adapter: ArbitrumAdapter,
     /// Settlement delay
-    settlement_delay: u64,
+    _settlement_delay: u64,
 }
 
 impl Verifier {
     /// Create a new `Verifier`
     pub fn new(config: &AppchainVerifierConfig) -> Self {
         Self {
-            arbitrum_adapter: ArbitrumAdapter {
+            _arbitrum_adapter: ArbitrumAdapter {
                 transaction_parser: SequencingTransactionParser::new(
                     config.sequencing_contract_address,
                 ),
@@ -40,7 +40,7 @@ impl Verifier {
                     .copied()
                     .collect::<HashSet<_>>(),
             },
-            settlement_delay: config.settlement_delay,
+            _settlement_delay: config.settlement_delay,
         }
     }
 
@@ -69,6 +69,10 @@ impl Verifier {
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
     ) -> Result<VerifierOutput, VerifierError> {
+        // TODO: Implement output generation
+        println!("Generating output");
+        println!("Sequencing chain input {:?}", sequencing_chain_input);
+        println!("Settlement chain input {:?}", settlement_chain_input);
         Ok(VerifierOutput { block_verifier_inputs: vec![], batch_count: 0 })
     }
 }

@@ -1,4 +1,4 @@
-//! Errors for the verifier
+//! Errors for the `synd-appchain-verifier`
 
 use thiserror::Error;
 

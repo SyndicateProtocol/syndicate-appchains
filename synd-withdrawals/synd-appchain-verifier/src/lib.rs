@@ -1,5 +1,4 @@
-//! The `synd-appchain-verifier` crate is responsible for verifying a batch of blocks and creating a
-//! new mchain block
+//! The `synd-appchain-verifier` crate
 pub mod config;
 pub mod errors;
 pub mod types;

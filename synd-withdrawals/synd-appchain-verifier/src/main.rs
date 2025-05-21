@@ -1,4 +1,5 @@
-//! Main entrypoint for the synd-appchain-verifier
+//! Main entrypoint for the `synd-appchain-verifier`
+
 use alloy::primitives::B256;
 use clap::Parser;
 use eyre::Result;
