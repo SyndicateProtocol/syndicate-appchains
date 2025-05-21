@@ -343,11 +343,17 @@ mod tests {
             .unwrap();
         let chain_id = 1;
         let redis_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
-        let producer =
-            StreamProducer::new(conn, chain_id, Duration::from_secs(60), Duration::from_secs(60));
+        let producer = StreamProducer::new(
+            conn,
+            chain_id,
+            Duration::from_secs(60),
+            Duration::from_secs(60),
+            0,
+            |_| async { CheckFinalizationResult::Done },
+        );
 
         let test_data1 = b"test transaction data 1".to_vec();
-        producer.enqueue_transaction(test_data1.clone()).await.unwrap();
+        producer.enqueue_transaction(&test_data1).await.unwrap();
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
@@ -459,6 +465,8 @@ mod tests {
             config.chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
+            0,
+            |_| async { CheckFinalizationResult::Done },
         );
 
         // Add 20 test transactions of ~10KB each
@@ -470,7 +478,7 @@ mod tests {
         }
         test_data.truncate(10 * 1024); // Ensure exact 10KB
         for _ in 0..20 {
-            producer.enqueue_transaction(test_data.clone()).await.unwrap();
+            producer.enqueue_transaction(&test_data).await.unwrap();
         }
 
         let mut registry = Registry::default();
