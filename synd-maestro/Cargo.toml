@@ -36,6 +36,7 @@ shared       = { workspace = true }
 test-utils   = { workspace = true }
 thiserror    = { workspace = true }
 tokio        = { workspace = true, features = ["full"] }
+tokio-util   = { workspace = true }
 tower        = { workspace = true }
 tracing      = { workspace = true }
 

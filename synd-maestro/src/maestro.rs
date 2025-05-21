@@ -33,7 +33,7 @@ use shared::{
 };
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 /// The service for filtering and directing transactions
 #[derive(Debug)]
@@ -653,6 +653,29 @@ impl MaestroService {
         }
 
         Ok(result)
+    }
+
+    /// Shuts down the Maestro service and all its components gracefully.
+    pub async fn shutdown(&self) {
+        info!("Shutting down MaestroService...");
+
+        let mut shutdown_handles = Vec::new();
+        for (chain_id, producer) in &self.producers {
+            info!(%chain_id, "Initiating shutdown for StreamProducer...");
+            let producer_clone = Arc::clone(producer);
+            shutdown_handles.push(tokio::spawn(async move {
+                producer_clone.shutdown().await;
+            }));
+        }
+
+        for handle in shutdown_handles {
+            if let Err(e) = handle.await {
+                error!("Error during StreamProducer shutdown: {:?}", e);
+            }
+        }
+
+        info!("All StreamProducers shut down.");
+        info!("MaestroService shutdown complete.");
     }
 }
 

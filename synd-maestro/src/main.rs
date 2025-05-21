@@ -7,7 +7,7 @@ use shared::{
 };
 use synd_maestro::config::Config;
 use tokio::signal::unix::{signal, SignalKind};
-use tracing::info;
+use tracing::{error, info};
 
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
@@ -23,7 +23,9 @@ async fn main() -> Result<()> {
     let metrics_state = MetricsState::default();
     tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
 
-    let (addr, handle) = synd_maestro::server::run(config).await?;
+    // Server::run now creates the service internally and returns a shutdown function
+    // that also handles stopping the server handle.
+    let (addr, shutdown_fn) = synd_maestro::server::run(config).await?;
     info!(
         %addr,
         "Maestro server running"
@@ -43,8 +45,10 @@ async fn main() -> Result<()> {
         }
     }
 
-    handle.stop()?;
-    handle.stopped().await;
-
+    info!("Initiating Maestro shutdown...");
+    if let Err(e) = shutdown_fn().await {
+        error!("Error during shutdown: {:?}", e);
+    }
+    info!("Maestro shutdown completed.");
     Ok(())
 }

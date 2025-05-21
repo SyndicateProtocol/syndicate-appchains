@@ -4,8 +4,9 @@
 use alloy::primitives::keccak256;
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisError};
 use std::{self, time::Duration};
-use tokio::{task::JoinHandle, time::MissedTickBehavior};
-use tracing::{debug, error, trace};
+use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
+use tokio_util::sync::CancellationToken;
+use tracing::{debug, error, info, trace};
 
 /// Base key for Redis transaction streams
 /// Format: `synd-maestro:transactions:{chain_id}`
@@ -51,7 +52,8 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 pub struct StreamProducer {
     conn: MultiplexedConnection,
     pub(crate) stream_key: String,
-    _finalization_checker_handle: JoinHandle<()>,
+    shutdown_token: CancellationToken,
+    finalization_task_handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl StreamProducer {
@@ -80,15 +82,23 @@ impl StreamProducer {
         Fut: std::future::Future<Output = CheckFinalizationResult> + Send + 'static,
     {
         let stream_key = tx_stream_key(chain_id);
-        let _finalization_checker_handle = start_finalization_checker(
+        let shutdown_token = CancellationToken::new();
+
+        let handle = start_finalization_checker(
             conn.clone(),
             stream_key.clone(),
             finalization_checker_interval,
             finalization_duration,
             max_resubmission_retries,
             handle_finalized_tx,
+            shutdown_token.clone(),
         );
-        Self { conn, stream_key, _finalization_checker_handle }
+        Self {
+            conn,
+            stream_key,
+            shutdown_token,
+            finalization_task_handle: Mutex::new(Some(handle)),
+        }
     }
 
     /// Enqueues a raw transaction to the Redis stream
@@ -165,6 +175,24 @@ impl StreamProducer {
         trace!(%stream_key, count = ids.len(), "Deleted entries");
         Ok(entries)
     }
+
+    /// Shuts down the finalization checker task gracefully.
+    ///
+    /// Sends a shutdown signal to the checker and waits for it to finish its current loop.
+    pub async fn shutdown(&self) {
+        debug!(stream_key = %self.stream_key, "Attempting to shut down StreamProducer's finalization checker...");
+        self.shutdown_token.cancel();
+
+        let mut handle_guard = self.finalization_task_handle.lock().await;
+        if let Some(handle) = handle_guard.take() {
+            debug!(stream_key = %self.stream_key, "Awaiting finalization checker task to join...");
+            if let Err(e) = handle.await {
+                error!(stream_key = %self.stream_key, error = %e, "Finalization checker task panicked or was cancelled during join.");
+            }
+        } else {
+            debug!(stream_key = %self.stream_key, "Finalization checker task already awaited or shutdown process was previously completed.");
+        }
+    }
 }
 
 /// Result of the finalization check
@@ -226,6 +254,7 @@ fn parse_stream_entry<'a>(
 /// * `max_resubmission_retries` - Maximum number of times a transaction can be re-submitted
 /// * `check_finalization` - Function to call with each entry's raw data, this will decide whether
 ///   to resubmit the transaction or not
+/// * `shutdown_token` - CancellationToken for shutting down the task
 ///
 /// # Returns
 /// A `JoinHandle` for the spawned finalization checker task
@@ -236,6 +265,7 @@ fn start_finalization_checker<F, Fut>(
     finalization_duration: Duration,
     max_resubmission_retries: u32,
     check_finalization: F,
+    shutdown_token: CancellationToken,
 ) -> JoinHandle<()>
 where
     F: Fn(&[u8]) -> Fut + Send + 'static,
@@ -247,7 +277,16 @@ where
         interval_timer.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
         loop {
-            interval_timer.tick().await;
+            tokio::select! {
+                biased;
+                _ = shutdown_token.cancelled() => {
+                    info!(%stream_key, "Finalization checker: cancellation token activated. Exiting task.");
+                    return;
+                }
+                _ = interval_timer.tick() => {
+                    trace!(%stream_key, "Finalization checker: interval tick.");
+                }
+            }
 
             let entries = match StreamProducer::get_finalized_transactions(
                 &mut conn,
@@ -390,6 +429,8 @@ mod tests {
         let finalization_duration = Duration::from_millis(50);
         let max_resubmission_retries = 1; // Test with 1 retry allowed
 
+        let shutdown_token = CancellationToken::new();
+
         let _finalization_checker_handle = start_finalization_checker(
             conn.clone(),
             stream_key.to_string(),
@@ -420,6 +461,7 @@ mod tests {
                     }
                 }
             },
+            shutdown_token.clone(),
         );
 
         // Wait for finalization checking to occur
@@ -498,6 +540,8 @@ mod tests {
         let finalization_checker_interval = Duration::from_millis(100);
         let finalization_duration = Duration::from_millis(50);
 
+        let shutdown_token = CancellationToken::new();
+
         let _checker_handle = start_finalization_checker(
             conn.clone(),
             stream_key.to_string(),
@@ -505,6 +549,7 @@ mod tests {
             finalization_duration,
             max_resubmission_retries,
             finalization_callback,
+            shutdown_token.clone(),
         );
 
         // Wait for the first finalization cycle
