@@ -4,13 +4,15 @@
 use crate::{
     config::AppchainVerifierConfig,
     errors::VerifierError,
-    types::{SequencingChainInput, SettlementChainInput, VerifierOutput},
+    types::{
+        BlockVerifierInput, L1IncomingMessage as DelayedMessage, SequencingChainInput,
+        SettlementChainInput, SyndicateTransaction,
+    },
 };
+use alloy::primitives::Bytes;
 use eyre::Result;
-use std::collections::HashSet;
-use synd_block_builder::appchains::{
-    arbitrum::arbitrum_adapter::ArbitrumAdapter,
-    shared::sequencing_transaction_parser::SequencingTransactionParser,
+use synd_block_builder::appchains::arbitrum::batch::{
+    Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader,
 };
 use tracing::debug;
 
@@ -18,31 +20,77 @@ use tracing::debug;
 /// block.
 #[derive(Default, Debug, Clone)]
 pub struct Verifier {
-    /// The adapter for the sequencing chain
-    _arbitrum_adapter: ArbitrumAdapter,
     /// Settlement delay
     _settlement_delay: u64,
 }
 
+/// A batch with a timestamp
+#[derive(Default, Debug, Clone)]
+pub struct BatchWithTimestamp {
+    /// Timestamp
+    pub timestamp: u64,
+    /// Batch
+    pub batch: Bytes,
+}
+
 impl Verifier {
     /// Create a new `Verifier`
-    pub fn new(config: &AppchainVerifierConfig) -> Self {
-        Self {
-            _arbitrum_adapter: ArbitrumAdapter {
-                transaction_parser: SequencingTransactionParser::new(
-                    config.sequencing_contract_address,
-                ),
-                bridge_address: config.arbitrum_bridge_address,
-                inbox_address: config.arbitrum_inbox_address,
-                ignore_delayed_messages: config.arbitrum_ignore_delayed_messages,
-                allowed_settlement_addresses: config
-                    .allowed_settlement_addresses
-                    .iter()
-                    .copied()
-                    .collect::<HashSet<_>>(),
-            },
-            _settlement_delay: config.settlement_delay,
+    pub const fn new(config: &AppchainVerifierConfig) -> Self {
+        Self { _settlement_delay: config.settlement_delay }
+    }
+
+    /// Builds a batch of transactions into an Arbitrum batch
+    fn build_batch(txs: Vec<Bytes>, block_number: u64, timestamp: u64) -> Result<Bytes> {
+        let mut messages = vec![];
+
+        if !txs.is_empty() {
+            debug!("Sequenced transactions: {:?}", txs);
+            messages.push(BatchMessage::L2(L1IncomingMessage {
+                header: L1IncomingMessageHeader { block_number, timestamp },
+                l2_msg: txs,
+            }));
+        };
+
+        let batch = Batch(messages);
+        debug!("New Batch: {:?}", batch);
+
+        // Encode the batch data
+        let encoded_batch = batch.encode()?;
+
+        Ok(encoded_batch)
+    }
+
+    fn build_batch_txns(
+        &self,
+        txs_payloads: &Vec<SyndicateTransaction>,
+    ) -> Result<Vec<BatchWithTimestamp>, VerifierError> {
+        let mut batches = vec![];
+        let mut slot = vec![];
+        let mut block_number = txs_payloads[0].block_number;
+        let mut timestamp = txs_payloads[0].timestamp;
+        for tx in txs_payloads {
+            if tx.block_number == block_number {
+                slot.push(tx.payload.clone());
+            } else {
+                let batch = BatchWithTimestamp {
+                    timestamp,
+                    batch: Self::build_batch(slot, block_number, timestamp)?,
+                };
+                batches.push(batch);
+                slot = vec![tx.payload.clone()];
+                block_number = tx.block_number;
+                timestamp = tx.timestamp;
+            }
         }
+
+        Ok(batches)
+    }
+
+    const fn build_delayed_messages(
+        &self,
+        delayed_messages: Vec<DelayedMessage>,
+    ) -> Result<Vec<DelayedMessage>, VerifierError> {
+        Ok(delayed_messages)
     }
 
     /// Verifies blocks and receipts and creates a new mchain block
@@ -50,7 +98,7 @@ impl Verifier {
         &self,
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
-    ) -> Result<VerifierOutput, VerifierError> {
+    ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
         // Validate Settlement Chain Input
         settlement_chain_input.validate()?;
 
@@ -69,12 +117,51 @@ impl Verifier {
         &self,
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
-    ) -> Result<VerifierOutput, VerifierError> {
+    ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
         // TODO (SEQ-769): Implement Appchain Verifier Component
+        let _batches = self.build_batch_txns(&sequencing_chain_input.syndicate_transactions)?;
+        let _delayed_messages =
+            self.build_delayed_messages(settlement_chain_input.delayed_messages.clone())?;
+
         // TODO: Implement output generation
         debug!("Generating output");
         debug!("Sequencing chain input {:?}", sequencing_chain_input);
         debug!("Settlement chain input {:?}", settlement_chain_input);
-        Ok(VerifierOutput { block_verifier_inputs: vec![], batch_count: 0 })
+        Ok(vec![])
+    }
+
+    fn _slotter(
+        &self,
+        batches: Vec<BatchWithTimestamp>,
+        delayed_messages: Vec<DelayedMessage>,
+    ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
+        let mut block_verifier_inputs = vec![];
+        for batch in batches {
+            let messages = Self::_get_current_messages(delayed_messages.clone(), batch.timestamp);
+            let block_verifier_input = BlockVerifierInput {
+                min_block_number: 0,
+                max_block_number: u64::MAX,
+                min_timestamp: 0,
+                max_timestamp: u64::MAX,
+                messages,
+                batch: batch.batch,
+            };
+            block_verifier_inputs.push(block_verifier_input);
+        }
+        Ok(block_verifier_inputs)
+    }
+
+    fn _get_current_messages(
+        _delayed_messages: Vec<DelayedMessage>,
+        _timestamp: u64,
+    ) -> Vec<DelayedMessage> {
+        // TODO: Implement this
+        // delayed_messages
+        //     .iter()
+        //     .filter(|message| message.header.timestamp == timestamp)
+        //     .map(|message| message.clone())
+        //     .collect()
+
+        vec![]
     }
 }

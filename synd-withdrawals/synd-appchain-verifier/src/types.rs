@@ -2,32 +2,39 @@
 
 use crate::errors::VerifierError;
 use alloy::{
-    primitives::{keccak256, Address, Bytes, B256, U256},
-    rpc::types::EIP1186AccountProofResponse,
+    primitives::{fixed_bytes, keccak256, Address, Bytes, B256, U256},
+    rpc::types::{EIP1186AccountProofResponse, Header},
     sol_types::SolValue as _,
 };
 use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
+use tracing::error;
+
+const SYNDICATE_ACCUMULATOR_STORAGE_SLOT: B256 =
+    fixed_bytes!("0xbcd134af035e52869741eb0221dfc8a26900a04521f5a2d44a59b675ea20a969"); // Keccak256("syndicate.tx.data")
 
 /// Settlement chain input
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SettlementChainInput {
-    /// Start accumulator
-    pub start_accumulator: B256,
-    /// Delayed messages Accumulator
-    pub delayed_messages_accumulator: B256,
+    // TRUSTLESS INPUT
     /// Delayed messages
     pub delayed_messages: Vec<L1IncomingMessage>,
+    /// Start delayed messages accumulator
+    pub start_delayed_messages_accumulator: B256,
+
+    // TRUSTED INPUT
+    /// End delayed messages accumulator
+    pub end_delayed_messages_accumulator: B256,
 }
 
 impl SettlementChainInput {
     /// Validate the settlement chain input
     pub fn validate(&self) -> Result<(), VerifierError> {
-        let mut acc = self.start_accumulator;
+        let mut acc = self.start_delayed_messages_accumulator;
         for delayed_message in &self.delayed_messages {
             acc = delayed_message.accumulate(acc);
         }
-        if acc != self.delayed_messages_accumulator {
+        if acc != self.end_delayed_messages_accumulator {
             return Err(VerifierError::InvalidSettlementChainInput);
         }
         Ok(())
@@ -36,35 +43,36 @@ impl SettlementChainInput {
 /// Sequencing chain input
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SequencingChainInput {
+    // TRUSTLESS INPUT
+    /// Start block header
+    pub start_block_header: Header,
+    /// End block header
+    pub end_block_header: Header,
     /// Sequencing chain contract address
     pub sequencing_chain_contract_address: Address,
-    /// Syndicate Accumulator Merkle Proof
-    pub syndicate_accumulator_merkle_proof: EIP1186AccountProofResponse,
+    /// Start syndicate accumulator merkle proof
+    pub start_syndicate_accumulator_merkle_proof: EIP1186AccountProofResponse,
+    /// End syndicate accumulator merkle proof
+    pub end_syndicate_accumulator_merkle_proof: EIP1186AccountProofResponse,
+    /// Syndicate transactions
+    pub syndicate_transactions: Vec<SyndicateTransaction>,
 
+    // TRUSTED INPUT
+    /// Start block hash
+    pub start_block_hash: B256,
     /// End block hash
     pub end_block_hash: B256,
-
-    /// Start accumulator
-    pub start_accumulator: B256,
-
-    /// End accumulator
-    pub end_accumulator: B256,
-
-    /// Syndicate batches
-    pub syndicate_batches: Vec<SyndBatch>,
-
-    // Trusted input
-    /// Start batch number
-    pub start_batch_number: u64,
 }
 
 impl SequencingChainInput {
     fn verify_accumulator(&self) -> Result<(), VerifierError> {
-        let mut acc = self.start_accumulator;
-        for syndicate_batch in &self.syndicate_batches {
-            acc = syndicate_batch.accumulate(acc);
+        let mut acc = self.start_syndicate_accumulator_merkle_proof.storage_proof[0].value.into();
+        for syndicate_transaction in &self.syndicate_transactions {
+            acc = syndicate_transaction.accumulate(acc);
         }
-        if acc != self.end_accumulator {
+        let expected_end_accumulator: B256 =
+            self.end_syndicate_accumulator_merkle_proof.storage_proof[0].value.into();
+        if acc != expected_end_accumulator {
             return Err(VerifierError::InvalidSequencingChainInput);
         }
         Ok(())
@@ -72,59 +80,57 @@ impl SequencingChainInput {
 
     fn verify_account_proof_response(
         proof: &EIP1186AccountProofResponse,
-        block_hash: B256,
+        state_root: B256,
     ) -> Result<(), VerifierError> {
-        let key = Nibbles::unpack(keccak256(proof.address));
-        println!("Key {:?}", key);
+        let key: Nibbles = Nibbles::unpack(keccak256(proof.address));
         let expected_value = alloy::rlp::encode(TrieAccount {
-            balance: proof.balance,
-            code_hash: proof.code_hash,
             nonce: proof.nonce,
+            balance: proof.balance,
             storage_root: proof.storage_hash,
+            code_hash: proof.code_hash,
         });
-        println!("Expected value {:?} - length {:?}", expected_value, expected_value.len());
-        verify_proof(block_hash, key, Some(expected_value), &proof.account_proof).map_err(|e| {
-            println!("Error {:?}", e);
+        verify_proof(state_root, key, Some(expected_value), &proof.account_proof).map_err(|e| {
+            error!("Error {:?}", e);
             VerifierError::InvalidSequencingChainInput
         })?;
-        println!("Proof {:?}", proof);
         for p in &proof.storage_proof {
-            let k = Nibbles::unpack(p.key.as_b256());
-            verify_proof(proof.storage_hash, k, Some(p.value.to_be_bytes_vec()), &p.proof)
-                .map_err(|e| {
-                    println!("Error 2 {:?}", e);
-                    VerifierError::InvalidSequencingChainInput
-                })?;
+            let k = Nibbles::unpack(keccak256(p.key.as_b256()));
+            let expected_value = Some(alloy::rlp::encode_fixed_size(&p.value).to_vec());
+            verify_proof(proof.storage_hash, k, expected_value, &p.proof).map_err(|e| {
+                error!("Error 2 {:?}", e);
+                VerifierError::InvalidSequencingChainInput
+            })?;
         }
-        println!("Proof 2 {:?}", proof);
         Ok(())
     }
 
-    fn verify_merkle_proof(&self) -> Result<(), VerifierError> {
-        // Verify syndicate accumulator merkle proof
-        Self::verify_account_proof_response(
-            &self.syndicate_accumulator_merkle_proof,
-            self.end_block_hash,
-        )?;
-
-        // Verify there is only one storage proof
-        assert!(self.syndicate_accumulator_merkle_proof.storage_proof.len() == 1);
-
-        // Verify storage slot
-        let storage_slot = keccak256("syndicate.accumulator");
-        let storage_proof = &self.syndicate_accumulator_merkle_proof.storage_proof[0];
-
-        if storage_proof.key.as_b256() != storage_slot {
+    fn verify_merkle_proof(
+        proof: &EIP1186AccountProofResponse,
+        header: &Header,
+        block_hash: B256,
+        sequencing_chain_contract_address: Address,
+        slot: B256,
+    ) -> Result<(), VerifierError> {
+        // Verify header
+        if header.hash_slow() != block_hash {
             return Err(VerifierError::InvalidSequencingChainInput);
         }
+        // Verify end syndicate accumulator merkle proof
+        Self::verify_account_proof_response(proof, header.state_root)?;
 
-        if storage_proof.value != self.end_accumulator.into() {
+        // Verify there is only one storage proof
+        if proof.storage_proof.len() != 1 {
+            return Err(VerifierError::InvalidSequencingChainInput);
+        }
+        // Verify storage slot
+        let storage_proof = &proof.storage_proof[0];
+
+        if storage_proof.key.as_b256() != slot {
             return Err(VerifierError::InvalidSequencingChainInput);
         }
 
         // Verify address
-        if self.syndicate_accumulator_merkle_proof.address != self.sequencing_chain_contract_address
-        {
+        if proof.address != sequencing_chain_contract_address {
             return Err(VerifierError::InvalidSequencingChainInput);
         }
 
@@ -135,19 +141,24 @@ impl SequencingChainInput {
     pub fn validate(&self) -> Result<(), VerifierError> {
         // Verify accumulator
         self.verify_accumulator()?;
-        // Validate merkle proof
-        self.verify_merkle_proof()?;
+        // Validate start syndicate accumulator merkle proof
+        Self::verify_merkle_proof(
+            &self.start_syndicate_accumulator_merkle_proof,
+            &self.start_block_header,
+            self.start_block_hash,
+            self.sequencing_chain_contract_address,
+            SYNDICATE_ACCUMULATOR_STORAGE_SLOT,
+        )?;
+        // Validate  end syndicate accumulator merkle proof
+        Self::verify_merkle_proof(
+            &self.end_syndicate_accumulator_merkle_proof,
+            &self.end_block_header,
+            self.end_block_hash,
+            self.sequencing_chain_contract_address,
+            SYNDICATE_ACCUMULATOR_STORAGE_SLOT,
+        )?;
         Ok(())
     }
-}
-
-/// Output for the verifier
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VerifierOutput {
-    /// Array of block verifier inputs
-    pub block_verifier_inputs: Vec<BlockVerifierInput>,
-    /// Batch count
-    pub batch_count: u64,
 }
 
 // TODO: Move to a shared crate
@@ -155,8 +166,6 @@ pub struct VerifierOutput {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockVerifierInput {
-    /// Appchain block hash
-    pub block_hash: B256,
     /// Minimum timestamp
     pub min_timestamp: u64,
     /// Maximum timestamp
@@ -201,7 +210,7 @@ pub struct L1IncomingMessageHeader {
 
 impl L1IncomingMessage {
     /// Hash the L1 incoming message
-    pub fn hash(&self) -> B256 {
+    fn hash(&self) -> B256 {
         let message_hash = keccak256(&self.l2msg);
         keccak256(
             (
@@ -227,69 +236,77 @@ impl L1IncomingMessage {
 /// Synd batch
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SyndBatch {
-    /// Batch number
-    pub batch_number: u64,
+pub struct SyndicateTransaction {
+    /// Transaction number
+    pub tx_number: u64,
     /// Block number
     pub block_number: u64,
     /// Timestamp
     pub timestamp: u64,
     /// Messages
     pub payload: Bytes,
+    /// Sender
+    pub sender: Address,
 }
 
-impl SyndBatch {
-    /// Hash the batch
-    pub fn hash(&self) -> B256 {
-        keccak256(
-            (self.batch_number, self.block_number, self.timestamp, &self.payload)
-                .abi_encode_packed(),
-        )
-    }
-
+impl SyndicateTransaction {
     /// Accumulate the batch
     pub fn accumulate(&self, acc: B256) -> B256 {
-        keccak256((acc, self.hash()).abi_encode_packed())
+        keccak256(
+            (
+                acc,
+                self.sender,
+                self.block_number,
+                self.timestamp,
+                self.tx_number,
+                keccak256(&self.payload),
+            )
+                .abi_encode_packed(),
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::providers::{Provider as _, ProviderBuilder, RootProvider};
+    use alloy::{
+        primitives::U256,
+        providers::{Provider as _, ProviderBuilder, RootProvider},
+    };
     use std::str::FromStr;
 
     #[tokio::test]
     // TODO (SEQ-769): Implement Appchain Verifier Component
     // TODO: fix test
-    #[ignore]
+
     async fn test_verify_account_proof_response() {
         let client: RootProvider = ProviderBuilder::default()
             .connect("https://syndicate-exo.g.alchemy.com/v2/K6cAUXQhrUT3KJPd9a-glciOF5ZA_F8Y")
             .await
             .unwrap();
+
+        let address = Address::from_str("0x180972BF154c9Aea86c43149D83B7Ea078c33f48").unwrap();
+        let test_slot = B256::ZERO;
         let proof: EIP1186AccountProofResponse = client
             .raw_request(
                 "eth_getProof".into(),
-                (
-                    Address::from_str("0x180972BF154c9Aea86c43149D83B7Ea078c33f48").unwrap(),
-                    vec![U256::from(1)],
-                    "latest",
-                ),
+                (address, vec![U256::from_be_bytes(test_slot.0)], "latest"),
             )
             .await
             .unwrap();
-        println!("Proof {:?}", proof);
-        let block_hash = client
+
+        println!("Proof: {:#?}", proof);
+
+        let block = client
             .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
             .await
             .unwrap()
-            .unwrap()
-            .header
-            .hash;
-        println!("Block hash {:?}", block_hash);
-        let result = SequencingChainInput::verify_account_proof_response(&proof, block_hash);
-        println!("Result {:?}", result);
+            .unwrap();
+        let state_root = block.header.state_root;
+
+        let result = SequencingChainInput::verify_account_proof_response(&proof, state_root);
+        println!("Result: {:?}", result);
+
         assert!(result.is_ok());
     }
 }

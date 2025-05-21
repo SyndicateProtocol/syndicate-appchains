@@ -6,7 +6,7 @@ use eyre::Result;
 use shared::logger::set_global_default_subscriber;
 use synd_appchain_verifier::{
     config::AppchainVerifierConfig,
-    types::{SequencingChainInput, SettlementChainInput, VerifierOutput},
+    types::{BlockVerifierInput, SequencingChainInput, SettlementChainInput},
     verifier::Verifier,
 };
 use tracing::debug;
@@ -44,11 +44,9 @@ fn main() {
     }
 }
 
-fn run() -> Result<(Vec<VerifierOutput>, B256)> {
-    // TODO (SEQ-769): Implement Appchain Verifier Component
-
+fn run() -> Result<(Vec<Vec<BlockVerifierInput>>, B256)> {
     set_global_default_subscriber()?;
-
+    // TODO (SEQ-769): Implement Appchain Verifier Component
     let args = VerifierCliArgs::parse();
     debug!("VerifierCliArgs: {:?}", args);
 
