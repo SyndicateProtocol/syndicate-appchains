@@ -4806,6 +4806,7 @@ name = "synd-appchain-verifier"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "alloy-trie",
  "clap",
  "eyre",
  "serde",
