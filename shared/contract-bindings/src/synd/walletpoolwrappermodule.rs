@@ -20,7 +20,7 @@ interface WalletPoolWrapperModule {
     function allowlist(address user) external view returns (bool isAllowed);
     function isAllowed(address proposer, address, bytes memory) external view returns (bool);
     function processBulkTransactions(address _SyndicateSequencingChain, bytes[] memory data) external;
-    function processTransaction(address _SyndicateSequencingChain, bytes memory data) external;
+    function processTransactionUncompressed(address _SyndicateSequencingChain, bytes memory data) external;
     function processTransactionRaw(address _SyndicateSequencingChain, bytes memory data) external;
     function removeFromAllowlist(address user) external;
     function transferAdmin(address newAdmin) external;
@@ -1981,7 +1981,7 @@ function processBulkTransactions(address _SyndicateSequencingChain, bytes[] memo
     };
     /**Function with signature `processTransaction(address,bytes)` and selector `0x6ebca5f6`.
 ```solidity
-function processTransaction(address _SyndicateSequencingChain, bytes memory data) external;
+function processTransactionUncompressed(address _SyndicateSequencingChain, bytes memory data) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]

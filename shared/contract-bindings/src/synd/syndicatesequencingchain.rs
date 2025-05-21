@@ -21,7 +21,7 @@ interface SyndicateSequencingChain {
     function owner() external view returns (address);
     function permissionRequirementModule() external view returns (address);
     function processBulkTransactions(bytes[] memory data) external;
-    function processTransaction(bytes memory data) external;
+    function processTransactionUncompressed(bytes memory data) external;
     function processTransactionRaw(bytes memory data) external;
     function renounceOwnership() external;
     function transferOwnership(address newOwner) external;
@@ -1942,7 +1942,7 @@ function processBulkTransactions(bytes[] memory data) external;
     };
     /**Function with signature `processTransaction(bytes)` and selector `0x46e2cc09`.
 ```solidity
-function processTransaction(bytes memory data) external;
+function processTransactionUncompressed(bytes memory data) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]

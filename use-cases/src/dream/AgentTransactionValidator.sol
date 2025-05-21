@@ -9,7 +9,7 @@ import {RLPTxDecoder} from "./RLP/RLPTxDecoder.sol";
 interface ISyndicateSequencingChain {
     /// @notice Process a transaction
     /// @param data The transaction data to process
-    function processTransaction(bytes calldata data) external;
+    function processTransactionUncompressed(bytes calldata data) external;
 
     /// @notice Process a raw transaction
     /// @param data The transaction data to process
@@ -55,7 +55,7 @@ contract AgentTransactionValidator {
 
     /// @notice Process a transaction after validating the 'from' address
     /// @param data The transaction data to process
-    function processTransaction(bytes calldata data) external {
+    function processTransactionUncompressed(bytes calldata data) external {
         address from = RLPTxDecoder.decodeTx(data);
 
         // Check if the from address is permitted

@@ -24,30 +24,28 @@ contract SyndicateSequencingChainWithDecayingPriority is SyndicateSequencingChai
     /// @param data The compressed transaction data.
     /// @param priority The initial priority of the transaction.
     //#olympix-ignore-required-tx-origin
-    function processTransactionRaw(bytes calldata data, uint256 priority)
+    function processTransaction(bytes calldata data, uint256 priority)
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
     {
         emit TransactionProcessed(msg.sender, data, priority, block.timestamp);
     }
 
-    /// @notice Processes a single transaction with priority, prepending a zero byte.
-    /// @dev Prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param data The transaction data
+    /// @notice Processes an uncompressed transaction with a zero byte prepended.
+    /// @param data The transaction data without the prepended zero byte.
     /// @param priority The initial priority of the transaction
-    function processTransaction(bytes calldata data, uint256 priority)
+    function processTransactionUncompressed(bytes calldata data, uint256 priority)
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
     {
         emit TransactionProcessed(msg.sender, prependZeroByte(data), priority, block.timestamp); //#olympix-ignore-external-call-potential-out-of-gas
     }
 
-    /// @notice Processes multiple transactions in bulk with individual priorities.
-    /// @dev Prepends a zero byte to each transaction data to signal uncompressed data
-    /// @param data An array of transaction data.
+    /// @notice Processes multiple uncompressed transactions in bulk.
+    /// @param data An array of transaction data without prepended zero bytes.
     /// @param priorities An array of priorities for the transactions.
     //#olympix-ignore-reentrancy-events
-    function processBulkTransactions(bytes[] calldata data, uint256[] calldata priorities) external {
+    function processTransactionsBulk(bytes[] calldata data, uint256[] calldata priorities) external {
         uint256 dataCount = data.length;
         require(dataCount == priorities.length, "Data and priority arrays must have the same length");
 

@@ -74,14 +74,14 @@ rule moduleNotZero(method f) {
 }
 
 /*
- * Rule 5: Only allowed addresses can process transactions
+ * Rule 5: Only allowed addresses can process transactions uncompressed
  */
 rule onlyAllowedCanProcess(bytes data) {
     env e;
     require init._getInitializedVersion() > 0;
 
     // Try to process a transaction
-    processTransaction@withrevert(e, data);
+    processTransactionUncompressed@withrevert(e, data);
 
     // If the transaction succeeded
     bool success = !lastReverted;
@@ -92,7 +92,7 @@ rule onlyAllowedCanProcess(bytes data) {
 }
 
 /*
- * Rule 6: Consistent behavior between processTransaction and processTransactionRaw
+ * Rule 6: Consistent behavior between processTransaction and processTransaction
  */
 rule processConsistency(bytes data) {
     env e;
@@ -100,10 +100,10 @@ rule processConsistency(bytes data) {
     require permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Record both outcomes
-    processTransaction@withrevert(e, data);
+    processTransactionUncompressed@withrevert(e, data);
     bool txSuccess = !lastReverted;
 
-    processTransactionRaw@withrevert(e, data);
+    processTransaction@withrevert(e, data);
     bool rawSuccess = !lastReverted;
 
     // If one succeeds, both should succeed under same conditions
@@ -123,22 +123,22 @@ rule bulkProcessingConsistency(bytes[] data) {
 
 
     // Process transactions in bulk
-    processBulkTransactions@withrevert(e, data);
+    processTransactionsBulk@withrevert(e, data);
     bool bulkSuccess = !lastReverted;
 
     // If bulk processing succeeded, each individual transaction should succeed
     require bulkSuccess;
 
     // Check individual transactions would succeed
-    processTransaction@withrevert(e, data[0]);
+    processTransactionUncompressed@withrevert(e, data[0]);
     assert !lastReverted, "Bulk processing accepted invalid transaction";
 
 
-    processTransaction@withrevert(e, data[1]);
+    processTransactionUncompressed@withrevert(e, data[1]);
     assert !lastReverted, "Bulk processing accepted invalid transaction";
 
 
-    processTransaction@withrevert(e, data[2]);
+    processTransactionUncompressed@withrevert(e, data[2]);
     assert !lastReverted, "Bulk processing accepted invalid transaction";
 }
 
@@ -185,7 +185,7 @@ rule stateConsistencyAfterProcessing(bytes data) {
     address oldProposerModule = permissionRequirementModule();
 
     // Process transaction
-    processTransaction@withrevert(e, data);
+    processTransactionUncompressed@withrevert(e, data);
 
     // Verify requirement modules haven't changed
     assert permissionRequirementModule() == oldProposerModule,
@@ -221,7 +221,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
     bool senderAllowed = permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Process transaction
-    processTransaction@withrevert(e, data);
+    processTransactionUncompressed@withrevert(e, data);
     bool txSucceeded = !lastReverted;
 
     // Bidirectional assertions

@@ -25,8 +25,8 @@ interface SyndicateSequencingChainWithDecayingPriority {
     function permissionRequirementModule() external view returns (address);
     function processBulkTransactions(bytes[] memory data) external;
     function processBulkTransactions(bytes[] memory data, uint256[] memory priorities) external;
-    function processTransaction(bytes memory data, uint256 priority) external;
-    function processTransaction(bytes memory data) external;
+    function processTransactionUncompressed(bytes memory data, uint256 priority) external;
+    function processTransactionUncompressed(bytes memory data) external;
     function processTransactionRaw(bytes memory data, uint256 priority) external;
     function processTransactionRaw(bytes memory data) external;
     function renounceOwnership() external;
@@ -2669,7 +2669,7 @@ function processBulkTransactions(bytes[] memory data, uint256[] memory prioritie
     };
     /**Function with signature `processTransaction(bytes,uint256)` and selector `0x1c0b6367`.
 ```solidity
-function processTransaction(bytes memory data, uint256 priority) external;
+function processTransactionUncompressed(bytes memory data, uint256 priority) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2813,7 +2813,7 @@ function processTransaction(bytes memory data, uint256 priority) external;
     };
     /**Function with signature `processTransaction(bytes)` and selector `0x46e2cc09`.
 ```solidity
-function processTransaction(bytes memory data) external;
+function processTransactionUncompressed(bytes memory data) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]

@@ -6,7 +6,7 @@ interface MockSyndicateSequencingChain {
     function lastProcessedBulkData(uint256) external view returns (bytes memory);
     function lastProcessedData() external view returns (bytes memory);
     function processBulkTransactions(bytes[] memory data) external;
-    function processTransaction(bytes memory data) external;
+    function processTransactionUncompressed(bytes memory data) external;
     function processTransactionRaw(bytes memory data) external;
     function setRevertFlag(bool _shouldRevert) external;
     function shouldRevert() external view returns (bool);
@@ -535,7 +535,7 @@ function processBulkTransactions(bytes[] memory data) external;
     };
     /**Function with signature `processTransaction(bytes)` and selector `0x46e2cc09`.
 ```solidity
-function processTransaction(bytes memory data) external;
+function processTransactionUncompressed(bytes memory data) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]

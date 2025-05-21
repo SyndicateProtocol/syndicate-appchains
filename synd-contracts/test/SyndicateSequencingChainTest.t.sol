@@ -21,7 +21,7 @@ contract MockIsAllowed is IPermissionModule {
 }
 
 contract MockIsAllowedWithInvalidData is IPermissionModule {
-    function isAllowed(address, address, bytes calldata data) external view override returns (bool) {
+    function isAllowed(address, address, bytes calldata data) external pure override returns (bool) {
         return keccak256(data) != keccak256(abi.encode("invalid"));
     }
 }
@@ -68,7 +68,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(address(this), validTxn);
 
-        chain.processTransactionRaw(validTxn);
+        chain.processTransaction(validTxn);
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -80,7 +80,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RequireAllModule.CheckFailed.selector, mockRequireAll, address(this)));
-        chain.processTransactionRaw(validTxn);
+        chain.processTransaction(validTxn);
     }
 
     function testProcessTransactionRequireAnyFailure() public {
@@ -92,7 +92,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
-        chain.processTransactionRaw(validTxn);
+        chain.processTransaction(validTxn);
     }
 
     function testProcessTransaction() public {
@@ -106,7 +106,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(address(this), expectedTx);
 
-        chain.processTransaction(_data);
+        chain.processTransactionUncompressed(_data);
     }
 
     function testProcessBulkTransactions() public {
@@ -127,7 +127,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             );
         }
 
-        chain.processBulkTransactions(validTxns);
+        chain.processTransactionsBulk(validTxns);
     }
 
     function testConstructorWithZeroAppChainId() public {
@@ -162,7 +162,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         }
 
         // Process all transactions
-        chain.processBulkTransactions(txns);
+        chain.processTransactionsBulk(txns);
     }
 
     function testProcessBulkTransactionsBranchCoverage() public {
@@ -182,7 +182,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         directMock.setAllowed(failingTxns[0], true);
         directMock.setAllowed(failingTxns[1], false);
 
-        chain.processBulkTransactions(failingTxns);
+        chain.processTransactionsBulk(failingTxns);
 
         // Part 2: Test the success branch
         bytes[] memory successTxns = new bytes[](2);
@@ -200,7 +200,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             );
         }
 
-        chain.processBulkTransactions(successTxns);
+        chain.processTransactionsBulk(successTxns);
     }
 
     function testProcessBulkTransactionsOnlyEmitsValidTransactionsAsEvents() public {
@@ -215,7 +215,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         txns[2] = abi.encode("valid");
 
         vm.recordLogs();
-        chainWithInvalidDataPermissionModule.processBulkTransactions(txns);
+        chainWithInvalidDataPermissionModule.processTransactionsBulk(txns);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         bytes32 expectedSig = keccak256("TransactionProcessed(address,bytes)");
@@ -257,30 +257,30 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         directMock.setAllowed(allowedData, true);
         directMock.setAllowed(disallowedData, false);
 
-        // Test 1: Failure path of onlyWhenAllowed (processTransactionRaw)
-        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
-        chain.processTransactionRaw(disallowedData);
+        // Test 1: Failure path of onlyWhenAllowed (processTransaction)
+        vm.expectRevert(SequencingModuleChecker.TransactionOrSenderNotAllowed.selector);
+        chain.processTransaction(disallowedData);
 
-        // Test 2: Success path of onlyWhenAllowed (processTransactionRaw)
+        // Test 2: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(address(this), allowedData);
-        chain.processTransactionRaw(allowedData);
+        chain.processTransaction(allowedData);
 
         // Test 3: Failure path of onlyWhenAllowed (processTransaction)
-        vm.expectRevert(SequencingModuleChecker.TransactionOrProposerNotAllowed.selector);
-        chain.processTransaction(disallowedData);
+        vm.expectRevert(SequencingModuleChecker.TransactionOrSenderNotAllowed.selector);
+        chain.processTransactionUncompressed(disallowedData);
 
         // Test 4: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), allowedData));
-        chain.processTransaction(allowedData);
+        chain.processTransactionUncompressed(allowedData);
     }
 
     function testProcessBulkTransactionsWithEmptyArray() public {
         bytes[] memory emptyArray = new bytes[](0);
 
         // This should execute without errors or events
-        chain.processBulkTransactions(emptyArray);
+        chain.processTransactionsBulk(emptyArray);
     }
 }
 

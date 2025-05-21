@@ -51,6 +51,24 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
      * @param data The transaction data to process.
      */
     //#olympix-ignore-reentrancy-events
+    function processTransactionUncompressed(address _SyndicateSequencingChain, bytes calldata data)
+        external
+        onlyAllowed
+        SyndicateSequencingChainNotZero(_SyndicateSequencingChain)
+    {
+        // Forward the transaction to the syndicate sequencer chain
+        ISyndicateSequencingChain(_SyndicateSequencingChain).processTransactionUncompressed(data);
+
+        // Emit an event indicating the transaction was sent
+        emit WalletPoolWrapperTransactionSent(msg.sender, _SyndicateSequencingChain);
+    }
+
+    /**
+     * @dev Function to process a raw transaction.
+     * @param _SyndicateSequencingChain The syndicate sequencer chain address
+     * @param data The transaction data to process.
+     */
+    //#olympix-ignore-reentrancy-events
     function processTransaction(address _SyndicateSequencingChain, bytes calldata data)
         external
         onlyAllowed
@@ -64,36 +82,18 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
     }
 
     /**
-     * @dev Function to process a raw transaction.
-     * @param _SyndicateSequencingChain The syndicate sequencer chain address
-     * @param data The transaction data to process.
-     */
-    //#olympix-ignore-reentrancy-events
-    function processTransactionRaw(address _SyndicateSequencingChain, bytes calldata data)
-        external
-        onlyAllowed
-        SyndicateSequencingChainNotZero(_SyndicateSequencingChain)
-    {
-        // Forward the transaction to the syndicate sequencer chain
-        ISyndicateSequencingChain(_SyndicateSequencingChain).processTransactionRaw(data);
-
-        // Emit an event indicating the transaction was sent
-        emit WalletPoolWrapperTransactionSent(msg.sender, _SyndicateSequencingChain);
-    }
-
-    /**
      * @dev Function to process bulk transactions.
      * @param _SyndicateSequencingChain The syndicate sequencer chain address
      * @param data The array of transaction data to process.
      */
     //#olympix-ignore-reentrancy-events
-    function processBulkTransactions(address _SyndicateSequencingChain, bytes[] calldata data)
+    function processTransactionsBulk(address _SyndicateSequencingChain, bytes[] calldata data)
         external
         onlyAllowed
         SyndicateSequencingChainNotZero(_SyndicateSequencingChain)
     {
         // Forward the transactions to the syndicate sequencer chain
-        ISyndicateSequencingChain(_SyndicateSequencingChain).processBulkTransactions(data);
+        ISyndicateSequencingChain(_SyndicateSequencingChain).processTransactionsBulk(data);
 
         // Emit an event indicating the bulk transactions were sent
         emit WalletPoolWrapperBulkTransactionsSent(msg.sender, _SyndicateSequencingChain, data.length);

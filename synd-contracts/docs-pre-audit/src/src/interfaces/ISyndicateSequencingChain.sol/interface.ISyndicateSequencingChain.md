@@ -6,9 +6,23 @@ Interface for the SyndicateSequencingChain contract
 
 ## Functions
 
-### processTransaction
+### processTransactionUncompressed
 
 Process a transaction
+
+```solidity
+function processTransactionUncompressed(bytes calldata data) external;
+```
+
+**Parameters**
+
+| Name   | Type    | Description                     |
+| ------ | ------- | ------------------------------- |
+| `data` | `bytes` | The transaction data to process |
+
+### processTransaction
+
+Process a raw transaction
 
 ```solidity
 function processTransaction(bytes calldata data) external;
@@ -20,26 +34,12 @@ function processTransaction(bytes calldata data) external;
 | ------ | ------- | ------------------------------- |
 | `data` | `bytes` | The transaction data to process |
 
-### processTransactionRaw
-
-Process a raw transaction
-
-```solidity
-function processTransactionRaw(bytes calldata data) external;
-```
-
-**Parameters**
-
-| Name   | Type    | Description                     |
-| ------ | ------- | ------------------------------- |
-| `data` | `bytes` | The transaction data to process |
-
-### processBulkTransactions
+### processTransactionsBulk
 
 Process bulk transactions
 
 ```solidity
-function processBulkTransactions(bytes[] calldata data) external;
+function processTransactionsBulk(bytes[] calldata data) external;
 ```
 
 **Parameters**

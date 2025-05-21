@@ -6,8 +6,12 @@ import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.so
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title SequencingModuleChecker
-/// @notice A simplified contract that delegates permission checks to modules
-
+/// @notice A contract that delegates permission checks to modular permission systems
+/// @dev This separation of concerns allows for flexible permission systems:
+/// 1. The SequencingModuleChecker manages the core permission interface
+/// 2. The permissionRequirementModule (typically RequireAllModule or RequireAnyModule) handles the actual permission logic
+/// 3. This design allows for complex permission structures (AND/OR logic) that can be upgraded over time
+/// 4. The initialization pattern allows for proper setup of the permission system after deployment
 abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// @notice The requirement module that handles checks
     IPermissionModule public permissionRequirementModule;
@@ -15,7 +19,7 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     event RequirementModuleUpdated(address indexed newModule);
 
     error InvalidModuleAddress();
-    error TransactionOrProposerNotAllowed();
+    error TransactionOrSenderNotAllowed();
     error AlreadyInitialized();
 
     bool internal hasBeenInitialized = false;
@@ -27,6 +31,10 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     }
 
     /// @notice Initializes the contract with a new admin and a requirement module
+    /// @dev This two-step initialization process allows for proper setup of the contract:
+    /// 1. First deployed with a temporary admin (deployer)
+    /// 2. Then initialized with the permanent admin and requirement module
+    /// 3. Once initialized, it cannot be re-initialized (immutable pattern)
     /// @param admin The address of the new admin
     /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module
     function initialize(address admin, address _permissionRequirementModule) external onlyOwner {
@@ -49,12 +57,12 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
         emit RequirementModuleUpdated(_newModule);
     }
 
-    /// @notice Modifier to checks if an address is allowed to submit txs based on the sender, origin and data
-    /// @param proposer The address to check
-    /// @param originator The address of tx.origin. Useful to know the sender originator in wrapper contracts
+    /// @notice Modifier to check if an address is allowed to submit txs based on the sender, origin and data
+    /// @param msgSender The address calling the function (msg.sender)
+    /// @param txOrigin The address that initiated the transaction (tx.origin)
     /// @param data The calldata to check
-    modifier onlyWhenAllowed(address proposer, address originator, bytes calldata data) {
-        if (!isAllowed(proposer, originator, data)) revert TransactionOrProposerNotAllowed();
+    modifier onlyWhenAllowed(address msgSender, address txOrigin, bytes calldata data) {
+        if (!isAllowed(msgSender, txOrigin, data)) revert TransactionOrSenderNotAllowed();
         _;
     }
 

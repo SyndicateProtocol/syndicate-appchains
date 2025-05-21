@@ -88,7 +88,7 @@ contract AtomicSequencerTest is Test {
         allTxns[1] = txnsB;
 
         bytes memory callData =
-            abi.encodeWithSignature("processBulkTransactionsAtomically(address[],bytes[][])", chains, allTxns);
+            abi.encodeWithSignature("processTransactionsBulkAtomically(address[],bytes[][])", chains, allTxns);
 
         vm.prank(originalCaller);
         (bool success,) = address(atomicSequencer).call(callData);

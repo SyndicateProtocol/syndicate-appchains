@@ -26,21 +26,21 @@ uint256 public constant PRIORITY_DECAY_RATE = 10;
 Constructs the SyndicateSequencingChainWithDecayingPriority contract.
 
 ```solidity
-constructor(uint256 _appChainId) SyndicateSequencingChain(_appChainId);
+constructor(uint256 _appchainId) SyndicateSequencingChain(_appchainId);
 ```
 
 **Parameters**
 
 | Name          | Type      | Description                                                                |
 | ------------- | --------- | -------------------------------------------------------------------------- |
-| `_appChainId` | `uint256` | The ID of the App chain that this contract is sequencing transactions for. |
+| `_appchainId` | `uint256` | The ID of the App chain that this contract is sequencing transactions for. |
 
-### processTransactionRaw
+### processTransaction
 
 Processes a single compressed transaction with priority.
 
 ```solidity
-function processTransactionRaw(bytes calldata data, uint256 priority)
+function processTransaction(bytes calldata data, uint256 priority)
     external
     onlyWhenAllowed(msg.sender, tx.origin, data);
 ```
@@ -52,14 +52,14 @@ function processTransactionRaw(bytes calldata data, uint256 priority)
 | `data`     | `bytes`   | The compressed transaction data.         |
 | `priority` | `uint256` | The initial priority of the transaction. |
 
-### processTransaction
+### processTransactionUncompressed
 
 Processes a single transaction with priority, prepending a zero byte.
 
 _Prepends a zero byte to the transaction data to signal uncompressed data_
 
 ```solidity
-function processTransaction(bytes calldata data, uint256 priority)
+function processTransactionUncompressed(bytes calldata data, uint256 priority)
     external
     onlyWhenAllowed(msg.sender, tx.origin, data);
 ```
@@ -71,14 +71,14 @@ function processTransaction(bytes calldata data, uint256 priority)
 | `data`     | `bytes`   | The transaction data                    |
 | `priority` | `uint256` | The initial priority of the transaction |
 
-### processBulkTransactions
+### processTransactionsBulk
 
 Processes multiple transactions in bulk with individual priorities.
 
 _Prepends a zero byte to each transaction data to signal uncompressed data_
 
 ```solidity
-function processBulkTransactions(bytes[] calldata data, uint256[] calldata priorities) external;
+function processTransactionsBulk(bytes[] calldata data, uint256[] calldata priorities) external;
 ```
 
 **Parameters**

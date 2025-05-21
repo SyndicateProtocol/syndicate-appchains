@@ -30,12 +30,12 @@ contract SyndicateSequencingChainWithDecayingPriorityTestSetUp is Test {
 
     function setUp() public virtual {
         admin = address(0x1);
-        uint256 appChainId = 1234;
+        uint256 appchainId = 1234;
 
         vm.startPrank(admin);
         requireAllModule = new RequireAllModule(admin);
         requireAnyModule = new RequireAnyModule(admin);
-        chain = new SyndicateSequencingChainWithDecayingPriority(appChainId);
+        chain = new SyndicateSequencingChainWithDecayingPriority(appchainId);
         chain.initialize(admin, address(requireAllModule));
         vm.stopPrank();
     }
@@ -71,7 +71,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
 
     function testConstructorSetsCorrectValues() public view {
         // Verify the constructor sets the correct values
-        assertEq(chain.appChainId(), 1234);
+        assertEq(chain.appchainId(), 1234);
         assertEq(chain.PRIORITY_DECAY_RATE(), 10);
     }
 
@@ -102,7 +102,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         );
 
         // Process the transaction
-        chain.processTransaction(testData1, 150);
+        chain.processTransactionUncompressed(testData1, 150);
     }
 
     function testProcessRawTransaction() public {
@@ -124,7 +124,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         );
 
         // Process the raw transaction
-        chain.processTransactionRaw(testData2, 200);
+        chain.processTransaction(testData2, 200);
     }
 
     // BULK TRANSACTION TESTS
@@ -147,7 +147,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         }
 
         // Process all transactions in bulk
-        chain.processBulkTransactions(testDataArray, testPriorityArray);
+        chain.processTransactionsBulk(testDataArray, testPriorityArray);
     }
 
     function testProcessBulkTransactionsRevertsWithMismatchedArrays() public {
@@ -163,7 +163,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
 
         // Expect revert due to array length mismatch
         vm.expectRevert("Data and priority arrays must have the same length");
-        chain.processBulkTransactions(testDataArray, shortPriorityArray);
+        chain.processTransactionsBulk(testDataArray, shortPriorityArray);
     }
 
     // PRIORITY DECAY CALCULATION TESTS
@@ -233,7 +233,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         );
 
         // This should revert with CheckFailed
-        chain.processTransactionRaw(testData2, 1);
+        chain.processTransaction(testData2, 1);
     }
 
     function testProcessTransactionRequireAnyFailure() public {
@@ -246,7 +246,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
 
         // This should revert with CheckFailed
-        chain.processTransactionRaw(testData2, 1);
+        chain.processTransaction(testData2, 1);
     }
 
     function testRequireAnyModuleWithOnePassingCheck() public {
@@ -257,7 +257,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         vm.stopPrank();
 
         // This should work as at least one check passes
-        chain.processTransactionRaw(testData2, 1);
+        chain.processTransaction(testData2, 1);
     }
 }
 

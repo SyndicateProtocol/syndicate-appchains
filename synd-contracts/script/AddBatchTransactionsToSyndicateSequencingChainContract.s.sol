@@ -23,7 +23,7 @@ contract AddBatchTransactionsToSyndicateSequencingChainContract is Script {
         // send 2 wei to the SyndicateSequencingChain contract
         transactionList[1] = abi.encode(recipient, uint256(2));
 
-        SyndicateSequencingChainContract.processBulkTransactions(transactionList);
+        SyndicateSequencingChainContract.processTransactionsBulk(transactionList);
 
         vm.stopBroadcast();
     }
