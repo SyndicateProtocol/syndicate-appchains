@@ -149,7 +149,8 @@ impl MaestroService {
     /// # Arguments
     /// * `self` - Arc reference to the service to ensure it outlives spawned tasks
     /// * `raw_tx` - The raw transaction bytes to process
-    /// * `signer` - The wallet address that signed the transaction
+    /// * `tx` - The decoded transaction envelope
+    /// * `wallet` - The wallet address that signed the transaction
     /// * `chain_id` - The chain identifier the transaction is intended for
     /// * `tx_nonce` - The nonce value included in the transaction
     ///

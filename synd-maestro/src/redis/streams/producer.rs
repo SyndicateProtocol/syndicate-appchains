@@ -8,7 +8,7 @@ use tracing::{debug, error, trace};
 
 /// Base key for Redis transaction streams
 /// Format: `synd-maestro:transactions:{chain_id}`
-const TX_STREAM_KEY: &str = "maestro:transactions";
+const TX_STREAM_KEY: &str = "synd-maestro:transactions";
 
 /// Generates a Redis stream key for a specific chain
 ///
@@ -31,7 +31,7 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 /// ```rust
 /// use redis::aio::MultiplexedConnection;
 /// use std::time::Duration;
-/// use synd_maestro::redis::streams::producer::StreamProducer;
+/// use synd_maestro::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
 ///
 /// async fn example(redis_conn: MultiplexedConnection) {
 ///     let mut producer = StreamProducer::new(

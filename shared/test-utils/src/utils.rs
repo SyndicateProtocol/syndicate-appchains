@@ -12,12 +12,12 @@ use std::{
 ///
 /// The path is constructed by:
 /// 1. Getting the caller's source location (file and line)
-/// 2. Appending the current timestamp in nanoseconds and thread ID
+/// 2. Appending the current timestamp in nanoseconds, process ID, and thread ID
 /// 3. Hashing the combined string
 /// 4. Creating a path in the system temp directory with format `"{prefix}_{hash}"`
 ///
-/// This ensures unique paths for concurrent tests by including both the test location
-/// and thread ID for debugging.
+/// This ensures unique paths for concurrent tests by including both the test location,
+/// process ID, and thread ID for debugging.
 pub fn test_path(prefix: &str) -> String {
     let location = panic::Location::caller();
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
