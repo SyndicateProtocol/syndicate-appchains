@@ -8,7 +8,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title BaseRequirementModule
  * @notice Base abstract contract for requirement modules that share common functionality
- * @dev Contains shared code for RequireAllModule and RequireOrModule
+ * @dev Contains shared code for RequireAndModule and RequireOrModule
  */
 abstract contract BaseRequirementModule is IRequirementModule, Ownable {
     /// @notice List of permission checks addresses
@@ -16,9 +16,11 @@ abstract contract BaseRequirementModule is IRequirementModule, Ownable {
 
     // Events
     /// @notice Emitted when a permission check is added
+    //#olympix-ignore-missing-events-assertion
     event PermissionCheckAdded(address indexed check);
 
     /// @notice Emitted when a permission check is removed
+    //#olympix-ignore-missing-events-assertion
     event PermissionCheckRemoved(address indexed check);
 
     // Errors
@@ -35,6 +37,7 @@ abstract contract BaseRequirementModule is IRequirementModule, Ownable {
      * @notice Initializes the contract with an admin address
      * @param admin The address of the admin who can add/remove checks
      */
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(address admin) Ownable(admin) {}
 
     /**
@@ -43,7 +46,7 @@ abstract contract BaseRequirementModule is IRequirementModule, Ownable {
      * @param _address The address of the check to add
      * @param addToHead True to add to the head of the list, false to add to the tail
      */
-    function addPermissionCheck(address _address, bool addToHead) external virtual override onlyOwner {
+    function addPermissionCheck(address _address, bool addToHead) public virtual override onlyOwner {
         if (_address == address(0)) revert InvalidAddress();
         if (AddressStructuredLinkedList.nodeExists(permissionChecks, _address)) {
             revert AddressAlreadyExists();
@@ -64,7 +67,7 @@ abstract contract BaseRequirementModule is IRequirementModule, Ownable {
      * @notice Removes permission check address from the list
      * @param _address The address of the check to remove
      */
-    function removePermissionCheck(address _address) external virtual override onlyOwner {
+    function removePermissionCheck(address _address) public virtual override onlyOwner {
         if (_address == address(0)) revert InvalidAddress();
         if (!AddressStructuredLinkedList.nodeExists(permissionChecks, _address)) {
             revert AddressDoesNotExist();

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.29;
 
-import {RequireAnyModule, BaseRequirementModule} from "src/requirement-modules/RequireAnyModule.sol";
+import {RequireOrModule, BaseRequirementModule} from "src/requirement-modules/RequireOrModule.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -20,8 +20,8 @@ contract MockPermissionAllowedFalse is IPermissionModule {
     }
 }
 
-contract RequireAnyModuleTest is Test {
-    RequireAnyModule public module;
+contract RequireOrModuleTest is Test {
+    RequireOrModule public module;
     address public admin;
     address public nonAdmin;
 
@@ -35,7 +35,7 @@ contract RequireAnyModuleTest is Test {
     function setUp() public {
         admin = address(this);
         nonAdmin = address(0x456);
-        module = new RequireAnyModule(admin);
+        module = new RequireOrModule(admin);
     }
 
     // ----------------------
@@ -80,7 +80,7 @@ contract RequireAnyModuleTest is Test {
         vm.stopPrank();
 
         // Should fail if all checks fail
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
         module.isAllowed(address(this), address(0), emptyData);
     }
 
@@ -232,7 +232,7 @@ contract RequireAnyModuleTest is Test {
         // 2. Both fail: False only
         module.addPermissionCheck(permissionFalse, true);
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
         module.isAllowed(address(this), address(0), emptyData);
 
         vm.stopPrank();

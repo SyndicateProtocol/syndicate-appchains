@@ -2,8 +2,8 @@
 pragma solidity 0.8.29;
 
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
-import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
+import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
+import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -40,8 +40,8 @@ contract DirectMockModule is IPermissionModule {
 
 contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateSequencingChain public chain;
-    RequireAllModule public permissionModule;
-    RequireAnyModule public permissionModuleAny;
+    RequireAndModule public permissionModule;
+    RequireOrModule public permissionModuleAny;
     address public admin;
 
     function setUp() public virtual {
@@ -49,8 +49,8 @@ contract SyndicateSequencingChainTestSetUp is Test {
         uint256 appChainId = 10042001;
 
         vm.startPrank(admin);
-        permissionModule = new RequireAllModule(admin);
-        permissionModuleAny = new RequireAnyModule(admin);
+        permissionModule = new RequireAndModule(admin);
+        permissionModuleAny = new RequireOrModule(admin);
         chain = new SyndicateSequencingChain(appChainId);
         chain.initialize(admin, address(permissionModule));
         vm.stopPrank();
@@ -79,7 +79,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         permissionModule.addPermissionCheck(mockRequireAll, false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAllModule.CheckFailed.selector, mockRequireAll, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireAndModule.CheckFailed.selector, mockRequireAll, address(this)));
         chain.processTransaction(validTxn);
     }
 
@@ -91,7 +91,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         permissionModuleAny.addPermissionCheck(address(new MockIsAllowed(false)), false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
         chain.processTransaction(validTxn);
     }
 

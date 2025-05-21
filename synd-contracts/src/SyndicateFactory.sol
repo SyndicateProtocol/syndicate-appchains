@@ -2,8 +2,8 @@
 pragma solidity 0.8.29;
 
 import {SyndicateSequencingChain} from "./SyndicateSequencingChain.sol";
-import {RequireAllModule} from "./requirement-modules/RequireAllModule.sol";
-import {RequireAnyModule} from "./requirement-modules/RequireAnyModule.sol";
+import {RequireAndModule} from "./requirement-modules/RequireAndModule.sol";
+import {RequireOrModule} from "./requirement-modules/RequireOrModule.sol";
 import {IRequirementModule} from "./interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
@@ -145,20 +145,20 @@ contract SyndicateFactory is AccessControl {
         return (deployedAddress, actualChainId);
     }
 
-    /// @notice Creates a SyndicateSequencingChain with RequireAllModule
+    /// @notice Creates a SyndicateSequencingChain with RequireAndModule
     /// @param admin The address that will be the default admin role
     /// @param appChainId The app chain ID (0 for auto-increment)
     /// @param salt The salt to use for the deployment
     /// @return sequencingChain The address of the newly created SyndicateSequencingChain
-    /// @return permissionModule The address of the newly created RequireAllModule
+    /// @return permissionModule The address of the newly created RequireAndModule
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChainWithRequireAllModule(address admin, uint256 appChainId, bytes32 salt)
+    function createSyndicateSequencingChainWithRequireAndModule(address admin, uint256 appChainId, bytes32 salt)
         public
         zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
         returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId)
     {
-        permissionModule = IRequirementModule(new RequireAllModule(admin));
+        permissionModule = IRequirementModule(new RequireAndModule(admin));
         (sequencingChain, actualChainId) = createSyndicateSequencingChain(appChainId, admin, permissionModule, salt);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
@@ -166,20 +166,20 @@ contract SyndicateFactory is AccessControl {
         return (sequencingChain, permissionModule, actualChainId);
     }
 
-    /// @notice Creates a SyndicateSequencingChain with RequireAnyModule
+    /// @notice Creates a SyndicateSequencingChain with RequireOrModule
     /// @param admin The address that will be the default admin role
     /// @param appChainId The app chain ID (0 for auto-increment)
     /// @param salt The salt to use for the deployment
     /// @return sequencingChain The address of the newly created SyndicateSequencingChain
-    /// @return permissionModule The address of the newly created RequireAnyModule
+    /// @return permissionModule The address of the newly created RequireOrModule
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChainWithRequireAnyModule(address admin, uint256 appChainId, bytes32 salt)
+    function createSyndicateSequencingChainWithRequireOrModule(address admin, uint256 appChainId, bytes32 salt)
         public
         zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
         returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId)
     {
-        permissionModule = IRequirementModule(new RequireAnyModule(admin));
+        permissionModule = IRequirementModule(new RequireOrModule(admin));
         (sequencingChain, actualChainId) = createSyndicateSequencingChain(appChainId, admin, permissionModule, salt);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));

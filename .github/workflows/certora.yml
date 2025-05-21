@@ -3,9 +3,9 @@
 # No other files within this repository are licensed under the MIT License
 # unless the MIT license is stated explicitly at the top of the file.
 
-# This workflow runs Certora Prover checks (specs located in `/shared/arb-contracts/certora/specs`) 
+# This workflow runs Certora Prover checks (specs located in `/shared/arb-contracts/certora/specs`)
 # on our smart contracts (located in `synd-contracts/src` and `shared/arb-contracts`).
-# Certora specs contain our custom rules and this workflow ensures that our contracts adhere to 
+# Certora specs contain our custom rules and this workflow ensures that our contracts adhere to
 # those rules any time a change is made.
 # https://www.certora.com/
 
@@ -49,8 +49,8 @@ jobs:
             "AtomicSequencer",
             "AtomicSequencerImplementation",
             "SyndicateToken",
-            "RequireAllModule",
-            "RequireAnyModule",
+            "RequireAndModule",
+            "RequireOrModule",
             "WalletPoolWrapperModule",
           ]
     steps:

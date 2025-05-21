@@ -9,7 +9,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @notice A contract that delegates permission checks to modular permission systems
 /// @dev This separation of concerns allows for flexible permission systems:
 /// 1. The SequencingModuleChecker manages the core permission interface
-/// 2. The permissionRequirementModule (typically RequireAllModule or RequireAnyModule) handles the actual permission logic
+/// 2. The permissionRequirementModule (typically RequireAndModule or RequireOrModule) handles the actual permission logic
 /// 3. This design allows for complex permission structures (AND/OR logic) that can be upgraded over time
 /// 4. The initialization pattern allows for proper setup of the permission system after deployment
 abstract contract SequencingModuleChecker is Ownable, IPermissionModule {

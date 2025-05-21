@@ -103,12 +103,12 @@ function createSyndicateSequencingChain(
 | `sequencingChain` | `address` | The address of the newly created SyndicateSequencingChain |
 | `actualChainId`   | `uint256` | The chain ID that was used (auto-generated or specified)  |
 
-### createSyndicateSequencingChainWithRequireAllModule
+### createSyndicateSequencingChainWithRequireAndModule
 
-Creates SyndicateSequencingChain with RequireAllModule
+Creates SyndicateSequencingChain with RequireAndModule
 
 ```solidity
-function createSyndicateSequencingChainWithRequireAllModule(address admin, uint256 appChainId, bytes32 salt)
+function createSyndicateSequencingChainWithRequireAndModule(address admin, uint256 appChainId, bytes32 salt)
     public
     zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
     returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId);
@@ -127,15 +127,15 @@ function createSyndicateSequencingChainWithRequireAllModule(address admin, uint2
 | Name               | Type                 | Description                                               |
 | ------------------ | -------------------- | --------------------------------------------------------- |
 | `sequencingChain`  | `address`            | The address of the newly created SyndicateSequencingChain |
-| `permissionModule` | `IRequirementModule` | The address of the newly created RequireAllModule         |
+| `permissionModule` | `IRequirementModule` | The address of the newly created RequireAndModule         |
 | `actualChainId`    | `uint256`            | The chain ID that was used (auto-generated or specified)  |
 
-### createSyndicateSequencingChainWithRequireAnyModule
+### createSyndicateSequencingChainWithRequireOrModule
 
-Creates SyndicateSequencingChain with RequireAnyModule
+Creates SyndicateSequencingChain with RequireOrModule
 
 ```solidity
-function createSyndicateSequencingChainWithRequireAnyModule(address admin, uint256 appChainId, bytes32 salt)
+function createSyndicateSequencingChainWithRequireOrModule(address admin, uint256 appChainId, bytes32 salt)
     public
     zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
     returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId);
@@ -154,7 +154,7 @@ function createSyndicateSequencingChainWithRequireAnyModule(address admin, uint2
 | Name               | Type                 | Description                                               |
 | ------------------ | -------------------- | --------------------------------------------------------- |
 | `sequencingChain`  | `address`            | The address of the newly created SyndicateSequencingChain |
-| `permissionModule` | `IRequirementModule` | The address of the newly created RequireAnyModule         |
+| `permissionModule` | `IRequirementModule` | The address of the newly created RequireOrModule          |
 | `actualChainId`    | `uint256`            | The chain ID that was used (auto-generated or specified)  |
 
 ### computeSequencingChainAddress

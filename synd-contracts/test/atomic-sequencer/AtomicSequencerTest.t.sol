@@ -4,7 +4,7 @@ pragma solidity 0.8.29;
 import {Test} from "forge-std/Test.sol";
 import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequencer/AtomicSequencer.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
 contract MockIsAllowed is IPermissionModule {
@@ -23,7 +23,7 @@ contract AtomicSequencerTest is Test {
     AtomicSequencer public atomicSequencer;
     SyndicateSequencingChain public chainA;
     SyndicateSequencingChain public chainB;
-    RequireAllModule public permissionModule;
+    RequireAndModule public permissionModule;
     address public admin;
     address public originalCaller;
 
@@ -36,7 +36,7 @@ contract AtomicSequencerTest is Test {
         uint256 appChainIdB = 10042002;
 
         vm.startPrank(admin);
-        permissionModule = new RequireAllModule(admin);
+        permissionModule = new RequireAndModule(admin);
         chainA = new SyndicateSequencingChain(appChainIdA);
         chainA.initialize(admin, address(permissionModule));
         chainB = new SyndicateSequencingChain(appChainIdB);
