@@ -88,7 +88,7 @@ jobs:
       - name: Install Certora Prover
         run: |
           pip3 install setuptools==75.8.2
-          pip3 install certora-cli==7.26.0
+          pip3 install certora-cli==7.29.1
 
       - name: Install dependencies
         run: forge install
@@ -97,8 +97,8 @@ jobs:
       - name: Install solc
         run: |
           pipx install solc-select
-          solc-select install 0.8.29
-          solc-select use 0.8.29
+          solc-select install 0.8.28
+          solc-select use 0.8.28
           ls ~/.solc-select/artifacts/
           which solc
 
