@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.29;
+pragma solidity 0.8.28;
 
 import {AddressStructuredLinkedList} from "src/LinkedList/AddressStructuredLinkedList.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";

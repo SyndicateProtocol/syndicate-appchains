@@ -65,22 +65,22 @@ pub mod Errors {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212204bf7f3ef6887105d7542239d7b3aab51b0cb25253600fa85038961ba725e48ea64736f6c634300081d0033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220d31144d9bd7017fc78ca57b76cf545c4de94acad7aa1c6b98451dc41f9f2fd5c64736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 K\xF7\xF3\xEFh\x87\x10]uB#\x9D{:\xABQ\xB0\xCB%%6\0\xFA\x85\x03\x89a\xBAr^H\xEAdsolcC\0\x08\x1D\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD3\x11D\xD9\xBDp\x17\xFCx\xCAW\xB7l\xF5E\xC4\xDE\x94\xAC\xADz\xA1\xC6\xB9\x84Q\xDCA\xF9\xF2\xFD\\dsolcC\0\x08\x1C\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea26469706673582212204bf7f3ef6887105d7542239d7b3aab51b0cb25253600fa85038961ba725e48ea64736f6c634300081d0033
+    ///0x60806040525f80fdfea2646970667358221220d31144d9bd7017fc78ca57b76cf545c4de94acad7aa1c6b98451dc41f9f2fd5c64736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 K\xF7\xF3\xEFh\x87\x10]uB#\x9D{:\xABQ\xB0\xCB%%6\0\xFA\x85\x03\x89a\xBAr^H\xEAdsolcC\0\x08\x1D\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD3\x11D\xD9\xBDp\x17\xFCx\xCAW\xB7l\xF5E\xC4\xDE\x94\xAC\xADz\xA1\xC6\xB9\x84Q\xDCA\xF9\xF2\xFD\\dsolcC\0\x08\x1C\x003",
     );
     /**Custom error with signature `FailedCall()` and selector `0xd6bda275`.
 ```solidity

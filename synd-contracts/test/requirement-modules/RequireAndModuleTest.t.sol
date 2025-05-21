@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.29;
+pragma solidity 0.8.28;
 
 import {RequireAndModule, BaseRequirementModule} from "src/requirement-modules/RequireAndModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.29;
+pragma solidity 0.8.28;
 
 import {AtomicSequencerImplementation} from "./AtomicSequencerImplementation.sol";
 import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";

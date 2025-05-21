@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.29;
+pragma solidity 0.8.28;
 
 import {IPermissionModule} from "./interfaces/IPermissionModule.sol";
 import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.sol";

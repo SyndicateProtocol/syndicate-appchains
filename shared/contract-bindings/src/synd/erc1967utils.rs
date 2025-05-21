@@ -66,22 +66,22 @@ pub mod ERC1967Utils {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220cb816de43aefc2923c7246d8781149f8a1426fc44e8b8fb64d0527ef7009b46a64736f6c634300081d0033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220a7a42b6ee1d032e81e6539f012f4e8539bd01478348d46e2a0b0c38d74ae04b264736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xCB\x81m\xE4:\xEF\xC2\x92<rF\xD8x\x11I\xF8\xA1Bo\xC4N\x8B\x8F\xB6M\x05'\xEFp\t\xB4jdsolcC\0\x08\x1D\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA7\xA4+n\xE1\xD02\xE8\x1Ee9\xF0\x12\xF4\xE8S\x9B\xD0\x14x4\x8DF\xE2\xA0\xB0\xC3\x8Dt\xAE\x04\xB2dsolcC\0\x08\x1C\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220cb816de43aefc2923c7246d8781149f8a1426fc44e8b8fb64d0527ef7009b46a64736f6c634300081d0033
+    ///0x60806040525f80fdfea2646970667358221220a7a42b6ee1d032e81e6539f012f4e8539bd01478348d46e2a0b0c38d74ae04b264736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xCB\x81m\xE4:\xEF\xC2\x92<rF\xD8x\x11I\xF8\xA1Bo\xC4N\x8B\x8F\xB6M\x05'\xEFp\t\xB4jdsolcC\0\x08\x1D\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA7\xA4+n\xE1\xD02\xE8\x1Ee9\xF0\x12\xF4\xE8S\x9B\xD0\x14x4\x8DF\xE2\xA0\xB0\xC3\x8Dt\xAE\x04\xB2dsolcC\0\x08\x1C\x003",
     );
     /**Custom error with signature `ERC1967InvalidAdmin(address)` and selector `0x62e77ba2`.
 ```solidity

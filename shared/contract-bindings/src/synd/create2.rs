@@ -30,22 +30,22 @@ pub mod Create2 {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212205f8e733f6fa670873aa7ab886ab06f1b7efeeec9a1a2680f4db66686cbc1f44364736f6c634300081d0033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea264697066735822122032c8d2142a46c1737b31dd8d73dd32135475eccbb1064f5fd395b7b06c863be564736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 _\x8Es?o\xA6p\x87:\xA7\xAB\x88j\xB0o\x1B~\xFE\xEE\xC9\xA1\xA2h\x0FM\xB6f\x86\xCB\xC1\xF4CdsolcC\0\x08\x1D\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 2\xC8\xD2\x14*F\xC1s{1\xDD\x8Ds\xDD2\x13Tu\xEC\xCB\xB1\x06O_\xD3\x95\xB7\xB0l\x86;\xE5dsolcC\0\x08\x1C\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea26469706673582212205f8e733f6fa670873aa7ab886ab06f1b7efeeec9a1a2680f4db66686cbc1f44364736f6c634300081d0033
+    ///0x60806040525f80fdfea264697066735822122032c8d2142a46c1737b31dd8d73dd32135475eccbb1064f5fd395b7b06c863be564736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 _\x8Es?o\xA6p\x87:\xA7\xAB\x88j\xB0o\x1B~\xFE\xEE\xC9\xA1\xA2h\x0FM\xB6f\x86\xCB\xC1\xF4CdsolcC\0\x08\x1D\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 2\xC8\xD2\x14*F\xC1s{1\xDD\x8Ds\xDD2\x13Tu\xEC\xCB\xB1\x06O_\xD3\x95\xB7\xB0l\x86;\xE5dsolcC\0\x08\x1C\x003",
     );
     /**Custom error with signature `Create2EmptyBytecode()` and selector `0x4ca249dc`.
 ```solidity
