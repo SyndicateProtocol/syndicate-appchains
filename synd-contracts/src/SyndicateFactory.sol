@@ -14,7 +14,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 contract SyndicateFactory is AccessControl {
     /// @notice Emitted when a new SyndicateSequencingChain is created
     event SyndicateSequencingChainCreated(
-        uint256 indexed appChainId,
+        uint256 indexed appchainId,
         address indexed SyndicateSequencingChainAddress,
         address indexed permissionModuleAddress
     );
@@ -60,11 +60,11 @@ contract SyndicateFactory is AccessControl {
     }
 
     modifier zeroValuesChainAndTwoAddressesNotAllowed(
-        uint256 appChainId,
+        uint256 appchainId,
         address firstAddrCheck,
         address secondAddrCheck
     ) {
-        if (appChainId == 0) {
+        if (appchainId == 0) {
             revert ZeroValue();
         }
         if (firstAddrCheck == address(0) || secondAddrCheck == address(0)) {
@@ -73,8 +73,8 @@ contract SyndicateFactory is AccessControl {
         _;
     }
 
-    modifier zeroValuesChainAndAddressNotAllowed(uint256 appChainId, address addrCheck) {
-        if (appChainId == 0) {
+    modifier zeroValuesChainAndAddressNotAllowed(uint256 appchainId, address addrCheck) {
+        if (appchainId == 0) {
             revert ZeroValue();
         }
         if (addrCheck == address(0)) {
@@ -83,17 +83,17 @@ contract SyndicateFactory is AccessControl {
         _;
     }
 
-    modifier validateChainId(uint256 appChainId, bool isManuallySpecified) {
+    modifier validateChainId(uint256 appchainId, bool isManuallySpecified) {
         // If manually specified, ensure it's not in our reserved namespace
         if (isManuallySpecified) {
             // Check if the chainId is in the reserved namespace
-            if (appChainId / namespaceMultiplier() == namespacePrefix()) {
+            if (appchainId / namespaceMultiplier() == namespacePrefix()) {
                 revert ReservedNamespace();
             }
         }
 
         // Check if chain ID already exists
-        if (_usedChainIds[appChainId]) {
+        if (_usedChainIds[appchainId]) {
             revert ChainIdAlreadyExists();
         }
 
@@ -101,7 +101,7 @@ contract SyndicateFactory is AccessControl {
     }
 
     /// @notice Creates a new SyndicateSequencingChain contract with a permission module
-    /// @param appChainId The app chain the contract refers to (0 for auto-increment)
+    /// @param appchainId The app chain the contract refers to (0 for auto-increment)
     /// @param admin The address that will be the admin
     /// @param permissionModule The address of the permission module
     /// @param salt The salt to use for the deployment
@@ -109,28 +109,28 @@ contract SyndicateFactory is AccessControl {
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
     //#olympix-ignore-reentrancy-events
     function createSyndicateSequencingChain(
-        uint256 appChainId,
+        uint256 appchainId,
         address admin,
         IRequirementModule permissionModule,
         bytes32 salt
     )
         public
         zeroValuesChainAndTwoAddressesNotAllowed(
-            appChainId == 0 ? _getNextChainId() : appChainId,
+            appchainId == 0 ? _getNextChainId() : appchainId,
             admin,
             address(permissionModule)
         )
-        validateChainId(appChainId == 0 ? _getNextChainId() : appChainId, appChainId != 0)
+        validateChainId(appchainId == 0 ? _getNextChainId() : appchainId, appchainId != 0)
         returns (address sequencingChain, uint256 actualChainId)
     {
         // Determine the actual chain ID to use
-        actualChainId = appChainId == 0 ? _getNextChainId() : appChainId;
+        actualChainId = appchainId == 0 ? _getNextChainId() : appchainId;
 
         // Mark this chain ID as used
         _usedChainIds[actualChainId] = true;
 
         // Increment the auto-chain ID counter if we used an auto-generated ID
-        if (appChainId == 0) {
+        if (appchainId == 0) {
             _nextAutoChainId++;
         }
 
@@ -147,19 +147,19 @@ contract SyndicateFactory is AccessControl {
 
     /// @notice Creates a SyndicateSequencingChain with RequireAndModule
     /// @param admin The address that will be the default admin role
-    /// @param appChainId The app chain ID (0 for auto-increment)
+    /// @param appchainId The app chain ID (0 for auto-increment)
     /// @param salt The salt to use for the deployment
     /// @return sequencingChain The address of the newly created SyndicateSequencingChain
     /// @return permissionModule The address of the newly created RequireAndModule
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChainWithRequireAndModule(address admin, uint256 appChainId, bytes32 salt)
+    function createSyndicateSequencingChainWithRequireAndModule(address admin, uint256 appchainId, bytes32 salt)
         public
-        zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
+        zeroValuesChainAndAddressNotAllowed(appchainId == 0 ? _getNextChainId() : appchainId, admin)
         returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId)
     {
         permissionModule = IRequirementModule(new RequireAndModule(admin));
-        (sequencingChain, actualChainId) = createSyndicateSequencingChain(appChainId, admin, permissionModule, salt);
+        (sequencingChain, actualChainId) = createSyndicateSequencingChain(appchainId, admin, permissionModule, salt);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 
@@ -168,19 +168,19 @@ contract SyndicateFactory is AccessControl {
 
     /// @notice Creates a SyndicateSequencingChain with RequireOrModule
     /// @param admin The address that will be the default admin role
-    /// @param appChainId The app chain ID (0 for auto-increment)
+    /// @param appchainId The app chain ID (0 for auto-increment)
     /// @param salt The salt to use for the deployment
     /// @return sequencingChain The address of the newly created SyndicateSequencingChain
     /// @return permissionModule The address of the newly created RequireOrModule
     /// @return actualChainId The chain ID that was used (auto-generated or specified)
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChainWithRequireOrModule(address admin, uint256 appChainId, bytes32 salt)
+    function createSyndicateSequencingChainWithRequireOrModule(address admin, uint256 appchainId, bytes32 salt)
         public
-        zeroValuesChainAndAddressNotAllowed(appChainId == 0 ? _getNextChainId() : appChainId, admin)
+        zeroValuesChainAndAddressNotAllowed(appchainId == 0 ? _getNextChainId() : appchainId, admin)
         returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId)
     {
         permissionModule = IRequirementModule(new RequireOrModule(admin));
-        (sequencingChain, actualChainId) = createSyndicateSequencingChain(appChainId, admin, permissionModule, salt);
+        (sequencingChain, actualChainId) = createSyndicateSequencingChain(appchainId, admin, permissionModule, salt);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 

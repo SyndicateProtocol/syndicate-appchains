@@ -11,12 +11,12 @@ import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 
 contract DeploySyndicateFactory is Script {
     SyndicateFactory public syndicateFactory;
-    uint256 public appChainId;
+    uint256 public appchainId;
 
     function run() public {
         vm.startBroadcast();
 
-        appChainId = 0; // TODO: Set the App chain ID
+        appchainId = 0; // TODO: Set the App chain ID
 
         // syndicate admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
@@ -26,7 +26,7 @@ contract DeploySyndicateFactory is Script {
 
         // create new contracts
         (address sequencingChain, IRequirementModule permissionModule,) =
-            syndicateFactory.createSyndicateSequencingChainWithRequireAndModule(admin, appChainId, bytes32(appChainId));
+            syndicateFactory.createSyndicateSequencingChainWithRequireAndModule(admin, appchainId, bytes32(appchainId));
 
         console.log("Deployed SyndicateSequencingChain", sequencingChain);
         console.log("Deployed RequireAndModule", address(permissionModule));
@@ -38,12 +38,12 @@ contract DeploySyndicateFactory is Script {
 contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script {
     SyndicateSequencingChain public sequencingChain;
     RequireAndModule public permissionModule;
-    uint256 public appChainId;
+    uint256 public appchainId;
 
     function run() public {
         vm.startBroadcast();
 
-        appChainId = 0; // TODO: Set the App chain ID
+        appchainId = 0; // TODO: Set the App chain ID
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
         // Deploy permission module first
@@ -51,7 +51,7 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
         console.log("Deployed RequireAndModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencingChain = new SyndicateSequencingChain(appChainId);
+        sequencingChain = new SyndicateSequencingChain(appchainId);
         sequencingChain.initialize(admin, address(permissionModule));
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 

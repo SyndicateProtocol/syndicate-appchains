@@ -16,9 +16,9 @@ contract SyndicateSequencingChainWithDecayingPriority is SyndicateSequencingChai
     event TransactionProcessed(address indexed sender, bytes data, uint256 originalPriority, uint256 timestamp);
 
     /// @notice Constructs the SyndicateSequencingChainWithDecayingPriority contract.
-    /// @param _appChainId The ID of the App chain that this contract is sequencing transactions for.
+    /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-no-parameter-validation-in-constructor
-    constructor(uint256 _appChainId) SyndicateSequencingChain(_appChainId) {}
+    constructor(uint256 _appchainId) SyndicateSequencingChain(_appchainId) {}
 
     /// @notice Processes a single compressed transaction with priority.
     /// @param data The compressed transaction data.

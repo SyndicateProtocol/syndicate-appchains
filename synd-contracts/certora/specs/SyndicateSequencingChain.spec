@@ -3,7 +3,7 @@ using InitializableHarness as init;
 
 methods {
     // View functions
-    function appChainId() external returns (uint256) envfree;
+    function appchainId() external returns (uint256) envfree;
     function permissionRequirementModule() external returns (address) envfree;
     function isAllowed(address, address, bytes) external returns (bool) envfree;
     function owner() external returns (address) envfree;
@@ -47,10 +47,10 @@ rule initializationCorrect(address admin, address module) {
 }
 
 /*
- * Rule 3: Verify that appChainId cannot be zero
+ * Rule 3: Verify that appchainId cannot be zero
  */
-invariant appChainIdNotZero()
-    appChainId() != 0;
+invariant appchainIdNotZero()
+    appchainId() != 0;
 
 /*
  * Rule 4: Verify that permissionRequirementModule address is never zero after initialization

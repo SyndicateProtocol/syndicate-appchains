@@ -32,14 +32,14 @@ contract AtomicSequencerTest is Test {
     function setUp() public {
         admin = address(0x1);
         originalCaller = address(0x2);
-        uint256 appChainIdA = 10042001;
-        uint256 appChainIdB = 10042002;
+        uint256 appchainIdA = 10042001;
+        uint256 appchainIdB = 10042002;
 
         vm.startPrank(admin);
         permissionModule = new RequireAndModule(admin);
-        chainA = new SyndicateSequencingChain(appChainIdA);
+        chainA = new SyndicateSequencingChain(appchainIdA);
         chainA.initialize(admin, address(permissionModule));
-        chainB = new SyndicateSequencingChain(appChainIdB);
+        chainB = new SyndicateSequencingChain(appchainIdB);
         chainB.initialize(admin, address(permissionModule));
         atomicSequencer = new AtomicSequencer();
         permissionModule.addPermissionCheck(address(new MockIsAllowed(true)), false);

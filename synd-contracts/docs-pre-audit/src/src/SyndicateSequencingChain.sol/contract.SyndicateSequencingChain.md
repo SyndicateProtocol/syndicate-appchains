@@ -10,12 +10,12 @@ to determine the address that is allowed to sequence and whether the calldata is
 
 ## State Variables
 
-### appChainId
+### appchainId
 
 The ID of the App chain that this contract is sequencing transactions for.
 
 ```solidity
-uint256 public immutable appChainId;
+uint256 public immutable appchainId;
 ```
 
 ## Functions
@@ -25,14 +25,14 @@ uint256 public immutable appChainId;
 Constructs the SyndicateSequencingChain contract.
 
 ```solidity
-constructor(uint256 _appChainId) SequencingModuleChecker();
+constructor(uint256 _appchainId) SequencingModuleChecker();
 ```
 
 **Parameters**
 
 | Name          | Type      | Description                                                                |
 | ------------- | --------- | -------------------------------------------------------------------------- |
-| `_appChainId` | `uint256` | The ID of the App chain that this contract is sequencing transactions for. |
+| `_appchainId` | `uint256` | The ID of the App chain that this contract is sequencing transactions for. |
 
 ### processTransaction
 

@@ -46,12 +46,12 @@ contract SyndicateSequencingChainTestSetUp is Test {
 
     function setUp() public virtual {
         admin = address(0x1);
-        uint256 appChainId = 10042001;
+        uint256 appchainId = 10042001;
 
         vm.startPrank(admin);
         permissionModule = new RequireAndModule(admin);
         permissionModuleAny = new RequireOrModule(admin);
-        chain = new SyndicateSequencingChain(appChainId);
+        chain = new SyndicateSequencingChain(appchainId);
         chain.initialize(admin, address(permissionModule));
         vm.stopPrank();
     }
