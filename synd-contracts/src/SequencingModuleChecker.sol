@@ -82,15 +82,6 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
         emit RequirementModuleUpdated(_newModule);
     }
 
-    /// @notice Modifier to checks if an address is allowed to submit txs based on the sender, origin and data
-    /// @param proposer The address to check
-    /// @param originator The address of tx.origin. Useful to know the sender originator in wrapper contracts
-    /// @param data The calldata to check
-    modifier onlyWhenAllowed(address proposer, address originator, bytes calldata data) {
-        if (!isAllowed(proposer, originator, data)) revert TransactionOrProposerNotAllowed();
-        _;
-    }
-
     /// @notice Checks if both the proposer and calldata are allowed
     /// @param proposer The address to check
     /// @param originator The address of tx.origin.
@@ -100,7 +91,23 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
         return permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
     }
 
-    function transactionProcessed(address sender, bytes memory data) internal {
+    function transactionProcessed(bytes calldata data) internal returns (bool) {
+        if (!isAllowed(msg.sender, tx.origin, data)) {
+            return false;
+        }
+        _transactionProcessed(data);
+        return true;
+    }
+
+    function uncompressedTransactionProcessed(bytes calldata data) internal returns (bool) {
+        if (!isAllowed(msg.sender, tx.origin, data)) {
+            return false;
+        }
+        _transactionProcessed(prependZeroByte(data));
+        return true;
+    }
+
+    function _transactionProcessed(bytes memory data) private {
         TxData storage txData = _getTxData();
         uint256 blockNumber = block.number;
         if (address(arbsys).code.length > 0) {
@@ -109,9 +116,18 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
             } catch {}
         }
 
-        txData.acc =
-            keccak256(abi.encodePacked(txData.acc, sender, blockNumber, block.timestamp, txData.count, keccak256(data)));
+        txData.acc = keccak256(
+            abi.encodePacked(txData.acc, msg.sender, blockNumber, block.timestamp, txData.count, keccak256(data))
+        );
         txData.count += 1;
-        emit TransactionProcessed(sender, data);
+        emit TransactionProcessed(msg.sender, data);
+    }
+
+    /// @notice Prepends a zero byte to the transaction data
+    /// @dev This helps op-translator identify uncompressed data
+    /// @param _data The original transaction data
+    /// @return bytes The transaction data with a zero byte prepended
+    function prependZeroByte(bytes calldata _data) internal pure returns (bytes memory) {
+        return abi.encodePacked(bytes1(0x00), _data);
     }
 }

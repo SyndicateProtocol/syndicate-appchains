@@ -9,6 +9,15 @@ import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
  * This is only an example implementation. Not for production use.
  */
 contract SyndicateSequencingChainWithDecayingPriority is SyndicateSequencingChain {
+    /// @notice Modifier to checks if an address is allowed to submit txs based on the sender, origin and data
+    /// @param proposer The address to check
+    /// @param originator The address of tx.origin. Useful to know the sender originator in wrapper contracts
+    /// @param data The calldata to check
+    modifier onlyWhenAllowed(address proposer, address originator, bytes calldata data) {
+        if (!isAllowed(proposer, originator, data)) revert TransactionOrProposerNotAllowed();
+        _;
+    }
+
     /// @notice The constant rate at which priority decays (10 units per second)
     uint256 public constant PRIORITY_DECAY_RATE = 10;
 

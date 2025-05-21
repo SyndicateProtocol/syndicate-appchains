@@ -22,16 +22,20 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @notice Processes a single compressed transaction.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
-    function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
-        transactionProcessed(msg.sender, data);
+    function processTransactionRaw(bytes calldata data) external {
+        if (!transactionProcessed(data)) {
+            revert TransactionOrProposerNotAllowed();
+        }
     }
 
     /// @notice Process transactions
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data The transaction data
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
-        transactionProcessed(msg.sender, prependZeroByte(data));
+    function processTransaction(bytes calldata data) external {
+        if (!uncompressedTransactionProcessed(data)) {
+            revert TransactionOrProposerNotAllowed();
+        }
     }
 
     /// @notice Processes multiple transactions in bulk.
@@ -43,19 +47,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
-            if (isAllowed) {
-                // only emit the event if the transaction is allowed
-                transactionProcessed(msg.sender, prependZeroByte(data[i]));
-            }
+            uncompressedTransactionProcessed(data[i]);
         }
-    }
-
-    /// @notice Prepends a zero byte to the transaction data
-    /// @dev This helps op-translator identify uncompressed data
-    /// @param _data The original transaction data
-    /// @return bytes The transaction data with a zero byte prepended
-    function prependZeroByte(bytes calldata _data) internal pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), _data);
     }
 }
