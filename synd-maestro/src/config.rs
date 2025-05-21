@@ -75,8 +75,8 @@ pub struct Config {
     pub finalization_checker_interval: Duration,
 
     /// Maximum number of resubmission retries
-    #[arg(long, env = "MAX_RESUBMISSION_RETRIES", default_value = "3")]
-    pub max_resubmission_retries: u32,
+    #[arg(long, env = "MAX_TRANSACTION_RETRIES", default_value = "3")]
+    pub max_transaction_retries: u32,
 }
 
 /// Parse the chain ID to URL mappings from the JSON string

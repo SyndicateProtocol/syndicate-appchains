@@ -70,7 +70,7 @@ mod tests {
             wallet_nonce_ttl: Duration::from_secs(3),
             finalization_duration: Duration::from_secs(5 * 60),
             finalization_checker_interval: Duration::from_secs(5 * 60),
-            max_resubmission_retries: 3,
+            max_transaction_retries: 3,
         };
 
         // Start the actual Maestro server with our mocked config

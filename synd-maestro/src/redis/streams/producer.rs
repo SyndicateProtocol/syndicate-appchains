@@ -41,7 +41,7 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 ///         1,
 ///         Duration::from_secs(60 * 60 * 24),
 ///         Duration::from_secs(60 * 60 * 24),
-///         5, // max_resubmission_retries
+///         5, // max_transaction_retries
 ///         |_raw_tx: &[u8]| async { CheckFinalizationResult::Done },
 ///     );
 ///     let tx_data = vec![0x01, 0x02, 0x03];
@@ -64,7 +64,7 @@ impl StreamProducer {
     /// * `chain_id` - The chain identifier this producer will write to
     /// * `finalization_checker_interval` - How often to check for finalized transactions
     /// * `finalization_duration` - Duration after which a transaction is considered finalized
-    /// * `max_resubmission_retries` - Maximum number of times a transaction can be re-submitted
+    /// * `max_transaction_retries` - Maximum number of times a transaction can be re-submitted
     /// * `handle_finalized_tx` - Callback to check if a transaction is finalized
     ///
     /// # Returns
@@ -74,7 +74,7 @@ impl StreamProducer {
         chain_id: u64,
         finalization_checker_interval: Duration,
         finalization_duration: Duration,
-        max_resubmission_retries: u32,
+        max_transaction_retries: u32,
         handle_finalized_tx: F,
     ) -> Self
     where
@@ -89,7 +89,7 @@ impl StreamProducer {
             stream_key.clone(),
             finalization_checker_interval,
             finalization_duration,
-            max_resubmission_retries,
+            max_transaction_retries,
             handle_finalized_tx,
             shutdown_token.clone(),
         );
@@ -251,10 +251,10 @@ fn parse_stream_entry<'a>(
 /// * `stream_key` - Key of the Redis stream to check
 /// * `finalization_checker_interval` - How often to check for old entries
 /// * `finalization_duration` - Maximum age of entries to keep
-/// * `max_resubmission_retries` - Maximum number of times a transaction can be re-submitted
+/// * `max_transaction_retries` - Maximum number of times a transaction can be re-submitted
 /// * `check_finalization` - Function to call with each entry's raw data, this will decide whether
 ///   to resubmit the transaction or not
-/// * `shutdown_token` - CancellationToken for shutting down the task
+/// * `shutdown_token` - `CancellationToken` for shutting down the task
 ///
 /// # Returns
 /// A `JoinHandle` for the spawned finalization checker task
@@ -263,7 +263,7 @@ fn start_finalization_checker<F, Fut>(
     stream_key: String,
     finalization_checker_interval: Duration,
     finalization_duration: Duration,
-    max_resubmission_retries: u32,
+    max_transaction_retries: u32,
     check_finalization: F,
     shutdown_token: CancellationToken,
 ) -> JoinHandle<()>
@@ -308,7 +308,7 @@ where
                     Some((data, retries)) => (data, retries),
                     None => continue,
                 };
-                if retries >= max_resubmission_retries {
+                if retries >= max_transaction_retries {
                     let tx_hash = keccak256(data);
                     debug!(%stream_key, entry_id = %id, %tx_hash, %retries, "Max resubmission retries reached. Transaction will not be re-submitted.");
                     continue;
@@ -355,12 +355,12 @@ mod tests {
     async fn test_stream_finalization_checker() {
         // This test verifies the behavior of the `start_finalization_checker` with conditional
         // logic in the callback and ensures items with future-dated IDs are not processed.
-        // It also tests the max_resubmission_retries logic.
+        // It also tests the max_transaction_retries logic.
         // 1. It populates a Redis stream with 5 initial entries (intended to be "old") and 1
         //    "extra" entry with a far-future ID (intended to remain unprocessed by this test run).
         //    All entries are added with "retries: 0".
         // 2. It starts the finalization checker with a short interval (100ms), finalization
-        //    duration (50ms), and max_resubmission_retries (e.g., 1).
+        //    duration (50ms), and max_transaction_retries (e.g., 1).
         // 3. The test waits for 150ms, allowing the checker to run effectively once.
         // 4. In this run, the checker should: a. Identify only the 5 "old" entries. b. The "extra"
         //    entry with the future ID should NOT be selected. c. Delete the 5 selected "old"
@@ -369,7 +369,7 @@ mod tests {
         // 5. The callback logic for the 5 processed entries is conditional:
         //    - For the first 2 invocations, it returns `CheckFinalizationResult::ReSubmit`.
         //    - For the next 3 invocations, it returns `CheckFinalizationResult::Done`.
-        // 6. `start_finalization_checker` behavior with `max_resubmission_retries = 1`:
+        // 6. `start_finalization_checker` behavior with `max_transaction_retries = 1`:
         //    - Item 0 (test-0, retries=0): Callback `ReSubmit`. `0 < 1` is true. Re-submitted with
         //      `retries = 1`.
         //    - Item 1 (test-1, retries=0): Callback `ReSubmit`. `0 < 1` is true. Re-submitted with
@@ -427,7 +427,7 @@ mod tests {
         // Start finalization checker with short intervals for testing
         let finalization_checker_interval = Duration::from_millis(100);
         let finalization_duration = Duration::from_millis(50);
-        let max_resubmission_retries = 1; // Test with 1 retry allowed
+        let max_transaction_retries = 1; // Test with 1 retry allowed
 
         let shutdown_token = CancellationToken::new();
 
@@ -436,7 +436,7 @@ mod tests {
             stream_key.to_string(),
             finalization_checker_interval,
             finalization_duration,
-            max_resubmission_retries,
+            max_transaction_retries,
             move |data: &[u8]| {
                 // Create static reference to avoid lifetime issues
                 let data = data.to_vec();
@@ -500,9 +500,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_transaction_max_retries_behavior() {
-        // This test verifies that a transaction is retried once when max_resubmission_retries is 1,
+        // This test verifies that a transaction is retried once when max_transaction_retries is 1,
         // and then dropped on the subsequent processing attempt.
-        // 1. Set max_resubmission_retries = 1.
+        // 1. Set max_transaction_retries = 1.
         // 2. Add one entry with retries = 0.
         // 3. Callback always returns ReSubmit.
         // 4. After 1st cycle: entry is re-submitted with retries = 1. Callback invoked once.
@@ -516,7 +516,7 @@ mod tests {
         let mut conn_clone_for_assert = conn.clone();
 
         let stream_key = "test:max_retries_behavior:stream";
-        let max_resubmission_retries = 1;
+        let max_transaction_retries = 1;
         let item_data = b"single_retry_item_data";
 
         // Add initial entry
@@ -547,7 +547,7 @@ mod tests {
             stream_key.to_string(),
             finalization_checker_interval,
             finalization_duration,
-            max_resubmission_retries,
+            max_transaction_retries,
             finalization_callback,
             shutdown_token.clone(),
         );
