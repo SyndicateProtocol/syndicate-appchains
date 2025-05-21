@@ -11,8 +11,9 @@ use test_utils::wait_until;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prometheus_client::registry::Registry;
     use std::collections::HashMap;
-    use synd_maestro::{config::Config, server::HEADER_CHAIN_ID};
+    use synd_maestro::{config::Config, metrics::MaestroMetrics, server::HEADER_CHAIN_ID};
     use test_utils::{
         docker::{start_redis, Docker},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
@@ -70,8 +71,11 @@ mod tests {
             wallet_nonce_ttl: Duration::from_secs(3),
         };
 
+        let mut registry = Registry::default();
+        let metrics = MaestroMetrics::new(&mut registry);
+
         // Start the actual Maestro server with our mocked config
-        let (addr, handle) = server::run(config).await.expect("Failed to start server");
+        let (addr, handle) = server::run(config, metrics).await.expect("Failed to start server");
         let base_url = format!("http://{}", addr);
 
         // Wait for server to be ready by checking health endpoint

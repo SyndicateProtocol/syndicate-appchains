@@ -1,6 +1,8 @@
 //! The JSON-RPC server module for the Maestro service.
 
-use crate::{config::Config, layers::HeadersLayer, maestro::MaestroService};
+use crate::{
+    config::Config, layers::HeadersLayer, maestro::MaestroService, metrics::MaestroMetrics,
+};
 use alloy::{consensus::Transaction, primitives::ChainId};
 use http::Extensions;
 use jsonrpsee::{
@@ -19,6 +21,7 @@ use shared::{
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use tokio::time::Instant;
 use tower::ServiceBuilder;
 use tracing::info;
 
@@ -26,7 +29,10 @@ use tracing::info;
 pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
 
 /// Runs the base server for the sequencer
-pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
+pub async fn run(
+    config: Config,
+    metrics: MaestroMetrics,
+) -> eyre::Result<(SocketAddr, ServerHandle)> {
     info!("Starting Maestro server:run");
 
     let optional_headers = vec![HEADER_CHAIN_ID.to_string()];
@@ -42,7 +48,7 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
 
     let client = redis::Client::open(config.redis_url.as_str())?;
     let redis_conn = client.get_multiplexed_async_connection().await?;
-    let service = MaestroService::new(redis_conn, config).await?;
+    let service = MaestroService::new(redis_conn, config, metrics).await?;
     info!("Connected to Redis successfully!");
 
     let mut module = RpcModule::new(service);
@@ -71,6 +77,9 @@ pub async fn send_raw_transaction_handler(
     service: Arc<MaestroService>,
     extensions: Extensions,
 ) -> RpcResult<String> {
+    let req_start = Instant::now();
+    service.metrics.increment_maestro_requests_total(1);
+
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let (tx, signer) = validate_transaction(&raw_tx)?;
     let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
@@ -90,6 +99,9 @@ pub async fn send_raw_transaction_handler(
     service.handle_transaction_and_manage_nonces(raw_tx, signer, chain_id, tx_nonce).await?;
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
+
+    service.metrics.record_maestro_requests_duration_ms(req_start.elapsed());
+    service.metrics.increment_maestro_successful_transactions_total(1);
     Ok(tx_hash)
 }
 
