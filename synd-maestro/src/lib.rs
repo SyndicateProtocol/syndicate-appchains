@@ -5,5 +5,6 @@ pub mod config;
 pub mod errors;
 pub mod layers;
 pub mod maestro;
+pub mod metrics;
 pub mod redis;
 pub mod server;
