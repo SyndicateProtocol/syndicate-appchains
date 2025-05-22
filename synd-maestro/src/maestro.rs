@@ -63,28 +63,31 @@ impl MaestroService {
             rpc_providers,
             config,
         };
-        res.create_redis_producers();
+        res.create_redis_producers().await;
 
         Ok(res)
     }
 
-    fn create_redis_producers(&mut self) {
+    async fn create_redis_producers(&mut self) {
         for (chain_id, provider) in &self.rpc_providers {
             let provider_clone = provider.clone();
             self.producers.insert(
                 *chain_id,
-                Arc::new(StreamProducer::new(
-                    self.redis_conn.clone(),
-                    *chain_id,
-                    self.config.finalization_checker_interval,
-                    self.config.finalization_duration,
-                    self.config.max_transaction_retries,
-                    move |raw_tx: &[u8]| {
-                        let provider = provider_clone.clone();
-                        let tx_data = raw_tx.to_vec();
-                        async move { Self::handle_finalization(tx_data, &provider).await }
-                    },
-                )),
+                Arc::new(
+                    StreamProducer::new(
+                        self.redis_conn.clone(),
+                        *chain_id,
+                        self.config.finalization_checker_interval,
+                        self.config.finalization_duration,
+                        self.config.max_transaction_retries,
+                        move |raw_tx: &[u8]| {
+                            let provider = provider_clone.clone();
+                            let tx_data = raw_tx.to_vec();
+                            async move { Self::handle_finalization(tx_data, &provider).await }
+                        },
+                    )
+                    .await,
+                ),
             );
         }
     }

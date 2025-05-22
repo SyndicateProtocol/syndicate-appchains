@@ -154,7 +154,8 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
-        );
+        )
+        .await;
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
 
         // Send transaction
@@ -192,7 +193,8 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
-        );
+        )
+        .await;
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
 
         // Send transactions

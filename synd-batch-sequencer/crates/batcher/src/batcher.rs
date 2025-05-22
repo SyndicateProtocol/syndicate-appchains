@@ -314,7 +314,8 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
-        );
+        )
+        .await;
 
         let test_data1 = b"test transaction data 1".to_vec();
         producer.enqueue_transaction(&test_data1).await.unwrap();
@@ -350,7 +351,8 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
-        );
+        )
+        .await;
 
         let test_data1 = b"test transaction data 1".to_vec();
         producer.enqueue_transaction(&test_data1).await.unwrap();
@@ -408,7 +410,8 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
-        );
+        )
+        .await;
 
         // Add 100 test transactions of ~50KB each
         // Create a 50KB transaction by repeating the pattern
@@ -467,7 +470,8 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
-        );
+        )
+        .await;
 
         // Add 20 test transactions of ~10KB each
         // Create a 10KB transaction by repeating the pattern
