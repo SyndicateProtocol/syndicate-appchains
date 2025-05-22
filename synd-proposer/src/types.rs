@@ -1,4 +1,4 @@
-//! The `types` module handles types for the poster.
+//! The `types` module handles types for the Proposer.
 
 use alloy::primitives::{B256, U256};
 use serde::{Deserialize, Serialize};

@@ -1,6 +1,6 @@
 [package]
 edition.workspace = true
-name              = "synd-poster"
+name              = "synd-proposer"
 version.workspace = true
 
 [dependencies]

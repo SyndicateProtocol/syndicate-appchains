@@ -1,13 +1,13 @@
 use alloy::primitives::Address;
 
 // needs to be different from the regular private key to prevent nonce collisions
-// needs to match the owner of the poster contract
+// needs to match the owner of the proposer contract
 // anvil account 0
-pub(super) const POSTER_SEQUENCER_PRIVATE_KEY: &str =
+pub(super) const PROPOSER_SEQUENCER_PRIVATE_KEY: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 #[derive(Debug)]
-pub(super) struct PosterConfig {
+pub(super) struct ProposerConfig {
     pub(crate) assertion_poster_contract_address: Address,
     pub(crate) settlement_rpc_url: String,
     pub(crate) appchain_rpc_url: String,
@@ -15,11 +15,11 @@ pub(super) struct PosterConfig {
     pub(crate) port: u16,
 }
 
-impl PosterConfig {
+impl ProposerConfig {
     pub(super) fn cli_args(&self) -> Vec<String> {
         vec![
             "--private-key".to_string(),
-            POSTER_SEQUENCER_PRIVATE_KEY.to_string(),
+            PROPOSER_SEQUENCER_PRIVATE_KEY.to_string(),
             "--appchain-rpc-url".to_string(),
             self.appchain_rpc_url.to_string(),
             "--assertion-poster-contract-address".to_string(),

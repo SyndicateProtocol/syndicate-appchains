@@ -6,7 +6,7 @@ use crate::components::{
     chain_ingestor::ChainIngestorConfig,
     configuration::{setup_config_manager, ConfigurationOptions, ContractVersion},
     maestro::MaestroConfig,
-    poster::PosterConfig,
+    proposer::ProposerConfig,
     timer::TestTimer,
     translator::TranslatorConfig,
 };
@@ -42,7 +42,7 @@ use test_utils::{
     port_manager::PortManager,
     preloaded_config::{
         PRELOAD_BRIDGE_ADDRESS_231, PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231,
-        PRELOAD_INBOX_ADDRESS_300, PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
+        PRELOAD_INBOX_ADDRESS_300, PRELOAD_PROPOSER_ADDRESS_231, PRELOAD_PROPOSER_ADDRESS_300,
     },
     utils::test_path,
     wait_until,
@@ -56,7 +56,7 @@ struct ComponentHandles {
     mchain: Docker,
     nitro_docker: Docker,
     translator: Docker,
-    poster: Option<Docker>,
+    proposer: Option<Docker>,
     sequencing_chain_ingestor: Docker,
     settlement_chain_ingestor: Docker,
 
@@ -90,7 +90,7 @@ pub struct TestComponents {
 
     /// Mchain
     pub mchain_provider: MProvider,
-    pub poster_url: String,
+    pub proposer_url: String,
 
     pub maestro_url: String,
     pub redis_url: String,
@@ -106,7 +106,7 @@ impl TestComponents {
         test: impl FnOnce(Self) -> Fut + Send,
     ) -> Result<()> {
         let (components, mut handles) = Self::new(options).await?;
-        let poster = handles.poster.take();
+        let proposer = handles.proposer.take();
         let maestro = handles.maestro.take();
         let batch_sequencer = handles.batch_sequencer.take();
         let redis = handles.redis.take();
@@ -116,8 +116,8 @@ impl TestComponents {
             e = handles.settlement_chain_ingestor.wait() => panic!("settlement ingestor died: {:#?}", e),
             e = handles.mchain.wait() => panic!("synd-mchain died: {:#?}", e),
             e = handles.nitro_docker.wait() => panic!("nitro died: {:#?}", e),
-            e = handles.translator.wait() => panic!("translator died: {:#?}", e),
-            e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
+            e = handles.translator.wait() => panic!("synd-translator died: {:#?}", e),
+            e = async {proposer.unwrap().wait().await}, if proposer.is_some() => panic!("synd-proposer died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("synd-maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
             e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
@@ -321,14 +321,14 @@ impl TestComponents {
         .await?;
         info!("Nitro URL: {}", nitro_url);
 
-        let (poster, poster_url) = if options.pre_loaded.is_some() {
-            info!("Starting poster...");
-            let poster_config = PosterConfig {
+        let (proposer, proposer_url) = if options.pre_loaded.is_some() {
+            info!("Starting proposer...");
+            let proposer_config = ProposerConfig {
                 assertion_poster_contract_address: options.pre_loaded.as_ref().map_or(
                     Address::ZERO,
                     |version| match version {
-                        ContractVersion::V300 => PRELOAD_POSTER_ADDRESS_300,
-                        ContractVersion::V213 => PRELOAD_POSTER_ADDRESS_231,
+                        ContractVersion::V300 => PRELOAD_PROPOSER_ADDRESS_300,
+                        ContractVersion::V213 => PRELOAD_PROPOSER_ADDRESS_231,
                     },
                 ),
                 settlement_rpc_url: settlement_anvil_url.clone(),
@@ -339,14 +339,14 @@ impl TestComponents {
             (
                 Some(
                     start_component(
-                        "synd-poster",
-                        poster_config.metrics_port,
-                        poster_config.cli_args(),
+                        "synd-proposer",
+                        proposer_config.metrics_port,
+                        proposer_config.cli_args(),
                         Default::default(),
                     )
                     .await?,
                 ),
-                format!("http://localhost:{}", poster_config.port),
+                format!("http://localhost:{}", proposer_config.port),
             )
         } else {
             (None, Default::default())
@@ -415,7 +415,7 @@ impl TestComponents {
                 inbox_address: arbitrum_inbox_address,
 
                 mchain_provider,
-                poster_url,
+                proposer_url,
                 maestro_url,
                 redis_url: redis_url_init,
                 appchain_block_explorer_url,
@@ -428,7 +428,7 @@ impl TestComponents {
                 mchain,
                 nitro_docker,
                 translator,
-                poster,
+                proposer,
                 batch_sequencer,
                 redis,
                 maestro,

@@ -1,4 +1,4 @@
-//! Integration tests for the poster
+//! Integration tests for the Proposer
 pub mod utils;
 use alloy::{
     consensus::Transaction,
@@ -14,7 +14,7 @@ use eyre::Result;
 use jsonrpsee::types::ErrorObjectOwned;
 use prometheus_client::registry::Registry;
 use std::{str::FromStr, time::Duration};
-use synd_poster::{config::Config, metrics::PosterMetrics, poster, types::NitroBlock};
+use synd_proposer::{config::Config, metrics::ProposerMetrics, proposer, types::NitroBlock};
 use test_utils::{port_manager::PortManager, wait_until};
 use tokio::time::sleep;
 use url::Url;
@@ -25,10 +25,10 @@ fn init() {
 }
 
 #[tokio::test]
-async fn e2e_poster_test() -> Result<()> {
+async fn e2e_proposer_test() -> Result<()> {
     let set_port = PortManager::instance().next_port().await;
     let app_port = PortManager::instance().next_port().await;
-    let poster_port = PortManager::instance().next_port().await;
+    let proposer_port = PortManager::instance().next_port().await;
 
     let (_set_anvil, set_provider) = utils::start_anvil(1, set_port).await?;
 
@@ -56,14 +56,14 @@ async fn e2e_poster_test() -> Result<()> {
         assertion_poster_contract_address,
         private_key: utils::DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
         polling_interval: Duration::from_secs(60),
-        port: poster_port,
+        port: proposer_port,
         metrics_port: 9090,
     };
 
     let mut registry = Registry::default();
-    let metrics = PosterMetrics::new(&mut registry);
+    let metrics = ProposerMetrics::new(&mut registry);
 
-    let _poster_handler = tokio::spawn(poster::run(config, metrics));
+    let _proposer_handler = tokio::spawn(proposer::run(config, metrics));
     sleep(Duration::from_secs(1)).await;
 
     let block_option = set_provider.get_block_by_number(BlockNumberOrTag::Latest).full().await?;
@@ -84,13 +84,13 @@ async fn e2e_poster_test() -> Result<()> {
     assert_eq!(nitro_block.hash, decode.blockHash);
     assert_eq!(nitro_block.send_root, decode.sendRoot);
 
-    // Trigger the /post endpoint
+    // Trigger the /propose endpoint
     let client = reqwest::Client::new();
     let response = client
-        .post(format!("http://localhost:{}/post", poster_port))
+        .post(format!("http://localhost:{}/propose", proposer_port))
         .send()
         .await
-        .expect("Failed to send POST to /post");
+        .expect("Failed to send POST to /propose");
 
     assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
     let body = response.text().await?;
