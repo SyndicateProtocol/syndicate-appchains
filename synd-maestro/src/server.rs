@@ -7,7 +7,7 @@ use alloy::{consensus::Transaction, primitives::ChainId};
 use http::Extensions;
 use jsonrpsee::{
     core::RpcResult,
-    server::{middleware::http::ProxyGetRequestLayer, Server, ServerHandle},
+    server::{middleware::http::ProxyGetRequestLayer, Server},
     types::{ErrorCode, Params},
     RpcModule,
 };
@@ -20,19 +20,23 @@ use shared::{
     },
     tx_validation::validate_transaction,
 };
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, future::Future, net::SocketAddr, pin::Pin, sync::Arc};
 use tokio::time::Instant;
 use tower::ServiceBuilder;
-use tracing::info;
+use tracing::{error, info};
 
 /// Request header for `eth_sendRawTransaction` calls that holds the intended `chain_id`
 pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
+
+/// shutdown function type
+pub type ShutdownFn =
+    Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = Result<(), eyre::Error>> + Send>> + Send>;
 
 /// Runs the base server for the sequencer
 pub async fn run(
     config: Config,
     metrics: MaestroMetrics,
-) -> eyre::Result<(SocketAddr, ServerHandle)> {
+) -> eyre::Result<(SocketAddr, ShutdownFn)> {
     info!("Starting Maestro server:run");
 
     let optional_headers = vec![HEADER_CHAIN_ID.to_string()];
@@ -46,12 +50,13 @@ pub async fn run(
         .build(format!("0.0.0.0:{}", config.port))
         .await?;
 
+    // Create the service internally again
     let client = redis::Client::open(config.redis_url.as_str())?;
     let redis_conn = client.get_multiplexed_async_connection().await?;
-    let service = MaestroService::new(redis_conn, config, metrics).await?;
-    info!("Connected to Redis successfully!");
+    let service = Arc::new(MaestroService::new(redis_conn, config.clone(), metrics).await?);
+    info!("MaestroService created and connected to Redis successfully!");
 
-    let mut module = RpcModule::new(service);
+    let mut module = RpcModule::new(service.clone()); // Pass Arc for RpcModule state
 
     // Register RPC methods
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
@@ -68,15 +73,33 @@ pub async fn run(
     let addr = server.local_addr()?;
     let handle = server.start(module);
 
-    Ok((addr, handle))
+    // Define the shutdown closure
+    let shutdown_fn: ShutdownFn = Box::new(move || {
+        let service_clone = Arc::clone(&service);
+        Box::pin(async move {
+            info!("Stopping RPC server...");
+            if let Err(e) = handle.stop() {
+                error!("Error stopping RPC server: {:?}", e);
+            }
+            handle.stopped().await;
+            info!("RPC server stopped.");
+            info!("Stopping MaestroService...");
+            service_clone.shutdown().await;
+            info!("MaestroService stopped.");
+            Ok(())
+        }) as Pin<Box<dyn Future<Output = Result<(), eyre::Error>> + Send>>
+    });
+
+    Ok((addr, shutdown_fn))
 }
 
 /// The handler for the `eth_sendRawTransaction` JSON-RPC method
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
-    service: Arc<MaestroService>,
+    service_arc_arc: Arc<Arc<MaestroService>>,
     extensions: Extensions,
 ) -> RpcResult<String> {
+    let service = service_arc_arc.as_ref();
     let req_start = Instant::now();
     service.metrics.increment_maestro_requests_total(1);
 
@@ -96,7 +119,7 @@ pub async fn send_raw_transaction_handler(
         "Submitting validated transaction",
     );
 
-    service.handle_transaction_and_manage_nonces(raw_tx, signer, chain_id, tx_nonce).await?;
+    service.handle_transaction_and_manage_nonces(raw_tx, tx, signer, chain_id, tx_nonce).await?;
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
 
