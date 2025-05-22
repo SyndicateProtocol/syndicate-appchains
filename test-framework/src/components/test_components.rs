@@ -40,7 +40,7 @@ use synd_maestro::server::HEADER_CHAIN_ID;
 use synd_mchain::client::MProvider;
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, PRIVATE_KEY},
-    docker::{launch_nitro_node, start_component, start_mchain, start_redis, Docker},
+    docker::{launch_nitro_node, start_component, start_mchain, start_valkey, Docker},
     port_manager::PortManager,
     preloaded_config::{
         PRELOAD_BRIDGE_ADDRESS_231, PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231,
@@ -64,7 +64,7 @@ struct ComponentHandles {
 
     // Write loop
     batch_sequencer: Option<Docker>,
-    redis: Option<Docker>,
+    valkey: Option<Docker>,
     maestro: Option<Docker>,
 }
 
@@ -95,7 +95,7 @@ pub struct TestComponents {
     pub proposer_url: String,
 
     pub maestro_url: String,
-    pub redis_url: String,
+    pub valkey_url: String,
 
     #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
@@ -111,7 +111,7 @@ impl TestComponents {
         let proposer = handles.proposer.take();
         let maestro = handles.maestro.take();
         let batch_sequencer = handles.batch_sequencer.take();
-        let redis = handles.redis.take();
+        let valkey = handles.valkey.take();
         tokio::select! {
             biased;
             e = handles.sequencing_chain_ingestor.wait() => panic!("sequencing ingestor died: {:#?}", e),
@@ -122,7 +122,7 @@ impl TestComponents {
             e = async {proposer.unwrap().wait().await}, if proposer.is_some() => panic!("synd-proposer died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("synd-maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
-            e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
+            e = async {valkey.unwrap().wait().await}, if valkey.is_some() => panic!("valkey died: {:#?}", e),
             r = test(components) => r
         }
     }
@@ -135,21 +135,21 @@ impl TestComponents {
         // Launch mock sequencing chain and deploy contracts
         info!("Starting sequencing chain...");
         let (seq_port, seq_anvil, seq_provider) = start_anvil(15).await?;
-        _ = SyndicateSequencingChain::deploy_builder(
+        let _ = SyndicateSequencingChain::deploy_builder(
             &seq_provider,
             U256::from(options.appchain_chain_id),
         )
         .send()
         .await?;
         let sequencing_contract_address = seq_provider.default_signer_address().create(0);
-        _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+        let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         let always_allowed_module_address = seq_provider.default_signer_address().create(1);
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
             SyndicateSequencingChain::new(sequencing_contract_address, provider_clone);
-        _ = sequencing_contract
+        let _ = sequencing_contract
             .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()
             .await?;
@@ -184,7 +184,7 @@ impl TestComponents {
             (set_port, set_anvil, set_provider) = start_anvil(20).await?;
             // Use the mock rollup contract for the test instead of deploying all the nitro rollup
             // contracts
-            _ = Rollup::deploy_builder(
+            let _ = Rollup::deploy_builder(
                 &set_provider,
                 U256::from(options.appchain_chain_id),
                 "null".to_string(),
@@ -354,19 +354,19 @@ impl TestComponents {
             (None, Default::default())
         };
 
-        let (mut redis, mut maestro, mut batch_sequencer) = (None, None, None);
-        let mut redis_url_init = String::new();
+        let (mut valkey, mut maestro, mut batch_sequencer) = (None, None, None);
+        let mut valkey_url_init = String::new();
         let mut maestro_url = Default::default();
         if options.use_write_loop {
             info!("Starting Write Loop components...");
-            info!("Starting redis...");
-            let (redis_instance, redis_url) = start_redis().await?;
-            redis_url_init = redis_url.clone();
-            redis = Some(redis_instance);
+            info!("Starting valkey...");
+            let (valkey_instance, valkey_url) = start_valkey().await?;
+            valkey_url_init = valkey_url.clone();
+            valkey = Some(valkey_instance);
             info!("Starting maestro...");
             let maestro_config = MaestroConfig {
                 port: PortManager::instance().next_port().await,
-                redis_url: redis_url.clone(),
+                valkey_url: valkey_url.clone(),
                 chain_rpc_urls: format!("{{\"{}\":\"{}\"}}", options.appchain_chain_id, nitro_url),
                 metrics_port: PortManager::instance().next_port().await,
                 finalization_duration: options.maestro_finalization_duration,
@@ -385,7 +385,7 @@ impl TestComponents {
             info!("Starting batch sequencer...");
             let batch_sequencer_config = BatchSequencerConfig {
                 chain_id: options.appchain_chain_id,
-                redis_url: redis_url.clone(),
+                valkey_url: valkey_url.clone(),
                 private_key: PRIVATE_KEY.to_string(),
                 sequencing_address: sequencing_contract_address,
                 sequencing_rpc_url: sequencing_anvil_url,
@@ -419,7 +419,7 @@ impl TestComponents {
                 mchain_provider,
                 proposer_url,
                 maestro_url,
-                redis_url: redis_url_init,
+                valkey_url: valkey_url_init,
                 appchain_block_explorer_url,
             },
             ComponentHandles {
@@ -432,7 +432,7 @@ impl TestComponents {
                 translator,
                 proposer,
                 batch_sequencer,
-                redis,
+                valkey,
                 maestro,
             },
         ))

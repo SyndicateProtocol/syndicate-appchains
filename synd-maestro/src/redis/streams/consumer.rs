@@ -128,12 +128,12 @@ mod tests {
     use super::*;
     use crate::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
     use std::time::Duration;
-    use test_utils::docker::start_redis;
+    use test_utils::docker::start_valkey;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_produce_consume_transaction() {
         // Start Redis container
-        let (_redis, redis_url) = start_redis().await.unwrap();
+        let (_redis, redis_url) = start_valkey().await.unwrap();
 
         // Connect to Redis
         let conn = redis::Client::open(redis_url.as_str())
@@ -171,7 +171,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_produce_consume_multiple_transactions() {
         // Start Redis container
-        let (_redis, redis_url) = start_redis().await.unwrap();
+        let (_redis, redis_url) = start_valkey().await.unwrap();
 
         // Connect to Redis
         let conn = redis::Client::open(redis_url.as_str())

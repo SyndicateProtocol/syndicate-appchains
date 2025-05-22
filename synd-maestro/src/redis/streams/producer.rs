@@ -345,7 +345,7 @@ mod tests {
         atomic::{AtomicUsize, Ordering},
         Arc,
     };
-    use test_utils::docker::start_redis;
+    use test_utils::docker::start_valkey;
     use tokio::{
         sync::Mutex,
         time::{sleep, Duration},
@@ -386,7 +386,7 @@ mod tests {
         //       - The 3 items for which `Done` was returned are not re-added.
 
         // Setup Redis connection
-        let (_redis, redis_url) = start_redis().await.unwrap();
+        let (_redis, redis_url) = start_valkey().await.unwrap();
 
         let client = redis::Client::open(redis_url.as_str()).unwrap();
         let conn = client.get_multiplexed_async_connection().await.unwrap();
@@ -513,7 +513,7 @@ mod tests {
         // 5. After 2nd cycle: entry with retries = 1 is dropped. Callback not invoked again. Stream
         //    empty.
 
-        let (_redis, redis_url) = start_redis().await.unwrap();
+        let (_redis, redis_url) = start_valkey().await.unwrap();
         let client = redis::Client::open(redis_url.as_str()).unwrap();
         let conn = client.get_multiplexed_async_connection().await.unwrap();
         let mut conn_clone_for_setup = conn.clone();

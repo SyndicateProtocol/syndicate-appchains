@@ -745,7 +745,7 @@ mod tests {
     use serde_json::json;
     use std::time::Duration;
     use test_utils::{
-        docker::{start_redis, Docker},
+        docker::{start_valkey, Docker},
         transaction::create_legacy_transaction,
         wait_until,
     };
@@ -762,8 +762,8 @@ mod tests {
 
     // Helper to create a test service with real Redis and mock RPC
     async fn create_test_service() -> (MaestroService, MockServer, MockServer, Docker) {
-        // Start Redis
-        let (redis_container, redis_url) = start_redis().await.unwrap();
+        // Start cache
+        let (valkey_container, valkey_url) = start_valkey().await.unwrap();
 
         // Start mock RPC servers
         let mock_rpc_server_4 = MockServer::start().await;
@@ -776,14 +776,14 @@ mod tests {
         chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
         chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
 
-        // Create Redis connection
-        let client = redis::Client::open(redis_url.as_str()).unwrap();
-        let redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        // Create cache connection
+        let client = redis::Client::open(valkey_url.as_str()).unwrap();
+        let valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Create test config
         let config = Config {
             port: 0,
-            redis_url,
+            valkey_url,
             chain_rpc_urls,
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
@@ -800,9 +800,9 @@ mod tests {
         let metrics = MaestroMetrics::new(&mut registry);
 
         // Create service
-        let service = MaestroService::new(redis_conn, config, metrics).await.unwrap();
+        let service = MaestroService::new(valkey_conn, config, metrics).await.unwrap();
 
-        (service, mock_rpc_server_4, mock_rpc_server_5, redis_container)
+        (service, mock_rpc_server_4, mock_rpc_server_5, valkey_container)
     }
 
     // Helper to set up default mock responses
@@ -905,7 +905,7 @@ mod tests {
 
         // Verify transaction was actually stored
         // Connect to Redis directly to check
-        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
         let mut conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Check stream exists and has entries
@@ -1111,7 +1111,7 @@ mod tests {
         sleep(Duration::from_secs(3 + 1)).await;
 
         // Create a fresh connection after the sleep
-        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
         let mut fresh_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Verify nonce has expired using the fresh connection
@@ -1396,7 +1396,7 @@ mod tests {
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Get initial count of stream entries
@@ -1515,7 +1515,7 @@ mod tests {
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set cache nonce to be the first one
@@ -1643,7 +1643,7 @@ mod tests {
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
@@ -1708,7 +1708,7 @@ mod tests {
         set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
 
         // Set up Redis
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
@@ -1770,7 +1770,7 @@ mod tests {
         set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
 
         // Set up Redis
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
@@ -1853,7 +1853,7 @@ mod tests {
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
@@ -1961,7 +1961,7 @@ mod tests {
 
         // Set up Redis stream
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value

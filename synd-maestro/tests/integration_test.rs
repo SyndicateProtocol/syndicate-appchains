@@ -18,7 +18,7 @@ mod tests {
         server::{ShutdownFn, HEADER_CHAIN_ID},
     };
     use test_utils::{
-        docker::{start_redis, Docker},
+        docker::{start_valkey, Docker},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
     };
     use wiremock::{
@@ -59,12 +59,12 @@ mod tests {
         chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
         chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
 
-        let (redis, redis_url) = start_redis().await.unwrap();
+        let (valkey, valkey_url) = start_valkey().await.unwrap();
         // Create config with mock server URL
         let config = Config {
             port: 0,
             metrics_port: 8081,
-            redis_url,
+            valkey_url,
             chain_rpc_urls,
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
@@ -95,7 +95,7 @@ mod tests {
             Duration::from_secs(5)
         );
 
-        (addr, shutdown_fn, base_url, redis, mock_rpc_server_4, mock_rpc_server_5)
+        (addr, shutdown_fn, base_url, valkey, mock_rpc_server_4, mock_rpc_server_5)
     }
 
     async fn set_default_mock_responses_for_server_4(mock_rpc_server_4: &MockServer) {

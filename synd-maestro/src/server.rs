@@ -51,7 +51,7 @@ pub async fn run(
         .await?;
 
     // Create the service internally again
-    let client = redis::Client::open(config.redis_url.as_str())?;
+    let client = redis::Client::open(config.valkey_url.as_str())?;
     let redis_conn = client.get_multiplexed_async_connection().await?;
     let service = Arc::new(MaestroService::new(redis_conn, config.clone(), metrics).await?);
     info!("MaestroService created and connected to Redis successfully!");

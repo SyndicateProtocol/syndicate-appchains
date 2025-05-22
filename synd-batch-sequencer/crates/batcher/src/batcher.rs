@@ -66,11 +66,11 @@ pub async fn run_batcher(
     sequencing_contract_address: Address,
     metrics: BatcherMetrics,
 ) -> Result<JoinHandle<()>> {
-    let client = RedisClient::open(config.redis_url.as_str()).map_err(|e| {
-        eyre!("Failed to open Redis client: {}. Redis URL: {}", e, config.redis_url)
+    let client = RedisClient::open(config.valkey_url.as_str()).map_err(|e| {
+        eyre!("Failed to open Redis client: {}. Redis URL: {}", e, config.valkey_url)
     })?;
     let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
-        eyre!("Failed to get Redis connection: {}. Redis URL: {}", e, config.redis_url)
+        eyre!("Failed to get Redis connection: {}. Redis URL: {}", e, config.valkey_url)
     })?;
     let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
 
@@ -247,7 +247,7 @@ mod tests {
     };
     use prometheus_client::registry::Registry;
     use synd_maestro::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
-    use test_utils::{docker::start_redis, wait_until};
+    use test_utils::{docker::start_valkey, wait_until};
     use url::Url;
 
     // Create a mock provider that always succeeds
@@ -284,7 +284,7 @@ mod tests {
     fn test_config() -> BatcherConfig {
         BatcherConfig {
             max_batch_size: byte_unit::Byte::from_u64(1024),
-            redis_url: "dummy".to_string(),
+            valkey_url: "dummy".to_string(),
             chain_id: 1,
             compression_enabled: true,
             timeout: Duration::from_millis(200),
@@ -297,10 +297,10 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_read_transactions() {
         let mut config = test_config();
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
@@ -334,10 +334,10 @@ mod tests {
         let mut config = test_config();
         config.max_batch_size = byte_unit::Byte::from_u64(1); // force failure
         config.compression_enabled = false;
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
@@ -370,10 +370,10 @@ mod tests {
     #[tokio::test]
     async fn test_read_transactions_no_data() {
         let mut config = test_config();
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
@@ -394,10 +394,10 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_txs() {
         let mut config = test_config();
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
@@ -454,10 +454,10 @@ mod tests {
         config.compression_enabled = false;
         config.max_batch_size = byte_unit::Byte::from_u64(51 * 1024); // 51KB
 
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await

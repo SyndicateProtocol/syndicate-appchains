@@ -29,10 +29,10 @@ pub struct Config {
     #[arg(short = 'm', long, env = "METRICS_PORT", default_value_t = 8081)]
     pub metrics_port: u16,
 
-    /// Redis address to listen on
+    /// Valkey cache address to listen on.
     /// Example: "redis://0.0.0.0:6379"
-    #[arg(short = 'r', long, env = "REDIS_URL")]
-    pub redis_url: String,
+    #[arg(short = 'r', long, env = "VALKEY_URL")]
+    pub valkey_url: String,
 
     /// Chain ID to RPC URL mappings as a JSON string object
     /// Example: '{"1": "https://example.com", "2": "https://another.com"}'
