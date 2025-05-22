@@ -11,6 +11,7 @@ use crate::{
         MaestroRpcError::{self, InternalError, JsonRpcError},
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
+    metrics::MaestroMetrics,
     redis::{
         keys::wallet_nonce::{chain_wallet_nonce_key, ChainWalletNonceKey},
         models::{
@@ -44,6 +45,7 @@ pub struct MaestroService {
     producers: HashMap<ChainId, Arc<StreamProducer>>,
     rpc_providers: HashMap<ChainId, RpcProvider>,
     config: Config,
+    pub(crate) metrics: MaestroMetrics,
 }
 
 impl MaestroService {
@@ -51,6 +53,7 @@ impl MaestroService {
     pub async fn new(
         redis_conn: MultiplexedConnection,
         config: Config,
+        metrics: MaestroMetrics,
     ) -> Result<Self, MaestroError> {
         let rpc_providers = config.validate().await?;
         if rpc_providers.is_empty() {
@@ -62,6 +65,7 @@ impl MaestroService {
             producers: HashMap::new(),
             rpc_providers,
             config,
+            metrics,
         };
         res.create_redis_producers().await;
 
@@ -191,10 +195,7 @@ impl MaestroService {
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
-                // 1. enqueue the txn
-                self.enqueue_raw_transaction(&raw_tx, tx.hash(), chain_id).await?;
-
-                // 2. update the cache with nonce + 1. Quit if this fails
+                // 1. update the cache with nonce + 1. Quit if thiss fails
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
@@ -202,6 +203,10 @@ impl MaestroService {
                         JsonRpcError(TransactionRejected(rejection))
                     }
                     )?;
+
+                // 2. enqueue the txn
+                self.enqueue_raw_transaction(&raw_tx, tx.hash(), chain_id).await?;
+                self.metrics.increment_maestro_enqueued_transactions_total(1);
 
                 // 3. check cache for waiting txns (background task)
                 let service_clone = self.clone();
@@ -220,6 +225,7 @@ impl MaestroService {
                 debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Caching waiting transaction");
                 self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx, tx.hash())
                     .await?;
+                self.metrics.increment_maestro_waiting_transactions_total(1);
             }
         }
         Ok(())
@@ -692,6 +698,7 @@ mod tests {
         rlp::Encodable,
         rpc::types::TransactionRequest,
     };
+    use prometheus_client::registry::Registry;
     use redis::AsyncCommands;
     use serde_json::json;
     use std::time::Duration;
@@ -746,8 +753,11 @@ mod tests {
             max_transaction_retries: 3,
         };
 
+        let mut registry = Registry::default();
+        let metrics = MaestroMetrics::new(&mut registry);
+
         // Create service
-        let service = MaestroService::new(redis_conn, config).await.unwrap();
+        let service = MaestroService::new(redis_conn, config, metrics).await.unwrap();
 
         (service, mock_rpc_server_4, mock_rpc_server_5, redis_container)
     }

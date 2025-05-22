@@ -1,6 +1,8 @@
 //! The JSON-RPC server module for the Maestro service.
 
-use crate::{config::Config, layers::HeadersLayer, maestro::MaestroService};
+use crate::{
+    config::Config, layers::HeadersLayer, maestro::MaestroService, metrics::MaestroMetrics,
+};
 use alloy::{consensus::Transaction, primitives::ChainId};
 use http::Extensions;
 use jsonrpsee::{
@@ -19,6 +21,7 @@ use shared::{
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, future::Future, net::SocketAddr, pin::Pin, sync::Arc};
+use tokio::time::Instant;
 use tower::ServiceBuilder;
 use tracing::{error, info};
 
@@ -30,7 +33,10 @@ pub type ShutdownFn =
     Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = Result<(), eyre::Error>> + Send>> + Send>;
 
 /// Runs the base server for the sequencer
-pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ShutdownFn)> {
+pub async fn run(
+    config: Config,
+    metrics: MaestroMetrics,
+) -> eyre::Result<(SocketAddr, ShutdownFn)> {
     info!("Starting Maestro server:run");
 
     let optional_headers = vec![HEADER_CHAIN_ID.to_string()];
@@ -47,10 +53,10 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ShutdownFn)> {
     // Create the service internally again
     let client = redis::Client::open(config.redis_url.as_str())?;
     let redis_conn = client.get_multiplexed_async_connection().await?;
-    let service = Arc::new(MaestroService::new(redis_conn, config.clone()).await?);
+    let service = Arc::new(MaestroService::new(redis_conn, config.clone(), metrics).await?);
     info!("MaestroService created and connected to Redis successfully!");
 
-    let mut module = RpcModule::new(Arc::clone(&service)); // Pass Arc for RpcModule state
+    let mut module = RpcModule::new(service.clone()); // Pass Arc for RpcModule state
 
     // Register RPC methods
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
@@ -94,6 +100,9 @@ pub async fn send_raw_transaction_handler(
     extensions: Extensions,
 ) -> RpcResult<String> {
     let service = service_arc_arc.as_ref();
+    let req_start = Instant::now();
+    service.metrics.increment_maestro_requests_total(1);
+
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let (tx, signer) = validate_transaction(&raw_tx)?;
     let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
@@ -113,6 +122,9 @@ pub async fn send_raw_transaction_handler(
     service.handle_transaction_and_manage_nonces(raw_tx, tx, signer, chain_id, tx_nonce).await?;
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
+
+    service.metrics.record_maestro_requests_duration_ms(req_start.elapsed());
+    service.metrics.increment_maestro_successful_transactions_total(1);
     Ok(tx_hash)
 }
 

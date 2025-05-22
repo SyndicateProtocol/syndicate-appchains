@@ -4877,6 +4877,7 @@ dependencies = [
  "humantime",
  "jsonrpsee",
  "once_cell",
+ "prometheus-client",
  "rand 0.9.0",
  "redis",
  "serde_json",

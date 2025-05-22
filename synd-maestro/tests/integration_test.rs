@@ -10,9 +10,11 @@ use test_utils::wait_until;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prometheus_client::registry::Registry;
     use std::collections::HashMap;
     use synd_maestro::{
         config::Config,
+        metrics::MaestroMetrics,
         server::{ShutdownFn, HEADER_CHAIN_ID},
     };
     use test_utils::{
@@ -73,8 +75,12 @@ mod tests {
             max_transaction_retries: 3,
         };
 
+        let mut registry = Registry::default();
+        let metrics = MaestroMetrics::new(&mut registry);
+
         // Start the actual Maestro server with our mocked config
-        let (addr, shutdown_fn) = server::run(config).await.expect("Failed to start server");
+        let (addr, shutdown_fn) =
+            server::run(config, metrics).await.expect("Failed to start server");
         let base_url = format!("http://{}", addr);
 
         // Wait for server to be ready by checking health endpoint
