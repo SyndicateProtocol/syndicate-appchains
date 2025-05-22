@@ -84,6 +84,11 @@ contract DeployArbConfigManagerForExistingChains is Script {
             allowedSettlementAddresses: new address[](0)
         });
 
+        // @note For deploying the token bridge to nodes that ignore dealyed messages we must pass the address of the
+        // L1AtomicTokenBridgeCreator, L1ERC20Gateway, and any other contracts that call the Inbox of the appchain
+        // @note we may need to set this to the L1AtomicTokenBridgeCreator first && then upgrade the contract to include the L1ERC20BridgeGateway contract
+        address[] memory dreamAllowedSettlementAddresses = new address[](1);
+        dreamAllowedSettlementAddresses[0] = address(0xFC71d21a4FE10Cc0d34745ba9c713836f82f8DE3);
         chainConfigs[3] = ChainConfig({
             name: "dream",
             chainId: 63823,
@@ -96,8 +101,7 @@ contract DeployArbConfigManagerForExistingChains is Script {
             sequencingStartBlock: 90282,
             initialAppchainOwner: 0xC480Fc4694e5da3cF8257F9bF51eF1d01e1952Eb,
             appchainBlockExplorerUrl: "https://explorer.testnet.dream.syndicate.io/",
-            // @note TODO: what values need to be passed here?
-            allowedSettlementAddresses: new address[](0)
+            allowedSettlementAddresses: dreamAllowedSettlementAddresses
         });
 
         chainConfigs[4] = ChainConfig({
@@ -206,6 +210,7 @@ contract DeployArbConfigManagerForExistingChains is Script {
         });
 
         vm.startBroadcast(privateKey);
+        console2.log("Deploying ArbChainConfigs:");
         for (uint256 i = 0; i < chainConfigs.length; i++) {
             ChainConfig memory chainConfig = chainConfigs[i];
             address arbChainConfigAddress = manager.createArbChainConfig(
@@ -224,7 +229,7 @@ contract DeployArbConfigManagerForExistingChains is Script {
                 chainConfig.appchainBlockExplorerUrl,
                 chainConfig.allowedSettlementAddresses
             );
-            console2.log("ArbChainConfig for chain", chainConfig.name, "deployed to:", arbChainConfigAddress);
+            console2.log(chainConfig.name, arbChainConfigAddress);
         }
         vm.stopBroadcast();
     }
