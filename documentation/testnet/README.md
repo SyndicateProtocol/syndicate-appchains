@@ -4,7 +4,7 @@ A Syndicate Appchain RPC Node consists of 3 components: `translator`, `mchain`, 
 
 ## Hardware Requirements
 
-Below are the _minimum_ hardware requirements to run a readonly RPC node.
+Below are the _minimum_ hardware requirements to run an RPC node.
 
 CPU/Memory:
 
@@ -13,8 +13,8 @@ CPU/Memory:
 
 Storage:
 
-- translator data disk: 5 GB
-- nitro data disk: 50 GB
+- `mchain` data disk: 5 GB
+- `nitro` data disk: 50 GB
 
 > This data grows over time depending on chain activity, so consider enabling dynamic resizing if available.
 
@@ -23,7 +23,9 @@ Other:
 - Docker version 28+
 - Access to pull `translator` and `mchain` images from `ghcr.io/syndicateprotocol/syndicate-appchains/` (private) registry
 - Access to Syndicate's sequencing JSON-RPC API, in order to forward `eth_sendRawTransaction` requests there
-- Ingestors running for the Settlement and Sequencing chains, docs provided at `./run-an-ingestor.md`
+- Websocket URLs for the Settlement and Sequencing chains
+  - For faster sync times, consider running your own Settlement and Sequencing `ingestors` (see the `ingestor.md` doc for more info)
+  - Need to support `getBlockByNumber`, `getReceiptsByBlock`, `get_logs`, and `eth_subscribe`
 
 ## Chain Config
 
