@@ -1,5 +1,5 @@
-//!  The `synd-proposer` polls information from the appchain on a `polling_interval` frequency and
-//! posts to the settlement chain `AssertionPoster` contract
+//! The `synd-proposer` polls information from the appchain and posts to the settlement chain
+//! `AssertionPoster` contract
 
 use crate::{config::Config, metrics::ProposerMetrics, types::NitroBlock};
 use alloy::{
