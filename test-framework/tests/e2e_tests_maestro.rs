@@ -152,6 +152,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
     .await
 }
 
+// TODO (SEQ-917): Fix flaky test
 // Duplicate txn spam is rejected, dispatched concurrently
 #[tokio::test]
 async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
