@@ -217,7 +217,7 @@ impl Batcher {
         let _ = match batch {
             SequencingBatch::Compressed(batch) => {
                 self.sequencing_contract_provider
-                    .processTransactionUncompressed(Bytes::from(batch))
+                    .processTransaction(Bytes::from(batch))
                     .send()
                     .await
             }
