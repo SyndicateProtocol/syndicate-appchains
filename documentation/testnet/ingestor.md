@@ -17,7 +17,7 @@ Below are the _minimum_ hardware requirements to run an ingestor.
 Other:
 
 - Docker version 28+
-- Access to pull `ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor` private image
+- Access to pull the `synd-chain-ingestor` private image. Contact Syndicate for access instructions
 
 ## Docker Compose
 
