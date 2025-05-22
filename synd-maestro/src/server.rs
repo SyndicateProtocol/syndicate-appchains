@@ -119,7 +119,7 @@ pub async fn send_raw_transaction_handler(
         "Submitting validated transaction",
     );
 
-    service.handle_transaction_and_manage_nonces(raw_tx, tx, signer, chain_id, tx_nonce).await?;
+    service.handle_transaction_and_manage_nonces(raw_tx, &tx, signer, chain_id, tx_nonce).await?;
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
 

@@ -110,6 +110,37 @@ mod tests {
             .mount(mock_rpc_server_4)
             .await;
 
+        // Mock getBalance for the default legacy transaction sender
+        let balance = alloy::primitives::utils::parse_ether("100").unwrap();
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "jsonrpc": "2.0",
+                "method": "eth_getBalance",
+                "params": ["0x556c6271902d142f27b66eb51f4fc355afed8bd9", "latest"]
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": format!("0x{:x}", balance)
+            })))
+            .mount(mock_rpc_server_4)
+            .await;
+
+        // Mock getBalance for the default EIP-1559 transaction sender
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "jsonrpc": "2.0",
+                "method": "eth_getBalance",
+                "params": ["0x1b2f2a4f68bb6a86475cbfc947920288bb18603d", "latest"]
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": format!("0x{:x}", balance)
+            })))
+            .mount(mock_rpc_server_4)
+            .await;
+
         Mock::given(method("POST"))
             .and(body_partial_json(json!({
                 "method": "eth_chainId"
@@ -603,7 +634,6 @@ mod tests {
             .await;
 
         // Txn nonce equal - 690 vs 690
-        //
         Mock::given(method("POST"))
             .and(body_partial_json(json!({
                 "method": "eth_getTransactionCount",
@@ -613,6 +643,20 @@ mod tests {
             "jsonrpc": "2.0",
             "id": 1,
             "result": "0x2B2" // nonce 690
+            })))
+            .mount(&mock_server_4)
+            .await;
+
+        let balance = alloy::primitives::utils::parse_ether("100").unwrap();
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "method": "eth_getBalance",
+                "params": ["0x96216849c49358b10257cb55b28ea603c874b05e", "latest"]
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": format!("0x{:x}", balance)
             })))
             .mount(&mock_server_4)
             .await;

@@ -5,7 +5,8 @@ use crate::{
     config::{Config, RpcProvider},
     errors::{
         InternalErrorType::{
-            Other, RpcFailedToFetchWalletNonce, RpcMissing, TransactionSubmissionFailed,
+            Other, RpcFailedToFetchWalletBalance, RpcFailedToFetchWalletNonce, RpcMissing,
+            TransactionSubmissionFailed,
         },
         MaestroError::{self, WaitingTransaction},
         MaestroRpcError::{self, InternalError, JsonRpcError},
@@ -24,7 +25,7 @@ use crate::{
 use alloy::{
     consensus::{Transaction, TxEnvelope},
     hex,
-    primitives::{keccak256, Address, Bytes, ChainId, B256},
+    primitives::{keccak256, Address, Bytes, ChainId, B256, U256},
     providers::Provider,
 };
 use redis::aio::MultiplexedConnection;
@@ -145,6 +146,45 @@ impl MaestroService {
         }
     }
 
+    /// Performs gas and balance checks for a transaction.
+    async fn ensure_account_balance(
+        &self,
+        tx: &TxEnvelope,
+        chain_id: ChainId,
+        wallet: Address,
+    ) -> Result<(), MaestroRpcError> {
+        let account_balance =
+            self.get_rpc_provider(&chain_id)?.get_balance(wallet).await.map_err(|e| {
+                error!(%chain_id, %wallet, %e, "Failed to fetch account balance for gas check");
+                InternalError(RpcFailedToFetchWalletBalance(chain_id, wallet))
+            })?;
+        Self::balance_check(tx, account_balance)
+    }
+
+    fn balance_check(tx: &TxEnvelope, account_balance: U256) -> Result<(), MaestroRpcError> {
+        let tx_hash_str = format!("0x{}", hex::encode(tx.hash()));
+        let max_gas_cost = U256::from(tx.gas_limit())
+            .checked_mul(U256::from(tx.max_fee_per_gas()))
+            .ok_or_else(|| {
+                error!(%tx_hash_str, "Overflow calculating max gas cost");
+                InternalError(Other)
+            })?;
+        let total_required = max_gas_cost.checked_add(tx.value()).ok_or_else(|| {
+            error!(%tx_hash_str, "Overflow calculating total required funds");
+            InternalError(Other)
+        })?;
+
+        if account_balance < total_required {
+            debug!(%tx_hash_str, %account_balance, %total_required, "Insufficient funds for transaction");
+            return Err(JsonRpcError(TransactionRejected(
+                shared::json_rpc::Rejection::InsufficientFunds,
+            )));
+        }
+
+        trace!(%tx_hash_str, %account_balance, %total_required, "Gas check passed");
+        Ok(())
+    }
+
     /// Processes a transaction based on its nonce compared to the wallet's expected nonce
     ///
     /// This method handles the transaction dispatch logic based on nonce comparison:
@@ -181,13 +221,11 @@ impl MaestroService {
     pub async fn handle_transaction_and_manage_nonces(
         self: &Arc<Self>,
         raw_tx: Bytes,
-        tx: TxEnvelope,
+        tx: &TxEnvelope,
         wallet: Address,
         chain_id: ChainId,
         tx_nonce: u64,
     ) -> Result<(), MaestroRpcError> {
-        // Handle nonce comparison
-        // Get wallet-specific lock
         let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
         let _guard = chain_wallet_lock.lock().await;
 
@@ -195,7 +233,10 @@ impl MaestroService {
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
-                // 1. update the cache with nonce + 1. Quit if thiss fails
+                // Perform gas and balance check using the new function
+                self.ensure_account_balance(tx, chain_id, wallet).await?;
+
+                // 2. update the cache with nonce + 1. Quit if this fails
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
@@ -694,7 +735,7 @@ mod tests {
     use crate::{config::Config, redis::streams::producer::tx_stream_key};
     use alloy::{
         network::{EthereumWallet, TransactionBuilder},
-        primitives::{keccak256, Address, Bytes},
+        primitives::{keccak256, utils::parse_ether, Address, Bytes, U256},
         rlp::Encodable,
         rpc::types::TransactionRequest,
     };
@@ -772,6 +813,21 @@ mod tests {
                 "jsonrpc": "2.0",
                 "id": 1,
                 "result": format!("0x{:x}", chain_id)
+            })))
+            .mount(mock_server)
+            .await;
+    }
+
+    async fn set_up_mock_balance(mock_server: &MockServer, wallet: &str, balance: U256) {
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "method": "eth_getBalance",
+                "params": [wallet, "latest"]
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": format!("0x{:x}", balance)
             })))
             .mount(mock_server)
             .await;
@@ -1405,7 +1461,7 @@ mod tests {
         let signer_wallet = EthereumWallet::from(signer);
         TransactionRequest::default()
             .to(Address::default())
-            .value(alloy::primitives::U256::from(1))
+            .value(U256::from(1))
             .nonce(nonce)
             .gas_limit(0)
             .max_fee_per_gas(0)
@@ -1567,14 +1623,21 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_equal_nonce() {
         // Create test service
-        let (service, _, _, _redis_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let nonce = 42u64;
-        let raw_tx = create_legacy_transaction(chain_id, nonce);
+        // Create a transaction that can be RLP decoded
+        let mut raw_tx_vec = vec![];
+        build_test_txn(&mut raw_tx_vec, nonce).await;
+        let raw_tx = Bytes::from(raw_tx_vec);
+
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
@@ -1594,7 +1657,7 @@ mod tests {
         let result = service_arc
             .handle_transaction_and_manage_nonces(
                 raw_tx.clone(),
-                decode_transaction(&raw_tx).unwrap(),
+                &decode_transaction(&raw_tx).unwrap(),
                 wallet,
                 chain_id,
                 nonce,
@@ -1625,15 +1688,22 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_lower_nonce() {
         // Create test service
-        let (service, _, _, _redis_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let current_nonce = 42u64;
         let lower_nonce = 41u64;
-        let raw_tx = create_legacy_transaction(chain_id, lower_nonce);
+        // Create a transaction that can be RLP decoded
+        let mut raw_tx_vec = vec![];
+        build_test_txn(&mut raw_tx_vec, lower_nonce).await; // Use lower_nonce for the tx
+        let raw_tx = Bytes::from(raw_tx_vec);
+
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
 
         // Set up Redis
         let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
@@ -1649,7 +1719,7 @@ mod tests {
         let result = service_arc
             .handle_transaction_and_manage_nonces(
                 raw_tx.clone(),
-                decode_transaction(&raw_tx).unwrap(),
+                &decode_transaction(&raw_tx).unwrap(),
                 wallet,
                 chain_id,
                 lower_nonce,
@@ -1680,15 +1750,22 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_higher_nonce() {
         // Create test service
-        let (service, _, _, _redis_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let current_nonce = 42u64;
         let higher_nonce = 44u64;
-        let raw_tx = create_legacy_transaction(chain_id, higher_nonce);
+        // Create a transaction that can be RLP decoded
+        let mut raw_tx_vec = vec![];
+        build_test_txn(&mut raw_tx_vec, higher_nonce).await; // Use higher_nonce for the tx
+        let raw_tx = Bytes::from(raw_tx_vec);
+
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
 
         // Set up Redis
         let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
@@ -1704,7 +1781,7 @@ mod tests {
         let result = service_arc
             .handle_transaction_and_manage_nonces(
                 raw_tx.clone(),
-                decode_transaction(&raw_tx).unwrap(),
+                &decode_transaction(&raw_tx).unwrap(),
                 wallet,
                 chain_id,
                 higher_nonce,
@@ -1735,12 +1812,13 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_background_processing() {
         // Create test service
-        let (service, _, _, _redis_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let current_nonce = 41u64;
 
         // Create transactions for sequential nonces
@@ -1785,11 +1863,14 @@ mod tests {
         // Get initial count of stream entries
         let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
 
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
+
         // Submit transaction with current nonce
         let result = service_arc
             .handle_transaction_and_manage_nonces(
                 raw_tx0.clone(),
-                decode_transaction(&raw_tx0).unwrap(),
+                &decode_transaction(&raw_tx0).unwrap(),
                 wallet,
                 chain_id,
                 current_nonce,
@@ -1849,17 +1930,20 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_gaps() {
         // Create test service
-        let (service, _, _, _redis_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _redis_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let current_nonce = 41u64;
 
         // Create transactions for non-sequential nonces (gap at nonce 42)
-        let raw_tx0 = create_legacy_transaction(chain_id, current_nonce);
-        let raw_tx2 = create_legacy_transaction(chain_id, current_nonce + 2);
+        let mut raw_tx0 = vec![];
+        let mut raw_tx2 = vec![];
+        build_test_txn(&mut raw_tx0, current_nonce).await;
+        build_test_txn(&mut raw_tx2, current_nonce + 2).await;
 
         // Setup: Store future transaction with a gap
         service_arc
@@ -1867,7 +1951,7 @@ mod tests {
                 chain_id,
                 wallet,
                 current_nonce + 2, // Skip nonce 42
-                raw_tx2.clone(),
+                raw_tx2.clone().into(),
                 &keccak256(raw_tx2),
             )
             .await
@@ -1888,10 +1972,16 @@ mod tests {
         let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
 
         // Submit transaction with current nonce
+        let raw_tx0_bytes = Bytes::from(raw_tx0);
+        let decoded_tx0_for_test = decode_transaction(&raw_tx0_bytes).unwrap();
+
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
+
         let result = service_arc
             .handle_transaction_and_manage_nonces(
-                raw_tx0.clone(),
-                decode_transaction(&raw_tx0).unwrap(),
+                raw_tx0_bytes,
+                &decoded_tx0_for_test,
                 wallet,
                 chain_id,
                 current_nonce,
@@ -2097,6 +2187,86 @@ mod tests {
 
             let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
             assert_eq!(result, CheckFinalizationResult::Done);
+        }
+    }
+
+    // Helper to create a dummy transaction for testing
+    async fn create_dummy_tx(gas_limit: u64, max_fee_per_gas: u128, value: U256) -> TxEnvelope {
+        let signer = alloy::signers::local::PrivateKeySigner::random();
+        let signer_wallet = EthereumWallet::from(signer);
+        TransactionRequest::default()
+            .with_gas_limit(gas_limit)
+            .with_max_fee_per_gas(max_fee_per_gas)
+            .with_max_priority_fee_per_gas(0)
+            .with_value(value)
+            .with_to(Address::ZERO)
+            .with_nonce(0)
+            .with_chain_id(123)
+            .build(&signer_wallet)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_sufficient_funds() {
+        let tx = create_dummy_tx(21000u64, 10_000_000_000u128, parse_ether("1").unwrap()).await;
+        let account_balance = parse_ether("2").unwrap();
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_exact_funds() {
+        let gas_limit_u64 = 21000u64;
+        let max_fee_per_gas_u128 = 10_000_000_000u128; // 10 gwei
+        let value = parse_ether("1").unwrap();
+        let tx = create_dummy_tx(gas_limit_u64, max_fee_per_gas_u128, value).await;
+
+        let max_gas_cost = U256::from(gas_limit_u64) * U256::from(max_fee_per_gas_u128);
+        let account_balance = max_gas_cost + value;
+
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_insufficient_funds() {
+        let tx = create_dummy_tx(21000u64, 10_000_000_000u128, parse_ether("1").unwrap()).await;
+        let account_balance = parse_ether("0.5").unwrap();
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            _ => panic!("Expected InsufficientFunds error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_insufficient_funds_for_max_gas_cost() {
+        // gas_limit * max_fee_per_gas (u64::MAX * u128::MAX) does NOT overflow U256
+        // but it results in a very large gas cost.
+        let tx = create_dummy_tx(u64::MAX, u128::MAX, U256::from(1u64)).await;
+        let account_balance = U256::ZERO; // Set balance to 0 to make it insufficient
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            _ => {
+                panic!("Expected InsufficientFunds error due to maximal gas cost and zero balance")
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_total_required_overflow() {
+        // (gas_limit * max_fee_per_gas) is small, but adding value overflows U256
+        let tx = create_dummy_tx(1u64, 1u128, U256::MAX).await;
+        let account_balance = U256::MAX;
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            InternalError(Other) => {} // Expecting Other due to checked_add failing
+            _ => panic!("Expected InternalError(Other) for total_required overflow"),
         }
     }
 }
