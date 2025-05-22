@@ -1,6 +1,6 @@
 //! e2e tests for the `synd-appchains` stack
 use alloy::{
-    eips::{BlockNumberOrTag, Encodable2718},
+    eips::{BlockId, BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
     primitives::{address, utils::parse_ether, Address, Bytes, B256, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
@@ -808,17 +808,13 @@ async fn e2e_maestro_reorg_handling() -> Result<()> {
     let config_opts = ConfigurationOptions {
         pre_loaded: None,
         use_write_loop: true,
-        // tx takes 5s to be considered final, and that is checked every second
+        // tx takes 3s to be considered final, and that is checked every second
         maestro_finalization_duration: Some(Duration::from_secs(5)),
         maestro_finalization_checker_interval: Some(Duration::from_secs(1)),
         ..Default::default()
     };
 
     TestComponents::run(&config_opts, |components| async move {
-        components.sequencing_provider.anvil_set_block_timestamp_interval(1).await?;
-        components.sequencing_provider.anvil_set_interval_mining(1).await?;
-        components.sequencing_provider.anvil_set_auto_mine(true).await?;
-
         let wallet_address = components.sequencing_provider.default_signer_address();
         let chain_id = components.appchain_chain_id;
 
@@ -827,7 +823,7 @@ async fn e2e_maestro_reorg_handling() -> Result<()> {
         let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
         let _ = inbox.depositEth(wallet_address, wallet_address, deposit_value).send().await?;
         components.mine_set_block(0).await?;
-        components.mine_set_block(1000000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately
+        components.mine_set_block(10000000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately
         wait_until!(
             components.appchain_provider.get_balance(wallet_address).await? > U256::ZERO,
             Duration::from_secs(10)
@@ -850,6 +846,12 @@ async fn e2e_maestro_reorg_handling() -> Result<()> {
         let tx_encoded = tx.encoded_2718();
         let tx_hash = components.send_maestro_tx_successful(&tx_encoded).await?;
 
+        // mine sequencing blocks until we see the tx from the batcher being included
+        wait_until!(
+            components.mine_seq_block(1).await?;
+            components.sequencing_provider.get_block(BlockId::Number(BlockNumberOrTag::Latest)).await?.unwrap().transactions.len() == 1,
+            Duration::from_secs(10)
+        );
         // 3. Verify the initial transaction was processed
         wait_until!(
             components.appchain_provider.get_transaction_count(wallet_address).await? ==
@@ -865,9 +867,9 @@ async fn e2e_maestro_reorg_handling() -> Result<()> {
         );
 
         // 4. Simulate a reorg on the sequencing chain
-        components.sequencing_provider.anvil_rollback(Some(2)).await?;
-        components.mine_seq_block(1).await?;
-        components.mine_seq_block(1).await?; // build blocks on top so reorg is detected
+        components.sequencing_provider.anvil_rollback(Some(1)).await?;
+        // re-build a block on top, must submit a tx so the reorg is detected by nitro
+        components.sequence_tx(b"potato", 10, false).await?; 
 
         // 5. Verify the appchain reflects the reorg
         wait_until!(
@@ -879,9 +881,12 @@ async fn e2e_maestro_reorg_handling() -> Result<()> {
             components.appchain_provider.get_transaction_receipt(tx_hash).await?;
         assert!(receipt_after_reorg.is_none(), "Receipt should be gone after reorg");
 
-        // // re-enable auto mine
-        // components.sequencing_provider.anvil_set_auto_mine(true).await?;
-        // components.sequencing_provider.anvil_set_interval_mining(1).await?;
+        // mine sequencing blocks until we see the re-submitted tx from the batcher being included
+        wait_until!(
+            components.mine_seq_block(1).await?;
+            components.sequencing_provider.get_block(BlockId::Number(BlockNumberOrTag::Latest)).await?.unwrap().transactions.len() == 1,
+            Duration::from_secs(10)
+        );
 
         // 6. Wait for Maestro's finalization background task to detect and re-submit the tx,
         // Verify the transaction is sequenced again
