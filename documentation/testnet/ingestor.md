@@ -1,12 +1,12 @@
 # Run an Ingestor
 
-A Syndicate "Ingestor" is an optional service you can run to optimize your Syndicate Appchain RPC nodes. Ingestors speed up the syncing process by ingesting and storing compressed Sequencing and Settlement chain history and exposing that data via a websocket to any number of Syndicate Appchain RPC nodes.
+A Syndicate Ingestor is an optional service you can run to optimize your Syndicate Appchain RPC nodes. Ingestors speed up the syncing process by ingesting and storing compressed Sequencing and Settlement chain history and exposing that data via a websocket to one or more Syndicate Appchain RPC nodes.
 
 This guide explains how to run ingestor(s) for your Syndicate Appchain RPC node.
 
 ## Hardware Requirements
 
-Below are the _minimum_ hardware requirements to run a readonly RPC node.
+Below are the _minimum_ hardware requirements to run an ingestor.
 
 - CPU: 0.5 cores
 - Memory: 256 MB
@@ -17,7 +17,7 @@ Below are the _minimum_ hardware requirements to run a readonly RPC node.
 Other:
 
 - Docker version 28+
-- Access to pull `ingestor` image from `ghcr.io/syndicateprotocol/syndicate-appchains/` (private) registry
+- Access to pull the `synd-chain-ingestor` private image. Contact Syndicate for access instructions.
 
 ## Docker Compose
 
@@ -25,9 +25,9 @@ Run your ingestors in Docker, using the provided `./docker/ingestor-docker-compo
 
 After running that Docker Compose file, the container logs will track the ingesting progress and indicate when the websocket is ready to use.
 
-## Configuring the RPC Node
+## Configuring RPC Node(s)
 
-Now that your ingestors are running, use the following config values for the `translator` container in your Syndicate Appchain RPC Nodes:
+Now that your ingestors are running, use the following config values for your Syndicate Appchain RPC Node(s):
 
 ```yaml
 SETTLEMENT_RPC_URL: "wss://your-settlement-ingestor"
