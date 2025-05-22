@@ -10,7 +10,7 @@ Below are the _minimum_ hardware requirements to run an ingestor.
 
 - CPU: 0.5 cores
 - Memory: 256 MB
-- Storage: 1 GB
+- Storage: 10 GB
 
 > The disk usage grows over time depending on chain activity, so consider enabling dynamic resizing if available.
 
