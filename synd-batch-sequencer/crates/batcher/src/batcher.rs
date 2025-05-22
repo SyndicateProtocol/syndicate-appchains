@@ -246,7 +246,7 @@ mod tests {
         transports::mock::Asserter,
     };
     use prometheus_client::registry::Registry;
-    use synd_maestro::redis::streams::producer::StreamProducer;
+    use synd_maestro::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
     use test_utils::{docker::start_redis, wait_until};
     use url::Url;
 
@@ -307,11 +307,18 @@ mod tests {
             .unwrap();
         let chain_id = 1;
         let redis_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
-        let producer =
-            StreamProducer::new(conn, chain_id, Duration::from_secs(60), Duration::from_secs(60));
+        let producer = StreamProducer::new(
+            conn,
+            chain_id,
+            Duration::from_secs(60),
+            Duration::from_secs(60),
+            0,
+            |_| async { CheckFinalizationResult::Done },
+        )
+        .await;
 
         let test_data1 = b"test transaction data 1".to_vec();
-        producer.enqueue_transaction(test_data1.clone()).await.unwrap();
+        producer.enqueue_transaction(&test_data1).await.unwrap();
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
@@ -337,11 +344,18 @@ mod tests {
             .unwrap();
         let chain_id = 1;
         let redis_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
-        let producer =
-            StreamProducer::new(conn, chain_id, Duration::from_secs(60), Duration::from_secs(60));
+        let producer = StreamProducer::new(
+            conn,
+            chain_id,
+            Duration::from_secs(60),
+            Duration::from_secs(60),
+            0,
+            |_| async { CheckFinalizationResult::Done },
+        )
+        .await;
 
         let test_data1 = b"test transaction data 1".to_vec();
-        producer.enqueue_transaction(test_data1.clone()).await.unwrap();
+        producer.enqueue_transaction(&test_data1).await.unwrap();
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
@@ -394,7 +408,10 @@ mod tests {
             config.chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
-        );
+            0,
+            |_| async { CheckFinalizationResult::Done },
+        )
+        .await;
 
         // Add 100 test transactions of ~50KB each
         // Create a 50KB transaction by repeating the pattern
@@ -405,7 +422,7 @@ mod tests {
         }
         test_data.truncate(50 * 1024); // Ensure exact 50KB
         for _ in 0..100 {
-            producer.enqueue_transaction(test_data.clone()).await.unwrap();
+            producer.enqueue_transaction(&test_data).await.unwrap();
         }
 
         let mut registry = Registry::default();
@@ -451,7 +468,10 @@ mod tests {
             config.chain_id,
             Duration::from_secs(60),
             Duration::from_secs(60),
-        );
+            0,
+            |_| async { CheckFinalizationResult::Done },
+        )
+        .await;
 
         // Add 20 test transactions of ~10KB each
         // Create a 10KB transaction by repeating the pattern
@@ -462,7 +482,7 @@ mod tests {
         }
         test_data.truncate(10 * 1024); // Ensure exact 10KB
         for _ in 0..20 {
-            producer.enqueue_transaction(test_data.clone()).await.unwrap();
+            producer.enqueue_transaction(&test_data).await.unwrap();
         }
 
         let mut registry = Registry::default();

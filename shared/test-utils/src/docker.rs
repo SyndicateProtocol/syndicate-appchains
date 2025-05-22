@@ -18,7 +18,7 @@ use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
 };
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug)]
 pub struct Docker(Child);
@@ -58,9 +58,46 @@ impl Docker {
 
 impl Drop for Docker {
     fn drop(&mut self) {
-        if let Ok(None) = self.0.try_wait() {
-            if let Some(pid) = self.0.id() {
-                _ = std::process::Command::new("kill").arg(pid.to_string()).spawn();
+        if self.0.try_wait().is_ok_and(|status| status.is_some()) {
+            info!("Docker process for Drop already exited or was not running.");
+            return;
+        }
+
+        let Some(pid) = self.0.id() else {
+            info!("Docker process for Drop had no PID, likely already exited or failed to start.");
+            return;
+        };
+
+        info!("Attempting to stop Docker container process (PID: {}) via Drop", pid);
+        let kill_proc = match std::process::Command::new("kill")
+            .arg(pid.to_string())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+        {
+            Ok(proc) => proc,
+            Err(e) => {
+                warn!("Failed to spawn kill command for PID {}: {}", pid, e);
+                return;
+            }
+        };
+
+        match kill_proc.wait_with_output() {
+            Ok(output) => {
+                if output.status.success() {
+                    info!("Successfully sent SIGTERM to PID {} and kill command exited.", pid);
+                } else {
+                    warn!(
+                        "Kill command for PID {} completed with error. Status: {}. Stderr: {}. Stdout: {}",
+                        pid,
+                        output.status,
+                        String::from_utf8_lossy(&output.stderr),
+                        String::from_utf8_lossy(&output.stdout)
+                    );
+                }
+            }
+            Err(e) => {
+                warn!("Failed to wait for kill command for PID {}: {}", pid, e);
             }
         }
     }
