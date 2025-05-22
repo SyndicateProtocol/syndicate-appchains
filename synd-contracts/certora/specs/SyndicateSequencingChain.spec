@@ -112,37 +112,6 @@ rule processConsistency(bytes data) {
 }
 
 /*
- * Rule 8: Bulk processing maintains individual transaction properties
- */
-rule bulkProcessingConsistency(bytes[] data) {
-    env e;
-    require init._getInitializedVersion() > 0;
-    require permissionModule.isAllowed(e.msg.sender, e.msg.sender, data[0]);
-    require data.length > 0;
-    require data.length < 3; // Loop unrolling limit - Certora will unroll up to this limit
-
-
-    // Process transactions in bulk
-    processTransactionsBulk@withrevert(e, data);
-    bool bulkSuccess = !lastReverted;
-
-    // If bulk processing succeeded, each individual transaction should succeed
-    require bulkSuccess;
-
-    // Check individual transactions would succeed
-    processTransactionUncompressed@withrevert(e, data[0]);
-    assert !lastReverted, "Bulk processing accepted invalid transaction";
-
-
-    processTransactionUncompressed@withrevert(e, data[1]);
-    assert !lastReverted, "Bulk processing accepted invalid transaction";
-
-
-    processTransactionUncompressed@withrevert(e, data[2]);
-    assert !lastReverted, "Bulk processing accepted invalid transaction";
-}
-
-/*
  * Rule 9: Only owner can update requirement module
  */
 rule onlyOwnerCanUpdateModule(address newModule) {

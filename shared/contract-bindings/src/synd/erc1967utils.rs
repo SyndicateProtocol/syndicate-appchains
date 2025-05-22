@@ -66,22 +66,22 @@ pub mod ERC1967Utils {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220a7a42b6ee1d032e81e6539f012f4e8539bd01478348d46e2a0b0c38d74ae04b264736f6c634300081c0033
+    ///0x608060405234601d57600e6021565b6008602c823930815050600890f35b6027565b60405190565b5f80fdfe60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA7\xA4+n\xE1\xD02\xE8\x1Ee9\xF0\x12\xF4\xE8S\x9B\xD0\x14x4\x8DF\xE2\xA0\xB0\xC3\x8Dt\xAE\x04\xB2dsolcC\0\x08\x1C\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`\x08`,\x8290\x81PP`\x08\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220a7a42b6ee1d032e81e6539f012f4e8539bd01478348d46e2a0b0c38d74ae04b264736f6c634300081c0033
+    ///0x60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA7\xA4+n\xE1\xD02\xE8\x1Ee9\xF0\x12\xF4\xE8S\x9B\xD0\x14x4\x8DF\xE2\xA0\xB0\xC3\x8Dt\xAE\x04\xB2dsolcC\0\x08\x1C\x003",
+        b"`\x80`@R_\x80\xFD",
     );
     /**Custom error with signature `ERC1967InvalidAdmin(address)` and selector `0x62e77ba2`.
 ```solidity

@@ -82,22 +82,22 @@ pub mod SafeCast {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220f15bf8bb778f090e8a5fbe2fbf1b59abd1e4265171864cd56dfaa2fa9a5bed7a64736f6c634300081c0033
+    ///0x608060405234601d57600e6021565b6008602c823930815050600890f35b6027565b60405190565b5f80fdfe60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xF1[\xF8\xBBw\x8F\t\x0E\x8A_\xBE/\xBF\x1BY\xAB\xD1\xE4&Qq\x86L\xD5m\xFA\xA2\xFA\x9A[\xEDzdsolcC\0\x08\x1C\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`\x08`,\x8290\x81PP`\x08\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220f15bf8bb778f090e8a5fbe2fbf1b59abd1e4265171864cd56dfaa2fa9a5bed7a64736f6c634300081c0033
+    ///0x60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xF1[\xF8\xBBw\x8F\t\x0E\x8A_\xBE/\xBF\x1BY\xAB\xD1\xE4&Qq\x86L\xD5m\xFA\xA2\xFA\x9A[\xEDzdsolcC\0\x08\x1C\x003",
+        b"`\x80`@R_\x80\xFD",
     );
     /**Custom error with signature `SafeCastOverflowedIntDowncast(uint8,int256)` and selector `0x327269a7`.
 ```solidity

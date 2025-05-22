@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
+import {SyndicateAccumulator} from "./SyndicateAccumulator.sol";
 
 /// @title SyndicateSequencingChain
 /// @notice The core contract for sequencing transactions using a modular permission architecture
@@ -12,12 +13,9 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 /// 4. If allowed, a TransactionProcessed event is emitted with the sender and data
 /// 5. External systems observe these events to process the transactions on the application chain
 /// This design uses events rather than state changes for scalability and gas efficiency
-contract SyndicateSequencingChain is SequencingModuleChecker {
+contract SyndicateSequencingChain is SequencingModuleChecker, SyndicateAccumulator {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
-
-    /// @notice Emitted when a new transaction is processed.
-    event TransactionProcessed(address indexed msgSender, bytes data);
 
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
@@ -32,18 +30,17 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
     function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
-        emit TransactionProcessed(msg.sender, data);
+        _transactionProcessed(data);
     }
 
-    /// @notice Processes an uncompressed transaction.
-    /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
+    /// @notice Processes multiple uncompressed transactions in bulk.
     /// @param data An array of transaction data without prepended zero bytes.
     //#olympix-ignore-required-tx-origin
     function processTransactionUncompressed(bytes calldata data)
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
     {
-        emit TransactionProcessed(msg.sender, prependZeroByte(data));
+        _transactionProcessed(prependZeroByte(data));
     }
 
     /// @notice Processes multiple transactions in bulk.
@@ -58,7 +55,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
             bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed
-                emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
+                _transactionProcessed(prependZeroByte(data[i]));
             }
         }
     }

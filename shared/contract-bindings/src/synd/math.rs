@@ -22,22 +22,22 @@ pub mod Math {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220d755d16aab08bf36fabcf90c7ae43c809c00c1fef59e10f7489e04d551d7e3bc64736f6c634300081c0033
+    ///0x608060405234601d57600e6021565b6008602c823930815050600890f35b6027565b60405190565b5f80fdfe60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD7U\xD1j\xAB\x08\xBF6\xFA\xBC\xF9\x0Cz\xE4<\x80\x9C\0\xC1\xFE\xF5\x9E\x10\xF7H\x9E\x04\xD5Q\xD7\xE3\xBCdsolcC\0\x08\x1C\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`\x08`,\x8290\x81PP`\x08\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220d755d16aab08bf36fabcf90c7ae43c809c00c1fef59e10f7489e04d551d7e3bc64736f6c634300081c0033
+    ///0x60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD7U\xD1j\xAB\x08\xBF6\xFA\xBC\xF9\x0Cz\xE4<\x80\x9C\0\xC1\xFE\xF5\x9E\x10\xF7H\x9E\x04\xD5Q\xD7\xE3\xBCdsolcC\0\x08\x1C\x003",
+        b"`\x80`@R_\x80\xFD",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`Math`](self) contract instance.

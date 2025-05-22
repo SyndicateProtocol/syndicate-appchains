@@ -53,22 +53,22 @@ pub mod Strings {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212200f2e7a6d7f082cd938475f76ae08b0749ea1ed6415f7f2bddca00f066a7f9f6164736f6c634300081c0033
+    ///0x608060405234601d57600e6021565b6008602c823930815050600890f35b6027565b60405190565b5f80fdfe60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x0F.zm\x7F\x08,\xD98G_v\xAE\x08\xB0t\x9E\xA1\xEDd\x15\xF7\xF2\xBD\xDC\xA0\x0F\x06j\x7F\x9FadsolcC\0\x08\x1C\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`\x08`,\x8290\x81PP`\x08\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea26469706673582212200f2e7a6d7f082cd938475f76ae08b0749ea1ed6415f7f2bddca00f066a7f9f6164736f6c634300081c0033
+    ///0x60806040525f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x0F.zm\x7F\x08,\xD98G_v\xAE\x08\xB0t\x9E\xA1\xEDd\x15\xF7\xF2\xBD\xDC\xA0\x0F\x06j\x7F\x9FadsolcC\0\x08\x1C\x003",
+        b"`\x80`@R_\x80\xFD",
     );
     /**Custom error with signature `StringsInsufficientHexLength(uint256,uint256)` and selector `0xe22e27eb`.
 ```solidity
