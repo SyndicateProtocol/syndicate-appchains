@@ -20,6 +20,7 @@ contract SyndicateAccumulator {
 
     constructor() {
         isArbChain = (address(arbsys).code.length > 0);
+        require(!isArbChain || arbsys.arbBlockNumber() > 0, "arbsys precompile failed");
     }
 
     // keccak256("syndicate.accumulator")
