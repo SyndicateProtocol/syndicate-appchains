@@ -157,7 +157,7 @@ impl StreamProducer {
         let entries = match result {
             Ok(entries) => entries,
             Err(e) => {
-                error!(%stream_key, %e, "Failed to fetch old entries");
+                error!(%stream_key, %max_id, %e, "Failed to fetch old entries");
                 return Err(e);
             }
         };
@@ -169,10 +169,10 @@ impl StreamProducer {
         // Collect IDs for deletion and call XDEL on all of them
         let ids: Vec<String> = entries.iter().map(|(id, _)| id.clone()).collect();
         if let Err(e) = conn.xdel::<_, _, usize>(&stream_key, &ids).await {
-            error!(%stream_key, %e, "Failed to delete processed entries");
+            error!(%stream_key, %max_id, %e, "Failed to delete finalized transaction entries");
             return Err(e);
         }
-        trace!(%stream_key, count = ids.len(), "Deleted entries");
+        trace!(%stream_key, %max_id, count = ids.len(), "Deleted entries");
         Ok(entries)
     }
 
@@ -302,7 +302,7 @@ where
                 }
             };
 
-            // Process each entry with the `check_finalization`` callback function
+            // Process each entry with the `check_finalization` callback function
             for (id, fields) in entries {
                 let (data, retries) = match parse_stream_entry(&fields, &stream_key, &id) {
                     Some((data, retries)) => (data, retries),
