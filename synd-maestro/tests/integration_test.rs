@@ -56,8 +56,8 @@ mod tests {
         };
 
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert("4".to_string(), mock_rpc_server_4.uri());
-        chain_rpc_urls.insert("5".to_string(), mock_rpc_server_5.uri());
+        chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
+        chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
 
         let (redis, redis_url) = start_redis().await.unwrap();
         // Create config with mock server URL

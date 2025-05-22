@@ -731,8 +731,8 @@ mod tests {
 
         // Create chain RPC URLs map
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert("4".to_string(), mock_rpc_server_4.uri());
-        chain_rpc_urls.insert("5".to_string(), mock_rpc_server_5.uri());
+        chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
+        chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
 
         // Create Redis connection
         let client = redis::Client::open(redis_url.as_str()).unwrap();

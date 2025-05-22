@@ -43,7 +43,7 @@ pub struct Config {
         default_value = "{}",
         value_parser = parse_chain_rpc_urls_map
     )]
-    pub chain_rpc_urls: HashMap<String, String>,
+    pub chain_rpc_urls: HashMap<u64, String>,
 
     /// Timeout in seconds for connection validation
     #[arg(long, env = "VALIDATION_TIMEOUT", default_value = "5s",
@@ -80,8 +80,8 @@ pub struct Config {
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
-fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<String, String>, ConfigError> {
-    let map: HashMap<String, String> =
+fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<u64, String>, ConfigError> {
+    let map: HashMap<u64, String> =
         serde_json::from_str(s).map_err(|e| RpcUrlInvalidAddress(e.to_string()))?;
     Ok(map)
 }
@@ -136,28 +136,27 @@ impl Config {
                 Ok(provider) => provider,
                 Err(e) => {
                     error!(%chain_id, %url, %e, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
-                    return Err(RpcUrlInvalidAddress(e.to_string()));
+                    continue; // create other providers
                 }
             };
 
-            let resp_chain_id = match provider.get_chain_id().await {
-                Ok(id) => id,
+            match provider.get_chain_id().await {
+                Ok(resp_chain_id) => {
+                    if resp_chain_id != *chain_id {
+                        return Err(ConfigError::RpcUrlInvalidChainId(
+                            url.to_string(),
+                            chain_id.to_string(),
+                            resp_chain_id.to_string(),
+                        ));
+                    }
+                }
                 Err(e) => {
                     error!(%e, %chain_id, %url, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
-                    return Err(RpcUrlInvalidAddress(e.to_string()));
                 }
             };
 
-            if resp_chain_id.to_string() != *chain_id {
-                return Err(ConfigError::RpcUrlInvalidChainId(
-                    url.to_string(),
-                    chain_id.to_string(),
-                    resp_chain_id.to_string(),
-                ));
-            }
-
             debug!(%chain_id, %url, "Successful JSON-RPC request to RPC provider");
-            provider_map.insert(resp_chain_id, provider);
+            provider_map.insert(*chain_id, provider);
         }
         Ok(provider_map)
     }
