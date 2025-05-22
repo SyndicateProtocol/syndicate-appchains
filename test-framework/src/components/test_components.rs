@@ -521,7 +521,8 @@ impl TestComponents {
     ) -> Result<Option<TransactionReceipt>> {
         let tx_hash = keccak256(tx);
         let tx_bytes = Bytes::from(tx.to_vec());
-        let seq_tx = self.sequencing_contract.processTransaction(tx_bytes).send().await?;
+        let seq_tx =
+            self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;
         self.mine_seq_block(seq_delay).await?;
         let seq_receipt =
             self.sequencing_provider.get_transaction_receipt(*seq_tx.tx_hash()).await?.unwrap();
