@@ -3,7 +3,7 @@
 use crate::{
     config::ConfigError::RpcUrlInvalidAddress,
     errors::ConfigError,
-    redis::ttl::{waiting_txn::WAITING_TXN_TTL, wallet_nonce::WALLET_NONCE_TTL},
+    valkey::ttl::{waiting_txn::WAITING_TXN_TTL, wallet_nonce::WALLET_NONCE_TTL},
 };
 use alloy::{
     primitives::ChainId,
@@ -30,7 +30,7 @@ pub struct Config {
     pub metrics_port: u16,
 
     /// Valkey cache address to listen on.
-    /// Example: "redis://0.0.0.0:6379"
+    /// Example: "valkey://0.0.0.0:6379"
     #[arg(short = 'r', long, env = "VALKEY_URL")]
     pub valkey_url: String,
 
@@ -54,12 +54,12 @@ pub struct Config {
     #[arg(long, env = "SKIP_VALIDATION", default_value_t = false)]
     pub skip_validation: bool,
 
-    /// Time-to-live (TTL) of waiting transaction Redis key values
+    /// Time-to-live (TTL) of waiting transaction Valkey key values
     #[arg(long, env = "WAITING_TXN_TTL", default_value = WAITING_TXN_TTL,
     value_parser = humantime::parse_duration)]
     pub waiting_txn_ttl: Duration,
 
-    /// Time-to-live (TTL) of wallet nonce Redis key values
+    /// Time-to-live (TTL) of wallet nonce Valkey key values
     #[arg(long, env = "WALLET_NONCE_TTL", default_value = WALLET_NONCE_TTL,
     value_parser = humantime::parse_duration)]
     pub wallet_nonce_ttl: Duration,

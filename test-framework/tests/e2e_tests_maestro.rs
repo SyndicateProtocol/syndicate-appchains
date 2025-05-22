@@ -15,7 +15,7 @@ use contract_bindings::arbitrum::rollup::{Rollup, Rollup::RollupInstance};
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use synd_maestro::redis::models::waiting_transaction::WaitingGapTxnExt;
+use synd_maestro::valkey::models::waiting_transaction::WaitingGapTxnExt;
 use test_framework::components::{
     configuration::ConfigurationOptions, test_components::TestComponents,
 };

@@ -1,8 +1,8 @@
 //!
-//! This module provides the consumer implementation for Redis streams used to queue
+//! This module provides the consumer implementation for Valkey Streams used to queue
 //! and process transactions across different chains.
 
-use crate::redis::streams::producer::tx_stream_key;
+use crate::valkey::streams::producer::tx_stream_key;
 use alloy::primitives::ChainId;
 use redis::{
     aio::MultiplexedConnection,
@@ -11,18 +11,18 @@ use redis::{
 };
 use std::time::Duration;
 
-/// A consumer for Redis streams that reads transaction data.
+/// A consumer for Valkey Streams that reads transaction data.
 ///
-/// This consumer reads from a Redis stream using the XREAD command, maintaining its position
+/// This consumer reads from a Valkey Stream using the XREAD command, maintaining its position
 /// in the stream using the last processed message ID. It's designed to work with transaction
 /// data that has been enqueued by a `StreamProducer`.
 ///
 /// # Example
 /// ```no_compile
-/// use redis::aio::MultiplexedConnection;
-/// use synd-maestro::redis::consumer::StreamConsumer;
+/// use valkey::aio::MultiplexedConnection;
+/// use synd-maestro::valkey::consumer::StreamConsumer;
 ///
-/// let conn: MultiplexedConnection = // ... get Redis connection
+/// let conn: MultiplexedConnection = // ... get Valkey connection
 /// let chain_id = 1;
 /// let start_from_id = "0-0";
 /// let mut consumer = StreamConsumer::new(conn, chain_id, start_from_id);
@@ -43,7 +43,7 @@ impl StreamConsumer {
     /// Creates a new `StreamConsumer` for a specific chain.
     ///
     /// # Arguments
-    /// * `conn` - A Redis multiplexed connection to use for reading from the stream
+    /// * `conn` - A Valkey multiplexed connection to use for reading from the stream
     /// * `chain_id` - The ID of the chain to consume transactions for
     /// * `start_from_id` - The ID of the message to start reading from ("0-0" to start from the
     ///   beginning)
@@ -126,17 +126,17 @@ impl StreamConsumer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
+    use crate::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
     use std::time::Duration;
     use test_utils::docker::start_valkey;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_produce_consume_transaction() {
-        // Start Redis container
-        let (_redis, redis_url) = start_valkey().await.unwrap();
+        // Start Valkey container
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
-        // Connect to Redis
-        let conn = redis::Client::open(redis_url.as_str())
+        // Connect to Valkey
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
@@ -170,11 +170,11 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_produce_consume_multiple_transactions() {
-        // Start Redis container
-        let (_redis, redis_url) = start_valkey().await.unwrap();
+        // Start Valkey container
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
-        // Connect to Redis
-        let conn = redis::Client::open(redis_url.as_str())
+        // Connect to Valkey
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await

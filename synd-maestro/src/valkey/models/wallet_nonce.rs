@@ -1,21 +1,21 @@
 //! This module describes the required functionality for Maestro to interact with wallet nonce
-//! values in the Redis cache.
+//! values in the Valkey cache.
 
-use crate::redis::keys::wallet_nonce::chain_wallet_nonce_key;
+use crate::valkey::keys::wallet_nonce::chain_wallet_nonce_key;
 use alloy::primitives::{Address, ChainId};
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
 use std::{future::Future, time::Duration};
 
-/// Extension trait for Redis connections to work with wallet nonces
+/// Extension trait for Valkey connections to work with wallet nonces
 pub trait WalletNonceExt {
-    /// Get a wallet nonce from the Redis cache
+    /// Get a wallet nonce from the Valkey cache
     fn get_wallet_nonce(
         &mut self,
         chain_id: ChainId,
         wallet_address: Address,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send;
 
-    /// Set a wallet nonce in the Redis cache with TTL
+    /// Set a wallet nonce in the Valkey cache with TTL
     fn set_wallet_nonce(
         &mut self,
         chain_id: ChainId,
@@ -54,9 +54,9 @@ impl WalletNonceExt for MultiplexedConnection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::redis::{
+    use crate::valkey::{
         keys::wallet_nonce::WALLET_NONCE_KEY_PREFIX, models::wallet_nonce::WalletNonceExt,
-        test_utils::init_redis_and_get_connection, ttl::wallet_nonce::WALLET_NONCE_TTL,
+        test_utils::init_valkey_and_get_connection, ttl::wallet_nonce::WALLET_NONCE_TTL,
     };
     use alloy::primitives::Address;
     use ctor::ctor;
@@ -85,11 +85,11 @@ mod tests {
         );
     }
 
-    // Avoid having to spin up unique Redis containers this way
+    // Avoid having to spin up unique Valkey containers this way
     #[tokio::test]
     async fn test_cache() -> Result<(), eyre::Error> {
-        let (conn, redis_url, _redis) = init_redis_and_get_connection().await;
-        println!("redis url is {}", redis_url);
+        let (conn, valkey_url, _valkey) = init_valkey_and_get_connection().await;
+        println!("valkey url is {}", valkey_url);
 
         test_set_get_wallet_nonce(conn.clone()).await;
         test_nonce_expiration(conn.clone()).await;
@@ -98,7 +98,7 @@ mod tests {
         test_multiple_wallets_independence(conn.clone()).await;
         test_multiple_chains_independence(conn.clone()).await;
         test_high_load_scenario(conn.clone()).await;
-        test_parallel_operations(redis_url.clone()).await;
+        test_parallel_operations(valkey_url.clone()).await;
 
         Ok(())
     }
@@ -239,17 +239,17 @@ mod tests {
         }
     }
 
-    async fn test_parallel_operations(redis_url: String) {
+    async fn test_parallel_operations(valkey_url: String) {
         // Create multiple connections for parallel operations
         let mut handles = vec![];
 
         for i in 0..10 {
             let chain_id = 12u64;
             let wallet_bytes = [i as u8; 20]; // Create different addresses
-            let redis_url_clone = redis_url.clone();
+            let valkey_url_clone = valkey_url.clone();
 
             let handle = tokio::spawn(async move {
-                let client = redis::Client::open(redis_url_clone.as_str()).unwrap();
+                let client = redis::Client::open(valkey_url_clone.as_str()).unwrap();
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
 
                 let wallet_address = Address::from_slice(&wallet_bytes);

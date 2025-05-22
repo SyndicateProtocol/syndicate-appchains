@@ -28,7 +28,7 @@ pub enum ConfigError {
 #[command(version, about, long_about = None)]
 pub struct BatcherConfig {
     /// Valkey address to listen on
-    /// Example: redis://0.0.0.0:6379
+    /// Example: valkey://0.0.0.0:6379
     #[arg(short = 'r', long, env = "VALKEY_URL")]
     pub valkey_url: String,
 
@@ -85,7 +85,7 @@ async fn ping_sequencing_rpc_url(url: &Url) -> Result<(), ConfigError> {
 impl Default for BatcherConfig {
     fn default() -> Self {
         Self {
-            valkey_url: "redis://127.0.0.1:6379".to_string(),
+            valkey_url: "valkey://127.0.0.1:6379".to_string(),
             chain_id: 1,
             compression_enabled: true,
             max_batch_size: byte_unit::Byte::from_u64(90 * 1024),

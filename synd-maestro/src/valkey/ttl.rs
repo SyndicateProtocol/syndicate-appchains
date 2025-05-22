@@ -1,4 +1,4 @@
-//! Module for all default Redis time-to-live (TTL) values for different Redis String keys.
+//! Module for all default Valkey cache time-to-live (TTL) values for different Valkey String keys.
 //! These are used when initializing Maestro config in `config.rs`
 
 /// Time-to-live (TTL) for wallet nonce keys

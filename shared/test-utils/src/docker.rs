@@ -297,7 +297,7 @@ pub async fn start_valkey() -> Result<(Docker, String)> {
             .arg("--loglevel debug"),
     )?;
 
-    let valkey_url = format!("redis://0.0.0.0:{port}/");
+    let valkey_url = format!("valkey://0.0.0.0:{port}/");
 
     let valkey_client = redis::Client::open(valkey_url.as_str()).unwrap();
     wait_until!(

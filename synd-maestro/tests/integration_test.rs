@@ -190,7 +190,7 @@ mod tests {
     where
         Fut: Future<Output = Result<()>> + Send,
     {
-        let (_addr, shutdown_fn, base_url, _redis, _mock_rpc_server4, _mock_rpc_server5) =
+        let (_addr, shutdown_fn, base_url, _valkey, _mock_rpc_server4, _mock_rpc_server5) =
             setup_server(mock_rpc_server_4, mock_rpc_server_5).await;
         let client = Client::new();
 
