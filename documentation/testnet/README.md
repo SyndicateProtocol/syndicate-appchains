@@ -1,6 +1,6 @@
 # Run a Testnet Syndicate Appchain RPC Node
 
-A Syndicate Appchain RPC Node consists of 3 components: `synd-translator`, `synd-mchain`, and [`nitro`](https://github.com/OffchainLabs/nitro). This guide explains how to run them together in Docker to operate your own RPC node for a Syndicate Appchain.
+A Syndicate Appchain RPC Node consists of 3 components: `synd-translator`, `synd-mchain`, and Arbitrum [`nitro`](https://github.com/OffchainLabs/nitro). This guide explains how to run them together in Docker to operate your own RPC node for a Syndicate Appchain.
 
 ## Hardware Requirements
 
