@@ -21,9 +21,9 @@ Storage:
 Other:
 
 - Docker version 28+
-- Access to pull private images
-  - `ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain`
-  - `ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator`
+- Access to pull private Syndicate images. Contact Syndicate for access instructions.
+  - `synd-mchain`
+  - `synd-translator`
 - Access to Syndicate's sequencing JSON-RPC API, in order to forward `eth_sendRawTransaction` requests there
 - Websocket URLs for the Settlement and Sequencing chains
   - For faster sync times, consider running your own Settlement and Sequencing Ingestors (see the `ingestor.md` doc for more info)

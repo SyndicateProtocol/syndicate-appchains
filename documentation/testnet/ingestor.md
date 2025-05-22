@@ -1,6 +1,6 @@
 # Run an Ingestor
 
-A Syndicate "Ingestor" is an optional service you can run to optimize your Syndicate Appchain RPC nodes. Ingestors speed up the syncing process by ingesting and storing compressed Sequencing and Settlement chain history and exposing that data via a websocket to one or more Syndicate Appchain RPC nodes.
+A Syndicate Ingestor is an optional service you can run to optimize your Syndicate Appchain RPC nodes. Ingestors speed up the syncing process by ingesting and storing compressed Sequencing and Settlement chain history and exposing that data via a websocket to one or more Syndicate Appchain RPC nodes.
 
 This guide explains how to run ingestor(s) for your Syndicate Appchain RPC node.
 
@@ -17,7 +17,7 @@ Below are the _minimum_ hardware requirements to run an ingestor.
 Other:
 
 - Docker version 28+
-- Access to pull the `synd-chain-ingestor` private image. Contact Syndicate for access instructions
+- Access to pull the `synd-chain-ingestor` private image. Contact Syndicate for access instructions.
 
 ## Docker Compose
 
