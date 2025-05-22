@@ -802,3 +802,111 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
     )
     .await
 }
+
+#[tokio::test]
+async fn e2e_maestro_reorg_handling() -> Result<()> {
+    let config_opts = ConfigurationOptions {
+        pre_loaded: None,
+        use_write_loop: true,
+        // tx takes 5s to be considered final, and that is checked every second
+        maestro_finalization_duration: Some(Duration::from_secs(5)),
+        maestro_finalization_checker_interval: Some(Duration::from_secs(1)),
+        ..Default::default()
+    };
+
+    TestComponents::run(&config_opts, |components| async move {
+        components.sequencing_provider.anvil_set_block_timestamp_interval(1).await?;
+        components.sequencing_provider.anvil_set_interval_mining(1).await?;
+        components.sequencing_provider.anvil_set_auto_mine(true).await?;
+
+        let wallet_address = components.sequencing_provider.default_signer_address();
+        let chain_id = components.appchain_chain_id;
+
+        // 1. Deposit funds to ensure the wallet can send a transaction
+        let deposit_value = parse_ether("0.01")?;
+        let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+        let _ = inbox.depositEth(wallet_address, wallet_address, deposit_value).send().await?;
+        components.mine_set_block(0).await?;
+        components.mine_set_block(1000000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately
+        wait_until!(
+            components.appchain_provider.get_balance(wallet_address).await? > U256::ZERO,
+            Duration::from_secs(10)
+        );
+
+        // 2. Send an initial transaction via Maestro
+        let initial_nonce =
+            components.appchain_provider.get_transaction_count(wallet_address).await?;
+        let tx = TransactionRequest::default()
+            .from(wallet_address)
+            .with_to(TEST_ADDR)
+            .with_value(U256::from(0))
+            .with_nonce(initial_nonce)
+            .with_gas_limit(100_000)
+            .with_chain_id(chain_id)
+            .with_max_fee_per_gas(100_000_000)
+            .with_max_priority_fee_per_gas(0)
+            .build(components.sequencing_provider.wallet())
+            .await?;
+        let tx_encoded = tx.encoded_2718();
+        let tx_hash = components.send_maestro_tx_successful(&tx_encoded).await?;
+
+        // 3. Verify the initial transaction was processed
+        wait_until!(
+            components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                initial_nonce + 1,
+            Duration::from_secs(10)
+        );
+        let receipt_before_reorg =
+            components.appchain_provider.get_transaction_receipt(tx_hash).await?;
+        assert!(receipt_before_reorg.is_some(), "Receipt for initial tx should exist before reorg");
+        assert!(
+            receipt_before_reorg.clone().unwrap().status(),
+            "Initial tx should be successful before reorg"
+        );
+
+        // 4. Simulate a reorg on the sequencing chain
+        components.sequencing_provider.anvil_rollback(Some(2)).await?;
+        components.mine_seq_block(1).await?;
+        components.mine_seq_block(1).await?; // build blocks on top so reorg is detected
+
+        // 5. Verify the appchain reflects the reorg
+        wait_until!(
+            components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                initial_nonce,
+            Duration::from_secs(10)
+        );
+        let receipt_after_reorg =
+            components.appchain_provider.get_transaction_receipt(tx_hash).await?;
+        assert!(receipt_after_reorg.is_none(), "Receipt should be gone after reorg");
+
+        // // re-enable auto mine
+        // components.sequencing_provider.anvil_set_auto_mine(true).await?;
+        // components.sequencing_provider.anvil_set_interval_mining(1).await?;
+
+        // 6. Wait for Maestro's finalization background task to detect and re-submit the tx,
+        // Verify the transaction is sequenced again
+        wait_until!(
+            components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                initial_nonce + 1,
+            Duration::from_secs(10)
+        );
+        let receipt_after_resubmission =
+            components.appchain_provider.get_transaction_receipt(tx_hash).await?;
+        assert!(
+            receipt_after_resubmission.is_some(),
+            "Receipt should exist again after Maestro resubmission"
+        );
+        assert!(
+            receipt_after_resubmission.clone().unwrap().status(),
+            "Resubmitted tx should be successful"
+        );
+        assert_eq!(
+            receipt_after_resubmission.unwrap().from,
+            wallet_address,
+            "From address should match on resubmitted tx"
+        );
+
+        Ok(())
+    })
+    .await
+}

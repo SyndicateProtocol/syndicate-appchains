@@ -367,6 +367,8 @@ impl TestComponents {
                 redis_url: redis_url.clone(),
                 chain_rpc_urls: format!("{{\"{}\":\"{}\"}}", options.appchain_chain_id, nitro_url),
                 metrics_port: PortManager::instance().next_port().await,
+                finalization_duration: options.maestro_finalization_duration,
+                finalization_checker_interval: options.maestro_finalization_checker_interval,
             };
             let maestro_instance = start_component(
                 "synd-maestro",

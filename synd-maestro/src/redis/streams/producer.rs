@@ -153,8 +153,7 @@ impl StreamProducer {
         #[allow(clippy::unwrap_used)] // safe to unwrap
         let current_time =
             std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
-        let min_time = current_time - finalization_ms;
-        let max_id = format!("{}-0", min_time);
+        let max_id = format!("{}-0", current_time - finalization_ms);
 
         // Use XRANGE to get all entries that are older than finalization_duration
         #[allow(clippy::type_complexity)]
@@ -268,16 +267,19 @@ impl StreamProducer {
                     }
                 }
 
-                let entries =
-                    match Self::get_finalized_transactions(&mut conn, &stream_key, finalization_ms)
-                        .await
-                    {
-                        Ok(entries) => entries,
-                        Err(e) => {
-                            error!(%stream_key, %e, "Failed to fetch old entries");
-                            continue;
-                        }
-                    };
+                let entries = match Self::get_finalized_transactions(
+                    &mut conn,
+                    &stream_key,
+                    finalization_ms,
+                )
+                .await
+                {
+                    Ok(entries) => entries,
+                    Err(e) => {
+                        error!(%stream_key, %e, "Finalization checker: Failed to fetch old entries");
+                        continue;
+                    }
+                };
 
                 // Process each entry with the `check_finalization` callback function
                 for (id, fields) in entries {
@@ -286,25 +288,29 @@ impl StreamProducer {
                         Some((data, retries)) => (data, retries),
                         None => continue,
                     };
+
                     if retries >= max_transaction_retries {
                         let tx_hash = keccak256(data);
-                        debug!(%stream_key, entry_id = %id, %tx_hash, %retries, "Max resubmission retries reached. Transaction will not be re-submitted.");
+                        debug!(%stream_key, entry_id = %id, %tx_hash, %retries, "Finalization checker: Max resubmission retries reached. Transaction will not be re-submitted.");
                         continue;
                     }
 
-                    trace!(%stream_key, entry_id = %id, retries, "Checking tx for finalization");
+                    trace!(%stream_key, entry_id = %id, retries, "Finalization checker: Checking tx for finalization");
                     match check_tx_finalization(data).await {
                         CheckFinalizationResult::Done => {} // do nothing
                         CheckFinalizationResult::ReSubmit => {
-                            if let Err(e) =
-                                Self::add_to_stream(&conn, &stream_key, data, retries + 1).await
-                            {
-                                error!(
-                                    %stream_key,
-                                    original_id = %id,
-                                    error = %e,
-                                    "Failed to resubmit transaction."
-                                );
+                            match Self::add_to_stream(&conn, &stream_key, data, retries + 1).await {
+                                Ok(id) => {
+                                    debug!(%stream_key, original_id = %id, new_id = %id, "Finalization checker: Resubmitted transaction.");
+                                }
+                                Err(e) => {
+                                    error!(
+                                        %stream_key,
+                                        original_id = %id,
+                                        error = %e,
+                                        "Finalization checker: Failed to resubmit transaction."
+                                    );
+                                }
                             }
                         }
                     }
