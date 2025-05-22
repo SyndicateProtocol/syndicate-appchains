@@ -187,7 +187,7 @@ impl ArbitrumAdapter {
         block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
             match log.topics()[0] {
                 INBOX_MSG_DELIVERED_EVENT_HASH => {
-                    let message_num = U256::from_be_slice(log.topics()[1].as_slice());
+                    let message_num = log.topics()[1].into();
 
                     // Decode the event using the contract bindings
                     match InboxMessageDelivered::abi_decode_data(&log.data.data, true) {
@@ -208,7 +208,7 @@ impl ArbitrumAdapter {
 
                 INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
                     error!("ignoring unsupported inbox message delivered from origin");
-                    let message_num = U256::from_be_slice(log.topics()[1].as_slice());
+                    let message_num = log.topics()[1].into();
                     message_data.insert(message_num, None);
                 }
                 _ => {}
@@ -447,11 +447,7 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes::<32>()),
-                FixedBytes::from([1u8; 32]),
-            ],
+            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
             msg_delivered.encode_data().into(),
         );
 
@@ -492,11 +488,7 @@ mod tests {
 
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes::<32>()),
-                FixedBytes::from([1u8; 32]),
-            ],
+            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
             msg_delivered.encode_data().into(),
         );
 
@@ -555,11 +547,7 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes::<32>()),
-                FixedBytes::from([1u8; 32]),
-            ],
+            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
             msg_delivered.encode_data().into(),
         );
 
@@ -597,11 +585,7 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes::<32>()),
-                FixedBytes::from([1u8; 32]),
-            ],
+            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
             msg_delivered.encode_data().into(),
         );
 
