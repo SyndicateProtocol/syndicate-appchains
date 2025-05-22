@@ -14,7 +14,6 @@ use eyre::Result;
 use synd_block_builder::appchains::arbitrum::batch::{
     Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader,
 };
-use tracing::debug;
 
 /// The `Verifier` struct is responsible for verifying a batch of blocks and creating a new mchain
 /// block.
@@ -37,53 +36,6 @@ impl Verifier {
     /// Create a new `Verifier`
     pub const fn new(config: &AppchainVerifierConfig) -> Self {
         Self { _settlement_delay: config.settlement_delay }
-    }
-
-    /// Builds a batch of transactions into an Arbitrum batch
-    fn build_batch(txs: Vec<Bytes>, block_number: u64, timestamp: u64) -> Result<Bytes> {
-        let mut messages = vec![];
-
-        if !txs.is_empty() {
-            debug!("Sequenced transactions: {:?}", txs);
-            messages.push(BatchMessage::L2(L1IncomingMessage {
-                header: L1IncomingMessageHeader { block_number, timestamp },
-                l2_msg: txs,
-            }));
-        };
-
-        let batch = Batch(messages);
-        debug!("New Batch: {:?}", batch);
-
-        // Encode the batch data
-        let encoded_batch = batch.encode()?;
-
-        Ok(encoded_batch)
-    }
-
-    fn build_batch_txns(
-        &self,
-        txs_payloads: &Vec<SyndicateTransaction>,
-    ) -> Result<Vec<BatchWithTimestamp>, VerifierError> {
-        let mut batches = vec![];
-        let mut slot = vec![];
-        let mut block_number = txs_payloads[0].block_number;
-        let mut timestamp = txs_payloads[0].timestamp;
-        for tx in txs_payloads {
-            if tx.block_number == block_number {
-                slot.push(tx.payload.clone());
-            } else {
-                let batch = BatchWithTimestamp {
-                    timestamp,
-                    batch: Self::build_batch(slot, block_number, timestamp)?,
-                };
-                batches.push(batch);
-                slot = vec![tx.payload.clone()];
-                block_number = tx.block_number;
-                timestamp = tx.timestamp;
-            }
-        }
-
-        Ok(batches)
     }
 
     const fn build_delayed_messages(
@@ -118,26 +70,13 @@ impl Verifier {
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
     ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
-        // TODO (SEQ-769): Implement Appchain Verifier Component
-        let _batches = self.build_batch_txns(&sequencing_chain_input.syndicate_transactions)?;
-        let _delayed_messages =
+        let batches = self.build_batch_txns(&sequencing_chain_input.syndicate_transactions)?;
+        let delayed_messages =
             self.build_delayed_messages(settlement_chain_input.delayed_messages.clone())?;
 
-        // TODO: Implement output generation
-        debug!("Generating output");
-        debug!("Sequencing chain input {:?}", sequencing_chain_input);
-        debug!("Settlement chain input {:?}", settlement_chain_input);
-        Ok(vec![])
-    }
-
-    fn _slotter(
-        &self,
-        batches: Vec<BatchWithTimestamp>,
-        delayed_messages: Vec<DelayedMessage>,
-    ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
         let mut block_verifier_inputs = vec![];
         for batch in batches {
-            let messages = Self::_get_current_messages(delayed_messages.clone(), batch.timestamp);
+            let messages = Self::get_current_messages(delayed_messages.clone(), batch.timestamp);
             let block_verifier_input = BlockVerifierInput {
                 min_block_number: 0,
                 max_block_number: u64::MAX,
@@ -151,7 +90,7 @@ impl Verifier {
         Ok(block_verifier_inputs)
     }
 
-    fn _get_current_messages(
+    fn get_current_messages(
         _delayed_messages: Vec<DelayedMessage>,
         _timestamp: u64,
     ) -> Vec<DelayedMessage> {
@@ -163,5 +102,49 @@ impl Verifier {
         //     .collect()
 
         vec![]
+    }
+
+    // --------------------------------------------
+    // Batch Generation
+    // --------------------------------------------
+    /// Builds a batch of transactions into an Arbitrum batch
+    fn build_batch(txs: Vec<Bytes>, block_number: u64, timestamp: u64) -> Result<Bytes> {
+        let mut messages = vec![];
+        if !txs.is_empty() {
+            messages.push(BatchMessage::L2(L1IncomingMessage {
+                header: L1IncomingMessageHeader { block_number, timestamp },
+                l2_msg: txs,
+            }));
+        };
+
+        let batch = Batch(messages);
+        let encoded_batch = batch.encode()?;
+        Ok(encoded_batch)
+    }
+
+    fn build_batch_txns(
+        &self,
+        txs_payloads: &Vec<SyndicateTransaction>,
+    ) -> Result<Vec<BatchWithTimestamp>, VerifierError> {
+        let mut batches = vec![];
+        let mut slot = vec![];
+        let mut block_number = txs_payloads[0].block_number;
+        let mut timestamp = txs_payloads[0].timestamp;
+        for tx in txs_payloads {
+            if tx.block_number == block_number {
+                slot.push(tx.payload.clone());
+            } else {
+                let batch = BatchWithTimestamp {
+                    timestamp,
+                    batch: Self::build_batch(slot, block_number, timestamp)?,
+                };
+                batches.push(batch);
+                slot = vec![tx.payload.clone()];
+                block_number = tx.block_number;
+                timestamp = tx.timestamp;
+            }
+        }
+
+        Ok(batches)
     }
 }

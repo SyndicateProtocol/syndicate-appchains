@@ -56,6 +56,8 @@ pub struct SequencingChainInput {
     pub end_syndicate_accumulator_merkle_proof: EIP1186AccountProofResponse,
     /// Syndicate transactions
     pub syndicate_transactions: Vec<SyndicateTransaction>,
+    /// Block headers
+    pub block_headers: Vec<Header>,
 
     // TRUSTED INPUT
     /// Start block hash
@@ -137,8 +139,41 @@ impl SequencingChainInput {
         Ok(())
     }
 
+    /// Verify the block headers
+    #[allow(clippy::unwrap_used)]
+    fn verify_block_headers(&self) -> Result<(), VerifierError> {
+        if self.block_headers.is_empty() {
+            return Err(VerifierError::InvalidSequencingChainInput);
+        }
+
+        // Check that the first block hash matches the expected start hash
+        let first_hash = self.block_headers.first().unwrap().hash_slow();
+        if first_hash != self.start_block_hash {
+            return Err(VerifierError::InvalidSequencingChainInput);
+        }
+
+        // Verify each header’s parent_hash matches the previous block’s hash
+        for window in self.block_headers.windows(2) {
+            let prev = &window[0];
+            let curr = &window[1];
+            if curr.parent_hash != prev.hash_slow() {
+                return Err(VerifierError::InvalidSequencingChainInput);
+            }
+        }
+
+        // Check that the last block hash matches the expected end hash
+        let last_hash = self.block_headers.last().unwrap().hash_slow();
+        if last_hash != self.end_block_hash {
+            return Err(VerifierError::InvalidSequencingChainInput);
+        }
+
+        Ok(())
+    }
+
     /// Validate the sequencing chain input
     pub fn validate(&self) -> Result<(), VerifierError> {
+        // Verify block headers
+        self.verify_block_headers()?;
         // Verify accumulator
         self.verify_accumulator()?;
         // Validate start syndicate accumulator merkle proof
