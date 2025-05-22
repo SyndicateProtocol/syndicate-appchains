@@ -12,7 +12,7 @@ use alloy::{
     signers::local::PrivateKeySigner,
     transports::TransportError,
 };
-use contract_bindings::synd::syndicatesequencerchain::SyndicateSequencerChain::SyndicateSequencerChainInstance;
+use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
 use redis::Client as RedisClient;
@@ -37,7 +37,7 @@ struct Batcher {
     /// The Redis consumer for the batcher
     redis_consumer: StreamConsumer,
     /// The sequencing contract provider for the batcher
-    sequencing_contract_provider: SyndicateSequencerChainInstance<(), FilledProvider>,
+    sequencing_contract_provider: SyndicateSequencingChainInstance<(), FilledProvider>,
     /// The chain ID for the batcher
     chain_id: u64,
     /// The timeout for the batcher
@@ -96,21 +96,21 @@ pub async fn run_batcher(
 async fn create_sequencing_contract_provider(
     config: &BatcherConfig,
     sequencing_contract_address: Address,
-) -> Result<SyndicateSequencerChainInstance<(), FilledProvider>, TransportError> {
+) -> Result<SyndicateSequencingChainInstance<(), FilledProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
-    let sequencer_provider = ProviderBuilder::new()
+    let sequencing_provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer))
         .connect(config.sequencing_rpc_url.as_str())
         .await?;
-    Ok(SyndicateSequencerChainInstance::new(sequencing_contract_address, sequencer_provider))
+    Ok(SyndicateSequencingChainInstance::new(sequencing_contract_address, sequencing_provider))
 }
 
 impl Batcher {
     const fn new(
         config: &BatcherConfig,
         redis_consumer: StreamConsumer,
-        sequencing_contract_provider: SyndicateSequencerChainInstance<(), FilledProvider>,
+        sequencing_contract_provider: SyndicateSequencingChainInstance<(), FilledProvider>,
         metrics: BatcherMetrics,
     ) -> Self {
         Self {
@@ -217,13 +217,13 @@ impl Batcher {
         let _ = match batch {
             SequencingBatch::Compressed(batch) => {
                 self.sequencing_contract_provider
-                    .processTransactionRaw(Bytes::from(batch))
+                    .processTransaction(Bytes::from(batch))
                     .send()
                     .await
             }
             SequencingBatch::Uncompressed(batch) => {
                 self.sequencing_contract_provider
-                    .processBulkTransactions(
+                    .processTransactionsBulk(
                         batch.iter().map(|tx| Bytes::from(tx.clone())).collect(),
                     )
                     .send()
@@ -253,7 +253,7 @@ mod tests {
     // Create a mock provider that always succeeds
     async fn create_mock_contract(
         anvil: Option<&AnvilInstance>,
-    ) -> SyndicateSequencerChainInstance<(), FilledProvider> {
+    ) -> SyndicateSequencingChainInstance<(), FilledProvider> {
         let mock_address = Address::from([0; 20]); // Use a dummy address
 
         let signer = PrivateKeySigner::from_str(
@@ -278,7 +278,7 @@ mod tests {
             let asserter = Asserter::new();
             ProviderBuilder::new().wallet(EthereumWallet::from(signer)).on_mocked_client(asserter)
         };
-        SyndicateSequencerChainInstance::new(mock_address, mock_provider)
+        SyndicateSequencingChainInstance::new(mock_address, mock_provider)
     }
 
     fn test_config() -> BatcherConfig {

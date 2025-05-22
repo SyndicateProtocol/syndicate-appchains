@@ -1,4 +1,4 @@
-using SyndicateSequencerChain as syndicateChain;
+using SyndicateSequencingChain as syndicateChain;
 
 methods {
     // Inherited view functions from AllowlistSequencingModule
@@ -8,54 +8,54 @@ methods {
 }
 
 /**
- * Rule 1: Only allowlisted addresses can use processTransaction
+ * Rule 1: Only allowlisted addresses can use processTransactionUncompressed
+ */
+rule onlyAllowlistedCanProcessTransactionUncompressed() {
+    env e;
+    address SyndicateSequencingChain;
+    bytes data;
+
+    // Require a non-zero sequencer address
+    require SyndicateSequencingChain != 0;
+
+    // Try to process a transaction
+    processTransactionUncompressed@withrevert(e, SyndicateSequencingChain, data);
+
+    // If transaction succeeded (didn't revert), sender must be in allowlist
+    assert !lastReverted => allowlist(e.msg.sender);
+}
+
+/**
+ * Rule 2: Only allowlisted addresses can use processTransaction
  */
 rule onlyAllowlistedCanProcessTransaction() {
     env e;
-    address syndicateSequencerChain;
+    address SyndicateSequencingChain;
     bytes data;
 
     // Require a non-zero sequencer address
-    require syndicateSequencerChain != 0;
-
-    // Try to process a transaction
-    processTransaction@withrevert(e, syndicateSequencerChain, data);
-
-    // If transaction succeeded (didn't revert), sender must be in allowlist
-    assert !lastReverted => allowlist(e.msg.sender);
-}
-
-/**
- * Rule 2: Only allowlisted addresses can use processTransactionRaw
- */
-rule onlyAllowlistedCanProcessTransactionRaw() {
-    env e;
-    address syndicateSequencerChain;
-    bytes data;
-
-    // Require a non-zero sequencer address
-    require syndicateSequencerChain != 0;
+    require SyndicateSequencingChain != 0;
 
     // Try to process a raw transaction
-    processTransactionRaw@withrevert(e, syndicateSequencerChain, data);
+    processTransaction@withrevert(e, SyndicateSequencingChain, data);
 
     // If transaction succeeded (didn't revert), sender must be in allowlist
     assert !lastReverted => allowlist(e.msg.sender);
 }
 
 /**
- * Rule 3: Only allowlisted addresses can use processBulkTransactions
+ * Rule 3: Only allowlisted addresses can use processTransactionsBulk
  */
-rule onlyAllowlistedCanProcessBulkTransactions() {
+rule onlyAllowlistedCanProcessTransactionsBulk() {
     env e;
-    address syndicateSequencerChain;
+    address SyndicateSequencingChain;
     bytes[] data;
 
     // Require a non-zero sequencer address
-    require syndicateSequencerChain != 0;
+    require SyndicateSequencingChain != 0;
 
     // Try to process bulk transactions
-    processBulkTransactions@withrevert(e, syndicateSequencerChain, data);
+    processTransactionsBulk@withrevert(e, SyndicateSequencingChain, data);
 
     // If transaction succeeded (didn't revert), sender must be in allowlist
     assert !lastReverted => allowlist(e.msg.sender);
@@ -64,25 +64,25 @@ rule onlyAllowlistedCanProcessBulkTransactions() {
 /**
  * Rule 4: Zero address cannot be used as sequencer chain
  */
-rule noZeroAddressSequencerChain() {
+rule noZeroAddressSequencingChain() {
     env e;
     bytes data;
     bytes[] bulkData;
 
     // Try to process transaction with zero address
-    processTransaction@withrevert(e, 0, data);
+    processTransactionUncompressed@withrevert(e, 0, data);
 
     // Must revert
     assert lastReverted;
 
     // Try to process raw transaction with zero address
-    processTransactionRaw@withrevert(e, 0, data);
+    processTransaction@withrevert(e, 0, data);
 
     // Must revert
     assert lastReverted;
 
     // Try to process bulk transactions with zero address
-    processBulkTransactions@withrevert(e, 0, bulkData);
+    processTransactionsBulk@withrevert(e, 0, bulkData);
 
     // Must revert
     assert lastReverted;
@@ -93,11 +93,11 @@ rule noZeroAddressSequencerChain() {
  */
 rule allowlistedCanProcessTransactions() {
     env e;
-    address syndicateSequencerChain;
+    address SyndicateSequencingChain;
 
     // Setup conditions
     require allowlist(e.msg.sender);
-    require syndicateSequencerChain != 0;
+    require SyndicateSequencingChain != 0;
 
     // Note: We cannot assert they will succeed as external calls may revert
     assert true;
@@ -200,26 +200,26 @@ rule adminTransferWorks() {
  */
 rule methodsHaveConsistentAllowlistChecks() {
     env e;
-    address syndicateSequencerChain;
+    address SyndicateSequencingChain;
     bytes data;
     bytes[] bulkData;
 
     // Setup - non-zero sequencer address
-    require syndicateSequencerChain != 0;
+    require SyndicateSequencingChain != 0;
 
     // Store allowlist status
     bool isAllowed = allowlist(e.msg.sender);
 
     // Call processTransaction
-    processTransaction@withrevert(e, syndicateSequencerChain, data);
+    processTransactionUncompressed@withrevert(e, SyndicateSequencingChain, data);
     bool txReverted = lastReverted;
 
-    // Call processTransactionRaw
-    processTransactionRaw@withrevert(e, syndicateSequencerChain, data);
+    // Call processTransaction
+    processTransaction@withrevert(e, SyndicateSequencingChain, data);
     bool rawTxReverted = lastReverted;
 
-    // Call processBulkTransactions
-    processBulkTransactions@withrevert(e, syndicateSequencerChain, bulkData);
+    // Call processTransactionsBulk
+    processTransactionsBulk@withrevert(e, SyndicateSequencingChain, bulkData);
     bool bulkTxReverted = lastReverted;
 
     // If sender is not allowed, all three methods should revert
@@ -233,7 +233,7 @@ rule methodsHaveConsistentAllowlistChecks() {
  */
 rule modifiersAppliedCorrectly() {
     env e;
-    address syndicateSequencerChain;
+    address SyndicateSequencingChain;
     bytes data;
     bytes[] bulkData;
 
@@ -241,12 +241,12 @@ rule modifiersAppliedCorrectly() {
     require !allowlist(e.msg.sender);
 
     // All three methods should revert for non-allowlisted sender
-    processTransaction@withrevert(e, syndicateSequencerChain, data);
+    processTransactionUncompressed@withrevert(e, SyndicateSequencingChain, data);
     assert lastReverted;
 
-    processTransactionRaw@withrevert(e, syndicateSequencerChain, data);
+    processTransaction@withrevert(e, SyndicateSequencingChain, data);
     assert lastReverted;
 
-    processBulkTransactions@withrevert(e, syndicateSequencerChain, bulkData);
+    processTransactionsBulk@withrevert(e, SyndicateSequencingChain, bulkData);
     assert lastReverted;
 }

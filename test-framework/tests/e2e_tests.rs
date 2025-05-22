@@ -89,7 +89,7 @@ async fn e2e_send_transaction() -> Result<()> {
             .await?;
         _ = components
             .sequencing_contract
-            .processTransaction(tx.encoded_2718().into())
+            .processTransactionUncompressed(tx.encoded_2718().into())
             .send()
             .await?;
         components.mine_seq_block(0).await?;
@@ -374,7 +374,7 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
                 .await?;
             _ = components
                 .sequencing_contract
-                .processTransaction(tx.encoded_2718().into())
+                .processTransactionUncompressed(tx.encoded_2718().into())
                 .send()
                 .await?;
             components.mine_seq_block(0).await?;

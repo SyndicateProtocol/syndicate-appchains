@@ -23,7 +23,13 @@ $ forge test
 #### Run coverage test:
 
 ```shell
-forge coverage
+forge coverage --ir-minimum --no-match-coverage "(script|test)"
+```
+
+or
+
+```shell
+make test-coverage
 ```
 
 ## Certora Verification
@@ -49,7 +55,7 @@ forge coverage
 ### Running Specs
 
 ```bash
-certoraRun certora/conf/SyndicateSequencerChain.conf
+certoraRun certora/conf/SyndicateSequencingChain.conf
 ```
 
 ### Troubleshooting
@@ -112,7 +118,7 @@ Look at Makefile for more details.
 Example:
 
 ```shell
-$ make deploy-based-sequencerchain-frame
+$ make deploy-syndicate-factory
 ```
 
 ### Deployed Contracts
