@@ -1,5 +1,5 @@
 //! `Synd-Proposer` is responsible for extracting the appchain root state and submitting
-//! assertions to the settlement chain.
+//! assertions to the settlement chain `AssertionPoster` contract.
 
 use eyre::Result;
 use shared::{

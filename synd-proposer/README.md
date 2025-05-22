@@ -1,6 +1,6 @@
 # Synd-Proposer
 
-The Syndicate Proposer is responsible for extracting the appchain root state and submitting assertions to the settlement chain.
+The Syndicate Proposer is responsible for extracting the appchain root state and submitting assertions to the settlement chain `AssertionPoster` contract.
 
 ## Example command
 
