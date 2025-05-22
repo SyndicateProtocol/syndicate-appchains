@@ -84,16 +84,6 @@ impl StreamProducer {
     {
         let stream_key = tx_stream_key(chain_id);
         let shutdown_token = CancellationToken::new();
-
-        // let handle = start_finalization_checker(
-        //     conn.clone(),
-        //     stream_key.clone(),
-        //     finalization_checker_interval,
-        //     finalization_duration,
-        //     max_transaction_retries,
-        //     handle_finalized_tx,
-        //     shutdown_token.clone(),
-        // );
         let res =
             Self { conn, stream_key, shutdown_token, finalization_task_handle: Mutex::new(None) };
 
