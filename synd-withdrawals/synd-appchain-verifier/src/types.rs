@@ -310,10 +310,13 @@ mod tests {
     };
     use std::str::FromStr;
 
-    #[tokio::test]
-    // TODO (SEQ-769): Implement Appchain Verifier Component
-    // TODO: fix test
+    #[test]
+    fn test_accumulator_storage_slot() {
+        let slot = keccak256(b"syndicate.tx.data");
+        assert_eq!(slot, SYNDICATE_ACCUMULATOR_STORAGE_SLOT);
+    }
 
+    #[tokio::test]
     async fn test_verify_account_proof_response() {
         let client: RootProvider = ProviderBuilder::default()
             .connect("https://syndicate-exo.g.alchemy.com/v2/K6cAUXQhrUT3KJPd9a-glciOF5ZA_F8Y")
@@ -330,8 +333,6 @@ mod tests {
             .await
             .unwrap();
 
-        println!("Proof: {:#?}", proof);
-
         let block = client
             .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
             .await
@@ -340,7 +341,6 @@ mod tests {
         let state_root = block.header.state_root;
 
         let result = SequencingChainInput::verify_account_proof_response(&proof, state_root);
-        println!("Result: {:?}", result);
 
         assert!(result.is_ok());
     }
