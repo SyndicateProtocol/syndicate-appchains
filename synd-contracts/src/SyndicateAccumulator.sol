@@ -12,42 +12,45 @@ contract SyndicateAccumulator {
     event TransactionProcessed(address indexed sender, bytes data);
 
     /// @custom:storage-location
-    struct TxData {
+    struct Accumulator {
         bytes32 acc;
-        uint64 count;
     }
 
-    // keccak256("syndicate.tx.data")
-    bytes32 public constant TX_DATA_STORAGE_LOCATION =
-        0xbcd134af035e52869741eb0221dfc8a26900a04521f5a2d44a59b675ea20a969;
+    bool immutable isArbChain;
 
-    function _getTxData() private pure returns (TxData storage $) {
+    constructor() {
+        isArbChain = (address(arbsys).code.length > 0);
+    }
+
+    // keccak256("syndicate.accumulator")
+    bytes32 public constant ACCUMULATOR_STORAGE_LOCATION =
+        0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90;
+
+    function _getAccumulator() private pure returns (Accumulator storage $) {
         assembly {
-            $.slot := TX_DATA_STORAGE_LOCATION
+            $.slot := ACCUMULATOR_STORAGE_LOCATION
         }
     }
 
-    function txCount() public view returns (uint64) {
-        return _getTxData().count;
-    }
-
-    function txAcc() public view returns (bytes32) {
-        return _getTxData().acc;
+    function accumulator() public view returns (bytes32) {
+        return _getAccumulator().acc;
     }
 
     function _transactionProcessed(bytes memory data) internal {
-        TxData storage txData = _getTxData();
-        uint256 blockNumber = block.number;
-        if (address(arbsys).code.length > 0) {
-            try arbsys.arbBlockNumber() returns (uint256 number) {
-                blockNumber = number;
-            } catch {}
+        uint64 blockNumber;
+
+        if (isArbChain) {
+            blockNumber = uint64(arbsys.arbBlockNumber());
+        } else {
+            blockNumber = uint64(block.number);
         }
 
-        txData.acc = keccak256(
-            abi.encodePacked(txData.acc, msg.sender, blockNumber, block.timestamp, txData.count, keccak256(data))
+        Accumulator storage acc = _getAccumulator();
+        acc.acc = keccak256(
+            abi.encodePacked(
+                acc.acc, keccak256(abi.encodePacked(msg.sender, blockNumber, uint64(block.timestamp), keccak256(data)))
+            )
         );
-        txData.count += 1;
         emit TransactionProcessed(msg.sender, data);
     }
 }
