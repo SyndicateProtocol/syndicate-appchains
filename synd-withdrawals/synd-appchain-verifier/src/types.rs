@@ -8,10 +8,17 @@ use alloy::{
 };
 use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
+use synd_block_builder::appchains::{
+    arbitrum::batch::{
+        Batch, BatchMessage, L1IncomingMessage as ArbL1IncomingMessage,
+        L1IncomingMessageHeader as ArbL1IncomingMessageHeader,
+    },
+    shared::SequencingTransactionParser,
+};
 use tracing::error;
 
 const SYNDICATE_ACCUMULATOR_STORAGE_SLOT: B256 =
-    fixed_bytes!("0xbcd134af035e52869741eb0221dfc8a26900a04521f5a2d44a59b675ea20a969"); // Keccak256("syndicate.tx.data")
+    fixed_bytes!("0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90"); // Keccak256("syndicate.accumulator")
 
 /// Settlement chain input
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,7 +62,7 @@ pub struct SequencingChainInput {
     /// End syndicate accumulator merkle proof
     pub end_syndicate_accumulator_merkle_proof: EIP1186AccountProofResponse,
     /// Syndicate transactions
-    pub syndicate_transactions: Vec<SyndicateTransaction>,
+    pub syndicate_transaction_events: Vec<SyndicateTransactionEvent>,
     /// Block headers
     pub block_headers: Vec<Header>,
 
@@ -69,7 +76,7 @@ pub struct SequencingChainInput {
 impl SequencingChainInput {
     fn verify_accumulator(&self) -> Result<(), VerifierError> {
         let mut acc = self.start_syndicate_accumulator_merkle_proof.storage_proof[0].value.into();
-        for syndicate_transaction in &self.syndicate_transactions {
+        for syndicate_transaction in &self.syndicate_transaction_events {
             acc = syndicate_transaction.accumulate(acc);
         }
         let expected_end_accumulator: B256 =
@@ -271,34 +278,143 @@ impl L1IncomingMessage {
 /// Synd batch
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SyndicateTransaction {
-    /// Transaction number
-    pub tx_number: u64,
+pub struct SyndicateTransactionEvent {
     /// Block number
     pub block_number: u64,
     /// Timestamp
     pub timestamp: u64,
-    /// Messages
-    pub payload: Bytes,
     /// Sender
     pub sender: Address,
+    /// Payload
+    pub payload: Bytes,
 }
 
-impl SyndicateTransaction {
+impl SyndicateTransactionEvent {
     /// Accumulate the batch
     pub fn accumulate(&self, acc: B256) -> B256 {
         keccak256(
             (
                 acc,
-                self.sender,
-                self.block_number,
-                self.timestamp,
-                self.tx_number,
-                keccak256(&self.payload),
+                keccak256(
+                    (self.sender, self.block_number, self.timestamp, keccak256(&self.payload))
+                        .abi_encode_packed(),
+                ),
             )
                 .abi_encode_packed(),
         )
     }
+
+    /// Parse the payload depending on the compression scheme
+    pub fn parse_payload(&self) -> Result<Vec<Bytes>, VerifierError> {
+        Ok(SequencingTransactionParser::decode_event_data(&self.payload)?)
+    }
+}
+
+/// Syndicate block
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyndicateBlock {
+    /// Block number
+    pub block_number: u64,
+    /// Timestamp
+    pub timestamp: u64,
+    /// Transactions
+    pub transactions: Vec<Bytes>,
+}
+
+/// Parse the syndicate transaction events
+pub fn parse_syndicate_transaction_events(
+    syndicate_transaction_events: &Vec<SyndicateTransactionEvent>,
+) -> Result<Vec<SyndicateBlock>, VerifierError> {
+    let mut aggregated_events_by_block: Vec<SyndicateBlock> = vec![];
+    let mut current_block = syndicate_transaction_events[0].block_number;
+    let mut current_timestamp = syndicate_transaction_events[0].timestamp;
+    let mut payload: Vec<Bytes> = vec![];
+
+    for event in syndicate_transaction_events {
+        if event.block_number == current_block {
+            payload.append(&mut event.parse_payload()?);
+        } else {
+            let block = SyndicateBlock {
+                block_number: current_block,
+                timestamp: current_timestamp,
+                transactions: payload,
+            };
+            aggregated_events_by_block.push(block);
+            current_block = event.block_number;
+            current_timestamp = event.timestamp;
+            payload = event.parse_payload()?;
+        }
+    }
+
+    // Always push the final accumulated block
+    aggregated_events_by_block.push(SyndicateBlock {
+        block_number: current_block,
+        timestamp: current_timestamp,
+        transactions: payload,
+    });
+
+    Ok(aggregated_events_by_block)
+}
+
+// --------------------------------------------
+// L1IncomingMessage Helper Functions
+// --------------------------------------------
+
+/// Get the current messages from the delayed messages
+pub fn get_current_messages(
+    delayed_messages: Vec<L1IncomingMessage>,
+    timestamp: u64,
+) -> Vec<L1IncomingMessage> {
+    delayed_messages.into_iter().filter(|message| message.header.timestamp == timestamp).collect()
+}
+
+// --------------------------------------------
+// Batch Helper Functions
+// --------------------------------------------
+
+/// Builds a batch of transactions into an Arbitrum batch
+pub fn build_batch(
+    txs: Vec<Bytes>,
+    block_number: u64,
+    timestamp: u64,
+) -> Result<Bytes, VerifierError> {
+    let mut messages = vec![];
+    if !txs.is_empty() {
+        messages.push(BatchMessage::L2(ArbL1IncomingMessage {
+            header: ArbL1IncomingMessageHeader { block_number, timestamp },
+            l2_msg: txs,
+        }));
+    };
+
+    let batch = Batch(messages);
+    let encoded_batch = batch.encode()?;
+    Ok(encoded_batch)
+}
+
+/// A batch with a timestamp
+#[derive(Default, Debug, Clone)]
+pub struct BatchWithTimestamp {
+    /// Timestamp
+    pub timestamp: u64,
+    /// Batch
+    pub batch: Bytes,
+}
+
+/// Get the input batches
+pub fn get_input_batches_with_timestamps(
+    sequencing_chain_input: &SequencingChainInput,
+) -> Result<Vec<BatchWithTimestamp>, VerifierError> {
+    let blocks =
+        parse_syndicate_transaction_events(&sequencing_chain_input.syndicate_transaction_events)?;
+    let mut batches = vec![];
+    for block in blocks {
+        let batch = build_batch(block.transactions, block.block_number, block.timestamp)
+            .map(|batch| BatchWithTimestamp { timestamp: block.timestamp, batch })
+            .map_err(|_| VerifierError::InvalidBatch)?;
+        batches.push(batch);
+    }
+    Ok(batches)
 }
 
 #[cfg(test)]
@@ -312,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_accumulator_storage_slot() {
-        let slot = keccak256(b"syndicate.tx.data");
+        let slot = keccak256(b"syndicate.accumulator");
         assert_eq!(slot, SYNDICATE_ACCUMULATOR_STORAGE_SLOT);
     }
 
