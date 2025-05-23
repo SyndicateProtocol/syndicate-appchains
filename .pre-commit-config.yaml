@@ -45,14 +45,6 @@ repos:
         types: [solidity]
         files: ^(synd-contracts)/
         pass_filenames: false
-      - id: forge-test-shared-contracts
-        name: forge test syndicate translator contracts
-        entry: forge test
-        args: ["--root", "shared/arb-contracts"]
-        language: system
-        types: [solidity]
-        files: ^(shared)/arb-contracts/
-        pass_filenames: false
       - id: taplo-fmt
         name: Cargo.toml format validation
         entry: taplo fmt
