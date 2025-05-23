@@ -16,3 +16,6 @@ url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "synd-contracts/lib/nitro-contracts"]
 	path = synd-contracts/lib/nitro-contracts
 	url = https://github.com/OffchainLabs/nitro-contracts
+[submodule "synd-contracts/lib/upgrade-executor"]
+	path = synd-contracts/lib/upgrade-executor
+	url = https://github.com/OffchainLabs/upgrade-executor
