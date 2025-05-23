@@ -12,9 +12,9 @@ use tracing::error;
 /// Primary error type for the Maestro service, following JSON-RPC error code mapping
 #[derive(Debug, Error)]
 pub enum MaestroError {
-    /// Error relating to Redis
+    /// Error relating to Valkey
     #[error(transparent)]
-    Redis(#[from] RedisError),
+    Valkey(#[from] RedisError),
 
     /// Error relating to Config
     #[error("config error: {0}")]

@@ -284,28 +284,29 @@ pub async fn launch_nitro_node(
     Ok((nitro, appchain, url))
 }
 
-pub async fn start_redis() -> Result<(Docker, String)> {
+pub async fn start_valkey() -> Result<(Docker, String)> {
     let port = PortManager::instance().next_port().await;
-    let mut redis = Docker::new(
+    let mut valkey = Docker::new(
         Command::new("docker")
             .arg("run")
             .arg("--init")
             .arg("--rm")
             .arg("-p")
             .arg(format!("{port}:6379"))
-            .arg("redis:latest")
+            .arg("valkey/valkey:latest")
             .arg("--loglevel debug"),
     )?;
 
-    let redis_url = format!("redis://127.0.0.1:{port}/");
+    // Not a typo - `valkey` URL should have the `redis` prefix
+    let valkey_url = format!("redis://0.0.0.0:{port}/");
 
-    let client = redis::Client::open(redis_url.as_str()).unwrap();
+    let valkey_client = redis::Client::open(valkey_url.as_str()).unwrap();
     wait_until!(
-        if let Some(status) = redis.try_wait()? {
-            panic!("redis exited with {}", status);
+        if let Some(status) = valkey.try_wait()? {
+            panic!("cache exited with {}", status);
         };
-        client.get_multiplexed_async_connection().await.is_ok(),
+        valkey_client.get_multiplexed_async_connection().await.is_ok(),
         Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
-    Ok((redis, redis_url))
+    Ok((valkey, valkey_url))
 }

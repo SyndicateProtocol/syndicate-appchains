@@ -42,8 +42,7 @@ pub async fn run(
     let optional_headers = vec![HEADER_CHAIN_ID.to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
-        .layer(ProxyGetRequestLayer::new("/health", "health")?)
-        .layer(ProxyGetRequestLayer::new("/test_redis", "test_redis")?);
+        .layer(ProxyGetRequestLayer::new("/health", "health")?);
 
     let server = Server::builder()
         .set_http_middleware(http_middleware)
@@ -51,10 +50,10 @@ pub async fn run(
         .await?;
 
     // Create the service internally again
-    let client = redis::Client::open(config.redis_url.as_str())?;
-    let redis_conn = client.get_multiplexed_async_connection().await?;
-    let service = Arc::new(MaestroService::new(redis_conn, config.clone(), metrics).await?);
-    info!("MaestroService created and connected to Redis successfully!");
+    let client = redis::Client::open(config.valkey_url.as_str())?;
+    let valkey_conn = client.get_multiplexed_async_connection().await?;
+    let service = Arc::new(MaestroService::new(valkey_conn, config.clone(), metrics).await?);
+    info!("MaestroService created and connected to Valkey successfully!");
 
     let mut module = RpcModule::new(service.clone()); // Pass Arc for RpcModule state
 

@@ -1,7 +1,7 @@
 //! This module describes the required functionality for Maestro to interact with waiting gap
-//! transactions in the Redis cache.
+//! transactions in the Valkey cache.
 
-use crate::redis::keys::waiting_txn::waiting_gap_txns_key;
+use crate::valkey::keys::waiting_txn::waiting_gap_txns_key;
 use alloy::{
     hex,
     primitives::{Address, Bytes, ChainId},
@@ -9,9 +9,9 @@ use alloy::{
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
 use std::{future::Future, time::Duration};
 
-/// Extension trait for Redis connections to work with waiting transactions
+/// Extension trait for Valkey connections to work with waiting transactions
 pub trait WaitingGapTxnExt {
-    /// Get a waiting transaction from the Redis cache
+    /// Get a waiting transaction from the Valkey cache
     fn get_waiting_txn(
         &mut self,
         chain_id: ChainId,
@@ -19,7 +19,7 @@ pub trait WaitingGapTxnExt {
         nonce: u64,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send;
 
-    /// Set a waiting transaction in the Redis cache with TTL
+    /// Set a waiting transaction in the Valkey cache with TTL
     fn set_waiting_txn(
         &mut self,
         chain_id: ChainId,
@@ -29,7 +29,7 @@ pub trait WaitingGapTxnExt {
         ttl: Duration,
     ) -> impl Future<Output = RedisResult<String>> + Send;
 
-    /// Delete a waiting transaction by key from the Redis cache
+    /// Delete a waiting transaction by key from the Valkey cache
     fn del_waiting_txn_keys(
         &mut self,
         waiting_txns: &[WaitingTransactionId],
@@ -87,9 +87,9 @@ pub struct WaitingTransactionId {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::redis::{
+    use crate::valkey::{
         keys::waiting_txn::WAITING_GAP_KEY_PREFIX, models::waiting_transaction::WaitingGapTxnExt,
-        test_utils::init_redis_and_get_connection,
+        test_utils::init_valkey_and_get_connection,
     };
     use alloy::primitives::Address;
     use ctor::ctor;
@@ -118,10 +118,10 @@ mod tests {
         );
     }
 
-    // Avoid having to spin up unique Redis containers this way
+    // Avoid having to spin up unique Valkey containers this way
     #[tokio::test]
     async fn test_cache() -> Result<(), eyre::Error> {
-        let (conn, _, _redis) = init_redis_and_get_connection().await;
+        let (conn, _, _valkey) = init_valkey_and_get_connection().await;
 
         test_set_get_waiting_txn(conn.clone()).await;
         test_del_waiting_txn_key(conn.clone()).await;
@@ -374,7 +374,7 @@ mod tests {
         let txn_ids = vec![WaitingTransactionId { chain_id, wallet_address, nonce }];
         let del_result = conn.del_waiting_txn_keys(&txn_ids).await.unwrap();
 
-        // Redis returns 0 when no keys were deleted
+        // Cache returns 0 when no keys were deleted
         assert_eq!(del_result, 0, "Should return 0 when deleting non-existent key");
 
         let get_result = conn.get_waiting_txn(chain_id, wallet_address, nonce).await.unwrap();

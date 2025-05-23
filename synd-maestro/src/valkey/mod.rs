@@ -1,4 +1,4 @@
-//! This module describes how Maestro uses Redis for caching
+//! This module describes how Maestro uses Valkey for caching
 
 pub mod keys;
 pub mod models;

@@ -1,13 +1,13 @@
-//! Module to store unique Redis key formats in order to improve visibility and avoid collisions
+//! Module to store unique Valkey key formats in order to improve visibility and avoid collisions
 
-/// Redis key to retrieve Wallet Nonce values
+/// Valkey key to retrieve Wallet Nonce values
 pub mod wallet_nonce {
     use alloy::primitives::{Address, ChainId};
 
-    /// Unique prefix of Wallet Nonce key for Redis String retrieval
+    /// Unique prefix of Wallet Nonce key for Valkey String retrieval
     pub const WALLET_NONCE_KEY_PREFIX: &str = "maestro:wallet-nonce";
 
-    /// Generates a Redis String key for a specific chain and wallet address. Note that such a
+    /// Generates a Valkey String key for a specific chain and wallet address. Note that such a
     /// combination is unique per chain
     ///
     /// # Arguments
@@ -28,14 +28,14 @@ pub mod wallet_nonce {
     pub type ChainWalletNonceKey = String;
 }
 
-/// Redis keys to retrieve Waiting Transaction values
+/// Valkey keys to retrieve Waiting Transaction values
 pub mod waiting_txn {
     use alloy::primitives::{Address, ChainId};
 
-    /// Unique prefix of Waiting Gap Txns key for Redis String retrieval
+    /// Unique prefix of Waiting Gap Txns key for Valkey String retrieval
     pub const WAITING_GAP_KEY_PREFIX: &str = "maestro:waiting-gap-txns";
 
-    /// Generates a Redis String key for a specific chain, wallet, and nonce, thereby corresponding
+    /// Generates a Valkey String key for a specific chain, wallet, and nonce, thereby corresponding
     /// to a unique transaciton.
     ///
     /// # Arguments

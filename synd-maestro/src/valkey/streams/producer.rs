@@ -1,4 +1,4 @@
-//! This module provides the producer implementation for Redis streams used to queue
+//! This module provides the producer implementation for Valkey Streams used to queue
 //! and process transactions across different chains.
 
 use alloy::primitives::keccak256;
@@ -8,11 +8,11 @@ use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, trace};
 
-/// Base key for Redis transaction streams
+/// Base key for Valkey transaction streams
 /// Format: `synd-maestro:transactions:{chain_id}`
 const TX_STREAM_KEY: &str = "synd-maestro:transactions";
 
-/// Generates a Redis stream key for a specific chain
+/// Generates a Valkey Stream key for a specific chain
 ///
 /// # Arguments
 /// * `chain_id` - The chain identifier to create the stream key for
@@ -23,9 +23,9 @@ pub fn tx_stream_key(chain_id: u64) -> String {
     format!("{}:{}", TX_STREAM_KEY, chain_id)
 }
 
-/// Redis Stream producer for enqueueing transactions to a specific chain's stream
+/// Valkey Stream producer for enqueueing transactions to a specific chain's stream
 ///
-/// This producer handles writing raw transaction data to Redis streams, which are used
+/// This producer handles writing raw transaction data to Valkey Streams, which are used
 /// for reliable message queuing. Each chain has its own dedicated stream identified
 /// by the chain ID.
 ///
@@ -33,11 +33,11 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 /// ```rust
 /// use redis::aio::MultiplexedConnection;
 /// use std::time::Duration;
-/// use synd_maestro::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
+/// use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
 ///
-/// async fn example(redis_conn: MultiplexedConnection) {
+/// async fn example(valkey_conn: MultiplexedConnection) {
 ///     let mut producer = StreamProducer::new(
-///         redis_conn,
+///         valkey_conn,
 ///         1,
 ///         Duration::from_secs(60 * 60 * 24),
 ///         Duration::from_secs(60 * 60 * 24),
@@ -61,7 +61,7 @@ impl StreamProducer {
     /// Creates a new producer instance for a specific chain
     ///
     /// # Arguments
-    /// * `conn` - An established Redis connection
+    /// * `conn` - An established Valkey connection
     /// * `chain_id` - The chain identifier this producer will write to
     /// * `finalization_checker_interval` - How often to check for finalized transactions
     /// * `finalization_duration` - Duration after which a transaction is considered finalized
@@ -98,9 +98,9 @@ impl StreamProducer {
         res
     }
 
-    /// Enqueues a raw transaction to the Redis stream
+    /// Enqueues a raw transaction to the Valkey stream
     ///
-    /// This method writes the transaction data to the Redis stream and returns
+    /// This method writes the transaction data to the Valkey Stream and returns
     /// the generated stream entry ID. The ID is in the format `{timestamp}-{sequence}`.
     ///
     /// # Arguments
@@ -108,11 +108,11 @@ impl StreamProducer {
     ///
     /// # Returns
     /// * `Ok(String)` - The stream entry ID if successful
-    /// * `Err(Error)` - If the Redis operation fails
+    /// * `Err(Error)` - If the Valkey cache operation fails
     ///
     /// # Errors
     /// Returns an error if:
-    /// * Redis connection fails
+    /// * Valkey connection fails
     /// * Stream write operation fails
     /// * Connection is dropped
     pub async fn enqueue_transaction(&self, raw_tx: &[u8]) -> Result<String, RedisError> {
@@ -172,11 +172,11 @@ impl StreamProducer {
         Ok(entries)
     }
 
-    /// Parses the fields from a Redis stream entry.
+    /// Parses the fields from a Valkey Stream entry.
     ///
     /// # Arguments
     /// * `fields` - The fields from the stream entry.
-    /// * `stream_key` - The key of the Redis stream (for logging purposes).
+    /// * `stream_key` - The key of the Valkey Stream (for logging purposes).
     /// * `id` - The ID of the stream entry (for logging purposes).
     ///
     /// # Returns
@@ -212,11 +212,11 @@ impl StreamProducer {
         }
     }
 
-    /// Starts a background task to check for finalized transactions from the Redis stream
+    /// Starts a background task to check for finalized transactions from the Valkey Stream
     ///
     /// # Arguments
-    /// * `conn` - Redis multiplexed connection
-    /// * `stream_key` - Key of the Redis stream to check
+    /// * `conn` - Valkey multiplexed connection
+    /// * `stream_key` - Key of the Valkey Stream to check
     /// * `finalization_checker_interval` - How often to check for old entries
     /// * `finalization_duration` - Maximum age of entries to keep
     /// * `max_transaction_retries` - Maximum number of times a transaction can be re-submitted
@@ -345,7 +345,7 @@ mod tests {
         atomic::{AtomicUsize, Ordering},
         Arc,
     };
-    use test_utils::docker::start_redis;
+    use test_utils::docker::start_valkey;
     use tokio::{
         sync::Mutex,
         time::{sleep, Duration},
@@ -356,7 +356,7 @@ mod tests {
         // This test verifies the behavior of the `start_finalization_checker` with conditional
         // logic in the callback and ensures items with future-dated IDs are not processed.
         // It also tests the max_transaction_retries logic.
-        // 1. It populates a Redis stream with 5 initial entries (intended to be "old") and 1
+        // 1. It populates a Valkey Stream with 5 initial entries (intended to be "old") and 1
         //    "extra" entry with a far-future ID (intended to remain unprocessed by this test run).
         //    All entries are added with "retries: 0".
         // 2. It starts the finalization checker with a short interval (100ms), finalization
@@ -385,10 +385,10 @@ mod tests {
         //       - The 1 "extra" item (which was never processed or deleted, retries=0).
         //       - The 3 items for which `Done` was returned are not re-added.
 
-        // Setup Redis connection
-        let (_redis, redis_url) = start_redis().await.unwrap();
+        // Set up Valkey connection
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
-        let client = redis::Client::open(redis_url.as_str()).unwrap();
+        let client = redis::Client::open(valkey_url.as_str()).unwrap();
         let conn = client.get_multiplexed_async_connection().await.unwrap();
 
         let mut conn_clone = conn.clone();
@@ -513,8 +513,8 @@ mod tests {
         // 5. After 2nd cycle: entry with retries = 1 is dropped. Callback not invoked again. Stream
         //    empty.
 
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        let client = redis::Client::open(redis_url.as_str()).unwrap();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        let client = redis::Client::open(valkey_url.as_str()).unwrap();
         let conn = client.get_multiplexed_async_connection().await.unwrap();
         let mut conn_clone_for_setup = conn.clone();
         let mut conn_clone_for_assert = conn.clone();

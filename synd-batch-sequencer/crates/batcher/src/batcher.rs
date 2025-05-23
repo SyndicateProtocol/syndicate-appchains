@@ -22,7 +22,7 @@ use std::{
     str::FromStr,
     time::{Duration, Instant},
 };
-use synd_maestro::redis::streams::consumer::StreamConsumer;
+use synd_maestro::valkey::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
 
@@ -34,8 +34,8 @@ struct Batcher {
     compression_enabled: bool,
     /// The max batch size for the batcher
     max_batch_size: usize,
-    /// The Redis consumer for the batcher
-    redis_consumer: StreamConsumer,
+    /// The Stream consumer for the batcher
+    stream_consumer: StreamConsumer,
     /// The sequencing contract provider for the batcher
     sequencing_contract_provider: SyndicateSequencingChainInstance<(), FilledProvider>,
     /// The chain ID for the batcher
@@ -66,18 +66,18 @@ pub async fn run_batcher(
     sequencing_contract_address: Address,
     metrics: BatcherMetrics,
 ) -> Result<JoinHandle<()>> {
-    let client = RedisClient::open(config.redis_url.as_str()).map_err(|e| {
-        eyre!("Failed to open Redis client: {}. Redis URL: {}", e, config.redis_url)
+    let client = RedisClient::open(config.valkey_url.as_str()).map_err(|e| {
+        eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
     let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
-        eyre!("Failed to get Redis connection: {}. Redis URL: {}", e, config.redis_url)
+        eyre!("Failed to get Valkey connection: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
-    let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+    let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
 
     let sequencing_contract_provider =
         create_sequencing_contract_provider(config, sequencing_contract_address).await?;
 
-    let mut batcher = Batcher::new(config, redis_consumer, sequencing_contract_provider, metrics);
+    let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_provider, metrics);
 
     let handle = tokio::spawn({
         async move {
@@ -109,14 +109,14 @@ async fn create_sequencing_contract_provider(
 impl Batcher {
     const fn new(
         config: &BatcherConfig,
-        redis_consumer: StreamConsumer,
+        stream_consumer: StreamConsumer,
         sequencing_contract_provider: SyndicateSequencingChainInstance<(), FilledProvider>,
         metrics: BatcherMetrics,
     ) -> Self {
         Self {
             compression_enabled: config.compression_enabled,
             max_batch_size: config.max_batch_size.as_u64() as usize,
-            redis_consumer,
+            stream_consumer,
             sequencing_contract_provider,
             chain_id: config.chain_id,
             timeout: config.timeout,
@@ -140,7 +140,7 @@ impl Batcher {
             // TODO (SEQ-842): Configurable max msg count
             // NOTE: If msg count is >1 we need to handle edge cases where not all transactions fit
             // in the batch
-            let incoming_txs = self.redis_consumer.recv(1, Duration::from_millis(100)).await?;
+            let incoming_txs = self.stream_consumer.recv(1, Duration::from_millis(100)).await?;
 
             // Combine outstanding transactions with incoming transactions
             let mut pending_txs: VecDeque<Bytes> = std::mem::take(&mut self.outstanding_txs)
@@ -246,8 +246,8 @@ mod tests {
         transports::mock::Asserter,
     };
     use prometheus_client::registry::Registry;
-    use synd_maestro::redis::streams::producer::{CheckFinalizationResult, StreamProducer};
-    use test_utils::{docker::start_redis, wait_until};
+    use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
+    use test_utils::{docker::start_valkey, wait_until};
     use url::Url;
 
     // Create a mock provider that always succeeds
@@ -284,7 +284,7 @@ mod tests {
     fn test_config() -> BatcherConfig {
         BatcherConfig {
             max_batch_size: byte_unit::Byte::from_u64(1024),
-            redis_url: "dummy".to_string(),
+            valkey_url: "dummy".to_string(),
             chain_id: 1,
             compression_enabled: true,
             timeout: Duration::from_millis(200),
@@ -297,16 +297,16 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_read_transactions() {
         let mut config = test_config();
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
             .unwrap();
         let chain_id = 1;
-        let redis_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
+        let stream_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
         let producer = StreamProducer::new(
             conn,
             chain_id,
@@ -323,7 +323,7 @@ mod tests {
         let metrics = BatcherMetrics::new(&mut registry);
 
         let mut batcher =
-            Batcher::new(&config, redis_consumer, create_mock_contract(None).await, metrics);
+            Batcher::new(&config, stream_consumer, create_mock_contract(None).await, metrics);
 
         let result = batcher.read_and_batch_transactions().await;
         assert!(result.is_ok());
@@ -334,16 +334,16 @@ mod tests {
         let mut config = test_config();
         config.max_batch_size = byte_unit::Byte::from_u64(1); // force failure
         config.compression_enabled = false;
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
             .unwrap();
         let chain_id = 1;
-        let redis_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
+        let stream_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
         let producer = StreamProducer::new(
             conn,
             chain_id,
@@ -360,7 +360,7 @@ mod tests {
         let metrics = BatcherMetrics::new(&mut registry);
 
         let mut batcher =
-            Batcher::new(&config, redis_consumer, create_mock_contract(None).await, metrics);
+            Batcher::new(&config, stream_consumer, create_mock_contract(None).await, metrics);
 
         let result = batcher.read_and_batch_transactions().await;
         assert!(result.is_ok());
@@ -370,21 +370,21 @@ mod tests {
     #[tokio::test]
     async fn test_read_transactions_no_data() {
         let mut config = test_config();
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
             .unwrap();
-        let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+        let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
 
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
         let mut batcher =
-            Batcher::new(&config, redis_consumer, create_mock_contract(None).await, metrics);
+            Batcher::new(&config, stream_consumer, create_mock_contract(None).await, metrics);
         let result = batcher.read_and_batch_transactions().await;
 
         assert!(result.is_ok());
@@ -394,15 +394,15 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_txs() {
         let mut config = test_config();
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
             .unwrap();
-        let redis_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
+        let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
         let producer = StreamProducer::new(
             conn,
             config.chain_id,
@@ -432,7 +432,7 @@ mod tests {
         let anvil = Anvil::new().spawn();
         let mut batcher = Batcher::new(
             &config,
-            redis_consumer,
+            stream_consumer,
             create_mock_contract(Some(&anvil)).await,
             metrics,
         );
@@ -454,15 +454,15 @@ mod tests {
         config.compression_enabled = false;
         config.max_batch_size = byte_unit::Byte::from_u64(51 * 1024); // 51KB
 
-        let (_redis, redis_url) = start_redis().await.unwrap();
-        config.redis_url = redis_url.clone();
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(redis_url.as_str())
+        let conn = redis::Client::open(valkey_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
             .unwrap();
-        let redis_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
+        let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
         let producer = StreamProducer::new(
             conn,
             config.chain_id,
@@ -492,7 +492,7 @@ mod tests {
         let anvil = Anvil::new().spawn();
         let mut batcher = Batcher::new(
             &config,
-            redis_consumer,
+            stream_consumer,
             create_mock_contract(Some(&anvil)).await,
             metrics,
         );
