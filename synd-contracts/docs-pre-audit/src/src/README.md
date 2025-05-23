@@ -10,6 +10,7 @@
 - [requirement-modules](/src/requirement-modules)
 - [sequencing-modules](/src/sequencing-modules)
 - [token](/src/token)
+- [withdrawal](/src/withdrawal)
 - [SequencingModuleChecker](SequencingModuleChecker.sol/abstract.SequencingModuleChecker.md)
 - [ArbSys](SyndicateAccumulator.sol/interface.ArbSys.md)
 - [SyndicateAccumulator](SyndicateAccumulator.sol/contract.SyndicateAccumulator.md)

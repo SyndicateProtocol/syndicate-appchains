@@ -20,6 +20,7 @@ The Smart contracts we intend to have the audit are the following:
 - [ArbConfigManager](src/src/config/ArbConfigManager.sol/contract.ArbConfigManager.md)
 - [ArbChainConfig](src/src/config/ArbChainConfig.sol/contract.ArbChainConfig.md)
 - [ArbConfigManagerFactory](src/src/config/ArbConfigManagerFactory.sol/contract.ArbConfigManagerFactory.md)
+- [AssertionPoster](src/src/withdrawal/AssertionPoster.sol/contract.AssertionPoster.md)
 
 ## General Overview of Syndicate Sequencer Chain and Its Smart Contracts
 
@@ -171,3 +172,26 @@ The configuration management system is a critical infrastructure component that:
 5. **Ensures Deterministic Addressing**: CREATE2-based deployment ensures that configurations can be found at predictable addresses, simplifying cross-chain interactions
 
 This configuration system acts as the backbone for the Syndicate Sequencer Chain's multi-chain capabilities, allowing it to correctly route transactions and interact with different Arbitrum-based rollups while maintaining separation and security between chains.
+
+### Assertion Poster
+
+The `AssertionPoster` contract is a generic assertion posting utility for Arbitrum rollups
+
+Core functionalities include:
+
+1. **Generic Assertion Management**:
+
+   - Posts assertions to Arbitrum rollups with configurable block hashes and send roots
+   - Supports both legacy (v2) and new (v3) Arbitrum Nitro rollup protocols
+   - Manages rollup state progression through assertion posting
+
+2. **Permission Control**:
+
+   - Restricts assertion posting to authorized addresses (contract owner)
+   - Configures rollup permissions to prevent unauthorized assertion creation
+   - Sets up proper validator and batch poster permissions
+
+3. **Protocol Compatibility**:
+   - Auto-detects rollup version and adapts behavior accordingly
+   - Handles version-specific assertion formats and function calls
+   - Manages rollup configuration updates and state synchronization

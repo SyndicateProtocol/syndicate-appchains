@@ -1,5 +1,5 @@
 # ArbConfigManagerFactory
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/f93e91004eb8d04d84acd3b9cb0e8f7e6abfa528/src/config/ArbConfigManagerFactory.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/config/ArbConfigManagerFactory.sol)
 
 *Factory contract to deploy ArbConfigManager deterministically across chains*
 
