@@ -8,7 +8,6 @@ members = [
   "synd-chain-ingestor",
   "synd-maestro",
   "synd-mchain",
-  "synd-proposer",
   "synd-translator/bin/synd-translator",
   "synd-translator/crates/common",
   "synd-translator/crates/metrics",
@@ -16,6 +15,7 @@ members = [
   "synd-translator/crates/synd-slotter",
   "synd-translator/tests",
   "synd-withdrawals/synd-appchain-verifier",
+  "synd-withdrawals/synd-proposer",
   "test-framework",
 ]
 
