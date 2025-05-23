@@ -12,7 +12,7 @@ import {
 } from "@arbitrum/nitro-contracts/src/rollup/IRollupCore.sol";
 import {IRollupAdmin} from "@arbitrum/nitro-contracts/src/rollup/IRollupAdmin.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {Ownable} from "@openzeppelin/contracts/ownership/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IOwnable} from "@arbitrum/nitro-contracts/src/bridge/IOwnable.sol";
 import {IUpgradeExecutor} from "@offchainlabs/upgrade-executor/src/IUpgradeExecutor.sol";
 import {IGasRefunder} from "@arbitrum/nitro-contracts/src/libraries/IGasRefunder.sol";
@@ -66,6 +66,18 @@ interface IRollup is IRollupCore, IOwnable {
 }
 
 /**
+ * @title IRollupAdminExtended Interface
+ * @dev Extends IRollupAdmin to include a function for checking if the rollup is paused
+ */
+interface IRollupAdminExtended is IRollupAdmin {
+    /**
+     * @notice Check if the rollup contract is paused
+     * @return True if the rollup contract is paused
+     */
+    function paused() external view returns (bool);
+}
+
+/**
  * @title Assertion Data Structure
  * @dev Defines the structure of an assertion in the legacy rollup system
  */
@@ -104,7 +116,7 @@ contract AssertionPoster is Ownable {
      * @notice Constructs the AssertionPoster contract
      * @param rollup_ Address of the rollup contract
      */
-    constructor(IRollup rollup_) {
+    constructor(IRollup rollup_) Ownable(msg.sender) {
         self = address(this);
         rollup = rollup_;
         executor = IUpgradeExecutor(rollup_.owner());
@@ -162,7 +174,7 @@ contract AssertionPoster is Ownable {
     function _configureLegacy() private {
         IAccessControl(address(executor)).grantRole(keccak256("EXECUTOR_ROLE"), self);
         // Prevent anyone except the admin account from creating assertions
-        if (!IRollupAdmin(address(rollup)).paused()) {
+        if (!IRollupAdminExtended(address(rollup)).paused()) {
             IRollupAdmin(address(rollup)).pause();
         }
     }

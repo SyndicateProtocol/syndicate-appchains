@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {AssertionPoster, Assertion, IRollup} from "src/AssertionPoster.sol";
+import {AssertionPoster, Assertion, IRollup, Ownable} from "src/withdrawal/AssertionPoster.sol";
 import {
     ExecutionState,
     MachineStatus,
@@ -85,7 +85,7 @@ contract AssertionPosterTest is Test {
         vm.prank(OWNER);
         AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
         vm.prank(USER);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, USER));
         legacyPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
     }
 
@@ -136,7 +136,7 @@ contract AssertionPosterTest is Test {
         vm.stopPrank();
 
         vm.startPrank(USER);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, USER));
         newPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
         vm.stopPrank();
     }

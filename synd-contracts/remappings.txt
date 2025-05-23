@@ -1,1 +1,2 @@
-@arbitrum/nitro-contracts/src/=src/nitro-contracts/
+@arbitrum/nitro-contracts/src/=lib/nitro-contracts/src/
+@offchainlabs/upgrade-executor/src/=lib/upgrade-executor/src/
