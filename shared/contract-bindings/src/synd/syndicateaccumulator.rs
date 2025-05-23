@@ -9,6 +9,7 @@ interface SyndicateAccumulator {
 
     function ACCUMULATOR_STORAGE_LOCATION() external view returns (bytes32);
     function accumulator() external view returns (bytes32);
+    function isArbChain() external view returns (bool);
 }
 ```
 
@@ -47,6 +48,19 @@ interface SyndicateAccumulator {
     "stateMutability": "view"
   },
   {
+    "type": "function",
+    "name": "isArbChain",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "event",
     "name": "TransactionProcessed",
     "inputs": [
@@ -80,22 +94,22 @@ pub mod SyndicateAccumulator {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60a06040523461002d57610011610207565b610019610032565b6101bc6102f382396080518150506101bc90f35b610038565b60405190565b5f80fd5b60018060a01b031690565b90565b61005e6100596100639261003c565b610047565b61003c565b90565b61006f9061004a565b90565b61007b90610066565b90565b6100886064610072565b90565b6100949061004a565b90565b6100a09061008b565b90565b90565b90565b6100bd6100b86100c2926100a6565b610047565b6100a3565b90565b151590565b6100d490516100c5565b90565b601f801991011690565b634e487b7160e01b5f52604160045260245ffd5b906100ff906100d7565b810190811060018060401b0382111761011757604052565b6100e1565b60e01b90565b5f80fd5b61012f816100a3565b0361013657565b5f80fd5b9050519061014782610126565b565b906020828203126101625761015f915f0161013a565b90565b610122565b5f0190565b610174610032565b3d5f823e3d90fd5b60209181520190565b5f7f61726273797320707265636f6d70696c65206661696c65640000000000000000910152565b6101b9601860209261017c565b6101c281610185565b0190565b6101db9060208101905f8183039101526101ac565b90565b156101e557565b6101ed610032565b62461bcd60e51b815280610203600482016101c6565b0390fd5b61021761021261007e565b610097565b3b61022a6102245f6100a9565b916100a3565b1160805261024161023b60806100ca565b156100c5565b8015610253575b610251906101de565b565b5061027f602061026961026461007e565b610097565b63a3b1b31d90610277610032565b93849261011c565b8252818061028f60048201610167565b03915afa80156102ed57610251915f916102bf575b506102b76102b15f6100a9565b916100a3565b119050610248565b6102e0915060203d81116102e6575b6102d881836100f5565b810190610149565b5f6102a4565b503d6102ce565b61016c56fe60806040526004361015610013575b610149565b61001d5f3561003c565b80630338115414610037576363d964370361000e57610114565b610084565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f91031261005a57565b61004c565b90565b61006b9061005f565b9052565b9190610082905f60208501940190610062565b565b346100b457610094366004610050565b6100b061009f61017a565b6100a7610042565b9182918261006f565b0390f35b610048565b90565b5f1b90565b6100d56100d06100da926100b9565b6100bc565b61005f565b90565b6101067f847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b906100c1565b90565b6101116100dd565b90565b3461014457610124366004610050565b61014061012f610109565b610137610042565b9182918261006f565b0390f35b610048565b5f80fd5b5f90565b5f1c90565b90565b61016561016a91610151565b610156565b90565b6101779054610159565b90565b61018261014d565b506101955f61018f610198565b0161016d565b90565b7f847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b909056
+    ///0x60a06040523461003057610011610230565b610019610035565b61024c61031c82396080518161015b015261024c90f35b61003b565b60405190565b5f80fd5b60018060a01b031690565b90565b61006161005c6100669261003f565b61004a565b61003f565b90565b6100729061004d565b90565b61007e90610069565b90565b61008b6064610075565b90565b6100979061004d565b90565b6100a39061008e565b90565b90565b90565b6100c06100bb6100c5926100a9565b61004a565b6100a6565b90565b151590565b6100d790516100c8565b90565b601f801991011690565b634e487b7160e01b5f52604160045260245ffd5b90610102906100da565b810190811060018060401b0382111761011a57604052565b6100e4565b60e01b90565b5f80fd5b610132816100a6565b0361013957565b5f80fd5b9050519061014a82610129565b565b9060208282031261016557610162915f0161013d565b90565b610125565b5f0190565b610177610035565b3d5f823e3d90fd5b60209181520190565b60207f6c65640000000000000000000000000000000000000000000000000000000000917f41726253797320707265636f6d70696c652076616c69646174696f6e206661695f8201520152565b6101e2602360409261017f565b6101eb81610188565b0190565b6102049060208101905f8183039101526101d5565b90565b1561020e57565b610216610035565b62461bcd60e51b81528061022c600482016101ef565b0390fd5b61024061023b610081565b61009a565b3b61025361024d5f6100ac565b916100a6565b1160805261026a61026460806100cd565b156100c8565b801561027c575b61027a90610207565b565b506102a8602061029261028d610081565b61009a565b63a3b1b31d906102a0610035565b93849261011f565b825281806102b86004820161016a565b03915afa80156103165761027a915f916102e8575b506102e06102da5f6100ac565b916100a6565b119050610271565b610309915060203d811161030f575b61030181836100f8565b81019061014c565b5f6102cd565b503d6102f7565b61016f56fe60806040526004361015610013575b6101d9565b61001d5f3561004c565b8063033811541461004757806363d96437146100425763ea161ce60361000e576101a4565b610124565b610094565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f91031261006a57565b61005c565b90565b61007b9061006f565b9052565b9190610092905f60208501940190610072565b565b346100c4576100a4366004610060565b6100c06100af61020a565b6100b7610052565b9182918261007f565b0390f35b610058565b90565b5f1b90565b6100e56100e06100ea926100c9565b6100cc565b61006f565b90565b6101167f847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b906100d1565b90565b6101216100ed565b90565b3461015457610134366004610060565b61015061013f610119565b610147610052565b9182918261007f565b0390f35b610058565b7f000000000000000000000000000000000000000000000000000000000000000090565b151590565b61018b9061017d565b9052565b91906101a2905f60208501940190610182565b565b346101d4576101b4366004610060565b6101d06101bf610159565b6101c7610052565b9182918261018f565b0390f35b610058565b5f80fd5b5f90565b5f1c90565b90565b6101f56101fa916101e1565b6101e6565b90565b61020790546101e9565b90565b6102126101dd565b506102255f61021f610228565b016101fd565b90565b7f847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b909056
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\xA0`@R4a\0-Wa\0\x11a\x02\x07V[a\0\x19a\x002V[a\x01\xBCa\x02\xF3\x829`\x80Q\x81PPa\x01\xBC\x90\xF3[a\08V[`@Q\x90V[_\x80\xFD[`\x01\x80`\xA0\x1B\x03\x16\x90V[\x90V[a\0^a\0Ya\0c\x92a\0<V[a\0GV[a\0<V[\x90V[a\0o\x90a\0JV[\x90V[a\0{\x90a\0fV[\x90V[a\0\x88`da\0rV[\x90V[a\0\x94\x90a\0JV[\x90V[a\0\xA0\x90a\0\x8BV[\x90V[\x90V[\x90V[a\0\xBDa\0\xB8a\0\xC2\x92a\0\xA6V[a\0GV[a\0\xA3V[\x90V[\x15\x15\x90V[a\0\xD4\x90Qa\0\xC5V[\x90V[`\x1F\x80\x19\x91\x01\x16\x90V[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD[\x90a\0\xFF\x90a\0\xD7V[\x81\x01\x90\x81\x10`\x01\x80`@\x1B\x03\x82\x11\x17a\x01\x17W`@RV[a\0\xE1V[`\xE0\x1B\x90V[_\x80\xFD[a\x01/\x81a\0\xA3V[\x03a\x016WV[_\x80\xFD[\x90PQ\x90a\x01G\x82a\x01&V[V[\x90` \x82\x82\x03\x12a\x01bWa\x01_\x91_\x01a\x01:V[\x90V[a\x01\"V[_\x01\x90V[a\x01ta\x002V[=_\x82>=\x90\xFD[` \x91\x81R\x01\x90V[_\x7Farbsys precompile failed\0\0\0\0\0\0\0\0\x91\x01RV[a\x01\xB9`\x18` \x92a\x01|V[a\x01\xC2\x81a\x01\x85V[\x01\x90V[a\x01\xDB\x90` \x81\x01\x90_\x81\x83\x03\x91\x01Ra\x01\xACV[\x90V[\x15a\x01\xE5WV[a\x01\xEDa\x002V[bF\x1B\xCD`\xE5\x1B\x81R\x80a\x02\x03`\x04\x82\x01a\x01\xC6V[\x03\x90\xFD[a\x02\x17a\x02\x12a\0~V[a\0\x97V[;a\x02*a\x02$_a\0\xA9V[\x91a\0\xA3V[\x11`\x80Ra\x02Aa\x02;`\x80a\0\xCAV[\x15a\0\xC5V[\x80\x15a\x02SW[a\x02Q\x90a\x01\xDEV[V[Pa\x02\x7F` a\x02ia\x02da\0~V[a\0\x97V[c\xA3\xB1\xB3\x1D\x90a\x02wa\x002V[\x93\x84\x92a\x01\x1CV[\x82R\x81\x80a\x02\x8F`\x04\x82\x01a\x01gV[\x03\x91Z\xFA\x80\x15a\x02\xEDWa\x02Q\x91_\x91a\x02\xBFW[Pa\x02\xB7a\x02\xB1_a\0\xA9V[\x91a\0\xA3V[\x11\x90Pa\x02HV[a\x02\xE0\x91P` =\x81\x11a\x02\xE6W[a\x02\xD8\x81\x83a\0\xF5V[\x81\x01\x90a\x01IV[_a\x02\xA4V[P=a\x02\xCEV[a\x01lV\xFE`\x80`@R`\x046\x10\x15a\0\x13W[a\x01IV[a\0\x1D_5a\0<V[\x80c\x038\x11T\x14a\x007Wcc\xD9d7\x03a\0\x0EWa\x01\x14V[a\0\x84V[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x91\x03\x12a\0ZWV[a\0LV[\x90V[a\0k\x90a\0_V[\x90RV[\x91\x90a\0\x82\x90_` \x85\x01\x94\x01\x90a\0bV[V[4a\0\xB4Wa\0\x946`\x04a\0PV[a\0\xB0a\0\x9Fa\x01zV[a\0\xA7a\0BV[\x91\x82\x91\x82a\0oV[\x03\x90\xF3[a\0HV[\x90V[_\x1B\x90V[a\0\xD5a\0\xD0a\0\xDA\x92a\0\xB9V[a\0\xBCV[a\0_V[\x90V[a\x01\x06\x7F\x84\x7F\xE1\xA0\xBF\xD7\x01\xC2\xDB\xB0\xB6&p\xAD\x87\x12\xEE\xD4\xC0\xFFM,l\t\x17\xF4\xC8\xD2`\xED\x0B\x90a\0\xC1V[\x90V[a\x01\x11a\0\xDDV[\x90V[4a\x01DWa\x01$6`\x04a\0PV[a\x01@a\x01/a\x01\tV[a\x017a\0BV[\x91\x82\x91\x82a\0oV[\x03\x90\xF3[a\0HV[_\x80\xFD[_\x90V[_\x1C\x90V[\x90V[a\x01ea\x01j\x91a\x01QV[a\x01VV[\x90V[a\x01w\x90Ta\x01YV[\x90V[a\x01\x82a\x01MV[Pa\x01\x95_a\x01\x8Fa\x01\x98V[\x01a\x01mV[\x90V[\x7F\x84\x7F\xE1\xA0\xBF\xD7\x01\xC2\xDB\xB0\xB6&p\xAD\x87\x12\xEE\xD4\xC0\xFFM,l\t\x17\xF4\xC8\xD2`\xED\x0B\x90\x90V",
+        b"`\xA0`@R4a\x000Wa\0\x11a\x020V[a\0\x19a\x005V[a\x02La\x03\x1C\x829`\x80Q\x81a\x01[\x01Ra\x02L\x90\xF3[a\0;V[`@Q\x90V[_\x80\xFD[`\x01\x80`\xA0\x1B\x03\x16\x90V[\x90V[a\0aa\0\\a\0f\x92a\0?V[a\0JV[a\0?V[\x90V[a\0r\x90a\0MV[\x90V[a\0~\x90a\0iV[\x90V[a\0\x8B`da\0uV[\x90V[a\0\x97\x90a\0MV[\x90V[a\0\xA3\x90a\0\x8EV[\x90V[\x90V[\x90V[a\0\xC0a\0\xBBa\0\xC5\x92a\0\xA9V[a\0JV[a\0\xA6V[\x90V[\x15\x15\x90V[a\0\xD7\x90Qa\0\xC8V[\x90V[`\x1F\x80\x19\x91\x01\x16\x90V[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD[\x90a\x01\x02\x90a\0\xDAV[\x81\x01\x90\x81\x10`\x01\x80`@\x1B\x03\x82\x11\x17a\x01\x1AW`@RV[a\0\xE4V[`\xE0\x1B\x90V[_\x80\xFD[a\x012\x81a\0\xA6V[\x03a\x019WV[_\x80\xFD[\x90PQ\x90a\x01J\x82a\x01)V[V[\x90` \x82\x82\x03\x12a\x01eWa\x01b\x91_\x01a\x01=V[\x90V[a\x01%V[_\x01\x90V[a\x01wa\x005V[=_\x82>=\x90\xFD[` \x91\x81R\x01\x90V[` \x7Fled\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x91\x7FArbSys precompile validation fai_\x82\x01R\x01RV[a\x01\xE2`#`@\x92a\x01\x7FV[a\x01\xEB\x81a\x01\x88V[\x01\x90V[a\x02\x04\x90` \x81\x01\x90_\x81\x83\x03\x91\x01Ra\x01\xD5V[\x90V[\x15a\x02\x0EWV[a\x02\x16a\x005V[bF\x1B\xCD`\xE5\x1B\x81R\x80a\x02,`\x04\x82\x01a\x01\xEFV[\x03\x90\xFD[a\x02@a\x02;a\0\x81V[a\0\x9AV[;a\x02Sa\x02M_a\0\xACV[\x91a\0\xA6V[\x11`\x80Ra\x02ja\x02d`\x80a\0\xCDV[\x15a\0\xC8V[\x80\x15a\x02|W[a\x02z\x90a\x02\x07V[V[Pa\x02\xA8` a\x02\x92a\x02\x8Da\0\x81V[a\0\x9AV[c\xA3\xB1\xB3\x1D\x90a\x02\xA0a\x005V[\x93\x84\x92a\x01\x1FV[\x82R\x81\x80a\x02\xB8`\x04\x82\x01a\x01jV[\x03\x91Z\xFA\x80\x15a\x03\x16Wa\x02z\x91_\x91a\x02\xE8W[Pa\x02\xE0a\x02\xDA_a\0\xACV[\x91a\0\xA6V[\x11\x90Pa\x02qV[a\x03\t\x91P` =\x81\x11a\x03\x0FW[a\x03\x01\x81\x83a\0\xF8V[\x81\x01\x90a\x01LV[_a\x02\xCDV[P=a\x02\xF7V[a\x01oV\xFE`\x80`@R`\x046\x10\x15a\0\x13W[a\x01\xD9V[a\0\x1D_5a\0LV[\x80c\x038\x11T\x14a\0GW\x80cc\xD9d7\x14a\0BWc\xEA\x16\x1C\xE6\x03a\0\x0EWa\x01\xA4V[a\x01$V[a\0\x94V[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x91\x03\x12a\0jWV[a\0\\V[\x90V[a\0{\x90a\0oV[\x90RV[\x91\x90a\0\x92\x90_` \x85\x01\x94\x01\x90a\0rV[V[4a\0\xC4Wa\0\xA46`\x04a\0`V[a\0\xC0a\0\xAFa\x02\nV[a\0\xB7a\0RV[\x91\x82\x91\x82a\0\x7FV[\x03\x90\xF3[a\0XV[\x90V[_\x1B\x90V[a\0\xE5a\0\xE0a\0\xEA\x92a\0\xC9V[a\0\xCCV[a\0oV[\x90V[a\x01\x16\x7F\x84\x7F\xE1\xA0\xBF\xD7\x01\xC2\xDB\xB0\xB6&p\xAD\x87\x12\xEE\xD4\xC0\xFFM,l\t\x17\xF4\xC8\xD2`\xED\x0B\x90a\0\xD1V[\x90V[a\x01!a\0\xEDV[\x90V[4a\x01TWa\x0146`\x04a\0`V[a\x01Pa\x01?a\x01\x19V[a\x01Ga\0RV[\x91\x82\x91\x82a\0\x7FV[\x03\x90\xF3[a\0XV[\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x90V[\x15\x15\x90V[a\x01\x8B\x90a\x01}V[\x90RV[\x91\x90a\x01\xA2\x90_` \x85\x01\x94\x01\x90a\x01\x82V[V[4a\x01\xD4Wa\x01\xB46`\x04a\0`V[a\x01\xD0a\x01\xBFa\x01YV[a\x01\xC7a\0RV[\x91\x82\x91\x82a\x01\x8FV[\x03\x90\xF3[a\0XV[_\x80\xFD[_\x90V[_\x1C\x90V[\x90V[a\x01\xF5a\x01\xFA\x91a\x01\xE1V[a\x01\xE6V[\x90V[a\x02\x07\x90Ta\x01\xE9V[\x90V[a\x02\x12a\x01\xDDV[Pa\x02%_a\x02\x1Fa\x02(V[\x01a\x01\xFDV[\x90V[\x7F\x84\x7F\xE1\xA0\xBF\xD7\x01\xC2\xDB\xB0\xB6&p\xAD\x87\x12\xEE\xD4\xC0\xFFM,l\t\x17\xF4\xC8\xD2`\xED\x0B\x90\x90V",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040526004361015610013575b610149565b61001d5f3561003c565b80630338115414610037576363d964370361000e57610114565b610084565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f91031261005a57565b61004c565b90565b61006b9061005f565b9052565b9190610082905f60208501940190610062565b565b346100b457610094366004610050565b6100b061009f61017a565b6100a7610042565b9182918261006f565b0390f35b610048565b90565b5f1b90565b6100d56100d06100da926100b9565b6100bc565b61005f565b90565b6101067f847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b906100c1565b90565b6101116100dd565b90565b3461014457610124366004610050565b61014061012f610109565b610137610042565b9182918261006f565b0390f35b610048565b5f80fd5b5f90565b5f1c90565b90565b61016561016a91610151565b610156565b90565b6101779054610159565b90565b61018261014d565b506101955f61018f610198565b0161016d565b90565b7f847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b909056
+    ///0x60806040526004361015610013575b6101d9565b61001d5f3561004c565b8063033811541461004757806363d96437146100425763ea161ce60361000e576101a4565b610124565b610094565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f91031261006a57565b61005c565b90565b61007b9061006f565b9052565b9190610092905f60208501940190610072565b565b346100c4576100a4366004610060565b6100c06100af61020a565b6100b7610052565b9182918261007f565b0390f35b610058565b90565b5f1b90565b6100e56100e06100ea926100c9565b6100cc565b61006f565b90565b6101167f847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b906100d1565b90565b6101216100ed565b90565b3461015457610134366004610060565b61015061013f610119565b610147610052565b9182918261007f565b0390f35b610058565b7f000000000000000000000000000000000000000000000000000000000000000090565b151590565b61018b9061017d565b9052565b91906101a2905f60208501940190610182565b565b346101d4576101b4366004610060565b6101d06101bf610159565b6101c7610052565b9182918261018f565b0390f35b610058565b5f80fd5b5f90565b5f1c90565b90565b6101f56101fa916101e1565b6101e6565b90565b61020790546101e9565b90565b6102126101dd565b506102255f61021f610228565b016101fd565b90565b7f847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b909056
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x01IV[a\0\x1D_5a\0<V[\x80c\x038\x11T\x14a\x007Wcc\xD9d7\x03a\0\x0EWa\x01\x14V[a\0\x84V[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x91\x03\x12a\0ZWV[a\0LV[\x90V[a\0k\x90a\0_V[\x90RV[\x91\x90a\0\x82\x90_` \x85\x01\x94\x01\x90a\0bV[V[4a\0\xB4Wa\0\x946`\x04a\0PV[a\0\xB0a\0\x9Fa\x01zV[a\0\xA7a\0BV[\x91\x82\x91\x82a\0oV[\x03\x90\xF3[a\0HV[\x90V[_\x1B\x90V[a\0\xD5a\0\xD0a\0\xDA\x92a\0\xB9V[a\0\xBCV[a\0_V[\x90V[a\x01\x06\x7F\x84\x7F\xE1\xA0\xBF\xD7\x01\xC2\xDB\xB0\xB6&p\xAD\x87\x12\xEE\xD4\xC0\xFFM,l\t\x17\xF4\xC8\xD2`\xED\x0B\x90a\0\xC1V[\x90V[a\x01\x11a\0\xDDV[\x90V[4a\x01DWa\x01$6`\x04a\0PV[a\x01@a\x01/a\x01\tV[a\x017a\0BV[\x91\x82\x91\x82a\0oV[\x03\x90\xF3[a\0HV[_\x80\xFD[_\x90V[_\x1C\x90V[\x90V[a\x01ea\x01j\x91a\x01QV[a\x01VV[\x90V[a\x01w\x90Ta\x01YV[\x90V[a\x01\x82a\x01MV[Pa\x01\x95_a\x01\x8Fa\x01\x98V[\x01a\x01mV[\x90V[\x7F\x84\x7F\xE1\xA0\xBF\xD7\x01\xC2\xDB\xB0\xB6&p\xAD\x87\x12\xEE\xD4\xC0\xFFM,l\t\x17\xF4\xC8\xD2`\xED\x0B\x90\x90V",
+        b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x01\xD9V[a\0\x1D_5a\0LV[\x80c\x038\x11T\x14a\0GW\x80cc\xD9d7\x14a\0BWc\xEA\x16\x1C\xE6\x03a\0\x0EWa\x01\xA4V[a\x01$V[a\0\x94V[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x91\x03\x12a\0jWV[a\0\\V[\x90V[a\0{\x90a\0oV[\x90RV[\x91\x90a\0\x92\x90_` \x85\x01\x94\x01\x90a\0rV[V[4a\0\xC4Wa\0\xA46`\x04a\0`V[a\0\xC0a\0\xAFa\x02\nV[a\0\xB7a\0RV[\x91\x82\x91\x82a\0\x7FV[\x03\x90\xF3[a\0XV[\x90V[_\x1B\x90V[a\0\xE5a\0\xE0a\0\xEA\x92a\0\xC9V[a\0\xCCV[a\0oV[\x90V[a\x01\x16\x7F\x84\x7F\xE1\xA0\xBF\xD7\x01\xC2\xDB\xB0\xB6&p\xAD\x87\x12\xEE\xD4\xC0\xFFM,l\t\x17\xF4\xC8\xD2`\xED\x0B\x90a\0\xD1V[\x90V[a\x01!a\0\xEDV[\x90V[4a\x01TWa\x0146`\x04a\0`V[a\x01Pa\x01?a\x01\x19V[a\x01Ga\0RV[\x91\x82\x91\x82a\0\x7FV[\x03\x90\xF3[a\0XV[\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x90V[\x15\x15\x90V[a\x01\x8B\x90a\x01}V[\x90RV[\x91\x90a\x01\xA2\x90_` \x85\x01\x94\x01\x90a\x01\x82V[V[4a\x01\xD4Wa\x01\xB46`\x04a\0`V[a\x01\xD0a\x01\xBFa\x01YV[a\x01\xC7a\0RV[\x91\x82\x91\x82a\x01\x8FV[\x03\x90\xF3[a\0XV[_\x80\xFD[_\x90V[_\x1C\x90V[\x90V[a\x01\xF5a\x01\xFA\x91a\x01\xE1V[a\x01\xE6V[\x90V[a\x02\x07\x90Ta\x01\xE9V[\x90V[a\x02\x12a\x01\xDDV[Pa\x02%_a\x02\x1Fa\x02(V[\x01a\x01\xFDV[\x90V[\x7F\x84\x7F\xE1\xA0\xBF\xD7\x01\xC2\xDB\xB0\xB6&p\xAD\x87\x12\xEE\xD4\xC0\xFFM,l\t\x17\xF4\xC8\xD2`\xED\x0B\x90\x90V",
     );
     /**Event with signature `TransactionProcessed(address,bytes)` and selector `0x83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f`.
 ```solidity
@@ -540,12 +554,133 @@ function accumulator() external view returns (bytes32);
             }
         }
     };
+    /**Function with signature `isArbChain()` and selector `0xea161ce6`.
+```solidity
+function isArbChain() external view returns (bool);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct isArbChainCall {}
+    ///Container type for the return parameters of the [`isArbChain()`](isArbChainCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct isArbChainReturn {
+        #[allow(missing_docs)]
+        pub _0: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<isArbChainCall> for UnderlyingRustTuple<'_> {
+                fn from(value: isArbChainCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for isArbChainCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (bool,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<isArbChainReturn> for UnderlyingRustTuple<'_> {
+                fn from(value: isArbChainReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for isArbChainReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for isArbChainCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = isArbChainReturn;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "isArbChain()";
+            const SELECTOR: [u8; 4] = [234u8, 22u8, 28u8, 230u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_returns(
+                data: &[u8],
+                validate: bool,
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
+            }
+        }
+    };
     ///Container for all the [`SyndicateAccumulator`](self) function calls.
     pub enum SyndicateAccumulatorCalls {
         #[allow(missing_docs)]
         ACCUMULATOR_STORAGE_LOCATION(ACCUMULATOR_STORAGE_LOCATIONCall),
         #[allow(missing_docs)]
         accumulator(accumulatorCall),
+        #[allow(missing_docs)]
+        isArbChain(isArbChainCall),
     }
     #[automatically_derived]
     impl SyndicateAccumulatorCalls {
@@ -558,13 +693,14 @@ function accumulator() external view returns (bytes32);
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [3u8, 56u8, 17u8, 84u8],
             [99u8, 217u8, 100u8, 55u8],
+            [234u8, 22u8, 28u8, 230u8],
         ];
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for SyndicateAccumulatorCalls {
         const NAME: &'static str = "SyndicateAccumulatorCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 2usize;
+        const COUNT: usize = 3usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -573,6 +709,9 @@ function accumulator() external view returns (bytes32);
                 }
                 Self::accumulator(_) => {
                     <accumulatorCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::isArbChain(_) => {
+                    <isArbChainCall as alloy_sol_types::SolCall>::SELECTOR
                 }
             }
         }
@@ -621,6 +760,19 @@ function accumulator() external view returns (bytes32);
                     }
                     ACCUMULATOR_STORAGE_LOCATION
                 },
+                {
+                    fn isArbChain(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<SyndicateAccumulatorCalls> {
+                        <isArbChainCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
+                            .map(SyndicateAccumulatorCalls::isArbChain)
+                    }
+                    isArbChain
+                },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
                 return Err(
@@ -645,6 +797,9 @@ function accumulator() external view returns (bytes32);
                         inner,
                     )
                 }
+                Self::isArbChain(inner) => {
+                    <isArbChainCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
+                }
             }
         }
         #[inline]
@@ -658,6 +813,12 @@ function accumulator() external view returns (bytes32);
                 }
                 Self::accumulator(inner) => {
                     <accumulatorCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::isArbChain(inner) => {
+                    <isArbChainCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -948,6 +1109,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<T, &P, accumulatorCall, N> {
             self.call_builder(&accumulatorCall {})
+        }
+        ///Creates a new call builder for the [`isArbChain`] function.
+        pub fn isArbChain(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<T, &P, isArbChainCall, N> {
+            self.call_builder(&isArbChainCall {})
         }
     }
     /// Event filters.

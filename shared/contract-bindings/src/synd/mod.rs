@@ -77,6 +77,7 @@ pub mod r#storageslot;
 pub mod r#strings;
 pub mod r#arbsys;
 pub mod r#syndicateaccumulator;
+pub mod r#mockarbsys;
 pub mod r#syndicatefactory;
 pub mod r#syndicatesequencingchain;
 pub mod r#directmockmodule;
