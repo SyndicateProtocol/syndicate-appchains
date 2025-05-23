@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {ArbConfigManager} from "./ArbConfigManager.sol";
 
@@ -8,7 +8,7 @@ import {ArbConfigManager} from "./ArbConfigManager.sol";
  * @dev Factory contract to deploy ArbConfigManager deterministically across chains
  */
 contract ArbConfigManagerFactory {
-    event ArbConfigManagerDeployed(address deployedAddress, address owner);
+    event ArbConfigManagerDeployed(address deployedAddress, address owner); //#olympix-ignore-missing-events-assertion
 
     /**
      * @dev Deploy the ArbConfigManager with deterministic address
@@ -18,6 +18,7 @@ contract ArbConfigManagerFactory {
      */
     function deployArbConfigManager(address owner, bytes32 salt) external returns (address) {
         // Step 1: Compute the expected address (for logging/verification)
+        //#olympix-ignore-external-call-potential-out-of-gas
         bytes memory bytecode = getBytecode(owner);
         address computedAddress = getAddress(bytecode, salt);
 
@@ -62,13 +63,13 @@ contract ArbConfigManagerFactory {
     function getAddress(bytes memory bytecode, bytes32 salt) public view returns (address) {
         bytes32 hash = keccak256(
             abi.encodePacked(
-                bytes1(0xff), // Standard CREATE2 prefix
+                bytes1(0xff), // Standard CREATE2 prefix //#olympix-ignore-unsafe-downcast
                 address(this), // This factory address
                 salt, // User-provided salt
                 keccak256(bytecode) // Hash of the contract bytecode
             )
         );
-
+        //#olympix-ignore-unsafe-downcast
         return address(uint160(uint256(hash)));
     }
 
@@ -79,6 +80,6 @@ contract ArbConfigManagerFactory {
      * @return The address where the contract will be deployed
      */
     function predictDeploymentAddress(address owner, bytes32 salt) external view returns (address) {
-        return getAddress(getBytecode(owner), salt);
+        return getAddress(getBytecode(owner), salt); //#olympix-ignore-external-call-potential-out-of-gas
     }
 }

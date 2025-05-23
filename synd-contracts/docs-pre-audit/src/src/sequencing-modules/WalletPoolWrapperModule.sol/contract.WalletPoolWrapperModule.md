@@ -1,5 +1,5 @@
 # WalletPoolWrapperModule
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/7027a63d41514909f85c2d3245a5d979fd2c367a/src/sequencing-modules/WalletPoolWrapperModule.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/sequencing-modules/WalletPoolWrapperModule.sol)
 
 **Inherits:**
 [AllowlistSequencingModule](/src/sequencing-modules/AllowlistSequencingModule.sol/contract.AllowlistSequencingModule.md)
@@ -11,6 +11,8 @@
 ### constructor
 
 *Constructor that sets the admin address.*
+
+*param _admin is validated in AllowlistSequencingModule constructor.*
 
 
 ```solidity
@@ -32,75 +34,75 @@ constructor(address _admin) AllowlistSequencingModule(_admin);
 modifier onlyAllowed();
 ```
 
-### syndicateSequencerChainNotZero
+### SyndicateSequencingChainNotZero
 
 *Modifier to check if the syndicate sequencer chain address is not zero.*
 
 
 ```solidity
-modifier syndicateSequencerChainNotZero(address _syndicateSequencerChain);
+modifier SyndicateSequencingChainNotZero(address _SyndicateSequencingChain);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_syndicateSequencerChain`|`address`|The syndicate sequencer chain address|
+|`_SyndicateSequencingChain`|`address`|The syndicate sequencer chain address|
 
 
-### processTransaction
+### processTransactionUncompressed
 
 *Function to process a transaction.*
 
 
 ```solidity
-function processTransaction(address _syndicateSequencerChain, bytes calldata data)
+function processTransactionUncompressed(address _SyndicateSequencingChain, bytes calldata data)
     external
     onlyAllowed
-    syndicateSequencerChainNotZero(_syndicateSequencerChain);
+    SyndicateSequencingChainNotZero(_SyndicateSequencingChain);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_syndicateSequencerChain`|`address`|The syndicate sequencer chain address|
+|`_SyndicateSequencingChain`|`address`|The syndicate sequencer chain address|
 |`data`|`bytes`|The transaction data to process.|
 
 
-### processTransactionRaw
+### processTransaction
 
 *Function to process a raw transaction.*
 
 
 ```solidity
-function processTransactionRaw(address _syndicateSequencerChain, bytes calldata data)
+function processTransaction(address _SyndicateSequencingChain, bytes calldata data)
     external
     onlyAllowed
-    syndicateSequencerChainNotZero(_syndicateSequencerChain);
+    SyndicateSequencingChainNotZero(_SyndicateSequencingChain);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_syndicateSequencerChain`|`address`|The syndicate sequencer chain address|
+|`_SyndicateSequencingChain`|`address`|The syndicate sequencer chain address|
 |`data`|`bytes`|The transaction data to process.|
 
 
-### processBulkTransactions
+### processTransactionsBulk
 
 *Function to process bulk transactions.*
 
 
 ```solidity
-function processBulkTransactions(address _syndicateSequencerChain, bytes[] calldata data)
+function processTransactionsBulk(address _SyndicateSequencingChain, bytes[] calldata data)
     external
     onlyAllowed
-    syndicateSequencerChainNotZero(_syndicateSequencerChain);
+    SyndicateSequencingChainNotZero(_SyndicateSequencingChain);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_syndicateSequencerChain`|`address`|The syndicate sequencer chain address|
+|`_SyndicateSequencingChain`|`address`|The syndicate sequencer chain address|
 |`data`|`bytes[]`|The array of transaction data to process.|
 
 
@@ -108,14 +110,14 @@ function processBulkTransactions(address _syndicateSequencerChain, bytes[] calld
 ### WalletPoolWrapperTransactionSent
 
 ```solidity
-event WalletPoolWrapperTransactionSent(address indexed from, address indexed syndicateSequencerChain);
+event WalletPoolWrapperTransactionSent(address indexed from, address indexed SyndicateSequencingChain);
 ```
 
 ### WalletPoolWrapperBulkTransactionsSent
 
 ```solidity
 event WalletPoolWrapperBulkTransactionsSent(
-    address indexed from, address indexed syndicateSequencerChain, uint256 count
+    address indexed from, address indexed SyndicateSequencingChain, uint256 count
 );
 ```
 

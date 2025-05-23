@@ -7,7 +7,7 @@ interface SequencingModuleChecker {
     error InvalidModuleAddress();
     error OwnableInvalidOwner(address owner);
     error OwnableUnauthorizedAccount(address account);
-    error TransactionOrProposerNotAllowed();
+    error TransactionOrSenderNotAllowed();
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event RequirementModuleUpdated(address indexed newModule);
@@ -197,7 +197,7 @@ interface SequencingModuleChecker {
   },
   {
     "type": "error",
-    "name": "TransactionOrProposerNotAllowed",
+    "name": "TransactionOrSenderNotAllowed",
     "inputs": []
   }
 ]
@@ -504,13 +504,13 @@ error OwnableUnauthorizedAccount(address account);
             }
         }
     };
-    /**Custom error with signature `TransactionOrProposerNotAllowed()` and selector `0xc35d8c92`.
+    /**Custom error with signature `TransactionOrSenderNotAllowed()` and selector `0xdc741458`.
 ```solidity
-error TransactionOrProposerNotAllowed();
+error TransactionOrSenderNotAllowed();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct TransactionOrProposerNotAllowed {}
+    pub struct TransactionOrSenderNotAllowed {}
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -536,28 +536,28 @@ error TransactionOrProposerNotAllowed();
         }
         #[automatically_derived]
         #[doc(hidden)]
-        impl ::core::convert::From<TransactionOrProposerNotAllowed>
+        impl ::core::convert::From<TransactionOrSenderNotAllowed>
         for UnderlyingRustTuple<'_> {
-            fn from(value: TransactionOrProposerNotAllowed) -> Self {
+            fn from(value: TransactionOrSenderNotAllowed) -> Self {
                 ()
             }
         }
         #[automatically_derived]
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>>
-        for TransactionOrProposerNotAllowed {
+        for TransactionOrSenderNotAllowed {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                 Self {}
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolError for TransactionOrProposerNotAllowed {
+        impl alloy_sol_types::SolError for TransactionOrSenderNotAllowed {
             type Parameters<'a> = UnderlyingSolTuple<'a>;
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "TransactionOrProposerNotAllowed()";
-            const SELECTOR: [u8; 4] = [195u8, 93u8, 140u8, 146u8];
+            const SIGNATURE: &'static str = "TransactionOrSenderNotAllowed()";
+            const SELECTOR: [u8; 4] = [220u8, 116u8, 20u8, 88u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -2038,7 +2038,7 @@ function updateRequirementModule(address _newModule) external;
         #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
         #[allow(missing_docs)]
-        TransactionOrProposerNotAllowed(TransactionOrProposerNotAllowed),
+        TransactionOrSenderNotAllowed(TransactionOrSenderNotAllowed),
     }
     #[automatically_derived]
     impl SequencingModuleCheckerErrors {
@@ -2053,7 +2053,7 @@ function updateRequirementModule(address _newModule) external;
             [17u8, 140u8, 218u8, 167u8],
             [30u8, 79u8, 189u8, 247u8],
             [92u8, 254u8, 120u8, 254u8],
-            [195u8, 93u8, 140u8, 146u8],
+            [220u8, 116u8, 20u8, 88u8],
         ];
     }
     #[automatically_derived]
@@ -2076,8 +2076,8 @@ function updateRequirementModule(address _newModule) external;
                 Self::OwnableUnauthorizedAccount(_) => {
                     <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::SELECTOR
                 }
-                Self::TransactionOrProposerNotAllowed(_) => {
-                    <TransactionOrProposerNotAllowed as alloy_sol_types::SolError>::SELECTOR
+                Self::TransactionOrSenderNotAllowed(_) => {
+                    <TransactionOrSenderNotAllowed as alloy_sol_types::SolError>::SELECTOR
                 }
             }
         }
@@ -2155,19 +2155,19 @@ function updateRequirementModule(address _newModule) external;
                     InvalidModuleAddress
                 },
                 {
-                    fn TransactionOrProposerNotAllowed(
+                    fn TransactionOrSenderNotAllowed(
                         data: &[u8],
                         validate: bool,
                     ) -> alloy_sol_types::Result<SequencingModuleCheckerErrors> {
-                        <TransactionOrProposerNotAllowed as alloy_sol_types::SolError>::abi_decode_raw(
+                        <TransactionOrSenderNotAllowed as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
                                 validate,
                             )
                             .map(
-                                SequencingModuleCheckerErrors::TransactionOrProposerNotAllowed,
+                                SequencingModuleCheckerErrors::TransactionOrSenderNotAllowed,
                             )
                     }
-                    TransactionOrProposerNotAllowed
+                    TransactionOrSenderNotAllowed
                 },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
@@ -2203,8 +2203,8 @@ function updateRequirementModule(address _newModule) external;
                         inner,
                     )
                 }
-                Self::TransactionOrProposerNotAllowed(inner) => {
-                    <TransactionOrProposerNotAllowed as alloy_sol_types::SolError>::abi_encoded_size(
+                Self::TransactionOrSenderNotAllowed(inner) => {
+                    <TransactionOrSenderNotAllowed as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -2237,8 +2237,8 @@ function updateRequirementModule(address _newModule) external;
                         out,
                     )
                 }
-                Self::TransactionOrProposerNotAllowed(inner) => {
-                    <TransactionOrProposerNotAllowed as alloy_sol_types::SolError>::abi_encode_raw(
+                Self::TransactionOrSenderNotAllowed(inner) => {
+                    <TransactionOrSenderNotAllowed as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )

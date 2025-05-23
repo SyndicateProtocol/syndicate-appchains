@@ -3,9 +3,9 @@
 # No other files within this repository are licensed under the MIT License
 # unless the MIT license is stated explicitly at the top of the file.
 
-# This workflow runs Certora Prover checks (specs located in `/shared/arb-contracts/certora/specs`) 
-# on our smart contracts (located in `synd-contracts/src` and `shared/arb-contracts`).
-# Certora specs contain our custom rules and this workflow ensures that our contracts adhere to 
+# This workflow runs Certora Prover checks
+# on our smart contracts (located in `synd-contracts/src`).
+# Certora specs contain our custom rules and this workflow ensures that our contracts adhere to
 # those rules any time a change is made.
 # https://www.certora.com/
 
@@ -19,8 +19,6 @@ on:
     paths:
       - "synd-contracts/src/**/*.sol"
       - "synd-contracts/certora/specs/**/*.spec"
-      - "shared/arb-contracts/src/**/*.sol"
-      - "shared/arb-contracts/certora/specs/**/*.spec"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -44,13 +42,14 @@ jobs:
       matrix:
         rule:
           [
-            "SyndicateSequencerChain",
+            "SyndicateSequencingChain",
             "AllowlistSequencingModule",
             "AtomicSequencer",
             "AtomicSequencerImplementation",
+            "AssertionPoster",
             "SyndicateToken",
-            "RequireAllModule",
-            "RequireAnyModule",
+            "RequireAndModule",
+            "RequireOrModule",
             "WalletPoolWrapperModule",
           ]
     steps:
@@ -88,7 +87,7 @@ jobs:
       - name: Install Certora Prover
         run: |
           pip3 install setuptools==75.8.2
-          pip3 install certora-cli==7.26.0
+          pip3 install certora-cli==7.29.1
 
       - name: Install dependencies
         run: forge install
@@ -97,8 +96,8 @@ jobs:
       - name: Install solc
         run: |
           pipx install solc-select
-          solc-select install 0.8.25
-          solc-select use 0.8.25
+          solc-select install 0.8.28
+          solc-select use 0.8.28
           ls ~/.solc-select/artifacts/
           which solc
 

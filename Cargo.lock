@@ -4902,6 +4902,7 @@ dependencies = [
  "test-utils",
  "thiserror 2.0.12",
  "tokio",
+ "tokio-util",
  "tower 0.4.13",
  "tracing",
  "wiremock",
@@ -4931,7 +4932,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "synd-poster"
+name = "synd-proposer"
 version = "0.1.0"
 dependencies = [
  "alloy",

@@ -3,7 +3,7 @@
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-/// Structure holding metrics related to the `Poster`.
+/// Structure holding metrics related to the `Ingestor`.
 #[derive(Debug, Default, Clone)]
 pub struct ChainIngestorMetrics {
     block_number: Gauge,

@@ -6,13 +6,13 @@
 -include .env
 
 # deploy SyndicateFactory to Base Sepolia
-deploy-syndicate-factory :; forge script script/DeployContractsForSequencerChain.s.sol:DeploySyndicateFactory --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --skip-simulation --legacy --broadcast -vv
+deploy-syndicate-factory :; forge script script/DeployContractsForSequencingChain.s.sol:DeploySyndicateFactory --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --skip-simulation --legacy --broadcast -vv
 
-# deploy DeploySyndicateSequencerChainPlusSetupWithAlwaysAllowModule to Syndicate Exo
-deploy-syndicate-sequencerchain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeploySyndicateSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --skip-simulation --legacy --broadcast -vv
+# deploy DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule to Syndicate Exo
+deploy-syndicate-sequencing-chain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencingChain.s.sol:DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --skip-simulation --legacy --broadcast -vv
 
-# run AddBatchTransactionsToSyndicateSequencerChainContract script on Syndicate Exo
-add-batch-transactions-to-syndicate-sequencerchain :; forge script script/AddBatchTransactionsToSyndicateSequencerChainContract.s.sol:AddBatchTransactionsToSyndicateSequencerChainContract --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# run AddBatchTransactionsToSyndicateSequencingChainContract script on Syndicate Exo
+add-batch-transactions-to-syndicate-sequencing-chain :; forge script script/AddBatchTransactionsToSyndicateSequencingChainContract.s.sol:AddBatchTransactionsToSyndicateSequencingChainContract --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 ## deploy storage related contracts to Syndicate Exo
 deploy-syndicate-storage :; forge create --rpc-url exo --private-key ${ETH_PRIVATE_KEY} src/backfill/SyndicateStorage.sol:SyndicateStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR} ${APP_CHAIN_ID} --legacy
@@ -37,10 +37,12 @@ verify-agent-application :; forge verify-contract --rpc-url exo --verifier block
 # run tx limit test against OP Mainnet or Base Sepolia
 # and save output to file
 # need to change target network in the test file
-test-tx-limit :; forge test --match-contract SyndicateSequencerChainIntegrationTest -vv > test/integration/syndicate-tx-limit-data/optimism_test_output_$(date +%Y%m%d_%H%M%S).log 2>&1
+test-tx-limit :; forge test --match-contract SyndicateSequencingChainIntegrationTest -vv > test/integration/syndicate-tx-limit-data/optimism_test_output_$(date +%Y%m%d_%H%M%S).log 2>&1
 
-test-events-limit :; forge test --match-contract SyndicateSequencerChainEventLimitTest -vv > test/integration/syndicate-events-limit-data/base_sepolia_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
+test-events-limit :; forge test --match-contract SyndicateSequencingChainEventLimitTest -vv > test/integration/syndicate-events-limit-data/base_sepolia_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
 
 docs-pre-audit-gen :; forge doc --build --out docs-pre-audit
 
 docs-pre-audit-serve :; forge doc --serve --out docs-pre-audit
+
+test-coverage :; forge coverage --ir-minimum --no-match-coverage "(script|test)"

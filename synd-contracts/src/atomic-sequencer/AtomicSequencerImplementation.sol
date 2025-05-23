@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
-import {SyndicateSequencerChain} from "src/SyndicateSequencerChain.sol";
+import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 
 /// @title AtomicSequencerImplementation
 /// @notice Implementation contract containing the logic for atomic sequencing
@@ -16,7 +16,7 @@ contract AtomicSequencerImplementation {
     /// @param transactions Array of transactions corresponding to each chain
     /// @param isRaw Array indicating whether each transaction should use raw processing
     function processTransactionsAtomically(
-        SyndicateSequencerChain[] calldata chains,
+        SyndicateSequencingChain[] calldata chains,
         bytes[] calldata transactions,
         bool[] calldata isRaw
     ) external {
@@ -27,9 +27,9 @@ contract AtomicSequencerImplementation {
 
         for (uint256 i = 0; i < chains.length; i++) {
             if (isRaw[i]) {
-                chains[i].processTransactionRaw(transactions[i]);
-            } else {
                 chains[i].processTransaction(transactions[i]);
+            } else {
+                chains[i].processTransactionUncompressed(transactions[i]);
             }
         }
     }
@@ -37,8 +37,8 @@ contract AtomicSequencerImplementation {
     /// @notice Processes bulk transactions on multiple Syndicate chains atomically. Only used with encoded transactions.
     /// @param chains Array of Syndicate chains
     /// @param transactions Array of transaction arrays corresponding to each chain
-    function processBulkTransactionsAtomically(
-        SyndicateSequencerChain[] calldata chains,
+    function processTransactionsBulkAtomically(
+        SyndicateSequencingChain[] calldata chains,
         bytes[][] calldata transactions
     ) external {
         if (chains.length == 0 || chains.length != transactions.length) {
@@ -46,7 +46,7 @@ contract AtomicSequencerImplementation {
         }
 
         for (uint256 i = 0; i < chains.length; i++) {
-            chains[i].processBulkTransactions(transactions[i]);
+            chains[i].processTransactionsBulk(transactions[i]);
         }
     }
 }

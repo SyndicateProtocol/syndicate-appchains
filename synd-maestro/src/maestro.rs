@@ -5,47 +5,46 @@ use crate::{
     config::{Config, RpcProvider},
     errors::{
         InternalErrorType::{
-            Other, RpcFailedToFetchWalletNonce, RpcMissing, TransactionSubmissionFailed,
+            Other, RpcFailedToFetchWalletBalance, RpcFailedToFetchWalletNonce, RpcMissing,
+            TransactionSubmissionFailed,
         },
-        MaestroError,
-        MaestroError::WaitingTransaction,
-        MaestroRpcError,
-        MaestroRpcError::{InternalError, JsonRpcError},
+        MaestroError::{self, WaitingTransaction},
+        MaestroRpcError::{self, InternalError, JsonRpcError},
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
     metrics::MaestroMetrics,
-    redis::{
+    valkey::{
         keys::wallet_nonce::{chain_wallet_nonce_key, ChainWalletNonceKey},
         models::{
             waiting_transaction::{WaitingGapTxnExt, WaitingTransactionId},
             wallet_nonce::WalletNonceExt,
         },
-        streams::producer::StreamProducer,
+        streams::producer::{CheckFinalizationResult, StreamProducer},
     },
 };
 use alloy::{
-    consensus::Transaction,
+    consensus::{Transaction, TxEnvelope},
     hex,
-    primitives::{keccak256, Address, Bytes, ChainId},
+    primitives::{keccak256, Address, Bytes, ChainId, B256, U256},
     providers::Provider,
 };
 use redis::aio::MultiplexedConnection;
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
-    tx_validation::decode_transaction,
+    tx_validation::{check_signature, decode_transaction},
 };
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 /// The service for filtering and directing transactions
 #[derive(Debug)]
 pub struct MaestroService {
-    redis_conn: MultiplexedConnection,
+    valkey_conn: MultiplexedConnection,
     // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
-    rpc_providers: HashMap<ChainId, Option<RpcProvider>>,
+    rpc_providers: HashMap<ChainId, RpcProvider>,
     config: Config,
     pub(crate) metrics: MaestroMetrics,
 }
@@ -53,7 +52,7 @@ pub struct MaestroService {
 impl MaestroService {
     /// Create a new instance of the Maestro service
     pub async fn new(
-        redis_conn: MultiplexedConnection,
+        valkey_conn: MultiplexedConnection,
         config: Config,
         metrics: MaestroMetrics,
     ) -> Result<Self, MaestroError> {
@@ -61,37 +60,43 @@ impl MaestroService {
         if rpc_providers.is_empty() {
             warn!("No RPC providers configured. This is probably undesirable");
         }
-        let producers = Self::create_redis_producers(&redis_conn, &config, &rpc_providers);
-
-        Ok(Self {
-            redis_conn,
+        let mut res = Self {
+            valkey_conn,
             chain_wallets: Mutex::new(HashMap::new()),
-            producers,
+            producers: HashMap::new(),
             rpc_providers,
             config,
             metrics,
-        })
+        };
+        res.create_stream_producers().await;
+
+        Ok(res)
     }
 
-    fn create_redis_producers(
-        redis_conn: &MultiplexedConnection,
-        config: &Config,
-        rpc_providers: &HashMap<ChainId, Option<RpcProvider>>,
-    ) -> HashMap<ChainId, Arc<StreamProducer>> {
-        let mut producers = HashMap::new();
-        for chain_id in rpc_providers.keys() {
-            producers.insert(
+    async fn create_stream_producers(&mut self) {
+        for (chain_id, provider) in &self.rpc_providers {
+            let provider_clone = provider.clone();
+            self.producers.insert(
                 *chain_id,
-                Arc::new(StreamProducer::new(
-                    redis_conn.clone(),
-                    *chain_id,
-                    config.prune_interval,
-                    config.prune_max_age,
-                )),
+                Arc::new(
+                    StreamProducer::new(
+                        self.valkey_conn.clone(),
+                        *chain_id,
+                        self.config.finalization_checker_interval,
+                        self.config.finalization_duration,
+                        self.config.max_transaction_retries,
+                        move |raw_tx: &[u8]| {
+                            let provider = provider_clone.clone();
+                            let tx_data = raw_tx.to_vec();
+                            async move { Self::handle_finalization(tx_data, &provider).await }
+                        },
+                    )
+                    .await,
+                ),
             );
         }
-        producers
     }
+
     async fn get_chain_wallet_lock(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
         let key = chain_wallet_nonce_key(chain_id, wallet);
         let mut locks = self.chain_wallets.lock().await;
@@ -100,10 +105,84 @@ impl MaestroService {
 
     /// Checks if a given `chain_id` has a corresponding [`RpcProvider`] configured
     pub fn get_rpc_provider(&self, chain_id: &ChainId) -> Result<&RpcProvider, MaestroRpcError> {
-        match self.rpc_providers.get(chain_id) {
-            None | Some(None) => Err(InternalError(RpcMissing(*chain_id))),
-            Some(Some(provider)) => Ok(provider),
+        self.rpc_providers
+            .get(chain_id)
+            .map_or_else(|| Err(InternalError(RpcMissing(*chain_id))), Ok)
+    }
+
+    async fn handle_finalization(
+        raw_tx: Vec<u8>,
+        provider: &RpcProvider,
+    ) -> CheckFinalizationResult {
+        let tx_hash = keccak256(raw_tx.clone());
+        match provider.get_transaction_receipt(tx_hash).await {
+            Ok(Some(_tx_receipt)) => CheckFinalizationResult::Done,
+            Ok(None) => {
+                // safe to unwrap because we know the tx is valid
+                #[allow(clippy::unwrap_used)]
+                let tx = decode_transaction(&Bytes::from(raw_tx)).unwrap();
+                #[allow(clippy::unwrap_used)]
+                let signer = check_signature(&tx).unwrap();
+
+                match provider.get_transaction_count(signer).await {
+                    Ok(nonce) => {
+                        if nonce == tx.nonce() {
+                            debug!(%tx_hash, "Valid transaction is not finalized, resubmitting");
+                            return CheckFinalizationResult::ReSubmit;
+                        }
+                        debug!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
+                        CheckFinalizationResult::Done
+                    }
+                    Err(err) => {
+                        error!(%tx_hash, %err, "Failed to query RPC for nonce during finalization check");
+                        CheckFinalizationResult::Done
+                    }
+                }
+            }
+            Err(err) => {
+                error!(%tx_hash, %err, "Failed to query RPC for transaction receipt during finalization check");
+                CheckFinalizationResult::Done
+            }
         }
+    }
+
+    /// Performs gas and balance checks for a transaction.
+    async fn check_sender_wallet_balance(
+        &self,
+        tx: &TxEnvelope,
+        chain_id: ChainId,
+        wallet: Address,
+    ) -> Result<(), MaestroRpcError> {
+        let account_balance =
+            self.get_rpc_provider(&chain_id)?.get_balance(wallet).await.map_err(|e| {
+                error!(%chain_id, %wallet, %e, "Failed to fetch account balance for gas check");
+                InternalError(RpcFailedToFetchWalletBalance(chain_id, wallet))
+            })?;
+        Self::balance_check(tx, account_balance)
+    }
+
+    fn balance_check(tx: &TxEnvelope, account_balance: U256) -> Result<(), MaestroRpcError> {
+        let tx_hash_str = format!("0x{}", hex::encode(tx.hash()));
+        let max_gas_cost = U256::from(tx.gas_limit())
+            .checked_mul(U256::from(tx.max_fee_per_gas()))
+            .ok_or_else(|| {
+                error!(%tx_hash_str, "Overflow calculating max gas cost");
+                InternalError(Other)
+            })?;
+        let total_required = max_gas_cost.checked_add(tx.value()).ok_or_else(|| {
+            error!(%tx_hash_str, "Overflow calculating total required funds");
+            InternalError(Other)
+        })?;
+
+        if account_balance < total_required {
+            debug!(%tx_hash_str, %account_balance, %total_required, "Insufficient funds for transaction");
+            return Err(JsonRpcError(TransactionRejected(
+                shared::json_rpc::Rejection::InsufficientFunds,
+            )));
+        }
+
+        trace!(%tx_hash_str, %account_balance, %total_required, "Gas check passed");
+        Ok(())
     }
 
     /// Processes a transaction based on its nonce compared to the wallet's expected nonce
@@ -119,7 +198,8 @@ impl MaestroService {
     /// # Arguments
     /// * `self` - Arc reference to the service to ensure it outlives spawned tasks
     /// * `raw_tx` - The raw transaction bytes to process
-    /// * `signer` - The wallet address that signed the transaction
+    /// * `tx` - The decoded transaction envelope
+    /// * `wallet` - The wallet address that signed the transaction
     /// * `chain_id` - The chain identifier the transaction is intended for
     /// * `tx_nonce` - The nonce value included in the transaction
     ///
@@ -130,7 +210,7 @@ impl MaestroService {
     /// # Errors
     /// Returns an error if:
     /// * Transaction nonce is lower than expected (rejected as [`NonceTooLow`])
-    /// * Redis operations fail during transaction enqueuing or caching
+    /// * Cache operations fail during transaction enqueuing or caching
     /// * Stream write operations fail
     ///
     /// # Notes
@@ -138,24 +218,26 @@ impl MaestroService {
     /// spawned to check for and process any waiting transactions with sequential nonces.
     /// This allows the method to return quickly while potentially processing a chain of
     /// transactions in the background.
-    pub async fn handle_transaction_and_manage_nonces(
+    pub async fn handle_transaction(
         self: &Arc<Self>,
         raw_tx: Bytes,
+        tx: &TxEnvelope,
         wallet: Address,
         chain_id: ChainId,
         tx_nonce: u64,
     ) -> Result<(), MaestroRpcError> {
-        // Handle nonce comparison
-        // Get wallet-specific lock
         let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
         let _guard = chain_wallet_lock.lock().await;
 
         let expected_nonce = self.get_cached_or_rpc_nonce(wallet, chain_id).await?;
-        let tx_hash = keccak256(raw_tx.as_ref());
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
-                // 1. update the cache with nonce + 1. Quit if thiss fails
+                if !self.config.skip_balance_check {
+                    self.check_sender_wallet_balance(tx, chain_id, wallet).await?;
+                }
+
+                // 1. update the cache with nonce + 1. Quit if this fails
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
@@ -165,7 +247,7 @@ impl MaestroService {
                     )?;
 
                 // 2. enqueue the txn
-                self.enqueue_raw_transaction(raw_tx, chain_id).await?;
+                self.enqueue_raw_transaction(&raw_tx, tx.hash(), chain_id).await?;
                 self.metrics.increment_maestro_enqueued_transactions_total(1);
 
                 // 3. check cache for waiting txns (background task)
@@ -178,21 +260,22 @@ impl MaestroService {
             }
             Ordering::Less => {
                 let rejection = NonceTooLow(expected_nonce, tx_nonce);
-                warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", rejection);
+                warn!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Failed to submit forwarded transaction: {}", rejection);
                 return Err(JsonRpcError(TransactionRejected(rejection)))
             }
             Ordering::Greater => {
-                debug!(%tx_hash, %chain_id, "Caching waiting transaction");
-                self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx).await?;
+                debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Caching waiting transaction");
+                self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx, tx.hash())
+                    .await?;
                 self.metrics.increment_maestro_waiting_transactions_total(1);
             }
         }
         Ok(())
     }
 
-    /// Enqueues a raw transaction to the Redis stream for a specific chain
+    /// Enqueues a raw transaction to the Valkey Stream for a specific chain
     ///
-    /// This method use Redis stream producers to forward the transaction data.
+    /// This method use Valkey stream producers to forward the transaction data.
     /// It creates a new producer if one doesn't exist for the specified chain.
     ///
     /// # Arguments
@@ -201,26 +284,26 @@ impl MaestroService {
     ///
     /// # Returns
     /// * `Ok(())` - If the transaction was successfully enqueued
-    /// * `Err(ErrorObjectOwned)` - If the Redis operation fails
+    /// * `Err(ErrorObjectOwned)` - If the Valkey operation fails
     ///
     /// # Errors
     /// Returns an error if:
-    /// * Redis connection fails
+    /// * Valkey connection fails
     /// * Stream write operation fails
     /// * Producer creation fails
     pub async fn enqueue_raw_transaction(
         &self,
-        raw_tx: Bytes,
+        raw_tx: &Bytes,
+        tx_hash: &B256,
         chain_id: ChainId,
     ) -> Result<(), MaestroRpcError> {
-        let tx_hash = keccak256(raw_tx.as_ref());
         let producer = self.producers.get(&chain_id).ok_or_else(|| {
             error!(%chain_id, %tx_hash, "Non existent stream producer for chain id");
             InternalError(RpcMissing(chain_id))
         })?;
 
-        producer.enqueue_transaction(raw_tx.into()).await.map_err(|e| {
-            error!(%chain_id, %tx_hash, %e, "failed to enqueue transaction to Redis Stream");
+        producer.enqueue_transaction(raw_tx).await.map_err(|e| {
+            error!(%chain_id, %tx_hash, %e, "failed to enqueue transaction to Valkey Stream");
             InternalError(TransactionSubmissionFailed(tx_hash.to_string()))
         })?;
         Ok(())
@@ -242,7 +325,7 @@ impl MaestroService {
     ///
     /// # Errors
     /// Returns an error if:
-    /// * Redis connection fails
+    /// * Valkey connection fails
     /// * RPC provider is missing for the specified chain
     /// * RPC request to fetch the nonce fails
     pub async fn get_cached_or_rpc_nonce(
@@ -252,7 +335,7 @@ impl MaestroService {
     ) -> Result<u64, MaestroRpcError> {
         // TODO(SEQ-885): remove this once tracing makes the below logs redundant
         let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
-        let mut conn = self.redis_conn.clone();
+        let mut conn = self.valkey_conn.clone();
 
         let nonce = match conn.get_wallet_nonce(chain_id, signer).await {
             // Cache hit - we have a valid value
@@ -261,7 +344,7 @@ impl MaestroService {
                 match nonce_str.parse::<u64>() {
                     Ok(nonce) => nonce,
                     Err(e) => {
-                        warn!(%nonce_str, %chain_wallet_nonce_key, %e, "Failed to parse nonce from Redis cache, falling back to RPC");
+                        warn!(%nonce_str, %chain_wallet_nonce_key, %e, "Failed to parse nonce from Valkey cache, falling back to RPC");
                         self.get_nonce_from_rpc_and_update_cache(chain_id, signer).await?
                     }
                 }
@@ -280,7 +363,7 @@ impl MaestroService {
     ///
     /// This method is called when there is a cache miss or parsing error
     /// when getting a nonce from the cache. It queries the RPC provider
-    /// for the current nonce and updates the Redis cache with the result.
+    /// for the current nonce and updates the Valkey cache with the result.
     ///
     /// # Arguments
     /// * `chain_id` - The chain identifier to query
@@ -313,7 +396,7 @@ impl MaestroService {
         };
 
         // Update cache
-        let mut conn = self.redis_conn.clone();
+        let mut conn = self.valkey_conn.clone();
         match conn.set_wallet_nonce(chain_id, signer, rpc_nonce, self.config.wallet_nonce_ttl).await
         {
             Ok(_) => {}
@@ -325,9 +408,9 @@ impl MaestroService {
         Ok(rpc_nonce)
     }
 
-    /// Updates a wallet's nonce in the Redis cache
+    /// Updates a wallet's nonce in the cache
     ///
-    /// This method updates the wallet's nonce in the Redis cache to the
+    /// This method updates the wallet's nonce in the cache to the
     /// specified value. Typically used after a transaction is submitted.
     ///
     /// # Arguments
@@ -337,8 +420,8 @@ impl MaestroService {
     /// * `desired_nonce` - The new nonce value to set
     ///
     /// # Returns
-    /// * `Ok(String)` - The result of the Redis SET operation if successful
-    /// * `Err(Error)` - If the Redis operation fails
+    /// * `Ok(String)` - The result of the Valkey SET operation if successful
+    /// * `Err(Error)` - If the Valkey operation fails
     pub async fn increment_wallet_nonce(
         &self,
         chain_id: ChainId,
@@ -346,12 +429,12 @@ impl MaestroService {
         current_nonce: u64,
         desired_nonce: u64,
     ) -> Result<u64, MaestroError> {
-        let mut conn = self.redis_conn.clone();
+        let mut conn = self.valkey_conn.clone();
 
         let cached_nonce = conn.get_wallet_nonce(chain_id, wallet_address).await?;
         if let Some(cached_nonce) = cached_nonce {
             let cached_nonce_parsed = cached_nonce.parse::<u64>().map_err(|_e| {
-                error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
+                error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
                 //TODO clear cache here?
                 WaitingTransaction(FailedToEnqueue)
             })?;
@@ -366,7 +449,7 @@ impl MaestroService {
         let old_nonce = conn
             .set_wallet_nonce(chain_id, wallet_address, desired_nonce, self.config.wallet_nonce_ttl)
             .await
-            .map_err(MaestroError::Redis)?;
+            .map_err(MaestroError::Valkey)?;
 
         match old_nonce {
             None => {
@@ -376,7 +459,7 @@ impl MaestroService {
             Some(old_nonce) => {
                 let old_nonce_parsed = old_nonce.parse::<u64>().
                     map_err(|_e| {
-                        error!(%desired_nonce, %old_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
+                        error!(%desired_nonce, %old_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
                         //TODO clear cache here?
                         WaitingTransaction(FailedToEnqueue)
                     })?;
@@ -447,9 +530,8 @@ impl MaestroService {
                 WaitingTransaction(FailedToDecode)
             })?;
             _current_waiting_txn_nonce = tx.nonce();
-            let tx_hash = format!("0x{}", hex::encode(tx.hash()));
-
-            if let Err(e) = self.enqueue_raw_transaction(waiting_txn, chain_id).await {
+            if let Err(e) = self.enqueue_raw_transaction(&waiting_txn, tx.hash(), chain_id).await {
+                let tx_hash = format!("0x{}", hex::encode(tx.hash()));
                 error!(%e, %chain_id, %wallet_address, %tx_hash, "Failed to enqueue transaction");
                 return Err(WaitingTransaction(FailedToEnqueue))
             }
@@ -499,14 +581,14 @@ impl MaestroService {
     /// # Returns
     /// * `Ok(Some(Bytes))` - The raw transaction bytes if found in cache and successfully decoded
     /// * `Ok(None)` - If no transaction is found for the given nonce
-    /// * `Err(Error::Redis)` - If there was an error accessing Redis
+    /// * `Err(Error::Valkey)` - If there was an error accessing Valkey cache
     /// * `Err(Error::WaitingTransaction(FailedToDecode))` - If the transaction was found but hex
     ///   decoding failed
     ///
     /// # Errors
     /// Returns an error if:
-    /// * Redis connection fails or operation fails during transaction retrieval (wrapped as
-    ///   [`MaestroError::Redis`])
+    /// * Valkey connection fails or operation fails during transaction retrieval (wrapped as
+    ///   [`MaestroError::Valkey`])
     /// * Hex decoding fails when converting the cached transaction string to bytes (wrapped as
     ///   [`Error::WaitingTransaction(FailedToDecode)`])
     ///
@@ -518,14 +600,14 @@ impl MaestroService {
         wallet_address: Address,
         starting_nonce: u64,
     ) -> Result<Vec<Bytes>, MaestroError> {
-        let mut conn = self.redis_conn.clone();
+        let mut conn = self.valkey_conn.clone();
         let mut txns: Vec<Bytes> = Vec::new();
         let mut current_nonce = starting_nonce;
         loop {
             match conn
                 .get_waiting_txn(chain_id, wallet_address, current_nonce)
                 .await
-                .map_err(MaestroError::Redis)?
+                .map_err(MaestroError::Valkey)?
             {
                 None => {
                     //
@@ -563,20 +645,20 @@ impl MaestroService {
     /// * `tx_hash` - The transaction hash for error reporting
     ///
     /// # Returns
-    /// * `Ok(String)` - The Redis operation result if successful
-    /// * `Err(MaestroRpcError)` - If the Redis operation fails
+    /// * `Ok(String)` - The Valkey operation result if successful
+    /// * `Err(MaestroRpcError)` - If the Valkey operation fails
     ///
     /// # Errors
-    /// Returns an error if the Redis operation fails
+    /// Returns an error if the Valkey operation fails
     pub async fn cache_waiting_transaction(
         &self,
         chain_id: ChainId,
         wallet_address: Address,
         nonce: u64,
         raw_tx: Bytes,
+        tx_hash: &B256,
     ) -> Result<String, MaestroRpcError> {
-        let tx_hash = keccak256(raw_tx.as_ref());
-        let mut conn = self.redis_conn.clone();
+        let mut conn = self.valkey_conn.clone();
         conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_tx, self.config.waiting_txn_ttl)
             .await
             .map_err(|_| InternalError(TransactionSubmissionFailed(tx_hash.to_string())))
@@ -593,10 +675,10 @@ impl MaestroService {
     ///
     /// # Returns
     /// * `Ok(u64)` - The number of transactions removed if successful
-    /// * `Err(MaestroRpcError)` - If the Redis operation fails
+    /// * `Err(MaestroRpcError)` - If the cache operation fails
     ///
     /// # Errors
-    /// Returns an error if the Redis operation fails
+    /// Returns an error if the cache operation fails
     pub async fn remove_waiting_transactions_from_cache(
         &self,
         waiting_txns: &[WaitingTransactionId],
@@ -606,7 +688,7 @@ impl MaestroService {
             return Err(InternalError(Other))
         }
 
-        let mut conn = self.redis_conn.clone();
+        let mut conn = self.valkey_conn.clone();
         let txn_ids = waiting_txns;
         let result = conn.del_waiting_txn_keys(txn_ids).await.map_err(|_| InternalError(Other))?;
 
@@ -623,15 +705,38 @@ impl MaestroService {
 
         Ok(result)
     }
+
+    /// Shuts down the Maestro service and all its components gracefully.
+    pub async fn shutdown(&self) {
+        info!("Shutting down MaestroService...");
+
+        let mut shutdown_handles = Vec::new();
+        for (chain_id, producer) in &self.producers {
+            info!(%chain_id, "Initiating shutdown for StreamProducer...");
+            let producer_clone = Arc::clone(producer);
+            shutdown_handles.push(tokio::spawn(async move {
+                producer_clone.shutdown().await;
+            }));
+        }
+
+        for handle in shutdown_handles {
+            if let Err(e) = handle.await {
+                error!("Error during StreamProducer shutdown: {:?}", e);
+            }
+        }
+
+        info!("All StreamProducers shut down.");
+        info!("MaestroService shutdown complete.");
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::Config, redis::streams::producer::tx_stream_key};
+    use crate::{config::Config, valkey::streams::producer::tx_stream_key};
     use alloy::{
         network::{EthereumWallet, TransactionBuilder},
-        primitives::{Address, Bytes},
+        primitives::{keccak256, utils::parse_ether, Address, Bytes, U256},
         rlp::Encodable,
         rpc::types::TransactionRequest,
     };
@@ -640,7 +745,8 @@ mod tests {
     use serde_json::json;
     use std::time::Duration;
     use test_utils::{
-        docker::{start_redis, Docker},
+        docker::{start_valkey, Docker},
+        transaction::create_legacy_transaction,
         wait_until,
     };
     use tokio::time::sleep;
@@ -654,11 +760,10 @@ mod tests {
         shared::logger::set_global_default_subscriber();
     }
 
-    // Helper to create a test service with real Redis and mock RPC
-    // TODO(SEQ-904): Fix lingering Redis container bug
+    // Helper to create a test service with real Valkey and mock RPC
     async fn create_test_service() -> (MaestroService, MockServer, MockServer, Docker) {
-        // Start Redis
-        let (redis_container, redis_url) = start_redis().await.unwrap();
+        // Start cache
+        let (valkey_container, valkey_url) = start_valkey().await.unwrap();
 
         // Start mock RPC servers
         let mock_rpc_server_4 = MockServer::start().await;
@@ -668,34 +773,36 @@ mod tests {
 
         // Create chain RPC URLs map
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert("4".to_string(), mock_rpc_server_4.uri());
-        chain_rpc_urls.insert("5".to_string(), mock_rpc_server_5.uri());
+        chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
+        chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
 
-        // Create Redis connection
-        let client = redis::Client::open(redis_url.as_str()).unwrap();
-        let redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        // Create cache connection
+        let client = redis::Client::open(valkey_url.as_str()).unwrap();
+        let valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Create test config
         let config = Config {
             port: 0,
-            redis_url,
+            valkey_url,
             chain_rpc_urls,
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
-            prune_interval: Duration::from_secs(1),
-            prune_max_age: Duration::from_secs(1),
             metrics_port: 8090,
             waiting_txn_ttl: Duration::from_secs(20), // shorter than default
             wallet_nonce_ttl: Duration::from_secs(3),
+            finalization_duration: Duration::from_secs(10),
+            finalization_checker_interval: Duration::from_secs(1),
+            max_transaction_retries: 3,
+            skip_balance_check: false,
         };
 
         let mut registry = Registry::default();
         let metrics = MaestroMetrics::new(&mut registry);
 
         // Create service
-        let service = MaestroService::new(redis_conn, config, metrics).await.unwrap();
+        let service = MaestroService::new(valkey_conn, config, metrics).await.unwrap();
 
-        (service, mock_rpc_server_4, mock_rpc_server_5, redis_container)
+        (service, mock_rpc_server_4, mock_rpc_server_5, valkey_container)
     }
 
     // Helper to set up default mock responses
@@ -708,6 +815,21 @@ mod tests {
                 "jsonrpc": "2.0",
                 "id": 1,
                 "result": format!("0x{:x}", chain_id)
+            })))
+            .mount(mock_server)
+            .await;
+    }
+
+    async fn set_up_mock_balance(mock_server: &MockServer, wallet: &str, balance: U256) {
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "method": "eth_getBalance",
+                "params": [wallet, "latest"]
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": format!("0x{:x}", balance)
             })))
             .mount(mock_server)
             .await;
@@ -731,7 +853,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_producer() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test chain ID
         let chain_id = 4u64;
@@ -740,7 +862,7 @@ mod tests {
         let producer1 = service.producers.get(&chain_id).unwrap();
 
         // Verify stream key is correct
-        assert_eq!(producer1.stream_key, format!("maestro:transactions:{}", chain_id));
+        assert_eq!(producer1.stream_key, format!("synd-maestro:transactions:{}", chain_id));
 
         // Get producer again
         let producer2 = service.producers.get(&chain_id).unwrap();
@@ -759,27 +881,31 @@ mod tests {
         );
 
         // Verify correct stream key
-        assert_eq!(producer3.stream_key, format!("maestro:transactions:{}", different_chain_id));
+        assert_eq!(
+            producer3.stream_key,
+            format!("synd-maestro:transactions:{}", different_chain_id)
+        );
     }
 
     #[tokio::test]
     async fn test_enqueue_raw_transaction() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
         let raw_tx = Bytes::from(vec![1, 2, 3, 4, 5]);
+        let tx_hash = keccak256(raw_tx.as_ref());
 
         // Enqueue transaction
-        let result = service.enqueue_raw_transaction(raw_tx.clone(), chain_id).await;
+        let result = service.enqueue_raw_transaction(&raw_tx, &tx_hash, chain_id).await;
 
         // Verify success
         assert!(result.is_ok(), "Enqueuing transaction should succeed");
 
         // Verify transaction was actually stored
-        // Connect to Redis directly to check
-        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
+        // Connect to Valkey directly to check
+        let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
         let mut conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Check stream exists and has entries
@@ -802,15 +928,15 @@ mod tests {
     #[tokio::test]
     async fn test_get_cached_or_rpc_nonce_cache_hit() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
         let expected_nonce = 42u64;
 
-        // Pre-populate Redis with nonce
-        let mut conn = service.redis_conn.clone();
+        // Pre-populate Valkey with nonce
+        let mut conn = service.valkey_conn.clone();
         conn.set_wallet_nonce(chain_id, wallet, expected_nonce, service.config.wallet_nonce_ttl)
             .await
             .unwrap();
@@ -830,7 +956,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cached_or_rpc_nonce_cache_miss() {
         // Create test service
-        let (service, mock_server_4, _, _) = create_test_service().await;
+        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -849,7 +975,7 @@ mod tests {
         assert_eq!(nonce_result.unwrap(), expected_nonce, "Retrieved nonce should match RPC value");
 
         // Verify nonce was cached
-        let mut conn = service.redis_conn.clone();
+        let mut conn = service.valkey_conn.clone();
         let cached_nonce = conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(cached_nonce, Some(expected_nonce.to_string()), "Nonce should be cached");
     }
@@ -857,7 +983,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_nonce_from_rpc_missing_provider() {
         // Create test service with mock servers
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data - use a chain ID that doesn't have a provider
         let chain_id = 9999u64; // Not in our config
@@ -879,7 +1005,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_nonce_from_rpc_provider_error() {
         // Create test service
-        let (service, mock_server_4, _, _) = create_test_service().await;
+        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -920,7 +1046,7 @@ mod tests {
     #[tokio::test]
     async fn test_increment_wallet_nonce() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -931,7 +1057,7 @@ mod tests {
 
         // Set initial nonce
         {
-            let mut conn = service.redis_conn.clone();
+            let mut conn = service.valkey_conn.clone();
             conn.set_wallet_nonce(chain_id, wallet, initial_nonce, service.config.wallet_nonce_ttl)
                 .await
                 .unwrap();
@@ -946,11 +1072,11 @@ mod tests {
             .increment_wallet_nonce(chain_id, wallet, initial_nonce, initial_nonce + 1)
             .await;
 
-        // Verify success (result should be "OK" from Redis)
+        // Verify success (result should be "OK" from Valkey)
         assert!(result.is_ok(), "Incrementing nonce should succeed");
 
         // Verify nonce was updated
-        let mut conn = service.redis_conn.clone();
+        let mut conn = service.valkey_conn.clone();
         let updated_nonce = conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(
             updated_nonce,
@@ -962,7 +1088,7 @@ mod tests {
     #[tokio::test]
     async fn test_nonce_ttl() {
         // Create test service
-        let (service, _, _, redis) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -971,7 +1097,7 @@ mod tests {
 
         // Set nonce
         {
-            let mut conn = service.redis_conn.clone();
+            let mut conn = service.valkey_conn.clone();
             conn.set_wallet_nonce(chain_id, wallet, nonce, service.config.wallet_nonce_ttl)
                 .await
                 .unwrap();
@@ -985,21 +1111,18 @@ mod tests {
         sleep(Duration::from_secs(3 + 1)).await;
 
         // Create a fresh connection after the sleep
-        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
         let mut fresh_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Verify nonce has expired using the fresh connection
         let expired_nonce = fresh_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(expired_nonce, None, "Nonce should expire after TTL period");
-
-        // Keep redis in scope to avoid closed connections
-        drop(redis)
     }
 
     #[tokio::test]
     async fn test_multi_chain_independence() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data for two different chains
         let chain_id1 = 4u64;
@@ -1021,7 +1144,7 @@ mod tests {
             .expect("Incrementing nonce should succeed");
 
         // Verify nonces are chain-specific
-        let mut conn = service.redis_conn.clone();
+        let mut conn = service.valkey_conn.clone();
         let get1 = conn.get_wallet_nonce(chain_id1, wallet).await.unwrap();
         let get2 = conn.get_wallet_nonce(chain_id2, wallet).await.unwrap();
 
@@ -1032,7 +1155,7 @@ mod tests {
     #[tokio::test]
     async fn test_invalid_cached_nonce() {
         // Create test service
-        let (service, mock_server_4, _, _) = create_test_service().await;
+        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1045,7 +1168,7 @@ mod tests {
         {
             // Directly set invalid nonce string
             let key = chain_wallet_nonce_key(chain_id, wallet);
-            let mut conn = service.redis_conn.clone();
+            let mut conn = service.valkey_conn.clone();
             let _: String = conn.set(&key, invalid_nonce_str).await.unwrap();
         }
 
@@ -1060,7 +1183,7 @@ mod tests {
         assert_eq!(nonce_result.unwrap(), rpc_nonce, "Should return RPC nonce value");
 
         // Verify cache was updated with valid nonce
-        let mut conn = service.redis_conn.clone();
+        let mut conn = service.valkey_conn.clone();
         let updated_nonce = conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(
             updated_nonce,
@@ -1072,7 +1195,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_cache_for_transaction() {
         // Create test service
-        let (service, _, _, redis) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1081,8 +1204,8 @@ mod tests {
         let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
         let _tx_hash = "test_hash";
 
-        // Set up test transaction in Redis
-        let mut conn = service.redis_conn.clone();
+        // Set up test transaction in Valkey
+        let mut conn = service.valkey_conn.clone();
         conn.set_waiting_txn(
             chain_id,
             wallet,
@@ -1107,30 +1230,34 @@ mod tests {
             .await
             .unwrap();
         assert!(non_existent.is_empty(), "Non-existent transaction should return None");
-
-        drop(redis)
     }
 
     #[tokio::test]
     async fn test_put_gap_transaction_on_cache() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
         let nonce = 42u64;
         let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
-
         // Put transaction in cache
-        let result =
-            service.cache_waiting_transaction(chain_id, wallet, nonce, raw_tx.clone()).await;
+        let result = service
+            .cache_waiting_transaction(
+                chain_id,
+                wallet,
+                nonce,
+                raw_tx.clone(),
+                &keccak256(raw_tx.as_ref()),
+            )
+            .await;
 
         // Verify success
         assert!(result.is_ok(), "Putting transaction in cache should succeed");
 
         // Verify transaction was stored
-        let mut conn = service.redis_conn.clone();
+        let mut conn = service.valkey_conn.clone();
         let cached_tx_hex = conn.get_waiting_txn(chain_id, wallet, nonce).await.unwrap();
 
         assert!(cached_tx_hex.is_some(), "Transaction should be stored in cache");
@@ -1141,7 +1268,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_gap_transaction_from_cache() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1149,8 +1276,8 @@ mod tests {
         let nonce = 42u64;
         let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
 
-        // Set up test transaction in Redis
-        let mut conn = service.redis_conn.clone();
+        // Set up test transaction in Valkey
+        let mut conn = service.valkey_conn.clone();
         conn.set_waiting_txn(
             chain_id,
             wallet_address,
@@ -1210,7 +1337,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_empty() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1229,7 +1356,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_with_transactions() {
         // Create test service
-        let (service, _, _, redis) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1246,25 +1373,40 @@ mod tests {
 
         // Add two sequential transactions to the waiting gap
         service
-            .cache_waiting_transaction(chain_id, wallet, current_nonce + 1, Bytes::from(raw_tx1))
+            .cache_waiting_transaction(
+                chain_id,
+                wallet,
+                current_nonce + 1,
+                Bytes::from(raw_tx1.clone()),
+                &keccak256(raw_tx1),
+            )
             .await
             .unwrap();
 
         service
-            .cache_waiting_transaction(chain_id, wallet, current_nonce + 2, Bytes::from(raw_tx2))
+            .cache_waiting_transaction(
+                chain_id,
+                wallet,
+                current_nonce + 2,
+                Bytes::from(raw_tx2.clone()),
+                &keccak256(raw_tx2),
+            )
             .await
             .unwrap();
 
-        // Set up Redis stream for checking enqueued transactions
+        // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
-        let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
+        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Get initial count of stream entries
-        let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let initial_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
 
         //Submit txn and increment nonce
-        service.enqueue_raw_transaction(Bytes::from(raw_tx0), chain_id).await.unwrap();
+        service
+            .enqueue_raw_transaction(&Bytes::from(raw_tx0.clone()), &keccak256(raw_tx0), chain_id)
+            .await
+            .unwrap();
         service
             .increment_wallet_nonce(chain_id, wallet, current_nonce, current_nonce + 1)
             .await
@@ -1279,16 +1421,16 @@ mod tests {
         assert!(result.is_ok(), "Processing waiting transactions should succeed");
 
         // Verify transactions were enqueued (stream length increased)
-        let final_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let final_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
 
         println!("{} {}", initial_len, final_len);
 
         // Should have processed three total transactions
         assert_eq!(final_len, initial_len + 3, "Should have enqueued 3 transactions");
 
-        // Verify nonce was updated in Redis
+        // Verify nonce was updated in cache
         let updated_nonce =
-            service.redis_conn.clone().get_wallet_nonce(chain_id, wallet).await.unwrap();
+            service.valkey_conn.clone().get_wallet_nonce(chain_id, wallet).await.unwrap();
 
         assert_eq!(
             updated_nonce,
@@ -1314,9 +1456,6 @@ mod tests {
                 .is_empty(),
             "Second transaction should be removed from waiting gap"
         );
-
-        // Keep redis in scope to avoid closed connections
-        drop(redis)
     }
 
     async fn build_test_txn(mut raw_tx0: &mut Vec<u8>, nonce: u64) {
@@ -1324,7 +1463,7 @@ mod tests {
         let signer_wallet = EthereumWallet::from(signer);
         TransactionRequest::default()
             .to(Address::default())
-            .value(alloy::primitives::U256::from(1))
+            .value(U256::from(1))
             .nonce(nonce)
             .gas_limit(0)
             .max_fee_per_gas(0)
@@ -1338,7 +1477,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_with_non_sequential_nonces() {
         // Create test service
-        let (service, _, _, redis) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1353,28 +1492,40 @@ mod tests {
 
         // Add transactions with nonce gap
         service
-            .cache_waiting_transaction(chain_id, wallet, current_nonce, Bytes::from(raw_tx1))
+            .cache_waiting_transaction(
+                chain_id,
+                wallet,
+                current_nonce,
+                Bytes::from(raw_tx1.clone()),
+                &keccak256(raw_tx1),
+            )
             .await
             .unwrap();
 
         service
-            .cache_waiting_transaction(chain_id, wallet, current_nonce + 2, Bytes::from(raw_tx3))
+            .cache_waiting_transaction(
+                chain_id,
+                wallet,
+                current_nonce + 2,
+                Bytes::from(raw_tx3.clone()),
+                &keccak256(raw_tx3),
+            )
             .await
             .unwrap();
 
-        // Set up Redis stream for checking enqueued transactions
+        // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
-        let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
+        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set cache nonce to be the first one
-        redis_conn
+        valkey_conn
             .set_wallet_nonce(chain_id, wallet, current_nonce, service.config.wallet_nonce_ttl)
             .await
             .unwrap();
 
         // Get initial count of stream entries
-        let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let initial_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
 
         // Process waiting transactions
         let result = service
@@ -1385,13 +1536,13 @@ mod tests {
         assert!(result.is_ok(), "Processing waiting transactions should succeed");
 
         // Verify only the first transaction was enqueued
-        let final_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let final_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
 
         assert_eq!(final_len, initial_len + 1, "Should have enqueued 1 transaction");
 
         // Verify nonce was updated only once
         let updated_nonce =
-            service.redis_conn.clone().get_wallet_nonce(chain_id, wallet).await.unwrap();
+            service.valkey_conn.clone().get_wallet_nonce(chain_id, wallet).await.unwrap();
 
         assert_eq!(
             updated_nonce,
@@ -1418,15 +1569,12 @@ mod tests {
                 .is_empty(),
             "Gap transaction should still be in waiting gap"
         );
-
-        // Keep redis in scope to avoid closed connections
-        drop(redis)
     }
 
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_invalid_transaction() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1438,7 +1586,13 @@ mod tests {
 
         // Add invalid transaction to waiting gap
         service
-            .cache_waiting_transaction(chain_id, wallet, current_nonce, invalid_tx)
+            .cache_waiting_transaction(
+                chain_id,
+                wallet,
+                current_nonce,
+                invalid_tx.clone(),
+                &keccak256(invalid_tx),
+            )
             .await
             .unwrap();
 
@@ -1471,47 +1625,61 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_equal_nonce() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let nonce = 42u64;
-        let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
+        // Create a transaction that can be RLP decoded
+        let mut raw_tx_vec = vec![];
+        build_test_txn(&mut raw_tx_vec, nonce).await;
+        let raw_tx = Bytes::from(raw_tx_vec);
 
-        // Set up Redis stream for checking enqueued transactions
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
+
+        // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
-        let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
+        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn
+        valkey_conn
             .set_wallet_nonce(chain_id, wallet, nonce, service_arc.config.wallet_nonce_ttl)
             .await
             .unwrap();
 
         // Get initial count of stream entries
-        let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let initial_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
 
         // Submit transaction with equal nonce
-        let result =
-            service_arc.handle_transaction_and_manage_nonces(raw_tx, wallet, chain_id, nonce).await;
+        let result = service_arc
+            .handle_transaction(
+                raw_tx.clone(),
+                &decode_transaction(&raw_tx).unwrap(),
+                wallet,
+                chain_id,
+                nonce,
+            )
+            .await;
 
         // Verify success
         assert!(result.is_ok(), "Transaction with equal nonce should be accepted");
 
         wait_until!(
-            redis_conn.xlen::<&String, u64>(&stream_key).await.unwrap().eq(&(initial_len + 1)),
+            valkey_conn.xlen::<&String, u64>(&stream_key).await.unwrap().eq(&(initial_len + 1)),
             Duration::from_millis(100)
         );
 
         // Verify transactions were enqueued (stream length increased)
-        let final_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let final_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
         assert_eq!(final_len, initial_len + 1, "Should have enqueued 1 transaction");
 
         // Verify nonce was incremented
-        let updated_nonce = redis_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
+        let updated_nonce = valkey_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(
             updated_nonce,
             Some((nonce + 1).to_string()),
@@ -1522,29 +1690,42 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_lower_nonce() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let current_nonce = 42u64;
         let lower_nonce = 41u64;
-        let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
+        // Create a transaction that can be RLP decoded
+        let mut raw_tx_vec = vec![];
+        build_test_txn(&mut raw_tx_vec, lower_nonce).await; // Use lower_nonce for the tx
+        let raw_tx = Bytes::from(raw_tx_vec);
 
-        // Set up Redis
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
-        let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
+
+        // Set up Valkey
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
+        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn
+        valkey_conn
             .set_wallet_nonce(chain_id, wallet, current_nonce, service_arc.config.wallet_nonce_ttl)
             .await
             .unwrap();
 
         // Submit transaction with lower nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(raw_tx, wallet, chain_id, lower_nonce)
+            .handle_transaction(
+                raw_tx.clone(),
+                &decode_transaction(&raw_tx).unwrap(),
+                wallet,
+                chain_id,
+                lower_nonce,
+            )
             .await;
 
         // Verify transaction was rejected due to lower nonce
@@ -1560,7 +1741,7 @@ mod tests {
         }
 
         // Verify nonce was NOT incremented
-        let unchanged_nonce = redis_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
+        let unchanged_nonce = valkey_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(
             unchanged_nonce,
             Some(current_nonce.to_string()),
@@ -1571,36 +1752,49 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_higher_nonce() {
         // Create test service
-        let (service, _, _, redis) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let current_nonce = 42u64;
         let higher_nonce = 44u64;
-        let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
+        // Create a transaction that can be RLP decoded
+        let mut raw_tx_vec = vec![];
+        build_test_txn(&mut raw_tx_vec, higher_nonce).await; // Use higher_nonce for the tx
+        let raw_tx = Bytes::from(raw_tx_vec);
 
-        // Set up Redis
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
-        let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
+
+        // Set up Valkey
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
+        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn
+        valkey_conn
             .set_wallet_nonce(chain_id, wallet, current_nonce, service_arc.config.wallet_nonce_ttl)
             .await
             .unwrap();
 
         // Submit transaction with higher nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(raw_tx.clone(), wallet, chain_id, higher_nonce)
+            .handle_transaction(
+                raw_tx.clone(),
+                &decode_transaction(&raw_tx).unwrap(),
+                wallet,
+                chain_id,
+                higher_nonce,
+            )
             .await;
 
         // Verify success
         assert!(result.is_ok(), "Transaction with higher nonce should be accepted and cached");
 
         // Verify nonce was NOT incremented
-        let unchanged_nonce = redis_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
+        let unchanged_nonce = valkey_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(
             unchanged_nonce,
             Some(current_nonce.to_string()),
@@ -1615,28 +1809,24 @@ mod tests {
 
         assert!(!cached_tx.is_empty(), "Transaction should be stored in waiting gap");
         assert_eq!(cached_tx[0], raw_tx, "Cached transaction should match the original");
-
-        drop(redis)
     }
 
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_background_processing() {
         // Create test service
-        let (service, _, _, redis) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let current_nonce = 41u64;
 
         // Create transactions for sequential nonces
-        let mut raw_tx0 = vec![];
-        let mut raw_tx1 = vec![];
-        let mut raw_tx2 = vec![];
-        build_test_txn(&mut raw_tx0, current_nonce).await;
-        build_test_txn(&mut raw_tx1, current_nonce + 1).await;
-        build_test_txn(&mut raw_tx2, current_nonce + 2).await;
+        let raw_tx0 = create_legacy_transaction(chain_id, current_nonce);
+        let raw_tx1 = create_legacy_transaction(chain_id, current_nonce + 1);
+        let raw_tx2 = create_legacy_transaction(chain_id, current_nonce + 2);
 
         // Setup: Store future transactions in waiting gap
         service_arc
@@ -1644,7 +1834,8 @@ mod tests {
                 chain_id,
                 wallet,
                 current_nonce + 1,
-                Bytes::from(raw_tx1.clone()),
+                raw_tx1.clone(),
+                &keccak256(raw_tx1),
             )
             .await
             .unwrap();
@@ -1654,29 +1845,34 @@ mod tests {
                 chain_id,
                 wallet,
                 current_nonce + 2,
-                Bytes::from(raw_tx2.clone()),
+                raw_tx2.clone(),
+                &keccak256(raw_tx2),
             )
             .await
             .unwrap();
 
-        // Set up Redis stream for checking enqueued transactions
+        // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
-        let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
+        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn
+        valkey_conn
             .set_wallet_nonce(chain_id, wallet, current_nonce, service_arc.config.wallet_nonce_ttl)
             .await
             .unwrap();
 
         // Get initial count of stream entries
-        let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let initial_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
+
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
 
         // Submit transaction with current nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(
-                Bytes::from(raw_tx0),
+            .handle_transaction(
+                raw_tx0.clone(),
+                &decode_transaction(&raw_tx0).unwrap(),
                 wallet,
                 chain_id,
                 current_nonce,
@@ -1688,16 +1884,16 @@ mod tests {
 
         // Wait for background processing to complete
         wait_until!(
-            redis_conn.xlen::<&String, u64>(&stream_key).await.unwrap().eq(&(initial_len + 3)),
+            valkey_conn.xlen::<&String, u64>(&stream_key).await.unwrap().eq(&(initial_len + 3)),
             Duration::from_millis(100)
         );
 
         // Verify all three transactions were enqueued
-        let final_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let final_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
         assert_eq!(final_len, initial_len + 3, "Should have enqueued all 3 transactions");
 
         // Verify nonce was incremented for all transactions
-        let updated_nonce = redis_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
+        let updated_nonce = valkey_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(
             updated_nonce,
             Some((current_nonce + 3).to_string()),
@@ -1731,27 +1927,24 @@ mod tests {
                 .is_empty(),
             "Transaction 2 should be removed from waiting gap"
         );
-
-        // Keep redis in scope to avoid closed connections
-        drop(redis)
     }
 
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_gaps() {
         // Create test service
-        let (service, _, _, redis) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let current_nonce = 41u64;
 
         // Create transactions for non-sequential nonces (gap at nonce 42)
         let mut raw_tx0 = vec![];
         let mut raw_tx2 = vec![];
         build_test_txn(&mut raw_tx0, current_nonce).await;
-        // build_test_txn(&mut raw_tx1, 1).await;
         build_test_txn(&mut raw_tx2, current_nonce + 2).await;
 
         // Setup: Store future transaction with a gap
@@ -1760,29 +1953,37 @@ mod tests {
                 chain_id,
                 wallet,
                 current_nonce + 2, // Skip nonce 42
-                Bytes::from(raw_tx2.clone()),
+                raw_tx2.clone().into(),
+                &keccak256(raw_tx2),
             )
             .await
             .unwrap();
 
-        // Set up Redis stream
+        // Set up Valkey stream
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
-        let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
+        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn
+        valkey_conn
             .set_wallet_nonce(chain_id, wallet, current_nonce, service_arc.config.wallet_nonce_ttl)
             .await
             .unwrap();
 
         // Get initial count of stream entries
-        let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let initial_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
 
         // Submit transaction with current nonce
+        let raw_tx0_bytes = Bytes::from(raw_tx0);
+        let decoded_tx0_for_test = decode_transaction(&raw_tx0_bytes).unwrap();
+
+        let balance = parse_ether("100").unwrap();
+        set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
+
         let result = service_arc
-            .handle_transaction_and_manage_nonces(
-                Bytes::from(raw_tx0),
+            .handle_transaction(
+                raw_tx0_bytes,
+                &decoded_tx0_for_test,
                 wallet,
                 chain_id,
                 current_nonce,
@@ -1794,16 +1995,16 @@ mod tests {
 
         // Wait for background processing to complete
         wait_until!(
-            redis_conn.xlen::<&String, u64>(&stream_key).await.unwrap().eq(&(initial_len + 1)),
+            valkey_conn.xlen::<&String, u64>(&stream_key).await.unwrap().eq(&(initial_len + 1)),
             Duration::from_millis(100)
         );
 
         // Verify only one transaction was enqueued (the gap prevents processing tx2)
-        let final_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
+        let final_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
         assert_eq!(final_len, initial_len + 1, "Should have enqueued only 1 transaction");
 
         // Verify nonce was incremented only for the first transaction
-        let updated_nonce = redis_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
+        let updated_nonce = valkey_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
         assert_eq!(
             updated_nonce,
             Some((current_nonce + 1).to_string()),
@@ -1819,8 +2020,255 @@ mod tests {
                 .is_empty(),
             "Transaction with gap should still be in waiting gap"
         );
+    }
 
-        // Manually drop redis to avoid dropped connection
-        drop(redis)
+    mod handle_finalization_tests {
+        use super::*; // Brings in outer test helpers and main module items
+        use crate::valkey::streams::producer::CheckFinalizationResult;
+        use alloy::primitives::{keccak256, B256};
+        use serde_json::json;
+        use test_utils::transaction::create_legacy_transaction;
+        use wiremock::{matchers::body_partial_json, Mock, ResponseTemplate}; // method is already in scope via super::* if needed
+
+        const TEST_CHAIN_ID_U64: u64 = 4;
+        // Address corresponding to the private key used in `create_legacy_transaction`
+        const KNOWN_SIGNER_ADDRESS_STR: &str = "0x90f79bf6eb2c4f870365e785982e1f101e93b906";
+
+        async fn setup_mock_receipt_response(
+            server: &MockServer,
+            tx_hash: B256,
+            receipt_json: Option<serde_json::Value>, // None means result is null
+            is_rpc_error: bool,
+        ) {
+            let mock_builder = Mock::given(method("POST")).and(body_partial_json(json!({
+                "method": "eth_getTransactionReceipt",
+                "params": [format!("{:#x}", tx_hash)]
+            })));
+
+            if is_rpc_error {
+                mock_builder
+                    .respond_with(ResponseTemplate::new(500).set_body_json(json!({
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "error": {"code": -32000, "message": "Receipt RPC error"},
+                    })))
+                    .mount(server)
+                    .await;
+            } else {
+                match receipt_json {
+                    Some(data) => {
+                        mock_builder
+                            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                                "jsonrpc": "2.0",
+                                "id": 1,
+                                "result": data
+                            })))
+                            .mount(server)
+                            .await;
+                    }
+                    None => {
+                        // Ok(None) from provider.get_transaction_receipt
+                        mock_builder
+                            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                                "jsonrpc": "2.0",
+                                "id": 1,
+                                "result": null
+                            })))
+                            .mount(server)
+                            .await;
+                    }
+                }
+            }
+        }
+
+        // Using existing set_up_mock_transaction_count for success cases
+        // Adding a specific helper for error cases for getTransactionCount
+        async fn setup_mock_nonce_error_response(server: &MockServer, wallet_address_str: &str) {
+            Mock::given(method("POST"))
+                .and(body_partial_json(json!({
+                    "method": "eth_getTransactionCount",
+                    "params": [wallet_address_str, "latest"]
+                })))
+                .respond_with(ResponseTemplate::new(500).set_body_json(json!({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "error": {"code": -32000, "message": "Nonce RPC error"}
+                })))
+                .mount(server)
+                .await;
+        }
+
+        #[tokio::test]
+        async fn test_receipt_found() {
+            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 10u64;
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            let mock_receipt_data =
+                json!({"status": "0x1", "transactionHash": format!("{:#x}", tx_hash)});
+            setup_mock_receipt_response(&mock_server, tx_hash, Some(mock_receipt_data), false)
+                .await;
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::Done);
+        }
+
+        #[tokio::test]
+        async fn test_receipt_not_found_nonce_matches_resubmit() {
+            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 11u64;
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            // Decode the transaction to get the actual signer address.
+            // This is necessary because create_legacy_transaction might use a random signer,
+            // making KNOWN_SIGNER_ADDRESS_STR unreliable for this specific mock.
+            let tx_for_signer_derivation = decode_transaction(&raw_tx_bytes)
+                .expect("Test setup: Failed to decode transaction for signer derivation");
+            let actual_signer = check_signature(&tx_for_signer_derivation)
+                .expect("Test setup: Failed to derive signer from transaction");
+            // Format as 0x-prefixed lowercase hex, which is standard for RPC calls.
+            let actual_signer_hex = format!("{:#x}", actual_signer);
+
+            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
+                                                                                   // Use the dynamically derived signer address for the mock setup.
+            set_up_mock_transaction_count(&mock_server, &actual_signer_hex, tx_nonce).await;
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::ReSubmit);
+        }
+
+        #[tokio::test]
+        async fn test_receipt_not_found_nonce_differs_done() {
+            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 12u64;
+            let rpc_nonce = 13u64; // Different from tx_nonce
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
+            set_up_mock_transaction_count(&mock_server, KNOWN_SIGNER_ADDRESS_STR, rpc_nonce).await; // Nonce differs
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::Done);
+        }
+
+        #[tokio::test]
+        async fn test_receipt_not_found_get_nonce_fails_done() {
+            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 14u64;
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
+            setup_mock_nonce_error_response(&mock_server, KNOWN_SIGNER_ADDRESS_STR).await; // Nonce call fails
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::Done);
+        }
+
+        #[tokio::test]
+        async fn test_get_receipt_fails_done() {
+            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
+            let tx_nonce = 15u64;
+            let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
+            let raw_tx_vec = raw_tx_bytes.to_vec();
+            let tx_hash = keccak256(&raw_tx_vec);
+
+            setup_mock_receipt_response(&mock_server, tx_hash, None, true).await; // Receipt call fails
+
+            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            assert_eq!(result, CheckFinalizationResult::Done);
+        }
+    }
+
+    // Helper to create a dummy transaction for testing
+    async fn create_dummy_tx(gas_limit: u64, max_fee_per_gas: u128, value: U256) -> TxEnvelope {
+        let signer = alloy::signers::local::PrivateKeySigner::random();
+        let signer_wallet = EthereumWallet::from(signer);
+        TransactionRequest::default()
+            .with_gas_limit(gas_limit)
+            .with_max_fee_per_gas(max_fee_per_gas)
+            .with_max_priority_fee_per_gas(0)
+            .with_value(value)
+            .with_to(Address::ZERO)
+            .with_nonce(0)
+            .with_chain_id(123)
+            .build(&signer_wallet)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_sufficient_funds() {
+        let tx = create_dummy_tx(21000u64, 10_000_000_000u128, parse_ether("1").unwrap()).await;
+        let account_balance = parse_ether("2").unwrap();
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_exact_funds() {
+        let gas_limit_u64 = 21000u64;
+        let max_fee_per_gas_u128 = 10_000_000_000u128; // 10 gwei
+        let value = parse_ether("1").unwrap();
+        let tx = create_dummy_tx(gas_limit_u64, max_fee_per_gas_u128, value).await;
+
+        let max_gas_cost = U256::from(gas_limit_u64) * U256::from(max_fee_per_gas_u128);
+        let account_balance = max_gas_cost + value;
+
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_insufficient_funds() {
+        let tx = create_dummy_tx(21000u64, 10_000_000_000u128, parse_ether("1").unwrap()).await;
+        let account_balance = parse_ether("0.5").unwrap();
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            _ => panic!("Expected InsufficientFunds error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_insufficient_funds_for_max_gas_cost() {
+        // gas_limit * max_fee_per_gas (u64::MAX * u128::MAX) does NOT overflow U256
+        // but it results in a very large gas cost.
+        let tx = create_dummy_tx(u64::MAX, u128::MAX, U256::from(1u64)).await;
+        let account_balance = U256::ZERO; // Set balance to 0 to make it insufficient
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            _ => {
+                panic!("Expected InsufficientFunds error due to maximal gas cost and zero balance")
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_balance_check_total_required_overflow() {
+        // (gas_limit * max_fee_per_gas) is small, but adding value overflows U256
+        let tx = create_dummy_tx(1u64, 1u128, U256::MAX).await;
+        let account_balance = U256::MAX;
+        let result = MaestroService::balance_check(&tx, account_balance);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            InternalError(Other) => {} // Expecting Other due to checked_add failing
+            _ => panic!("Expected InternalError(Other) for total_required overflow"),
+        }
     }
 }
