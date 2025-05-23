@@ -13,3 +13,6 @@ url = https://github.com/foundry-rs/forge-std
 [submodule "use-cases/lib/openzeppelin-contracts"]
 path = use-cases/lib/openzeppelin-contracts
 url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "synd-contracts/lib/nitro-contracts"]
+	path = synd-contracts/lib/nitro-contracts
+	url = https://github.com/OffchainLabs/nitro-contracts
