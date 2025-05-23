@@ -39,6 +39,7 @@ async fn main() -> eyre::Result<()> {
     let cfg = Config::parse();
     info!("loading rockdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir)?;
+
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
 

@@ -172,8 +172,9 @@ mod tests {
     use crate::{
         client::{validate_block_add_timestamp, KnownState},
         db::{tests::TestDB, ArbitrumDB, DelayedMessage, MBlock, Slot},
+        methods::common::test_utils::TIME,
         metrics::MchainMetrics,
-        server::{start_mchain, tests::TIME},
+        server::start_mchain,
     };
     use alloy::{
         eips::BlockNumberOrTag,

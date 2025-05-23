@@ -6,5 +6,6 @@
 #![allow(missing_docs)]
 pub mod client;
 pub mod db;
+pub mod methods;
 pub mod metrics;
 pub mod server;

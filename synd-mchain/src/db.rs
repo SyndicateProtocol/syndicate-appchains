@@ -11,7 +11,7 @@ use std::fmt;
 const VERSION: u64 = 2;
 
 /// Each delayed message is used to derive an appchain block
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct DelayedMessage {
     pub kind: u8,
     pub sender: Address,
