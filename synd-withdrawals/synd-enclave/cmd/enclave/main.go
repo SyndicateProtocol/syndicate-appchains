@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	log.Info("Starting Enclave")
 	oplog.SetupDefaults()
 
 	s := rpc.NewServer()
