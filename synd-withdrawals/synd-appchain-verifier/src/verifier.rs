@@ -5,8 +5,8 @@ use crate::{
     config::AppchainVerifierConfig,
     errors::VerifierError,
     types::{
-        get_current_messages, get_input_batches_with_timestamps, BlockVerifierInput,
-        SequencingChainInput, SettlementChainInput,
+        get_input_batches_with_timestamps, BlockVerifierInput, SequencingChainInput,
+        SettlementChainInput,
     },
 };
 use eyre::Result;
@@ -16,13 +16,13 @@ use eyre::Result;
 #[derive(Default, Debug, Clone)]
 pub struct Verifier {
     /// Settlement delay
-    _settlement_delay: u64,
+    settlement_delay: u64,
 }
 
 impl Verifier {
     /// Create a new `Verifier`
     pub const fn new(config: &AppchainVerifierConfig) -> Self {
-        Self { _settlement_delay: config.settlement_delay }
+        Self { settlement_delay: config.settlement_delay }
     }
 
     /// Verifies blocks and receipts and creates a new mchain block
@@ -41,28 +41,52 @@ impl Verifier {
         self.generate_output(sequencing_chain_input, settlement_chain_input)
     }
 
-    // --------------------------------------------
-    // Output Generation
-    // --------------------------------------------
-    #[allow(clippy::unwrap_used)]
+    /// Generates the output for the verifier
     fn generate_output(
         &self,
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
     ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
-        let batches = get_input_batches_with_timestamps(sequencing_chain_input)?;
+        let batches_with_timestamp = get_input_batches_with_timestamps(sequencing_chain_input)?;
         let delayed_messages = &settlement_chain_input.delayed_messages;
         let mut block_verifier_inputs = vec![];
-        for batch in batches {
-            let messages = get_current_messages(delayed_messages.clone(), batch.timestamp);
+        let start_timestamp = batches_with_timestamp[0].timestamp;
+        let mut delayed_messages_index = 0;
+        if delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay >
+            start_timestamp
+        {
+            return Err(VerifierError::InvalidSettlementChainInput);
+        }
+        while delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay <=
+            start_timestamp
+        {
+            delayed_messages_index += 1;
+        }
+
+        for batch_with_timestamp in &batches_with_timestamp[1..] {
+            let mut messages = vec![];
+            while delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay <=
+                batch_with_timestamp.timestamp
+            {
+                messages.push(delayed_messages[delayed_messages_index].clone());
+                delayed_messages_index += 1;
+            }
+            let batch = batch_with_timestamp.batch.clone();
+
+            // If there are no sequencing transactions or delayed messages, skip this batch
+            if batch.is_empty() && messages.is_empty() {
+                continue;
+            }
+
             let block_verifier_input = BlockVerifierInput {
                 min_block_number: 0,
                 max_block_number: u64::MAX,
                 min_timestamp: 0,
                 max_timestamp: u64::MAX,
                 messages,
-                batch: batch.batch,
+                batch,
             };
+
             block_verifier_inputs.push(block_verifier_input);
         }
         Ok(block_verifier_inputs)

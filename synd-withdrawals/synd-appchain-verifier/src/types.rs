@@ -2,7 +2,7 @@
 
 use crate::errors::VerifierError;
 use alloy::{
-    primitives::{fixed_bytes, keccak256, Address, Bytes, B256, U256},
+    primitives::{fixed_bytes, keccak256, map::HashMap, Address, Bytes, B256, U256},
     rpc::types::{EIP1186AccountProofResponse, Header},
     sol_types::SolValue as _,
 };
@@ -51,10 +51,6 @@ impl SettlementChainInput {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SequencingChainInput {
     // TRUSTLESS INPUT
-    /// Start block header
-    pub start_block_header: Header,
-    /// End block header
-    pub end_block_header: Header,
     /// Sequencing chain contract address
     pub sequencing_chain_contract_address: Address,
     /// Start syndicate accumulator merkle proof
@@ -178,6 +174,7 @@ impl SequencingChainInput {
     }
 
     /// Validate the sequencing chain input
+    #[allow(clippy::unwrap_used)]
     pub fn validate(&self) -> Result<(), VerifierError> {
         // Verify block headers
         self.verify_block_headers()?;
@@ -186,7 +183,7 @@ impl SequencingChainInput {
         // Validate start syndicate accumulator merkle proof
         Self::verify_merkle_proof(
             &self.start_syndicate_accumulator_merkle_proof,
-            &self.start_block_header,
+            self.block_headers.first().unwrap(),
             self.start_block_hash,
             self.sequencing_chain_contract_address,
             SYNDICATE_ACCUMULATOR_STORAGE_SLOT,
@@ -194,7 +191,7 @@ impl SequencingChainInput {
         // Validate  end syndicate accumulator merkle proof
         Self::verify_merkle_proof(
             &self.end_syndicate_accumulator_merkle_proof,
-            &self.end_block_header,
+            self.block_headers.last().unwrap(),
             self.end_block_hash,
             self.sequencing_chain_contract_address,
             SYNDICATE_ACCUMULATOR_STORAGE_SLOT,
@@ -358,18 +355,6 @@ pub fn parse_syndicate_transaction_events(
 }
 
 // --------------------------------------------
-// L1IncomingMessage Helper Functions
-// --------------------------------------------
-
-/// Get the current messages from the delayed messages
-pub fn get_current_messages(
-    delayed_messages: Vec<L1IncomingMessage>,
-    timestamp: u64,
-) -> Vec<L1IncomingMessage> {
-    delayed_messages.into_iter().filter(|message| message.header.timestamp == timestamp).collect()
-}
-
-// --------------------------------------------
 // Batch Helper Functions
 // --------------------------------------------
 
@@ -405,15 +390,36 @@ pub struct BatchWithTimestamp {
 pub fn get_input_batches_with_timestamps(
     sequencing_chain_input: &SequencingChainInput,
 ) -> Result<Vec<BatchWithTimestamp>, VerifierError> {
-    let blocks =
+    let syndicate_blocks =
         parse_syndicate_transaction_events(&sequencing_chain_input.syndicate_transaction_events)?;
-    let mut batches = vec![];
-    for block in blocks {
-        let batch = build_batch(block.transactions, block.block_number, block.timestamp)
-            .map(|batch| BatchWithTimestamp { timestamp: block.timestamp, batch })
-            .map_err(|_| VerifierError::InvalidBatch)?;
-        batches.push(batch);
+
+    let mut map_syndicate_block_number_to_block = HashMap::new();
+    for block in syndicate_blocks {
+        map_syndicate_block_number_to_block.insert(block.block_number, block);
     }
+
+    let sequencing_headers = sequencing_chain_input.block_headers.clone();
+    let mut batches = vec![];
+
+    for header in sequencing_headers {
+        match map_syndicate_block_number_to_block.get(&header.number) {
+            // If there is a batch for this block, build it
+            Some(block) => {
+                let batch =
+                    build_batch(block.transactions.clone(), block.block_number, block.timestamp)
+                        .map(|batch| BatchWithTimestamp { timestamp: block.timestamp, batch })
+                        .map_err(|_| VerifierError::InvalidBatch)?;
+                batches.push(batch);
+            }
+            // If there is no batch for this block, build an empty batch
+            None => {
+                let empty_batch =
+                    BatchWithTimestamp { timestamp: header.timestamp, batch: Bytes::new() };
+                batches.push(empty_batch);
+            }
+        }
+    }
+
     Ok(batches)
 }
 
