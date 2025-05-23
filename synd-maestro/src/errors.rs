@@ -12,9 +12,9 @@ use tracing::error;
 /// Primary error type for the Maestro service, following JSON-RPC error code mapping
 #[derive(Debug, Error)]
 pub enum MaestroError {
-    /// Error relating to Redis
+    /// Error relating to Valkey
     #[error(transparent)]
-    Redis(#[from] RedisError),
+    Valkey(#[from] RedisError),
 
     /// Error relating to Config
     #[error("config error: {0}")]
@@ -62,6 +62,10 @@ pub enum InternalErrorType {
     /// Failed to fetch wallet nonce from RPC
     #[error("chain {0} failed to return wallet {1} nonce")]
     RpcFailedToFetchWalletNonce(ChainId, Address),
+
+    /// Failed to fetch wallet balance from RPC
+    #[error("chain {0} failed to return wallet {1} balance")]
+    RpcFailedToFetchWalletBalance(ChainId, Address),
 
     /// Failed to submit transaction
     #[error("transaction submission failed for tx hash: {0}")]

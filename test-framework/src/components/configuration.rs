@@ -4,6 +4,7 @@ use alloy::{primitives::Address, providers::WalletProvider};
 use contract_bindings::synd::arbconfigmanager::ArbConfigManager;
 use eyre::Result;
 use shared::types::FilledProvider;
+use std::time::Duration;
 use test_utils::anvil::mine_block;
 
 /// Arbitrum Nitro contract version on the settlement chain used for testing
@@ -25,6 +26,8 @@ pub struct ConfigurationOptions {
     pub rollup_owner: Address,
     pub appchain_chain_id: u64,
     pub finality_delay: u64,
+    pub maestro_finalization_duration: Option<Duration>,
+    pub maestro_finalization_checker_interval: Option<Duration>,
 }
 
 impl Default for ConfigurationOptions {
@@ -41,6 +44,8 @@ impl Default for ConfigurationOptions {
             rollup_owner: Address::ZERO,
             appchain_chain_id: 13331370,
             finality_delay: 60,
+            maestro_finalization_duration: None,
+            maestro_finalization_checker_interval: None,
         }
     }
 }

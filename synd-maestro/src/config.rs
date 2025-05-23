@@ -2,8 +2,8 @@
 
 use crate::{
     config::ConfigError::RpcUrlInvalidAddress,
-    errors::{ConfigError, ConfigError::ParseConfig},
-    redis::ttl::{waiting_txn::WAITING_TXN_TTL, wallet_nonce::WALLET_NONCE_TTL},
+    errors::ConfigError,
+    valkey::ttl::{waiting_txn::WAITING_TXN_TTL, wallet_nonce::WALLET_NONCE_TTL},
 };
 use alloy::{
     primitives::ChainId,
@@ -14,11 +14,11 @@ use alloy::{
 };
 use clap::Parser;
 use std::{collections::HashMap, time::Duration};
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 
 /// Configuration for Maestro
 #[allow(clippy::doc_markdown)]
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 #[command(version, about, long_about = None)]
 pub struct Config {
     /// Port to listen on
@@ -29,10 +29,10 @@ pub struct Config {
     #[arg(short = 'm', long, env = "METRICS_PORT", default_value_t = 8081)]
     pub metrics_port: u16,
 
-    /// Redis address to listen on
-    /// Example: "redis://0.0.0.0:6379"
-    #[arg(short = 'r', long, env = "REDIS_URL")]
-    pub redis_url: String,
+    /// Valkey cache address to listen on.
+    /// Example: "valkey://0.0.0.0:6379"
+    #[arg(short = 'r', long, env = "VALKEY_URL")]
+    pub valkey_url: String,
 
     /// Chain ID to RPC URL mappings as a JSON string object
     /// Example: '{"1": "https://example.com", "2": "https://another.com"}'
@@ -43,7 +43,7 @@ pub struct Config {
         default_value = "{}",
         value_parser = parse_chain_rpc_urls_map
     )]
-    pub chain_rpc_urls: HashMap<String, String>,
+    pub chain_rpc_urls: HashMap<u64, String>,
 
     /// Timeout in seconds for connection validation
     #[arg(long, env = "VALIDATION_TIMEOUT", default_value = "5s",
@@ -54,30 +54,38 @@ pub struct Config {
     #[arg(long, env = "SKIP_VALIDATION", default_value_t = false)]
     pub skip_validation: bool,
 
-    /// Interval at which to prune the Redis stream
-    #[arg(long, env = "PRUNE_INTERVAL", default_value = "24h",
-    value_parser = humantime::parse_duration)]
-    pub prune_interval: Duration,
-
-    /// Redis stream max age of messages to prune
-    #[arg(long, env = "PRUNE_MAX_AGE", default_value = "24h",
-    value_parser = humantime::parse_duration)]
-    pub prune_max_age: Duration,
-
-    /// Time-to-live (TTL) of waiting transaction Redis key values
+    /// Time-to-live (TTL) of waiting transaction Valkey key values
     #[arg(long, env = "WAITING_TXN_TTL", default_value = WAITING_TXN_TTL,
     value_parser = humantime::parse_duration)]
     pub waiting_txn_ttl: Duration,
 
-    /// Time-to-live (TTL) of wallet nonce Redis key values
+    /// Time-to-live (TTL) of wallet nonce Valkey key values
     #[arg(long, env = "WALLET_NONCE_TTL", default_value = WALLET_NONCE_TTL,
     value_parser = humantime::parse_duration)]
     pub wallet_nonce_ttl: Duration,
+
+    /// Duration after which a transaction is considered finalized
+    #[arg(long, env = "FINALIZATION_DURATION", default_value = "15m",
+    value_parser = humantime::parse_duration)]
+    pub finalization_duration: Duration,
+
+    /// Interval at which a background task checks for finalized transactions
+    #[arg(long, env = "FINALIZATION_CHECKER_INTERVAL", default_value = "1m",
+    value_parser = humantime::parse_duration)]
+    pub finalization_checker_interval: Duration,
+
+    /// Maximum number of resubmission retries
+    #[arg(long, env = "MAX_TRANSACTION_RETRIES", default_value = "3")]
+    pub max_transaction_retries: u32,
+
+    /// Skip sender wallet balance check
+    #[arg(long, env = "SKIP_BALANCE_CHECK", default_value_t = false)]
+    pub skip_balance_check: bool,
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
-fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<String, String>, ConfigError> {
-    let map: HashMap<String, String> =
+fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<u64, String>, ConfigError> {
+    let map: HashMap<u64, String> =
         serde_json::from_str(s).map_err(|e| RpcUrlInvalidAddress(e.to_string()))?;
     Ok(map)
 }
@@ -98,7 +106,7 @@ impl Config {
     }
 
     /// Validates the configuration
-    pub async fn validate(&self) -> Result<HashMap<ChainId, Option<RpcProvider>>, ConfigError> {
+    pub async fn validate(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
         // Skip validation if requested
         if self.skip_validation {
             debug!("Skipping config validation");
@@ -117,9 +125,9 @@ impl Config {
     }
 
     /// Checks that all RPC URLs are accessible by making a test connection. Return usable providers
-    async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, Option<RpcProvider>>, ConfigError> {
+    async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
         // Validate RPC URLs by trying to connect to each one
-        let mut provider_map: HashMap<ChainId, Option<RpcProvider>> = HashMap::new();
+        let mut provider_map: HashMap<ChainId, RpcProvider> = HashMap::new();
 
         if self.chain_rpc_urls.is_empty() {
             return Ok(provider_map)
@@ -127,57 +135,33 @@ impl Config {
 
         for (chain_id, url) in &self.chain_rpc_urls {
             debug!(%chain_id, %url, "Sending test JSON-RPC request");
-            let configured_chain_id = chain_id.parse().map_err(|e| {
-                error!(%chain_id, %url, %e, "Failed to parse chain_id");
-                ParseConfig(e)
-            })?;
 
             let provider = match ProviderBuilder::new().connect(url).await {
                 Ok(provider) => provider,
                 Err(e) => {
-                    warn!(%chain_id, %url, %e, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
-                    provider_map.insert(configured_chain_id, None);
-                    continue; // Skip to next iteration
+                    error!(%chain_id, %url, %e, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
+                    continue; // create other providers
                 }
             };
 
-            let resp_chain_id = match provider.get_chain_id().await {
-                Ok(id) => id,
+            match provider.get_chain_id().await {
+                Ok(resp_chain_id) => {
+                    if resp_chain_id != *chain_id {
+                        return Err(ConfigError::RpcUrlInvalidChainId(
+                            url.to_string(),
+                            chain_id.to_string(),
+                            resp_chain_id.to_string(),
+                        ));
+                    }
+                }
                 Err(e) => {
                     error!(%e, %chain_id, %url, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
-                    provider_map.insert(configured_chain_id, None);
-                    continue; // Skip to next iteration
                 }
             };
 
-            if resp_chain_id.to_string() != *chain_id {
-                return Err(ConfigError::RpcUrlInvalidChainId(
-                    url.to_string(),
-                    chain_id.to_string(),
-                    resp_chain_id.to_string(),
-                ));
-            }
-
             debug!(%chain_id, %url, "Successful JSON-RPC request to RPC provider");
-            provider_map.insert(resp_chain_id, Some(provider));
+            provider_map.insert(*chain_id, provider);
         }
         Ok(provider_map)
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            port: 8080,
-            metrics_port: 8081,
-            redis_url: String::new(),
-            chain_rpc_urls: HashMap::new(),
-            validation_timeout: Duration::from_secs(5),
-            skip_validation: false,
-            prune_interval: Duration::from_secs(60 * 60 * 24),
-            prune_max_age: Duration::from_secs(60 * 60 * 24),
-            waiting_txn_ttl: Default::default(),
-            wallet_nonce_ttl: Default::default(),
-        }
     }
 }

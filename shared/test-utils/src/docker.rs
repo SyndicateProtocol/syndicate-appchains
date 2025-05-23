@@ -18,7 +18,7 @@ use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
 };
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug)]
 pub struct Docker(Child);
@@ -58,9 +58,46 @@ impl Docker {
 
 impl Drop for Docker {
     fn drop(&mut self) {
-        if let Ok(None) = self.0.try_wait() {
-            if let Some(pid) = self.0.id() {
-                _ = std::process::Command::new("kill").arg(pid.to_string()).spawn();
+        if self.0.try_wait().is_ok_and(|status| status.is_some()) {
+            info!("Docker process for Drop already exited or was not running.");
+            return;
+        }
+
+        let Some(pid) = self.0.id() else {
+            info!("Docker process for Drop had no PID, likely already exited or failed to start.");
+            return;
+        };
+
+        info!("Attempting to stop Docker container process (PID: {}) via Drop", pid);
+        let kill_proc = match std::process::Command::new("kill")
+            .arg(pid.to_string())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+        {
+            Ok(proc) => proc,
+            Err(e) => {
+                warn!("Failed to spawn kill command for PID {}: {}", pid, e);
+                return;
+            }
+        };
+
+        match kill_proc.wait_with_output() {
+            Ok(output) => {
+                if output.status.success() {
+                    info!("Successfully sent SIGTERM to PID {} and kill command exited.", pid);
+                } else {
+                    warn!(
+                        "Kill command for PID {} completed with error. Status: {}. Stderr: {}. Stdout: {}",
+                        pid,
+                        output.status,
+                        String::from_utf8_lossy(&output.stderr),
+                        String::from_utf8_lossy(&output.stdout)
+                    );
+                }
+            }
+            Err(e) => {
+                warn!("Failed to wait for kill command for PID {}: {}", pid, e);
             }
         }
     }
@@ -247,28 +284,29 @@ pub async fn launch_nitro_node(
     Ok((nitro, appchain, url))
 }
 
-pub async fn start_redis() -> Result<(Docker, String)> {
+pub async fn start_valkey() -> Result<(Docker, String)> {
     let port = PortManager::instance().next_port().await;
-    let mut redis = Docker::new(
+    let mut valkey = Docker::new(
         Command::new("docker")
             .arg("run")
             .arg("--init")
             .arg("--rm")
             .arg("-p")
             .arg(format!("{port}:6379"))
-            .arg("redis:latest")
+            .arg("valkey/valkey:latest")
             .arg("--loglevel debug"),
     )?;
 
-    let redis_url = format!("redis://127.0.0.1:{port}/");
+    // Not a typo - `valkey` URL should have the `redis` prefix
+    let valkey_url = format!("redis://0.0.0.0:{port}/");
 
-    let client = redis::Client::open(redis_url.as_str()).unwrap();
+    let valkey_client = redis::Client::open(valkey_url.as_str()).unwrap();
     wait_until!(
-        if let Some(status) = redis.try_wait()? {
-            panic!("redis exited with {}", status);
+        if let Some(status) = valkey.try_wait()? {
+            panic!("cache exited with {}", status);
         };
-        client.get_multiplexed_async_connection().await.is_ok(),
+        valkey_client.get_multiplexed_async_connection().await.is_ok(),
         Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
-    Ok((redis, redis_url))
+    Ok((valkey, valkey_url))
 }

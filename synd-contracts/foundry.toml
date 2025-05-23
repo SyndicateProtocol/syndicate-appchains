@@ -3,6 +3,9 @@ src = "src"
 out = "out"
 libs = ["lib"]
 via_ir = true
+evm_version = "cancun"
+bytecode_hash = "none"
+cbor_metadata = false
 
 [rpc_endpoints]
 localhost = "http://localhost:8545"

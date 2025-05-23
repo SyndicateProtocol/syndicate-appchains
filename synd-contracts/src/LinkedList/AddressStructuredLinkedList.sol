@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 /**
  * @title AddressStructuredLinkedList
@@ -221,7 +221,7 @@ library AddressStructuredLinkedList {
      */
     function _pop(List storage self, bool _direction) private returns (address) {
         address adj;
-        (, adj) = getAdjacent(self, _HEAD, _direction);
+        (, adj) = getAdjacent(self, _HEAD, _direction); //#olympix-ignore-unused-return-function-call
         return remove(self, adj);
     }
 

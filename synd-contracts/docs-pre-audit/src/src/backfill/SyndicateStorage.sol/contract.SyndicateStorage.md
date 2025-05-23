@@ -1,5 +1,5 @@
 # SyndicateStorage
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/7027a63d41514909f85c2d3245a5d979fd2c367a/src/backfill/SyndicateStorage.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/backfill/SyndicateStorage.sol)
 
 **Inherits:**
 AccessControl
@@ -10,10 +10,10 @@ This contract is used to emit events containing App chain block and transaction 
 
 
 ## State Variables
-### appChainId
+### appchainId
 
 ```solidity
-uint256 public immutable appChainId;
+uint256 public immutable appchainId;
 ```
 
 
@@ -38,7 +38,7 @@ Constructor that sets up the default admin and manager roles
 
 
 ```solidity
-constructor(address admin, address manager, uint256 appChainId_);
+constructor(address admin, address manager, uint256 appchainId_);
 ```
 **Parameters**
 
@@ -46,7 +46,7 @@ constructor(address admin, address manager, uint256 appChainId_);
 |----|----|-----------|
 |`admin`|`address`|The address that will be the default admin role|
 |`manager`|`address`|The address that will be the manager role|
-|`appChainId_`|`uint256`|The App chain ID|
+|`appchainId_`|`uint256`|The App chain ID|
 
 
 ### setIndexFromBlock

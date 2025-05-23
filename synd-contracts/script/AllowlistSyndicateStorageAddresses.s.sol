@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 
@@ -12,7 +12,6 @@ contract AllowlistSyndicateStorageAddresses is Script {
         vm.startBroadcast();
         address syndicateStorageAddress = vm.envAddress("SYNDICATE_STORAGE_ADDRESS");
         syndicateStorage = SyndicateStorage(syndicateStorageAddress);
-        // TODO: Update the addresses to allowlist
         address[10] memory addressesToAllowlist = [
             0x5f008726C9584810fB4C6e7B794e7EA5aC79C1C6,
             0x6a5462609FEBcd374Cb72385c2543E9cb833DA1c,

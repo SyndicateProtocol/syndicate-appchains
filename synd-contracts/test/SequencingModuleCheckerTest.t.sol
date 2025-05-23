@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract SequencingModuleCheckerMock is SequencingModuleChecker {}
 
 contract SequencingModuleCheckerTest is Test {
     SequencingModuleChecker public manager;
-    RequireAllModule public masterModule;
+    RequireAndModule public masterModule;
     address public admin;
     address public nonAdmin;
 
@@ -17,13 +17,13 @@ contract SequencingModuleCheckerTest is Test {
         admin = msg.sender;
         nonAdmin = address(0x456);
 
-        masterModule = new RequireAllModule(admin);
+        masterModule = new RequireAndModule(admin);
         manager = new SequencingModuleCheckerMock();
         manager.initialize(admin, address(masterModule));
     }
 
     function testUpdateMasterModule() public {
-        address newModule = address(new RequireAllModule(admin));
+        address newModule = address(new RequireAndModule(admin));
 
         vm.prank(admin);
         vm.expectEmit(true, false, false, false);
@@ -34,7 +34,7 @@ contract SequencingModuleCheckerTest is Test {
     }
 
     function testUpdateMasterModuleNonAdmin() public {
-        address newModule = address(new RequireAllModule(admin));
+        address newModule = address(new RequireAndModule(admin));
 
         vm.prank(nonAdmin);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
