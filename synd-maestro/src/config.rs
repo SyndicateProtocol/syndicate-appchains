@@ -77,6 +77,10 @@ pub struct Config {
     /// Maximum number of resubmission retries
     #[arg(long, env = "MAX_TRANSACTION_RETRIES", default_value = "3")]
     pub max_transaction_retries: u32,
+
+    /// Skip sender wallet balance check
+    #[arg(long, env = "SKIP_BALANCE_CHECK", default_value_t = false)]
+    pub skip_balance_check: bool,
 }
 
 /// Parse the chain ID to URL mappings from the JSON string

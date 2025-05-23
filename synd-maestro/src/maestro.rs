@@ -233,7 +233,9 @@ impl MaestroService {
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
-                self.check_sender_wallet_balance(tx, chain_id, wallet).await?;
+                if !self.config.skip_balance_check {
+                    self.check_sender_wallet_balance(tx, chain_id, wallet).await?;
+                }
 
                 // 1. update the cache with nonce + 1. Quit if this fails
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
@@ -791,6 +793,7 @@ mod tests {
             finalization_duration: Duration::from_secs(10),
             finalization_checker_interval: Duration::from_secs(1),
             max_transaction_retries: 3,
+            skip_balance_check: false,
         };
 
         let mut registry = Registry::default();
