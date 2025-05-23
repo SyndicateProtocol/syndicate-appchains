@@ -55,29 +55,27 @@ fn main() {
 
 fn run() -> Result<Vec<BlockVerifierInput>> {
     set_global_default_subscriber()?;
-    // TODO (SEQ-769): Implement Appchain Verifier Component
     let args = VerifierCliArgs::parse();
-    debug!("VerifierCliArgs sequencing_chain_input: {:?}", args.sequencing_chain_input);
 
+    let config: AppchainVerifierConfig = serde_json::from_str(&args.config)?;
     let sequencing_chain_input: SequencingChainInput =
         serde_json::from_str(&args.sequencing_chain_input)?;
     let settlement_chain_input: SettlementChainInput =
         serde_json::from_str(&args.settlement_chain_input)?;
 
+    debug!("Appchain Verifier Config: {:?}", config);
     debug!("Sequencing chain input: {:?}", sequencing_chain_input);
     debug!("Settlement chain input: {:?}", settlement_chain_input);
-
-    let config: AppchainVerifierConfig = serde_json::from_str(&args.config)?;
 
     // Verify config hash matches config
     if args.appchain_config_hash != config.hash_verifier_config_sha256().to_string() {
         return Err(eyre::eyre!("Config hash mismatch"));
     }
 
-    let _verifier = Verifier::new(&config);
-
-    // Ok(verifier.verify_and_create_output(&sequencing_chain_input, &settlement_chain_input)?)
-    Ok(vec![])
+    let verifier = Verifier::new(&config);
+    verifier
+        .verify_and_create_output(&sequencing_chain_input, &settlement_chain_input)
+        .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
 }
 
 #[cfg(test)]
