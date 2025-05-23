@@ -1,10 +1,16 @@
 # SequencingModuleChecker
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/7027a63d41514909f85c2d3245a5d979fd2c367a/src/SequencingModuleChecker.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/SequencingModuleChecker.sol)
 
 **Inherits:**
 Ownable, [IPermissionModule](/src/interfaces/IPermissionModule.sol/interface.IPermissionModule.md)
 
-A simplified contract that delegates permission checks to modules
+A contract that delegates permission checks to modular permission systems
+
+*This separation of concerns allows for flexible permission systems:
+1. The SequencingModuleChecker manages the core permission interface
+2. The permissionRequirementModule (typically RequireAndModule or RequireOrModule) handles the actual permission logic
+3. This design allows for complex permission structures (AND/OR logic) that can be upgraded over time
+4. The initialization pattern allows for proper setup of the permission system after deployment*
 
 
 ## State Variables
@@ -38,6 +44,11 @@ constructor() Ownable(msg.sender);
 
 Initializes the contract with a new admin and a requirement module
 
+*This two-step initialization process allows for proper setup of the contract:
+1. First deployed with a temporary admin (deployer)
+2. Then initialized with the permanent admin and requirement module
+3. Once initialized, it cannot be re-initialized (immutable pattern)*
+
 
 ```solidity
 function initialize(address admin, address _permissionRequirementModule) external onlyOwner;
@@ -67,18 +78,18 @@ function updateRequirementModule(address _newModule) external onlyOwner;
 
 ### onlyWhenAllowed
 
-Modifier to checks if an address is allowed to submit txs based on the sender, origin and data
+Modifier to check if an address is allowed to submit txs based on the sender, origin and data
 
 
 ```solidity
-modifier onlyWhenAllowed(address proposer, address originator, bytes calldata data);
+modifier onlyWhenAllowed(address msgSender, address txOrigin, bytes calldata data);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`proposer`|`address`|The address to check|
-|`originator`|`address`|The address of tx.origin. Useful to know the sender originator in wrapper contracts|
+|`msgSender`|`address`|The address calling the function (msg.sender)|
+|`txOrigin`|`address`|The address that initiated the transaction (tx.origin)|
 |`data`|`bytes`|The calldata to check|
 
 
@@ -119,10 +130,10 @@ event RequirementModuleUpdated(address indexed newModule);
 error InvalidModuleAddress();
 ```
 
-### TransactionOrProposerNotAllowed
+### TransactionOrSenderNotAllowed
 
 ```solidity
-error TransactionOrProposerNotAllowed();
+error TransactionOrSenderNotAllowed();
 ```
 
 ### AlreadyInitialized

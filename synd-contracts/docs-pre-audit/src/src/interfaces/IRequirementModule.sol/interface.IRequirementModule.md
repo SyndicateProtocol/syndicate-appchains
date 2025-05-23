@@ -1,12 +1,12 @@
 # IRequirementModule
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/7027a63d41514909f85c2d3245a5d979fd2c367a/src/interfaces/IRequirementModule.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/interfaces/IRequirementModule.sol)
 
 **Inherits:**
 [IPermissionModule](/src/interfaces/IPermissionModule.sol/interface.IPermissionModule.md)
 
-Interface for requirement modules with both proposer and calldata validation
+Interface for requirement modules that manage collections of permission checks
 
-*Combines both proposer and calldata permission check capabilities*
+*Extends IPermissionModule with methods to add/remove individual permission modules*
 
 
 ## Functions
