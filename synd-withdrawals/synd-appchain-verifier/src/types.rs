@@ -21,7 +21,7 @@ const SYNDICATE_ACCUMULATOR_STORAGE_SLOT: B256 =
     fixed_bytes!("0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90"); // Keccak256("syndicate.accumulator")
 
 /// Settlement chain input
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct SettlementChainInput {
     // TRUSTLESS INPUT
     /// Delayed messages
@@ -48,11 +48,9 @@ impl SettlementChainInput {
     }
 }
 /// Sequencing chain input
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct SequencingChainInput {
     // TRUSTLESS INPUT
-    /// Sequencing chain contract address
-    pub sequencing_chain_contract_address: Address,
     /// Start syndicate accumulator merkle proof
     pub start_syndicate_accumulator_merkle_proof: EIP1186AccountProofResponse,
     /// End syndicate accumulator merkle proof
@@ -175,7 +173,10 @@ impl SequencingChainInput {
 
     /// Validate the sequencing chain input
     #[allow(clippy::unwrap_used)]
-    pub fn validate(&self) -> Result<(), VerifierError> {
+    pub fn validate(
+        &self,
+        sequencing_chain_contract_address: Address,
+    ) -> Result<(), VerifierError> {
         // Verify block headers
         self.verify_block_headers()?;
         // Verify accumulator
@@ -185,7 +186,7 @@ impl SequencingChainInput {
             &self.start_syndicate_accumulator_merkle_proof,
             self.block_headers.first().unwrap(),
             self.start_block_hash,
-            self.sequencing_chain_contract_address,
+            sequencing_chain_contract_address,
             SYNDICATE_ACCUMULATOR_STORAGE_SLOT,
         )?;
         // Validate  end syndicate accumulator merkle proof
@@ -193,7 +194,7 @@ impl SequencingChainInput {
             &self.end_syndicate_accumulator_merkle_proof,
             self.block_headers.last().unwrap(),
             self.end_block_hash,
-            self.sequencing_chain_contract_address,
+            sequencing_chain_contract_address,
             SYNDICATE_ACCUMULATOR_STORAGE_SLOT,
         )?;
         Ok(())
@@ -235,8 +236,8 @@ pub struct L1IncomingMessage {
 pub struct L1IncomingMessageHeader {
     /// Kind
     pub kind: u8,
-    /// Poster
-    pub poster: Address,
+    /// Sender
+    pub sender: Address,
     /// Block number
     pub block_number: u64,
     /// Timestamp
@@ -244,7 +245,7 @@ pub struct L1IncomingMessageHeader {
     /// Request ID
     pub request_id: B256,
     /// L1 base fee
-    pub l1_base_fee: U256,
+    pub base_fee_l1: U256,
 }
 
 impl L1IncomingMessage {
@@ -254,11 +255,11 @@ impl L1IncomingMessage {
         keccak256(
             (
                 [self.header.kind],
-                self.header.poster,
+                self.header.sender,
                 self.header.block_number,
                 self.header.timestamp,
                 self.header.request_id,
-                self.header.l1_base_fee,
+                self.header.base_fee_l1,
                 message_hash,
             )
                 .abi_encode_packed(),

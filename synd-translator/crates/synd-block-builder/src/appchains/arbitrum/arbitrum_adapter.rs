@@ -80,7 +80,8 @@ impl TryFrom<u8> for L1MessageType {
 }
 
 impl L1MessageType {
-    fn from_u8_panic(value: u8) -> Self {
+    /// Convert a u8 to a `L1MessageType`
+    pub fn from_u8_panic(value: u8) -> Self {
         Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {}", value))
     }
 }
@@ -272,7 +273,12 @@ impl ArbitrumAdapter {
 
         let kind = L1MessageType::from_u8_panic(msg.kind);
 
-        if self.should_ignore_delayed_message(&msg.sender, &kind) {
+        if Self::should_ignore_delayed_message(
+            self.ignore_delayed_messages,
+            &self.allowed_settlement_addresses,
+            &msg.sender,
+            &kind,
+        ) {
             return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
         }
 
@@ -322,7 +328,13 @@ impl ArbitrumAdapter {
         Ok(encoded_batch)
     }
 
-    fn should_ignore_delayed_message(&self, sender: &Address, kind: &L1MessageType) -> bool {
+    /// Should ignore delayed message
+    pub fn should_ignore_delayed_message(
+        ignore_delayed_messages: bool,
+        allowed_settlement_addresses: &HashSet<Address>,
+        sender: &Address,
+        kind: &L1MessageType,
+    ) -> bool {
         // Always ignore Initialize & BatchPostingReport message types.
         // Except for the initial initialization message, these should not occur in practice.
         if matches!(kind, L1MessageType::Initialize | L1MessageType::BatchPostingReport) {
@@ -332,9 +344,9 @@ impl ArbitrumAdapter {
 
         // If self.ignore_delayed_messages is enabled and the address is not privileged, ignore
         // everything except for EthDeposit
-        if self.ignore_delayed_messages &&
+        if ignore_delayed_messages &&
             *kind != L1MessageType::EthDeposit &&
-            !self.allowed_settlement_addresses.contains(sender)
+            !allowed_settlement_addresses.contains(sender)
         {
             debug!("Delayed message ignored. Kind: {:?}, Sender: {:?}", kind, sender);
             return true;
@@ -608,39 +620,80 @@ mod tests {
 
     #[test]
     fn test_should_ignore_delayed_message() {
-        let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: Some(true),
-            ..Default::default()
-        });
-
-        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2Message));
-        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2FundedByL1));
-        assert!(
-            builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::SubmitRetryable)
-        );
-        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::Initialize));
-        assert!(builder
-            .should_ignore_delayed_message(&Address::ZERO, &L1MessageType::BatchPostingReport));
-
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(
+            true,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::L2Message
+        ));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(
+            true,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::L2FundedByL1
+        ));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(
+            true,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::SubmitRetryable
+        ));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(
+            true,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::Initialize
+        ));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(
+            true,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::BatchPostingReport
+        ));
         // Message that should NOT be ignored (even if ignore_delayed_messages is true)
-        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::EthDeposit));
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(
+            true,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::EthDeposit
+        ));
 
-        let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: Some(false),
-            ..Default::default()
-        });
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(
+            false,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::L2Message
+        ));
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(
+            false,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::L2FundedByL1
+        ));
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(
+            false,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::SubmitRetryable
+        ));
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(
+            false,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::EthDeposit
+        ));
 
-        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2Message));
-        assert!(
-            !builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2FundedByL1)
-        );
-        assert!(
-            !builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::SubmitRetryable)
-        );
-        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::EthDeposit));
-
-        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::Initialize));
-        assert!(builder
-            .should_ignore_delayed_message(&Address::ZERO, &L1MessageType::BatchPostingReport));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(
+            false,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::Initialize
+        ));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(
+            false,
+            &HashSet::new(),
+            &Address::ZERO,
+            &L1MessageType::BatchPostingReport
+        ));
     }
 }

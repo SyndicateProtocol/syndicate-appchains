@@ -1,28 +1,49 @@
-//! The `synd-appchain-verifier` crate is responsible for verifying a batch of blocks and creating a
-//! new `mchain` block
+//! The `synd-appchain-verifier` crate is responsible for verifying both the sequencing and
+//! settlement chains and creating a new `BlockVerifierInput` for each batch of blocks.
 
 use crate::{
     config::AppchainVerifierConfig,
     errors::VerifierError,
     types::{
-        get_input_batches_with_timestamps, BlockVerifierInput, SequencingChainInput,
-        SettlementChainInput,
+        get_input_batches_with_timestamps, BlockVerifierInput, L1IncomingMessage,
+        L1IncomingMessageHeader, SequencingChainInput, SettlementChainInput,
     },
 };
+use alloy::primitives::{Address, U256};
 use eyre::Result;
+use std::collections::HashSet;
+use synd_block_builder::appchains::arbitrum::arbitrum_adapter::{ArbitrumAdapter, L1MessageType};
 
 /// The `Verifier` struct is responsible for verifying a batch of blocks and creating a new mchain
 /// block.
 #[derive(Default, Debug, Clone)]
 pub struct Verifier {
+    /// Sequencing chain contract address
+    sequencing_chain_contract_address: Address,
+
     /// Settlement delay
     settlement_delay: u64,
+
+    /// Ignore delayed messages
+    ignore_delayed_messages: bool,
+
+    /// Allowed settlement addresses
+    allowed_settlement_addresses: HashSet<Address>,
 }
 
 impl Verifier {
     /// Create a new `Verifier`
-    pub const fn new(config: &AppchainVerifierConfig) -> Self {
-        Self { settlement_delay: config.settlement_delay }
+    pub fn new(config: &AppchainVerifierConfig) -> Self {
+        Self {
+            sequencing_chain_contract_address: config.sequencing_contract_address,
+            settlement_delay: config.settlement_delay,
+            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages,
+            allowed_settlement_addresses: config
+                .allowed_settlement_addresses
+                .iter()
+                .copied()
+                .collect::<HashSet<_>>(),
+        }
     }
 
     /// Verifies blocks and receipts and creates a new mchain block
@@ -35,10 +56,37 @@ impl Verifier {
         settlement_chain_input.validate()?;
 
         // Validate Sequencing Chain Input
-        sequencing_chain_input.validate()?;
+        sequencing_chain_input.validate(self.sequencing_chain_contract_address)?;
 
         // Generate output
         self.generate_output(sequencing_chain_input, settlement_chain_input)
+    }
+
+    fn process_delayed_message(&self, delayed_message: L1IncomingMessage) -> L1IncomingMessage {
+        assert!(
+            delayed_message.header.kind != L1MessageType::Initialize as u8,
+            "Initialize message received. This should not happen."
+        );
+        if ArbitrumAdapter::should_ignore_delayed_message(
+            self.ignore_delayed_messages,
+            &self.allowed_settlement_addresses,
+            &delayed_message.header.sender,
+            &L1MessageType::from_u8_panic(delayed_message.header.kind),
+        ) {
+            L1IncomingMessage {
+                header: L1IncomingMessageHeader {
+                    kind: L1MessageType::EndOfBlock as u8,
+                    sender: Address::ZERO,
+                    block_number: 0,
+                    timestamp: 0,
+                    request_id: delayed_message.header.request_id,
+                    base_fee_l1: U256::ZERO,
+                },
+                l2msg: Default::default(),
+            }
+        } else {
+            delayed_message
+        }
     }
 
     /// Generates the output for the verifier
@@ -48,7 +96,13 @@ impl Verifier {
         settlement_chain_input: &SettlementChainInput,
     ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
         let batches_with_timestamp = get_input_batches_with_timestamps(sequencing_chain_input)?;
-        let delayed_messages = &settlement_chain_input.delayed_messages;
+        let delayed_messages = settlement_chain_input
+            .delayed_messages
+            .clone()
+            .into_iter()
+            .map(|m| self.process_delayed_message(m))
+            .collect::<Vec<_>>();
+
         let mut block_verifier_inputs = vec![];
         let start_timestamp = batches_with_timestamp[0].timestamp;
         let mut delayed_messages_index = 0;

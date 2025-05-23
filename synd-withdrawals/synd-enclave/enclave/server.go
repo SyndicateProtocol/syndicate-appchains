@@ -228,62 +228,51 @@ func (s *Server) SetSignerKey(ctx context.Context, encrypted hexutil.Bytes) erro
 	return nil
 }
 
-func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput TEEInput) (TEEOutput, error) {
+func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput string) (string, error) {
 	// TODO (SEQ-961): Implement Sequencing Chain Verifier Component
 	// Sequencing chain verification
-	// Sequencing chain block builder
+	// Sequencing chain block verifier
 	// Sign & return
-	return TEEOutput{}, nil
+	return "", nil
 }
 
-func (s *Server) VerifyAppchain(ctx context.Context, verifyInput TEEInput) (TEEOutput, error) {
-	// TODO (SEQ-769): Implement Appchain Verifier Component
-	sequencingChainInput := SequencingChainInput{}
-	settlementChainInput := SettlementChainInput{}
-	// Appchain verification
-	configJson, err := json.Marshal(verifyInput.Config.AppchainVerifierConfig)
-	if err != nil {
-		return TEEOutput{}, fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	sequencingChainInputJson, err := json.Marshal(sequencingChainInput)
-	if err != nil {
-		return TEEOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
-	}
-
-	settlementChainInputJson, err := json.Marshal(settlementChainInput)
-	if err != nil {
-		return TEEOutput{}, fmt.Errorf("failed to marshal settlement chain input: %w", err)
-	}
-
-	appchainConfigHashJson, err := json.Marshal(verifyInput.TrustedInput.AppchainConfigHash)
-	if err != nil {
-		return TEEOutput{}, fmt.Errorf("failed to marshal appchain config hash: %w", err)
-	}
-
+func (s *Server) VerifyAppchain(ctx context.Context, config string, sequencingChainInput string, settlementChainInput string, appchainConfigHash string) (string, error) {
+	// Execute Appchain Verifier Rust Binary
 	cmd := exec.Command("cargo", "run", "--bin", "synd-appchain-verifier", "--",
-		"--config", string(configJson),
-		"--sequencing-chain-input", string(sequencingChainInputJson),
-		"--settlement-chain-input", string(settlementChainInputJson),
-		"--appchain-config-hash", string(appchainConfigHashJson),
+		"--config", config,
+		"--sequencing-chain-input", sequencingChainInput,
+		"--settlement-chain-input", settlementChainInput,
+		"--appchain-config-hash", appchainConfigHash,
 	)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return TEEOutput{}, fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
+		return "", fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
 	}
+
+	log.Debug("VerifyAppchain Output", "output", string(out))
 
 	lines := strings.Split(string(out), "\n")
-	outputLine := lines[len(lines)-1]
-
-	var output VerifyAppchainOutput
-	if err := json.Unmarshal([]byte(outputLine), &output); err != nil {
-		return TEEOutput{}, fmt.Errorf("failed to unmarshal MBlock: %w. Raw: %s", err, outputLine)
+	var outputLine string
+	for i := len(lines) - 1; i >= 0; i-- {
+		trimmed := strings.TrimSpace(lines[i])
+		if trimmed != "" {
+			outputLine = trimmed
+			break
+		}
 	}
 
-	// Appchain block verification
-	// TODO: Implement
-	fmt.Println(output)
+	var output VerifyAppchainOutput
+	log.Debug("VerifyAppchain Output Line", "outputLine", outputLine)
+	if err := json.Unmarshal([]byte(outputLine), &output); err != nil {
+		return "", fmt.Errorf("failed to unmarshal VerifyAppchainOutput: %w. Raw: %s", err, outputLine)
+	}
 
-	return TEEOutput{}, nil
+	// Appchain block verifier
+	// TODO (SEQ-781): Block verifier
+	log.Debug("VerifyAppchain Output", "output", output)
+
+	// Sign & return
+
+	return "", nil
 }

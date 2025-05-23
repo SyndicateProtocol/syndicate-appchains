@@ -1,8 +1,8 @@
 //! Main entrypoint for the `synd-appchain-verifier`
 
-use alloy::primitives::B256;
 use clap::Parser;
 use eyre::Result;
+use serde::Serialize;
 use shared::logger::set_global_default_subscriber;
 use synd_appchain_verifier::{
     config::AppchainVerifierConfig,
@@ -10,6 +10,11 @@ use synd_appchain_verifier::{
     verifier::Verifier,
 };
 use tracing::debug;
+
+#[derive(Serialize)]
+struct OutputWrapper {
+    verify_appchain_output: Vec<BlockVerifierInput>,
+}
 
 #[derive(Parser, Debug)]
 struct VerifierCliArgs {
@@ -33,9 +38,13 @@ struct VerifierCliArgs {
 #[allow(clippy::unwrap_used)]
 fn main() {
     match run() {
-        Ok((outputs, unused_delayed_messages_hash)) => {
-            debug!("Outputs created successfully:\n {}", serde_json::to_string(&outputs).unwrap());
-            debug!("Unused delayed messages hash: {}", unused_delayed_messages_hash);
+        Ok(outputs) => {
+            // Print raw JSON to stdout
+            println!("Outputs created successfully");
+            println!(
+                "{}",
+                serde_json::to_string(&OutputWrapper { verify_appchain_output: outputs }).unwrap()
+            );
         }
         Err(e) => {
             debug!("Error: {:?}", e);
@@ -44,11 +53,11 @@ fn main() {
     }
 }
 
-fn run() -> Result<(Vec<Vec<BlockVerifierInput>>, B256)> {
+fn run() -> Result<Vec<BlockVerifierInput>> {
     set_global_default_subscriber()?;
     // TODO (SEQ-769): Implement Appchain Verifier Component
     let args = VerifierCliArgs::parse();
-    debug!("VerifierCliArgs: {:?}", args);
+    debug!("VerifierCliArgs sequencing_chain_input: {:?}", args.sequencing_chain_input);
 
     let sequencing_chain_input: SequencingChainInput =
         serde_json::from_str(&args.sequencing_chain_input)?;
@@ -66,6 +75,27 @@ fn run() -> Result<(Vec<Vec<BlockVerifierInput>>, B256)> {
     }
 
     let _verifier = Verifier::new(&config);
+
     // Ok(verifier.verify_and_create_output(&sequencing_chain_input, &settlement_chain_input)?)
-    Ok((vec![], B256::ZERO))
+    Ok(vec![])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_input() {
+        let config = AppchainVerifierConfig::default();
+        let config_json = serde_json::to_string(&config).unwrap();
+        println!("{}", config_json);
+        let sequencing_chain_input = SequencingChainInput::default();
+        let sequencing_chain_input_json = serde_json::to_string(&sequencing_chain_input).unwrap();
+        println!("{}", sequencing_chain_input_json);
+        let settlement_chain_input = SettlementChainInput::default();
+        let settlement_chain_input_json = serde_json::to_string(&settlement_chain_input).unwrap();
+        println!("{}", settlement_chain_input_json);
+        let appchain_config_hash = config.hash_verifier_config_sha256();
+        println!("{}", appchain_config_hash);
+    }
 }
