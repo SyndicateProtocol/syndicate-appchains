@@ -147,7 +147,7 @@ impl MaestroService {
     }
 
     /// Performs gas and balance checks for a transaction.
-    async fn ensure_account_balance(
+    async fn check_sender_wallet_balance(
         &self,
         tx: &TxEnvelope,
         chain_id: ChainId,
@@ -218,7 +218,7 @@ impl MaestroService {
     /// spawned to check for and process any waiting transactions with sequential nonces.
     /// This allows the method to return quickly while potentially processing a chain of
     /// transactions in the background.
-    pub async fn handle_transaction_and_manage_nonces(
+    pub async fn handle_transaction(
         self: &Arc<Self>,
         raw_tx: Bytes,
         tx: &TxEnvelope,
@@ -233,10 +233,9 @@ impl MaestroService {
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
-                // Perform gas and balance check using the new function
-                self.ensure_account_balance(tx, chain_id, wallet).await?;
+                self.check_sender_wallet_balance(tx, chain_id, wallet).await?;
 
-                // 2. update the cache with nonce + 1. Quit if this fails
+                // 1. update the cache with nonce + 1. Quit if this fails
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
@@ -1655,7 +1654,7 @@ mod tests {
 
         // Submit transaction with equal nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(
+            .handle_transaction(
                 raw_tx.clone(),
                 &decode_transaction(&raw_tx).unwrap(),
                 wallet,
@@ -1717,7 +1716,7 @@ mod tests {
 
         // Submit transaction with lower nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(
+            .handle_transaction(
                 raw_tx.clone(),
                 &decode_transaction(&raw_tx).unwrap(),
                 wallet,
@@ -1779,7 +1778,7 @@ mod tests {
 
         // Submit transaction with higher nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(
+            .handle_transaction(
                 raw_tx.clone(),
                 &decode_transaction(&raw_tx).unwrap(),
                 wallet,
@@ -1868,7 +1867,7 @@ mod tests {
 
         // Submit transaction with current nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(
+            .handle_transaction(
                 raw_tx0.clone(),
                 &decode_transaction(&raw_tx0).unwrap(),
                 wallet,
@@ -1979,7 +1978,7 @@ mod tests {
         set_up_mock_balance(&mock_server, &wallet_hex, balance).await;
 
         let result = service_arc
-            .handle_transaction_and_manage_nonces(
+            .handle_transaction(
                 raw_tx0_bytes,
                 &decoded_tx0_for_test,
                 wallet,
