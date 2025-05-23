@@ -10,13 +10,13 @@ The Proposer is the orchestrator of the withdrawal flow. It collects relevant in
 
 - Aggregating data from:
 
-  - L1 node (eth_getProof, eth_getBlockByNumber, eth_getLogs)
+  - L1 node (eth_getProof)
 
   - Settlement node (eth_getLogs)
 
-  - Sequencer node (eth_getBlockByNumber, eth_getLogs, custom RPCs like eth_getProof, eth_getTransactionReceipt)
+  - Sequencing node (eth_getBlockByNumber, eth_getLogs, eth_getProof, arbdebug_validationInputsAt)
 
-  - Appchain node (starknet_getBlockWithTxs, starknet_getStateUpdate)
+  - Appchain node (arbdebug_validationInputsAt)
 
 - Constructing the PendingAssertion and invoking the TEE module
 
