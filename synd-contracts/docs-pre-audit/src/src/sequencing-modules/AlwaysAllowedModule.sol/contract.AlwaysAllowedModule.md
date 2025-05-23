@@ -1,5 +1,5 @@
 # AlwaysAllowedModule
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/7027a63d41514909f85c2d3245a5d979fd2c367a/src/sequencing-modules/AlwaysAllowedModule.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/f93e91004eb8d04d84acd3b9cb0e8f7e6abfa528/src/sequencing-modules/AlwaysAllowedModule.sol)
 
 **Inherits:**
 [IPermissionModule](/src/interfaces/IPermissionModule.sol/interface.IPermissionModule.md)

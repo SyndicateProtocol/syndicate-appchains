@@ -4,6 +4,7 @@ The Smart contracts we intend to have the audit are the following:
 
 - [SyndicateFactory](src/src/SyndicateFactory.sol/contract.SyndicateFactory.md)
 - [SyndicateSequencingChain](src/src/SyndicateSequencingChain.sol/contract.SyndicateSequencingChain.md)
+- [SyndicateAccumulator](src/src/SyndicateAccumulator.sol/contract.SyndicateAccumulator.md)
 - [SequencingModuleChecker](src/src/SequencingModuleChecker.sol/abstract.SequencingModuleChecker.md)
 - [AllowlistSequencingModule](src/src/sequencing-modules/AllowlistSequencingModule.sol/contract.AllowlistSequencingModule.md)
 - [WalletPoolWrapperModule](src/src/sequencing-modules/WalletPoolWrapperModule.sol/contract.WalletPoolWrapperModule.md)
@@ -11,6 +12,7 @@ The Smart contracts we intend to have the audit are the following:
 - [AtomicSequencerImplementation](src/src/atomic-sequencer/AtomicSequencerImplementation.sol/contract.AtomicSequencerImplementation.md)
 - [RequireAndModule](src/src/requirement-modules/RequireAndModule.sol/contract.RequireAndModule.md)
 - [RequireOrModule](src/src/requirement-modules/RequireOrModule.sol/contract.RequireOrModule.md)
+- [RequireCompositeModule](src/src/requirement-modules/RequireCompositeModule.sol/contract.RequireCompositeModule.md)
 - [SyndicateToken](src/src/token/SyndicateToken.sol/contract.SyndicateToken.md)
 - [IRequirementModule](src/src/interfaces/IRequirementModule.sol/interface.IRequirementModule.md)
 - [PermissionModule](src/src/interfaces/IPermissionModule.sol/interface.IPermissionModule.md)

@@ -1,3 +1,4 @@
-# Contents
 
+
+# Contents
 - [SyndicateSequencingChainWithDecayingPriority](SyndicateSequencingChainWithDecayingPriority.sol/contract.SyndicateSequencingChainWithDecayingPriority.md)
