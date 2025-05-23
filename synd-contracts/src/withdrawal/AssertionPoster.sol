@@ -116,10 +116,12 @@ contract AssertionPoster is Ownable {
      * @notice Constructs the AssertionPoster contract
      * @param rollup_ Address of the rollup contract
      */
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(IRollup rollup_) Ownable(msg.sender) {
         self = address(this);
         rollup = rollup_;
         executor = IUpgradeExecutor(rollup_.owner());
+        nodeNum = 0;
 
         // Detect if we're using legacy or new version and configure accordingly
         try rollup_.genesisAssertionHash() returns (bytes32 assertionHash_) {

@@ -78,6 +78,7 @@ contract SyndicateAccumulator {
     /// 3. Updates the accumulator with chained hash
     /// 4. Emits a TransactionProcessed event
     /// @param data The transaction data to be processed and accumulated
+    //#olympix-ignore-signature-replay-attacks
     function _transactionProcessed(bytes memory data) internal {
         uint64 blockNumber;
 

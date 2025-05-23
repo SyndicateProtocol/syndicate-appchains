@@ -46,7 +46,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, SyndicateAccumulat
     /// @notice Processes multiple transactions in bulk.
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data An array of transaction data.
-    //#olympix-ignore-reentrancy-events
+    //#olympix-ignore
     function processTransactionsBulk(bytes[] calldata data) external {
         uint256 dataCount = data.length;
 
