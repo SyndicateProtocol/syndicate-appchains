@@ -16,7 +16,7 @@ use alloy::{
     sol_types::SolEvent,
 };
 use common::types::{SequencingBlock, SettlementBlock};
-use contract_bindings::arbitrum::{
+use contract_bindings::synd::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,

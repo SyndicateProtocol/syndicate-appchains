@@ -11,7 +11,7 @@ use alloy::{
         local::{LocalSigner, PrivateKeySigner},
     },
 };
-use contract_bindings::arbitrum::rollup::{Rollup, Rollup::RollupInstance};
+use contract_bindings::synd::rollup::{Rollup, Rollup::RollupInstance};
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
