@@ -17,8 +17,6 @@ interface IL1Block {
     function hash() external view returns (bytes32);
 }
 
-IL1Block constant l1block = IL1Block(0x4200000000000000000000000000000000000015);
-
 struct TeeTrustedInput {
     // appchain - requires a full node
     bytes32 appchainConfigHash;
@@ -80,6 +78,7 @@ contract TeeModule is Ownable {
     // Immutable state variables
     AssertionPoster public immutable poster;
     IBridge public immutable bridge;
+    IL1Block public immutable l1block;
 
     // TEE variables
     TeeTrustedInput public teeTrustedInput;
@@ -88,8 +87,8 @@ contract TeeModule is Ownable {
     bytes32[] public teePrograms;
     mapping(bytes32 => address[]) public teeProgramKeys;
     mapping(address => bool) public isTeeKey;
-    uint256 public challengeWindowEnd;
-    uint256 public challengeWindowDuration;
+    uint64 public challengeWindowEnd;
+    uint64 public challengeWindowDuration;
 
     receive() external payable {}
 
@@ -99,6 +98,8 @@ contract TeeModule is Ownable {
      * @param bridge_ Settlement chain address of the appchain `Bridge` contract
      * @param appchainConfigHash_ Hash of the appchain configuration data passed to the TEE
      * @param seqConfigHash_ Hash of the sequencing chain configuration data passed to the TEE - currently unused
+     * @param l1block_ Address of the l1 block contract - 0x4200000000000000000000000000000000000015 for bedrock rollups
+     * and zero for ethereum itself
      * Note that the AssertionPoster must be owned by the TeeModule for closing the challenge window to work properly
      */
     constructor(
@@ -109,9 +110,15 @@ contract TeeModule is Ownable {
         bytes32 seqConfigHash_,
         bytes32 seqStartBlockHash_,
         bytes32 l1StartBlockHash_,
+        IL1Block l1block_,
+        uint64 challengeWindowDuration_,
         bytes32 teeProgram
     ) {
-        require(l1block.timestamp() > 0 && l1block.hash() > 0, "chain is not an l2 bedrock rollup");
+        challengeWindowDuration = challengeWindowDuration_;
+        require(
+            address(l1block_) == address(0) || (l1block_.timestamp() > 0 && l1block_.hash() > 0), "l1 contract invalid"
+        );
+        l1block = l1block_;
 
         require(address(poster_).code.length > 0, "poster address does not have any code");
         poster = poster_;
@@ -141,7 +148,8 @@ contract TeeModule is Ownable {
     function closeChallengeWindow() public {
         require(pendingAssertions.length <= 1, "cannot close challenge window - too many assertions");
         require(
-            l1block.timestamp() > challengeWindowEnd, "cannot close challenge window - insufficient time has passed"
+            (address(l1block) == address(0) ? uint64(block.timestamp) : l1block.timestamp()) > challengeWindowEnd,
+            "cannot close challenge window - insufficient time has passed"
         );
         if (pendingAssertions.length > 0) {
             // appchain
@@ -160,9 +168,9 @@ contract TeeModule is Ownable {
         teeTrustedInput.setDelayedMessageAcc = bridge.delayedInboxAccs(bridge.delayedMessageCount() - 1);
 
         // l1 chain
-        teeTrustedInput.l1EndBlockHash = l1block.hash();
+        teeTrustedInput.l1EndBlockHash = (address(l1block) == address(0) ? blockhash(block.number - 1) : l1block.hash());
 
-        challengeWindowEnd = block.timestamp + challengeWindowDuration;
+        challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
     }
 
     function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature, address rewardAddr)
@@ -177,7 +185,7 @@ contract TeeModule is Ownable {
             require(!equals(assertion, pendingAssertions[i]), "assertion already exists");
         }
         if (pendingAssertions.length == 0) {
-            challengeWindowEnd = block.timestamp + challengeWindowDuration;
+            challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
         }
         pendingAssertions.push(assertion);
         if (pendingAssertions.length == 2) {
@@ -252,7 +260,7 @@ contract TeeModule is Ownable {
     }
 
     // TODO: should this function be removed?
-    function setChallengeWindowDuration(uint256 duration) external onlyOwner {
+    function setChallengeWindowDuration(uint64 duration) external onlyOwner {
         require(pendingAssertions.length == 0, "cannot update challenge window while assertion is pending");
         challengeWindowDuration = duration;
     }
