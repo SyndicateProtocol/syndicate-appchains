@@ -63,6 +63,10 @@ pub enum InternalErrorType {
     #[error("chain {0} failed to return wallet {1} nonce")]
     RpcFailedToFetchWalletNonce(ChainId, Address),
 
+    /// Failed to fetch wallet balance from RPC
+    #[error("chain {0} failed to return wallet {1} balance")]
+    RpcFailedToFetchWalletBalance(ChainId, Address),
+
     /// Failed to submit transaction
     #[error("transaction submission failed for tx hash: {0}")]
     TransactionSubmissionFailed(String),
