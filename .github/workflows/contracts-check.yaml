@@ -30,14 +30,12 @@ jobs:
       # Enable fail-fast to stop the job immediately if any step fails
       # This helps catch issues early and prevents wasting CI resources
       fail-fast: true
-      matrix:
-        contract-dir: ["synd-contracts"]
 
-    name: ${{ matrix.contract-dir }} Check
+    name: synd-contracts Check
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ matrix.contract-dir }}
+        working-directory: "synd-contracts"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,7 +70,6 @@ jobs:
       # -C to create bindings only for a specific directory
 
       - name: Check Rust contract bindings for synd-contracts
-        if: matrix.contract-dir == 'synd-contracts'
         run: |
           forge bind --alloy --force -C ./sequencing-modules
           mv out/bindings/src/lib.rs out/bindings/src/mod.rs

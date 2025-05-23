@@ -14,9 +14,7 @@ use axum::{
     routing::post,
     serve, Router,
 };
-use contract_bindings::arbitrum::assertionposter::AssertionPoster::{
-    self, AssertionPosterInstance,
-};
+use contract_bindings::synd::assertionposter::AssertionPoster::{self, AssertionPosterInstance};
 use eyre::{eyre, Result};
 use shared::types::FilledProvider;
 use std::{str::FromStr, sync::Arc, time::Duration};
