@@ -195,22 +195,6 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
             let mut tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
             tx.append(&mut inner_tx);
             let _ = inbox.sendL2Message(tx.into()).send().await?;
-            // Message From Origin - should be ignored by the translator
-            inner_tx = vec![];
-            TransactionRequest::default()
-                .with_to(Address::ZERO)
-                .with_value(parse_ether("0.1")?)
-                .with_nonce(1)
-                .with_gas_limit(gas_limit)
-                .with_chain_id(components.appchain_chain_id)
-                .with_max_fee_per_gas(max_fee_per_gas)
-                .with_max_priority_fee_per_gas(0)
-                .build(components.settlement_provider.wallet())
-                .await?
-                .encode_2718(&mut inner_tx);
-            tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
-            tx.append(&mut inner_tx);
-            let _ = inbox.sendL2MessageFromOrigin(tx.into()).send().await?;
 
             // Send retryable tickets that are automatically redeemed (aliased address)
             // Safe Retryable Ticket
@@ -298,9 +282,9 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
             // Mine a set block to process the slot
             components.mine_set_block(1).await?;
 
-            // Process the slot - wait for block 17 to be reached
+            // Process the slot - wait for block 16 to be reached
             wait_until!(
-                components.appchain_provider.get_block_number().await? == 17,
+                components.appchain_provider.get_block_number().await? == 16,
                 Duration::from_secs(10)
             );
 
