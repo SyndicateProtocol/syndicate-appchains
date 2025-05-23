@@ -109,7 +109,9 @@ impl Verifier {
         if delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay >
             start_timestamp
         {
-            return Err(VerifierError::InvalidSettlementChainInput);
+            return Err(VerifierError::InvalidSettlementChainInputWithReason {
+                reason: "Delayed message timestamp is greater than the start timestamp".to_string(),
+            });
         }
         while delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay <=
             start_timestamp

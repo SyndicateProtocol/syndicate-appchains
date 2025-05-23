@@ -15,7 +15,6 @@ use synd_block_builder::appchains::{
     },
     shared::SequencingTransactionParser,
 };
-use tracing::error;
 
 const SYNDICATE_ACCUMULATOR_STORAGE_SLOT: B256 =
     fixed_bytes!("0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90"); // Keccak256("syndicate.accumulator")
@@ -42,7 +41,11 @@ impl SettlementChainInput {
             acc = delayed_message.accumulate(acc);
         }
         if acc != self.end_delayed_messages_accumulator {
-            return Err(VerifierError::InvalidSettlementChainInput);
+            return Err(VerifierError::InvalidSettlementChainInput {
+                reason: "Invalid end delayed messages accumulator".to_string(),
+                expected: self.end_delayed_messages_accumulator.to_string(),
+                actual: acc.to_string(),
+            });
         }
         Ok(())
     }
@@ -76,7 +79,11 @@ impl SequencingChainInput {
         let expected_end_accumulator: B256 =
             self.end_syndicate_accumulator_merkle_proof.storage_proof[0].value.into();
         if acc != expected_end_accumulator {
-            return Err(VerifierError::InvalidSequencingChainInput);
+            return Err(VerifierError::InvalidSequencingChainInput {
+                reason: "Invalid end accumulator".to_string(),
+                expected: expected_end_accumulator.to_string(),
+                actual: acc.to_string(),
+            });
         }
         Ok(())
     }
@@ -92,17 +99,13 @@ impl SequencingChainInput {
             storage_root: proof.storage_hash,
             code_hash: proof.code_hash,
         });
-        verify_proof(state_root, key, Some(expected_value), &proof.account_proof).map_err(|e| {
-            error!("Error {:?}", e);
-            VerifierError::InvalidSequencingChainInput
-        })?;
+        verify_proof(state_root, key, Some(expected_value), &proof.account_proof)
+            .map_err(|e| VerifierError::ErrorVerifyingProof(e.to_string()))?;
         for p in &proof.storage_proof {
             let k = Nibbles::unpack(keccak256(p.key.as_b256()));
             let expected_value = Some(alloy::rlp::encode_fixed_size(&p.value).to_vec());
-            verify_proof(proof.storage_hash, k, expected_value, &p.proof).map_err(|e| {
-                error!("Error 2 {:?}", e);
-                VerifierError::InvalidSequencingChainInput
-            })?;
+            verify_proof(proof.storage_hash, k, expected_value, &p.proof)
+                .map_err(|e| VerifierError::ErrorVerifyingProof(e.to_string()))?;
         }
         Ok(())
     }
@@ -115,26 +118,43 @@ impl SequencingChainInput {
         slot: B256,
     ) -> Result<(), VerifierError> {
         // Verify header
-        if header.hash_slow() != block_hash {
-            return Err(VerifierError::InvalidSequencingChainInput);
+        let actual_block_hash = header.hash_slow();
+        if actual_block_hash != block_hash {
+            return Err(VerifierError::InvalidSequencingChainInput {
+                reason: "Invalid block hash".to_string(),
+                expected: block_hash.to_string(),
+                actual: actual_block_hash.to_string(),
+            });
         }
         // Verify end syndicate accumulator merkle proof
         Self::verify_account_proof_response(proof, header.state_root)?;
 
         // Verify there is only one storage proof
         if proof.storage_proof.len() != 1 {
-            return Err(VerifierError::InvalidSequencingChainInput);
+            return Err(VerifierError::InvalidSequencingChainInput {
+                reason: "Invalid number of storage proofs".to_string(),
+                expected: "1".to_string(),
+                actual: proof.storage_proof.len().to_string(),
+            });
         }
         // Verify storage slot
         let storage_proof = &proof.storage_proof[0];
 
         if storage_proof.key.as_b256() != slot {
-            return Err(VerifierError::InvalidSequencingChainInput);
+            return Err(VerifierError::InvalidSequencingChainInput {
+                reason: "Invalid storage slot".to_string(),
+                expected: slot.to_string(),
+                actual: storage_proof.key.as_b256().to_string(),
+            });
         }
 
         // Verify address
         if proof.address != sequencing_chain_contract_address {
-            return Err(VerifierError::InvalidSequencingChainInput);
+            return Err(VerifierError::InvalidSequencingChainInput {
+                reason: "Invalid address".to_string(),
+                expected: sequencing_chain_contract_address.to_string(),
+                actual: proof.address.to_string(),
+            });
         }
 
         Ok(())
@@ -144,13 +164,19 @@ impl SequencingChainInput {
     #[allow(clippy::unwrap_used)]
     fn verify_block_headers(&self) -> Result<(), VerifierError> {
         if self.block_headers.is_empty() {
-            return Err(VerifierError::InvalidSequencingChainInput);
+            return Err(VerifierError::InvalidSequencingChainInputWithReason {
+                reason: "Empty block headers".to_string(),
+            });
         }
 
         // Check that the first block hash matches the expected start hash
         let first_hash = self.block_headers.first().unwrap().hash_slow();
         if first_hash != self.start_block_hash {
-            return Err(VerifierError::InvalidSequencingChainInput);
+            return Err(VerifierError::InvalidSequencingChainInput {
+                reason: "Invalid start block hash".to_string(),
+                expected: self.start_block_hash.to_string(),
+                actual: first_hash.to_string(),
+            });
         }
 
         // Verify each header’s parent_hash matches the previous block’s hash
@@ -158,14 +184,22 @@ impl SequencingChainInput {
             let prev = &window[0];
             let curr = &window[1];
             if curr.parent_hash != prev.hash_slow() {
-                return Err(VerifierError::InvalidSequencingChainInput);
+                return Err(VerifierError::InvalidSequencingChainInput {
+                    reason: "Invalid parent hash".to_string(),
+                    expected: prev.hash_slow().to_string(),
+                    actual: curr.parent_hash.to_string(),
+                });
             }
         }
 
         // Check that the last block hash matches the expected end hash
         let last_hash = self.block_headers.last().unwrap().hash_slow();
         if last_hash != self.end_block_hash {
-            return Err(VerifierError::InvalidSequencingChainInput);
+            return Err(VerifierError::InvalidSequencingChainInput {
+                reason: "Invalid end block hash".to_string(),
+                expected: self.end_block_hash.to_string(),
+                actual: last_hash.to_string(),
+            });
         }
 
         Ok(())
@@ -356,8 +390,17 @@ pub fn parse_syndicate_transaction_events(
 }
 
 // --------------------------------------------
-// Batch Helper Functions
+// Batch Helpers
 // --------------------------------------------
+
+/// A batch with a timestamp
+#[derive(Default, Debug, Clone)]
+pub struct BatchWithTimestamp {
+    /// Timestamp
+    pub timestamp: u64,
+    /// Batch
+    pub batch: Bytes,
+}
 
 /// Builds a batch of transactions into an Arbitrum batch
 pub fn build_batch(
@@ -376,15 +419,6 @@ pub fn build_batch(
     let batch = Batch(messages);
     let encoded_batch = batch.encode()?;
     Ok(encoded_batch)
-}
-
-/// A batch with a timestamp
-#[derive(Default, Debug, Clone)]
-pub struct BatchWithTimestamp {
-    /// Timestamp
-    pub timestamp: u64,
-    /// Batch
-    pub batch: Bytes,
 }
 
 /// Get the input batches
@@ -437,6 +471,47 @@ mod tests {
     fn test_accumulator_storage_slot() {
         let slot = keccak256(b"syndicate.accumulator");
         assert_eq!(slot, SYNDICATE_ACCUMULATOR_STORAGE_SLOT);
+    }
+
+    #[test]
+    fn test_l1_incoming_message_accumulate() {
+        let header = L1IncomingMessageHeader {
+            kind: 1,
+            sender: Address::repeat_byte(0x11),
+            block_number: 1,
+            timestamp: 123,
+            request_id: B256::repeat_byte(0x01),
+            base_fee_l1: U256::from(1000),
+        };
+        let msg = L1IncomingMessage { header, l2msg: Bytes::from(vec![0x01, 0x02, 0x03]) };
+        let acc = B256::repeat_byte(0x00);
+        let new_acc = msg.accumulate(acc);
+        assert_ne!(acc, new_acc);
+    }
+
+    #[test]
+    fn test_syndicate_transaction_event_accumulate() {
+        let event = SyndicateTransactionEvent {
+            block_number: 100,
+            timestamp: 1000000,
+            sender: Address::repeat_byte(0xAA),
+            payload: Bytes::from(vec![0xDE, 0xAD, 0xBE, 0xEF]),
+        };
+        let acc = B256::ZERO;
+        let new_acc = event.accumulate(acc);
+        assert_ne!(acc, new_acc);
+    }
+
+    #[test]
+    fn test_parse_empty_syndicate_transaction_event_payload() {
+        let event = SyndicateTransactionEvent {
+            block_number: 0,
+            timestamp: 0,
+            sender: Address::repeat_byte(0x00),
+            payload: Bytes::new(),
+        };
+        let parsed = event.parse_payload();
+        assert!(parsed.is_err());
     }
 
     #[tokio::test]
