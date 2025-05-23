@@ -155,6 +155,9 @@ pub enum Rejection {
     /// Transaction nonce is too low
     #[error("transaction nonce too low: expected {0}, got {1}")]
     NonceTooLow(u64, u64),
+    /// Insufficient funds
+    #[error("insufficient funds for gas_limit * gas_price + value")]
+    InsufficientFunds,
 }
 
 /// Invalid parameter errors that can occur during request processing

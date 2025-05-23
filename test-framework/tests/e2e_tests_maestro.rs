@@ -372,7 +372,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
             funded_addresses.push(wallet_address);
             unique_wallet_txns.push(tx1.clone());
 
-            let deposited_value = parse_ether("0.000001")?;
+            let deposited_value = parse_ether("0.1")?;
             for _ in 1..100 {
                 let (funded_wallet_signer, funded_wallet_address) =
                     create_and_fund_wallet(&components, wallet_address, deposited_value, &inbox)
