@@ -49,7 +49,13 @@ struct Config {
 }
 
 async fn new_provider(cfg: &Config) -> FailoverEthClient {
-    let urls: Vec<String> = serde_json::from_str(&cfg.rpc_urls).expect("Invalid RPC_URLS JSON");
+    let urls: Vec<String> = match serde_json::from_str(&cfg.rpc_urls) {
+        Ok(urls) => urls,
+        Err(e) => {
+            error!("Failed to parse RPC_URLS JSON: {e}");
+            std::process::exit(1);
+        }
+    };
     FailoverEthClient::new(
         urls,
         cfg.request_timeout,

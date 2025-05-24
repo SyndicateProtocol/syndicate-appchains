@@ -10,7 +10,7 @@ use alloy::{
     primitives::ChainId,
     providers::{
         fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},
-        Identity, Provider, ProviderBuilder, RootProvider,
+        Identity, ProviderBuilder, RootProvider,
     },
 };
 use clap::Parser;
