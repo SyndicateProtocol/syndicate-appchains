@@ -9,7 +9,7 @@ use shared::{
 };
 use std::time::Duration;
 use synd_chain_ingestor::{
-    eth_client::EthClient, failover_client::FailoverEthClient, ingestor,
+    failover_client::FailoverEthClient, ingestor,
     metrics::ChainIngestorMetrics, server,
 };
 use tokio::{

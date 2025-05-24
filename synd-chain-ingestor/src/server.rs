@@ -2,6 +2,7 @@
 use crate::{
     db::{BlockUpdateResult, DB},
     eth_client::EthClient,
+    failover_client::FailoverEthClient,
     metrics::ChainIngestorMetrics,
 };
 use alloy::{
@@ -38,12 +39,12 @@ pub enum Message {
 struct BlockIngestor<'a> {
     block: u64,
     end_block: u64,
-    provider: &'a EthClient,
+    provider: &'a FailoverEthClient,
     handles: VecDeque<JoinHandle<alloy::rpc::types::Header>>,
     request_limit: u64,
 }
 impl<'a> BlockIngestor<'a> {
-    fn new(start_block: u64, end_block: u64, request_limit: u64, provider: &'a EthClient) -> Self {
+    fn new(start_block: u64, end_block: u64, request_limit: u64, provider: &'a FailoverEthClient) -> Self {
         Self { block: start_block, end_block, provider, request_limit, handles: Default::default() }
     }
     async fn next(&mut self) -> Option<alloy::rpc::types::Header> {
@@ -64,7 +65,7 @@ impl<'a> BlockIngestor<'a> {
 #[allow(clippy::unwrap_used)]
 #[allow(missing_docs)]
 pub async fn start(
-    provider: &EthClient,
+    provider: &FailoverEthClient,
     rpc_urls: &str,
     db_name: &str,
     start_block: u64,

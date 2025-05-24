@@ -3,7 +3,7 @@
 
 use crate::{
     db::BlockUpdateResult,
-    eth_client::EthClient,
+    failover_client::FailoverEthClient,
     metrics::ChainIngestorMetrics,
     server::{Context, Message},
 };
@@ -17,7 +17,7 @@ use tracing::{error, warn};
 #[allow(clippy::unwrap_used)]
 pub async fn run(
     ctx: &Mutex<Context>,
-    provider: &EthClient,
+    provider: &FailoverEthClient,
     metrics: &ChainIngestorMetrics,
 ) -> eyre::Result<()> {
     let mut sub = provider.subscribe_blocks().await;
