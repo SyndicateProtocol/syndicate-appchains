@@ -223,7 +223,7 @@ impl<
                 let block_number = block.block_ref().number;
                 assert!(
                     block_number <= self.indexed_block_number,
-                    "block number {block_number} > index {self.indexed_block_number}",
+                    "block number {} > index {}",
                     block_number,
                     self.indexed_block_number
                 );
@@ -241,8 +241,8 @@ impl<
                         }
                         None => {
                             return Err(eyre!(
-                                "cannot reorg block {block_ref} - block already slotted",
-                                block_ref = block.block_ref()
+                                "cannot reorg block {} - block already slotted",
+                                block.block_ref()
                             ));
                         }
                     }
