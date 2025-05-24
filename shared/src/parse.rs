@@ -82,7 +82,7 @@ mod tests {
         ];
 
         for url in valid_urls {
-            assert!(parse_url(url).is_ok(), "URL should be valid: {}", url);
+            assert!(parse_url(url).is_ok(), "URL should be valid: {url}");
         }
     }
 
@@ -95,7 +95,7 @@ mod tests {
                 Err(Error::URL(URLErrorType::InvalidURL(error_url))) => {
                     assert_eq!(error_url, url, "Error should contain the invalid URL");
                 }
-                _ => panic!("Expected InvalidURL error for: {}", url),
+                _ => panic!("Expected InvalidURL error for: {url}"),
             }
         }
     }
@@ -107,8 +107,8 @@ mod tests {
         for url in invalid_host_schemes {
             match parse_url(url) {
                 Err(Error::URL(URLErrorType::InvalidScheme(_))) => {}
-                Err(err) => panic!("Expected InvalidScheme error for: {}, got: {:?}", url, err),
-                Ok(_) => panic!("Expected InvalidScheme error for: {}", url),
+                Err(err) => panic!("Expected InvalidScheme error for: {url}, got: {err:?}"),
+                Ok(_) => panic!("Expected InvalidScheme error for: {url}"),
             }
         }
     }
@@ -120,7 +120,7 @@ mod tests {
         for url in urls_without_host {
             match parse_url(url) {
                 Err(Error::URL(URLErrorType::InvalidHost)) => {}
-                _ => panic!("Expected InvalidHost error for: {}", url),
+                _ => panic!("Expected InvalidHost error for: {url}"),
             }
         }
     }
@@ -166,7 +166,7 @@ mod tests {
         let invalid_input = "0x123"; // Too short
         match parse_address(invalid_input) {
             Err(Error::EthereumAddress(_)) => {}
-            _ => panic!("Expected EthereumAddress error for: {}", invalid_input),
+            _ => panic!("Expected EthereumAddress error for: {invalid_input}"),
         }
     }
 

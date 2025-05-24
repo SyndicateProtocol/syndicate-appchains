@@ -33,6 +33,7 @@ use tracing::{error, info};
 // Uses the eth client to fetch log data for blocks in a range & combines them with raw (timestamp,
 // block hash) data from the db to build partial blocks
 #[allow(clippy::unwrap_used)]
+#[allow(clippy::cognitive_complexity)]
 async fn build_partial_blocks(
     start_block: u64,
     data: &Bytes,

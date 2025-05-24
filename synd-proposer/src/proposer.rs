@@ -34,7 +34,7 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
     let appchain_provider =
         ProviderBuilder::default().connect(config.appchain_rpc_url.as_str()).await?;
     let signer = PrivateKeySigner::from_str(&config.private_key)
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
     let settlement_provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer))
         .connect(config.settlement_rpc_url.as_str())
@@ -65,7 +65,7 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
 
     let server_task = tokio::spawn(async move {
         if let Err(err) = serve(listener, app).await {
-            eprintln!("HTTP server error: {:?}", err);
+            eprintln!("HTTP server error: {err:?}");
         }
     });
 
@@ -78,8 +78,8 @@ async fn post_assertion_handler(State(proposer): State<Arc<Proposer>>) -> Respon
     match proposer.fetch_block_and_post().await {
         Ok(_) => (StatusCode::OK, "Assertion posted successfully").into_response(),
         Err(err) => {
-            error!("Handler error: {:?}", err);
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to post assertion: {:?}", err))
+            error!("Handler error: {err:?}");
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to post assertion: {err:?}"))
                 .into_response()
         }
     }
@@ -98,7 +98,7 @@ impl Proposer {
         self.appchain_provider
             .raw_request("eth_getBlockByNumber".into(), ("latest", false))
             .await
-            .map_err(|err| eyre!("eth_getBlockByNumber request failed: {:?}", err))
+            .map_err(|err| eyre!("eth_getBlockByNumber request failed: {err:?}"))
     }
 
     async fn record_wallet_balance(&self) -> Result<()> {
@@ -116,7 +116,7 @@ impl Proposer {
         let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
         self.metrics.record_last_block_posted(block.number.to());
 
-        info!("Assertion submitted for block: {:?}", block);
+        info!("Assertion submitted for block: {block:?}");
         Ok(())
     }
 
@@ -124,11 +124,11 @@ impl Proposer {
         match self.fetch_block().await {
             Ok(block) => {
                 if let Err(err) = self.post_assertion(block).await {
-                    error!("Failed to post assertion: {:?}", err);
+                    error!("Failed to post assertion: {err:?}");
                 }
             }
             Err(err) => {
-                error!("Failed to fetch block: {:?}", err);
+                error!("Failed to fetch block: {err:?}");
             }
         }
         Ok(())

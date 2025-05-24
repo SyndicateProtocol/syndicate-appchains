@@ -190,12 +190,12 @@ mod tests {
 
         // Check compression ratio
         let ratio = (1.0 - (compressed.len() as f64 / input.len() as f64)) * 100.0;
-        println!("Single TX (n=1) compression ratio: {:.2}%", ratio);
+        println!("Single TX (n=1) compression ratio: {ratio:.2}%");
         println!("Original size: {} bytes", input.len());
         println!("Compressed size: {} bytes", compressed.len());
         println!("Decompression size: {} bytes", decompressed.len());
-        println!("Compression time: {:?}", compress_time);
-        println!("Decompression time: {:?}", decompression_time);
+        println!("Compression time: {compress_time:?}");
+        println!("Decompression time: {decompression_time:?}");
         println!();
     }
 

@@ -151,12 +151,15 @@ impl Config {
                     debug!(%chain_id, "Successfully created failover provider");
 
                     let provider = FillProvider::new(
-                        Identity::new(),
+                        Identity,
                         JoinFill::new(
-                            GasFiller::new(),
+                            GasFiller,
                             JoinFill::new(
-                                BlobGasFiller::new(),
-                                JoinFill::new(NonceFiller::new(), ChainIdFiller::new(*chain_id)),
+                                BlobGasFiller,
+                                JoinFill::new(
+                                    NonceFiller::default(),
+                                    ChainIdFiller::new(Some(*chain_id)),
+                                ),
                             ),
                         ),
                         failover_provider,

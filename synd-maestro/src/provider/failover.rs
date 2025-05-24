@@ -140,15 +140,15 @@ impl Provider for FailoverProvider {
         &self.providers[*self.current_index.blocking_read()]
     }
 
-    async fn get_chain_id<'a>(&'a self) -> Result<ChainId, RpcError<TransportErrorKind>> {
+    async fn get_chain_id(&self) -> Result<ChainId, RpcError<TransportErrorKind>> {
         self.execute_with_failover(|provider| {
             Box::pin(async move { provider.get_chain_id().await })
         })
         .await
     }
 
-    async fn get_transaction_count<'a>(
-        &'a self,
+    async fn get_transaction_count(
+        &self,
         address: alloy::primitives::Address,
     ) -> Result<u64, RpcError<TransportErrorKind>> {
         self.execute_with_failover(|provider| {
@@ -157,8 +157,8 @@ impl Provider for FailoverProvider {
         .await
     }
 
-    async fn get_balance<'a>(
-        &'a self,
+    async fn get_balance(
+        &self,
         address: alloy::primitives::Address,
     ) -> Result<alloy::primitives::U256, RpcError<TransportErrorKind>> {
         self.execute_with_failover(|provider| {
@@ -167,8 +167,8 @@ impl Provider for FailoverProvider {
         .await
     }
 
-    async fn get_transaction_receipt<'a>(
-        &'a self,
+    async fn get_transaction_receipt(
+        &self,
         hash: alloy::primitives::B256,
     ) -> Result<Option<alloy::rpc::types::TransactionReceipt>, RpcError<TransportErrorKind>> {
         self.execute_with_failover(|provider| {
@@ -177,12 +177,15 @@ impl Provider for FailoverProvider {
         .await
     }
 
-    async fn send_raw_transaction<'a>(
-        &'a self,
+    async fn send_raw_transaction(
+        &self,
         tx: alloy::primitives::Bytes,
     ) -> Result<alloy::primitives::TxHash, RpcError<TransportErrorKind>> {
         self.execute_with_failover(|provider| {
-            Box::pin(async move { provider.send_raw_transaction(&tx).await })
+            Box::pin(async move {
+                let result = provider.send_raw_transaction(&tx).await?;
+                Ok(result.tx_hash())
+            })
         })
         .await
     }
