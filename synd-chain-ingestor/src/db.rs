@@ -58,7 +58,7 @@ impl DB {
             file.set_len(metadata_size - (metadata_size % ITEM_SIZE))?;
         }
         let size = file.metadata()?.size();
-        assert!(size >= ITEM_SIZE && size % ITEM_SIZE == 0, "unexpected file size found: {}", size);
+        assert!(size >= ITEM_SIZE && size % ITEM_SIZE == 0, "unexpected file size found: {size}");
         let mut version = [0];
         file.read_exact_at(&mut version, 0)?;
         assert_eq!(version, [1]);
@@ -67,9 +67,7 @@ impl DB {
         let db_start_block = u64::from_be_bytes(buf);
         assert!(
             db_start_block <= start_block,
-            "configured db start block {} greater than actual db start block {}",
-            db_start_block,
-            start_block
+            "configured db start block {db_start_block} greater than actual db start block {start_block}"
         );
         file.read_exact_at(&mut buf, 9)?;
         assert_eq!(chain_id, u64::from_be_bytes(buf));

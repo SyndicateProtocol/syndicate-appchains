@@ -182,7 +182,8 @@ impl<
     }
 }
 
-/// BlockStream is a stream of blocks that automatically updates stale/reorged blocks in the queue.
+/// `BlockStream` is a stream of blocks that automatically updates stale/reorged blocks in the
+/// queue.
 #[async_trait]
 pub trait BlockStreamT<Block> {
     /// recv fetches the next block once a block with timestamp greater than or equal to the
@@ -222,7 +223,7 @@ impl<
                 let block_number = block.block_ref().number;
                 assert!(
                     block_number <= self.indexed_block_number,
-                    "block number {} > index {}",
+                    "block number {block_number} > index {self.indexed_block_number}",
                     block_number,
                     self.indexed_block_number
                 );
@@ -240,8 +241,8 @@ impl<
                         }
                         None => {
                             return Err(eyre!(
-                                "cannot reorg block {} - block already slotted",
-                                block.block_ref()
+                                "cannot reorg block {block_ref} - block already slotted",
+                                block_ref = block.block_ref()
                             ));
                         }
                     }
@@ -259,13 +260,13 @@ impl Message {
     fn init(self) -> Bytes {
         match self {
             Self::Init(x) => x,
-            x => panic!("expected init message, found {:?}", x),
+            x => panic!("expected init message, found {x:?}"),
         }
     }
     fn block(self) -> PartialBlock {
         match self {
             Self::Block(x) => x,
-            x => panic!("expected block message, found {:?}", x),
+            x => panic!("expected block message, found {x:?}"),
         }
     }
 }
@@ -343,7 +344,7 @@ impl IngestorProvider {
             .await
             {
                 Err(_) => error!("timed out connecting to websocket"),
-                Ok(Err(err)) => panic!("failed to connect to websocket: {}, url={}", err, url),
+                Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
                 Ok(Ok(client)) => return Self(Arc::new(client)),
             }
         }
