@@ -65,7 +65,7 @@ impl<'a> BlockIngestor<'a> {
 #[allow(missing_docs)]
 pub async fn start(
     provider: &EthClient,
-    rpc_url: &str,
+    rpc_urls: &str,
     db_name: &str,
     start_block: u64,
     parallel_sync_requests: u64,
@@ -114,7 +114,9 @@ pub async fn start(
     info!("synced to latest block");
 
     let ctx = Arc::new(Mutex::new(Context { db, subs: Default::default() }));
-    Ok((create_module(ctx.clone(), rpc_url.to_string()), ctx))
+    let urls: Vec<String> = serde_json::from_str(rpc_urls).unwrap_or_else(|_| vec![rpc_urls.to_string()]);
+    let first_url = urls.first().map(|s| s.to_string()).unwrap_or_default();
+    Ok((create_module(ctx.clone(), first_url), ctx))
 }
 
 #[allow(clippy::unwrap_used)]

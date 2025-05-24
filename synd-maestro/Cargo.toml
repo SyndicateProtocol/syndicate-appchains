@@ -20,6 +20,7 @@ alloy = { workspace = true, features = [
   "signer-local",
   "signers",
 ] }
+async-trait = { workspace = true }
 
 axum              = { workspace = true }
 bytes             = { workspace = true }

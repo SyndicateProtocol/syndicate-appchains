@@ -6,5 +6,6 @@ pub mod errors;
 pub mod layers;
 pub mod maestro;
 pub mod metrics;
+pub mod provider;
 pub mod server;
 pub mod valkey;

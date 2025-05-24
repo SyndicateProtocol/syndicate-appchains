@@ -10,6 +10,7 @@ version.workspace      = true
 
 [dependencies]
 alloy             = { workspace = true, features = ["provider-ws"] }
+async-trait       = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 eyre              = { workspace = true }
 fs2               = { workspace = true }

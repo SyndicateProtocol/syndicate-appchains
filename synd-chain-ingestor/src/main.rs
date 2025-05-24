@@ -8,7 +8,7 @@ use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use std::time::Duration;
-use synd_chain_ingestor::{eth_client::EthClient, ingestor, metrics::ChainIngestorMetrics, server};
+use synd_chain_ingestor::{eth_client::EthClient, failover_client::FailoverEthClient, ingestor, metrics::ChainIngestorMetrics, server};
 use tokio::{
     signal::unix::{signal, SignalKind},
     time::sleep,
@@ -21,8 +21,8 @@ use tracing::{error, info};
 #[allow(missing_docs)]
 struct Config {
     // time delay until a block is considered finalized
-    #[arg(long, env = "RPC_URL")]
-    rpc_url: String,
+    #[arg(long, env = "RPC_URLS")]
+    rpc_urls: String, // JSON array of URLs
     #[arg(long, env = "DB_FILE")]
     db_file: String,
     #[arg(long, env = "START_BLOCK")]
@@ -42,11 +42,13 @@ struct Config {
         value_parser = parse_duration
     )]
     request_timeout: Duration,
+    #[arg(long, env = "RPC_FAILOVER_WAIT_MS", default_value = "5000")]
+    rpc_failover_wait_ms: u64,
 }
 
-async fn new_provider(cfg: &Config) -> EthClient {
-    EthClient::new(&cfg.rpc_url, cfg.request_timeout, Duration::from_secs(300), cfg.channel_size)
-        .await
+async fn new_provider(cfg: &Config) -> FailoverEthClient {
+    let urls: Vec<String> = serde_json::from_str(&cfg.rpc_urls).expect("Invalid RPC_URLS JSON");
+    FailoverEthClient::new(urls, cfg.request_timeout, Duration::from_secs(300), cfg.channel_size, cfg.rpc_failover_wait_ms).await
 }
 
 #[tokio::main]
@@ -62,7 +64,7 @@ async fn main() {
     let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
     let (module, ctx) = server::start(
         &provider,
-        &cfg.rpc_url,
+        &cfg.rpc_urls,
         &cfg.db_file,
         cfg.start_block,
         cfg.parallel_sync_requests,

@@ -12,6 +12,7 @@ use alloy::{
         Identity, Provider, ProviderBuilder, RootProvider,
     },
 };
+use crate::provider::failover::FailoverProvider;
 use clap::Parser;
 use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
@@ -43,7 +44,11 @@ pub struct Config {
         default_value = "{}",
         value_parser = parse_chain_rpc_urls_map
     )]
-    pub chain_rpc_urls: HashMap<u64, String>,
+    pub chain_rpc_urls: HashMap<u64, Vec<String>>,
+    
+    /// Maximum wait time before switching to backup RPC node in milliseconds
+    #[arg(long, env = "RPC_FAILOVER_WAIT_MS", default_value = "5000")]
+    pub rpc_failover_wait_ms: u64,
 
     /// Timeout in seconds for connection validation
     #[arg(long, env = "VALIDATION_TIMEOUT", default_value = "5s",
@@ -84,8 +89,8 @@ pub struct Config {
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
-fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<u64, String>, ConfigError> {
-    let map: HashMap<u64, String> =
+fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<u64, Vec<String>>, ConfigError> {
+    let map: HashMap<u64, Vec<String>> =
         serde_json::from_str(s).map_err(|e| RpcUrlInvalidAddress(e.to_string()))?;
     Ok(map)
 }
@@ -133,34 +138,39 @@ impl Config {
             return Ok(provider_map)
         }
 
-        for (chain_id, url) in &self.chain_rpc_urls {
-            debug!(%chain_id, %url, "Sending test JSON-RPC request");
+        for (chain_id, urls) in &self.chain_rpc_urls {
+            debug!(%chain_id, urls=?urls, "Creating failover provider for chain");
 
-            let provider = match ProviderBuilder::new().connect(url).await {
-                Ok(provider) => provider,
+            if urls.is_empty() {
+                error!(%chain_id, "No RPC URLs provided for chain");
+                continue;
+            }
+
+            match FailoverProvider::new(urls.clone(), *chain_id, self.rpc_failover_wait_ms).await {
+                Ok(failover_provider) => {
+                    debug!(%chain_id, "Successfully created failover provider");
+                    
+                    let provider = FillProvider::new(
+                        Identity::new(),
+                        JoinFill::new(
+                            GasFiller::new(),
+                            JoinFill::new(
+                                BlobGasFiller::new(),
+                                JoinFill::new(
+                                    NonceFiller::new(),
+                                    ChainIdFiller::new(*chain_id),
+                                ),
+                            ),
+                        ),
+                        failover_provider,
+                    );
+                    
+                    provider_map.insert(*chain_id, provider);
+                }
                 Err(e) => {
-                    error!(%chain_id, %url, %e, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
-                    continue; // create other providers
+                    error!(%chain_id, %e, "Failed to create failover provider for chain");
                 }
-            };
-
-            match provider.get_chain_id().await {
-                Ok(resp_chain_id) => {
-                    if resp_chain_id != *chain_id {
-                        return Err(ConfigError::RpcUrlInvalidChainId(
-                            url.to_string(),
-                            chain_id.to_string(),
-                            resp_chain_id.to_string(),
-                        ));
-                    }
-                }
-                Err(e) => {
-                    error!(%e, %chain_id, %url, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
-                }
-            };
-
-            debug!(%chain_id, %url, "Successful JSON-RPC request to RPC provider");
-            provider_map.insert(*chain_id, provider);
+            }
         }
         Ok(provider_map)
     }
