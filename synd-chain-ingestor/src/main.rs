@@ -8,7 +8,10 @@ use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use std::time::Duration;
-use synd_chain_ingestor::{eth_client::EthClient, failover_client::FailoverEthClient, ingestor, metrics::ChainIngestorMetrics, server};
+use synd_chain_ingestor::{
+    eth_client::EthClient, failover_client::FailoverEthClient, ingestor,
+    metrics::ChainIngestorMetrics, server,
+};
 use tokio::{
     signal::unix::{signal, SignalKind},
     time::sleep,
@@ -48,7 +51,14 @@ struct Config {
 
 async fn new_provider(cfg: &Config) -> FailoverEthClient {
     let urls: Vec<String> = serde_json::from_str(&cfg.rpc_urls).expect("Invalid RPC_URLS JSON");
-    FailoverEthClient::new(urls, cfg.request_timeout, Duration::from_secs(300), cfg.channel_size, cfg.rpc_failover_wait_ms).await
+    FailoverEthClient::new(
+        urls,
+        cfg.request_timeout,
+        Duration::from_secs(300),
+        cfg.channel_size,
+        cfg.rpc_failover_wait_ms,
+    )
+    .await
 }
 
 #[tokio::main]

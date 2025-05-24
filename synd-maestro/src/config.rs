@@ -3,6 +3,7 @@
 use crate::{
     config::ConfigError::RpcUrlInvalidAddress,
     errors::ConfigError,
+    provider::failover::FailoverProvider,
     valkey::ttl::{waiting_txn::WAITING_TXN_TTL, wallet_nonce::WALLET_NONCE_TTL},
 };
 use alloy::{
@@ -12,7 +13,6 @@ use alloy::{
         Identity, Provider, ProviderBuilder, RootProvider,
     },
 };
-use crate::provider::failover::FailoverProvider;
 use clap::Parser;
 use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
@@ -45,7 +45,7 @@ pub struct Config {
         value_parser = parse_chain_rpc_urls_map
     )]
     pub chain_rpc_urls: HashMap<u64, Vec<String>>,
-    
+
     /// Maximum wait time before switching to backup RPC node in milliseconds
     #[arg(long, env = "RPC_FAILOVER_WAIT_MS", default_value = "5000")]
     pub rpc_failover_wait_ms: u64,
@@ -149,22 +149,19 @@ impl Config {
             match FailoverProvider::new(urls.clone(), *chain_id, self.rpc_failover_wait_ms).await {
                 Ok(failover_provider) => {
                     debug!(%chain_id, "Successfully created failover provider");
-                    
+
                     let provider = FillProvider::new(
                         Identity::new(),
                         JoinFill::new(
                             GasFiller::new(),
                             JoinFill::new(
                                 BlobGasFiller::new(),
-                                JoinFill::new(
-                                    NonceFiller::new(),
-                                    ChainIdFiller::new(*chain_id),
-                                ),
+                                JoinFill::new(NonceFiller::new(), ChainIdFiller::new(*chain_id)),
                             ),
                         ),
                         failover_provider,
                     );
-                    
+
                     provider_map.insert(*chain_id, provider);
                 }
                 Err(e) => {
