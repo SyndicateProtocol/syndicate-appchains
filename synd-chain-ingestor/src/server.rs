@@ -44,7 +44,12 @@ struct BlockIngestor<'a> {
     request_limit: u64,
 }
 impl<'a> BlockIngestor<'a> {
-    fn new(start_block: u64, end_block: u64, request_limit: u64, provider: &'a FailoverEthClient) -> Self {
+    fn new(
+        start_block: u64,
+        end_block: u64,
+        request_limit: u64,
+        provider: &'a FailoverEthClient,
+    ) -> Self {
         Self { block: start_block, end_block, provider, request_limit, handles: Default::default() }
     }
     async fn next(&mut self) -> Option<alloy::rpc::types::Header> {
