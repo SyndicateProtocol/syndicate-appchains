@@ -1,7 +1,6 @@
 //! The server crate is used to create a `RpcModule` that handles websocket jsonrpc requests.
 use crate::{
     db::{BlockUpdateResult, DB},
-    eth_client::EthClient,
     failover_client::FailoverEthClient,
     metrics::ChainIngestorMetrics,
 };
