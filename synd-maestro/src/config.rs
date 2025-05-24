@@ -101,7 +101,7 @@ pub type RpcProvider = FillProvider<
         Identity,
         JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
     >,
-    RootProvider,
+    RootProvider<alloy::network::Ethereum>,
 >;
 
 impl Config {
@@ -151,14 +151,16 @@ impl Config {
                     debug!(%chain_id, "Successfully created failover provider");
 
                     let provider = FillProvider::new(
-                        Identity,
                         JoinFill::new(
-                            GasFiller,
+                            Identity,
                             JoinFill::new(
-                                BlobGasFiller,
+                                GasFiller,
                                 JoinFill::new(
-                                    NonceFiller::default(),
-                                    ChainIdFiller::new(Some(*chain_id)),
+                                    BlobGasFiller,
+                                    JoinFill::new(
+                                        NonceFiller::default(),
+                                        ChainIdFiller::new(Some(*chain_id)),
+                                    ),
                                 ),
                             ),
                         ),

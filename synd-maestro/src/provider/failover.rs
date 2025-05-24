@@ -1,4 +1,5 @@
 use alloy::{
+    network::Ethereum,
     primitives::ChainId,
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::{RpcError, TransportErrorKind},
@@ -9,7 +10,7 @@ use tracing::{debug, error, warn};
 
 #[derive(Debug)]
 pub struct FailoverProvider {
-    providers: Vec<RootProvider>,
+    providers: Vec<RootProvider<Ethereum>>,
     current_index: Arc<RwLock<usize>>,
     chain_id: ChainId,
     failover_wait_ms: u64,
@@ -49,7 +50,7 @@ impl FailoverProvider {
         Ok(Self { providers, current_index: Arc::new(RwLock::new(0)), chain_id, failover_wait_ms })
     }
 
-    async fn get_current_provider(&self) -> RootProvider {
+    async fn get_current_provider(&self) -> RootProvider<Ethereum> {
         let index = *self.current_index.read().await;
         self.providers[index].clone()
     }
@@ -86,7 +87,7 @@ impl FailoverProvider {
     ) -> Result<T, RpcError<TransportErrorKind>>
     where
         F: Fn(
-            RootProvider,
+            RootProvider<Ethereum>,
         ) -> std::pin::Pin<
             Box<dyn std::future::Future<Output = Result<T, RpcError<TransportErrorKind>>> + Send>,
         >,
@@ -135,8 +136,8 @@ impl FailoverProvider {
 }
 
 #[async_trait::async_trait]
-impl Provider for FailoverProvider {
-    fn root(&self) -> &RootProvider {
+impl Provider<Ethereum> for FailoverProvider {
+    fn root(&self) -> &RootProvider<Ethereum> {
         &self.providers[*self.current_index.blocking_read()]
     }
 
@@ -184,7 +185,7 @@ impl Provider for FailoverProvider {
         self.execute_with_failover(|provider| {
             Box::pin(async move {
                 let result = provider.send_raw_transaction(&tx).await?;
-                Ok(result.tx_hash())
+                Ok(*result)
             })
         })
         .await
