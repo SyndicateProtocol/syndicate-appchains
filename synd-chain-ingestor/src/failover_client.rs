@@ -8,7 +8,7 @@ use alloy::{
 };
 use shared::types::Receipt;
 use std::time::Duration;
-use tracing::{debug, error, warn};
+use tracing::{error, warn};
 
 #[derive(Debug, Clone)]
 pub struct FailoverEthClient {
@@ -85,7 +85,7 @@ impl FailoverEthClient {
 
                     let elapsed = start_time.elapsed().as_millis() as u64;
                     if elapsed < self.failover_wait_ms {
-                        tokio::time::sleep(std::time::Duration::from_millis(
+                        tokio::time::sleep(Duration::from_millis(
                             self.failover_wait_ms - elapsed,
                         ))
                         .await;
@@ -120,7 +120,7 @@ impl FailoverEthClient {
 
                     let elapsed = start_time.elapsed().as_millis() as u64;
                     if elapsed < self.failover_wait_ms {
-                        tokio::time::sleep(std::time::Duration::from_millis(
+                        tokio::time::sleep(Duration::from_millis(
                             self.failover_wait_ms - elapsed,
                         ))
                         .await;
@@ -157,7 +157,7 @@ impl FailoverEthClient {
 
                     let elapsed = start_time.elapsed().as_millis() as u64;
                     if elapsed < self.failover_wait_ms {
-                        tokio::time::sleep(std::time::Duration::from_millis(
+                        tokio::time::sleep(Duration::from_millis(
                             self.failover_wait_ms - elapsed,
                         ))
                         .await;
@@ -197,7 +197,7 @@ impl FailoverEthClient {
 
         let elapsed = start_time.elapsed().as_millis() as u64;
         if elapsed < self.failover_wait_ms {
-            tokio::time::sleep(std::time::Duration::from_millis(
+            tokio::time::sleep(Duration::from_millis(
                 self.failover_wait_ms - elapsed,
             ))
             .await;
@@ -217,15 +217,14 @@ impl FailoverEthClient {
         error!("get_logs timed out, attempt {attempts}/{max_attempts}");
 
         if *attempts >= max_attempts {
-            return Err(TransportErrorKind::Custom(
-                "All RPC clients timed out for get_logs".into(),
-            )
-            .into());
+            return Err(
+                TransportErrorKind::Custom("All RPC clients timed out for get_logs".into()).into()
+            );
         }
 
         let elapsed = start_time.elapsed().as_millis() as u64;
         if elapsed < self.failover_wait_ms {
-            tokio::time::sleep(std::time::Duration::from_millis(
+            tokio::time::sleep(Duration::from_millis(
                 self.failover_wait_ms - elapsed,
             ))
             .await;
@@ -248,7 +247,9 @@ impl FailoverEthClient {
 
             match tokio::time::timeout(Duration::from_secs(30), client.get_logs(filter)).await {
                 Ok(Ok(result)) => return Ok(result),
-                Ok(Err(e)) => self.handle_logs_error(e, &mut attempts, max_attempts, start_time).await?,
+                Ok(Err(e)) => {
+                    self.handle_logs_error(e, &mut attempts, max_attempts, start_time).await?
+                }
                 Err(_) => self.handle_logs_timeout(&mut attempts, max_attempts, start_time).await?,
             }
         }
