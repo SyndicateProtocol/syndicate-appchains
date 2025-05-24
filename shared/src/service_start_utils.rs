@@ -23,23 +23,23 @@ pub async fn start_metrics_and_health(
     metrics_state: MetricsState,
     port: u16,
 ) -> tokio::task::JoinHandle<()> {
-    info!("starting metrics on port {}", port);
+    info!("starting metrics on port {port}");
     let state = Arc::new(metrics_state);
     let router = Router::new()
         .route("/metrics", get(metrics_handler))
         .route("/health", get(health_handler))
         .with_state(state);
 
-    let listener = match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await {
+    let listener = match tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await {
         Ok(listener) => listener,
         Err(e) => {
-            panic!("Failed to bind metrics server: {}", e);
+            panic!("Failed to bind metrics server: {e}");
         }
     };
 
     tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, router).await {
-            eprintln!("Metrics server error: {}", e);
+            eprintln!("Metrics server error: {e}");
             std::process::exit(1); // stop the process if the metrics server fails (this should
                                    // never happen)
         }

@@ -123,7 +123,13 @@ pub struct BlockRef {
 
 impl Display for BlockRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "number: {}, ts: {}, hash: {}", self.number, self.timestamp, self.hash)
+        write!(
+            f,
+            "number: {number}, ts: {timestamp}, hash: {hash}",
+            number = self.number,
+            timestamp = self.timestamp,
+            hash = self.hash
+        )
     }
 }
 
@@ -159,7 +165,7 @@ where
 {
     let hex_str: String = Deserialize::deserialize(deserializer)?;
     u64::from_str_radix(hex_str.trim_start_matches("0x"), 16)
-        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {}", err)))
+        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {err}")))
 }
 
 fn deserialize_hex_to_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
@@ -168,7 +174,7 @@ where
 {
     let hex_str: String = Deserialize::deserialize(deserializer)?;
     u8::from_str_radix(hex_str.trim_start_matches("0x"), 16)
-        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u8: {}", err)))
+        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u8: {err}")))
 }
 
 fn deserialize_b256<'de, D>(deserializer: D) -> Result<B256, D::Error>
@@ -188,14 +194,16 @@ fn serialize_b256<S>(b256: &B256, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&format!("0x{}", hex::encode(b256.as_slice())))
+    let encoded = hex::encode(b256.as_slice());
+    serializer.serialize_str(&format!("0x{encoded}"))
 }
 
 fn serialize_address<S>(addr: &Address, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&format!("0x{}", hex::encode(addr.as_slice())))
+    let encoded = hex::encode(addr.as_slice());
+    serializer.serialize_str(&format!("0x{encoded}"))
 }
 
 fn serialize_optional_address<S>(opt: &Option<Address>, serializer: S) -> Result<S::Ok, S::Error>
@@ -203,7 +211,10 @@ where
     S: Serializer,
 {
     match opt {
-        Some(addr) => serializer.serialize_str(&format!("0x{}", hex::encode(addr.as_slice()))),
+        Some(addr) => {
+            let encoded = hex::encode(addr.as_slice());
+            serializer.serialize_str(&format!("0x{encoded}"))
+        }
         None => serializer.serialize_none(),
     }
 }
@@ -212,14 +223,14 @@ fn serialize_hex_u64<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&format!("0x{:x}", num))
+    serializer.serialize_str(&format!("0x{num:x}"))
 }
 
 fn serialize_hex_u8<S>(num: &u8, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&format!("0x{:x}", num))
+    serializer.serialize_str(&format!("0x{num:x}"))
 }
 
 fn deserialize_status<'de, D>(deserializer: D) -> Result<Eip658Value, D::Error>
@@ -233,7 +244,7 @@ where
         _ => {
             // Try to decode to B256
             let decoded = hex::decode(hex_str.trim_start_matches("0x"))
-                .map_err(|err| de::Error::custom(format!("Invalid hex for PostState: {}", err)))?;
+                .map_err(|err| de::Error::custom(format!("Invalid hex for PostState: {err}")))?;
             let arr: [u8; 32] =
                 decoded.try_into().map_err(|_| de::Error::custom("PostState must be 32 bytes"))?;
             Ok(Eip658Value::PostState(B256::from(arr)))
@@ -248,7 +259,10 @@ where
     let hex = match status {
         Eip658Value::Eip658(true) => "0x1".to_string(),
         Eip658Value::Eip658(false) => "0x0".to_string(),
-        Eip658Value::PostState(val) => format!("0x{}", hex::encode(val.as_slice())),
+        Eip658Value::PostState(val) => {
+            let encoded = hex::encode(val.as_slice());
+            format!("0x{encoded}")
+        }
     };
     serializer.serialize_str(&hex)
 }
