@@ -36,7 +36,7 @@ pub mod waiting_txn {
     pub const WAITING_GAP_KEY_PREFIX: &str = "maestro:waiting-gap-txns";
 
     /// Generates a Redis String key for a specific chain, wallet, and nonce, thereby corresponding
-    /// to a unique transaciton.
+    /// to a unique transaction.
     ///
     /// # Arguments
     /// * `chain_id` - The chain identifier to create the key for

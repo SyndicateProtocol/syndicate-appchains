@@ -13,7 +13,7 @@ use alloy::{
     rlp::Decodable,
 };
 use byte_unit::Unit;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 /// Convert a raw transaction from [`&Bytes`] to [`TxEnvelope`]
 pub fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
@@ -79,6 +79,7 @@ fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), RpcError>
 }
 
 /// Validate a transaction
+#[instrument(err)]
 pub fn validate_transaction(raw_tx: &Bytes) -> Result<(TxEnvelope, Address), RpcError> {
     debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
     // Check tx size

@@ -36,7 +36,7 @@ use shared::{
 };
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, error, instrument, trace, warn, Instrument};
 
 /// The service for filtering and directing transactions
 #[derive(Debug)]
@@ -101,7 +101,11 @@ impl MaestroService {
     /// Checks if a given `chain_id` has a corresponding [`RpcProvider`] configured
     pub fn get_rpc_provider(&self, chain_id: &ChainId) -> Result<&RpcProvider, MaestroRpcError> {
         match self.rpc_providers.get(chain_id) {
-            None | Some(None) => Err(InternalError(RpcMissing(*chain_id))),
+            None | Some(None) => {
+                let error = InternalError(RpcMissing(*chain_id));
+                error!(?error);
+                Err(error)
+            }
             Some(Some(provider)) => Ok(provider),
         }
     }
@@ -138,6 +142,7 @@ impl MaestroService {
     /// spawned to check for and process any waiting transactions with sequential nonces.
     /// This allows the method to return quickly while potentially processing a chain of
     /// transactions in the background.
+    #[instrument(skip(self), err)]
     pub async fn handle_transaction_and_manage_nonces(
         self: &Arc<Self>,
         raw_tx: Bytes,
@@ -155,11 +160,11 @@ impl MaestroService {
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
-                // 1. update the cache with nonce + 1. Quit if thiss fails
+                // 1. update the cache with nonce + 1. Quit if this fails
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
-                        trace!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
+                        error!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
                         JsonRpcError(TransactionRejected(rejection))
                     }
                     )?;
@@ -170,16 +175,19 @@ impl MaestroService {
 
                 // 3. check cache for waiting txns (background task)
                 let service_clone = self.clone();
-                let _handle = tokio::spawn(async move {
-                    service_clone
-                        .check_for_and_enqueue_waiting_transactions(chain_id, wallet, new_nonce)
-                        .await
-                });
+                let _handle = tokio::spawn(
+                    async move {
+                        service_clone
+                            .check_for_and_enqueue_waiting_transactions(chain_id, wallet, new_nonce)
+                            .await
+                    }
+                    .in_current_span(),
+                );
             }
             Ordering::Less => {
                 let rejection = NonceTooLow(expected_nonce, tx_nonce);
-                warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", rejection);
-                return Err(JsonRpcError(TransactionRejected(rejection)))
+                error!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", rejection);
+                return Err(JsonRpcError(TransactionRejected(rejection)));
             }
             Ordering::Greater => {
                 debug!(%tx_hash, %chain_id, "Caching waiting transaction");
@@ -208,6 +216,7 @@ impl MaestroService {
     /// * Redis connection fails
     /// * Stream write operation fails
     /// * Producer creation fails
+    #[instrument(skip(self), err)]
     pub async fn enqueue_raw_transaction(
         &self,
         raw_tx: Bytes,
@@ -308,7 +317,7 @@ impl MaestroService {
             Ok(nonce) => nonce,
             Err(e) => {
                 error!(%signer, %chain_id, %e, "unable to get nonce from RPC");
-                return Err(InternalError(RpcFailedToFetchWalletNonce(chain_id, signer)))
+                return Err(InternalError(RpcFailedToFetchWalletNonce(chain_id, signer)));
             }
         };
 
@@ -358,7 +367,7 @@ impl MaestroService {
             if cached_nonce_parsed.cmp(&current_nonce) != Ordering::Equal {
                 error!(%desired_nonce, %cached_nonce_parsed, %current_nonce, %chain_id, %wallet_address, "unexpected cached nonce. likely a concurrency bug");
                 //TODO clear cache here?
-                return Err(WaitingTransaction(FailedToEnqueue))
+                return Err(WaitingTransaction(FailedToEnqueue));
             }
         }
 
@@ -405,6 +414,7 @@ impl MaestroService {
     ///
     /// # Returns
     /// * `Result<(), Error>` - Result containing possible [`WaitingTransaction`] errors
+    #[instrument(skip(self), err)]
     pub async fn check_for_and_enqueue_waiting_transactions(
         &self,
         chain_id: ChainId,
@@ -451,7 +461,7 @@ impl MaestroService {
 
             if let Err(e) = self.enqueue_raw_transaction(waiting_txn, chain_id).await {
                 error!(%e, %chain_id, %wallet_address, %tx_hash, "Failed to enqueue transaction");
-                return Err(WaitingTransaction(FailedToEnqueue))
+                return Err(WaitingTransaction(FailedToEnqueue));
             }
 
             waiting_txn_ids.push(WaitingTransactionId {
@@ -483,7 +493,7 @@ impl MaestroService {
     ///
     /// This method attempts to retrieve a transaction from the waiting gap cache
     /// for a specific wallet, chain, and nonce combination. By "contiguous", we mean transactions
-    /// with adjacent nonces starting from `starting_nonce` onward.  
+    /// with adjacent nonces starting from `starting_nonce` onward.
     ///
     /// For example, if transactions with nonce 5, 6, 7, 9, 10, and 11 exist in the cache and this
     /// function is called with `starting_nonce` 5, then 3 transactions will be returned - those
@@ -512,6 +522,7 @@ impl MaestroService {
     ///
     /// This method will log detailed error information when hex decoding fails, including the
     /// actual hex string that failed to decode.
+    #[instrument(skip(self), err)]
     pub async fn get_contiguous_waiting_transactions_from_cache(
         &self,
         chain_id: ChainId,
@@ -529,7 +540,7 @@ impl MaestroService {
             {
                 None => {
                     //
-                    break
+                    break;
                 }
                 Some(tx_hex) => match hex::decode(&tx_hex) {
                     Ok(tx_bytes) => {
@@ -538,7 +549,7 @@ impl MaestroService {
                     }
                     Err(e) => {
                         error!(%e, %chain_id, %wallet_address, %starting_nonce, %tx_hex, "Failed to decode hex transaction from cache");
-                        return Err(WaitingTransaction(FailedToDecode))
+                        return Err(WaitingTransaction(FailedToDecode));
                     }
                 },
             }
@@ -597,13 +608,14 @@ impl MaestroService {
     ///
     /// # Errors
     /// Returns an error if the Redis operation fails
+    #[instrument(skip(self), err)]
     pub async fn remove_waiting_transactions_from_cache(
         &self,
         waiting_txns: &[WaitingTransactionId],
     ) -> Result<u64, MaestroRpcError> {
         if waiting_txns.is_empty() {
             error!("No waiting txns to remove");
-            return Err(InternalError(Other))
+            return Err(InternalError(Other));
         }
 
         let mut conn = self.redis_conn.clone();
@@ -638,6 +650,7 @@ mod tests {
     use prometheus_client::registry::Registry;
     use redis::AsyncCommands;
     use serde_json::json;
+    use shared::tracing::ServiceTracingConfig;
     use std::time::Duration;
     use test_utils::{
         docker::{start_redis, Docker},
@@ -651,7 +664,10 @@ mod tests {
 
     #[ctor::ctor]
     fn init() {
-        shared::logger::set_global_default_subscriber();
+        shared::tracing::setup_global_tracing(ServiceTracingConfig::from_env(
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        ));
     }
 
     // Helper to create a test service with real Redis and mock RPC

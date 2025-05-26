@@ -9,7 +9,9 @@ use redis::{
     streams::{StreamReadOptions, StreamReadReply},
     AsyncCommands,
 };
-use std::time::Duration;
+use shared::tracing::{otel_global, OpenTelemetrySpanExt};
+use std::{collections::HashMap, time::Duration};
+use tracing::{info_span, instrument};
 
 /// A consumer for Redis streams that reads transaction data.
 ///
@@ -73,6 +75,7 @@ impl StreamConsumer {
     /// * Currently reads one message at a time for simplicity. For high-throughput scenarios,
     ///   consider implementing batch reading with an internal buffer.
     /// * Blocks for `block_duration` waiting for a new message to arrive
+    #[instrument(skip(self), err)]
     pub async fn recv(
         &mut self,
         max_msg_count: usize,
@@ -104,6 +107,23 @@ impl StreamConsumer {
         let mut results = Vec::with_capacity(key_data.ids.len());
 
         for id in &key_data.ids {
+            let traceparent = id
+                .map
+                .get("traceparent")
+                .ok_or_else(|| eyre::eyre!("No traceparent found in message"))?;
+            let parent_context = match traceparent {
+                redis::Value::BulkString(data) => {
+                    let carrier: HashMap<String, String> =
+                        [("traceparent".to_string(), String::from_utf8_lossy(data).to_string())]
+                            .into();
+                    otel_global::get_text_map_propagator(|propagator| propagator.extract(&carrier))
+                }
+                _ => return Err(eyre::eyre!("Expected binary data, got different type")),
+            };
+            let span = info_span!("redis_recv_transaction");
+            span.set_parent(parent_context);
+            let _guard = span.enter();
+
             let raw_tx =
                 id.map.get("data").ok_or_else(|| eyre::eyre!("No data found in message"))?;
 

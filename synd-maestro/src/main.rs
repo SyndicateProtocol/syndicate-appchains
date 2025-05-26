@@ -2,8 +2,8 @@
 
 use eyre::Result;
 use shared::{
-    logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
+    tracing::{setup_global_tracing, ServiceTracingConfig},
 };
 use synd_maestro::{config::Config, metrics::MaestroMetrics};
 use tokio::signal::unix::{signal, SignalKind};
@@ -12,7 +12,10 @@ use tracing::info;
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
-    set_global_default_subscriber()?;
+    let _guard = setup_global_tracing(ServiceTracingConfig::from_env(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION"),
+    ))?;
 
     let config = Config::initialize();
     info!("Config: {:?}", config);

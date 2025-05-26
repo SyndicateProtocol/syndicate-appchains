@@ -6,9 +6,10 @@ use redis::{
     streams::{StreamTrimOptions, StreamTrimmingMode},
     AsyncCommands, RedisError,
 };
+use shared::tracing::current_traceparent;
 use std::time::Duration;
 use tokio::{task::JoinHandle, time::MissedTickBehavior};
-use tracing::debug;
+use tracing::{debug, instrument};
 
 /// Base key for Redis transaction streams
 /// Format: `synd-maestro:transactions:{chain_id}`
@@ -95,8 +96,20 @@ impl StreamProducer {
     /// * Redis connection fails
     /// * Stream write operation fails
     /// * Connection is dropped
+    #[instrument(skip(self), err)]
     pub async fn enqueue_transaction(&self, raw_tx: Vec<u8>) -> Result<String, RedisError> {
-        let id: String = self.conn.clone().xadd(&self.stream_key, "*", &[("data", raw_tx)]).await?;
+        let id: String = self
+            .conn
+            .clone()
+            .xadd(
+                &self.stream_key,
+                "*",
+                &[
+                    ("data", raw_tx),
+                    ("traceparent", current_traceparent().map(Vec::from).unwrap_or_default()),
+                ],
+            )
+            .await?;
         debug!(%self.stream_key, %id, "Enqueued transaction");
         Ok(id)
     }
