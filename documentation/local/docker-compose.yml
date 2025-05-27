@@ -27,7 +27,6 @@ services:
     volumes:
       - ./:/chains
     environment:
-      #     - RUST_LOG=debug
       - DB_FILE=/chains/84532.db
       - START_BLOCK=20000000
       - RPC_URL={{ SETTLEMENT_RPC_URL }}
@@ -46,7 +45,6 @@ services:
       target: synd-translator
       dockerfile: Dockerfile
     environment:
-      #     RUST_LOG: "debug"
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
       SEQUENCING_CONTRACT_ADDRESS: ${SEQUENCING_CONTRACT_ADDRESS}
       ARBITRUM_BRIDGE_ADDRESS: ${ARBITRUM_BRIDGE_ADDRESS}
