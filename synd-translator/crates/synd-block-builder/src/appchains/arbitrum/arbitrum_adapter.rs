@@ -288,7 +288,7 @@ impl ArbitrumAdapter {
             &msg.sender,
             &kind,
         ) {
-            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
+            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind))
         }
 
         let data = message_data
