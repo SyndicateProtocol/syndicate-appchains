@@ -1,5 +1,5 @@
 use crate::{
-    db::{to_err, ArbitrumDB, DelayedMessage, MBlock, Slot, State},
+    db::{to_err, ArbitrumDB, DelayedMessage, MBlock, Slot},
     metrics::MchainMetrics,
 };
 use alloy::{
@@ -16,6 +16,10 @@ use contract_bindings::synd::{
 use jsonrpsee::{
     types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned},
     RpcModule, SubscriptionMessage, SubscriptionSink,
+};
+use shared::{
+    append_only_db::AppendOnlyT, fixed_size_append_only_db::FixedSizeAppendOnlyT,
+    single_value_db::SingleValueT,
 };
 #[cfg(not(test))]
 use std::time::SystemTime;
@@ -103,20 +107,26 @@ fn appchain_config(chain_id: u64) -> String {
 }
 
 #[derive(Debug)]
-pub struct Context {
+pub struct Context<T: AppendOnlyT, U: FixedSizeAppendOnlyT<32>, V: SingleValueT> {
+    db: ArbitrumDB<T, U, V>,
     finalized_block: u64,
     pending_ts: VecDeque<u64>,
     subs: Vec<SubscriptionSink>,
 }
 
 #[allow(clippy::unwrap_used)]
-pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
+#[allow(clippy::type_complexity)]
+pub fn start_mchain<
+    T: AppendOnlyT + Send + Sync + 'static,
+    U: FixedSizeAppendOnlyT<32> + Send + Sync + 'static,
+    V: SingleValueT + Send + Sync + 'static,
+>(
     chain_id: u64,
     finality_delay: u64,
-    db: T,
+    mut db: ArbitrumDB<T, U, V>,
     metrics: MchainMetrics,
-) -> RpcModule<(T, MchainMetrics, Mutex<Context>)> {
-    db.check_version();
+) -> RpcModule<(MchainMetrics, Mutex<Context<T, U, V>>)> {
+    db.sync_to_state();
     let init_msg = DelayedMessage {
         kind: 11, // L1MessageType::Initialize
         sender: Address::ZERO,
@@ -159,9 +169,8 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     }
     assert_eq!(finalized_block + pending_ts.len() as u64, db.get_state().batch_count);
     let mut module = RpcModule::new((
-        db,
         metrics,
-        Mutex::new(Context { finalized_block, pending_ts, subs: Default::default() }),
+        Mutex::new(Context { finalized_block, pending_ts, subs: Default::default(), db }),
     ));
 
     // -------------------------------------------------
@@ -170,15 +179,15 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_addBatch",
-            move |p, (db, metrics, mutex), _| -> Result<Option<u64>, ErrorObjectOwned> {
+            move |p, (metrics, mutex), _| -> Result<Option<u64>, ErrorObjectOwned> {
                 let (batch,): (MBlock,) = p.parse()?;
                 let timestamp = batch.timestamp;
                 let seq_block_number = batch.slot.seq_block_number;
-                let block = db.add_batch(batch)?;
+                let block = mutex.lock().unwrap().db.add_batch(batch)?;
                 metrics.record_sequencing_block(seq_block_number, timestamp);
                 Ok(block.inspect(|&block| {
-                    metrics.record_last_block(block, timestamp);
                     let mut data = mutex.lock().unwrap();
+                    metrics.record_last_block(block, timestamp);
                     data.pending_ts.push_back(timestamp);
                     assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block);
                     data.subs.retain_mut(|sink| {
@@ -202,47 +211,26 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_rollbackToBlock",
-            move |p, (db, metrics, mutex), _| -> Result<(), ErrorObjectOwned> {
+            move |p, (metrics, mutex), _| -> Result<(), ErrorObjectOwned> {
+                let mut data = mutex.lock().unwrap();
                 let (block_number,): (u64,) = p.parse()?;
-                let state = db.get_state();
+                let state = data.db.get_state();
                 if block_number > state.batch_count {
                     return Err(err("cannot set head past the last block"));
                 }
                 if block_number == 0 {
                     return Err(err("cannot set head before the first block"));
                 }
-                let block = db.get_block(block_number).unwrap();
-                let l1_block_number = block.slot.seq_block_number;
-                let timestamp = block.timestamp;
+                let block = data.db.rollback_to_block(block_number);
                 if block_number == state.batch_count {
-                    // reset the pending batch count.
                     // do not record or log the reorg since it has no user impact.
-                    db.put_state(&State { timestamp, slot: block.slot, ..state });
                     return Ok(());
                 }
-                let block_message_count = block.after_message_count();
-                // first reset the state - it is okay if the other deletions fail, incomplete
-                // data is ignored.
-                db.put_state(&State {
-                    batch_count: block_number,
-                    batch_acc: block.after_batch_acc,
-                    message_count: block.after_message_count(),
-                    message_acc: block.after_message_acc(),
-                    timestamp,
-                    slot: block.slot,
-                });
-                // next delete blocks, messages to free up space.
-                metrics.record_reorg(block_number, state.batch_count, timestamp);
-                for i in block_number..state.batch_count {
-                    db.delete_block(i + 1);
-                }
-                for i in block_message_count..state.message_count {
-                    db.delete_message_acc(i);
-                }
-                // finally update stale finality data.
-                let mut data = mutex.lock().unwrap();
+                metrics.record_reorg(block_number, state.batch_count, block.timestamp);
+
+                // update stale finality data.
                 if block_number < data.finalized_block {
-                    metrics.record_finalized_block(block_number, timestamp);
+                    metrics.record_finalized_block(block_number, block.timestamp);
                     data.finalized_block = block_number;
                     data.pending_ts.clear();
                 } else {
@@ -252,13 +240,15 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     data.pending_ts.truncate(data_len - removed);
                 }
                 assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block_number);
+
+                // notify subscribers of the reorg
                 data.subs.retain_mut(|sink| {
                     !sink.is_closed() &&
                         sink.try_send(
                             SubscriptionMessage::from_json(&create_header(
                                 block_number,
-                                l1_block_number,
-                                timestamp,
+                                block.slot.seq_block_number,
+                                block.timestamp,
                             ))
                             .unwrap(),
                         )
@@ -273,15 +263,15 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_getSourceChainsProcessedBlocks",
-            move |p, (db, _, _), _| -> Result<(Slot, u64), ErrorObjectOwned> {
+            move |p, (_, mutex), _| -> Result<(Slot, u64), ErrorObjectOwned> {
                 let (tag,): (BlockNumberOrTag,) = p.parse()?;
                 match tag {
                     BlockNumberOrTag::Pending => {
-                        let state = db.get_state();
+                        let state = mutex.lock().unwrap().db.get_state();
                         Ok((state.slot, state.batch_count + 1))
                     }
                     BlockNumberOrTag::Number(block_num) => {
-                        let block = db.get_block(block_num)?;
+                        let block = mutex.lock().unwrap().db.get_block(block_num)?;
                         Ok((block.slot, block_num))
                     }
                     _ => Err(to_err(format!("unexpected block tag: {}", tag))),
@@ -304,7 +294,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     return Err(format!("unknown subscription event: {}", param).into());
                 }
                 let sink = pending.accept().await.map_err(to_err)?;
-                ctx.2.lock().unwrap().subs.push(sink.clone());
+                ctx.1.lock().unwrap().subs.push(sink.clone());
                 sink.closed().await;
                 drop(sink);
                 Ok(())
@@ -317,12 +307,13 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     module
         .register_method(
             "eth_getLogs",
-            move |p, (db, _, _), _| -> Result<Vec<alloy::rpc::types::Log>, ErrorObjectOwned> {
+            move |p, (_, mutex), _| -> Result<Vec<alloy::rpc::types::Log>, ErrorObjectOwned> {
                 let (f,): (alloy::rpc::types::Filter,) = p.parse()?;
                 // these are unique
                 if f.address != APPCHAIN.into() {
                     return Ok(Default::default());
                 }
+                let data = mutex.lock().unwrap();
                 if f.topics[0].matches(&ISequencerInbox::SequencerBatchData::SIGNATURE_HASH) {
                     let index = match f.topics[1].to_value_or_array() {
                         Some(alloy::rpc::types::ValueOrArray::Value(i)) => i,
@@ -334,7 +325,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     {
                         return Err(err("block hash and batch index mismatch"));
                     }
-                    let block = db.get_block(ind + 1)?;
+                    let block = data.db.get_block(ind + 1)?;
                     if block.batch.is_empty() {
                         return Err(err("batch is empty - SequencerBatchData event does not exist"))
                     }
@@ -360,7 +351,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 }
                 if f.topics[0].matches(&IBridge::MessageDelivered::SIGNATURE_HASH) {
                     for i in from_block..to_block + 1 {
-                        let block = db.get_block(i)?;
+                        let block = data.db.get_block(i)?;
                         let mut before_acc = block.before_message_acc;
                         for (j, (msg, acc)) in block.messages.iter().enumerate() {
                             events.push(create_log(
@@ -383,7 +374,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 }
                 if f.topics[0].matches(&ISequencerInbox::SequencerBatchDelivered::SIGNATURE_HASH) {
                     for i in from_block..to_block + 1 {
-                        let block = db.get_block(i)?;
+                        let block = data.db.get_block(i)?;
                         events.push(create_log(
                             i,
                             ISequencerInbox::SequencerBatchDelivered {
@@ -410,7 +401,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 }
                 if f.topics[0].matches(&IInboxBase::InboxMessageDelivered::SIGNATURE_HASH) {
                     for i in from_block..to_block + 1 {
-                        let block = db.get_block(i)?;
+                        let block = data.db.get_block(i)?;
                         for (j, (msg, _)) in block.messages.iter().enumerate() {
                             events.push(create_log(
                                 i,
@@ -423,6 +414,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                         }
                     }
                 }
+                drop(data);
                 Ok(events)
             },
         )
@@ -430,10 +422,10 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     module
         .register_method(
             "eth_getBlockByHash",
-            move |p, (db, _, _), _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
+            move |p, (_, mutex), _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (hash, _): (FixedBytes<32>, bool) = p.parse()?;
                 let number = u64::from_be_bytes(hash[hash.len() - 8..].try_into().map_err(to_err)?);
-                let block = db.get_block(number)?;
+                let block = mutex.lock().unwrap().db.get_block(number)?;
                 Ok(alloy::rpc::types::Block {
                     header: create_header(number, block.slot.seq_block_number, block.timestamp),
                     ..Default::default()
@@ -444,15 +436,12 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     module
         .register_method(
             "eth_getBlockByNumber",
-            move |p,
-                  (db, metrics, mutex),
-                  _|
-                  -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
+            move |p, (metrics, mutex), _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (tag, _): (BlockNumberOrTag, bool) = p.parse()?;
+                let mut data = mutex.lock().unwrap();
                 let number = match tag {
-                    BlockNumberOrTag::Latest => db.get_state().batch_count,
+                    BlockNumberOrTag::Latest => data.db.get_state().batch_count,
                     BlockNumberOrTag::Safe | BlockNumberOrTag::Finalized => {
-                        let mut data = mutex.lock().unwrap();
                         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                         let mut ts = 0u64;
                         while let Some(block_ts) = data.pending_ts.front() {
@@ -471,7 +460,8 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     }
                     _ => return Err(format!("invalid tag: {}", tag)).map_err(to_err),
                 };
-                let block = db.get_block(number).unwrap();
+                let block = data.db.get_block(number).unwrap();
+                drop(data);
                 Ok(alloy::rpc::types::Block {
                     header: create_header(number, block.slot.seq_block_number, block.timestamp),
                     ..Default::default()
@@ -480,33 +470,34 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         )
         .unwrap();
     module
-        .register_method("eth_call", move |p, (db, _, _), _| -> Result<Bytes, ErrorObjectOwned> {
+        .register_method("eth_call", move |p, (_, mutex), _| -> Result<Bytes, ErrorObjectOwned> {
             let (input, _): (TransactionRequest, BlockNumberOrTag) = p.parse()?;
             if input.to != Some(alloy::primitives::TxKind::Call(APPCHAIN)) {
                 return Ok(Default::default());
             }
             let input = input.input.input.ok_or_else(|| err("missing calldata"))?;
             let selector = input.get(0..4).ok_or_else(|| err("missing selector"))?;
+            let mutex_data = mutex.lock().unwrap();
             match TryInto::<[u8; 4]>::try_into(selector).map_err(to_err)? {
                 // TODO(SEQ-767): make sure the max data size property is set properly
                 IInboxBase::maxDataSizeCall::SELECTOR => Ok(117964.abi_encode().into()),
                 IBridge::delayedMessageCountCall::SELECTOR => {
-                    Ok(db.get_state().message_count.abi_encode().into())
+                    Ok(mutex_data.db.get_state().message_count.abi_encode().into())
                 }
                 ISequencerInbox::batchCountCall::SELECTOR => {
-                    Ok(db.get_state().batch_count.abi_encode().into())
+                    Ok(mutex_data.db.get_state().batch_count.abi_encode().into())
                 }
                 IBridge::delayedInboxAccsCall::SELECTOR => {
                     let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref(), false)
                         .map_err(to_err)?;
                     let index = data._0.try_into().map_err(to_err)?;
-                    Ok(db.get_message_acc(index)?.abi_encode().into())
+                    Ok(mutex_data.db.get_message_acc(index)?.abi_encode().into())
                 }
                 ISequencerInbox::inboxAccsCall::SELECTOR => {
                     let data = ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref(), false)
                         .map_err(to_err)?;
                     let index: u64 = data.index.try_into().map_err(to_err)?;
-                    Ok(db.get_block(index + 1)?.after_batch_acc.abi_encode().into())
+                    Ok(mutex_data.db.get_block(index + 1)?.after_batch_acc.abi_encode().into())
                 }
                 _ => Err(err("unknown selector")),
             }

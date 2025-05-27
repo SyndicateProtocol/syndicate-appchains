@@ -39,17 +39,17 @@ async fn build_partial_blocks(
     client: &EthClient,
     addrs: Vec<Address>,
 ) -> eyre::Result<Vec<PartialBlock>> {
-    assert_eq!(data.len() as u64 % ITEM_SIZE, 0);
+    assert_eq!(data.len() % ITEM_SIZE, 0);
     assert!(!data.is_empty());
-    let count = data.len() as u64 / ITEM_SIZE - 1;
+    let count = data.len() / ITEM_SIZE - 1;
     let mut blocks = Vec::default();
     if count == 0 {
         return Ok(blocks);
     }
-    let mut parent_hash = B256::from_slice(data[4..ITEM_SIZE as usize].into());
-    for i in start_block..start_block + count {
-        let offset = ((i + 1 - start_block) * ITEM_SIZE) as usize;
-        let hash = B256::from_slice(data[offset + 4..offset + ITEM_SIZE as usize].into());
+    let mut parent_hash = B256::from_slice(data[4..ITEM_SIZE].into());
+    for i in start_block..start_block + count as u64 {
+        let offset = (i + 1 - start_block) as usize * ITEM_SIZE;
+        let hash = B256::from_slice(data[offset + 4..offset + ITEM_SIZE].into());
         blocks.push(PartialBlock {
             block_ref: BlockRef {
                 number: i,
@@ -62,7 +62,7 @@ async fn build_partial_blocks(
         parent_hash = hash;
     }
 
-    let end_block = start_block + count - 1;
+    let end_block = start_block + count as u64 - 1;
 
     let mut safe_block = client.get_block_header(BlockNumberOrTag::Safe).await.number;
     if safe_block < start_block {

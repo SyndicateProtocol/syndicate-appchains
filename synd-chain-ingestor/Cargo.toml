@@ -12,7 +12,6 @@ version.workspace      = true
 alloy             = { workspace = true, features = ["provider-ws"] }
 clap              = { workspace = true, features = ["derive", "env"] }
 eyre              = { workspace = true }
-fs2               = { workspace = true }
 futures-util      = { workspace = true }
 humantime         = { workspace = true }
 jsonrpsee         = { workspace = true, features = ["server", "ws-client"] }

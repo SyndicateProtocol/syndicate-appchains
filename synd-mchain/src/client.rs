@@ -178,7 +178,7 @@ mod tests {
     use alloy::{
         eips::BlockNumberOrTag,
         hex,
-        primitives::{Address, Bytes, B256, U256},
+        primitives::{Address, B256, U256},
     };
     use futures_util::{task, Stream};
     use jsonrpsee::{
@@ -187,7 +187,7 @@ mod tests {
     };
     use serde::de::DeserializeOwned;
     use shared::types::BlockRef;
-    use std::{collections::HashMap, marker::PhantomData, pin::Pin, sync::Arc, task::Poll};
+    use std::{collections::HashMap, marker::PhantomData, pin::Pin, task::Poll};
 
     #[ctor::ctor]
     fn init() {
@@ -209,22 +209,13 @@ mod tests {
         }
     }
 
-    impl ArbitrumDB for Arc<TestDB> {
-        fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
-            self.as_ref().get(key)
-        }
-        fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) {
-            self.as_ref().put(key, value)
-        }
-        fn delete<K: AsRef<[u8]>>(&self, key: K) {
-            self.as_ref().delete(key)
-        }
-    }
-
-    async fn setup() -> eyre::Result<(impl Provider, Arc<TestDB>)> {
-        let db = Arc::new(TestDB::new());
-        let mchain = start_mchain(10, 60, db.clone(), MchainMetrics::default());
-        Ok((mchain, db))
+    async fn setup() -> impl Provider {
+        let db = ArbitrumDB {
+            block: TestDB::default(),
+            message_acc: TestDB::default(),
+            state: TestDB::default(),
+        };
+        start_mchain(10, 60, db, MchainMetrics::default())
     }
 
     // additional provider functions for testing
@@ -288,7 +279,7 @@ mod tests {
     async fn reconcile_mchain_with_source_chains() -> eyre::Result<()> {
         // pending block is valid
 
-        let (mchain, _) = setup().await?;
+        let mchain = setup().await;
         let slot = Slot {
             seq_block_number: 1,
             seq_block_hash: U256::from(2).into(),
@@ -465,8 +456,7 @@ mod tests {
             data: Default::default(),
             base_fee_l1: Default::default(),
         };
-        let (mchain, db) = setup().await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1); // init msg, block number, batch (1)
+        let mchain = setup().await;
         assert_eq!(mchain.get_block_number().await, 1);
         mchain
             .add_batch(&MBlock {
@@ -475,7 +465,6 @@ mod tests {
                 ..Default::default()
             })
             .await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1); // block (2)
         assert_eq!(mchain.get_block_number().await, 2);
         mchain
             .add_batch(&MBlock {
@@ -483,8 +472,7 @@ mod tests {
                 slot: Slot { seq_block_number: 2, ..Default::default() },
                 timestamp: 0,
             })
-            .await?; // block + messages (3)
-        assert_eq!(db.0.read().unwrap().keys().len(), 6 + 1);
+            .await?;
         assert_eq!(mchain.get_block_number().await, 3);
         mchain
             .add_batch(&MBlock {
@@ -492,25 +480,21 @@ mod tests {
                 slot: Slot { seq_block_number: 3, ..Default::default() },
                 timestamp: 0,
             })
-            .await?; // block + 2 messagess (4)
-        assert_eq!(db.0.read().unwrap().keys().len(), 9 + 1);
+            .await?;
         assert_eq!(mchain.get_block_number().await, 4);
         mchain.rollback_to_block(2).await?; // rm 2 blocks + 3 messages
-        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1);
         assert_eq!(mchain.get_block_number().await, 2);
         mchain.rollback_to_block(1).await?; // rm block
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
         assert_eq!(mchain.get_block_number().await, 1);
         assert!(mchain.rollback_to_block(0).await.is_err());
         assert!(mchain.rollback_to_block(2).await.is_err());
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
         assert_eq!(mchain.get_block_number().await, 1);
         Ok(())
     }
 
     #[tokio::test]
     async fn finality() -> eyre::Result<()> {
-        let (mchain, _) = setup().await?;
+        let mchain = setup().await;
         assert_eq!(mchain.get_block_number().await, 1);
         assert_eq!(mchain.get_finalized_block().await, 1);
         mchain

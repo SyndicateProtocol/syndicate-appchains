@@ -1,6 +1,6 @@
 //! The server crate is used to create a `RpcModule` that handles websocket jsonrpc requests.
 use crate::{
-    db::{BlockUpdateResult, DB},
+    db::{BlockUpdateResult, DB, ITEM_SIZE},
     eth_client::EthClient,
     metrics::ChainIngestorMetrics,
 };
@@ -13,7 +13,7 @@ use jsonrpsee::{
     core::StringError, types::ErrorObjectOwned, RpcModule, SubscriptionMessage, SubscriptionSink,
 };
 use serde::{Deserialize, Serialize};
-use shared::types::PartialBlock;
+use shared::{fixed_size_append_only_db::FixedSizeAppendOnlyDB, types::PartialBlock};
 use std::{
     collections::{HashSet, VecDeque},
     sync::{Arc, Mutex},
@@ -24,7 +24,7 @@ use tracing::{error, info};
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct Context {
-    pub db: DB,
+    pub db: DB<FixedSizeAppendOnlyDB<ITEM_SIZE>>,
     pub subs: Vec<(SubscriptionSink, HashSet<Address>)>,
 }
 
@@ -75,7 +75,7 @@ pub async fn start(
 
     // reorg db if necessary.
     info!("checking for reorgs");
-    while db.count > 0 {
+    while db.count() > 0 {
         let block_num = db.next_block() - 1;
         let header = provider.get_block_header(BlockNumberOrTag::Number(block_num)).await;
         if db.update_block(&header, metrics) != BlockUpdateResult::Reorged {

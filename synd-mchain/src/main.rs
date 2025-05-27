@@ -1,13 +1,16 @@
 //! The `MockChain` is used for appchain block derivation.
 
+use alloy::primitives::U256;
 use clap::Parser;
 use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
-use rocksdb::DB;
 use shared::{
+    append_only_db::AppendOnlyDB,
+    fixed_size_append_only_db::FixedSizeAppendOnlyDB,
     logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
+    single_value_db::SingleValueDB,
 };
-use synd_mchain::{metrics::MchainMetrics, server::start_mchain};
+use synd_mchain::{db::ArbitrumDB, metrics::MchainMetrics, server::start_mchain};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -28,6 +31,8 @@ struct Config {
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     appchain_chain_id: u64,
 }
+/// VERSION must be bumped whenever a breaking change is made
+const VERSION: u64 = 2;
 
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
@@ -37,8 +42,18 @@ async fn main() -> eyre::Result<()> {
     set_global_default_subscriber().unwrap();
 
     let cfg = Config::parse();
-    info!("loading rockdb db {}", cfg.datadir);
-    let db = DB::open_default(cfg.datadir)?;
+    info!("loading db {}", cfg.datadir);
+    let db = ArbitrumDB {
+        block: AppendOnlyDB::open(
+            &(cfg.datadir.clone() + "/block.db"),
+            VERSION.to_be_bytes().as_slice(),
+        )?,
+        message_acc: FixedSizeAppendOnlyDB::open(
+            &(cfg.datadir.clone() + "/message.db"),
+            &U256::from(VERSION).to_be_bytes(),
+        )?,
+        state: SingleValueDB::open(&(cfg.datadir + "/state.db"))?,
+    };
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
 

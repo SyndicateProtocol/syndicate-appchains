@@ -16,6 +16,7 @@ byte-unit          = { workspace = true, features = ["default"] }
 bytes              = { workspace = true }
 eyre               = { workspace = true }
 flate2             = { workspace = true }
+fs2                = { workspace = true }
 jsonrpsee          = { workspace = true, features = ["jsonrpsee-types"] }
 prometheus-client  = { workspace = true }
 rlp                = { workspace = true }

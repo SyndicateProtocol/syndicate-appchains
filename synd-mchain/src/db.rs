@@ -3,12 +3,13 @@ use alloy::{
     sol_types::SolValue as _,
 };
 use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
-use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
+use shared::{
+    append_only_db::AppendOnlyT, fixed_size_append_only_db::FixedSizeAppendOnlyT,
+    single_value_db::SingleValueT,
+};
 use std::fmt;
-
-/// VERSION must be bumped whenever a breaking change is made
-const VERSION: u64 = 2;
+use tracing::warn;
 
 /// Each delayed message is used to derive an appchain block
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -90,20 +91,6 @@ impl Block {
     }
 }
 
-/// rocksdb implements the key-value trait
-#[allow(clippy::unwrap_used)]
-impl<T: ThreadMode> ArbitrumDB for DBWithThreadMode<T> {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
-        self.get(key).unwrap().map(|x| x.into())
-    }
-    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) {
-        self.put(key, value).unwrap();
-    }
-    fn delete<K: AsRef<[u8]>>(&self, key: K) {
-        self.delete(key).unwrap();
-    }
-}
-
 /// Database key types for different stored values
 #[derive(Debug, Clone)]
 pub enum DBKey {
@@ -128,63 +115,80 @@ impl fmt::Display for DBKey {
     }
 }
 
+#[derive(Debug)]
+#[allow(missing_docs)]
+pub struct ArbitrumDB<
+    AppendOnlyDB: AppendOnlyT,
+    FixedSizeAppendOnlyDB: FixedSizeAppendOnlyT<32>,
+    SingleValueDB: SingleValueT,
+> {
+    pub block: AppendOnlyDB,
+    pub message_acc: FixedSizeAppendOnlyDB,
+    pub state: SingleValueDB,
+}
+
 /// generic db trait for reading and writing block data
 #[allow(clippy::unwrap_used)]
-pub trait ArbitrumDB {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes>;
-    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V);
-    fn delete<K: AsRef<[u8]>>(&self, key: K);
-    fn get_block(&self, key: u64) -> Result<Block, ErrorObjectOwned> {
+impl<T: AppendOnlyT, U: FixedSizeAppendOnlyT<32>, V: SingleValueT> ArbitrumDB<T, U, V> {
+    /// this function should be called after loading the db from disk
+    pub fn sync_to_state(&mut self) {
         let state = self.get_state();
-        if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
-            .map_or_else(
-                || Err(to_err(format!("could not find block {}", key))),
-                |x| Ok(bincode::deserialize(&x).unwrap()),
-            )
+        if self.block.count() != state.batch_count {
+            warn!("removing corrupt blocks");
+            self.block.truncate(state.batch_count);
+        }
+        assert_eq!(self.block.count(), state.batch_count);
+        if self.message_acc.count() != state.message_count {
+            warn!("removing corrupt messages");
+            self.message_acc.truncate(state.message_count);
+        }
+        assert_eq!(self.message_acc.count(), state.message_count);
     }
-    fn put_block(&self, key: u64, value: &Block) {
-        self.put(DBKey::Block(key).to_string(), bincode::serialize(value).unwrap())
-    }
-    fn delete_block(&self, key: u64) {
-        self.delete(DBKey::Block(key).to_string())
-    }
-    fn get_message_acc(&self, key: u64) -> Result<FixedBytes<32>, ErrorObjectOwned> {
-        let state = self.get_state();
-        if key < state.message_count { self.get(DBKey::MessageAcc(key).to_string()) } else { None }
-            .map_or_else(
-                || Err(to_err(format!("could not find message acc {}", key))),
-                |x| Ok(bincode::deserialize(&x).unwrap()),
-            )
-    }
-    fn put_message_acc(&self, key: u64, value: &FixedBytes<32>) {
-        self.put(DBKey::MessageAcc(key).to_string(), bincode::serialize(value).unwrap())
-    }
-    fn delete_message_acc(&self, key: u64) {
-        self.delete(DBKey::MessageAcc(key).to_string())
-    }
-    fn get_state(&self) -> State {
-        self.get(DBKey::State.to_string())
-            .map(|x| bincode::deserialize(&x).unwrap())
-            .unwrap_or_default()
-    }
-    fn put_state(&self, value: &State) {
-        self.put(DBKey::State.to_string(), bincode::serialize(value).unwrap())
-    }
-    fn check_version(&self) {
-        match self.get(DBKey::Version.to_string()) {
-            Some(version) => {
-                assert_eq!(bincode::deserialize::<u64>(&version).unwrap(), VERSION);
-            }
-            None => {
-                // version 0 uses the "n" key to store the current block number
-                assert_eq!(self.get("n"), None, "version mismatch: found 0 expected {}", VERSION);
-                self.put(DBKey::Version.to_string(), bincode::serialize(&VERSION).unwrap());
-            }
+    pub fn get_block(&self, block: u64) -> Result<Block, ErrorObjectOwned> {
+        if block > 0 && block <= self.block.count() {
+            Ok(bincode::deserialize(&self.block.get(block)).unwrap())
+        } else {
+            Err(to_err(format!("could not find block {}", block)))
         }
     }
+    pub fn get_message_acc(&self, index: u64) -> Result<FixedBytes<32>, ErrorObjectOwned> {
+        if index < self.message_acc.count() {
+            Ok(self.message_acc.get(index + 1).into())
+        } else {
+            Err(to_err(format!("could not find message acc {}", index)))
+        }
+    }
+    pub fn get_state(&self) -> State {
+        self.state.get().map(|x| bincode::deserialize(x).unwrap()).unwrap_or_default()
+    }
+    pub fn rollback_to_block(&mut self, block_number: u64) -> Block {
+        let block = self.get_block(block_number).unwrap();
+
+        // first update the state - it is okay if the other deletions fail, incomplete
+        // data is ignored.
+        self.state.set(
+            bincode::serialize(&State {
+                batch_count: block_number,
+                batch_acc: block.after_batch_acc,
+                message_count: block.after_message_count(),
+                message_acc: block.after_message_acc(),
+                timestamp: block.timestamp,
+                slot: block.slot.clone(),
+            })
+            .unwrap(),
+        );
+
+        // next delete blocks, messages to free up space.
+        self.block.truncate(block_number);
+        self.message_acc.truncate(block.after_message_count());
+
+        block
+    }
     // returns the block number if a new block is added
-    fn add_batch(&self, mblock: MBlock) -> Result<Option<u64>, ErrorObjectOwned> {
+    pub fn add_batch(&mut self, mblock: MBlock) -> Result<Option<u64>, ErrorObjectOwned> {
         let state = self.get_state();
+        assert_eq!(state.batch_count, self.block.count());
+        assert_eq!(state.message_count, self.message_acc.count());
         if state.batch_count == 0 && mblock.payload.is_none() {
             return Err(to_err("invalid first batch: must contain a payload"))
         }
@@ -209,7 +213,14 @@ pub trait ArbitrumDB {
         let (batch, messages) = match mblock.payload {
             Some(payload) => payload,
             None => {
-                self.put_state(&State { timestamp: mblock.timestamp, slot: mblock.slot, ..state });
+                self.state.set(
+                    bincode::serialize(&State {
+                        timestamp: mblock.timestamp,
+                        slot: mblock.slot,
+                        ..state
+                    })
+                    .unwrap(),
+                );
                 return Ok(None);
             }
         };
@@ -239,7 +250,7 @@ pub trait ArbitrumDB {
             );
             before_inbox_acc = keccak256((before_inbox_acc, message_hash).abi_encode_packed());
             *acc = before_inbox_acc;
-            self.put_message_acc(block.before_message_count + i as u64, &before_inbox_acc);
+            self.message_acc.append(&before_inbox_acc);
         }
         let data_hash = keccak256(
             (
@@ -255,18 +266,19 @@ pub trait ArbitrumDB {
         block.after_batch_acc = keccak256(
             (block.before_batch_acc, data_hash, block.after_message_acc()).abi_encode_packed(),
         );
-        let block_number = state.batch_count + 1;
-        self.put_block(block_number, &block);
-        // update the state last - incomplete blocks can be ignored / overwritten
-        self.put_state(&State {
-            batch_count: block_number,
-            batch_acc: block.after_batch_acc,
-            message_count: block.after_message_count(),
-            message_acc: block.after_message_acc(),
-            timestamp: block.timestamp,
-            slot: block.slot,
-        });
-        Ok(Some(block_number))
+        self.block.append(&bincode::serialize(&block).unwrap());
+        self.state.set(
+            bincode::serialize(&State {
+                batch_count: state.batch_count + 1,
+                batch_acc: block.after_batch_acc,
+                message_count: block.after_message_count(),
+                message_acc: block.after_message_acc(),
+                timestamp: block.timestamp,
+                slot: block.slot.clone(),
+            })
+            .unwrap(),
+        );
+        Ok(Some(state.batch_count + 1))
     }
 }
 
@@ -274,49 +286,85 @@ pub(crate) fn to_err<T: ToString>(err: T) -> ErrorObjectOwned {
     ErrorObjectOwned::owned(INTERNAL_ERROR_CODE, err.to_string(), None::<()>)
 }
 
-// fully in-memory kv db for testing
 #[cfg(test)]
 pub(crate) mod tests {
     use super::ArbitrumDB;
     use crate::db::{MBlock, Slot};
-    use alloy::primitives::Bytes;
-    use std::{collections::HashMap, sync::RwLock};
+    use shared::{
+        append_only_db::AppendOnlyT, fixed_size_append_only_db::FixedSizeAppendOnlyT,
+        single_value_db::SingleValueT,
+    };
 
     #[allow(clippy::redundant_pub_crate)]
-    #[derive(Debug)]
-    pub(crate) struct TestDB(pub(crate) RwLock<HashMap<Bytes, Bytes>>);
+    #[derive(Debug, Default)]
+    /// fully in-memory db for testing
+    pub(crate) struct TestDB(pub(crate) Vec<Vec<u8>>);
 
     impl TestDB {
-        pub(crate) fn new() -> Self {
-            Self(RwLock::new(HashMap::new()))
+        fn truncate(&mut self, count: u64) {
+            self.0.truncate(count as usize);
+        }
+        fn count(&self) -> u64 {
+            self.0.len() as u64
         }
     }
 
-    #[allow(clippy::unwrap_used)]
-    impl ArbitrumDB for TestDB {
-        fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
-            self.0.read().unwrap().get(key.as_ref()).cloned()
+    impl AppendOnlyT for TestDB {
+        fn get(&self, index: u64) -> Vec<u8> {
+            self.0[index as usize - 1].clone()
         }
-        fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) {
-            self.0
-                .write()
-                .unwrap()
-                .insert(key.as_ref().to_owned().into(), value.as_ref().to_owned().into());
+        fn append(&mut self, item: &[u8]) {
+            self.0.push(item.to_vec());
         }
-        fn delete<K: AsRef<[u8]>>(&self, key: K) {
-            self.0.write().unwrap().remove(key.as_ref());
+        fn truncate(&mut self, count: u64) {
+            self.truncate(count)
+        }
+        fn count(&self) -> u64 {
+            self.count()
+        }
+    }
+
+    impl FixedSizeAppendOnlyT<32> for TestDB {
+        fn get(&self, index: u64) -> [u8; 32] {
+            self.0[index as usize - 1].as_slice().try_into().unwrap()
+        }
+        fn append(&mut self, item: &[u8; 32]) {
+            self.0.push(item.to_vec());
+        }
+        fn truncate(&mut self, count: u64) {
+            self.truncate(count)
+        }
+        fn count(&self) -> u64 {
+            self.count()
+        }
+    }
+
+    impl SingleValueT for TestDB {
+        fn get(&self) -> Option<&Vec<u8>> {
+            self.0.first()
+        }
+        fn set(&mut self, value: Vec<u8>) {
+            self.0 = vec![value];
         }
     }
 
     #[test]
     fn invalid_batch() -> eyre::Result<()> {
-        let db = TestDB::new();
+        let mut db = ArbitrumDB {
+            block: TestDB::default(),
+            message_acc: TestDB::default(),
+            state: TestDB::default(),
+        };
 
         // first batch must contain a payload
         assert!(db.add_batch(MBlock { payload: None, ..Default::default() }).is_err());
 
         for payload in [None, Some(Default::default())] {
-            let db = TestDB::new();
+            let mut db = ArbitrumDB {
+                block: TestDB::default(),
+                message_acc: TestDB::default(),
+                state: TestDB::default(),
+            };
             db.add_batch(MBlock { payload: Some(Default::default()), ..Default::default() })?;
 
             // not incrementing the seq block number fails
