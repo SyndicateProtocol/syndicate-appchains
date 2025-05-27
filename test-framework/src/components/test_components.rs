@@ -18,14 +18,10 @@ use alloy::{
     providers::{ext::AnvilApi as _, Provider, RootProvider, WalletProvider},
     rpc::types::{anvil::MineOptions, TransactionReceipt},
 };
-use contract_bindings::{
-    arbitrum::rollup::Rollup,
-    synd::{
-        alwaysallowedmodule::AlwaysAllowedModule,
-        syndicatesequencingchain::SyndicateSequencingChain::{
-            self, SyndicateSequencingChainInstance,
-        },
-    },
+use contract_bindings::synd::{
+    alwaysallowedmodule::AlwaysAllowedModule,
+    rollup::Rollup,
+    syndicatesequencingchain::SyndicateSequencingChain::{self, SyndicateSequencingChainInstance},
 };
 use eyre::Result;
 use serde_json::{json, Value};

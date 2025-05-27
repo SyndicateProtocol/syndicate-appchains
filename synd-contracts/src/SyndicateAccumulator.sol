@@ -1,14 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-/// @title ArbSys Interface
-/// @notice Interface for Arbitrum's ArbSys precompile contract
-/// @dev Used to get Arbitrum-specific block numbers when running on Arbitrum chains
-interface ArbSys {
-    /// @notice Returns the current Arbitrum block number
-    /// @return The current block number on Arbitrum
-    function arbBlockNumber() external view returns (uint256);
-}
+import "@arbitrum/nitro-contracts/src/precompiles/ArbSys.sol";
 
 // The ArbSys precompile address on Arbitrum chains
 ArbSys constant arbsys = ArbSys(0x0000000000000000000000000000000000000064);
