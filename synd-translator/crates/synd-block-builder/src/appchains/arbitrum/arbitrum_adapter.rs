@@ -182,7 +182,7 @@ impl ArbitrumAdapter {
     /// Processes settlement chain receipts into delayed messages
     pub fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>> {
         // Create a local map to store message data
-        let mut message_data: HashMap<U256, Option<Bytes>> = HashMap::new();
+        let mut message_data: HashMap<U256, Bytes> = HashMap::new();
         // Process all bridge logs in all receipts
         let delayed_messages = block.logs.iter().filter(|log| {
             log.address == self.bridge_address && log.topics()[0] == MSG_DELIVERED_EVENT_HASH
@@ -192,12 +192,12 @@ impl ArbitrumAdapter {
         block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
             match log.topics()[0] {
                 INBOX_MSG_DELIVERED_EVENT_HASH => {
-                    let message_num = U256::from_be_slice(log.topics()[1].as_slice());
+                    let message_num = log.topics()[1].into();
 
                     // Decode the event using the contract bindings
                     match InboxMessageDelivered::abi_decode_data(&log.data.data, true) {
                         Ok(decoded) => {
-                            message_data.insert(message_num, Some(decoded.0));
+                            message_data.insert(message_num, decoded.0);
                         }
                         Err(e) => {
                             panic!(
@@ -212,9 +212,7 @@ impl ArbitrumAdapter {
                 }
 
                 INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
-                    error!("ignoring unsupported inbox message delivered from origin");
-                    let message_num = U256::from_be_slice(log.topics()[1].as_slice());
-                    message_data.insert(message_num, None);
+                    panic!("unsupported inbox message delivered from origin: {}", log.topics()[1]);
                 }
                 _ => {}
             }
@@ -270,7 +268,7 @@ impl ArbitrumAdapter {
     fn delayed_message_to_mchain_txn(
         &self,
         log: &Log,
-        message_data: &HashMap<U256, Option<Bytes>>,
+        message_data: &HashMap<U256, Bytes>,
     ) -> Result<DelayedMessage, ArbitrumBlockBuilderError> {
         let msg = MessageDelivered::decode_raw_log(log.topics(), &log.data.data, true)
             .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
@@ -285,21 +283,13 @@ impl ArbitrumAdapter {
             return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
         }
 
-        let data = message_data
-            .get(&msg.messageIndex)
-            .ok_or_else(|| ArbitrumBlockBuilderError::MissingInboxMessageData(msg.messageIndex))?;
-
-        data.as_ref().map_or_else(
-            || Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind)),
-            |data| {
-                Ok(DelayedMessage {
-                    kind: msg.kind,
-                    sender: msg.sender,
-                    data: data.clone(),
-                    base_fee_l1: msg.baseFeeL1,
-                })
-            },
-        )
+        Ok(DelayedMessage {
+            kind: msg.kind,
+            sender: msg.sender,
+            #[allow(clippy::unwrap_used)]
+            data: message_data.get(&msg.messageIndex).unwrap().clone(),
+            base_fee_l1: msg.baseFeeL1,
+        })
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
@@ -439,7 +429,7 @@ mod tests {
         let message_index = U256::from(1);
         let message_data: Bytes = hex!("1234").into();
         let mut message_map = HashMap::new();
-        message_map.insert(message_index, Some(message_data.clone()));
+        message_map.insert(message_index, message_data.clone());
 
         // Create MessageDelivered event data
         let msg_delivered = MessageDelivered {
@@ -456,11 +446,7 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes::<32>()),
-                FixedBytes::from([1u8; 32]),
-            ],
+            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
             msg_delivered.encode_data().into(),
         );
 
@@ -483,6 +469,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_delayed_message_to_mchain_txn_missing_data() {
         let builder = ArbitrumAdapter::default();
 
@@ -501,21 +488,15 @@ mod tests {
 
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes::<32>()),
-                FixedBytes::from([1u8; 32]),
-            ],
+            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
             msg_delivered.encode_data().into(),
         );
 
         // Empty message data map
         let message_map = HashMap::new();
 
-        // Call should fail with MissingInboxMessageData error
-        let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
-        assert!(result.is_err());
-        assert_matches!(result.unwrap_err(), ArbitrumBlockBuilderError::MissingInboxMessageData(_));
+        // Call should panic
+        _ = builder.delayed_message_to_mchain_txn(&log, &message_map);
     }
 
     #[test]
@@ -547,7 +528,7 @@ mod tests {
         let message_index = U256::from(1);
         let message_data: Bytes = hex!("1234").into();
         let mut message_map = HashMap::new();
-        message_map.insert(message_index, Some(message_data.clone()));
+        message_map.insert(message_index, message_data.clone());
 
         // Create MessageDelivered event data
         let msg_delivered = MessageDelivered {
@@ -564,11 +545,7 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes::<32>()),
-                FixedBytes::from([1u8; 32]),
-            ],
+            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
             msg_delivered.encode_data().into(),
         );
 
@@ -589,7 +566,7 @@ mod tests {
         let message_index = U256::from(1);
         let message_data: Bytes = hex!("1234").into();
         let mut message_map = HashMap::new();
-        message_map.insert(message_index, Some(message_data.clone()));
+        message_map.insert(message_index, message_data.clone());
 
         // Create MessageDelivered event data
         let msg_delivered = MessageDelivered {
@@ -606,11 +583,7 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes::<32>()),
-                FixedBytes::from([1u8; 32]),
-            ],
+            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
             msg_delivered.encode_data().into(),
         );
 
