@@ -3,14 +3,12 @@ pragma solidity 0.8.28;
 
 import {AssertionPoster} from "./AssertionPoster.sol";
 
-import {Ownable} from "@openzeppelin/contracts/ownership/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
 
 using ECDSA for bytes32;
-using MessageHashUtils for bytes32;
 
 interface IL1Block {
     function timestamp() external view returns (uint64);
@@ -39,7 +37,7 @@ struct PendingAssertion {
     bytes32 seqBlockHash;
 }
 
-function hash_input(TeeTrustedInput storage a) view returns (bytes32) {
+function hash_object(TeeTrustedInput storage a) view returns (bytes32) {
     return keccak256(
         abi.encodePacked(
             a.appchainConfigHash,
@@ -53,8 +51,12 @@ function hash_input(TeeTrustedInput storage a) view returns (bytes32) {
     );
 }
 
-function equals(PendingAssertion calldata a, PendingAssertion storage b) view returns (bool) {
-    return a.blockHash == b.blockHash && a.sendRoot == b.sendRoot && a.seqBlockHash == b.seqBlockHash;
+function hash_object(PendingAssertion storage a) view returns (bytes32) {
+    return keccak256(abi.encodePacked(a.blockHash, a.sendRoot, a.seqBlockHash));
+}
+
+function hash_object(PendingAssertion calldata a) pure returns (bytes32) {
+    return keccak256(abi.encodePacked(a.blockHash, a.sendRoot, a.seqBlockHash));
 }
 
 event TeeKeysRevoked();
@@ -71,10 +73,12 @@ event TeeHacked(uint256);
 
 event ChallengeResolved(PendingAssertion);
 
+event TeeInput(TeeTrustedInput input);
+
 /**
  * @title TeeModule Contract
  */
-contract TeeModule is Ownable {
+contract TeeModule is Ownable(msg.sender) {
     // Immutable state variables
     AssertionPoster public immutable poster;
     IBridge public immutable bridge;
@@ -162,6 +166,8 @@ contract TeeModule is Ownable {
             teeTrustedInput.l1StartBlockHash = teeTrustedInput.l1EndBlockHash;
 
             poster.postAssertion(pendingAssertions[0].blockHash, pendingAssertions[0].sendRoot);
+
+            delete pendingAssertions;
         }
 
         // settlement chain
@@ -170,6 +176,8 @@ contract TeeModule is Ownable {
         // l1 chain
         teeTrustedInput.l1EndBlockHash = (address(l1block) == address(0) ? blockhash(block.number - 1) : l1block.hash());
 
+        emit TeeInput(teeTrustedInput);
+
         challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
     }
 
@@ -177,12 +185,12 @@ contract TeeModule is Ownable {
         external
     {
         require(signature.length == 65, "invalid signature length");
-        bytes32 payload_hash =
-            keccak256(abi.encodePacked(hash_input(teeTrustedInput), assertion.blockHash, assertion.sendRoot));
-        require(isTeeKey[payload_hash.toEthSignedMessageHash().recover(signature)], "invalid tee signature");
+        bytes32 assertionHash = hash_object(assertion);
+        bytes32 payload_hash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
+        require(isTeeKey[payload_hash.recover(signature)], "invalid tee signature");
         require(assertion.blockHash != teeTrustedInput.appchainStartBlockHash, "appchain block hash unchanged");
         for (uint256 i = 0; i < pendingAssertions.length; i++) {
-            require(!equals(assertion, pendingAssertions[i]), "assertion already exists");
+            require(assertionHash != hash_object(pendingAssertions[i]), "assertion already exists");
         }
         if (pendingAssertions.length == 0) {
             challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
@@ -199,8 +207,9 @@ contract TeeModule is Ownable {
 
     function resolveChallenge(PendingAssertion calldata assertion) external onlyOwner {
         require(pendingAssertions.length > 1, "challenge does not exist");
+        bytes32 assertionHash = hash_object(assertion);
         for (uint256 i = 0; i < pendingAssertions.length; i++) {
-            if (equals(assertion, pendingAssertions[i])) {
+            if (assertionHash == hash_object(pendingAssertions[i])) {
                 delete pendingAssertions;
                 pendingAssertions.push(assertion);
                 challengeWindowEnd = 0;

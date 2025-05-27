@@ -125,6 +125,8 @@ pub mod r#mockisallowedwithinvaliddata;
 pub mod r#syndicatesequencingchainwithdecayingpriority;
 pub mod r#syndicatestorage;
 pub mod r#syndicatetoken;
+pub mod r#il1block;
+pub mod r#teemodule;
 pub mod r#tokenbalancesequencingmodule;
 pub mod r#upgradeablebeacon;
 pub mod r#valuelib;
