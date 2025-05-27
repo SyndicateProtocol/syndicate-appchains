@@ -6,3 +6,5 @@ import "@arbitrum/nitro-contracts/src/node-interface/NodeInterface.sol";
 import "@arbitrum/nitro-contracts/src/precompiles/ArbGasInfo.sol";
 import "@arbitrum/nitro-contracts/src/precompiles/ArbOwnerPublic.sol";
 import "@arbitrum/nitro-contracts/src/precompiles/ArbSys.sol";
+
+/// @notice  This is a contract solely for testing purposes. Not to be used in production.
