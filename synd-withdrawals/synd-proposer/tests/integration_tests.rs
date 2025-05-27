@@ -8,7 +8,7 @@ use alloy::{
     rpc::types::BlockTransactions,
     sol_types::SolCall,
 };
-use contract_bindings::arbitrum::assertionposter::AssertionPoster;
+use contract_bindings::synd::assertionposter::AssertionPoster;
 use core::panic;
 use eyre::Result;
 use jsonrpsee::types::ErrorObjectOwned;

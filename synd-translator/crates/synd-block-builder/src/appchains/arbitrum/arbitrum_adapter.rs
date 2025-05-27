@@ -16,7 +16,7 @@ use alloy::{
     sol_types::SolEvent,
 };
 use common::types::{SequencingBlock, SettlementBlock};
-use contract_bindings::arbitrum::{
+use contract_bindings::synd::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
@@ -48,6 +48,9 @@ pub enum ArbitrumBlockBuilderError {
 
     #[error("Delayed message ignored: type = {0}")]
     DelayedMessageIgnored(L1MessageType),
+
+    #[error("Unexpected initialize msg at message index: {0}")]
+    UnexpectedInitializeMessage(U256),
 }
 
 #[allow(missing_docs)]
@@ -66,6 +69,8 @@ pub enum L1MessageType {
 impl TryFrom<u8> for L1MessageType {
     type Error = ();
 
+    // EndOfBlock is deliberately excluded since it is a dummy message that is not emitted by the
+    // nitro contracts
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             3 => Ok(Self::L2Message),
@@ -273,13 +278,17 @@ impl ArbitrumAdapter {
 
         let kind = L1MessageType::from_u8_panic(msg.kind);
 
+        if msg.kind == L1MessageType::Initialize as u8 && msg.messageIndex != U256::ZERO {
+            return Err(ArbitrumBlockBuilderError::UnexpectedInitializeMessage(msg.messageIndex))
+        }
+
         if Self::should_ignore_delayed_message(
             self.ignore_delayed_messages,
             &self.allowed_settlement_addresses,
             &msg.sender,
             &kind,
         ) {
-            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
+            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind))
         }
 
         let data = message_data
