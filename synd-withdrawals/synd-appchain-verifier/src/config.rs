@@ -3,7 +3,7 @@
 use alloy::primitives::{keccak256, Address, B256};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use shared::parse::{parse_address, parse_addresses};
+use shared::parse::parse_address;
 use std::fmt::Debug;
 
 /// Configuration for the verifier
@@ -13,14 +13,6 @@ pub struct AppchainVerifierConfig {
     #[arg(short = 's', long, env = "SEQUENCING_CONTRACT_ADDRESS",
         value_parser = parse_address, default_value = "0x0000000000000000000000000000000000000000")]
     pub sequencing_contract_address: Address,
-
-    /// Ignore delayed messages
-    #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false",  action = clap::ArgAction::Set)]
-    pub arbitrum_ignore_delayed_messages: bool,
-
-    /// Allowed settlement addresses
-    #[arg(long, env = "ALLOWED_SETTLEMENT_ADDRESSES", value_parser = parse_addresses, default_value = "")]
-    pub allowed_settlement_addresses: Vec<Address>,
 
     /// Settlement delay in seconds
     #[arg(long, env = "SETTLEMENT_DELAY", default_value = "0")]

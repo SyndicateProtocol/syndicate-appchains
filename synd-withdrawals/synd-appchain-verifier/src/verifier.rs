@@ -11,7 +11,6 @@ use crate::{
 };
 use alloy::primitives::{Address, U256};
 use eyre::Result;
-use std::collections::HashSet;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::{ArbitrumAdapter, L1MessageType};
 
 /// The `Verifier` struct
@@ -22,26 +21,14 @@ pub struct Verifier {
 
     /// Settlement delay
     settlement_delay: u64,
-
-    /// Ignore delayed messages
-    ignore_delayed_messages: bool,
-
-    /// Allowed settlement addresses
-    allowed_settlement_addresses: HashSet<Address>,
 }
 
 impl Verifier {
     /// Constructs a new [`Verifier`] from the provided config.
-    pub fn new(config: &AppchainVerifierConfig) -> Self {
+    pub const fn new(config: &AppchainVerifierConfig) -> Self {
         Self {
             sequencing_chain_contract_address: config.sequencing_contract_address,
             settlement_delay: config.settlement_delay,
-            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages,
-            allowed_settlement_addresses: config
-                .allowed_settlement_addresses
-                .iter()
-                .copied()
-                .collect::<HashSet<_>>(),
         }
     }
 
@@ -62,12 +49,9 @@ impl Verifier {
             msg.header.kind != L1MessageType::Initialize as u8,
             "Initialize message received. This should not happen."
         );
-        if ArbitrumAdapter::should_ignore_delayed_message(
-            self.ignore_delayed_messages,
-            &self.allowed_settlement_addresses,
-            &msg.header.sender,
-            &L1MessageType::from_u8_panic(msg.header.kind),
-        ) {
+        if ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::from_u8_panic(
+            msg.header.kind,
+        )) {
             L1IncomingMessage {
                 header: L1IncomingMessageHeader {
                     kind: L1MessageType::EndOfBlock as u8,
@@ -152,12 +136,9 @@ mod tests {
         let config = AppchainVerifierConfig {
             sequencing_contract_address: Address::ZERO,
             settlement_delay: 10,
-            arbitrum_ignore_delayed_messages: false,
-            allowed_settlement_addresses: vec![Address::ZERO],
         };
         let verifier = Verifier::new(&config);
 
         assert_eq!(verifier.settlement_delay, 10);
-        assert!(verifier.allowed_settlement_addresses.contains(&Address::ZERO));
     }
 }

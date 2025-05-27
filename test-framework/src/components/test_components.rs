@@ -292,7 +292,6 @@ impl TestComponents {
             arbitrum_bridge_address: None,
             arbitrum_inbox_address: None,
             sequencing_contract_address: None,
-            arbitrum_ignore_delayed_messages: None,
             sequencing_rpc_url: Some(sequencing_rpc_url.clone()),
             appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
