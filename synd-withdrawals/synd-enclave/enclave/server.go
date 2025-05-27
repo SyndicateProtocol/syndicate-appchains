@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -26,6 +27,7 @@ import (
 	"github.com/hf/nitrite"
 	"github.com/hf/nsm"
 	"github.com/hf/nsm/request"
+	"github.com/offchainlabs/nitro/execution"
 )
 
 const (
@@ -228,6 +230,16 @@ func (s *Server) SetSignerKey(ctx context.Context, encrypted hexutil.Bytes) erro
 	return nil
 }
 
+// skips all rust code
+func (s *Server) TestVerifySequencingChain(ctx context.Context, input wavmio.ValidationInput) (*execution.MessageResult, error) {
+	return Verify(input)
+}
+
+// skips all rust code
+func (s *Server) TestVerifyAppchain(ctx context.Context, input wavmio.ValidationInput) (*execution.MessageResult, error) {
+	return Verify(input)
+}
+
 func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput string) (string, error) {
 	// TODO (SEQ-961): Implement Sequencing Chain Verifier Component
 	// Sequencing chain verification
@@ -262,17 +274,28 @@ func (s *Server) VerifyAppchain(ctx context.Context, config string, sequencingCh
 		}
 	}
 
-	var output VerifyAppchainOutput
+	var batches []wavmio.Batch
 	log.Debug("VerifyAppchain Output Line", "outputLine", outputLine)
-	if err := json.Unmarshal([]byte(outputLine), &output); err != nil {
-		return "", fmt.Errorf("failed to unmarshal VerifyAppchainOutput: %w. Raw: %s", err, outputLine)
+	if err := json.Unmarshal([]byte(outputLine), &batches); err != nil {
+		return "", fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
+	}
+
+	// TODO: set block hash, preimage data properly
+	var input = wavmio.ValidationInput{
+		BlockHash:    common.Hash{},
+		PreimageData: nil,
+		Batches:      batches,
 	}
 
 	// Appchain block verifier
 	// TODO (SEQ-781): Block verifier
-	log.Debug("VerifyAppchain Output", "output", output)
+	log.Debug("VerifyAppchain Input", "input", input)
+
+	data, err := Verify(input)
+	if err != nil {
+		return "", err
+	}
 
 	// Sign & return
-
-	return "", nil
+	return fmt.Sprintf("%s %s", data.BlockHash, data.SendRoot), nil
 }

@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	enclave2 "github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
-	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/mdlayher/vsock"
@@ -12,7 +11,6 @@ import (
 
 func main() {
 	log.Info("Starting Enclave")
-	oplog.SetupDefaults()
 
 	s := rpc.NewServer()
 	serv, err := enclave2.NewServer()
