@@ -142,7 +142,6 @@ contract ArbConfigManagerFactoryTest is Test {
         uint256 sequencingChainId = 5678;
         address arbitrumBridgeAddress = address(10);
         address arbitrumInboxAddress = address(11);
-        bool arbitrumIgnoreDelayedMessages = false;
         uint256 settlementDelay = 1000;
         uint256 settlementStartBlock = 2000;
         address sequencingContractAddress = address(12);
@@ -150,9 +149,6 @@ contract ArbConfigManagerFactoryTest is Test {
         address initialAppchainOwner = address(13);
         string memory sequencingChainRpcUrl = "https://example.com/rpc";
         string memory appchainBlockExplorerUrl = "https://example.com/explorer";
-        address[] memory allowedSettlementAddresses = new address[](2);
-        allowedSettlementAddresses[0] = address(14);
-        allowedSettlementAddresses[1] = address(15);
 
         // Non-owner call should revert
         bytes memory errorMessage = abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner);
@@ -164,15 +160,13 @@ contract ArbConfigManagerFactoryTest is Test {
             sequencingChainId,
             arbitrumBridgeAddress,
             arbitrumInboxAddress,
-            arbitrumIgnoreDelayedMessages,
             settlementDelay,
             settlementStartBlock,
             sequencingContractAddress,
             sequencingStartBlock,
             initialAppchainOwner,
             sequencingChainRpcUrl,
-            appchainBlockExplorerUrl,
-            allowedSettlementAddresses
+            appchainBlockExplorerUrl
         );
 
         // Owner call should succeed
@@ -183,15 +177,13 @@ contract ArbConfigManagerFactoryTest is Test {
             sequencingChainId,
             arbitrumBridgeAddress,
             arbitrumInboxAddress,
-            arbitrumIgnoreDelayedMessages,
             settlementDelay,
             settlementStartBlock,
             sequencingContractAddress,
             sequencingStartBlock,
             initialAppchainOwner,
             sequencingChainRpcUrl,
-            appchainBlockExplorerUrl,
-            allowedSettlementAddresses
+            appchainBlockExplorerUrl
         );
 
         // Verify the config was created
@@ -252,15 +244,13 @@ contract ArbConfigManagerFactoryTest is Test {
             5678, // sequencingChainId
             address(10), // arbitrumBridgeAddress
             address(11), // arbitrumInboxAddress
-            false, // arbitrumIgnoreDelayedMessages
             1000, // settlementDelay
             2000, // settlementStartBlock
             address(12), // sequencingContractAddress
             3000, // sequencingStartBlock
             address(13), // initialAppchainOwner
             "https://example.com/rpc", // sequencingChainRpcUrl
-            "https://example.com/explorer", // appchainBlockExplorerUrl
-            new address[](0) // allowedSettlementAddresses
+            "https://example.com/explorer" // appchainBlockExplorerUrl
         );
 
         // Verify that the deployed address matches the deterministic address
@@ -281,7 +271,6 @@ contract ArbConfigManagerFactoryTest is Test {
         manager.getArbChainConfigAddress(0);
 
         // Try to create a config with chain ID 0
-        address[] memory emptyArray = new address[](0);
         vm.prank(owner);
         vm.expectRevert("Chain ID cannot be zero");
         manager.createArbChainConfig(
@@ -290,15 +279,13 @@ contract ArbConfigManagerFactoryTest is Test {
             5678, // sequencingChainId
             address(10), // arbitrumBridgeAddress
             address(11), // arbitrumInboxAddress
-            false, // arbitrumIgnoreDelayedMessages
             1000, // settlementDelay
             2000, // settlementStartBlock
             address(12), // sequencingContractAddress
             3000, // sequencingStartBlock
             address(13), // initialAppchainOwner
             "https://example.com/rpc", // sequencingChainRpcUrl
-            "https://example.com/explorer", // appchainBlockExplorerUrl
-            emptyArray // allowedSettlementAddresses
+            "https://example.com/explorer" // appchainBlockExplorerUrl
         );
     }
 
@@ -308,8 +295,6 @@ contract ArbConfigManagerFactoryTest is Test {
         ArbConfigManager manager = ArbConfigManager(deployedAddress);
 
         uint256 chainId = 1234;
-        address[] memory emptyArray = new address[](0);
-
         // First deployment
         vm.prank(owner);
         manager.createArbChainConfig(
@@ -318,15 +303,13 @@ contract ArbConfigManagerFactoryTest is Test {
             5678, // sequencingChainId
             address(10), // arbitrumBridgeAddress
             address(11), // arbitrumInboxAddress
-            false, // arbitrumIgnoreDelayedMessages
             1000, // settlementDelay
             2000, // settlementStartBlock
             address(12), // sequencingContractAddress
             3000, // sequencingStartBlock
             address(13), // initialAppchainOwner
             "https://example.com/rpc", // sequencingChainRpcUrl
-            "https://example.com/explorer", // appchainBlockExplorerUrl
-            emptyArray // allowedSettlementAddresses
+            "https://example.com/explorer" // appchainBlockExplorerUrl
         );
 
         // Second deployment with same chainId should fail
@@ -338,15 +321,13 @@ contract ArbConfigManagerFactoryTest is Test {
             5679, // Different sequencingChainId
             address(10),
             address(11),
-            false,
             1000,
             2000,
             address(12),
             3000,
             address(13),
             "https://example.com/rpc",
-            "https://example.com/explorer",
-            emptyArray
+            "https://example.com/explorer"
         );
     }
 
