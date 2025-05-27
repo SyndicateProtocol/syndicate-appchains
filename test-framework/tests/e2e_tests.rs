@@ -8,7 +8,7 @@ use alloy::{
     signers::local::PrivateKeySigner,
     sol,
 };
-use contract_bindings::arbitrum::{
+use contract_bindings::synd::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,
 };
