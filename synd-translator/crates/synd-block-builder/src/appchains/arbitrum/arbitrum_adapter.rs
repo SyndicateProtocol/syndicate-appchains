@@ -27,7 +27,7 @@ use shared::{
     tx_validation::validate_transaction,
     types::{BlockBuilder, PartialBlock},
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use synd_mchain::db::DelayedMessage;
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
@@ -107,20 +107,11 @@ pub struct ArbitrumAdapter {
 
     /// Settlement chain address
     pub inbox_address: Address,
-
-    /// Flag used to ignore Delayed messages (except Deposits)
-    pub ignore_delayed_messages: bool,
-
-    /// Whitelisted sender addresses for delayed messages
-    pub allowed_settlement_addresses: HashSet<Address>,
 }
 
 impl Default for ArbitrumAdapter {
     fn default() -> Self {
-        Self::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: Some(false),
-            ..Default::default()
-        })
+        Self::new(&Default::default())
     }
 }
 
@@ -136,19 +127,13 @@ impl ArbitrumAdapter {
     /// # Arguments
     /// - `config`: The configuration for the block builder.
     #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
-    pub fn new(config: &BlockBuilderConfig) -> Self {
+    pub const fn new(config: &BlockBuilderConfig) -> Self {
         Self {
             transaction_parser: SequencingTransactionParser::new(
                 config.sequencing_contract_address.unwrap(),
             ),
             bridge_address: config.arbitrum_bridge_address.unwrap(),
             inbox_address: config.arbitrum_inbox_address.unwrap(),
-            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages.unwrap(),
-            allowed_settlement_addresses: config
-                .allowed_settlement_addresses
-                .iter()
-                .copied()
-                .collect::<HashSet<_>>(),
         }
     }
 
@@ -279,7 +264,7 @@ impl ArbitrumAdapter {
             return Err(ArbitrumBlockBuilderError::UnexpectedInitializeMessage(msg.messageIndex))
         }
 
-        if self.should_ignore_delayed_message(&msg.sender, &kind) {
+        if Self::should_ignore_delayed_message(&kind) {
             return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
         }
 
@@ -321,21 +306,11 @@ impl ArbitrumAdapter {
         Ok(encoded_batch)
     }
 
-    fn should_ignore_delayed_message(&self, sender: &Address, kind: &L1MessageType) -> bool {
+    fn should_ignore_delayed_message(kind: &L1MessageType) -> bool {
         // Always ignore Initialize & BatchPostingReport message types.
         // Except for the initial initialization message, these should not occur in practice.
         if matches!(kind, L1MessageType::Initialize | L1MessageType::BatchPostingReport) {
-            error!("Ignoring unexpected delayed message. Kind: {:?}, Sender: {:?}", kind, sender);
-            return true;
-        }
-
-        // If self.ignore_delayed_messages is enabled and the address is not privileged, ignore
-        // everything except for EthDeposit
-        if self.ignore_delayed_messages &&
-            *kind != L1MessageType::EthDeposit &&
-            !self.allowed_settlement_addresses.contains(sender)
-        {
-            debug!("Delayed message ignored. Kind: {:?}, Sender: {:?}", kind, sender);
+            error!("Ignoring unexpected delayed message. Kind: {:?}.", kind);
             return true;
         }
 
@@ -380,7 +355,6 @@ mod tests {
         let config = BlockBuilderConfig {
             sequencing_contract_address: Some(sequencing_contract_address),
             arbitrum_bridge_address: Some(sequencing_contract_address),
-            arbitrum_ignore_delayed_messages: Some(false),
             ..Default::default()
         };
 
@@ -518,49 +492,8 @@ mod tests {
     }
 
     #[test]
-    fn test_delayed_message_to_mchain_txn_ignore_message() {
-        let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: Some(true),
-            ..Default::default()
-        });
-
-        // Create message data
-        let message_index = U256::from(1);
-        let message_data: Bytes = hex!("1234").into();
-        let mut message_map = HashMap::new();
-        message_map.insert(message_index, message_data.clone());
-
-        // Create MessageDelivered event data
-        let msg_delivered = MessageDelivered {
-            messageIndex: message_index,
-            beforeInboxAcc: FixedBytes::from([1u8; 32]),
-            inbox: builder.inbox_address,
-            kind: L1MessageType::L2Message as u8,
-            sender: Address::repeat_byte(1),
-            messageDataHash: keccak256(message_data),
-            baseFeeL1: U256::ZERO,
-            timestamp: 0u64,
-        };
-
-        // Create the log
-        let log = Log::new_unchecked(
-            builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
-            msg_delivered.encode_data().into(),
-        );
-
-        // Call the function
-        let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
-        assert!(result.is_err());
-        assert_matches!(result.unwrap_err(), ArbitrumBlockBuilderError::DelayedMessageIgnored(_));
-    }
-
-    #[test]
     fn test_delayed_message_to_mchain_txn_do_not_ignore_deposit() {
-        let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: Some(true),
-            ..Default::default()
-        });
+        let builder = ArbitrumAdapter::new(&Default::default());
 
         // Create message data
         let message_index = U256::from(1);
@@ -606,39 +539,18 @@ mod tests {
 
     #[test]
     fn test_should_ignore_delayed_message() {
-        let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: Some(true),
-            ..Default::default()
-        });
+        // Should ignore
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::Initialize));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::BatchPostingReport));
 
-        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2Message));
-        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2FundedByL1));
-        assert!(
-            builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::SubmitRetryable)
-        );
-        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::Initialize));
-        assert!(builder
-            .should_ignore_delayed_message(&Address::ZERO, &L1MessageType::BatchPostingReport));
+        // Should not ignore
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::EthDeposit));
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::L2Message));
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::L2FundedByL1));
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::SubmitRetryable));
+        assert!(!ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::EthDeposit));
 
-        // Message that should NOT be ignored (even if ignore_delayed_messages is true)
-        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::EthDeposit));
-
-        let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: Some(false),
-            ..Default::default()
-        });
-
-        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2Message));
-        assert!(
-            !builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2FundedByL1)
-        );
-        assert!(
-            !builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::SubmitRetryable)
-        );
-        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::EthDeposit));
-
-        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::Initialize));
-        assert!(builder
-            .should_ignore_delayed_message(&Address::ZERO, &L1MessageType::BatchPostingReport));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::Initialize));
+        assert!(ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::BatchPostingReport));
     }
 }

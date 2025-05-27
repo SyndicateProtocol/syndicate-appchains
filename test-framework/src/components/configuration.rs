@@ -80,7 +80,6 @@ pub(super) async fn setup_config_manager(
             options_clone.appchain_chain_id.try_into().unwrap(),
             arbitrum_bridge_address,
             arbitrum_inbox_address,
-            false,
             options_clone.settlement_delay.try_into().unwrap(),
             options_clone.settlement_start_block.try_into().unwrap(),
             sequencing_contract_address,
@@ -88,7 +87,6 @@ pub(super) async fn setup_config_manager(
             options_clone.rollup_owner,
             sequencing_rpc_url_clone,
             appchain_block_explorer_url_clone,
-            vec![],
         )
         .send()
         .await?;

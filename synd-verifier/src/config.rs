@@ -2,7 +2,7 @@
 
 use alloy::primitives::Address;
 use clap::Parser;
-use shared::parse::{parse_address, parse_addresses};
+use shared::parse::parse_address;
 use std::fmt::Debug;
 
 /// Configuration for the verifier
@@ -22,14 +22,6 @@ pub struct VerifierConfig {
     #[arg(short = 'i', long, env = "ARBITRUM_INBOX_ADDRESS",
        value_parser = parse_address, default_value = "0x0000000000000000000000000000000000000000")]
     pub arbitrum_inbox_address: Address,
-
-    /// Ignore delayed messages
-    #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
-    pub arbitrum_ignore_delayed_messages: bool,
-
-    /// Allowed settlement addresses
-    #[arg(long, env = "ALLOWED_SETTLEMENT_ADDRESSES", value_parser = parse_addresses, default_value = "[]")]
-    pub allowed_settlement_addresses: Vec<Address>,
 }
 
 impl Default for VerifierConfig {
@@ -38,8 +30,6 @@ impl Default for VerifierConfig {
             sequencing_contract_address: Address::ZERO,
             arbitrum_bridge_address: Address::ZERO,
             arbitrum_inbox_address: Address::ZERO,
-            arbitrum_ignore_delayed_messages: false,
-            allowed_settlement_addresses: vec![],
         }
     }
 }
