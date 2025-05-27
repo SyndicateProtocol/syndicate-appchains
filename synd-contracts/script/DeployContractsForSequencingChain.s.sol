@@ -7,10 +7,12 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 import {SyndicateFactory} from "src/SyndicateFactory.sol";
+import {RequireAndModuleFactory} from "src/PermissionModuleFactories.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 
 contract DeploySyndicateFactory is Script {
     SyndicateFactory public syndicateFactory;
+    RequireAndModuleFactory public requireAndModuleFactory;
     uint256 public appchainId;
 
     function run() public {
@@ -23,13 +25,25 @@ contract DeploySyndicateFactory is Script {
 
         syndicateFactory = new SyndicateFactory(admin);
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
+        requireAndModuleFactory = new RequireAndModuleFactory();
+        console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
 
-        // create new contracts
-        (address sequencingChain, IRequirementModule permissionModule,) =
-            syndicateFactory.createSyndicateSequencingChainWithRequireAndModule(admin, appchainId, bytes32(appchainId));
+        bytes32 salt = bytes32(appchainId);
+
+        address module = requireAndModuleFactory.createRequireAndModule(admin, salt);
+        console.log("Deployed RequireAndModule", module);
+
+        // create SyndicateSequencingChain with the permission module
+        (address sequencingChain, uint256 chainId) = syndicateFactory.createSyndicateSequencingChain(
+            0, // auto-increment
+            admin,
+            IRequirementModule(module),
+            salt
+        );
 
         console.log("Deployed SyndicateSequencingChain", sequencingChain);
-        console.log("Deployed RequireAndModule", address(permissionModule));
+        console.log("Deployed RequireAndModule", address(module));
+        console.log("Sequencing Chain ID", chainId);
 
         vm.stopBroadcast();
     }

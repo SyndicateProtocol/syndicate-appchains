@@ -2,21 +2,17 @@
 pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain} from "./SyndicateSequencingChain.sol";
-import {RequireAndModule} from "./requirement-modules/RequireAndModule.sol";
-import {RequireOrModule} from "./requirement-modules/RequireOrModule.sol";
 import {IRequirementModule} from "./interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title SyndicateFactory
-/// @notice Factory contract for creating SyndicateSequencingChain and related contracts
-/// with namespace management and auto-incrementing chain IDs
+/// @notice Factory contract for creating SyndicateSequencingChain contracts
+/// @dev Simplified version - users deploy permission modules separately
 contract SyndicateFactory is AccessControl {
     /// @notice Emitted when a new SyndicateSequencingChain is created
     event SyndicateSequencingChainCreated(
-        uint256 indexed appchainId,
-        address indexed SyndicateSequencingChainAddress,
-        address indexed permissionModuleAddress
+        uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
     );
 
     /// @notice Emitted when namespace configuration is updated
@@ -27,227 +23,130 @@ contract SyndicateFactory is AccessControl {
         uint256 newNamespaceMultiplier
     );
 
-    // Roles
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
-    // Errors
     error ZeroAddress();
     error ZeroValue();
     error ReservedNamespace();
     error ChainIdAlreadyExists();
 
-    // Namespace configuration - now mutable
+    // Namespace configuration
     uint256 private _namespacePrefix;
     uint256 private _namespaceMultiplier;
-
-    // State variables
     uint256 private _nextAutoChainId;
     mapping(uint256 => bool) private _usedChainIds;
 
     constructor(address admin) {
-        if (admin == address(0)) {
-            revert ZeroAddress();
-        }
+        if (admin == address(0)) revert ZeroAddress();
 
-        // Set up initial roles
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, admin);
 
-        // Set initial namespace configuration
         _namespacePrefix = 510;
         _namespaceMultiplier = 1000;
-        _nextAutoChainId = 1; // Start auto-incrementing from 1
+        _nextAutoChainId = 1;
     }
 
-    modifier zeroValuesChainAndTwoAddressesNotAllowed(
-        uint256 appchainId,
-        address firstAddrCheck,
-        address secondAddrCheck
-    ) {
-        if (appchainId == 0) {
-            revert ZeroValue();
-        }
-        if (firstAddrCheck == address(0) || secondAddrCheck == address(0)) {
-            revert ZeroAddress();
-        }
-        _;
-    }
-
-    modifier zeroValuesChainAndAddressNotAllowed(uint256 appchainId, address addrCheck) {
-        if (appchainId == 0) {
-            revert ZeroValue();
-        }
-        if (addrCheck == address(0)) {
-            revert ZeroAddress();
-        }
-        _;
-    }
-
-    modifier validateChainId(uint256 appchainId, bool isManuallySpecified) {
-        // If manually specified, ensure it's not in our reserved namespace
-        if (isManuallySpecified) {
-            // Check if the chainId is in the reserved namespace
-            if (appchainId / namespaceMultiplier() == namespacePrefix()) {
-                revert ReservedNamespace();
-            }
-        }
-
-        // Check if chain ID already exists
-        if (_usedChainIds[appchainId]) {
-            revert ChainIdAlreadyExists();
-        }
-
-        _;
-    }
-
-    /// @notice Creates a new SyndicateSequencingChain contract with a permission module
-    /// @param appchainId The app chain the contract refers to (0 for auto-increment)
-    /// @param admin The address that will be the admin
-    /// @param permissionModule The address of the permission module
-    /// @param salt The salt to use for the deployment
-    /// @return sequencingChain The address of the newly created SyndicateSequencingChain
-    /// @return actualChainId The chain ID that was used (auto-generated or specified)
+    /// @notice Creates a new SyndicateSequencingChain contract
+    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param admin The admin address for the new chain
+    /// @param permissionModule The pre-deployed permission module
+    /// @param salt The salt for CREATE2 deployment
+    /// @return sequencingChain The deployed sequencing chain address
+    /// @return actualChainId The chain ID that was used
     //#olympix-ignore-reentrancy-events
     function createSyndicateSequencingChain(
         uint256 appchainId,
         address admin,
         IRequirementModule permissionModule,
         bytes32 salt
-    )
-        public
-        zeroValuesChainAndTwoAddressesNotAllowed(
-            appchainId == 0 ? _getNextChainId() : appchainId,
-            admin,
-            address(permissionModule)
-        )
-        validateChainId(appchainId == 0 ? _getNextChainId() : appchainId, appchainId != 0)
-        returns (address sequencingChain, uint256 actualChainId)
-    {
-        // Determine the actual chain ID to use
+    ) external returns (address sequencingChain, uint256 actualChainId) {
+        if (admin == address(0) || address(permissionModule) == address(0)) {
+            revert ZeroAddress();
+        }
+
+        // Determine actual chain ID
         actualChainId = appchainId == 0 ? _getNextChainId() : appchainId;
 
-        // Mark this chain ID as used
-        _usedChainIds[actualChainId] = true;
+        // Validate chain ID
+        if (appchainId != 0 && actualChainId / _namespaceMultiplier == _namespacePrefix) {
+            revert ReservedNamespace();
+        }
+        if (_usedChainIds[actualChainId]) {
+            revert ChainIdAlreadyExists();
+        }
 
-        // Increment the auto-chain ID counter if we used an auto-generated ID
+        // Reserve the chain ID
+        _usedChainIds[actualChainId] = true;
         if (appchainId == 0) {
             _nextAutoChainId++;
         }
 
+        // Deploy the sequencing chain
         bytes memory bytecode = getBytecode(actualChainId);
-        address deployedAddress = Create2.deploy(0, salt, bytecode);
+        sequencingChain = Create2.deploy(0, salt, bytecode);
 
-        SyndicateSequencingChain newSequencingChain = SyndicateSequencingChain(deployedAddress);
-        newSequencingChain.initialize(admin, address(permissionModule));
-
-        emit SyndicateSequencingChainCreated(actualChainId, deployedAddress, address(permissionModule));
-
-        return (deployedAddress, actualChainId);
-    }
-
-    /// @notice Creates a SyndicateSequencingChain with RequireAndModule
-    /// @param admin The address that will be the default admin role
-    /// @param appchainId The app chain ID (0 for auto-increment)
-    /// @param salt The salt to use for the deployment
-    /// @return sequencingChain The address of the newly created SyndicateSequencingChain
-    /// @return permissionModule The address of the newly created RequireAndModule
-    /// @return actualChainId The chain ID that was used (auto-generated or specified)
-    //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChainWithRequireAndModule(address admin, uint256 appchainId, bytes32 salt)
-        public
-        zeroValuesChainAndAddressNotAllowed(appchainId == 0 ? _getNextChainId() : appchainId, admin)
-        returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId)
-    {
-        permissionModule = IRequirementModule(new RequireAndModule(admin));
-        (sequencingChain, actualChainId) = createSyndicateSequencingChain(appchainId, admin, permissionModule, salt);
+        // Initialize the contract
+        SyndicateSequencingChain(sequencingChain).initialize(admin, address(permissionModule));
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 
-        return (sequencingChain, permissionModule, actualChainId);
+        return (sequencingChain, actualChainId);
     }
 
-    /// @notice Creates a SyndicateSequencingChain with RequireOrModule
-    /// @param admin The address that will be the default admin role
-    /// @param appchainId The app chain ID (0 for auto-increment)
-    /// @param salt The salt to use for the deployment
-    /// @return sequencingChain The address of the newly created SyndicateSequencingChain
-    /// @return permissionModule The address of the newly created RequireOrModule
-    /// @return actualChainId The chain ID that was used (auto-generated or specified)
-    //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChainWithRequireOrModule(address admin, uint256 appchainId, bytes32 salt)
-        public
-        zeroValuesChainAndAddressNotAllowed(appchainId == 0 ? _getNextChainId() : appchainId, admin)
-        returns (address sequencingChain, IRequirementModule permissionModule, uint256 actualChainId)
-    {
-        permissionModule = IRequirementModule(new RequireOrModule(admin));
-        (sequencingChain, actualChainId) = createSyndicateSequencingChain(appchainId, admin, permissionModule, salt);
-
-        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
-
-        return (sequencingChain, permissionModule, actualChainId);
-    }
-
-    /// @notice Computes the address of the SyndicateSequencingChain contract
-    /// @param salt The salt to use for the deployment
-    /// @param chainId The ID of the app chain
-    /// @return The address of the SyndicateSequencingChain contract
-    function computeSequencingChainAddress(bytes32 salt, uint256 chainId) public view returns (address) {
+    /// @notice Computes the address where a sequencing chain will be deployed
+    /// @param salt The salt for CREATE2 deployment
+    /// @param chainId The chain ID
+    /// @return The computed address
+    function computeSequencingChainAddress(bytes32 salt, uint256 chainId) external view returns (address) {
         return Create2.computeAddress(salt, keccak256(getBytecode(chainId)));
     }
 
-    /// @notice Returns the bytecode of the SyndicateSequencingChain contract
-    /// @param chainId The ID of the app chain
-    /// @return The bytecode of the SyndicateSequencingChain contract
+    /// @notice Returns the bytecode for deploying a SyndicateSequencingChain
+    /// @param chainId The chain ID
+    /// @return The bytecode with constructor parameters
     function getBytecode(uint256 chainId) public pure returns (bytes memory) {
         return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId));
     }
 
-    /// @notice Get the next available auto-generated chain ID in the namespace
-    /// @return The next available chain ID
-    function _getNextChainId() internal view returns (uint256) {
-        return _namespacePrefix * _namespaceMultiplier + _nextAutoChainId;
-    }
-
-    /// @notice Get the current next auto-incremented chain ID
-    /// @return The current value of the auto-incrementing chain ID counter
+    /// @notice Get the next auto-generated chain ID
+    /// @return The next available chain ID in the namespace
     function getNextAutoChainId() external view returns (uint256) {
         return _getNextChainId();
     }
 
-    /// @notice Check if a chain ID has already been used
+    /// @notice Check if a chain ID has been used
     /// @param chainId The chain ID to check
-    /// @return 1 if the chain ID has been used, 0 otherwise
+    /// @return 1 if used, 0 if available
     function isChainIdUsed(uint256 chainId) external view returns (uint256) {
         return _usedChainIds[chainId] ? 1 : 0;
     }
 
-    // Namespace configuration getters
-
-    /// @notice Get the current namespace prefix
-    /// @return The current namespace prefix
-    function namespacePrefix() public view returns (uint256) {
+    /// @notice Get the namespace prefix
+    function namespacePrefix() external view returns (uint256) {
         return _namespacePrefix;
     }
 
-    /// @notice Get the current namespace multiplier
-    /// @return The current namespace multiplier
-    function namespaceMultiplier() public view returns (uint256) {
+    /// @notice Get the namespace multiplier
+    function namespaceMultiplier() external view returns (uint256) {
         return _namespaceMultiplier;
     }
 
-    /// @notice Update the namespace configuration (manager only)
+    /// @notice Update namespace configuration (manager only)
     /// @param newPrefix The new namespace prefix
     /// @param newMultiplier The new namespace multiplier
     function updateNamespaceConfig(uint256 newPrefix, uint256 newMultiplier) external onlyRole(MANAGER_ROLE) {
-        // Store old values for the event
         uint256 oldPrefix = _namespacePrefix;
         uint256 oldMultiplier = _namespaceMultiplier;
 
-        // Update values
         _namespacePrefix = newPrefix;
         _namespaceMultiplier = newMultiplier;
 
-        // Emit event
         emit NamespaceConfigUpdated(oldPrefix, oldMultiplier, newPrefix, newMultiplier);
+    }
+
+    /// @notice Internal function to get the next chain ID in namespace
+    function _getNextChainId() internal view returns (uint256) {
+        return _namespacePrefix * _namespaceMultiplier + _nextAutoChainId;
     }
 }
