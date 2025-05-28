@@ -19,6 +19,7 @@ members = [
   "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script",
+  "synd-withdrawals/synd-seqchain-verifier",
   "test-framework",
 ]
 
