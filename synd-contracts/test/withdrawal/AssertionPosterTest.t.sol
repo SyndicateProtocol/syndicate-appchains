@@ -6,12 +6,41 @@ import {AssertionPoster, Assertion, IRollup, Ownable} from "src/withdrawal/Asser
 import {
     ExecutionState,
     MachineStatus,
-    AssertionState,
-    AssertionInputs,
-    ConfigData,
     GlobalState
 } from "@arbitrum/nitro-contracts/src/rollup/IRollupCore.sol";
 import {IGasRefunder} from "@arbitrum/nitro-contracts/src/libraries/IGasRefunder.sol";
+
+// Grabbing these from the official v3 Arb contracts because they're missing in these v2 Eigen versions
+// https://github.com/OffchainLabs/nitro-contracts/blob/main/src/rollup/Assertion.sol
+struct AssertionState {
+    GlobalState globalState;
+    MachineStatus machineStatus;
+    bytes32 endHistoryRoot;
+}
+
+struct BeforeStateData {
+    // The assertion hash of the prev of the beforeState(prev)
+    bytes32 prevPrevAssertionHash;
+    // The sequencer inbox accumulator asserted by the beforeState(prev)
+    bytes32 sequencerBatchAcc;
+    // below are the components of config hash
+    ConfigData configData;
+}
+
+struct AssertionInputs {
+    // Additional data used to validate the before state
+    BeforeStateData beforeStateData;
+    AssertionState beforeState;
+    AssertionState afterState;
+}
+
+struct ConfigData {
+    bytes32 wasmModuleRoot;
+    uint256 requiredStake;
+    address challengeManager;
+    uint64 confirmPeriodBlocks;
+    uint64 nextInboxPosition;
+}
 
 contract AssertionPosterTest is Test {
     // Events for test verification

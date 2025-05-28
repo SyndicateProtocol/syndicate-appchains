@@ -10,9 +10,17 @@ use url::Url;
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Config {
+    /// URL of the Ethereum "L1" chain RPC node
+    #[arg(short = 'e', long, env = "ETH_RPC_URL", value_parser = parse_url)]
+    pub ethereum_rpc_url: Url,
+
     /// URL of the settlement chain RPC node
     #[arg(short = 's', long, env = "SETTLEMENT_RPC_URL", value_parser = parse_url)]
     pub settlement_rpc_url: Url,
+
+    /// URL of the app-chain RPC node
+    #[arg(short = 'a', long, env = "SEQUENCING_RPC_URL", value_parser = parse_url)]
+    pub sequencing_rpc_url: Url,
 
     /// URL of the app-chain RPC node
     #[arg(short = 'a', long, env = "APPCHAIN_RPC_URL", value_parser = parse_url)]
@@ -21,6 +29,25 @@ pub struct Config {
     /// Address of the assertion poster contract
     #[arg(short = 'b', long, env = "ASSERTION_POSTER_CONTRACT_ADDRESS", value_parser = parse_address)]
     pub assertion_poster_contract_address: Address,
+
+    /// Address of the assertion poster contract
+    #[arg(short = 't', long, env = "TEE_MODULE_CONTRACT_ADDRESS", value_parser = parse_address)]
+    pub tee_module_contract_address: Address,
+
+    /// Bridge address on the L1
+    #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
+       value_parser = parse_address)]
+    pub arbitrum_bridge_address: Address,
+
+    /// Inbox address on the L1 - for deposits
+    #[arg(short = 'i', long, env = "INBOX_ADDRESS",
+       value_parser = parse_address)]
+    pub inbox_address: Address,
+
+    /// Sequencer inbox address on the L1 - for batches
+    #[arg(short = 'b', long, env = "SEQUENCER_INBOX_ADDRESS",
+       value_parser = parse_address)]
+    pub sequencer_inbox_address: Address,
 
     /// Private key    
     #[arg(short = 'k', long, env = "PROPOSER_PRIVATE_KEY")]

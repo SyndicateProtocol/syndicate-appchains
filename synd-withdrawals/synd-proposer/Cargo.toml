@@ -4,7 +4,7 @@ name              = "synd-proposer"
 version.workspace = true
 
 [dependencies]
-alloy             = { workspace = true, features = ["provider-engine-api", "providers"] }
+alloy             = { workspace = true, features = ["provider-engine-api", "providers", "signer-local"] }
 axum              = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 contract-bindings = { workspace = true }
@@ -16,6 +16,9 @@ shared            = { workspace = true }
 tokio             = { workspace = true, features = ["full", "sync"] }
 tracing           = { workspace = true }
 url               = { workspace = true }
+synd-seqchain-verifier = {path = "../synd-seqchain-verifier"}
+log = "0.4.27"
+serde_json = "1.0.140"
 
 [lints]
 workspace = true

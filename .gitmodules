@@ -12,7 +12,7 @@ path = use-cases/lib/openzeppelin-contracts
 url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "synd-contracts/lib/nitro-contracts"]
 	path = synd-contracts/lib/nitro-contracts
-	url = https://github.com/OffchainLabs/nitro-contracts
+	url = https://github.com/Layr-Labs/nitro-contracts
 [submodule "synd-contracts/lib/upgrade-executor"]
 	path = synd-contracts/lib/upgrade-executor
 	url = https://github.com/OffchainLabs/upgrade-executor
@@ -22,3 +22,9 @@ url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "synd-contracts/lib/sp1-contracts"]
 	path = synd-contracts/lib/sp1-contracts
 	url = https://github.com/succinctlabs/sp1-contracts
+[submodule "synd-contracts/lib/eigenda-contracts"]
+	path = synd-contracts/lib/eigenda-contracts
+	url = https://github.com/Layr-Labs/eigenda-contracts
+[submodule "synd-contracts/lib/eigenlayer-middleware"]
+	path = synd-contracts/lib/eigenlayer-middleware
+	url = https://github.com/Layr-Labs/eigenlayer-middleware

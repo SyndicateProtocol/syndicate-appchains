@@ -59,7 +59,7 @@ impl Verifier {
                 min_timestamp: batch.time_bounds.min_timestamp,
                 max_timestamp: batch.time_bounds.max_timestamp,
                 messages,
-                batch: batch.get_data(),
+                batch: batch.data.clone(),
             };
 
             block_verifier_inputs.push(block_verifier_input);

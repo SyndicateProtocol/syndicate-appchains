@@ -4642,7 +4642,7 @@ function teeTrustedInput() external view returns (bytes32 appchainConfigHash, by
     pub struct teeTrustedInputCall {}
     ///Container type for the return parameters of the [`teeTrustedInput()`](teeTrustedInputCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
+    #[derive(Clone, Debug)]
     pub struct teeTrustedInputReturn {
         #[allow(missing_docs)]
         pub appchainConfigHash: alloy::sol_types::private::FixedBytes<32>,

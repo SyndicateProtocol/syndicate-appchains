@@ -3,7 +3,7 @@
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 
 /// Structure holding metrics related to the `Proposer`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ProposerMetrics {
     /// Last posted block number
     pub last_posted_block_number: Gauge,
