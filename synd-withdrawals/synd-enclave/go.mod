@@ -81,6 +81,6 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/offchainlabs/nitro => ../nitro
+replace github.com/offchainlabs/nitro => ./nitro
 
-replace github.com/ethereum/go-ethereum => ../nitro/go-ethereum
+replace github.com/ethereum/go-ethereum => ./nitro/go-ethereum

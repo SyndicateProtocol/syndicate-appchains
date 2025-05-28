@@ -27,21 +27,18 @@ import (
 	"github.com/hf/nitrite"
 	"github.com/hf/nsm"
 	"github.com/hf/nsm/request"
-	"github.com/offchainlabs/nitro/execution"
 )
 
 const (
 	// DefaultCARoots contains the PEM encoded roots for verifying Nitro
 	// Enclave attestation signatures. You can download them from
 	// https://docs.aws.amazon.com/enclaves/latest/user/verify-root.html
-	DefaultCARoots         = "UEsDBBQAAAAIALkYV1GVtvolRwIAAAkDAAAIABwAcm9vdC5wZW1VVAkAA10ekl9dHpJfdXgLAAEESHEtDwQUAAAAZZJLk6JQDIX3/IrZW10Igo2LWdwXiBoE5HXZCSq0iNgKfYVfP9guJ8tTqS85Ofn4GAszy3b+EOYHtmkTFLCX+CGBbRMWEILSfYGEjVFh+8itnoe4yKq1XC7DDNptcJ2YXJCC2+smtYfzlCEBYhewjQSospASMlwCiSJ40gE5uHAijBrAldny5PaTnRkAan77iBDUiw4B+A9heZxKkedRilflYQZdVl+meW20aayfM8tU0wTEsswdCKonUFuDAPotRUo8ag59axIE3ls84xV4D0FG6gi1mFhF4cBcQNP35GIcGCvlsV504ImXnVffRqLjxpECT2tA6Xt1AFabs7zXu33i91mvXLLaefAkveQDVgEjC/ff1g60BSqYJeFdhzFCX0i1EXYFibZdTWA57Jf0q26/vZ+Ka3BbDVlz2chy2qv8wnYK9vVgVz1OWSZpBjFi3PTtp6li8Xlk7X7vTprSUrNr+FgspofpKlGNIHe9hDA3nWGE7WPgcsEaEqdMKo2LzhtPBHkoL9YOgTEgKkZ//jRA3lLGKBRIMCwP6PCyuPQ0ZhZeWJFYoYfKlPzJMRZ6Ns9vM7feX087nQta/ALcN8CjqLCsV4yEvL2Pd6JIrRBYnEjgkfOpn/hNXi+S7qjxq4hrZxUhTTuhqavH6vbGG7HYchL5e3b82RjdVkn4vdOfLbixdD8BGSFfhv6IcbYS63Vy2M3xrfXMLs2Cz1kjF7hUvsPnRb46d0UNtwY/iftcuJtsMnckW2yGmcz/Sr+fzRz637f/A1BLAQIeAxQAAAAIALkYV1GVtvolRwIAAAkDAAAIABgAAAAAAAEAAACkgQAAAAByb290LnBlbVVUBQADXR6SX3V4CwABBEhxLQ8EFAAAAFBLBQYAAAAAAQABAE4AAACJAgAAAAA="
-	DefaultCARootsSHA256   = "8cf60e2b2efca96c6a9e71e851d00c1b6991cc09eadbe64a6a1d1b1eb9faff7c"
-	maxSequencerDriftFjord = 1800
+	DefaultCARoots       = "UEsDBBQAAAAIALkYV1GVtvolRwIAAAkDAAAIABwAcm9vdC5wZW1VVAkAA10ekl9dHpJfdXgLAAEESHEtDwQUAAAAZZJLk6JQDIX3/IrZW10Igo2LWdwXiBoE5HXZCSq0iNgKfYVfP9guJ8tTqS85Ofn4GAszy3b+EOYHtmkTFLCX+CGBbRMWEILSfYGEjVFh+8itnoe4yKq1XC7DDNptcJ2YXJCC2+smtYfzlCEBYhewjQSospASMlwCiSJ40gE5uHAijBrAldny5PaTnRkAan77iBDUiw4B+A9heZxKkedRilflYQZdVl+meW20aayfM8tU0wTEsswdCKonUFuDAPotRUo8ag59axIE3ls84xV4D0FG6gi1mFhF4cBcQNP35GIcGCvlsV504ImXnVffRqLjxpECT2tA6Xt1AFabs7zXu33i91mvXLLaefAkveQDVgEjC/ff1g60BSqYJeFdhzFCX0i1EXYFibZdTWA57Jf0q26/vZ+Ka3BbDVlz2chy2qv8wnYK9vVgVz1OWSZpBjFi3PTtp6li8Xlk7X7vTprSUrNr+FgspofpKlGNIHe9hDA3nWGE7WPgcsEaEqdMKo2LzhtPBHkoL9YOgTEgKkZ//jRA3lLGKBRIMCwP6PCyuPQ0ZhZeWJFYoYfKlPzJMRZ6Ns9vM7feX087nQta/ALcN8CjqLCsV4yEvL2Pd6JIrRBYnEjgkfOpn/hNXi+S7qjxq4hrZxUhTTuhqavH6vbGG7HYchL5e3b82RjdVkn4vdOfLbixdD8BGSFfhv6IcbYS63Vy2M3xrfXMLs2Cz1kjF7hUvsPnRb46d0UNtwY/iftcuJtsMnckW2yGmcz/Sr+fzRz637f/A1BLAQIeAxQAAAAIALkYV1GVtvolRwIAAAkDAAAIABgAAAAAAAEAAACkgQAAAAByb290LnBlbVVUBQADXR6SX3V4CwABBEhxLQ8EFAAAAFBLBQYAAAAAAQABAE4AAACJAgAAAAA="
+	DefaultCARootsSHA256 = "8cf60e2b2efca96c6a9e71e851d00c1b6991cc09eadbe64a6a1d1b1eb9faff7c"
 )
 
 var (
-	defaultRoot                = createAWSNitroRoot()
-	l2ToL1MessagePasserAddress = common.HexToAddress("0x4200000000000000000000000000000000000016")
+	defaultRoot = createAWSNitroRoot()
 )
 
 func createAWSNitroRoot() *x509.CertPool {
@@ -55,13 +52,16 @@ func createAWSNitroRoot() *x509.CertPool {
 		panic("DefaultCARoots checksum failed")
 	}
 	reader, err := zip.NewReader(bytes.NewReader(roots), int64(len(roots)))
+	if err != nil {
+		panic(fmt.Errorf("error creating zip reader: %w", err))
+	}
 	ca, err := reader.File[0].Open()
 	if err != nil {
-		panic("error reading AWS root cert zip")
+		panic(fmt.Errorf("error reading AWS root cert zip: %w", err))
 	}
 	pem, err := io.ReadAll(ca)
 	if err != nil {
-		panic("error reading AWS root cert")
+		panic(fmt.Errorf("error reading AWS root cert: %w", err))
 	}
 	pool := x509.NewCertPool()
 	ok := pool.AppendCertsFromPEM(pem)
@@ -76,8 +76,6 @@ type Server struct {
 	signerKey     *ecdsa.PrivateKey
 	decryptionKey *rsa.PrivateKey
 }
-
-var _ RPC = (*Server)(nil)
 
 func NewServer() (*Server, error) {
 	var random io.Reader
@@ -230,14 +228,182 @@ func (s *Server) SetSignerKey(ctx context.Context, encrypted hexutil.Bytes) erro
 	return nil
 }
 
-// skips all rust code
-func (s *Server) TestVerifySequencingChain(ctx context.Context, input wavmio.ValidationInput) (*execution.MessageResult, error) {
-	return Verify(input)
+// used to generate the signature
+type SeqTrustedInput struct {
+	SeqConfigHash     common.Hash
+	L1StartBlockHash  common.Hash
+	L1EndBlockHash    common.Hash
+	SeqStartBlockHash common.Hash
+}
+
+func (input *SeqTrustedInput) hash() common.Hash {
+	return crypto.Keccak256Hash(input.SeqConfigHash[:], input.L1StartBlockHash[:], input.L1EndBlockHash[:], input.SeqStartBlockHash[:])
+}
+
+type SeqVerifyInput struct {
+	TrustedInput SeqTrustedInput
+
+	// trustless preimage data
+	PreimageData [][]byte
+
+	// the output of the verifier - should be replaced with verifier inputs instead
+	Batches []wavmio.Batch
+}
+
+type SeqVerifyOutput struct {
+	BlockHash common.Hash
+	Signature []byte
+}
+
+func (output *SeqVerifyOutput) sign(input common.Hash, key *ecdsa.PrivateKey) (err error) {
+	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.BlockHash[:]))
+	output.Signature, err = crypto.Sign(payload, key)
+	return
+}
+
+func (output *SeqVerifyOutput) validate(input common.Hash, key *ecdsa.PublicKey) bool {
+	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.BlockHash[:]))
+	return crypto.VerifySignature(crypto.FromECDSAPub(key), payload, output.Signature)
+}
+
+type AppVerifyExtraInput struct {
+	// trustless old output
+	Output AppVerifyOutput
+	// trusted new inputs which replace the old ones
+	L1EndBlockHash       common.Hash
+	SetDelayedMessageAcc common.Hash
+	// trustless message hashes to derive the new accumulator from the old one
+	DelayedMessageHashes []common.Hash
+}
+
+// used to generate the signature
+type AppTrustedInput struct {
+	SeqTrustedInput      SeqTrustedInput
+	AppConfigHash        common.Hash
+	AppStartBlockHash    common.Hash
+	SetDelayedMessageAcc common.Hash
+}
+
+func (input *AppTrustedInput) hash() common.Hash {
+	return crypto.Keccak256Hash(input.AppConfigHash[:], input.AppStartBlockHash[:], input.SeqTrustedInput.SeqConfigHash[:], input.SeqTrustedInput.SeqStartBlockHash[:], input.SetDelayedMessageAcc[:], input.SeqTrustedInput.L1StartBlockHash[:], input.SeqTrustedInput.L1EndBlockHash[:])
+}
+
+type AppVerifyInput struct {
+	// appchain trusted input
+	TrustedInput AppTrustedInput
+
+	// optional extra input data to concat results with a previous AppVerifyOutput
+	ExtraInput *AppVerifyExtraInput
+
+	// seq trustless output for either TrustedInput or ExtraInput
+	SeqOutput SeqVerifyOutput
+
+	// trustless preimage data
+	PreimageData [][]byte
+
+	// the output of the verifier - should be replaced with verifier inputs instead
+	Batches []wavmio.Batch
+}
+
+type AppVerifyOutput struct {
+	BlockHash    common.Hash
+	SendRoot     common.Hash
+	SeqBlockHash common.Hash
+	Signature    []byte
+}
+
+func (output *AppVerifyOutput) sign(input common.Hash, priv *ecdsa.PrivateKey) (err error) {
+	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.BlockHash[:], output.SendRoot[:], output.SeqBlockHash[:]))
+	output.Signature, err = crypto.Sign(payload, priv)
+	return
+}
+
+func (output *AppVerifyOutput) validate(input common.Hash, key *ecdsa.PublicKey) bool {
+	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.BlockHash[:], output.SendRoot[:], output.SeqBlockHash[:]))
+	return crypto.VerifySignature(crypto.FromECDSAPub(key), payload, output.Signature)
 }
 
 // skips all rust code
-func (s *Server) TestVerifyAppchain(ctx context.Context, input wavmio.ValidationInput) (*execution.MessageResult, error) {
-	return Verify(input)
+func (s *Server) TestVerifySequencingChain(ctx context.Context, input SeqVerifyInput) (*SeqVerifyOutput, error) {
+	// todo: add verifier code here before calling the block verifier Verify function
+
+	result, err := Verify(wavmio.ValidationInput{
+		BlockHash:    input.TrustedInput.SeqStartBlockHash,
+		PreimageData: input.PreimageData,
+		Batches:      input.Batches,
+	})
+	if err != nil {
+		return nil, err
+	}
+	output := SeqVerifyOutput{
+		BlockHash: result.BlockHash,
+	}
+	if err := output.sign(input.TrustedInput.hash(), s.signerKey); err != nil {
+		return nil, err
+	}
+	return &output, nil
+}
+
+// skips all rust code
+func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (*AppVerifyOutput, error) {
+	// backup old start values
+	l1StartBlockHash := input.TrustedInput.SeqTrustedInput.L1StartBlockHash
+	appStartBlockHash := input.TrustedInput.AppStartBlockHash
+	seqStartBlockHash := input.TrustedInput.SeqTrustedInput.SeqStartBlockHash
+
+	if input.ExtraInput != nil {
+		// verify old start values
+		if !input.ExtraInput.Output.validate(input.TrustedInput.hash(), &s.signerKey.PublicKey) {
+			return nil, errors.New("output validation failed")
+		}
+
+		// verify the new delayed message acc contains the old one
+		acc := input.TrustedInput.SetDelayedMessageAcc
+		for _, hash := range input.ExtraInput.DelayedMessageHashes {
+			acc = crypto.Keccak256Hash(acc[:], hash[:])
+		}
+		if acc != input.ExtraInput.SetDelayedMessageAcc {
+			return nil, errors.New("set delayed message acc validation failed")
+		}
+
+		// temporarily update to new start values
+		input.TrustedInput.SeqTrustedInput.L1StartBlockHash = input.TrustedInput.SeqTrustedInput.L1EndBlockHash
+		input.TrustedInput.AppStartBlockHash = input.ExtraInput.Output.BlockHash
+		input.TrustedInput.SeqTrustedInput.SeqStartBlockHash = input.ExtraInput.Output.SeqBlockHash
+
+		// permanently update end values
+		input.TrustedInput.SeqTrustedInput.L1EndBlockHash = input.ExtraInput.L1EndBlockHash
+		input.TrustedInput.SetDelayedMessageAcc = input.ExtraInput.SetDelayedMessageAcc
+	}
+	if !input.SeqOutput.validate(input.TrustedInput.SeqTrustedInput.hash(), &s.signerKey.PublicKey) {
+		return nil, errors.New("seq output validation failed")
+	}
+
+	// todo: add verifier code here before calling the block verifier Verify function
+
+	result, err := Verify(wavmio.ValidationInput{
+		BlockHash:    input.TrustedInput.AppStartBlockHash,
+		PreimageData: input.PreimageData,
+		Batches:      input.Batches,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// restore old start values
+	input.TrustedInput.SeqTrustedInput.L1StartBlockHash = l1StartBlockHash
+	input.TrustedInput.AppStartBlockHash = appStartBlockHash
+	input.TrustedInput.SeqTrustedInput.SeqStartBlockHash = seqStartBlockHash
+
+	output := AppVerifyOutput{
+		BlockHash:    result.BlockHash,
+		SendRoot:     result.SendRoot,
+		SeqBlockHash: input.SeqOutput.BlockHash,
+	}
+	if err := output.sign(input.TrustedInput.hash(), s.signerKey); err != nil {
+		return nil, err
+	}
+	return &output, nil
 }
 
 func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput string) (string, error) {

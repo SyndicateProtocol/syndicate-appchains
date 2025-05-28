@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	enclave2 "github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/mdlayher/vsock"
@@ -13,11 +13,11 @@ func main() {
 	log.Info("Starting Enclave")
 
 	s := rpc.NewServer()
-	serv, err := enclave2.NewServer()
+	serv, err := enclave.NewServer()
 	if err != nil {
 		log.Crit("Error creating API server", "error", err)
 	}
-	err = s.RegisterName(enclave2.Namespace, serv)
+	err = s.RegisterName("enclave", serv)
 	if err != nil {
 		log.Crit("Error registering API", "error", err)
 	}

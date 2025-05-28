@@ -17,5 +17,5 @@ url = https://github.com/OpenZeppelin/openzeppelin-contracts
 	path = synd-contracts/lib/upgrade-executor
 	url = https://github.com/OffchainLabs/upgrade-executor
 [submodule "synd-withdrawals/nitro"]
-	path = synd-withdrawals/nitro
+	path = synd-withdrawals/synd-enclave/nitro
 	url = https://github.com/OffchainLabs/nitro.git
