@@ -16,6 +16,6 @@ jobs:
   docker:
     uses: ./.github/workflows/publish-images.yaml
     with:
-      dry_run: true
-      service: "" # all services
+      dry_run: false
+      service: "synd-maestro" # all services #TODO revert this file!
     secrets: inherit
