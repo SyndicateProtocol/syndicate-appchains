@@ -881,7 +881,7 @@ mod tests {
         let producer1 = service.producers.get(&chain_id).unwrap();
 
         // Verify stream key is correct
-        assert_eq!(producer1.stream_key, format!("synd-maestro:transactions:{}", chain_id));
+        assert_eq!(producer1.stream_key, format!("maestro:transactions:{}", chain_id));
 
         // Get producer again
         let producer2 = service.producers.get(&chain_id).unwrap();
@@ -902,7 +902,7 @@ mod tests {
         // Verify correct stream key
         assert_eq!(
             producer3.stream_key,
-            format!("synd-maestro:transactions:{}", different_chain_id)
+            format!("maestro:transactions:{}", different_chain_id)
         );
     }
 
