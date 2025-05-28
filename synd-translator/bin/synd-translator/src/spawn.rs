@@ -26,7 +26,12 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
         info!("Starting Syndicate Translator");
         match start_slotter(config, &metrics).await {
             Ok(()) => std::process::exit(0),
-            Err(e) => error!("restarting the translator components: {e}"),
+            Err(e) => {
+                error!("restarting the translator components: {e}");
+                // Sleep for 1 second to avoid spamming the logs on unrecoverable errors
+                // TODO [SEQ-985]: Review errors thrown by slotter and handle them appropriately
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
         };
     }
 }
