@@ -900,10 +900,7 @@ mod tests {
         );
 
         // Verify correct stream key
-        assert_eq!(
-            producer3.stream_key,
-            format!("maestro:transactions:{}", different_chain_id)
-        );
+        assert_eq!(producer3.stream_key, format!("maestro:transactions:{}", different_chain_id));
     }
 
     #[tokio::test]
