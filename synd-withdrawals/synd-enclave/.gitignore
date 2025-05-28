@@ -1,0 +1,3 @@
+cmd/server/server
+cmd/verifier/verifier
+cmd/enclave/enclave
