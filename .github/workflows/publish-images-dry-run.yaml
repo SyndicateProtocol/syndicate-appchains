@@ -17,5 +17,6 @@ jobs:
     uses: ./.github/workflows/publish-images.yaml
     with:
       dry_run: false
+      runner_label: vip-large-01
       service: "synd-maestro" # all services #TODO revert this file!
     secrets: inherit
