@@ -109,22 +109,19 @@ pub async fn run_batcher(
 /// Checks if the Valkey connection is healthy
 /// This method attempts to ping the Valkey connection to check if it is healthy.
 fn valkey_health_handler(
-    valkey_conn: MultiplexedConnection,
+    mut valkey_conn: MultiplexedConnection,
 ) -> MethodRouter<std::sync::Arc<MetricsState>> {
-    get(move || {
-        let mut conn = valkey_conn.clone();
-        async move {
-            let health = conn.ping::<()>().await;
-            match health {
-                Ok(_) => Json(serde_json::json!({ "health": true })),
-                Err(e) => {
-                    error!("Valkey connection is not healthy: {:?}", e);
-                    Json(serde_json::json!({
-                        "health": false,
-                        "code": 500,
-                        "message": "Valkey connection is not healthy"
-                    }))
-                }
+    get(move || async move {
+        let health = valkey_conn.ping::<()>().await;
+        match health {
+            Ok(_) => Json(serde_json::json!({ "health": true })),
+            Err(e) => {
+                error!("Valkey connection is not healthy: {:?}", e);
+                Json(serde_json::json!({
+                    "health": false,
+                    "code": 500,
+                    "message": "Valkey connection is not healthy"
+                }))
             }
         }
     })
