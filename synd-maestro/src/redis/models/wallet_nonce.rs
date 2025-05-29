@@ -60,12 +60,12 @@ mod tests {
     };
     use alloy::primitives::Address;
     use ctor::ctor;
-    use shared::tracing::setup_test_logging;
+    use shared::tracing::setup_global_logging;
     use tokio::time::{sleep, Duration};
 
     #[ctor]
     fn init() {
-        setup_test_logging();
+        setup_global_logging();
     }
 
     const TTL: Duration = Duration::from_secs(3);

@@ -4,8 +4,8 @@ use clap::{command, Parser};
 use humantime::parse_duration;
 use jsonrpsee::server::{PingConfig, Server};
 use shared::{
-    logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
+    tracing::setup_global_logging,
 };
 use std::time::Duration;
 use synd_chain_ingestor::{eth_client::EthClient, ingestor, metrics::ChainIngestorMetrics, server};

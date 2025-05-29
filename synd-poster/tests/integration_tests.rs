@@ -21,7 +21,7 @@ use url::Url;
 
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber();
+    shared::tracing::setup_global_logging();
 }
 
 #[tokio::test]

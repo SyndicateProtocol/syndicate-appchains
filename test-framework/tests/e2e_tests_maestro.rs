@@ -26,7 +26,7 @@ const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"
 
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber();
+    shared::tracing::setup_global_logging();
 }
 
 // Happy path - 1 txn submitted, 1 txn received. Identical to
@@ -69,8 +69,8 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await? ==
-                    nonce + 1,
+                components.appchain_provider.get_transaction_count(wallet_address).await?
+                    == nonce + 1,
                 Duration::from_secs(5)
             );
 
@@ -136,8 +136,8 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             );
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await? ==
-                    nonce + 1,
+                components.appchain_provider.get_transaction_count(wallet_address).await?
+                    == nonce + 1,
                 Duration::from_secs(5)
             );
 
@@ -311,8 +311,8 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             // Wait for the transactions to be processed
             for address in &funded_addresses {
                 wait_until!(
-                    components_arc.appchain_provider.get_transaction_count(*address).await? ==
-                        nonce + 1,
+                    components_arc.appchain_provider.get_transaction_count(*address).await?
+                        == nonce + 1,
                     Duration::from_secs(3)
                 );
             }
@@ -428,7 +428,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
                     // Server error
                     if json_resp.is_err() {
                         println!("hit a request error, we're at JSON-RPC server limit");
-                        return Ok::<_, eyre::Error>(("error", json!("")))
+                        return Ok::<_, eyre::Error>(("error", json!("")));
                     }
 
                     // Get time after receiving the response
@@ -595,8 +595,8 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             let tx_hash2 = components.send_maestro_tx_successful(&tx2.encoded_2718()).await?;
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await? ==
-                    nonce + 1,
+                components.appchain_provider.get_transaction_count(wallet_address).await?
+                    == nonce + 1,
                 Duration::from_secs(5)
             );
 
@@ -698,8 +698,8 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             let tx_hash0 = components.send_maestro_tx_successful(&tx0.encoded_2718()).await?;
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await? ==
-                    nonce + 3,
+                components.appchain_provider.get_transaction_count(wallet_address).await?
+                    == nonce + 3,
                 Duration::from_secs(5)
             );
 

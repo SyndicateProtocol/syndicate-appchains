@@ -4,8 +4,8 @@
 use batcher::{batcher::run_batcher, metrics::BatcherMetrics};
 use eyre::Result;
 use shared::{
-    logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
+    tracing::set_global_default_subscriber,
 };
 use synd_batch_sequencer::config::BatchSequencerConfig;
 use tokio::signal::unix::{signal, SignalKind};

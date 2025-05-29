@@ -102,7 +102,7 @@ pub trait Provider: Send + Sync {
             if slot.seq_block_number == 0 {
                 assert_eq!(slot, Default::default());
                 assert_eq!(mchain_block_number, if not_pending { 1 } else { 2 });
-                return (None, not_pending.then_some(mchain_block_number))
+                return (None, not_pending.then_some(mchain_block_number));
             }
 
             info!("checking slot {:?}", slot);
@@ -125,7 +125,7 @@ pub trait Provider: Send + Sync {
             info!("seq valid: {}, set valid: {}", seq_valid, set_valid);
             if seq_valid && set_valid {
                 info!("found safe state {:?} current block {:?}", state, current_block);
-                return (Some(state), not_pending.then_some(mchain_block_number))
+                return (Some(state), not_pending.then_some(mchain_block_number));
             }
             current_block = BlockNumberOrTag::Number(mchain_block_number - 1);
         }
@@ -191,7 +191,7 @@ mod tests {
 
     #[ctor::ctor]
     fn init() {
-        shared::logger::set_global_default_subscriber();
+        shared::tracing::setup_global_logging();
     }
 
     #[async_trait]

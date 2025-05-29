@@ -166,7 +166,7 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
 
 /// A shorthand to set up a subscriber for tests,
 /// bypassing tracing/metrics initialization.
-pub fn setup_test_logging() -> Result<(), Error> {
+pub fn setup_global_logging() -> Result<(), Error> {
     tracing_subscriber::fmt()
         .json()
         .with_target(true)
