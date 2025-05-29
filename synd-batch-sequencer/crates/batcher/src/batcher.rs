@@ -283,10 +283,10 @@ mod tests {
         transports::mock::Asserter,
     };
     use prometheus_client::registry::Registry;
+    use reqwest;
     use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
-    use test_utils::{docker::start_valkey, wait_until};
+    use test_utils::{docker::start_valkey, port_manager::PortManager, wait_until};
     use url::Url;
-
     // Create a mock provider that always succeeds
     async fn create_mock_contract(
         anvil: Option<&AnvilInstance>,
@@ -543,5 +543,42 @@ mod tests {
 
         wait_until!(metrics_clone.total_txs_processed.get() == 20, Duration::from_secs(10));
         drop(anvil);
+    }
+
+    #[tokio::test]
+    async fn test_health_endpoint() {
+        let (valkey, valkey_url) = start_valkey().await.unwrap();
+        let config = BatcherConfig {
+            max_batch_size: byte_unit::Byte::from_u64(1024),
+            valkey_url,
+            chain_id: 1,
+            compression_enabled: true,
+            timeout: Duration::from_millis(200),
+            private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
+                .to_string(),
+            sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+        };
+        let metrics_port = PortManager::instance().next_port().await;
+        let sequencing_contract_address = Address::ZERO;
+
+        let _handle =
+            run_batcher(&config, sequencing_contract_address, metrics_port).await.unwrap();
+
+        let url = format!("http://0.0.0.0:{}/health", metrics_port);
+
+        let client = reqwest::Client::new();
+
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // Should succeed
+        let response = client.get(&url).send().await.unwrap();
+        assert_eq!(response.status(), 200);
+
+        // Close Valkey container and test failure
+        drop(valkey);
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        let response = client.get(&url).send().await.unwrap();
+        assert_eq!(response.status(), 500);
     }
 }

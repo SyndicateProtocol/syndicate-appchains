@@ -31,6 +31,8 @@ url               = { workspace = true }
 
 [dev-dependencies]
 mockall    = { workspace = true }
+reqwest    = { workspace = true }
 test-utils = { workspace = true }
+
 [lints]
 workspace = true

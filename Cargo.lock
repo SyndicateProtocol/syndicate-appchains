@@ -1175,6 +1175,7 @@ dependencies = [
  "mockall",
  "prometheus-client",
  "redis",
+ "reqwest",
  "rlp 0.6.1",
  "serde_json",
  "shared",
