@@ -22,7 +22,8 @@ async fn main() -> Result<()> {
 
     let mut metrics_state = MetricsState::default();
     let metrics = BatcherMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
+
+    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port, None));
 
     let batcher_handle = run_batcher(&config.batcher, config.sequencing_address, metrics).await?;
 

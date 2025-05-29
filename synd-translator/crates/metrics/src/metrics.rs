@@ -31,7 +31,7 @@ mod tests {
         let metrics_state = MetricsState::default();
         let port = 9001;
 
-        let handle = start_metrics_and_health(metrics_state, port).await;
+        let handle = start_metrics_and_health(metrics_state, port, None).await;
 
         sleep(Duration::from_secs(1)).await;
         let client = Client::new();
