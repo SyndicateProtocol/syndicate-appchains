@@ -23,9 +23,14 @@ async fn main() -> Result<()> {
     let mut metrics_state = MetricsState::default();
     let metrics = BatcherMetrics::new(&mut metrics_state.registry);
 
-    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port, None));
+    let (batcher_handle, valkey_conn) =
+        run_batcher(&config.batcher, config.sequencing_address, metrics).await?;
 
-    let batcher_handle = run_batcher(&config.batcher, config.sequencing_address, metrics).await?;
+    tokio::spawn(start_metrics_and_health(
+        metrics_state,
+        config.metrics_port,
+        Some(valkey_health_handler),
+    ));
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
@@ -45,4 +50,19 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Checks if the Valkey connection is healthy
+/// This method attempts to ping the Valkey connection to check if it is healthy.
+async fn valkey_health_handler(mut valkey_conn: MultiplexedConnection) -> impl IntoResponse {
+    let health: Result<String, _> = valkey_conn.ping().await;
+    match health {
+        Ok(_) => Json(serde_json::json!({ "health": true })),
+        Err(e) => {
+            error!("Valkey connection is not healthy: {:?}", e);
+            Json(
+                serde_json::json!({ "health": false, "code": 500, "message": "Valkey connection is not healthy" }),
+            )
+        }
+    }
 }

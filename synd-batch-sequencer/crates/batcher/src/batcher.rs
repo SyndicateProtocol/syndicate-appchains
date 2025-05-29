@@ -15,7 +15,7 @@ use alloy::{
 use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::Client as RedisClient;
+use redis::{aio::MultiplexedConnection, Client as RedisClient};
 use shared::types::FilledProvider;
 use std::{
     collections::VecDeque,
@@ -65,7 +65,7 @@ pub async fn run_batcher(
     config: &BatcherConfig,
     sequencing_contract_address: Address,
     metrics: BatcherMetrics,
-) -> Result<JoinHandle<()>> {
+) -> Result<(JoinHandle<()>, MultiplexedConnection)> {
     let client = RedisClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
@@ -73,6 +73,7 @@ pub async fn run_batcher(
         eyre!("Failed to get Valkey connection: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
     let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+    // Ping stream consumer to ensure it's ready
 
     let sequencing_contract_provider =
         create_sequencing_contract_provider(config, sequencing_contract_address).await?;
@@ -90,7 +91,7 @@ pub async fn run_batcher(
         }
     });
     info!("Batcher job started");
-    Ok(handle)
+    Ok((handle, conn))
 }
 
 async fn create_sequencing_contract_provider(
