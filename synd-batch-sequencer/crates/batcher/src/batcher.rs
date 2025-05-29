@@ -12,11 +12,18 @@ use alloy::{
     signers::local::PrivateKeySigner,
     transports::TransportError,
 };
+use axum::{
+    response::Json,
+    routing::{get, MethodRouter},
+};
 use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::{aio::MultiplexedConnection, Client as RedisClient};
-use shared::types::FilledProvider;
+use redis::{aio::MultiplexedConnection, AsyncCommands, Client as RedisClient};
+use shared::{
+    service_start_utils::{start_metrics_and_health, MetricsState},
+    types::FilledProvider,
+};
 use std::{
     collections::VecDeque,
     str::FromStr,
@@ -64,16 +71,21 @@ enum BatchError {
 pub async fn run_batcher(
     config: &BatcherConfig,
     sequencing_contract_address: Address,
-    metrics: BatcherMetrics,
-) -> Result<(JoinHandle<()>, MultiplexedConnection)> {
+    metrics_port: u16,
+) -> Result<JoinHandle<()>> {
     let client = RedisClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
     let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
         eyre!("Failed to get Valkey connection: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
-    let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
-    // Ping stream consumer to ensure it's ready
+    let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
+
+    // Start metrics and health endpoints
+    let mut metrics_state = MetricsState::default();
+    let metrics = BatcherMetrics::new(&mut metrics_state.registry);
+    let health_handler = valkey_health_handler(conn);
+    tokio::spawn(start_metrics_and_health(metrics_state, metrics_port, Some(health_handler)));
 
     let sequencing_contract_provider =
         create_sequencing_contract_provider(config, sequencing_contract_address).await?;
@@ -91,7 +103,31 @@ pub async fn run_batcher(
         }
     });
     info!("Batcher job started");
-    Ok((handle, conn))
+    Ok(handle)
+}
+
+/// Checks if the Valkey connection is healthy
+/// This method attempts to ping the Valkey connection to check if it is healthy.
+fn valkey_health_handler(
+    valkey_conn: MultiplexedConnection,
+) -> MethodRouter<std::sync::Arc<MetricsState>> {
+    get(move || {
+        let mut conn = valkey_conn.clone();
+        async move {
+            let health = conn.ping::<()>().await;
+            match health {
+                Ok(_) => Json(serde_json::json!({ "health": true })),
+                Err(e) => {
+                    error!("Valkey connection is not healthy: {:?}", e);
+                    Json(serde_json::json!({
+                        "health": false,
+                        "code": 500,
+                        "message": "Valkey connection is not healthy"
+                    }))
+                }
+            }
+        }
+    })
 }
 
 async fn create_sequencing_contract_provider(
