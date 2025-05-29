@@ -13,6 +13,7 @@ use alloy::{
     transports::TransportError,
 };
 use axum::{
+    http::StatusCode,
     response::Json,
     routing::{get, MethodRouter},
 };
@@ -109,19 +110,22 @@ pub async fn run_batcher(
 /// Checks if the Valkey connection is healthy
 /// This method attempts to ping the Valkey connection to check if it is healthy.
 fn valkey_health_handler(
-    mut valkey_conn: MultiplexedConnection,
+    valkey_conn: MultiplexedConnection,
 ) -> MethodRouter<std::sync::Arc<MetricsState>> {
+    let mut conn = valkey_conn;
     get(move || async move {
-        let health = valkey_conn.ping::<()>().await;
+        let health: Result<String, _> = conn.ping().await;
         match health {
-            Ok(_) => Json(serde_json::json!({ "health": true })),
+            Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
             Err(e) => {
                 error!("Valkey connection is not healthy: {:?}", e);
-                Json(serde_json::json!({
-                    "health": false,
-                    "code": 500,
-                    "message": "Valkey connection is not healthy"
-                }))
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "health": false,
+                        "message": "Valkey connection is not healthy"
+                    })),
+                )
             }
         }
     })
