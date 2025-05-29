@@ -25,7 +25,7 @@ use crate::{
 use alloy::{
     consensus::{Transaction, TxEnvelope},
     hex,
-    primitives::{keccak256, Address, Bytes, ChainId, B256, U256},
+    primitives::{keccak256, utils::format_ether, Address, Bytes, ChainId, B256, U256},
     providers::Provider,
 };
 use redis::{aio::MultiplexedConnection, AsyncCommands};
@@ -147,12 +147,14 @@ impl MaestroService {
     }
 
     /// Performs gas and balance checks for a transaction.
+    ///
+    /// Returns `account_balance` of `wallet` in `wei`
     async fn check_sender_wallet_balance(
         &self,
         tx: &TxEnvelope,
         chain_id: ChainId,
         wallet: Address,
-    ) -> Result<(), MaestroRpcError> {
+    ) -> Result<U256, MaestroRpcError> {
         let account_balance =
             self.get_rpc_provider(&chain_id)?.get_balance(wallet).await.map_err(|e| {
                 error!(%chain_id, %wallet, %e, "Failed to fetch account balance for gas check");
@@ -161,7 +163,7 @@ impl MaestroService {
         Self::balance_check(tx, account_balance)
     }
 
-    fn balance_check(tx: &TxEnvelope, account_balance: U256) -> Result<(), MaestroRpcError> {
+    fn balance_check(tx: &TxEnvelope, account_balance: U256) -> Result<U256, MaestroRpcError> {
         let tx_hash_str = format!("0x{}", hex::encode(tx.hash()));
         let max_gas_cost = U256::from(tx.gas_limit())
             .checked_mul(U256::from(tx.max_fee_per_gas()))
@@ -182,7 +184,7 @@ impl MaestroService {
         }
 
         trace!(%tx_hash_str, %account_balance, %total_required, "Gas check passed");
-        Ok(())
+        Ok(account_balance)
     }
 
     /// Processes a transaction based on its nonce compared to the wallet's expected nonce
@@ -234,7 +236,14 @@ impl MaestroService {
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
                 if !self.config.skip_balance_check {
-                    self.check_sender_wallet_balance(tx, chain_id, wallet).await?;
+                    // TODO(SEQ-964): Remove lines below once we have tracing
+                    let tx_hash_str = format!("0x{}", hex::encode(tx.hash()));
+                    trace!(%tx_hash_str, %tx_nonce, sender_wallet=%wallet, %chain_id, "Checking sender wallet balance");
+                    let sender_balance_eth = format!(
+                        "{} ETH units",
+                        format_ether(self.check_sender_wallet_balance(tx, chain_id, wallet).await?)
+                    );
+                    trace!(%tx_hash_str, %tx_nonce, sender_wallet=%wallet, %sender_balance_eth, %chain_id, "Sender wallet balance is sufficient");
                 }
 
                 // 1. update the cache with nonce + 1. Quit if this fails
@@ -2230,7 +2239,8 @@ mod tests {
         let tx = create_dummy_tx(21000u64, 10_000_000_000u128, parse_ether("1").unwrap()).await;
         let account_balance = parse_ether("2").unwrap();
         let result = MaestroService::balance_check(&tx, account_balance);
-        assert!(result.is_ok());
+        let balance_check_result = result.unwrap();
+        assert_eq!(balance_check_result, account_balance);
     }
 
     #[tokio::test]
@@ -2244,7 +2254,7 @@ mod tests {
         let account_balance = max_gas_cost + value;
 
         let result = MaestroService::balance_check(&tx, account_balance);
-        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), account_balance);
     }
 
     #[tokio::test]
@@ -2261,7 +2271,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_balance_check_insufficient_funds_for_max_gas_cost() {
-        // gas_limit * max_fee_per_gas (u64::MAX * u128::MAX) does NOT overflow U256
+        // gas_limit * max_fee_per_gas (u64::MAX * u128::MAX) does NOT overflow U256,
         // but it results in a very large gas cost.
         let tx = create_dummy_tx(u64::MAX, u128::MAX, U256::from(1u64)).await;
         let account_balance = U256::ZERO; // Set balance to 0 to make it insufficient
