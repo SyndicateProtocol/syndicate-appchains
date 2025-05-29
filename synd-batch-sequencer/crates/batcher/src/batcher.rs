@@ -85,7 +85,7 @@ pub async fn run_batcher(
     // Start metrics and health endpoints
     let mut metrics_state = MetricsState::default();
     let metrics = BatcherMetrics::new(&mut metrics_state.registry);
-    let health_handler = valkey_health_handler(conn);
+    let health_handler = health_handler(conn);
     tokio::spawn(start_metrics_and_health(metrics_state, metrics_port, Some(health_handler)));
 
     let sequencing_contract_provider =
@@ -109,7 +109,7 @@ pub async fn run_batcher(
 
 /// Checks if the Valkey connection is healthy
 /// This method attempts to ping the Valkey connection to check if it is healthy.
-fn valkey_health_handler(
+fn health_handler(
     valkey_conn: MultiplexedConnection,
 ) -> MethodRouter<std::sync::Arc<MetricsState>> {
     let mut conn = valkey_conn;
@@ -118,12 +118,12 @@ fn valkey_health_handler(
         match health {
             Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
             Err(e) => {
-                error!("Valkey connection is not healthy: {:?}", e);
+                error!("Cache connection is not healthy: {:?}", e);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({
                         "health": false,
-                        "message": "Valkey connection is not healthy"
+                        "message": "Cache connection is not healthy"
                     })),
                 )
             }
