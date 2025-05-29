@@ -56,7 +56,23 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
 
     let config: SeqchainVerifierConfig = serde_json::from_str(&args.config)?;
 
-    let _verifier = Verifier::new(&config);
-    // Ok(verifier.verify_and_create_output(&sequencing_chain_input, &settlement_chain_input)?)
-    Ok(vec![])
+    let verifier = Verifier::new(&config);
+    verifier
+        .verify_and_create_output(&l1_chain_input)
+        .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_input() {
+        let config = SeqchainVerifierConfig::default();
+        let config_json = serde_json::to_string(&config).unwrap();
+        println!("{}", config_json);
+        let l1_chain_input = L1ChainInput::default();
+        let l1_chain_input_json = serde_json::to_string(&l1_chain_input).unwrap();
+        println!("{}", l1_chain_input_json);
+    }
 }

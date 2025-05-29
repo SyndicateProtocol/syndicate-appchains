@@ -9,14 +9,22 @@ use alloy::{
 use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
 
-// TODO: Need to calculate these
 const BATCH_ACCUMULATOR_STORAGE_SLOT: B256 =
-    fixed_bytes!("0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90"); // Keccak256("syndicate.accumulator")
-const DELAYED_MESSAGE_ACCUMULATOR_STORAGE_SLOT: B256 =
-    fixed_bytes!("0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90"); // Keccak256("syndicate.accumulator")
+    fixed_bytes!("0x0000000000000000000000000000000000000000000000000000000000000007");
+const BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT: B256 =
+    fixed_bytes!("0xa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688"); // Keccak256("0x7")
+
+/// Calculate the slot for the batch accumulator
+#[allow(clippy::unwrap_used)]
+fn calculate_slot(start_slot: B256, index: U256) -> B256 {
+    B256::from(
+        U256::from_be_bytes::<32>(start_slot.as_slice().try_into().unwrap()) + index -
+            U256::from(1),
+    )
+}
 
 /// L1 chain input
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct L1ChainInput {
     /// Start batch accumulator merkle proof
     pub start_batch_accumulator_merkle_proof: EIP1186AccountProofResponse,
@@ -52,18 +60,16 @@ impl L1ChainInput {
         self.start_batch_accumulator_merkle_proof.storage_proof[0].value.into()
     }
 
-    fn start_batch_count(&self) -> u64 {
-        let count: U256 = self.start_batch_count_merkle_proof.storage_proof[0].value.into();
-        count.to_string().parse::<u64>().unwrap()
+    fn start_batch_count(&self) -> U256 {
+        self.start_batch_count_merkle_proof.storage_proof[0].value
     }
 
     fn end_batch_accumulator(&self) -> B256 {
         self.end_batch_accumulator_merkle_proof.storage_proof[0].value.into()
     }
 
-    fn end_batch_count(&self) -> u64 {
-        let count: U256 = self.end_batch_count_merkle_proof.storage_proof[0].value.into();
-        count.to_string().parse::<u64>().unwrap()
+    fn end_batch_count(&self) -> U256 {
+        self.end_batch_count_merkle_proof.storage_proof[0].value
     }
 
     fn verify_accumulator(&self) -> Result<(), VerifierError> {
@@ -83,6 +89,7 @@ impl L1ChainInput {
         Ok(())
     }
 
+    #[allow(clippy::unwrap_used)]
     fn verify_delayed_message_accumulator(&self) -> Result<(), VerifierError> {
         let mut acc = self.start_delayed_message_accumulator;
         for message in &self.delayed_messages {
@@ -189,22 +196,42 @@ impl L1ChainInput {
         self.verify_accumulator()?;
         self.verify_delayed_message_accumulator()?;
 
-        // Validate start batch accumulator merkle proof
+        // Validate start batch count merkle proof
         Self::verify_merkle_proof(
-            &self.start_batch_accumulator_merkle_proof,
+            &self.start_batch_count_merkle_proof,
             &self.start_block_header,
             self.start_block_hash,
             arbitrum_contract_address,
             BATCH_ACCUMULATOR_STORAGE_SLOT,
         )?;
-        // Validate end batch accumulator merkle proof
+        let start_acc_slot =
+            calculate_slot(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, self.start_batch_count());
         Self::verify_merkle_proof(
-            &self.end_batch_accumulator_merkle_proof,
+            &self.start_batch_accumulator_merkle_proof,
+            &self.start_block_header,
+            self.start_block_hash,
+            arbitrum_contract_address,
+            start_acc_slot,
+        )?;
+
+        // Validate end batch count merkle proof
+        Self::verify_merkle_proof(
+            &self.end_batch_count_merkle_proof,
             &self.end_block_header,
             self.end_block_hash,
             arbitrum_contract_address,
             BATCH_ACCUMULATOR_STORAGE_SLOT,
         )?;
+        let end_acc_slot =
+            calculate_slot(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, self.end_batch_count());
+        Self::verify_merkle_proof(
+            &self.end_batch_accumulator_merkle_proof,
+            &self.end_block_header,
+            self.end_block_hash,
+            arbitrum_contract_address,
+            end_acc_slot,
+        )?;
+
         Ok(())
     }
 }
@@ -315,7 +342,6 @@ impl ArbitrumBatch {
         )
             .abi_encode_packed();
 
-        // TODO: Seq chain is using Alt DA, so dont think it is this simple
         let data_hash = keccak256(&self.data);
 
         keccak256((header, data_hash).abi_encode_packed())
@@ -346,8 +372,17 @@ mod tests {
     use alloy::providers::{Provider as _, ProviderBuilder, RootProvider};
     use std::str::FromStr;
 
+    #[test]
+    fn test_calculate_slot() {
+        let index = U256::from(16);
+        let slot = calculate_slot(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, index);
+
+        let result =
+            fixed_bytes!("0xa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c697");
+        assert_eq!(slot, result);
+    }
+
     #[tokio::test]
-    // TODO: fix test
     #[ignore]
     async fn test_verify_account_proof_response() {
         let client: RootProvider = ProviderBuilder::default()

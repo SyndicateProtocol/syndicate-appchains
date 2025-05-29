@@ -7286,7 +7286,6 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
- "synd-block-builder",
  "thiserror 2.0.12",
  "tokio",
  "tracing",

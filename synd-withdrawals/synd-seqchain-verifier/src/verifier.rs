@@ -13,13 +13,13 @@ use eyre::Result;
 #[derive(Default, Debug, Clone)]
 pub struct Verifier {
     /// Arbitrum contract address
-    arbitrum_contract_address: Address,
+    arbitrum_bridge_address: Address,
 }
 
 impl Verifier {
     /// Constructs a new [`Verifier`] from the provided config.
-    pub fn new(config: &SeqchainVerifierConfig) -> Self {
-        Self { arbitrum_contract_address: config.arbitrum_bridge_address }
+    pub const fn new(config: &SeqchainVerifierConfig) -> Self {
+        Self { arbitrum_bridge_address: config.arbitrum_bridge_address }
     }
 
     /// Verifies both the sequencing and settlement chains and creates an array of
@@ -28,7 +28,7 @@ impl Verifier {
         &self,
         l1_chain_input: &L1ChainInput,
     ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
-        l1_chain_input.validate(self.arbitrum_contract_address)?;
+        l1_chain_input.validate(self.arbitrum_bridge_address)?;
         self.generate_output(l1_chain_input)
     }
 
@@ -70,10 +70,7 @@ mod tests {
 
     #[test]
     fn test_verifier_creation() {
-        let config = SeqchainVerifierConfig {
-            arbitrum_bridge_address: Address::ZERO,
-            arbitrum_inbox_address: Address::ZERO,
-        };
+        let config = SeqchainVerifierConfig { arbitrum_bridge_address: Address::ZERO };
         let _verifier = Verifier::new(&config);
     }
 }
