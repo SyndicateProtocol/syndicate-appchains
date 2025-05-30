@@ -28,7 +28,7 @@ use alloy::{
     primitives::{keccak256, Address, Bytes, ChainId, B256, U256},
     providers::Provider,
 };
-use redis::aio::MultiplexedConnection;
+use redis::{aio::MultiplexedConnection, AsyncCommands};
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
     tx_validation::{check_signature, decode_transaction},
@@ -261,7 +261,7 @@ impl MaestroService {
             Ordering::Less => {
                 let rejection = NonceTooLow(expected_nonce, tx_nonce);
                 warn!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Failed to submit forwarded transaction: {}", rejection);
-                return Err(JsonRpcError(TransactionRejected(rejection)))
+                return Err(JsonRpcError(TransactionRejected(rejection)));
             }
             Ordering::Greater => {
                 debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Caching waiting transaction");
@@ -391,7 +391,7 @@ impl MaestroService {
             Ok(nonce) => nonce,
             Err(e) => {
                 error!(%signer, %chain_id, %e, "unable to get nonce from RPC");
-                return Err(InternalError(RpcFailedToFetchWalletNonce(chain_id, signer)))
+                return Err(InternalError(RpcFailedToFetchWalletNonce(chain_id, signer)));
             }
         };
 
@@ -441,7 +441,7 @@ impl MaestroService {
             if cached_nonce_parsed.cmp(&current_nonce) != Ordering::Equal {
                 error!(%desired_nonce, %cached_nonce_parsed, %current_nonce, %chain_id, %wallet_address, "unexpected cached nonce. likely a concurrency bug");
                 //TODO clear cache here?
-                return Err(WaitingTransaction(FailedToEnqueue))
+                return Err(WaitingTransaction(FailedToEnqueue));
             }
         }
 
@@ -533,7 +533,7 @@ impl MaestroService {
             if let Err(e) = self.enqueue_raw_transaction(&waiting_txn, tx.hash(), chain_id).await {
                 let tx_hash = format!("0x{}", hex::encode(tx.hash()));
                 error!(%e, %chain_id, %wallet_address, %tx_hash, "Failed to enqueue transaction");
-                return Err(WaitingTransaction(FailedToEnqueue))
+                return Err(WaitingTransaction(FailedToEnqueue));
             }
 
             waiting_txn_ids.push(WaitingTransactionId {
@@ -611,7 +611,7 @@ impl MaestroService {
             {
                 None => {
                     //
-                    break
+                    break;
                 }
                 Some(tx_hex) => match hex::decode(&tx_hex) {
                     Ok(tx_bytes) => {
@@ -620,7 +620,7 @@ impl MaestroService {
                     }
                     Err(e) => {
                         error!(%e, %chain_id, %wallet_address, %starting_nonce, %tx_hex, "Failed to decode hex transaction from cache");
-                        return Err(WaitingTransaction(FailedToDecode))
+                        return Err(WaitingTransaction(FailedToDecode));
                     }
                 },
             }
@@ -685,7 +685,7 @@ impl MaestroService {
     ) -> Result<u64, MaestroRpcError> {
         if waiting_txns.is_empty() {
             error!("No waiting txns to remove");
-            return Err(InternalError(Other))
+            return Err(InternalError(Other));
         }
 
         let mut conn = self.valkey_conn.clone();
@@ -704,6 +704,25 @@ impl MaestroService {
         }
 
         Ok(result)
+    }
+
+    /// Checks if the Valkey connection is healthy
+    ///
+    /// This method attempts to ping the Valkey connection to check if it is healthy.
+    ///
+    /// # Returns
+    /// * `Ok(true)` - If the connection is healthy
+    /// * `Err(MaestroError::Valkey)` - If the connection is not healthy
+    pub async fn health(&self) -> Result<bool, MaestroError> {
+        let mut conn = self.valkey_conn.clone();
+        let health: Result<String, _> = conn.ping().await;
+        match health {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                error!("Valkey connection is not healthy: {:?}", e);
+                Err(MaestroError::Valkey(e))
+            }
+        }
     }
 
     /// Shuts down the Maestro service and all its components gracefully.
@@ -862,7 +881,7 @@ mod tests {
         let producer1 = service.producers.get(&chain_id).unwrap();
 
         // Verify stream key is correct
-        assert_eq!(producer1.stream_key, format!("synd-maestro:transactions:{}", chain_id));
+        assert_eq!(producer1.stream_key, format!("maestro:transactions:{}", chain_id));
 
         // Get producer again
         let producer2 = service.producers.get(&chain_id).unwrap();
@@ -881,10 +900,7 @@ mod tests {
         );
 
         // Verify correct stream key
-        assert_eq!(
-            producer3.stream_key,
-            format!("synd-maestro:transactions:{}", different_chain_id)
-        );
+        assert_eq!(producer3.stream_key, format!("maestro:transactions:{}", different_chain_id));
     }
 
     #[tokio::test]
