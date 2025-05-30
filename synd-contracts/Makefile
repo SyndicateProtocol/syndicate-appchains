@@ -22,10 +22,10 @@ allowlist-syndicate-storage-addresses :; forge script script/AllowlistSyndicateS
 deploy-syndicate-token :; forge create --rpc-url ${ETH_HOLESKY_RPC_URL} --private-key ${ETH_PRIVATE_KEY} src/token/SyndicateToken.sol:SyndicateToken --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
 ## grant Minter Role
-grant-minter-role :; forge script script/SYNDScript.s.sol:GrantMinterRole --rpc-url holesky --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+grant-minter-role :; forge script script/TestnetSYNDScript.s.sol:GrantMinterRole --rpc-url holesky --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# mint SYND to addresses
-mint-synd-to-addresses :; forge script script/SYNDScript.s.sol:MintSYNDToAddresses --rpc-url holesky --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# mint TestnetSYND to addresses
+mint-synd-to-addresses :; forge script script/TestnetSYNDScript.s.sol:MintSYNDToAddresses --rpc-url holesky --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # deploy AgentApplication to Syndicate Exo
 deploy-agent-application :; forge create --rpc-url exo --private-key ${ETH_PRIVATE_KEY} src/use-cases/dream/AgentApplication.sol:AgentApplication --legacy --broadcast --verify --verifier blockscout --verifier-url 'https://syndicate-exo.explorer.alchemy.com/api/' -vvv --constructor-args ${ADMIN_ADDR}
