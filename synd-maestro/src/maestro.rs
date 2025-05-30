@@ -76,6 +76,7 @@ impl MaestroService {
     async fn create_stream_producers(&mut self) {
         for (chain_id, provider) in &self.rpc_providers {
             let provider_clone = provider.clone();
+            let metrics_clone = self.metrics.clone();
             self.producers.insert(
                 *chain_id,
                 Arc::new(
@@ -86,9 +87,13 @@ impl MaestroService {
                         self.config.finalization_duration,
                         self.config.max_transaction_retries,
                         move |raw_tx: &[u8]| {
-                            let provider = provider_clone.clone();
+                            let provider_clone = provider_clone.clone();
+                            let metrics_clone = metrics_clone.clone();
                             let tx_data = raw_tx.to_vec();
-                            async move { Self::handle_finalization(tx_data, &provider).await }
+                            async move {
+                                Self::handle_finalization(tx_data, &provider_clone, &metrics_clone)
+                                    .await
+                            }
                         },
                     )
                     .await,
@@ -113,6 +118,7 @@ impl MaestroService {
     async fn handle_finalization(
         raw_tx: Vec<u8>,
         provider: &RpcProvider,
+        metrics: &MaestroMetrics,
     ) -> CheckFinalizationResult {
         let tx_hash = keccak256(raw_tx.clone());
         match provider.get_transaction_receipt(tx_hash).await {
@@ -128,6 +134,7 @@ impl MaestroService {
                     Ok(nonce) => {
                         if nonce == tx.nonce() {
                             debug!(%tx_hash, "Valid transaction is not finalized, resubmitting");
+                            metrics.increment_maestro_resubmitted_transactions_total(1);
                             return CheckFinalizationResult::ReSubmit;
                         }
                         debug!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
@@ -2128,7 +2135,9 @@ mod tests {
             setup_mock_receipt_response(&mock_server, tx_hash, Some(mock_receipt_data), false)
                 .await;
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::Done);
         }
 
@@ -2155,7 +2164,9 @@ mod tests {
                                                                                    // Use the dynamically derived signer address for the mock setup.
             set_up_mock_transaction_count(&mock_server, &actual_signer_hex, tx_nonce).await;
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::ReSubmit);
         }
 
@@ -2172,7 +2183,9 @@ mod tests {
             setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
             set_up_mock_transaction_count(&mock_server, KNOWN_SIGNER_ADDRESS_STR, rpc_nonce).await; // Nonce differs
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::Done);
         }
 
@@ -2188,7 +2201,9 @@ mod tests {
             setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
             setup_mock_nonce_error_response(&mock_server, KNOWN_SIGNER_ADDRESS_STR).await; // Nonce call fails
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::Done);
         }
 
@@ -2203,7 +2218,9 @@ mod tests {
 
             setup_mock_receipt_response(&mock_server, tx_hash, None, true).await; // Receipt call fails
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::Done);
         }
     }
