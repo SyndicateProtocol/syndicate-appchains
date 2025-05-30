@@ -8,7 +8,7 @@ use crate::{
 use alloy::{
     network::EthereumWallet,
     primitives::{keccak256, Address, Bytes},
-    providers::{Provider as _, ProviderBuilder, WalletProvider as _},
+    providers::{Provider, ProviderBuilder, WalletProvider},
     signers::local::PrivateKeySigner,
     transports::TransportError,
 };
