@@ -9,7 +9,7 @@ use redis::{
     streams::{StreamReadOptions, StreamReadReply},
     AsyncCommands,
 };
-use shared::tracing::{otel_global, OpenTelemetrySpanExt};
+use shared::tracing::{otel_global, OpenTelemetrySpanExt, SpanKind, TraceContextExt};
 use std::{collections::HashMap, time::Duration};
 use tracing::{info_span, instrument};
 
@@ -75,7 +75,14 @@ impl StreamConsumer {
     /// * Currently reads one message at a time for simplicity. For high-throughput scenarios,
     ///   consider implementing batch reading with an internal buffer.
     /// * Blocks for `block_duration` waiting for a new message to arrive
-    #[instrument(skip(self), err)]
+    #[instrument(
+        name = "redis_receive",
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Consumer,
+        )
+    )]
     pub async fn recv(
         &mut self,
         max_msg_count: usize,
@@ -120,8 +127,9 @@ impl StreamConsumer {
                 }
                 _ => return Err(eyre::eyre!("Expected binary data, got different type")),
             };
+            let parent_span = parent_context.span();
             let span = info_span!("redis_recv_transaction");
-            span.set_parent(parent_context);
+            span.add_link(parent_span.span_context().clone());
             let _guard = span.enter();
 
             let raw_tx =
@@ -150,8 +158,14 @@ mod tests {
     use std::time::Duration;
     use test_utils::docker::start_redis;
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_produce_consume_transaction() {
+        let _guard =
+            shared::tracing::setup_global_tracing(shared::tracing::ServiceTracingConfig::from_env(
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+            ))
+            .unwrap();
         // Start Redis container
         let (_redis, redis_url) = start_redis().await.unwrap();
 
@@ -183,10 +197,17 @@ mod tests {
         assert_eq!(received.len(), 1);
         assert_eq!(received[0].0, test_data);
         assert!(!received[0].1.is_empty());
+        tokio::time::sleep(Duration::from_secs(30)).await;
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_produce_consume_multiple_transactions() {
+        let _guard =
+            shared::tracing::setup_global_tracing(shared::tracing::ServiceTracingConfig::from_env(
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+            ))
+            .unwrap();
         // Start Redis container
         let (_redis, redis_url) = start_redis().await.unwrap();
 
@@ -222,5 +243,6 @@ mod tests {
         assert_eq!(received[1].0, test_data2);
         assert!(!received[0].1.is_empty());
         assert!(!received[1].1.is_empty());
+        tokio::time::sleep(Duration::from_secs(30)).await;
     }
 }

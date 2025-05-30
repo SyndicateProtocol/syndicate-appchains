@@ -30,7 +30,7 @@ pub fn parse_address(value: &str) -> Result<Address, Error> {
 /// Parse comma-separated addresses, e.g. "0x123,0x456"
 pub fn parse_addresses(value: &str) -> Result<Vec<Address>, Error> {
     if value.trim().is_empty() {
-        return Ok(Default::default())
+        return Ok(Default::default());
     }
     value.split(',').map(|x| parse_address(x.trim())).collect()
 }

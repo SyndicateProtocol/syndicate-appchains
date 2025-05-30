@@ -1,12 +1,13 @@
 //! This module provides the producer implementation for Redis streams used to queue
 //! and process transactions across different chains.
 
+use alloy::{hex, primitives::keccak256};
 use redis::{
     aio::MultiplexedConnection,
     streams::{StreamTrimOptions, StreamTrimmingMode},
     AsyncCommands, RedisError,
 };
-use shared::tracing::current_traceparent;
+use shared::tracing::{current_traceparent, SpanKind};
 use std::time::Duration;
 use tokio::{task::JoinHandle, time::MissedTickBehavior};
 use tracing::{debug, instrument};
@@ -96,7 +97,16 @@ impl StreamProducer {
     /// * Redis connection fails
     /// * Stream write operation fails
     /// * Connection is dropped
-    #[instrument(skip(self), err)]
+    #[instrument(
+        name = "redis_enqueue",
+        skip_all,
+        err,
+        fields(
+            otel.kind = ?SpanKind::Producer,
+            tx_hash = format!("0x{}", hex::encode(keccak256(&raw_tx))),
+            stream_key = %self.stream_key
+        )
+    )]
     pub async fn enqueue_transaction(&self, raw_tx: Vec<u8>) -> Result<String, RedisError> {
         let id: String = self
             .conn

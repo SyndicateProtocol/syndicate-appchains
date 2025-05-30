@@ -32,6 +32,7 @@ use alloy::{
 use redis::aio::MultiplexedConnection;
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
+    tracing::SpanKind,
     tx_validation::decode_transaction,
 };
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
@@ -142,7 +143,16 @@ impl MaestroService {
     /// spawned to check for and process any waiting transactions with sequential nonces.
     /// This allows the method to return quickly while potentially processing a chain of
     /// transactions in the background.
-    #[instrument(skip(self), err)]
+    #[instrument(
+        name = "transaction_submission",
+        skip(self, raw_tx),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Producer,
+            tx_hash = format!("0x{}", hex::encode(keccak256(raw_tx.as_ref()))),
+            chain_id, wallet = %wallet, tx_nonce
+        )
+    )]
     pub async fn handle_transaction_and_manage_nonces(
         self: &Arc<Self>,
         raw_tx: Bytes,
@@ -154,6 +164,7 @@ impl MaestroService {
         // Get wallet-specific lock
         let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
         let _guard = chain_wallet_lock.lock().await;
+        trace!(chain_id, %wallet, "got lock");
 
         let expected_nonce = self.get_cached_or_rpc_nonce(wallet, chain_id).await?;
         let tx_hash = keccak256(raw_tx.as_ref());
@@ -216,7 +227,6 @@ impl MaestroService {
     /// * Redis connection fails
     /// * Stream write operation fails
     /// * Producer creation fails
-    #[instrument(skip(self), err)]
     pub async fn enqueue_raw_transaction(
         &self,
         raw_tx: Bytes,
@@ -254,6 +264,15 @@ impl MaestroService {
     /// * Redis connection fails
     /// * RPC provider is missing for the specified chain
     /// * RPC request to fetch the nonce fails
+    #[instrument(
+        skip(self, signer),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Client,
+            wallet = %signer,
+            chain_id = %chain_id,
+        )
+    )]
     pub async fn get_cached_or_rpc_nonce(
         &self,
         signer: Address,
@@ -348,6 +367,7 @@ impl MaestroService {
     /// # Returns
     /// * `Ok(String)` - The result of the Redis SET operation if successful
     /// * `Err(Error)` - If the Redis operation fails
+    #[instrument(skip(self), err)]
     pub async fn increment_wallet_nonce(
         &self,
         chain_id: ChainId,
@@ -414,7 +434,14 @@ impl MaestroService {
     ///
     /// # Returns
     /// * `Result<(), Error>` - Result containing possible [`WaitingTransaction`] errors
-    #[instrument(skip(self), err)]
+    #[instrument(
+        name = "enqueue_waiting",
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Producer,
+        )
+    )]
     pub async fn check_for_and_enqueue_waiting_transactions(
         &self,
         chain_id: ChainId,
@@ -522,7 +549,6 @@ impl MaestroService {
     ///
     /// This method will log detailed error information when hex decoding fails, including the
     /// actual hex string that failed to decode.
-    #[instrument(skip(self), err)]
     pub async fn get_contiguous_waiting_transactions_from_cache(
         &self,
         chain_id: ChainId,
@@ -608,7 +634,13 @@ impl MaestroService {
     ///
     /// # Errors
     /// Returns an error if the Redis operation fails
-    #[instrument(skip(self), err)]
+    #[instrument(
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Consumer,
+        )
+    )]
     pub async fn remove_waiting_transactions_from_cache(
         &self,
         waiting_txns: &[WaitingTransactionId],

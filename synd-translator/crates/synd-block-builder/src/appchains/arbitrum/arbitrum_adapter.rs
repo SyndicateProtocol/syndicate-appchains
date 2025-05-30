@@ -152,7 +152,7 @@ impl ArbitrumAdapter {
         let mb_transactions = self.parse_block_to_mbtxs(block);
 
         if mb_transactions.is_empty() {
-            return Ok((0, Default::default()))
+            return Ok((0, Default::default()));
         }
 
         info!(

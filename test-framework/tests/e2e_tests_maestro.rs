@@ -69,8 +69,8 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await?
-                    == nonce + 1,
+                components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                    nonce + 1,
                 Duration::from_secs(5)
             );
 
@@ -79,6 +79,8 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             assert!(receipt.is_some());
             assert!(receipt.clone().unwrap().status());
             assert_eq!(receipt.unwrap().from, wallet_address);
+            
+            tokio::time::sleep(Duration::from_secs(30)).await;
             Ok(())
         },
     )
@@ -136,8 +138,8 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             );
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await?
-                    == nonce + 1,
+                components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                    nonce + 1,
                 Duration::from_secs(5)
             );
 
@@ -311,8 +313,8 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             // Wait for the transactions to be processed
             for address in &funded_addresses {
                 wait_until!(
-                    components_arc.appchain_provider.get_transaction_count(*address).await?
-                        == nonce + 1,
+                    components_arc.appchain_provider.get_transaction_count(*address).await? ==
+                        nonce + 1,
                     Duration::from_secs(3)
                 );
             }
@@ -595,8 +597,8 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             let tx_hash2 = components.send_maestro_tx_successful(&tx2.encoded_2718()).await?;
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await?
-                    == nonce + 1,
+                components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                    nonce + 1,
                 Duration::from_secs(5)
             );
 
@@ -698,8 +700,8 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             let tx_hash0 = components.send_maestro_tx_successful(&tx0.encoded_2718()).await?;
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await?
-                    == nonce + 3,
+                components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                    nonce + 3,
                 Duration::from_secs(5)
             );
 

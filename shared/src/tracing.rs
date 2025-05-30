@@ -1,11 +1,15 @@
 //! The `tracing` module contains code for setting up logs, tracing and metrics
 
-use std::collections::HashMap;
-
+pub use opentelemetry::{
+    global as otel_global,
+    propagation::TextMapPropagator,
+    trace::{SpanKind, Status as TraceStatus, TraceContextExt},
+};
 use opentelemetry::{trace::TracerProvider as _, KeyValue};
 use opentelemetry_otlp::{
     ExporterBuildError, MetricExporter as OtlpMetricExporter, SpanExporter as OtlpSpanExporter,
 };
+pub use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::{
     metrics::{MeterProviderBuilder, SdkMeterProvider, Temporality},
     trace::{RandomIdGenerator, Sampler, SdkTracerProvider},
@@ -16,8 +20,10 @@ use opentelemetry_semantic_conventions::{
     SCHEMA_URL,
 };
 use opentelemetry_stdout::SpanExporter as StdoutSpanExporter;
+use std::collections::HashMap;
 use thiserror::Error;
 use tracing::Span;
+pub use tracing_opentelemetry::OpenTelemetrySpanExt;
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{
     filter::{FromEnvError, LevelFilter, Targets},
@@ -25,12 +31,6 @@ use tracing_subscriber::{
     util::SubscriberInitExt as _,
     EnvFilter,
 };
-
-pub use opentelemetry::global as otel_global;
-pub use opentelemetry::propagation::TextMapPropagator;
-pub use opentelemetry::trace::Status as TraceStatus;
-pub use opentelemetry_sdk::propagation::TraceContextPropagator;
-pub use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 /// Percentage of traces to capture when debugging locally.
 pub const DEBUG_SAMPLING_RATE: f64 = 1.0;
@@ -124,6 +124,7 @@ fn init_tracer_provider(config: &ServiceTracingConfig) -> Result<SdkTracerProvid
 /// Initialize tracing-subscriber and return [`OtelGuard`]
 /// for OpenTelemetry-related termination processing.
 pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, Error> {
+    dbg!("TODO: setup tracing");
     let tracer_provider = init_tracer_provider(&config)?;
     // let meter_provider = init_meter_provider(&config)?;
 
@@ -175,8 +176,7 @@ pub fn setup_global_logging() -> Result<(), Error> {
         .map_err(|e| Error::DefaultLoggerInit(e.to_string()))
 }
 
-/// Extract the tracing context from the request headers
-/// and set it as the parent context for the current span.
+/// Extract the current tracing context from the global OpenTelemetry propagator.
 pub fn current_traceparent() -> Option<String> {
     let mut carrier = HashMap::new();
     otel_global::get_text_map_propagator(|propagator| propagator.inject(&mut carrier));

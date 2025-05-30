@@ -54,7 +54,7 @@ async fn new_provider(cfg: &Config) -> EthClient {
 #[allow(clippy::unwrap_used)]
 async fn main() {
     // Initialize logging
-    set_global_default_subscriber().unwrap();
+    setup_global_logging().unwrap();
 
     let cfg = Config::parse();
     let mut provider = new_provider(&cfg).await;

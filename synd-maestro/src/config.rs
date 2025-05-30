@@ -122,7 +122,7 @@ impl Config {
         let mut provider_map: HashMap<ChainId, Option<RpcProvider>> = HashMap::new();
 
         if self.chain_rpc_urls.is_empty() {
-            return Ok(provider_map)
+            return Ok(provider_map);
         }
 
         for (chain_id, url) in &self.chain_rpc_urls {

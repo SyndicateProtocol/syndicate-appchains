@@ -32,7 +32,7 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
         Ok(c) => c,
         Err(error) => {
             error!(%error, "error obtaining on-chain config");
-            return config.clone()
+            return config.clone();
         }
     };
 

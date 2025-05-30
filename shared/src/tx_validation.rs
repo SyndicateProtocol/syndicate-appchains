@@ -79,7 +79,7 @@ fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), RpcError>
 }
 
 /// Validate a transaction
-#[instrument(err)]
+#[instrument(skip(raw_tx), err)]
 pub fn validate_transaction(raw_tx: &Bytes) -> Result<(TxEnvelope, Address), RpcError> {
     debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
     // Check tx size

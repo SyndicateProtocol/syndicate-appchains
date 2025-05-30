@@ -18,7 +18,7 @@ use shared::{
         InvalidInputError::ChainIdMismatched,
         RpcError::{self, InvalidInput},
     },
-    tracing::extract_tracing_context,
+    tracing::{extract_tracing_context, SpanKind},
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
@@ -74,7 +74,13 @@ pub async fn run(
 }
 
 /// The handler for the `eth_sendRawTransaction` JSON-RPC method
-#[instrument(skip_all, err)]
+#[instrument(
+    skip_all,
+    err,
+    fields(
+        otel.kind = ?SpanKind::Server,
+    )
+)]
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
     service: Arc<MaestroService>,
@@ -121,7 +127,6 @@ fn get_request_chain_id(extensions: &Extensions) -> Option<ChainId> {
 }
 
 /// Returns `txn_chain_id` unwrapped if valid
-#[instrument(err)]
 fn validate_chain_id(
     request_chain_id: Option<ChainId>,
     txn_chain_id: Option<ChainId>,
