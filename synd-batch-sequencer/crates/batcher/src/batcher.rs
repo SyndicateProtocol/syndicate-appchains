@@ -8,7 +8,7 @@ use crate::{
 use alloy::{
     network::EthereumWallet,
     primitives::{keccak256, Address, Bytes},
-    providers::ProviderBuilder,
+    providers::{Provider, ProviderBuilder, WalletProvider},
     signers::local::PrivateKeySigner,
     transports::TransportError,
 };
@@ -247,6 +247,7 @@ impl Batcher {
     }
 
     async fn send_batch(&self, batch: SequencingBatch) -> Result<(), BatchError> {
+        self.record_wallet_balance().await?;
         debug!(
             %self.chain_id, "Batch sent - size: {} bytes",
             batch.len()
@@ -270,6 +271,15 @@ impl Batcher {
         }
         .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
 
+        Ok(())
+    }
+
+    async fn record_wallet_balance(&self) -> Result<()> {
+        let provider = self.sequencing_contract_provider.provider();
+        let wallet_address = provider.default_signer_address();
+
+        let balance = provider.get_balance(wallet_address).await?;
+        self.metrics.record_wallet_balance(balance.to());
         Ok(())
     }
 }
