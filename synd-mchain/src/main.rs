@@ -52,7 +52,7 @@ async fn main() -> eyre::Result<()> {
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
         .start(module);
-    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
