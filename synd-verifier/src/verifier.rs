@@ -13,7 +13,6 @@ use alloy::{
 };
 use eyre::Result;
 use shared::types::{convert_block_to_partial_block, Receipt};
-use std::collections::HashSet;
 use synd_block_builder::appchains::{
     arbitrum::arbitrum_adapter::ArbitrumAdapter,
     shared::sequencing_transaction_parser::SequencingTransactionParser,
@@ -30,7 +29,7 @@ pub struct Verifier {
 
 impl Verifier {
     /// Create a new `Verifier`
-    pub fn new(config: &VerifierConfig) -> Self {
+    pub const fn new(config: &VerifierConfig) -> Self {
         Self {
             arbitrum_adapter: ArbitrumAdapter {
                 transaction_parser: SequencingTransactionParser::new(
@@ -38,12 +37,6 @@ impl Verifier {
                 ),
                 bridge_address: config.arbitrum_bridge_address,
                 inbox_address: config.arbitrum_inbox_address,
-                ignore_delayed_messages: config.arbitrum_ignore_delayed_messages,
-                allowed_settlement_addresses: config
-                    .allowed_settlement_addresses
-                    .iter()
-                    .copied()
-                    .collect::<HashSet<_>>(),
             },
         }
     }

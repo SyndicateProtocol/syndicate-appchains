@@ -45,6 +45,7 @@ tracing           = { workspace = true }
 ctor       = { workspace = true }
 once_cell  = { workspace = true }
 rand       = { workspace = true }
+reqwest    = { workspace = true }
 test-utils = { workspace = true }
 wiremock   = { workspace = true }
 

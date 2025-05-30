@@ -11,6 +11,7 @@ pub struct MaestroMetrics {
     maestro_enqueued_transactions_total: Gauge,
     maestro_waiting_transactions_total: Gauge,
     maestro_successful_transactions_total: Gauge,
+    maestro_resubmitted_transactions_total: Gauge,
 }
 
 impl MaestroMetrics {
@@ -22,6 +23,7 @@ impl MaestroMetrics {
             maestro_enqueued_transactions_total: Gauge::default(),
             maestro_waiting_transactions_total: Gauge::default(),
             maestro_successful_transactions_total: Gauge::default(),
+            maestro_resubmitted_transactions_total: Gauge::default(),
         };
 
         registry.register(
@@ -54,6 +56,12 @@ impl MaestroMetrics {
             metrics.maestro_successful_transactions_total.clone(),
         );
 
+        registry.register(
+            "maestro_resubmitted_transactions_total",
+            "Total number of transactions re-submitted to the stream",
+            metrics.maestro_resubmitted_transactions_total.clone(),
+        );
+
         metrics
     }
 
@@ -75,5 +83,9 @@ impl MaestroMetrics {
 
     pub fn increment_maestro_successful_transactions_total(&self, count: usize) {
         self.maestro_successful_transactions_total.inc_by(count as i64);
+    }
+
+    pub fn increment_maestro_resubmitted_transactions_total(&self, count: usize) {
+        self.maestro_resubmitted_transactions_total.inc_by(count as i64);
     }
 }
