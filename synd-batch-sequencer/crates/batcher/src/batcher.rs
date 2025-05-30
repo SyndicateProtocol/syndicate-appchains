@@ -107,8 +107,8 @@ pub async fn run_batcher(
     Ok(handle)
 }
 
-/// Checks if the Valkey connection is healthy
-/// This method attempts to ping the Valkey connection to check if it is healthy.
+/// Checks if the cache connection is healthy
+/// This method attempts to ping the cache connection to check if it is healthy.
 fn health_handler(
     valkey_conn: MultiplexedConnection,
 ) -> MethodRouter<std::sync::Arc<MetricsState>> {
