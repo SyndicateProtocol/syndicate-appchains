@@ -79,8 +79,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             assert!(receipt.is_some());
             assert!(receipt.clone().unwrap().status());
             assert_eq!(receipt.unwrap().from, wallet_address);
-            
-            tokio::time::sleep(Duration::from_secs(30)).await;
+
             Ok(())
         },
     )

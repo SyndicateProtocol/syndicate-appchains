@@ -178,8 +178,11 @@ pub fn setup_global_logging() -> Result<(), Error> {
 
 /// Extract the current tracing context from the global OpenTelemetry propagator.
 pub fn current_traceparent() -> Option<String> {
+    let context = Span::current().context();
     let mut carrier = HashMap::new();
-    otel_global::get_text_map_propagator(|propagator| propagator.inject(&mut carrier));
+    otel_global::get_text_map_propagator(|propagator| {
+        propagator.inject_context(&context, &mut carrier)
+    });
     carrier.get("traceparent").cloned()
 }
 

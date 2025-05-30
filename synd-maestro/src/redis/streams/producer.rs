@@ -103,6 +103,7 @@ impl StreamProducer {
         err,
         fields(
             otel.kind = ?SpanKind::Producer,
+            traceparent_key_value = %current_traceparent().unwrap_or_else(|| "none".to_string()),
             tx_hash = format!("0x{}", hex::encode(keccak256(&raw_tx))),
             stream_key = %self.stream_key
         )
