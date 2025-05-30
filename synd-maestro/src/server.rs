@@ -61,9 +61,16 @@ pub async fn run(
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
 
     // Register health method (this will be hit by the health check middleware)
-    module.register_method("health", |_, _, _| {
-        Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true}))
-    })?;
+    module.register_async_method(
+        "health",
+        |_, service: Arc<Arc<MaestroService>>, _| async move {
+            let health = service.health().await;
+            match health {
+                Ok(true) => Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true})),
+                _ => Err(ErrorCode::InternalError),
+            }
+        },
+    )?;
 
     // TODO (SEQ-908): Background job to unstick `waiting txn` cache
 
@@ -153,8 +160,11 @@ fn validate_chain_id(
 mod tests {
     use super::*;
     use http::Extensions;
-    use shared::json_rpc::InvalidInputError::ChainIdMismatched;
-    use std::collections::HashMap;
+    use reqwest;
+    use shared::{
+        json_rpc::InvalidInputError::ChainIdMismatched, service_start_utils::MetricsState,
+    };
+    use std::{collections::HashMap, time::Duration};
 
     #[test]
     fn test_get_request_chain_id_valid_chain_id() {
@@ -237,5 +247,40 @@ mod tests {
     fn test_validate_chain_id_both_none() {
         let result = validate_chain_id(None, None);
         assert!(matches!(result, Err(InvalidInput(ChainIdMismatched(_, _)))));
+    }
+
+    #[tokio::test]
+    async fn test_health_endpoint() {
+        let mut metrics_state = MetricsState::default();
+        let metrics = MaestroMetrics::new(&mut metrics_state.registry);
+        let mut config = Config::default();
+
+        // Start Valkey container for testing
+        let (valkey, valkey_url) = test_utils::docker::start_valkey().await.unwrap();
+        config.valkey_url = valkey_url;
+
+        // Create and run server
+        let (addr, shutdown_fn) = run(config, metrics).await.unwrap();
+
+        // Create HTTP client
+        let client = reqwest::Client::new();
+
+        // Test health endpoint
+        let response = client.get(format!("http://{}/health", addr)).send().await.unwrap();
+        assert_eq!(response.status(), 200);
+        assert_eq!(
+            response.json::<JsonValue>().await.unwrap(),
+            serde_json::json!({"health": true})
+        );
+
+        // Stop Valkey container
+        drop(valkey);
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // Test unhealthy health endpoint
+        let response = client.get(format!("http://{}/health", addr)).send().await.unwrap();
+        assert_eq!(response.status(), 500);
+        // Cleanup
+        shutdown_fn().await.unwrap();
     }
 }

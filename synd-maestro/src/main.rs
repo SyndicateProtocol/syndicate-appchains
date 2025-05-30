@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
 
     let mut metrics_state = MetricsState::default();
     let metrics = MaestroMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port, None));
 
     // Server::run now creates the service internally and returns a shutdown function
     // that also handles stopping the server handle.
