@@ -12,6 +12,7 @@ pub struct BatcherMetrics {
     pub batch_processing_time_ms: Gauge,
     pub batch_submission_latency_ms: Gauge,
     pub total_txs_processed: Gauge,
+    pub wallet_balance: Gauge,
 }
 
 impl BatcherMetrics {
@@ -23,6 +24,7 @@ impl BatcherMetrics {
             batch_processing_time_ms: Gauge::default(),
             batch_submission_latency_ms: Gauge::default(),
             total_txs_processed: Gauge::default(),
+            wallet_balance: Gauge::default(),
         };
 
         registry.register(
@@ -60,6 +62,12 @@ impl BatcherMetrics {
             metrics.total_txs_processed.clone(),
         );
 
+        registry.register(
+            "wallet_balance",
+            "Current wallet balance in wei",
+            metrics.wallet_balance.clone(),
+        );
+
         metrics
     }
 
@@ -90,5 +98,86 @@ impl BatcherMetrics {
 
     pub fn increment_total_txs_processed(&self, count: usize) {
         self.total_txs_processed.inc_by(count as i64);
+    }
+
+    pub fn record_wallet_balance(&self, balance: u128) {
+        self.wallet_balance.set(balance as i64);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use prometheus_client::registry::Registry;
+
+    #[test]
+    fn test_new_metrics_initialization() {
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        assert_eq!(metrics.batch_transactions_count.get(), 0);
+    }
+
+    #[test]
+    fn test_record_batch_transactions() {
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        metrics.record_batch_transactions(10);
+        assert_eq!(metrics.batch_transactions_count.get(), 10);
+    }
+
+    #[test]
+    fn test_record_batch_size() {
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        metrics.record_batch_size(1000);
+        assert_eq!(metrics.batch_size_bytes.get(), 1000);
+    }
+
+    #[test]
+    fn test_record_compression_ratio() {
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        metrics.record_compression_ratio(1000, 500);
+        assert_eq!(metrics.batch_compression_ratio.get(), 50);
+    }
+
+    #[test]
+    fn test_record_processing_time() {
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        metrics.record_processing_time(Duration::from_millis(100));
+        assert_eq!(metrics.batch_processing_time_ms.get(), 100);
+    }
+
+    #[test]
+    fn test_record_submission_latency() {
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        metrics.record_submission_latency(Duration::from_millis(100));
+        assert_eq!(metrics.batch_submission_latency_ms.get(), 100);
+    }
+
+    #[test]
+    fn test_increment_total_txs_processed() {
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        metrics.increment_total_txs_processed(10);
+        assert_eq!(metrics.total_txs_processed.get(), 10);
+    }
+
+    #[test]
+    fn test_record_wallet_balance() {
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        metrics.record_wallet_balance(1000000000000000000);
+        assert_eq!(metrics.wallet_balance.get(), 1000000000000000000);
     }
 }
