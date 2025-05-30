@@ -31,6 +31,21 @@ repos:
         language: system
         types: [rust]
         pass_filenames: false
+        args:
+          [
+            "Cargo.toml",
+            "shared",
+            "synd-batch-sequencer",
+            "synd-maestro",
+            "synd-mchain",
+            "synd-translator",
+            "synd-verifier",
+            "synd-withdrawals/synd-appchain-verifier",
+            "synd-withdrawals/synd-proposer",
+            "synd-withdrawals/synd-tee-attestion-zk-proofs/aws-nitro",
+            "synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program",
+            "test-framework",
+          ]
       - id: forge-fmt
         name: forge fmt
         entry: forge fmt

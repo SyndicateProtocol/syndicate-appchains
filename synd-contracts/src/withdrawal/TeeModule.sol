@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {AssertionPoster} from "./AssertionPoster.sol";
+import {ITeeKeyManager} from "./ITeeKeyManager.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -59,12 +60,6 @@ function hash_object(PendingAssertion calldata a) pure returns (bytes32) {
     return keccak256(abi.encodePacked(a.blockHash, a.sendRoot, a.seqBlockHash));
 }
 
-event TeeKeysRevoked();
-
-event TeeProgramAdded(bytes32 hash);
-
-event TeeProgramRemoved(bytes32 hash);
-
 event TeeAppchainConfigHash(bytes32 configHash, bytes32 blockHash);
 
 event TeeSeqConfigHash(bytes32 configHash, bytes32 blockHash);
@@ -83,14 +78,12 @@ contract TeeModule is Ownable(msg.sender) {
     AssertionPoster public immutable poster;
     IBridge public immutable bridge;
     IL1Block public immutable l1block;
+    ITeeKeyManager public immutable teeKeyManager;
 
     // TEE variables
     TeeTrustedInput public teeTrustedInput;
     PendingAssertion[] public pendingAssertions;
     uint256 public teeHackCount;
-    bytes32[] public teePrograms;
-    mapping(bytes32 => address[]) public teeProgramKeys;
-    mapping(address => bool) public isTeeKey;
     uint64 public challengeWindowEnd;
     uint64 public challengeWindowDuration;
 
@@ -116,7 +109,7 @@ contract TeeModule is Ownable(msg.sender) {
         bytes32 l1StartBlockHash_,
         IL1Block l1block_,
         uint64 challengeWindowDuration_,
-        bytes32 teeProgram
+        ITeeKeyManager teeKeyManager_
     ) {
         challengeWindowDuration = challengeWindowDuration_;
         require(
@@ -128,6 +121,12 @@ contract TeeModule is Ownable(msg.sender) {
         poster = poster_;
         require(bridge_.delayedMessageCount() > 0, "insufficient delayed messages in bridge");
         bridge = bridge_;
+
+        require(
+            address(teeKeyManager_).code.length > 0,
+            "teeKeyManager address does not have any code"
+        );
+        teeKeyManager = teeKeyManager_;
 
         // appchain
         teeTrustedInput.appchainConfigHash = appchainConfigHash_;
@@ -141,10 +140,6 @@ contract TeeModule is Ownable(msg.sender) {
 
         // l1 chain
         teeTrustedInput.l1StartBlockHash = l1StartBlockHash_;
-
-        require(teeProgram != 0, "tee program hash must be non-zero");
-        teePrograms.push(teeProgram);
-        emit TeeProgramAdded(teeProgram);
 
         closeChallengeWindow();
     }
@@ -187,7 +182,7 @@ contract TeeModule is Ownable(msg.sender) {
         require(signature.length == 65, "invalid signature length");
         bytes32 assertionHash = hash_object(assertion);
         bytes32 payload_hash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
-        require(isTeeKey[payload_hash.recover(signature)], "invalid tee signature");
+        require(teeKeyManager.isKeyValid(payload_hash.recover(signature)), "invalid tee signature");
         require(assertion.blockHash != teeTrustedInput.appchainStartBlockHash, "appchain block hash unchanged");
         for (uint256 i = 0; i < pendingAssertions.length; i++) {
             require(assertionHash != hash_object(pendingAssertions[i]), "assertion already exists");
@@ -219,53 +214,6 @@ contract TeeModule is Ownable(msg.sender) {
             }
         }
         revert("assertion not found");
-    }
-
-    function addTeeKey(address publicKey, bytes32 programHash, bytes calldata zkProof) external {
-        // todo: validate the zk proof
-        require(zkProof.length == 1, "todo: validate zk zkProof");
-        require(!isTeeKey[publicKey], "key already added");
-        if (teeProgramKeys[programHash].length == 0) {
-            bool found = false;
-            for (uint256 i = teePrograms.length; i > 0; i--) {
-                if (teePrograms[i - 1] == programHash) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                return;
-            }
-        }
-        isTeeKey[publicKey] = true;
-        teeProgramKeys[programHash].push(publicKey);
-    }
-
-    function revokeAllTeeKeys() external onlyOwner {
-        for (uint256 i = 0; i < teePrograms.length; i++) {
-            removeTeeProgram(teePrograms[i]);
-        }
-        delete teePrograms;
-        emit TeeKeysRevoked();
-    }
-
-    // TODO: should this function be removed?
-    function addTeeProgram(bytes32 hash) external onlyOwner {
-        for (uint256 i = 0; i < teePrograms.length; i++) {
-            require(teePrograms[i] != hash, "tee program already exists");
-        }
-        teePrograms.push(hash);
-        emit TeeProgramAdded(hash);
-    }
-
-    // TODO: should this function be removed?
-    function removeTeeProgram(bytes32 hash) public onlyOwner {
-        require(pendingAssertions.length == 0, "cannot remove tee program while assertion is pending");
-        for (uint256 i = 0; i < teeProgramKeys[hash].length; i++) {
-            isTeeKey[teeProgramKeys[hash][i]] = false;
-        }
-        delete teeProgramKeys[hash];
-        emit TeeProgramRemoved(hash);
     }
 
     // TODO: should this function be removed?
