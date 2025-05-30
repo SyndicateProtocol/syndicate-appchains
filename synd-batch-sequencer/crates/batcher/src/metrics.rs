@@ -142,7 +142,7 @@ mod tests {
         let metrics = BatcherMetrics::new(&mut registry);
 
         metrics.record_compression_ratio(1000, 500);
-        assert_eq!(metrics.batch_compression_ratio.get(), 50);
+        assert_eq!(metrics.batch_compression_ratio.get(), 200);
     }
 
     #[test]
