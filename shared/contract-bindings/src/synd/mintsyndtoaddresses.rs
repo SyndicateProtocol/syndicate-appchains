@@ -40,7 +40,7 @@ interface MintSYNDToAddresses {
       {
         "name": "",
         "type": "address",
-        "internalType": "contract SyndicateToken"
+        "internalType": "contract TestnetSyndToken"
       }
     ],
     "stateMutability": "view"
