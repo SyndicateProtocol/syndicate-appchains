@@ -7,7 +7,7 @@ use std::{
     io::Write,
     os::unix::fs::{FileExt, MetadataExt as _},
 };
-use tracing::info;
+use tracing::warn;
 
 /// Append-only db trait
 #[allow(missing_docs)]
@@ -39,17 +39,19 @@ impl AppendOnlyDB {
         let file_size = file.metadata()?.size();
         let mut last_index_end_offset = u64::from_be_bytes(index_db.get(index_db.count));
         while index_db.count > 0 && file_size < last_index_end_offset {
-            info!("removing corrupt entry {} from db", index_db.count);
+            warn!("removing corrupt entry {} from db", index_db.count);
             index_db.truncate(index_db.count - 1);
             last_index_end_offset = u64::from_be_bytes(index_db.get(index_db.count));
         }
         #[allow(clippy::comparison_chain)]
         if file_size < last_index_end_offset {
-            info!("file is fully corrupt! clearing db");
-            file.set_len(0)?;
+            if file_size > 0 {
+                warn!("file is fully corrupt! clearing db");
+                file.set_len(0)?;
+            }
             file.write_all(header)?;
         } else if file_size > last_index_end_offset {
-            info!("removing corrupt entry from db");
+            warn!("removing corrupt entry from db");
             file.set_len(last_index_end_offset)?;
         }
         let mut new_header = vec![0; header.len()];

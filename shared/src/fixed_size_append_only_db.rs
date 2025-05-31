@@ -5,7 +5,7 @@ use std::{
     io::Write,
     os::unix::fs::{FileExt, MetadataExt as _},
 };
-use tracing::info;
+use tracing::{info, warn};
 
 #[allow(missing_docs)]
 pub trait FixedSizeAppendOnlyT<const ITEM_SIZE: usize> {
@@ -36,7 +36,7 @@ impl<const ITEM_SIZE: usize> FixedSizeAppendOnlyDB<ITEM_SIZE> {
             file.set_len(0)?;
             file.write_all(header)?;
         } else if metadata_size % ITEM_SIZE as u64 != 0 {
-            info!("removing corrupt entry from fixed size db");
+            warn!("removing corrupt entry from fixed size db");
             file.set_len(metadata_size - (metadata_size % ITEM_SIZE as u64))?;
         }
         let size = file.metadata()?.size();
