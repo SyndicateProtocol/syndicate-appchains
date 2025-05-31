@@ -1164,6 +1164,7 @@ name = "batcher"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "axum",
  "byte-unit",
  "clap",
  "contract-bindings",
@@ -1174,7 +1175,9 @@ dependencies = [
  "mockall",
  "prometheus-client",
  "redis",
+ "reqwest",
  "rlp 0.6.1",
+ "serde_json",
  "shared",
  "synd-maestro",
  "test-utils",
@@ -4698,6 +4701,7 @@ dependencies = [
  "prometheus-client",
  "rand 0.9.0",
  "redis",
+ "reqwest",
  "serde_json",
  "shared",
  "test-utils",

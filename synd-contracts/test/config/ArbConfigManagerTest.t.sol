@@ -17,7 +17,6 @@ contract ArbConfigManagerTest is Test {
     uint256 public constant SEQUENCING_CHAIN_ID = 654321;
     address public constant ARBITRUM_BRIDGE_ADDRESS = address(0x1234);
     address public constant ARBITRUM_INBOX_ADDRESS = address(0x5678);
-    bool public constant ARBITRUM_IGNORE_DELAYED_MESSAGES = false;
     uint256 public constant SETTLEMENT_DELAY = 10;
     uint256 public constant SETTLEMENT_START_BLOCK = 100;
     address public constant SEQUENCING_CONTRACT_ADDRESS = address(0x9ABC);
@@ -25,15 +24,7 @@ contract ArbConfigManagerTest is Test {
     string public constant DEFAULT_RPC_URL = "https://example.com/rpc";
     string public constant APPCHAIN_BLOCK_EXPLORER_URL = "https://example.com/explorer";
 
-    // Define allowed settlement addresses for testing
-    address[] public ALLOWED_SETTLEMENT_ADDRESSES;
-
     function setUp() public {
-        // Initialize allowed settlement addresses
-        ALLOWED_SETTLEMENT_ADDRESSES = new address[](2);
-        ALLOWED_SETTLEMENT_ADDRESSES[0] = address(0xABCD);
-        ALLOWED_SETTLEMENT_ADDRESSES[1] = address(0xEF12);
-
         vm.startPrank(owner);
         configManager = new ArbConfigManager(owner);
         vm.stopPrank();
@@ -68,15 +59,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Verify the deployed address is stored correctly
@@ -99,7 +88,6 @@ contract ArbConfigManagerTest is Test {
         assertEq(chainConfig.SEQUENCING_CHAIN_ID(), SEQUENCING_CHAIN_ID);
         assertEq(chainConfig.ARBITRUM_BRIDGE_ADDRESS(), ARBITRUM_BRIDGE_ADDRESS);
         assertEq(chainConfig.ARBITRUM_INBOX_ADDRESS(), ARBITRUM_INBOX_ADDRESS);
-        assertEq(chainConfig.ARBITRUM_IGNORE_DELAYED_MESSAGES(), ARBITRUM_IGNORE_DELAYED_MESSAGES);
         assertEq(chainConfig.SETTLEMENT_DELAY(), SETTLEMENT_DELAY);
         assertEq(chainConfig.SETTLEMENT_START_BLOCK(), SETTLEMENT_START_BLOCK);
         assertEq(chainConfig.SEQUENCING_CONTRACT_ADDRESS(), SEQUENCING_CONTRACT_ADDRESS);
@@ -107,10 +95,6 @@ contract ArbConfigManagerTest is Test {
         assertEq(chainConfig.INITIAL_APPCHAIN_OWNER(), appchainOwner);
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), DEFAULT_RPC_URL);
         assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), APPCHAIN_BLOCK_EXPLORER_URL);
-
-        // Verify allowed settlement addresses
-        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(0), ALLOWED_SETTLEMENT_ADDRESSES[0]);
-        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(1), ALLOWED_SETTLEMENT_ADDRESSES[1]);
 
         vm.stopPrank();
     }
@@ -125,15 +109,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Attempt to deploy a duplicate config
@@ -144,15 +126,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         vm.stopPrank();
@@ -168,15 +148,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         vm.stopPrank();
@@ -192,15 +170,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
     }
 
@@ -213,15 +189,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Get the stored address
@@ -243,15 +217,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Now that it's deployed, the getArbChainConfigAddress should return the deployed address
@@ -277,15 +249,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Get the current implementation
@@ -363,15 +333,13 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
             SETTLEMENT_DELAY,
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL,
-            ALLOWED_SETTLEMENT_ADDRESSES
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Verify the addresses match

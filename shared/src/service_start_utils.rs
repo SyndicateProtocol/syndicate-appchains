@@ -4,7 +4,7 @@ use axum::{
     extract::State,
     http::{header::CONTENT_TYPE, StatusCode},
     response::{IntoResponse, Json, Response},
-    routing::get,
+    routing::{get, MethodRouter},
     Router,
 };
 use prometheus_client::{encoding::text::encode, registry::Registry};
@@ -22,12 +22,15 @@ pub struct MetricsState {
 pub async fn start_metrics_and_health(
     metrics_state: MetricsState,
     port: u16,
+    health_handler: Option<MethodRouter<Arc<MetricsState>>>,
 ) -> tokio::task::JoinHandle<()> {
     info!("starting metrics on port {}", port);
     let state = Arc::new(metrics_state);
+    let health_route =
+        health_handler.map_or_else(|| get(default_health_handler), |handler| handler);
     let router = Router::new()
         .route("/metrics", get(metrics_handler))
-        .route("/health", get(health_handler))
+        .route("/health", health_route)
         .with_state(state);
 
     let listener = match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await {
@@ -64,6 +67,6 @@ async fn metrics_handler(
 }
 
 /// Handler for the `/health` endpoint, returning a simple 200 OK and JSON response.
-pub async fn health_handler() -> impl IntoResponse {
+pub async fn default_health_handler() -> impl IntoResponse {
     Json(serde_json::json!({ "health": true }))
 }

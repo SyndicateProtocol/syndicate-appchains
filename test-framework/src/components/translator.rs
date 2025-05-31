@@ -6,7 +6,6 @@ pub(super) struct TranslatorConfig {
     pub(crate) arbitrum_bridge_address: Option<Address>,
     pub(crate) arbitrum_inbox_address: Option<Address>,
     pub(crate) sequencing_contract_address: Option<Address>,
-    pub(crate) arbitrum_ignore_delayed_messages: Option<bool>,
     pub(crate) config_manager_address: Option<Address>,
     pub(crate) appchain_chain_id: Option<u64>,
     pub(crate) mchain_rpc_url: String,
@@ -56,10 +55,6 @@ impl TranslatorConfig {
 
         if let Some(delay) = self.settlement_delay {
             args.extend(vec!["--settlement-delay".to_string(), delay.to_string()]);
-        }
-
-        if let Some(ignore) = self.arbitrum_ignore_delayed_messages {
-            args.extend(vec!["--arbitrum-ignore-delayed-messages".to_string(), ignore.to_string()]);
         }
 
         if let Some(addr) = self.sequencing_contract_address {
