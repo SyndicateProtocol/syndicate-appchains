@@ -30,6 +30,17 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup component add clippy
 
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up 
+          ~/.sp1/bin/cargo-prove prove --version
+  
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program
+          ~/.sp1/bin/cargo-prove build
+
       # Cache Cargo dependencies
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
@@ -144,6 +155,17 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
+
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up 
+          ~/.sp1/bin/cargo-prove prove --version
+
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program
+          ~/.sp1/bin/cargo-prove build
       
       - name: Verify Foundry Installation
         run: |
