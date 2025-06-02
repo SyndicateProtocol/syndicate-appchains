@@ -8,7 +8,7 @@ import {IAttestationDocVerifier} from "./IAttestationDocVerifier.sol";
 /**
  * @title TeeKeyManager Contract
  * @notice Manages TEE program hashes and their associated public keys.
- * Allows an owner to add/remove programs and keys, and provides a function
+ * Allows anyone to add a key, by providing a proof for a valid attestation document.
  * to check if a given key is valid (i.e., associated with an active program).
  */
 contract TeeKeyManager is ITeeKeyManager, Ownable {
@@ -56,7 +56,7 @@ contract TeeKeyManager is ITeeKeyManager, Ownable {
      * @param _attestationDocVerifier The new attestation doc verifier.
      */
     function updateAttestationDocVerifier(IAttestationDocVerifier _attestationDocVerifier) external onlyOwner {
-        this.revokeAllKeys();
+        revokeAllKeys();
         attestationDocVerifier = _attestationDocVerifier;
     }
 }
