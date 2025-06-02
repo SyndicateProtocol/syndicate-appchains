@@ -39,7 +39,7 @@ jobs:
       - name: Build SP1 ELF program
         run: |
           cd synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program
-          ~/.sp1/bin/cargo-prove build
+          ~/.sp1/bin/cargo-prove prove build
 
       # Cache Cargo dependencies
       - name: Cache dependencies
@@ -165,7 +165,7 @@ jobs:
       - name: Build SP1 ELF program
         run: |
           cd synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program
-          ~/.sp1/bin/cargo-prove build
+          ~/.sp1/bin/cargo-prove prove build
       
       - name: Verify Foundry Installation
         run: |
