@@ -14,7 +14,7 @@ import {SyndicateFactory} from "src/SyndicateFactory.sol";
 contract DeploySyndicateFactoryDirect is Script {
     function run() public {
         // The fixed salt for CREATE2 deployment
-        bytes32 factorySalt = keccak256("SYNDICATE_FACTORY_v1.1");
+        bytes32 factorySalt = keccak256("SYNDICATE_FACTORY_v1");
 
         // MUST use the same private key (resulting in the same deployer address) across all chains
         uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
