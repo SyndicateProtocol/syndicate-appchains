@@ -96,7 +96,7 @@ async fn main() {
         std::process::exit(0);
     });
 
-    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
     loop {
         if let Err(err) = ingestor::run(&ctx, &provider, &metrics).await {
             error!("ingestor failed: {}", err);

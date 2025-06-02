@@ -8,15 +8,23 @@ use crate::{
 use alloy::{
     network::EthereumWallet,
     primitives::{keccak256, Address, Bytes},
-    providers::ProviderBuilder,
+    providers::{Provider, ProviderBuilder, WalletProvider},
     signers::local::PrivateKeySigner,
     transports::TransportError,
+};
+use axum::{
+    http::StatusCode,
+    response::Json,
+    routing::{get, MethodRouter},
 };
 use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::Client as RedisClient;
-use shared::types::FilledProvider;
+use redis::{aio::MultiplexedConnection, AsyncCommands, Client as RedisClient};
+use shared::{
+    service_start_utils::{start_metrics_and_health, MetricsState},
+    types::FilledProvider,
+};
 use std::{
     collections::VecDeque,
     str::FromStr,
@@ -64,7 +72,7 @@ enum BatchError {
 pub async fn run_batcher(
     config: &BatcherConfig,
     sequencing_contract_address: Address,
-    metrics: BatcherMetrics,
+    metrics_port: u16,
 ) -> Result<JoinHandle<()>> {
     let client = RedisClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
@@ -72,7 +80,13 @@ pub async fn run_batcher(
     let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
         eyre!("Failed to get Valkey connection: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
-    let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+    let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
+
+    // Start metrics and health endpoints
+    let mut metrics_state = MetricsState::default();
+    let metrics = BatcherMetrics::new(&mut metrics_state.registry);
+    let health_handler = health_handler(conn);
+    tokio::spawn(start_metrics_and_health(metrics_state, metrics_port, Some(health_handler)));
 
     let sequencing_contract_provider =
         create_sequencing_contract_provider(config, sequencing_contract_address).await?;
@@ -91,6 +105,30 @@ pub async fn run_batcher(
     });
     info!("Batcher job started");
     Ok(handle)
+}
+
+/// Checks if the cache connection is healthy
+/// This method attempts to ping the cache connection to check if it is healthy.
+fn health_handler(
+    valkey_conn: MultiplexedConnection,
+) -> MethodRouter<std::sync::Arc<MetricsState>> {
+    let mut conn = valkey_conn;
+    get(move || async move {
+        let health: Result<String, _> = conn.ping().await;
+        match health {
+            Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
+            Err(e) => {
+                error!("Cache connection is not healthy: {:?}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "health": false,
+                        "message": "Cache connection is not healthy"
+                    })),
+                )
+            }
+        }
+    })
 }
 
 async fn create_sequencing_contract_provider(
@@ -231,8 +269,26 @@ impl Batcher {
             }
         }
         .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
+        self.record_wallet_balance();
 
         Ok(())
+    }
+
+    fn record_wallet_balance(&self) {
+        let provider = self.sequencing_contract_provider.provider().clone();
+        let metrics = self.metrics.clone();
+        tokio::spawn(async move {
+            let wallet_address = provider.default_signer_address();
+
+            match provider.get_balance(wallet_address).await {
+                Ok(balance) => {
+                    metrics.record_wallet_balance(balance.to());
+                }
+                Err(e) => {
+                    error!("Failed to get wallet balance: {:?}", e);
+                }
+            }
+        });
     }
 }
 
@@ -246,10 +302,10 @@ mod tests {
         transports::mock::Asserter,
     };
     use prometheus_client::registry::Registry;
+    use reqwest;
     use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
-    use test_utils::{docker::start_valkey, wait_until};
+    use test_utils::{docker::start_valkey, port_manager::PortManager, wait_until};
     use url::Url;
-
     // Create a mock provider that always succeeds
     async fn create_mock_contract(
         anvil: Option<&AnvilInstance>,
@@ -506,5 +562,42 @@ mod tests {
 
         wait_until!(metrics_clone.total_txs_processed.get() == 20, Duration::from_secs(10));
         drop(anvil);
+    }
+
+    #[tokio::test]
+    async fn test_health_endpoint() {
+        let (valkey, valkey_url) = start_valkey().await.unwrap();
+        let config = BatcherConfig {
+            max_batch_size: byte_unit::Byte::from_u64(1024),
+            valkey_url,
+            chain_id: 1,
+            compression_enabled: true,
+            timeout: Duration::from_millis(200),
+            private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
+                .to_string(),
+            sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+        };
+        let metrics_port = PortManager::instance().next_port().await;
+        let sequencing_contract_address = Address::ZERO;
+
+        let _handle =
+            run_batcher(&config, sequencing_contract_address, metrics_port).await.unwrap();
+
+        let url = format!("http://0.0.0.0:{}/health", metrics_port);
+
+        let client = reqwest::Client::new();
+
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // Should succeed
+        let response = client.get(&url).send().await.unwrap();
+        assert_eq!(response.status(), 200);
+
+        // Close Valkey container and test failure
+        drop(valkey);
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        let response = client.get(&url).send().await.unwrap();
+        assert_eq!(response.status(), 500);
     }
 }

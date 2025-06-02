@@ -25,7 +25,7 @@ use crate::{
 use alloy::{
     consensus::{Transaction, TxEnvelope},
     hex,
-    primitives::{keccak256, Address, Bytes, ChainId, B256, U256},
+    primitives::{keccak256, utils::format_ether, Address, Bytes, ChainId, B256, U256},
     providers::Provider,
 };
 use redis::{aio::MultiplexedConnection, AsyncCommands};
@@ -76,6 +76,7 @@ impl MaestroService {
     async fn create_stream_producers(&mut self) {
         for (chain_id, provider) in &self.rpc_providers {
             let provider_clone = provider.clone();
+            let metrics_clone = self.metrics.clone();
             self.producers.insert(
                 *chain_id,
                 Arc::new(
@@ -86,9 +87,13 @@ impl MaestroService {
                         self.config.finalization_duration,
                         self.config.max_transaction_retries,
                         move |raw_tx: &[u8]| {
-                            let provider = provider_clone.clone();
+                            let provider_clone = provider_clone.clone();
+                            let metrics_clone = metrics_clone.clone();
                             let tx_data = raw_tx.to_vec();
-                            async move { Self::handle_finalization(tx_data, &provider).await }
+                            async move {
+                                Self::handle_finalization(tx_data, &provider_clone, &metrics_clone)
+                                    .await
+                            }
                         },
                     )
                     .await,
@@ -113,6 +118,7 @@ impl MaestroService {
     async fn handle_finalization(
         raw_tx: Vec<u8>,
         provider: &RpcProvider,
+        metrics: &MaestroMetrics,
     ) -> CheckFinalizationResult {
         let tx_hash = keccak256(raw_tx.clone());
         match provider.get_transaction_receipt(tx_hash).await {
@@ -128,6 +134,7 @@ impl MaestroService {
                     Ok(nonce) => {
                         if nonce == tx.nonce() {
                             debug!(%tx_hash, "Valid transaction is not finalized, resubmitting");
+                            metrics.increment_maestro_resubmitted_transactions_total(1);
                             return CheckFinalizationResult::ReSubmit;
                         }
                         debug!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
@@ -147,12 +154,14 @@ impl MaestroService {
     }
 
     /// Performs gas and balance checks for a transaction.
+    ///
+    /// Returns `account_balance` of `wallet` in `wei`
     async fn check_sender_wallet_balance(
         &self,
         tx: &TxEnvelope,
         chain_id: ChainId,
         wallet: Address,
-    ) -> Result<(), MaestroRpcError> {
+    ) -> Result<U256, MaestroRpcError> {
         let account_balance =
             self.get_rpc_provider(&chain_id)?.get_balance(wallet).await.map_err(|e| {
                 error!(%chain_id, %wallet, %e, "Failed to fetch account balance for gas check");
@@ -161,7 +170,7 @@ impl MaestroService {
         Self::balance_check(tx, account_balance)
     }
 
-    fn balance_check(tx: &TxEnvelope, account_balance: U256) -> Result<(), MaestroRpcError> {
+    fn balance_check(tx: &TxEnvelope, account_balance: U256) -> Result<U256, MaestroRpcError> {
         let tx_hash_str = format!("0x{}", hex::encode(tx.hash()));
         let max_gas_cost = U256::from(tx.gas_limit())
             .checked_mul(U256::from(tx.max_fee_per_gas()))
@@ -182,7 +191,7 @@ impl MaestroService {
         }
 
         trace!(%tx_hash_str, %account_balance, %total_required, "Gas check passed");
-        Ok(())
+        Ok(account_balance)
     }
 
     /// Processes a transaction based on its nonce compared to the wallet's expected nonce
@@ -234,7 +243,14 @@ impl MaestroService {
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
                 if !self.config.skip_balance_check {
-                    self.check_sender_wallet_balance(tx, chain_id, wallet).await?;
+                    // TODO(SEQ-964): Remove lines below once we have tracing
+                    let tx_hash_str = format!("0x{}", hex::encode(tx.hash()));
+                    trace!(%tx_hash_str, %tx_nonce, sender_wallet=%wallet, %chain_id, "Checking sender wallet balance");
+                    let sender_balance_eth = format!(
+                        "{} ETH units",
+                        format_ether(self.check_sender_wallet_balance(tx, chain_id, wallet).await?)
+                    );
+                    trace!(%tx_hash_str, %tx_nonce, sender_wallet=%wallet, %sender_balance_eth, %chain_id, "Sender wallet balance is sufficient");
                 }
 
                 // 1. update the cache with nonce + 1. Quit if this fails
@@ -881,7 +897,7 @@ mod tests {
         let producer1 = service.producers.get(&chain_id).unwrap();
 
         // Verify stream key is correct
-        assert_eq!(producer1.stream_key, format!("synd-maestro:transactions:{}", chain_id));
+        assert_eq!(producer1.stream_key, format!("maestro:transactions:{}", chain_id));
 
         // Get producer again
         let producer2 = service.producers.get(&chain_id).unwrap();
@@ -900,10 +916,7 @@ mod tests {
         );
 
         // Verify correct stream key
-        assert_eq!(
-            producer3.stream_key,
-            format!("synd-maestro:transactions:{}", different_chain_id)
-        );
+        assert_eq!(producer3.stream_key, format!("maestro:transactions:{}", different_chain_id));
     }
 
     #[tokio::test]
@@ -2131,7 +2144,9 @@ mod tests {
             setup_mock_receipt_response(&mock_server, tx_hash, Some(mock_receipt_data), false)
                 .await;
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::Done);
         }
 
@@ -2158,7 +2173,9 @@ mod tests {
                                                                                    // Use the dynamically derived signer address for the mock setup.
             set_up_mock_transaction_count(&mock_server, &actual_signer_hex, tx_nonce).await;
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::ReSubmit);
         }
 
@@ -2175,7 +2192,9 @@ mod tests {
             setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
             set_up_mock_transaction_count(&mock_server, KNOWN_SIGNER_ADDRESS_STR, rpc_nonce).await; // Nonce differs
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::Done);
         }
 
@@ -2191,7 +2210,9 @@ mod tests {
             setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
             setup_mock_nonce_error_response(&mock_server, KNOWN_SIGNER_ADDRESS_STR).await; // Nonce call fails
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::Done);
         }
 
@@ -2206,7 +2227,9 @@ mod tests {
 
             setup_mock_receipt_response(&mock_server, tx_hash, None, true).await; // Receipt call fails
 
-            let result = MaestroService::handle_finalization(raw_tx_vec, rpc_provider).await;
+            let result =
+                MaestroService::handle_finalization(raw_tx_vec, rpc_provider, &service.metrics)
+                    .await;
             assert_eq!(result, CheckFinalizationResult::Done);
         }
     }
@@ -2233,7 +2256,8 @@ mod tests {
         let tx = create_dummy_tx(21000u64, 10_000_000_000u128, parse_ether("1").unwrap()).await;
         let account_balance = parse_ether("2").unwrap();
         let result = MaestroService::balance_check(&tx, account_balance);
-        assert!(result.is_ok());
+        let balance_check_result = result.unwrap();
+        assert_eq!(balance_check_result, account_balance);
     }
 
     #[tokio::test]
@@ -2247,7 +2271,7 @@ mod tests {
         let account_balance = max_gas_cost + value;
 
         let result = MaestroService::balance_check(&tx, account_balance);
-        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), account_balance);
     }
 
     #[tokio::test]
@@ -2264,7 +2288,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_balance_check_insufficient_funds_for_max_gas_cost() {
-        // gas_limit * max_fee_per_gas (u64::MAX * u128::MAX) does NOT overflow U256
+        // gas_limit * max_fee_per_gas (u64::MAX * u128::MAX) does NOT overflow U256,
         // but it results in a very large gas cost.
         let tx = create_dummy_tx(u64::MAX, u128::MAX, U256::from(1u64)).await;
         let account_balance = U256::ZERO; // Set balance to 0 to make it insufficient

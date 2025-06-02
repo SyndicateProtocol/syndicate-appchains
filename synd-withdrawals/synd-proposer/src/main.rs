@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
 
     let mut metrics_state = MetricsState::default();
     let metrics = ProposerMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port, None));
 
     info!("Starting Proposer service...");
     proposer::run(config, metrics).await

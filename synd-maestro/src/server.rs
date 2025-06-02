@@ -61,13 +61,16 @@ pub async fn run(
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
 
     // Register health method (this will be hit by the health check middleware)
-    module.register_async_method("health", async |_, service: Arc<Arc<MaestroService>>, _| {
-        let health = service.health().await;
-        match health {
-            Ok(true) => Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true})),
-            _ => Err(ErrorCode::InternalError),
-        }
-    })?;
+    module.register_async_method(
+        "health",
+        |_, service: Arc<Arc<MaestroService>>, _| async move {
+            let health = service.health().await;
+            match health {
+                Ok(true) => Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true})),
+                _ => Err(ErrorCode::InternalError),
+            }
+        },
+    )?;
 
     // TODO (SEQ-908): Background job to unstick `waiting txn` cache
 

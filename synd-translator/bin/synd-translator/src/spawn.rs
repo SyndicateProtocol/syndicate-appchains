@@ -20,7 +20,7 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
 
     let mut metrics_state = MetricsState::default();
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    start_metrics_and_health(metrics_state, config.metrics.metrics_port).await;
+    start_metrics_and_health(metrics_state, config.metrics.metrics_port, None).await;
 
     loop {
         info!("Starting Syndicate Translator");
