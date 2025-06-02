@@ -817,7 +817,6 @@ mod tests {
     use prometheus_client::registry::Registry;
     use redis::AsyncCommands;
     use serde_json::json;
-    use shared::tracing::ServiceTracingConfig;
     use std::time::Duration;
     use test_utils::{
         docker::{start_valkey, Docker},
@@ -832,10 +831,7 @@ mod tests {
 
     #[ctor::ctor]
     fn init() {
-        shared::tracing::setup_global_tracing(ServiceTracingConfig::from_env(
-            env!("CARGO_PKG_NAME"),
-            env!("CARGO_PKG_VERSION"),
-        ));
+        shared::tracing::setup_global_logging();
     }
 
     // Helper to create a test service with real Valkey and mock RPC

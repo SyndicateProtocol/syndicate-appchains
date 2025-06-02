@@ -26,6 +26,11 @@ mod tests {
         Mock, MockServer, ResponseTemplate,
     };
 
+    #[ctor::ctor]
+    fn init() {
+        shared::logger::setup_global_logging();
+    }
+
     // Initialize the server for this test function
     async fn setup_server(
         mock_rpc_server_4: Option<MockServer>,
