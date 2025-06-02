@@ -164,12 +164,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_produce_consume_transaction() {
-        let _guard =
-            shared::tracing::setup_global_tracing(shared::tracing::ServiceTracingConfig::from_env(
-                env!("CARGO_PKG_NAME"),
-                env!("CARGO_PKG_VERSION"),
-            ))
-            .unwrap();
         // Start Valkey container
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
@@ -209,12 +203,6 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_produce_consume_multiple_transactions() {
-        let _guard =
-            shared::tracing::setup_global_tracing(shared::tracing::ServiceTracingConfig::from_env(
-                env!("CARGO_PKG_NAME"),
-                env!("CARGO_PKG_VERSION"),
-            ))
-            .unwrap();
         // Start Valkey container
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
