@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
@@ -13,7 +13,9 @@ import {ArbChainConfig} from "./ArbChainConfig.sol";
  */
 contract ArbConfigManager is Ownable {
     // Events
+    //#olympix-ignore-missing-events-assertion
     event ArbChainConfigCreated(uint256 indexed chainId, address configAddress);
+    //#olympix-ignore-missing-events-assertion
     event ImplementationUpgraded(address newImplementation);
 
     // Beacon that holds the current implementation address
@@ -25,6 +27,7 @@ contract ArbConfigManager is Ownable {
     /**
      * @dev Constructor to deploy the implementation contract and beacon
      */
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(address _owner) Ownable(_owner) {
         // Deploy the implementation contract
         // No need to pass constructor arguments as they'll be handled by initialize()
@@ -41,7 +44,6 @@ contract ArbConfigManager is Ownable {
      * @param sequencingChainId The ID of the sequencing chain
      * @param arbitrumBridgeAddress Address of the Arbitrum bridge
      * @param arbitrumInboxAddress Address of the Arbitrum inbox
-     * @param arbitrumIgnoreDelayedMessages Whether to ignore delayed messages
      * @param settlementDelay Delay for settlement
      * @param settlementStartBlock Starting block for settlement
      * @param sequencingContractAddress Address of the sequencing contract
@@ -49,24 +51,22 @@ contract ArbConfigManager is Ownable {
      * @param initialAppchainOwner Initial appchain owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
-     * @param allowedSettlementAddresses Array of addresses allowed for settlement
      * @return address The address of the deployed ArbChainConfig contract
      */
+    //#olympix-ignore
     function createArbChainConfig(
         address owner,
         uint256 chainId,
         uint256 sequencingChainId,
         address arbitrumBridgeAddress,
         address arbitrumInboxAddress,
-        bool arbitrumIgnoreDelayedMessages,
         uint256 settlementDelay,
         uint256 settlementStartBlock,
         address sequencingContractAddress,
         uint256 sequencingStartBlock,
         address initialAppchainOwner,
         string memory sequencingChainRpcUrl,
-        string memory appchainBlockExplorerUrl,
-        address[] memory allowedSettlementAddresses
+        string memory appchainBlockExplorerUrl
     ) external onlyOwner returns (address) {
         require(chainId != 0, "Chain ID cannot be zero");
         require(deployedConfigs[chainId] == address(0), "Config already exists for this chain ID");
@@ -88,15 +88,13 @@ contract ArbConfigManager is Ownable {
             sequencingChainId,
             arbitrumBridgeAddress,
             arbitrumInboxAddress,
-            arbitrumIgnoreDelayedMessages,
             settlementDelay,
             settlementStartBlock,
             sequencingContractAddress,
             sequencingStartBlock,
             initialAppchainOwner,
             sequencingChainRpcUrl,
-            appchainBlockExplorerUrl,
-            allowedSettlementAddresses
+            appchainBlockExplorerUrl
         );
 
         emit ArbChainConfigCreated(chainId, proxyAddress);
@@ -126,8 +124,9 @@ contract ArbConfigManager is Ownable {
         bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(beacon), ""));
 
         // Calculate CREATE2 address
+        //#olympix-ignore-unsafe-downcast
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
-
+        //#olympix-ignore-unsafe-downcast
         return address(uint160(uint256(hash)));
     }
 

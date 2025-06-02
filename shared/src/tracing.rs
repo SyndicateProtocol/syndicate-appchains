@@ -124,9 +124,8 @@ fn init_tracer_provider(config: &ServiceTracingConfig) -> Result<SdkTracerProvid
 /// Initialize tracing-subscriber and return [`OtelGuard`]
 /// for OpenTelemetry-related termination processing.
 pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, Error> {
-    dbg!("TODO: setup tracing");
     let tracer_provider = init_tracer_provider(&config)?;
-    // let meter_provider = init_meter_provider(&config)?;
+    let meter_provider = init_meter_provider(&config)?;
 
     let tracer = tracer_provider.tracer("tracing-opentelemetry");
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
@@ -154,7 +153,7 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
         )
         .with(env_filter)
         // OpenTelemetry tracing + metrics layers
-        // .with(MetricsLayer::new(meter_provider.clone()))
+        .with(MetricsLayer::new(meter_provider))
         .with(OpenTelemetryLayer::new(tracer))
         .try_init()
         .map_err(|e| Error::DefaultLoggerInit(e.to_string()))?;

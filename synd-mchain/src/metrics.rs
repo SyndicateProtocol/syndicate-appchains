@@ -16,7 +16,7 @@ pub struct ReorgMetrics {
     pub duration: Gauge,
 }
 
-/// Structure holding metrics related to the `Poster`.
+/// Structure holding metrics related to the `Mchain`.
 #[derive(Debug, Default, Clone)]
 pub struct MchainMetrics {
     pub sequencing_block: BlockMetrics,
@@ -29,7 +29,7 @@ pub struct MchainMetrics {
 }
 
 impl MchainMetrics {
-    /// Creates a new `PosterMetrics` instance and registers metrics in the provided registry.
+    /// Creates a new `MchainMetrics` instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
         let metrics = Self::default();
         registry.register(

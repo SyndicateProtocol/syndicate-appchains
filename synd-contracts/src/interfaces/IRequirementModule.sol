@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {IPermissionModule} from "./IPermissionModule.sol";
 
 /**
  * @title IRequirementModule
- * @notice Interface for requirement modules with both proposer and calldata validation
- * @dev Combines both proposer and calldata permission check capabilities
+ * @notice Interface for requirement modules that manage collections of permission checks
+ * @dev Extends IPermissionModule with methods to add/remove individual permission modules
  */
 interface IRequirementModule is IPermissionModule {
     /**

@@ -8,9 +8,9 @@ use alloy::{
     rpc::types::{FilterBlockOption, TransactionRequest},
     sol_types::{SolCall, SolEvent as _, SolValue as _},
 };
-use contract_bindings::arbitrum::{
+use contract_bindings::synd::{
     ibridge::IBridge,
-    iinbox::IInbox,
+    iinboxbase::IInboxBase,
     isequencerinbox::{self, ISequencerInbox},
 };
 use jsonrpsee::{
@@ -408,13 +408,13 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                         ));
                     }
                 }
-                if f.topics[0].matches(&IInbox::InboxMessageDelivered::SIGNATURE_HASH) {
+                if f.topics[0].matches(&IInboxBase::InboxMessageDelivered::SIGNATURE_HASH) {
                     for i in from_block..to_block + 1 {
                         let block = db.get_block(i)?;
                         for (j, (msg, _)) in block.messages.iter().enumerate() {
                             events.push(create_log(
                                 i,
-                                IInbox::InboxMessageDelivered {
+                                IInboxBase::InboxMessageDelivered {
                                     messageNum: U256::from(block.before_message_count + j as u64),
                                     data: msg.data.clone(),
                                 }
@@ -489,7 +489,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             let selector = input.get(0..4).ok_or_else(|| err("missing selector"))?;
             match TryInto::<[u8; 4]>::try_into(selector).map_err(to_err)? {
                 // TODO(SEQ-767): make sure the max data size property is set properly
-                IInbox::maxDataSizeCall::SELECTOR => Ok(117964.abi_encode().into()),
+                IInboxBase::maxDataSizeCall::SELECTOR => Ok(117964.abi_encode().into()),
                 IBridge::delayedMessageCountCall::SELECTOR => {
                     Ok(db.get_state().message_count.abi_encode().into())
                 }

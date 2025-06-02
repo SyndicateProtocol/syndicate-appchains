@@ -2,7 +2,7 @@ use alloy::primitives::Address;
 
 pub(super) struct BatchSequencerConfig {
     pub(crate) chain_id: u64,
-    pub(crate) redis_url: String,
+    pub(crate) valkey_url: String,
     pub(crate) private_key: String,
     pub(crate) sequencing_address: Address,
     pub(crate) sequencing_rpc_url: String,
@@ -14,8 +14,8 @@ impl BatchSequencerConfig {
         vec![
             "--chain-id".to_string(),
             self.chain_id.to_string(),
-            "--redis-url".to_string(),
-            self.redis_url.to_string(),
+            "--valkey-url".to_string(),
+            self.valkey_url.to_string(),
             "--private-key".to_string(),
             self.private_key.to_string(),
             "--sequencing-address".to_string(),

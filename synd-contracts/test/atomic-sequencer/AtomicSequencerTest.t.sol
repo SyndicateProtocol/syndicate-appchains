@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequencer/AtomicSequencer.sol";
-import {SyndicateSequencerChain} from "src/SyndicateSequencerChain.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
+import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
 contract MockIsAllowed is IPermissionModule {
@@ -21,9 +21,9 @@ contract MockIsAllowed is IPermissionModule {
 
 contract AtomicSequencerTest is Test {
     AtomicSequencer public atomicSequencer;
-    SyndicateSequencerChain public chainA;
-    SyndicateSequencerChain public chainB;
-    RequireAllModule public permissionModule;
+    SyndicateSequencingChain public chainA;
+    SyndicateSequencingChain public chainB;
+    RequireAndModule public permissionModule;
     address public admin;
     address public originalCaller;
 
@@ -32,14 +32,14 @@ contract AtomicSequencerTest is Test {
     function setUp() public {
         admin = address(0x1);
         originalCaller = address(0x2);
-        uint256 appChainIdA = 10042001;
-        uint256 appChainIdB = 10042002;
+        uint256 appchainIdA = 10042001;
+        uint256 appchainIdB = 10042002;
 
         vm.startPrank(admin);
-        permissionModule = new RequireAllModule(admin);
-        chainA = new SyndicateSequencerChain(appChainIdA);
+        permissionModule = new RequireAndModule(admin);
+        chainA = new SyndicateSequencingChain(appchainIdA);
         chainA.initialize(admin, address(permissionModule));
-        chainB = new SyndicateSequencerChain(appChainIdB);
+        chainB = new SyndicateSequencingChain(appchainIdB);
         chainB.initialize(admin, address(permissionModule));
         atomicSequencer = new AtomicSequencer();
         permissionModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
@@ -50,7 +50,7 @@ contract AtomicSequencerTest is Test {
         bytes memory txnA = abi.encode("transaction A");
         bytes memory txnB = abi.encode("transaction B");
 
-        SyndicateSequencerChain[] memory chains = new SyndicateSequencerChain[](2);
+        SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](2);
         chains[0] = chainA;
         chains[1] = chainB;
 
@@ -79,7 +79,7 @@ contract AtomicSequencerTest is Test {
         txnsB[0] = abi.encode("B1");
         txnsB[1] = abi.encode("B2");
 
-        SyndicateSequencerChain[] memory chains = new SyndicateSequencerChain[](2);
+        SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](2);
         chains[0] = chainA;
         chains[1] = chainB;
 
@@ -88,7 +88,7 @@ contract AtomicSequencerTest is Test {
         allTxns[1] = txnsB;
 
         bytes memory callData =
-            abi.encodeWithSignature("processBulkTransactionsAtomically(address[],bytes[][])", chains, allTxns);
+            abi.encodeWithSignature("processTransactionsBulkAtomically(address[],bytes[][])", chains, allTxns);
 
         vm.prank(originalCaller);
         (bool success,) = address(atomicSequencer).call(callData);
@@ -96,10 +96,10 @@ contract AtomicSequencerTest is Test {
     }
 
     function testProcessMultipleChains() public {
-        SyndicateSequencerChain chainC = new SyndicateSequencerChain(10042003);
+        SyndicateSequencingChain chainC = new SyndicateSequencingChain(10042003);
         chainC.initialize(admin, address(permissionModule));
 
-        SyndicateSequencerChain[] memory chains = new SyndicateSequencerChain[](3);
+        SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](3);
         chains[0] = chainA;
         chains[1] = chainB;
         chains[2] = chainC;
@@ -123,7 +123,7 @@ contract AtomicSequencerTest is Test {
     }
 
     function testProcessSameChainMultipleTimes() public {
-        SyndicateSequencerChain[] memory chains = new SyndicateSequencerChain[](2);
+        SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](2);
         chains[0] = chainA;
         chains[1] = chainA;
 
@@ -150,7 +150,7 @@ contract AtomicSequencerTest is Test {
     }
 
     function testRevertOnInvalidCalls() public {
-        SyndicateSequencerChain[] memory chains = new SyndicateSequencerChain[](1);
+        SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](1);
         chains[0] = chainA;
 
         bytes[] memory txns = new bytes[](1);
@@ -167,7 +167,7 @@ contract AtomicSequencerTest is Test {
     }
 
     function testInputLengthMismatch() public {
-        SyndicateSequencerChain[] memory chains = new SyndicateSequencerChain[](2);
+        SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](2);
         chains[0] = chainA;
         chains[1] = chainB;
 
@@ -192,7 +192,7 @@ contract AtomicSequencerTest is Test {
     }
 
     function testMixedRawProcessing() public {
-        SyndicateSequencerChain[] memory chains = new SyndicateSequencerChain[](3);
+        SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](3);
         chains[0] = chainA;
         chains[1] = chainB;
         chains[2] = chainA;

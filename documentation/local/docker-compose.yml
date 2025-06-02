@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     environment:
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
- 
+
   seq-ingestor:
     build:
       context: ../
@@ -27,7 +27,6 @@ services:
     volumes:
       - ./:/chains
     environment:
-#     - RUST_LOG=debug
       - DB_FILE=/chains/84532.db
       - START_BLOCK=20000000
       - RPC_URL={{ SETTLEMENT_RPC_URL }}
@@ -46,7 +45,6 @@ services:
       target: synd-translator
       dockerfile: Dockerfile
     environment:
-#     RUST_LOG: "debug"
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
       SEQUENCING_CONTRACT_ADDRESS: ${SEQUENCING_CONTRACT_ADDRESS}
       ARBITRUM_BRIDGE_ADDRESS: ${ARBITRUM_BRIDGE_ADDRESS}
@@ -56,7 +54,6 @@ services:
       SETTLEMENT_RPC_URL: "ws://set-ingestor:8545"
       SETTLEMENT_START_BLOCK: ${SETTLEMENT_START_BLOCK}
       MCHAIN_RPC_URL: "ws://mchain:8545"
-      ARBITRUM_IGNORE_DELAYED_MESSAGES: "false"
       SETTLEMENT_DELAY: "60"
     depends_on:
       healthcheck:

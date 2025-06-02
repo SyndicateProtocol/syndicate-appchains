@@ -1,12 +1,12 @@
 # Batch Sequencer
 
-The Batch Sequencer is a Rust-based service responsible for reading transactions from a Redis stream, bundling them into size-limited batches, and submitting them to a sequencing contract on an EVM-compatible chain. It supports submission via Alloy or to Transaction Chains (TC) directly, depending on configuration.
+The Batch Sequencer is a Rust-based service responsible for reading transactions from a Valkey stream, bundling them into size-limited batches, and submitting them to a sequencing contract on an EVM-compatible chain. It supports submission via Alloy or to Transaction Chains (TC) directly, depending on configuration.
 
 ### Sample cmd:
 
 ```
 cargo run -p synd-batch-sequencer -- \
-  --redis-url redis://127.0.0.1:6379 \
+  --valkey-url redis://127.0.0.1:6379 \
   --chain-id 11155111 \
   --max-batch-size 90KB \
   --private-key <hex-private-key> \

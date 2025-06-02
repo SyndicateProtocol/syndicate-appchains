@@ -2,7 +2,6 @@
 
 use alloy::transports::http::{reqwest::Response, Client};
 use eyre::Result;
-use jsonrpsee::server::ServerHandle;
 use serde_json::{json, Value};
 use std::{future::Future, net::SocketAddr, time::Duration};
 use synd_maestro::server;
@@ -13,9 +12,13 @@ mod tests {
     use super::*;
     use prometheus_client::registry::Registry;
     use std::collections::HashMap;
-    use synd_maestro::{config::Config, metrics::MaestroMetrics, server::HEADER_CHAIN_ID};
+    use synd_maestro::{
+        config::Config,
+        metrics::MaestroMetrics,
+        server::{ShutdownFn, HEADER_CHAIN_ID},
+    };
     use test_utils::{
-        docker::{start_redis, Docker},
+        docker::{start_valkey, Docker},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
     };
     use wiremock::{
@@ -27,7 +30,7 @@ mod tests {
     async fn setup_server(
         mock_rpc_server_4: Option<MockServer>,
         mock_rpc_server_5: Option<MockServer>,
-    ) -> (SocketAddr, ServerHandle, String, Docker, MockServer, MockServer) {
+    ) -> (SocketAddr, ShutdownFn, String, Docker, MockServer, MockServer) {
         // Create new mock servers if not provided, otherwise use the ones passed in
         let mock_rpc_server_4 = match mock_rpc_server_4 {
             Some(server) => server,
@@ -48,29 +51,32 @@ mod tests {
         };
 
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert("4".to_string(), mock_rpc_server_4.uri());
-        chain_rpc_urls.insert("5".to_string(), mock_rpc_server_5.uri());
+        chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
+        chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
 
-        let (redis, redis_url) = start_redis().await.unwrap();
+        let (valkey, valkey_url) = start_valkey().await.unwrap();
         // Create config with mock server URL
         let config = Config {
             port: 0,
             metrics_port: 8081,
-            redis_url,
+            valkey_url,
             chain_rpc_urls,
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
-            prune_interval: Duration::from_secs(60 * 60 * 24),
-            prune_max_age: Duration::from_secs(60 * 60 * 24),
             waiting_txn_ttl: Duration::from_secs(20), // shorter than default
             wallet_nonce_ttl: Duration::from_secs(3),
+            finalization_duration: Duration::from_secs(5 * 60),
+            finalization_checker_interval: Duration::from_secs(5 * 60),
+            max_transaction_retries: 3,
+            skip_balance_check: false,
         };
 
         let mut registry = Registry::default();
         let metrics = MaestroMetrics::new(&mut registry);
 
         // Start the actual Maestro server with our mocked config
-        let (addr, handle) = server::run(config, metrics).await.expect("Failed to start server");
+        let (addr, shutdown_fn) =
+            server::run(config, metrics).await.expect("Failed to start server");
         let base_url = format!("http://{}", addr);
 
         // Wait for server to be ready by checking health endpoint
@@ -84,7 +90,7 @@ mod tests {
             Duration::from_secs(5)
         );
 
-        (addr, handle, base_url, redis, mock_rpc_server_4, mock_rpc_server_5)
+        (addr, shutdown_fn, base_url, valkey, mock_rpc_server_4, mock_rpc_server_5)
     }
 
     async fn set_default_mock_responses_for_server_4(mock_rpc_server_4: &MockServer) {
@@ -96,6 +102,37 @@ mod tests {
                 "jsonrpc": "2.0",
                 "id": 1,
                 "result": "0x1"  // Realistic nonce result format
+            })))
+            .mount(mock_rpc_server_4)
+            .await;
+
+        // Mock getBalance for the default legacy transaction sender
+        let balance = alloy::primitives::utils::parse_ether("100").unwrap();
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "jsonrpc": "2.0",
+                "method": "eth_getBalance",
+                "params": ["0x556c6271902d142f27b66eb51f4fc355afed8bd9", "latest"]
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": format!("0x{:x}", balance)
+            })))
+            .mount(mock_rpc_server_4)
+            .await;
+
+        // Mock getBalance for the default EIP-1559 transaction sender
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "jsonrpc": "2.0",
+                "method": "eth_getBalance",
+                "params": ["0x1b2f2a4f68bb6a86475cbfc947920288bb18603d", "latest"]
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": format!("0x{:x}", balance)
             })))
             .mount(mock_rpc_server_4)
             .await;
@@ -148,12 +185,12 @@ mod tests {
     where
         Fut: Future<Output = Result<()>> + Send,
     {
-        let (_addr, handle, base_url, _redis, _mock_rpc_server4, _mock_rpc_server5) =
+        let (_addr, shutdown_fn, base_url, _valkey, _mock_rpc_server4, _mock_rpc_server5) =
             setup_server(mock_rpc_server_4, mock_rpc_server_5).await;
         let client = Client::new();
 
         test_fn(client, base_url).await?;
-        handle.stop()?;
+        shutdown_fn().await?;
         Ok(())
     }
 
@@ -593,7 +630,6 @@ mod tests {
             .await;
 
         // Txn nonce equal - 690 vs 690
-        //
         Mock::given(method("POST"))
             .and(body_partial_json(json!({
                 "method": "eth_getTransactionCount",
@@ -603,6 +639,20 @@ mod tests {
             "jsonrpc": "2.0",
             "id": 1,
             "result": "0x2B2" // nonce 690
+            })))
+            .mount(&mock_server_4)
+            .await;
+
+        let balance = alloy::primitives::utils::parse_ether("100").unwrap();
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "method": "eth_getBalance",
+                "params": ["0x96216849c49358b10257cb55b28ea603c874b05e", "latest"]
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": format!("0x{:x}", balance)
             })))
             .mount(&mock_server_4)
             .await;

@@ -24,15 +24,14 @@ services:
     platform: linux/amd64
     environment:
       - RUST_LOG=warn
-      - SETTLEMENT_RPC_URL={{ settlement_ingestor_ws }}
-      - SEQUENCING_RPC_URL={{ sequencing_ingestor_ws }}
+      - SETTLEMENT_RPC_URL={{ settlement_rpc_ws_url }}
+      - SEQUENCING_RPC_URL={{ sequencing_rpc_ws_url }}
       - SEQUENCING_CONTRACT_ADDRESS={{ sequencing_contract }}
       - ARBITRUM_BRIDGE_ADDRESS={{ bridge_addr }}
       - ARBITRUM_INBOX_ADDRESS={{ inbox_addr }}
       - SEQUENCING_START_BLOCK={{ sequencing_start_block }}
       - SETTLEMENT_START_BLOCK={{ settlement_start_block }}
       - MCHAIN_RPC_URL=ws://mchain:8050
-      - ARBITRUM_IGNORE_DELAYED_MESSAGES={{ ignore_delayed_messages }}
       - SETTLEMENT_DELAY=60
       - METRICS_PORT=9090
     ports:

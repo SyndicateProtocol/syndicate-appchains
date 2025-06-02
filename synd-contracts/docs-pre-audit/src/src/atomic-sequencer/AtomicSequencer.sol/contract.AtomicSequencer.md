@@ -1,5 +1,5 @@
 # AtomicSequencer
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/7027a63d41514909f85c2d3245a5d979fd2c367a/src/atomic-sequencer/AtomicSequencer.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/atomic-sequencer/AtomicSequencer.sol)
 
 **Inherits:**
 Proxy

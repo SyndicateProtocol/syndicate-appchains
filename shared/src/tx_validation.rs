@@ -39,7 +39,8 @@ fn check_chain_id(tx: &TxEnvelope) -> Result<(), RpcError> {
     Ok(())
 }
 
-fn check_signature(tx: &TxEnvelope) -> Result<Address, RpcError> {
+/// Check the signature of a transaction
+pub fn check_signature(tx: &TxEnvelope) -> Result<Address, RpcError> {
     let signer = tx.recover_signer().map_err(|e| {
         debug!(
             error = ?e,

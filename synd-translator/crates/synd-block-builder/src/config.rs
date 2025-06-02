@@ -1,7 +1,7 @@
 //! Configuration for the `synd-block-builder` service
 use alloy::primitives::Address;
 use clap::{Parser, ValueEnum};
-use shared::parse::{parse_address, parse_addresses};
+use shared::parse::parse_address;
 use std::fmt::Debug;
 use thiserror::Error;
 
@@ -31,16 +31,6 @@ pub struct BlockBuilderConfig {
     #[arg(short = 'i', long, env = "ARBITRUM_INBOX_ADDRESS",
         value_parser = parse_address)]
     pub arbitrum_inbox_address: Option<Address>,
-
-    /// Flag used to ignore delayed messages besides deposits
-    /// Default is false
-    #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES")]
-    pub arbitrum_ignore_delayed_messages: Option<bool>,
-
-    /// Flag used to allow delayed messages from privileged contracts
-    /// even when the ignore delayed messages flag is enabled.
-    #[arg(long, env = "ALLOWED_SETTLEMENT_ADDRESSES", value_parser = parse_addresses)]
-    pub allowed_settlement_addresses: Vec<Address>,
 }
 
 /// Possible target appchain types for the `synd-block-builder`
@@ -60,7 +50,6 @@ impl Debug for BlockBuilderConfig {
             .field("arbitrum_bridge_address", &self.arbitrum_bridge_address)
             .field("arbitrum_inbox_address", &self.arbitrum_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
-            .field("arbitrum_ignore_delayed_messages", &self.arbitrum_ignore_delayed_messages)
             .finish()
     }
 }
@@ -73,8 +62,6 @@ impl Default for BlockBuilderConfig {
             target_appchain_type: TargetAppchainType::ARBITRUM,
             arbitrum_bridge_address: Some(Address::ZERO),
             arbitrum_inbox_address: Some(Address::ZERO),
-            arbitrum_ignore_delayed_messages: Some(false),
-            allowed_settlement_addresses: Default::default(),
         }
     }
 }
@@ -109,9 +96,6 @@ impl BlockBuilderConfig {
         if self.arbitrum_inbox_address.is_none() {
             return Err(ConfigError::ArbitrumInboxAddressMissing);
         }
-        if self.arbitrum_ignore_delayed_messages.is_none() {
-            return Err(ConfigError::ArbitrumIgnoreDelayedMessagesMissing);
-        }
         Ok(())
     }
 }
@@ -131,7 +115,4 @@ pub enum ConfigError {
 
     #[error("Arbitrum bridge address is missing")]
     ArbitrumBridgeAddressMissing,
-
-    #[error("Arbitrum ignore delayed messages is missing")]
-    ArbitrumIgnoreDelayedMessagesMissing,
 }

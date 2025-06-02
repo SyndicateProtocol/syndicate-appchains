@@ -1170,6 +1170,7 @@ name = "batcher"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "axum",
  "byte-unit",
  "clap",
  "contract-bindings",
@@ -1180,7 +1181,9 @@ dependencies = [
  "mockall",
  "prometheus-client",
  "redis",
+ "reqwest",
  "rlp 0.6.1",
+ "serde_json",
  "shared",
  "synd-maestro",
  "test-utils",
@@ -5011,13 +5014,14 @@ dependencies = [
  "prometheus-client",
  "rand 0.9.0",
  "redis",
+ "reqwest",
  "serde_json",
  "shared",
  "test-utils",
  "thiserror 2.0.12",
  "tokio",
+ "tokio-util",
  "tower 0.4.13",
- "tower-http",
  "tracing",
  "wiremock",
 ]
@@ -5046,7 +5050,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "synd-poster"
+name = "synd-proposer"
 version = "0.1.0"
 dependencies = [
  "alloy",
@@ -5501,22 +5505,6 @@ dependencies = [
  "pin-project-lite",
  "sync_wrapper",
  "tokio",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
-name = "tower-http"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fdb0c213ca27a9f57ab69ddb290fd80d970922355b83ae380b395d3986b8a2e"
-dependencies = [
- "bitflags",
- "bytes",
- "http",
- "http-body",
- "pin-project-lite",
  "tower-layer",
  "tower-service",
  "tracing",

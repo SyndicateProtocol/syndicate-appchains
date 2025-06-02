@@ -11,11 +11,11 @@ use alloy::{
         local::{LocalSigner, PrivateKeySigner},
     },
 };
-use contract_bindings::arbitrum::rollup::{Rollup, Rollup::RollupInstance};
+use contract_bindings::synd::rollup::{Rollup, Rollup::RollupInstance};
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use synd_maestro::redis::models::waiting_transaction::WaitingGapTxnExt;
+use synd_maestro::valkey::models::waiting_transaction::WaitingGapTxnExt;
 use test_framework::components::{
     configuration::ConfigurationOptions, test_components::TestComponents,
 };
@@ -157,7 +157,6 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
 // Duplicate txn spam is rejected, dispatched concurrently
 #[tokio::test]
 async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
-    // Ok(())
     TestComponents::run(
         &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
         |components| async move {
@@ -373,7 +372,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
             funded_addresses.push(wallet_address);
             unique_wallet_txns.push(tx1.clone());
 
-            let deposited_value = parse_ether("0.000001")?;
+            let deposited_value = parse_ether("0.1")?;
             for _ in 1..100 {
                 let (funded_wallet_signer, funded_wallet_address) =
                     create_and_fund_wallet(&components, wallet_address, deposited_value, &inbox)
@@ -689,10 +688,10 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             );
 
             // Assert waiting txns in cache
-            let client = redis::Client::open(components.redis_url.as_str()).unwrap();
-            let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+            let valkey_client = redis::Client::open(components.valkey_url.as_str()).unwrap();
+            let mut valkey_conn = valkey_client.get_multiplexed_async_connection().await.unwrap();
             let waiting_txn_2 =
-                redis_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
+                valkey_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
             assert!(waiting_txn_2.is_some());
 
             // Send txn to "unstick" cache
@@ -720,7 +719,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
 
             // Waiting txns removed from cache
             let waiting_txn_2 =
-                redis_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
+                valkey_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
             assert!(waiting_txn_2.is_none());
 
             Ok(())

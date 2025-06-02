@@ -6,7 +6,7 @@ use crate::components::{
     chain_ingestor::ChainIngestorConfig,
     configuration::{setup_config_manager, ConfigurationOptions, ContractVersion},
     maestro::MaestroConfig,
-    poster::PosterConfig,
+    proposer::ProposerConfig,
     timer::TestTimer,
     translator::TranslatorConfig,
 };
@@ -18,12 +18,10 @@ use alloy::{
     providers::{ext::AnvilApi as _, Provider, RootProvider, WalletProvider},
     rpc::types::{anvil::MineOptions, TransactionReceipt},
 };
-use contract_bindings::{
-    arbitrum::rollup::Rollup,
-    synd::{
-        alwaysallowedmodule::AlwaysAllowedModule,
-        syndicatesequencerchain::SyndicateSequencerChain::{self, SyndicateSequencerChainInstance},
-    },
+use contract_bindings::synd::{
+    alwaysallowedmodule::AlwaysAllowedModule,
+    rollup::Rollup,
+    syndicatesequencingchain::SyndicateSequencingChain::{self, SyndicateSequencingChainInstance},
 };
 use eyre::Result;
 use serde_json::{json, Value};
@@ -38,11 +36,11 @@ use synd_maestro::server::HEADER_CHAIN_ID;
 use synd_mchain::client::MProvider;
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, PRIVATE_KEY},
-    docker::{launch_nitro_node, start_component, start_mchain, start_redis, Docker},
+    docker::{launch_nitro_node, start_component, start_mchain, start_valkey, Docker},
     port_manager::PortManager,
     preloaded_config::{
         PRELOAD_BRIDGE_ADDRESS_231, PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231,
-        PRELOAD_INBOX_ADDRESS_300, PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
+        PRELOAD_INBOX_ADDRESS_300, PRELOAD_PROPOSER_ADDRESS_231, PRELOAD_PROPOSER_ADDRESS_300,
     },
     utils::test_path,
     wait_until,
@@ -56,13 +54,13 @@ struct ComponentHandles {
     mchain: Docker,
     nitro_docker: Docker,
     translator: Docker,
-    poster: Option<Docker>,
+    proposer: Option<Docker>,
     sequencing_chain_ingestor: Docker,
     settlement_chain_ingestor: Docker,
 
     // Write loop
     batch_sequencer: Option<Docker>,
-    redis: Option<Docker>,
+    valkey: Option<Docker>,
     maestro: Option<Docker>,
 }
 
@@ -76,7 +74,7 @@ pub struct TestComponents {
     /// Sequencing
     pub sequencing_provider: FilledProvider,
     pub sequencing_rpc_url: String,
-    pub sequencing_contract: SyndicateSequencerChainInstance<(), FilledProvider>,
+    pub sequencing_contract: SyndicateSequencingChainInstance<(), FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
@@ -90,10 +88,10 @@ pub struct TestComponents {
 
     /// Mchain
     pub mchain_provider: MProvider,
-    pub poster_url: String,
+    pub proposer_url: String,
 
     pub maestro_url: String,
-    pub redis_url: String,
+    pub valkey_url: String,
 
     #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
@@ -106,21 +104,21 @@ impl TestComponents {
         test: impl FnOnce(Self) -> Fut + Send,
     ) -> Result<()> {
         let (components, mut handles) = Self::new(options).await?;
-        let poster = handles.poster.take();
+        let proposer = handles.proposer.take();
         let maestro = handles.maestro.take();
         let batch_sequencer = handles.batch_sequencer.take();
-        let redis = handles.redis.take();
+        let valkey = handles.valkey.take();
         tokio::select! {
             biased;
             e = handles.sequencing_chain_ingestor.wait() => panic!("sequencing ingestor died: {:#?}", e),
             e = handles.settlement_chain_ingestor.wait() => panic!("settlement ingestor died: {:#?}", e),
             e = handles.mchain.wait() => panic!("synd-mchain died: {:#?}", e),
             e = handles.nitro_docker.wait() => panic!("nitro died: {:#?}", e),
-            e = handles.translator.wait() => panic!("translator died: {:#?}", e),
-            e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
+            e = handles.translator.wait() => panic!("synd-translator died: {:#?}", e),
+            e = async {proposer.unwrap().wait().await}, if proposer.is_some() => panic!("synd-proposer died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("synd-maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
-            e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
+            e = async {valkey.unwrap().wait().await}, if valkey.is_some() => panic!("valkey died: {:#?}", e),
             r = test(components) => r
         }
     }
@@ -133,21 +131,21 @@ impl TestComponents {
         // Launch mock sequencing chain and deploy contracts
         info!("Starting sequencing chain...");
         let (seq_port, seq_anvil, seq_provider) = start_anvil(15).await?;
-        _ = SyndicateSequencerChain::deploy_builder(
+        let _ = SyndicateSequencingChain::deploy_builder(
             &seq_provider,
             U256::from(options.appchain_chain_id),
         )
         .send()
         .await?;
         let sequencing_contract_address = seq_provider.default_signer_address().create(0);
-        _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+        let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         let always_allowed_module_address = seq_provider.default_signer_address().create(1);
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
-            SyndicateSequencerChain::new(sequencing_contract_address, provider_clone);
-        _ = sequencing_contract
+            SyndicateSequencingChain::new(sequencing_contract_address, provider_clone);
+        let _ = sequencing_contract
             .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()
             .await?;
@@ -182,7 +180,7 @@ impl TestComponents {
             (set_port, set_anvil, set_provider) = start_anvil(20).await?;
             // Use the mock rollup contract for the test instead of deploying all the nitro rollup
             // contracts
-            _ = Rollup::deploy_builder(
+            let _ = Rollup::deploy_builder(
                 &set_provider,
                 U256::from(options.appchain_chain_id),
                 "null".to_string(),
@@ -294,7 +292,6 @@ impl TestComponents {
             arbitrum_bridge_address: None,
             arbitrum_inbox_address: None,
             sequencing_contract_address: None,
-            arbitrum_ignore_delayed_messages: None,
             sequencing_rpc_url: Some(sequencing_rpc_url.clone()),
             appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
@@ -321,14 +318,14 @@ impl TestComponents {
         .await?;
         info!("Nitro URL: {}", nitro_url);
 
-        let (poster, poster_url) = if options.pre_loaded.is_some() {
-            info!("Starting poster...");
-            let poster_config = PosterConfig {
+        let (proposer, proposer_url) = if options.pre_loaded.is_some() {
+            info!("Starting proposer...");
+            let proposer_config = ProposerConfig {
                 assertion_poster_contract_address: options.pre_loaded.as_ref().map_or(
                     Address::ZERO,
                     |version| match version {
-                        ContractVersion::V300 => PRELOAD_POSTER_ADDRESS_300,
-                        ContractVersion::V213 => PRELOAD_POSTER_ADDRESS_231,
+                        ContractVersion::V300 => PRELOAD_PROPOSER_ADDRESS_300,
+                        ContractVersion::V213 => PRELOAD_PROPOSER_ADDRESS_231,
                     },
                 ),
                 settlement_rpc_url: settlement_anvil_url.clone(),
@@ -339,34 +336,36 @@ impl TestComponents {
             (
                 Some(
                     start_component(
-                        "synd-poster",
-                        poster_config.metrics_port,
-                        poster_config.cli_args(),
+                        "synd-proposer",
+                        proposer_config.metrics_port,
+                        proposer_config.cli_args(),
                         Default::default(),
                     )
                     .await?,
                 ),
-                format!("http://localhost:{}", poster_config.port),
+                format!("http://localhost:{}", proposer_config.port),
             )
         } else {
             (None, Default::default())
         };
 
-        let (mut redis, mut maestro, mut batch_sequencer) = (None, None, None);
-        let mut redis_url_init = String::new();
+        let (mut valkey, mut maestro, mut batch_sequencer) = (None, None, None);
+        let mut valkey_url_init = String::new();
         let mut maestro_url = Default::default();
         if options.use_write_loop {
             info!("Starting Write Loop components...");
-            info!("Starting redis...");
-            let (redis_instance, redis_url) = start_redis().await?;
-            redis_url_init = redis_url.clone();
-            redis = Some(redis_instance);
+            info!("Starting valkey...");
+            let (valkey_instance, valkey_url) = start_valkey().await?;
+            valkey_url_init = valkey_url.clone();
+            valkey = Some(valkey_instance);
             info!("Starting maestro...");
             let maestro_config = MaestroConfig {
                 port: PortManager::instance().next_port().await,
-                redis_url: redis_url.clone(),
+                valkey_url: valkey_url.clone(),
                 chain_rpc_urls: format!("{{\"{}\":\"{}\"}}", options.appchain_chain_id, nitro_url),
                 metrics_port: PortManager::instance().next_port().await,
+                finalization_duration: options.maestro_finalization_duration,
+                finalization_checker_interval: options.maestro_finalization_checker_interval,
             };
             let maestro_instance = start_component(
                 "synd-maestro",
@@ -381,7 +380,7 @@ impl TestComponents {
             info!("Starting batch sequencer...");
             let batch_sequencer_config = BatchSequencerConfig {
                 chain_id: options.appchain_chain_id,
-                redis_url: redis_url.clone(),
+                valkey_url: valkey_url.clone(),
                 private_key: PRIVATE_KEY.to_string(),
                 sequencing_address: sequencing_contract_address,
                 sequencing_rpc_url: sequencing_anvil_url,
@@ -413,9 +412,9 @@ impl TestComponents {
                 inbox_address: arbitrum_inbox_address,
 
                 mchain_provider,
-                poster_url,
+                proposer_url,
                 maestro_url,
-                redis_url: redis_url_init,
+                valkey_url: valkey_url_init,
                 appchain_block_explorer_url,
             },
             ComponentHandles {
@@ -426,9 +425,9 @@ impl TestComponents {
                 mchain,
                 nitro_docker,
                 translator,
-                poster,
+                proposer,
                 batch_sequencer,
-                redis,
+                valkey,
                 maestro,
             },
         ))
@@ -519,7 +518,8 @@ impl TestComponents {
     ) -> Result<Option<TransactionReceipt>> {
         let tx_hash = keccak256(tx);
         let tx_bytes = Bytes::from(tx.to_vec());
-        let seq_tx = self.sequencing_contract.processTransaction(tx_bytes).send().await?;
+        let seq_tx =
+            self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;
         self.mine_seq_block(seq_delay).await?;
         let seq_receipt =
             self.sequencing_provider.get_transaction_receipt(*seq_tx.tx_hash()).await?.unwrap();

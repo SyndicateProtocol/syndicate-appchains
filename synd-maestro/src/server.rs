@@ -7,7 +7,7 @@ use alloy::{consensus::Transaction, primitives::ChainId};
 use http::Extensions;
 use jsonrpsee::{
     core::RpcResult,
-    server::{middleware::http::ProxyGetRequestLayer, Server, ServerHandle},
+    server::{middleware::http::ProxyGetRequestLayer, Server},
     types::{ErrorCode, Params},
     RpcModule,
 };
@@ -21,47 +21,58 @@ use shared::{
     tracing::{extract_tracing_context, SpanKind},
     tx_validation::validate_transaction,
 };
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, future::Future, net::SocketAddr, pin::Pin, sync::Arc};
 use tokio::time::Instant;
 use tower::ServiceBuilder;
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 /// Request header for `eth_sendRawTransaction` calls that holds the intended `chain_id`
 pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
+
+/// shutdown function type
+pub type ShutdownFn =
+    Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = Result<(), eyre::Error>> + Send>> + Send>;
 
 /// Runs the base server for the sequencer
 pub async fn run(
     config: Config,
     metrics: MaestroMetrics,
-) -> eyre::Result<(SocketAddr, ServerHandle)> {
+) -> eyre::Result<(SocketAddr, ShutdownFn)> {
     info!("Starting Maestro server:run");
 
     let optional_headers =
         vec![HEADER_CHAIN_ID.to_string(), "traceparent".to_string(), "tracestate".to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
-        .layer(ProxyGetRequestLayer::new("/health", "health")?)
-        .layer(ProxyGetRequestLayer::new("/test_redis", "test_redis")?);
+        .layer(ProxyGetRequestLayer::new("/health", "health")?);
 
     let server = Server::builder()
         .set_http_middleware(http_middleware)
         .build(format!("0.0.0.0:{}", config.port))
         .await?;
 
-    let client = redis::Client::open(config.redis_url.as_str())?;
-    let redis_conn = client.get_multiplexed_async_connection().await?;
-    let service = MaestroService::new(redis_conn, config, metrics).await?;
-    info!("Connected to Redis successfully!");
+    // Create the service internally again
+    let client = redis::Client::open(config.valkey_url.as_str())?;
+    let valkey_conn = client.get_multiplexed_async_connection().await?;
+    let service = Arc::new(MaestroService::new(valkey_conn, config.clone(), metrics).await?);
+    info!("MaestroService created and connected to Valkey successfully!");
 
-    let mut module = RpcModule::new(service);
+    let mut module = RpcModule::new(service.clone()); // Pass Arc for RpcModule state
 
     // Register RPC methods
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
 
     // Register health method (this will be hit by the health check middleware)
-    module.register_method("health", |_, _, _| {
-        Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true}))
-    })?;
+    module.register_async_method(
+        "health",
+        |_, service: Arc<Arc<MaestroService>>, _| async move {
+            let health = service.health().await;
+            match health {
+                Ok(true) => Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true})),
+                _ => Err(ErrorCode::InternalError),
+            }
+        },
+    )?;
 
     // TODO (SEQ-908): Background job to unstick `waiting txn` cache
 
@@ -70,7 +81,24 @@ pub async fn run(
     let addr = server.local_addr()?;
     let handle = server.start(module);
 
-    Ok((addr, handle))
+    // Define the shutdown closure
+    let shutdown_fn: ShutdownFn = Box::new(move || {
+        let service_clone = Arc::clone(&service);
+        Box::pin(async move {
+            info!("Stopping RPC server...");
+            if let Err(e) = handle.stop() {
+                error!("Error stopping RPC server: {:?}", e);
+            }
+            handle.stopped().await;
+            info!("RPC server stopped.");
+            info!("Stopping MaestroService...");
+            service_clone.shutdown().await;
+            info!("MaestroService stopped.");
+            Ok(())
+        }) as Pin<Box<dyn Future<Output = Result<(), eyre::Error>> + Send>>
+    });
+
+    Ok((addr, shutdown_fn))
 }
 
 /// The handler for the `eth_sendRawTransaction` JSON-RPC method
@@ -83,13 +111,14 @@ pub async fn run(
 )]
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
-    service: Arc<MaestroService>,
+    service_arc_arc: Arc<Arc<MaestroService>>,
     extensions: Extensions,
 ) -> RpcResult<String> {
     #[allow(clippy::expect_used)]
     let headers = extensions.get::<HashMap<_, _>>().expect("should have headers as a HashMap");
     extract_tracing_context(headers);
 
+    let service = service_arc_arc.as_ref();
     let req_start = Instant::now();
     service.metrics.increment_maestro_requests_total(1);
 
@@ -110,7 +139,7 @@ pub async fn send_raw_transaction_handler(
         "Submitting validated transaction",
     );
 
-    service.handle_transaction_and_manage_nonces(raw_tx, signer, chain_id, tx_nonce).await?;
+    service.handle_transaction(raw_tx, &tx, signer, chain_id, tx_nonce).await?;
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
 
@@ -145,8 +174,11 @@ fn validate_chain_id(
 mod tests {
     use super::*;
     use http::Extensions;
-    use shared::json_rpc::InvalidInputError::ChainIdMismatched;
-    use std::collections::HashMap;
+    use reqwest;
+    use shared::{
+        json_rpc::InvalidInputError::ChainIdMismatched, service_start_utils::MetricsState,
+    };
+    use std::{collections::HashMap, time::Duration};
 
     #[test]
     fn test_get_request_chain_id_valid_chain_id() {
@@ -229,5 +261,40 @@ mod tests {
     fn test_validate_chain_id_both_none() {
         let result = validate_chain_id(None, None);
         assert!(matches!(result, Err(InvalidInput(ChainIdMismatched(_, _)))));
+    }
+
+    #[tokio::test]
+    async fn test_health_endpoint() {
+        let mut metrics_state = MetricsState::default();
+        let metrics = MaestroMetrics::new(&mut metrics_state.registry);
+        let mut config = Config::default();
+
+        // Start Valkey container for testing
+        let (valkey, valkey_url) = test_utils::docker::start_valkey().await.unwrap();
+        config.valkey_url = valkey_url;
+
+        // Create and run server
+        let (addr, shutdown_fn) = run(config, metrics).await.unwrap();
+
+        // Create HTTP client
+        let client = reqwest::Client::new();
+
+        // Test health endpoint
+        let response = client.get(format!("http://{}/health", addr)).send().await.unwrap();
+        assert_eq!(response.status(), 200);
+        assert_eq!(
+            response.json::<JsonValue>().await.unwrap(),
+            serde_json::json!({"health": true})
+        );
+
+        // Stop Valkey container
+        drop(valkey);
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // Test unhealthy health endpoint
+        let response = client.get(format!("http://{}/health", addr)).send().await.unwrap();
+        assert_eq!(response.status(), 500);
+        // Cleanup
+        shutdown_fn().await.unwrap();
     }
 }
