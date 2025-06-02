@@ -28,7 +28,7 @@ mod tests {
 
     #[ctor::ctor]
     fn init() {
-        shared::logger::setup_global_logging();
+        shared::tracing::setup_global_logging();
     }
 
     // Initialize the server for this test function
