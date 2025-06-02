@@ -12,7 +12,7 @@ use opentelemetry_otlp::{
 pub use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::{
     metrics::{MeterProviderBuilder, SdkMeterProvider, Temporality},
-    trace::{RandomIdGenerator, Sampler, SdkTracerProvider},
+    trace::{RandomIdGenerator, SdkTracerProvider},
     Resource,
 };
 use opentelemetry_semantic_conventions::{
@@ -32,12 +32,6 @@ use tracing_subscriber::{
     EnvFilter,
 };
 
-/// Percentage of traces to capture when debugging locally.
-pub const DEBUG_SAMPLING_RATE: f64 = 1.0;
-
-/// Percentage of traces to capture from a deployed service.
-pub const SAMPLING_RATE: f64 = 0.1;
-
 /// Configuration for the tracing system
 #[derive(Debug, Clone)]
 pub struct ServiceTracingConfig {
@@ -47,7 +41,7 @@ pub struct ServiceTracingConfig {
     version: String,
     /// Deployment environment (e.g., "development", "production")
     env: String,
-    /// Whether to sample all logs and print to stdout
+    /// Whether to print all logs to standard output
     debug: bool,
 }
 
@@ -101,11 +95,7 @@ fn init_tracer_provider(config: &ServiceTracingConfig) -> Result<SdkTracerProvid
     let otlp_exporter =
         OtlpSpanExporter::builder().with_http().build().map_err(Error::SpanExporter)?;
 
-    let sampling_ratio = if config.debug { DEBUG_SAMPLING_RATE } else { SAMPLING_RATE };
-    let sampler = Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(sampling_ratio)));
-
     let provider = SdkTracerProvider::builder()
-        .with_sampler(sampler)
         .with_id_generator(RandomIdGenerator::default())
         .with_resource(Resource::from(config.clone()))
         .with_batch_exporter(otlp_exporter);
