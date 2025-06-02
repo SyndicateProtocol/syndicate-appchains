@@ -314,13 +314,12 @@ pub fn verify_aws_nitro_attestation(
 
     let pub_key = doc.public_key.ok_or(VerificationError::PublicKeyMissing)?;
 
-    // pub key comes in SEC1 format, 0x04 prefixed - meaning uncompressed https://www.ietf.org/archive/id/draft-ietf-openpgp-crypto-refresh-12.html#name-elliptic-curve-point-wire-f
+    // pub key comes with a recovery byte suffix https://github.com/ethereum/go-ethereum/blob/c87b856c1a7daff56b46be70cdb7092adc519b7c/crypto/crypto.go#L40
     assert_eq!(pub_key.len(), 65);
-    assert_eq!(pub_key[0], 0x04);
 
     Ok(ValidationResult {
         // exclude the leading 0x04 byte prefix
-        tee_signing_key: Address::from_raw_public_key(&pub_key[1..]),
+        tee_signing_key: Address::from_raw_public_key(&pub_key[..64]),
         validity_window_start,
         validity_window_end,
         pcr_0: doc.pcrs.get(&0).unwrap().to_vec(),
@@ -360,7 +359,7 @@ mod tests {
         let res = verify_aws_nitro_attestation(&doc_cbor, &trusted_root_cert_der).unwrap();
         assert_eq!(
             res.tee_signing_key,
-            alloy::primitives::Address::from_raw_public_key(&hex::decode("0697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb36").unwrap())
+            alloy::primitives::Address::from_raw_public_key(&hex::decode("040697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb").unwrap())
         );
         assert_eq!(res.validity_window_start, 1748509950);
         assert_eq!(res.validity_window_end, 1748520753);
