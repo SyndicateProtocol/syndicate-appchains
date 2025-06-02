@@ -122,10 +122,7 @@ contract TeeModule is Ownable(msg.sender) {
         require(bridge_.delayedMessageCount() > 0, "insufficient delayed messages in bridge");
         bridge = bridge_;
 
-        require(
-            address(teeKeyManager_).code.length > 0,
-            "teeKeyManager address does not have any code"
-        );
+        require(address(teeKeyManager_).code.length > 0, "teeKeyManager address does not have any code");
         teeKeyManager = teeKeyManager_;
 
         // appchain

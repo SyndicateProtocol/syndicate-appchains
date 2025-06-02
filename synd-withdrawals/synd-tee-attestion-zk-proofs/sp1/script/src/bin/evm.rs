@@ -4,12 +4,14 @@
 #[path = "../utils.rs"]
 mod utils;
 
+use alloy::sol_types::SolValue;
 use clap::{Parser, ValueEnum};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{
     include_elf, HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey,
 };
 use std::path::PathBuf;
+use synd_tee_attestion_zk_proofs_aws_nitro::PublicValuesStruct;
 
 /// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
 pub const X509_ELF: &[u8] = include_elf!("synd-tee-attestion-zk-proofs-sp1-program");
@@ -44,6 +46,11 @@ struct SP1x509ProofFixture {
     vkey: String,
     public_values: String,
     proof: String,
+    root_cert_hash: String,
+    pcr_0: String,
+    pcr_1: String,
+    pcr_2: String,
+    pcr_8: String,
 }
 
 fn main() {
@@ -89,11 +96,18 @@ fn create_proof_fixture(
     // Deserialize the public values.
     let public_values_bytes = proof.public_values.as_slice();
 
+    let pub_values = PublicValuesStruct::abi_decode(public_values_bytes, true).unwrap();
+
     // Create the testing fixture so we can test things end-to-end.
     let fixture = SP1x509ProofFixture {
         vkey: vk.bytes32().to_string(),
         public_values: format!("0x{}", hex::encode(public_values_bytes)),
         proof: format!("0x{}", hex::encode(proof.bytes())),
+        root_cert_hash: format!("0x{}", hex::encode(pub_values.root_cert_hash)),
+        pcr_0: format!("0x{}", hex::encode(pub_values.pcr_0)),
+        pcr_1: format!("0x{}", hex::encode(pub_values.pcr_1)),
+        pcr_2: format!("0x{}", hex::encode(pub_values.pcr_2)),
+        pcr_8: format!("0x{}", hex::encode(pub_values.pcr_8)),
     };
 
     // The verification key is used to verify that the proof corresponds to the execution of the
@@ -114,7 +128,7 @@ fn create_proof_fixture(
 
     // Save the fixture to a file.
     let fixture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../synd-contracts/test/withdrawal/fixtures");
+        .join("../../../../synd-contracts/test/withdrawal/fixtures");
     std::fs::create_dir_all(&fixture_path).expect("failed to create fixture path");
     std::fs::write(
         fixture_path.join(format!("{:?}-fixture.json", system).to_lowercase()),

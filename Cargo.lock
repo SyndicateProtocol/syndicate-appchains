@@ -91,7 +91,6 @@ dependencies = [
  "alloy-contract",
  "alloy-core",
  "alloy-eips 0.13.0",
- "alloy-genesis",
  "alloy-network 0.13.0",
  "alloy-node-bindings",
  "alloy-provider",
@@ -7296,7 +7295,6 @@ name = "synd-tee-attestion-zk-proofs-aws-nitro"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-sol-types 1.1.2",
  "const-oid",
  "p384",
  "serde",
@@ -7308,7 +7306,7 @@ dependencies = [
 name = "synd-tee-attestion-zk-proofs-sp1-program"
 version = "0.1.0"
 dependencies = [
- "alloy-sol-types 1.1.2",
+ "alloy",
  "sp1-zkvm",
  "synd-tee-attestion-zk-proofs-aws-nitro",
 ]
@@ -7317,7 +7315,7 @@ dependencies = [
 name = "synd-tee-attestion-zk-proofs-sp1-script"
 version = "0.1.0"
 dependencies = [
- "alloy-sol-types 1.1.2",
+ "alloy",
  "clap",
  "dotenv",
  "hex",

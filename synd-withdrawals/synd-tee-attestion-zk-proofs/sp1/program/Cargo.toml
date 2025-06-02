@@ -9,6 +9,6 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy-sol-types                        = { workspace = true }
+alloy                                  = { workspace = true, features = ["sol-types"] }
 sp1-zkvm                               = { workspace = true }
 synd-tee-attestion-zk-proofs-aws-nitro = { workspace = true }

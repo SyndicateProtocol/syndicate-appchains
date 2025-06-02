@@ -1,5 +1,5 @@
 use crate::cose::CoseSign1;
-use alloy_sol_types::sol;
+use alloy::{primitives::Address, sol};
 // use aws_nitro_enclaves_cose::{crypto::Openssl, CoseSign1};
 use const_oid::db::rfc5912::ECDSA_WITH_SHA_384;
 use p384::{
@@ -18,11 +18,16 @@ use x509_cert::{
 sol! {
   /// The public values encoded as a struct that can be easily deserialized inside Solidity.
   struct PublicValuesStruct {
-      bytes cbor_encoded_attestation_document; // TODO REMOVE AND ADD PCRs
-      bytes der_encoded_root_cert; // TODO thi can be an hash
+      bytes32 root_cert_hash;
       uint64 validity_window_start;
       uint64 validity_window_end;
-      bytes public_key; // TODO return addr instead of pub key
+      // https://docs.aws.amazon.com/enclaves/latest/user/set-up-attestation.html#where
+      // each pcr is 48 bytes, that is subsequently keccak256'd
+      bytes32 pcr_0;
+      bytes32 pcr_1;
+      bytes32 pcr_2;
+      bytes32 pcr_8;
+      address tee_signing_key;
   }
 }
 
@@ -64,7 +69,6 @@ struct AwsNitroAttestationDocument<'a> {
 
     timestamp: u64,
 
-    // TODO add checks for PCRs 0 1 2 8 - see https://docs.aws.amazon.com/enclaves/latest/user/set-up-attestation.html#where
     #[serde(borrow)]
     pcrs: HashMap<u8, &'a [u8]>, // SHA384 hash is 384 bits = 48 bytes
 
@@ -258,6 +262,16 @@ pub fn verify_x509_parent(
     Ok(())
 }
 
+pub struct ValidationResult {
+    pub tee_signing_key: Address,
+    pub validity_window_start: u64,
+    pub validity_window_end: u64,
+    pub pcr_0: Vec<u8>,
+    pub pcr_1: Vec<u8>,
+    pub pcr_2: Vec<u8>,
+    pub pcr_8: Vec<u8>,
+}
+
 /// https://github.com/aws/aws-nitro-enclaves-nsm-api/blob/main/docs/attestation_process.md#32-syntactical-validation
 ///
 /// - Decode the CBOR object and map it to a COSE_Sign1 structure;
@@ -270,7 +284,7 @@ pub fn verify_x509_parent(
 pub fn verify_aws_nitro_attestation(
     input: &[u8],
     trusted_root_cert_der: &[u8],
-) -> Result<(Vec<u8>, u64, u64), VerificationError> {
+) -> Result<ValidationResult, VerificationError> {
     let mut input = input.to_vec();
     let cose_sign1 = CoseSign1::from_bytes(&mut input)
         .map_err(|e| VerificationError::CoseSign1ParseError(e.to_string()))?;
@@ -298,10 +312,22 @@ pub fn verify_aws_nitro_attestation(
         .verify_signature(&pub_key)
         .map_err(|e| VerificationError::InvalidCoseSign1Signature(e.to_string()))?;
 
-    // TODO verify this is where the pub key should come rom
-    doc.public_key
-        .ok_or(VerificationError::PublicKeyMissing)
-        .map(|pk| (pk.to_vec(), validity_window_start, validity_window_end))
+    let pub_key = doc.public_key.ok_or(VerificationError::PublicKeyMissing)?;
+
+    // pub key comes in SEC1 format, 0x04 prefixed - meaning uncompressed https://www.ietf.org/archive/id/draft-ietf-openpgp-crypto-refresh-12.html#name-elliptic-curve-point-wire-f
+    assert_eq!(pub_key.len(), 65);
+    assert_eq!(pub_key[0], 0x04);
+
+    Ok(ValidationResult {
+        // exclude the leading 0x04 byte prefix
+        tee_signing_key: Address::from_raw_public_key(&pub_key[1..]),
+        validity_window_start,
+        validity_window_end,
+        pcr_0: doc.pcrs.get(&0).unwrap().to_vec(),
+        pcr_1: doc.pcrs.get(&1).unwrap().to_vec(),
+        pcr_2: doc.pcrs.get(&2).unwrap().to_vec(),
+        pcr_8: doc.pcrs.get(&8).unwrap().to_vec(),
+    })
 }
 
 #[cfg(test)]
@@ -331,10 +357,12 @@ mod tests {
         let doc_cbor = hex::decode(doc_hex).unwrap();
         let trusted_root_cert_der = der_from_pem(include_bytes!("testdata/aws_nitro_root.pem"));
 
-        let (pub_key, validity_window_start, validity_window_end) =
-            verify_aws_nitro_attestation(&doc_cbor, &trusted_root_cert_der).unwrap();
-        assert_eq!(pub_key, hex::decode("040697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb36").unwrap());
-        assert_eq!(validity_window_start, 1748509950);
-        assert_eq!(validity_window_end, 1748520753);
+        let res = verify_aws_nitro_attestation(&doc_cbor, &trusted_root_cert_der).unwrap();
+        assert_eq!(
+            res.tee_signing_key,
+            alloy::primitives::Address::from_raw_public_key(&hex::decode("0697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb36").unwrap())
+        );
+        assert_eq!(res.validity_window_start, 1748509950);
+        assert_eq!(res.validity_window_end, 1748520753);
     }
 }

@@ -23,7 +23,7 @@ name = "vkey"
 path = "src/bin/vkey.rs"
 
 [dependencies]
-alloy-sol-types                        = { workspace = true }
+alloy                                  = { workspace = true }
 clap                                   = { workspace = true, features = ["derive", "env"] }
 dotenv                                 = { workspace = true }
 hex                                    = { workspace = true }

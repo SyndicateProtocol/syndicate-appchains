@@ -9,12 +9,12 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy-sol-types = { workspace = true }
-const-oid       = { workspace = true, features = ["db"] }
-p384            = { workspace = true }
-serde           = { workspace = true, features = ["derive"] }
-serde_cbor      = { workspace = true, default-features = true }
-x509-cert       = { workspace = true }
+alloy      = { workspace = true, features = ["sol-types"] }
+const-oid  = { workspace = true, features = ["db"] }
+p384       = { workspace = true }
+serde      = { workspace = true, features = ["derive"] }
+serde_cbor = { workspace = true, default-features = true }
+x509-cert  = { workspace = true }
 
 
 [dev-dependencies]

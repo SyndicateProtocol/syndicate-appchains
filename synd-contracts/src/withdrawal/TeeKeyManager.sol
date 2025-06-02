@@ -11,8 +11,7 @@ import {IAttestationDocVerifier} from "./IAttestationDocVerifier.sol";
  * Allows an owner to add/remove programs and keys, and provides a function
  * to check if a given key is valid (i.e., associated with an active program).
  */
-contract TeeKeyManager is ITeeKeyManager, Ownable{
-
+contract TeeKeyManager is ITeeKeyManager, Ownable {
     event KeyAdded(address indexed key);
     event KeysRevoked();
 
@@ -24,15 +23,12 @@ contract TeeKeyManager is ITeeKeyManager, Ownable{
         attestationDocVerifier = _attestationDocVerifier;
     }
 
-
     /**
      * @notice Checks if a public key is considered a valid TEE key.
      * @param publicKey The public key to check.
      * @return True if the key is valid (i.e., marked as valid in `keyValidity`), false otherwise.
      */
-    function isKeyValid(
-        address publicKey
-    ) external view override returns (bool) {
+    function isKeyValid(address publicKey) external view override returns (bool) {
         return validKeys[publicKey];
     }
 
@@ -41,10 +37,7 @@ contract TeeKeyManager is ITeeKeyManager, Ownable{
      * @param _proofBytes The encoded proof.
      * @param _publicValues The encoded public values.
      */
-    function addKey(
-        bytes calldata _publicValues,
-        bytes calldata _proofBytes
-    ) external {
+    function addKey(bytes calldata _publicValues, bytes calldata _proofBytes) external {
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(_publicValues, _proofBytes);
         validKeys[publicKey] = true;
         emit KeyAdded(publicKey);
@@ -53,9 +46,17 @@ contract TeeKeyManager is ITeeKeyManager, Ownable{
     /**
      * @notice Revokes all keys.
      */
-    function revokeAllKeys() external onlyOwner {
+    function revokeAllKeys() public onlyOwner {
         validKeys[msg.sender] = false;
         emit KeysRevoked();
     }
 
+    /**
+     * @notice Updates the attestation doc verifier.
+     * @param _attestationDocVerifier The new attestation doc verifier.
+     */
+    function updateAttestationDocVerifier(IAttestationDocVerifier _attestationDocVerifier) external onlyOwner {
+        this.revokeAllKeys();
+        attestationDocVerifier = _attestationDocVerifier;
+    }
 }

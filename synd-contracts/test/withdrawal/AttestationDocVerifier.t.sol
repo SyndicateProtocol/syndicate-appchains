@@ -10,6 +10,11 @@ struct SP1ProofFixtureJson {
     bytes proof;
     bytes publicValues;
     bytes32 vkey;
+    bytes32 rootCertHash;
+    bytes32 pcr0;
+    bytes32 pcr1;
+    bytes32 pcr2;
+    bytes32 pcr8;
 }
 
 abstract contract BaseAttestationDocVerifierTest is Test {
@@ -18,9 +23,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
     address verifier;
     AttestationDocVerifier public attestationDocVerifier;
 
-    function loadFixture(
-        string memory fixturePath
-    ) public view returns (SP1ProofFixtureJson memory) {
+    function loadFixture(string memory fixturePath) public view returns (SP1ProofFixtureJson memory) {
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, fixturePath);
         string memory json = vm.readFile(path);
@@ -29,6 +32,11 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         fixture.proof = json.readBytes(".proof");
         fixture.publicValues = json.readBytes(".publicValues");
         fixture.vkey = json.readBytes32(".vkey");
+        fixture.rootCertHash = json.readBytes32(".rootCertHash");
+        fixture.pcr0 = json.readBytes32(".pcr0");
+        fixture.pcr1 = json.readBytes32(".pcr1");
+        fixture.pcr2 = json.readBytes32(".pcr2");
+        fixture.pcr8 = json.readBytes32(".pcr8");
 
         return fixture;
     }
@@ -39,8 +47,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         SP1ProofFixtureJson memory fixture = loadFixture(getFixturePath());
         verifier = address(new SP1VerifierGateway(address(1)));
         attestationDocVerifier = new AttestationDocVerifier(
-            verifier,
-            fixture.vkey
+            verifier, fixture.vkey, fixture.rootCertHash, fixture.pcr0, fixture.pcr1, fixture.pcr2, fixture.pcr8
         );
     }
 
@@ -48,20 +55,11 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         SP1ProofFixtureJson memory fixture = loadFixture(getFixturePath());
         vm.warp(1748509951); // timestamp within the validity window
 
-        vm.mockCall(
-            verifier,
-            abi.encodeWithSelector(SP1VerifierGateway.verifyProof.selector),
-            abi.encode(true)
-        );
+        vm.mockCall(verifier, abi.encodeWithSelector(SP1VerifierGateway.verifyProof.selector), abi.encode(true));
 
-        address publicKey = attestationDocVerifier.verifyAttestationDocProof(
-            fixture.publicValues,
-            fixture.proof
-        );
+        address publicKey = attestationDocVerifier.verifyAttestationDocProof(fixture.publicValues, fixture.proof);
 
-        assert(
-            publicKey == address(0x00F652c7f894F01CEa2eeaDA38C2423C4B2c1Ad8)
-        );
+        assert(publicKey == address(0x498e5737cB53434430e55D8fD49be974267DFEba));
     }
 
     function testRevert_InvalidAttestationDocVerifierProof() public {
@@ -73,10 +71,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         // Create a fake proof.
         bytes memory fakeProof = new bytes(fixture.proof.length);
 
-        attestationDocVerifier.verifyAttestationDocProof(
-            fixture.publicValues,
-            fakeProof
-        );
+        attestationDocVerifier.verifyAttestationDocProof(fixture.publicValues, fakeProof);
     }
 }
 

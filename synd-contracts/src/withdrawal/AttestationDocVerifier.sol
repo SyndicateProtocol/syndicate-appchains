@@ -5,11 +5,16 @@ import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
 import {IAttestationDocVerifier} from "./IAttestationDocVerifier.sol";
 
 struct PublicValuesStruct {
-    bytes cbor_encoded_attestation_document; // TODO check if we can remove this
-    bytes der_encoded_root_cert;
+    bytes32 root_cert_hash;
     uint64 validity_window_start;
     uint64 validity_window_end;
-    bytes public_key;
+    // https://docs.aws.amazon.com/enclaves/latest/user/set-up-attestation.html#where
+    // each pcr is 48 bytes, that is subsequently keccak256'd
+    bytes32 pcr_0;
+    bytes32 pcr_1;
+    bytes32 pcr_2;
+    bytes32 pcr_8;
+    address tee_signing_key;
 }
 
 contract AttestationDocVerifier is IAttestationDocVerifier {
@@ -23,42 +28,53 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
     /// @notice The verification key for the cert verifier.
     bytes32 public attestationDocVerifierVKey;
 
-    constructor(address _verifier, bytes32 _attestationDocVerifierVKey) {
+    /// @notice The expected values for the attestation document.
+    bytes32 public rootCertHash;
+    bytes32 public pcr0;
+    bytes32 public pcr1;
+    bytes32 public pcr2;
+    bytes32 public pcr8;
+
+    constructor(
+        address _verifier,
+        bytes32 _attestationDocVerifierVKey,
+        bytes32 _rootCertHash,
+        bytes32 _pcr0,
+        bytes32 _pcr1,
+        bytes32 _pcr2,
+        bytes32 _pcr8
+    ) {
         verifier = _verifier;
         attestationDocVerifierVKey = _attestationDocVerifierVKey;
+        rootCertHash = _rootCertHash;
+        pcr0 = _pcr0;
+        pcr1 = _pcr1;
+        pcr2 = _pcr2;
+        pcr8 = _pcr8;
     }
 
     /// @notice The entrypoint for verifying the proof of a certificate.
     /// @param _proofBytes The encoded proof.
     /// @param _publicValues The encoded public values.
-    function verifyAttestationDocProof(
-        bytes calldata _publicValues,
-        bytes calldata _proofBytes
-    ) public view returns (address) {
-        PublicValuesStruct memory publicValues = abi.decode(
-            _publicValues,
-            (PublicValuesStruct)
-        );
+    function verifyAttestationDocProof(bytes calldata _publicValues, bytes calldata _proofBytes)
+        public
+        view
+        returns (address)
+    {
+        PublicValuesStruct memory publicValues = abi.decode(_publicValues, (PublicValuesStruct));
 
-        // TODO check root cert
+        require(publicValues.root_cert_hash == rootCertHash, "Root cert hash mismatch");
 
-        require(
-            block.timestamp >= publicValues.validity_window_start,
-            "Validity window has not started"
-        );
-        require(
-            block.timestamp <= publicValues.validity_window_end,
-            "Validity window has ended"
-        );
+        require(block.timestamp >= publicValues.validity_window_start, "Validity window has not started");
+        require(block.timestamp <= publicValues.validity_window_end, "Validity window has ended");
 
-        ISP1Verifier(verifier).verifyProof(
-            attestationDocVerifierVKey,
-            _publicValues,
-            _proofBytes
-        );
+        require(publicValues.pcr_0 == pcr0, "PCR0 mismatch");
+        require(publicValues.pcr_1 == pcr1, "PCR1 mismatch");
+        require(publicValues.pcr_2 == pcr2, "PCR2 mismatch");
+        require(publicValues.pcr_8 == pcr8, "PCR8 mismatch");
 
-        bytes32 hash = keccak256(publicValues.public_key);
+        ISP1Verifier(verifier).verifyProof(attestationDocVerifierVKey, _publicValues, _proofBytes);
 
-        return address(uint160(uint256(hash)));
+        return publicValues.tee_signing_key;
     }
 }

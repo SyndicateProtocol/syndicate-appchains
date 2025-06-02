@@ -3,7 +3,7 @@
 #[path = "../utils.rs"]
 mod utils;
 
-use alloy_sol_types::SolType;
+use alloy::{primitives::keccak256, sol_types::SolType};
 use clap::Parser;
 use sp1_sdk::{include_elf, ProverClient, SP1Stdin};
 use synd_tee_attestion_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, PublicValuesStruct};
@@ -60,29 +60,39 @@ fn main() {
         println!("Program executed successfully.");
 
         // Read the output.
-        let decoded = PublicValuesStruct::abi_decode(output.as_slice()).unwrap();
         let PublicValuesStruct {
-            cbor_encoded_attestation_document,
-            der_encoded_root_cert,
+            root_cert_hash,
             validity_window_start,
             validity_window_end,
-            public_key,
-        } = decoded;
-        println!("cbor_encoded_attestation_document: {}", cbor_encoded_attestation_document);
-        println!("der_encoded_root_cert: {}", der_encoded_root_cert);
+            tee_signing_key,
+            pcr_0,
+            pcr_1,
+            pcr_2,
+            pcr_8,
+        } = PublicValuesStruct::abi_decode(output.as_slice(), true).unwrap();
+        println!("root_cert_hash: {}", root_cert_hash);
         println!("validity_window_start: {}", validity_window_start);
         println!("validity_window_end: {}", validity_window_end);
-        println!("public_key: {}", public_key);
+        println!("tee_signing_key: {}", tee_signing_key);
+        println!("root_cert_hash: {}", hex::encode(keccak256(&der_encoded_root_cert)));
+        println!("pcr_0: {}", hex::encode(pcr_0));
+        println!("pcr_1: {}", hex::encode(pcr_1));
+        println!("pcr_2: {}", hex::encode(pcr_2));
+        println!("pcr_8: {}", hex::encode(pcr_8));
 
-        let (expected_public_key, expected_validity_window_start, expected_validity_window_end) =
-            verify_aws_nitro_attestation(
-                &cbor_encoded_attestation_document,
-                &der_encoded_root_cert,
-            )
-            .expect("Invalid attestation document");
-        assert_eq!(expected_public_key, public_key);
-        assert_eq!(expected_validity_window_start, validity_window_start);
-        assert_eq!(expected_validity_window_end, validity_window_end);
+        let expected = verify_aws_nitro_attestation(
+            &cbor_encoded_attestation_document,
+            &der_encoded_root_cert,
+        )
+        .expect("Invalid attestation document");
+        assert_eq!(tee_signing_key, expected.tee_signing_key);
+        assert_eq!(validity_window_start, expected.validity_window_start);
+        assert_eq!(validity_window_end, expected.validity_window_end);
+        assert_eq!(root_cert_hash, keccak256(&der_encoded_root_cert));
+        assert_eq!(pcr_0, keccak256(expected.pcr_0));
+        assert_eq!(pcr_1, keccak256(expected.pcr_1));
+        assert_eq!(pcr_2, keccak256(expected.pcr_2));
+        assert_eq!(pcr_8, keccak256(expected.pcr_8));
 
         println!("Values are correct!");
 
