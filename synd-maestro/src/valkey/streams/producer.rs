@@ -1,12 +1,13 @@
 //! This module provides the producer implementation for Valkey Streams used to queue
 //! and process transactions across different chains.
 
-use alloy::primitives::keccak256;
+use alloy::{hex, primitives::keccak256};
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisError};
+use shared::tracing::{current_traceparent, SpanKind};
 use std::{self, time::Duration};
 use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, instrument, trace};
 
 // TODO(SEQ-916): update me to `synd-maestro`
 /// Base key for Valkey transaction streams
@@ -120,15 +121,35 @@ impl StreamProducer {
         Self::add_to_stream(&self.conn, &self.stream_key, raw_tx, 0).await
     }
 
+    #[instrument(
+        name = "enqueue_transaction",
+        skip(conn, raw_tx),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Producer,
+            traceparent_key_value = %current_traceparent().unwrap_or_else(|| "none".to_string()),
+            tx_hash = format!("0x{}", hex::encode(keccak256(raw_tx))),
+            stream_key = %stream_key
+        )
+    )]
     async fn add_to_stream(
         conn: &MultiplexedConnection,
         stream_key: &str,
         raw_tx: &[u8],
         retries: u32,
     ) -> Result<String, RedisError> {
+        let traceparent = current_traceparent().unwrap_or_default();
         let id: String = conn
             .clone()
-            .xadd(stream_key, "*", &[("data", raw_tx), ("retries", retries.to_string().as_bytes())])
+            .xadd(
+                stream_key,
+                "*",
+                &[
+                    ("data", raw_tx),
+                    ("retries", retries.to_string().as_bytes()),
+                    ("traceparent", Vec::from(traceparent).as_slice()),
+                ],
+            )
             .await?;
         debug!(%stream_key, %id, "Enqueued transaction");
         Ok(id)
@@ -314,6 +335,7 @@ impl StreamProducer {
     /// Shuts down the finalization checker task gracefully.
     ///
     /// Sends a shutdown signal to the checker and waits for it to finish its current loop.
+    #[instrument(skip_all)]
     pub async fn shutdown(&self) {
         debug!(stream_key = %self.stream_key, "Attempting to shut down StreamProducer's finalization checker...");
         self.shutdown_token.cancel();

@@ -11,7 +11,7 @@ use redis::{
 };
 use shared::tracing::{otel_global, OpenTelemetrySpanExt, SpanKind, TraceContextExt};
 use std::{collections::HashMap, time::Duration};
-use tracing::{info_span, instrument};
+use tracing::{info_span, instrument, Span};
 
 /// A consumer for Valkey Streams that reads transaction data.
 ///
@@ -118,7 +118,7 @@ impl StreamConsumer {
                 .map
                 .get("traceparent")
                 .ok_or_else(|| eyre::eyre!("No traceparent found in message"))?;
-            let parent_context = match traceparent {
+            let producer_context = match traceparent {
                 redis::Value::BulkString(data) => {
                     let carrier: HashMap<String, String> =
                         [("traceparent".to_string(), String::from_utf8_lossy(data).to_string())]
@@ -127,9 +127,13 @@ impl StreamConsumer {
                 }
                 _ => return Err(eyre::eyre!("Expected binary data, got different type")),
             };
-            let parent_span = parent_context.span();
-            let span = info_span!("redis_recv_transaction");
-            span.add_link(parent_span.span_context().clone());
+            let producer_span = producer_context.span();
+            let span = info_span!(
+                parent: Span::current(),
+                "redis_recv_transaction",
+                otel.kind = ?SpanKind::Consumer,
+            );
+            span.add_link(producer_span.span_context().clone());
             let _guard = span.enter();
 
             let raw_tx =
