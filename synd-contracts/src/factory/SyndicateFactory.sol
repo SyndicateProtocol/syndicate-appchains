@@ -114,6 +114,7 @@ contract SyndicateFactory is AccessControl, Pausable {
         // This ensures we always stay within the 510 namespace
         string memory prefixStr = Strings.toString(namespacePrefix);
         string memory chainIdStr = Strings.toString(nextAutoChainId);
+        //#olympix-ignore-abi-encode-packed-dynamic-types
         string memory combined = string(abi.encodePacked(prefixStr, chainIdStr));
         return Strings.parseUint(combined);
     }

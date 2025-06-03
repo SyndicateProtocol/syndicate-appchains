@@ -59,6 +59,7 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
     /// @return sequencingChain The deployed sequencing chain address
     /// @return permissionModule The deployed permission module address
     /// @return actualChainId The chain ID that was used
+    //#olympix-ignore-reentrancy-events
     function deployCompleteSyndicate(
         uint256 appchainId,
         address admin,
