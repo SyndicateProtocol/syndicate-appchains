@@ -7,7 +7,6 @@ methods {
     function totalSupply() external returns (uint256) envfree;
     function balanceOf(address) external returns (uint256) envfree;
     function hasRole(bytes32,address) external returns (bool) envfree;
-    // function getRoleAdmin(bytes32) external returns (bytes32) envfree;
 
     function grantRole(bytes32,address) external;
     function revokeRole(bytes32,address) external;
@@ -19,7 +18,7 @@ methods {
 rule onlyMinterCanMint(address to, uint256 amount) {
     env e;
 
-    mint@withrevert(e, to, amount);
+    adminMint@withrevert(e, to, amount);
 
     assert !lastReverted => hasRole(MINTER_ROLE(), e.msg.sender),
         "Non-minter able to mint";
@@ -42,7 +41,7 @@ rule mintUpdatesBalance(address to, uint256 amount) {
     require balanceBefore + amount <= max_uint256;
     require totalBefore + amount <= max_uint256;
 
-    mint(e, to, amount);
+    adminMint(e, to, amount);
 
     mathint balanceAfter = balanceOf(to);
     mathint totalAfter = totalSupply();
@@ -58,7 +57,7 @@ rule noMintToZero(uint256 amount) {
     env e;
     require hasRole(MINTER_ROLE(), e.msg.sender);
 
-    mint@withrevert(e, 0, amount);
+    adminMint@withrevert(e, 0, amount);
 
     assert lastReverted, "Should not mint to zero address";
 }
@@ -146,7 +145,7 @@ rule adminCanRevokeMinterRole(address minter) {
     require hasRole(MINTER_ROLE(), e.msg.sender);
 
 
-    mint@withrevert(e, to, 0);
+    adminMint@withrevert(e, to, 0);
 
     assert lastReverted, "Should not mint zero amount";
  }
