@@ -1,2 +1,15 @@
-@arbitrum/nitro-contracts/src/=lib/nitro-contracts/src/
-@offchainlabs/upgrade-executor/src/=lib/upgrade-executor/src/
+@openzeppelin/contracts-upgradeable/=lib/upgrade-executor/node_modules/@openzeppelin/contracts-upgradeable/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@uniswap/lib/=lib/nitro-contracts/node_modules/@uniswap/lib/contracts/
+@uniswap/v2-core/=lib/nitro-contracts/node_modules/@uniswap/v2-core/contracts/
+ds-test/=lib/upgrade-executor/lib/forge-std/lib/ds-test/src/
+erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/
+forge-std/=lib/forge-std/src/
+halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/
+nitro-contracts/=lib/nitro-contracts/src/
+openzeppelin-contracts/=lib/openzeppelin-contracts/
+@sp1-contracts/=lib/sp1-contracts/contracts/src/
+upgrade-executor/=lib/upgrade-executor/src/
+@arbitrum/nitro-contracts/=lib/nitro-contracts/
+@offchainlabs/upgrade-executor/=lib/upgrade-executor/
+lib/openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/

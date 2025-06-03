@@ -43,3 +43,7 @@ Validates the structure and integrity of blocks from the appchain using Arbitrum
 ### Synd-Enclave
 
 The secure enclave environment executes core logic for verifying withdrawal proofs. This is a forked version of [base/op-enclave](https://github.com/base/op-enclave).
+
+### Synd-Tee-Attestation-ZK-Proofs
+
+Generation and verification of zk proofs for synd-enclave TEE attestation documents.

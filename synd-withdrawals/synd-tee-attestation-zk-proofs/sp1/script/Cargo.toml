@@ -1,0 +1,38 @@
+[package]
+default-run            = "tee-attestation-verifier"
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-tee-attestation-zk-proofs-sp1-script"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+
+[[bin]]
+name = "tee-attestation-verifier"
+path = "src/bin/main.rs"
+
+[[bin]]
+name = "evm"
+path = "src/bin/evm.rs"
+
+[[bin]]
+name = "vkey"
+path = "src/bin/vkey.rs"
+
+[dependencies]
+alloy                                    = { workspace = true }
+clap                                     = { workspace = true, features = ["derive", "env"] }
+dotenv                                   = { workspace = true }
+hex                                      = { workspace = true }
+serde                                    = { workspace = true, features = ["derive"] }
+serde_json                               = { workspace = true, features = ["alloc"] }
+sp1-sdk                                  = { workspace = true }
+synd-tee-attestation-zk-proofs-aws-nitro = { workspace = true }
+tracing                                  = { workspace = true }
+x509-cert                                = { workspace = true }
+
+[build-dependencies]
+sp1-build = { workspace = true }
