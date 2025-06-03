@@ -9,6 +9,7 @@ contract DeployArbConfigManagerFactory is Script {
     function run() public {
         uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(privateKey);
+        console2.log("Deployer address:", deployer);
         vm.startBroadcast(privateKey);
         new ArbConfigManagerFactory();
         vm.stopBroadcast();
