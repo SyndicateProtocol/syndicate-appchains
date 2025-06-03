@@ -23,17 +23,19 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
     ///      SP1VerifierGateway which can be used to verify proofs for any version of SP1.
     ///      For the list of supported verifiers on each chain, see:
     ///      https://github.com/succinctlabs/sp1-contracts/tree/main/contracts/deployments
-    address public verifier;
+    address public immutable verifier;
 
     /// @notice The verification key for the cert verifier.
-    bytes32 public attestationDocVerifierVKey;
+    bytes32 public immutable attestationDocVerifierVKey;
 
     /// @notice The expected values for the attestation document.
-    bytes32 public rootCertHash;
-    bytes32 public pcr0;
-    bytes32 public pcr1;
-    bytes32 public pcr2;
-    bytes32 public pcr8;
+    bytes32 public immutable rootCertHash;
+    bytes32 public immutable pcr0;
+    bytes32 public immutable pcr1;
+    bytes32 public immutable pcr2;
+    bytes32 public immutable pcr8;
+
+    uint64 public immutable expirationTolerance;
 
     constructor(
         address _verifier,
@@ -42,7 +44,8 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         bytes32 _pcr0,
         bytes32 _pcr1,
         bytes32 _pcr2,
-        bytes32 _pcr8
+        bytes32 _pcr8,
+        uint64 _expirationTolerance
     ) {
         verifier = _verifier;
         attestationDocVerifierVKey = _attestationDocVerifierVKey;
@@ -51,6 +54,7 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         pcr1 = _pcr1;
         pcr2 = _pcr2;
         pcr8 = _pcr8;
+        expirationTolerance = _expirationTolerance;
     }
 
     /// @notice The entrypoint for verifying the proof of a certificate.
@@ -66,7 +70,7 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         require(publicValues.root_cert_hash == rootCertHash, "Root cert hash mismatch");
 
         require(block.timestamp >= publicValues.validity_window_start, "Validity window has not started");
-        require(block.timestamp <= publicValues.validity_window_end, "Validity window has ended");
+        require(block.timestamp <= publicValues.validity_window_end + expirationTolerance, "Validity window has ended");
 
         require(publicValues.pcr_0 == pcr0, "PCR0 mismatch");
         require(publicValues.pcr_1 == pcr1, "PCR1 mismatch");

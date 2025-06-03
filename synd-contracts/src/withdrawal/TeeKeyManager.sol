@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ITeeKeyManager} from "./ITeeKeyManager.sol";
 import {IAttestationDocVerifier} from "./IAttestationDocVerifier.sol";
 
@@ -12,12 +13,14 @@ import {IAttestationDocVerifier} from "./IAttestationDocVerifier.sol";
  * to check if a given key is valid (i.e., associated with an active program).
  */
 contract TeeKeyManager is ITeeKeyManager, Ownable {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     event KeyAdded(address indexed key);
     event KeysRevoked();
 
     IAttestationDocVerifier public attestationDocVerifier;
 
-    mapping(address => bool) internal validKeys;
+    EnumerableSet.AddressSet internal validKeys;
 
     constructor(IAttestationDocVerifier _attestationDocVerifier) Ownable(msg.sender) {
         attestationDocVerifier = _attestationDocVerifier;
@@ -29,7 +32,7 @@ contract TeeKeyManager is ITeeKeyManager, Ownable {
      * @return True if the key is valid (i.e., marked as valid in `keyValidity`), false otherwise.
      */
     function isKeyValid(address publicKey) external view override returns (bool) {
-        return validKeys[publicKey];
+        return validKeys.contains(publicKey);
     }
 
     /**
@@ -39,7 +42,8 @@ contract TeeKeyManager is ITeeKeyManager, Ownable {
      */
     function addKey(bytes calldata _publicValues, bytes calldata _proofBytes) external {
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(_publicValues, _proofBytes);
-        validKeys[publicKey] = true;
+        bool added = validKeys.add(publicKey);
+        require(added, "TeeKeyManager: Key already exists or failed to add");
         emit KeyAdded(publicKey);
     }
 
@@ -47,7 +51,10 @@ contract TeeKeyManager is ITeeKeyManager, Ownable {
      * @notice Revokes all keys.
      */
     function revokeAllKeys() public onlyOwner {
-        validKeys[msg.sender] = false;
+        address[] memory keys = validKeys.values();
+        for (uint256 i = 0; i < keys.length; i++) {
+            require(validKeys.remove(keys[i]), "TeeKeyManager: Failed to remove key");
+        }
         emit KeysRevoked();
     }
 

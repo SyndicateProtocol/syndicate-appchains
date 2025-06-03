@@ -47,7 +47,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         SP1ProofFixtureJson memory fixture = loadFixture(getFixturePath());
         verifier = address(new SP1VerifierGateway(address(1)));
         attestationDocVerifier = new AttestationDocVerifier(
-            verifier, fixture.vkey, fixture.rootCertHash, fixture.pcr0, fixture.pcr1, fixture.pcr2, fixture.pcr8
+            verifier, fixture.vkey, fixture.rootCertHash, fixture.pcr0, fixture.pcr1, fixture.pcr2, fixture.pcr8, 0
         );
     }
 
@@ -59,7 +59,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
 
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(fixture.publicValues, fixture.proof);
 
-        assert(publicKey == address(0x498e5737cB53434430e55D8fD49be974267DFEba));
+        assert(publicKey == address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E));
     }
 
     function testRevert_InvalidAttestationDocVerifierProof() public {

@@ -1,6 +1,5 @@
 use crate::cose::CoseSign1;
 use alloy::{primitives::Address, sol};
-// use aws_nitro_enclaves_cose::{crypto::Openssl, CoseSign1};
 use const_oid::db::rfc5912::ECDSA_WITH_SHA_384;
 use p384::{
     ecdsa::{signature::Verifier as P384Verifier, Signature as P384Signature},
