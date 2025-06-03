@@ -6,8 +6,8 @@ import {Script, console} from "forge-std/Script.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
-import {SyndicateFactory} from "src/SyndicateFactory.sol";
-import {RequireAndModuleFactory} from "src/PermissionModuleFactories.sol";
+import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
+import {RequireAndModuleFactory} from "src/factory/PermissionModuleFactories.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 
 contract DeploySyndicateFactory is Script {
@@ -25,7 +25,7 @@ contract DeploySyndicateFactory is Script {
 
         syndicateFactory = new SyndicateFactory(admin);
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
-        requireAndModuleFactory = new RequireAndModuleFactory();
+        requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
 
         bytes32 salt = bytes32(appchainId);

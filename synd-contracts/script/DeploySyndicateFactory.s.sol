@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {SyndicateFactory} from "src/SyndicateFactory.sol";
+import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 
 /**
  * @title DeploySyndicateFactoryDirect
