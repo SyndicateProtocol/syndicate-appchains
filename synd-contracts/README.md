@@ -123,6 +123,16 @@ $ make deploy-syndicate-factory
 
 ### Deployed Contracts
 
+### Risa Devnet
+| Contract Name                  | Address                                                                                                                                                |
+| -----------------------        | --------------------------------------------------------------------------------------------------------------------------------------------------     |
+| SyndicateFactory               | [0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba](https://explorer-1205614516323464.devnet.alchemy.com/address/0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba)  |
+| ArbConfigManagerFactory        | [0x87F4DE1886298255c5fce2adF15977fE44F48f68](https://explorer-1205614516323464.devnet.alchemy.com/address/0x87F4DE1886298255c5fce2adF15977fE44F48f68)  |
+| ArbConfigManager               | [0x9c5657c370552C345BB7F0383949aadF70aC7f55](https://explorer-1205614516323464.devnet.alchemy.com/address/0x9c5657c370552C345BB7F0383949aadF70aC7f55)  |
+| RequireAndModuleFactory        | [0x19aaf160dA8985c54bb97adAF9304B5aC7890421](https://explorer-1205614516323464.devnet.alchemy.com/address/0x19aaf160dA8985c54bb97adAF9304B5aC7890421)  |
+| RequireOrModuleFactory         | [0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d](https://explorer-1205614516323464.devnet.alchemy.com/address/0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d)  |
+| RequireCompositeModuleFactory  | [0x471584f0B8e35faEB2a618BD58A62316D8882d63](https://explorer-1205614516323464.devnet.alchemy.com/address/0x471584f0B8e35faEB2a618BD58A62316D8882d63)  |
+
 ### Syndicate Exo
 
 | Contract Name           | Address                                                                                                                                     |
