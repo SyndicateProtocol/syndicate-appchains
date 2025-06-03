@@ -44,7 +44,6 @@ contract ArbConfigManager is Ownable {
      * @param sequencingChainId The ID of the sequencing chain
      * @param arbitrumBridgeAddress Address of the Arbitrum bridge
      * @param arbitrumInboxAddress Address of the Arbitrum inbox
-     * @param arbitrumIgnoreDelayedMessages Whether to ignore delayed messages
      * @param settlementDelay Delay for settlement
      * @param settlementStartBlock Starting block for settlement
      * @param sequencingContractAddress Address of the sequencing contract
@@ -52,7 +51,6 @@ contract ArbConfigManager is Ownable {
      * @param initialAppchainOwner Initial appchain owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
-     * @param allowedSettlementAddresses Array of addresses allowed for settlement
      * @return address The address of the deployed ArbChainConfig contract
      */
     //#olympix-ignore
@@ -62,15 +60,13 @@ contract ArbConfigManager is Ownable {
         uint256 sequencingChainId,
         address arbitrumBridgeAddress,
         address arbitrumInboxAddress,
-        bool arbitrumIgnoreDelayedMessages,
         uint256 settlementDelay,
         uint256 settlementStartBlock,
         address sequencingContractAddress,
         uint256 sequencingStartBlock,
         address initialAppchainOwner,
         string memory sequencingChainRpcUrl,
-        string memory appchainBlockExplorerUrl,
-        address[] memory allowedSettlementAddresses
+        string memory appchainBlockExplorerUrl
     ) external onlyOwner returns (address) {
         require(chainId != 0, "Chain ID cannot be zero");
         require(deployedConfigs[chainId] == address(0), "Config already exists for this chain ID");
@@ -92,15 +88,13 @@ contract ArbConfigManager is Ownable {
             sequencingChainId,
             arbitrumBridgeAddress,
             arbitrumInboxAddress,
-            arbitrumIgnoreDelayedMessages,
             settlementDelay,
             settlementStartBlock,
             sequencingContractAddress,
             sequencingStartBlock,
             initialAppchainOwner,
             sequencingChainRpcUrl,
-            appchainBlockExplorerUrl,
-            allowedSettlementAddresses
+            appchainBlockExplorerUrl
         );
 
         emit ArbChainConfigCreated(chainId, proxyAddress);
