@@ -11,10 +11,10 @@ use sp1_sdk::{
     include_elf, HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey,
 };
 use std::path::PathBuf;
-use synd_tee_attestion_zk_proofs_aws_nitro::PublicValuesStruct;
+use synd_tee_attestation_zk_proofs_aws_nitro::PublicValuesStruct;
 
 /// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
-pub const X509_ELF: &[u8] = include_elf!("synd-tee-attestion-zk-proofs-sp1-program");
+pub const X509_ELF: &[u8] = include_elf!("synd-tee-attestation-zk-proofs-sp1-program");
 
 /// The arguments for the EVM command.
 #[derive(Parser, Debug)]
@@ -54,19 +54,19 @@ struct SP1x509ProofFixture {
 }
 
 fn main() {
-    // Setup the logger.
+    // Set up the logger.
     sp1_sdk::utils::setup_logger();
 
     // Parse the command line arguments.
     let args = EVMArgs::parse();
 
-    // Setup the prover client.
+    // Set up the prover client.
     let client = ProverClient::from_env();
 
-    // Setup the program.
+    // Set up the program.
     let (pk, vk) = client.setup(X509_ELF);
 
-    // Setup the inputs.
+    // Set up the inputs.
     let mut stdin = SP1Stdin::new();
 
     let (cbor_encoded_attestation_document, der_encoded_root_cert) =

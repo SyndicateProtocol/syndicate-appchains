@@ -6,10 +6,10 @@ mod utils;
 use alloy::{primitives::keccak256, sol_types::SolType};
 use clap::Parser;
 use sp1_sdk::{include_elf, ProverClient, SP1Stdin};
-use synd_tee_attestion_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, PublicValuesStruct};
+use synd_tee_attestation_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, PublicValuesStruct};
 
 /// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
-pub const X509_ELF: &[u8] = include_elf!("synd-tee-attestion-zk-proofs-sp1-program");
+pub const X509_ELF: &[u8] = include_elf!("synd-tee-attestation-zk-proofs-sp1-program");
 
 /// The arguments for the command.
 #[derive(Parser, Debug)]

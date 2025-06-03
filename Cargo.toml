@@ -16,9 +16,9 @@ members = [
   "synd-translator/tests",
   "synd-withdrawals/synd-appchain-verifier",
   "synd-withdrawals/synd-proposer",
-  "synd-withdrawals/synd-tee-attestion-zk-proofs/aws-nitro",
-  "synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program",
-  "synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/script",
+  "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
+  "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program",
+  "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script",
   "test-framework",
 ]
 
@@ -93,7 +93,7 @@ synd-chain-ingestor                    = { path = "synd-chain-ingestor" }
 synd-maestro                           = { path = "synd-maestro" }
 synd-mchain                            = { path = "synd-mchain" }
 synd-slotter                           = { path = "synd-translator/crates/synd-slotter" }
-synd-tee-attestion-zk-proofs-aws-nitro = { path = "synd-withdrawals/synd-tee-attestion-zk-proofs/aws-nitro" }
+synd-tee-attestation-zk-proofs-aws-nitro = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro" }
 synd-translator                        = { path = "synd-translator/bin/synd-translator" }
 tc-client                              = { path = "synd-batch-sequencer/crates/tc-client" }
 test-utils                             = { path = "shared/test-utils" }

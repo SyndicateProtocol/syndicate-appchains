@@ -38,7 +38,7 @@ jobs:
   
       - name: Build SP1 ELF program
         run: |
-          cd synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
           ~/.sp1/bin/cargo-prove prove build
 
       # Cache Cargo dependencies
@@ -99,8 +99,8 @@ jobs:
             "synd-verifier"
             "synd-withdrawals/synd-appchain-verifier"
             "synd-withdrawals/synd-proposer"
-            "synd-withdrawals/synd-tee-attestion-zk-proofs/aws-nitro"
-            "synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program"
+            "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro"
+            "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program"
             "test-framework"
 
   taplo:
@@ -165,7 +165,7 @@ jobs:
 
       - name: Build SP1 ELF program
         run: |
-          cd synd-withdrawals/synd-tee-attestion-zk-proofs/sp1/program
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
           ~/.sp1/bin/cargo-prove prove build
       
       - name: Verify Foundry Installation

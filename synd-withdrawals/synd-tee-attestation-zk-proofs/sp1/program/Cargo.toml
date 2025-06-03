@@ -1,0 +1,14 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-tee-attestation-zk-proofs-sp1-program"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy                                    = { workspace = true, features = ["sol-types"] }
+sp1-zkvm                                 = { workspace = true }
+synd-tee-attestation-zk-proofs-aws-nitro = { workspace = true }

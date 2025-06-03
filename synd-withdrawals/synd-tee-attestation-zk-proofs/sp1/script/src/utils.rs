@@ -25,8 +25,8 @@ pub fn read_and_decode_attestation_docs(
     let hex_doc = fs::read(att_doc_path).expect("Failed to read attestation document");
     let pem_root_cert = fs::read(root_cert_path).expect("Failed to read root certificate");
 
-    // TODO: The expected doc is currently hex encoded, need to decide if we want the input to be
-    // hex or bin
+    // TODO SEQ-999: The expected doc is currently hex encoded, need to decide if we want the input
+    // to be hex or bin
     let cbor_encoded_attestation_document =
         hex::decode(hex_doc).expect("Failed to decode attestation document from hex");
 

@@ -7291,7 +7291,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "synd-tee-attestion-zk-proofs-aws-nitro"
+name = "synd-tee-attestation-zk-proofs-aws-nitro"
 version = "0.1.0"
 dependencies = [
  "alloy",
@@ -7303,16 +7303,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "synd-tee-attestion-zk-proofs-sp1-program"
+name = "synd-tee-attestation-zk-proofs-sp1-program"
 version = "0.1.0"
 dependencies = [
  "alloy",
  "sp1-zkvm",
- "synd-tee-attestion-zk-proofs-aws-nitro",
+ "synd-tee-attestation-zk-proofs-aws-nitro",
 ]
 
 [[package]]
-name = "synd-tee-attestion-zk-proofs-sp1-script"
+name = "synd-tee-attestation-zk-proofs-sp1-script"
 version = "0.1.0"
 dependencies = [
  "alloy",
@@ -7323,7 +7323,7 @@ dependencies = [
  "serde_json",
  "sp1-build",
  "sp1-sdk",
- "synd-tee-attestion-zk-proofs-aws-nitro",
+ "synd-tee-attestation-zk-proofs-aws-nitro",
  "tracing",
  "x509-cert",
 ]

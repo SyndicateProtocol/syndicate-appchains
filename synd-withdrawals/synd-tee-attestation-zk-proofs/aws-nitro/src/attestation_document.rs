@@ -16,6 +16,7 @@ use x509_cert::{
 // SP1 specific
 sol! {
   /// The public values encoded as a struct that can be easily deserialized inside Solidity.
+  /// must match the definition in `synd-contracts/src/withdrawal/AttestationDocVerifier.sol`
   struct PublicValuesStruct {
       bytes32 root_cert_hash;
       uint64 validity_window_start;

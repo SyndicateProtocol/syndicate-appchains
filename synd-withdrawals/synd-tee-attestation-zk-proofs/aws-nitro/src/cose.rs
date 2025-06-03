@@ -2,18 +2,13 @@ use p384::ecdsa::{signature::Verifier, Signature};
 use serde::{de::Error as SerdeDeError, Deserialize, Deserializer};
 use std::collections::HashMap;
 
-/// NEW FUNCTION: Custom deserializer for the 'protected' field
 fn deserialize_protected_header<'de, D>(
     deserializer: D,
 ) -> Result<HashMap<u8, serde_cbor::Value>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    // First, deserialize the bstr wrapper to get its content bytes
     let protected_header_bytes: &[u8] = Deserialize::deserialize(deserializer)?;
-
-    // Then, deserialize the content of these bytes (which is a CBOR-encoded map)
-    // into the target HashMap.
     serde_cbor::from_slice(protected_header_bytes).map_err(SerdeDeError::custom)
 }
 
@@ -173,18 +168,20 @@ mod tests {
 
         let sig_structure = signed_message_bytes(&cose_sign1_obj);
 
-        // Expected Sig_structure from RFC8152 C.2.1 (Sign1 example with ES256, adapted for ES384
-        // and our payload) Array_4(
-        // "Signature1",       // context
-        // h'A1013822',        // protected headers {1: -35} as bstr. CBOR(map) = A1013822.
-        // bstr(len 4, content) = 44A1013822   h'',               // external_aad (empty bstr)
-        // <payload_bytes>   // payload as bstr = TEXT
+        // Expected Sig_structure from RFC8152 C.2.1 (Sign1 example)
+        // (
+        //   "Signature1",       // context
+        //   h'A1013822',        // protected headers {1: -35} as bstr. CBOR(map) = A1013822
+        //   h'',               // external_aad (empty bstr)
+        //   <payload_bytes>   // payload as bstr = TEXT
         // )
         // SigStructure is: 84 6A 5369676E617475726531 44 A1013822 40 5875 <TEXT> ...
 
         let mut expected_bytes = vec![0x84]; // Array of 4 items
-                                             // 1. context "Signature1"
+
         expected_bytes.push(0x6A); // tstr len 10
+
+        // 1. context "Signature1"
         expected_bytes.extend_from_slice(b"Signature1");
         // 2. protected_map_bytes: bstr( A1 01 38 22 )
         expected_bytes.push(0x44); // bstr len 4
