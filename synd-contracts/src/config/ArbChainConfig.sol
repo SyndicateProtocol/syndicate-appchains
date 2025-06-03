@@ -24,13 +24,11 @@ contract ArbChainConfig is Initializable {
     address public ARBITRUM_BRIDGE_ADDRESS;
     address public ARBITRUM_INBOX_ADDRESS;
     address public SEQUENCING_CONTRACT_ADDRESS;
-    bool public ARBITRUM_IGNORE_DELAYED_MESSAGES;
     uint256 public CHAIN_ID;
     uint256 public SEQUENCING_CHAIN_ID;
     uint256 public SETTLEMENT_DELAY;
     uint256 public SETTLEMENT_START_BLOCK;
     uint256 public SEQUENCING_START_BLOCK;
-    address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 
     // ======== MUTABLE CONFIGURATION PARAMETERS ========
     // These parameters can be updated by the contract owner
@@ -53,7 +51,6 @@ contract ArbChainConfig is Initializable {
      * @param sequencingChainId The ID of the sequencing chain
      * @param arbitrumBridgeAddress Address of the Arbitrum bridge
      * @param arbitrumInboxAddress Address of the Arbitrum inbox
-     * @param arbitrumIgnoreDelayedMessages Whether to ignore delayed messages
      * @param settlementDelay Delay for settlement
      * @param settlementStartBlock Starting block for settlement
      * @param sequencingContractAddress Address of the sequencing contract
@@ -61,7 +58,6 @@ contract ArbChainConfig is Initializable {
      * @param initialAppchainOwner Initial appchain owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
-     * @param allowedSettlementAddresses Array of addresses allowed for settlement
      */
     function initialize(
         address _owner,
@@ -69,15 +65,13 @@ contract ArbChainConfig is Initializable {
         uint256 sequencingChainId,
         address arbitrumBridgeAddress,
         address arbitrumInboxAddress,
-        bool arbitrumIgnoreDelayedMessages,
         uint256 settlementDelay,
         uint256 settlementStartBlock,
         address sequencingContractAddress,
         uint256 sequencingStartBlock,
         address initialAppchainOwner,
         string memory sequencingChainRpcUrl,
-        string memory appchainBlockExplorerUrl,
-        address[] memory allowedSettlementAddresses
+        string memory appchainBlockExplorerUrl
     ) public initializer {
         // Set the configuration parameters
         require(_owner != address(0), "Owner cannot be zero address");
@@ -93,12 +87,10 @@ contract ArbChainConfig is Initializable {
         SEQUENCING_CHAIN_ID = sequencingChainId;
         ARBITRUM_BRIDGE_ADDRESS = arbitrumBridgeAddress;
         ARBITRUM_INBOX_ADDRESS = arbitrumInboxAddress;
-        ARBITRUM_IGNORE_DELAYED_MESSAGES = arbitrumIgnoreDelayedMessages;
         SETTLEMENT_DELAY = settlementDelay;
         SETTLEMENT_START_BLOCK = settlementStartBlock;
         SEQUENCING_CONTRACT_ADDRESS = sequencingContractAddress;
         SEQUENCING_START_BLOCK = sequencingStartBlock;
-        ALLOWED_SETTLEMENT_ADDRESSES = allowedSettlementAddresses;
 
         // Set mutable configuration parameters
         INITIAL_APPCHAIN_OWNER = initialAppchainOwner;
@@ -146,14 +138,6 @@ contract ArbChainConfig is Initializable {
         require(newOwner != address(0), "New owner cannot be zero address");
 
         _transferOwnership(newOwner);
-    }
-
-    /**
-     * @dev Get the allowed settlement addresses
-     * @return The allowed settlement addresses
-     */
-    function getAllowedSettlementAddresses() public view returns (address[] memory) {
-        return ALLOWED_SETTLEMENT_ADDRESSES;
     }
 
     /**

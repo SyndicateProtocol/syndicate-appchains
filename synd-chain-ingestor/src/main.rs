@@ -60,6 +60,8 @@ async fn main() {
     let mut provider = new_provider(&cfg).await;
     let mut metrics_state = MetricsState::default();
     let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
+    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
+
     let (module, ctx) = server::start(
         &provider,
         &cfg.rpc_url,
@@ -96,7 +98,6 @@ async fn main() {
         std::process::exit(0);
     });
 
-    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port));
     loop {
         if let Err(err) = ingestor::run(&ctx, &provider, &metrics).await {
             error!("ingestor failed: {}", err);
