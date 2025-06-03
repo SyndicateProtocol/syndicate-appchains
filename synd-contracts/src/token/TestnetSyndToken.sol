@@ -1,29 +1,33 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.28;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import {AbstractXERC20} from "./AbstractXERC20.sol";
 
-// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
-// as the contract uses standard unit tests and integration tests. Parameter validation is handled through AccessControl.
-contract TestnetSyndToken is ERC20, AccessControl, ERC20Permit {
+/**
+ * @title TestnetSyndToken
+ * @notice Testnet version of Syndicate Token with XERC20 and testing utilities
+ * @dev This contract is for testnet deployments. It is ERC20Votes, ERC20Permit, and XERC20 compatible.
+ */
+contract TestnetSyndToken is AbstractXERC20 {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    // [Olympix Warning: no parameter validation in constructor] Parameter validation is handled by OpenZeppelin's AccessControl
-    constructor(address defaultAdmin, address minter)
-        ERC20("Testnet Syndicate", "TestnetSYND")
-        ERC20Permit("Testnet Syndicate")
-    {
-        require(defaultAdmin != address(0), "Default admin cannot be zero address");
-        require(minter != address(0), "Minter cannot be zero address");
+    constructor(address defaultAdmin, address minter) AbstractXERC20("Testnet Syndicate", "TestnetSYND") {
+        if (defaultAdmin == address(0)) revert ZeroAddress();
+        if (minter == address(0)) revert ZeroAddress();
+
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(MINTER_ROLE, minter);
+        _grantRole(BRIDGE_MANAGER_ROLE, defaultAdmin);
     }
 
-    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
-        require(amount != 0, "Amount cannot be zero");
+    /**
+     * @notice Traditional mint function for testing (uses MINTER_ROLE)
+     * @param to The address to mint tokens to
+     * @param amount The amount of tokens to mint
+     */
+    function adminMint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        if (amount == 0) revert ZeroAmount();
+
         _mint(to, amount);
     }
 }

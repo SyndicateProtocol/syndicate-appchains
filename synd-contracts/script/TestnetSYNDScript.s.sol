@@ -3,7 +3,8 @@ pragma solidity 0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {TestnetSyndToken, AccessControl} from "src/token/TestnetSyndToken.sol";
+import {TestnetSyndToken} from "src/token/TestnetSyndToken.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 // Holesky SYND address Testnet
 address constant SYND_ADDRESS = 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba;

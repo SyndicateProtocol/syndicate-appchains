@@ -1,77 +1,74 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {AbstractXERC20} from "./AbstractXERC20.sol";
+import {IBridgeProxy} from "./interfaces/IBridgeProxy.sol";
+/**
+ * @title SyndicateToken
+ * @notice Syndicate Token with emissions and XERC20 functionality
+ * @dev This is the main token contract deployed on Ethereum (L1)
+ *      It includes emissions logic for distributing tokens to L2s
+ */
 
-// Interface for Optimism StandardBridge
-interface IStandardBridge {
-    function bridgeERC20To(
-        address _localToken,
-        address _remoteToken,
-        address _to,
-        uint256 _amount,
-        uint32 _minGasLimit,
-        bytes memory _extraData
-    ) external;
-}
+contract SyndicateToken is AbstractXERC20, Pausable {
+    // Custom errors for emissions logic
+    error EmissionsAlreadyStarted();
+    error EmissionsNotStarted();
+    error EmissionsNotActive();
+    error AllEmissionsCompleted();
+    error EpochAlreadyMinted();
+    error ExceedsEmissionsSupply();
+    error BridgeNotConfigured();
+    error ZeroGasLimit();
+    error InvalidEpoch();
 
-contract SyndicateToken is ERC20, AccessControl, ERC20Permit {
+    // Role definitions for emissions
     bytes32 public constant EMISSIONS_MANAGER_ROLE = keccak256("EMISSIONS_MANAGER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
+    // Token supply constants
     uint256 public constant TOTAL_SUPPLY = 100_000_000 * 10 ** 18; // 100M tokens
-    uint256 public constant INITIAL_MINT_SUPPLY = 90_000_000 * 10 ** 18; // 90M tokens (90%)
-    uint256 public constant EMISSIONS_SUPPLY = 10_000_000 * 10 ** 18; // 10M tokens (10%)
-    uint256 public constant EPOCH_DURATION = 30 days;
-    uint256 public constant TOTAL_EPOCHS = 48;
+    uint256 public constant INITIAL_MINT_SUPPLY = 90_000_000 * 10 ** 18; // 90M tokens (90%) - Initial distribution to foundation
+    uint256 public constant EMISSIONS_SUPPLY = 10_000_000 * 10 ** 18; // 10M tokens (10%) - Reserved for emissions over 4 years
 
-    // Emission amounts per epoch (in tokens, will be multiplied by 10**18)
-    uint256 public constant EMISSION_AMOUNT_1 = 678_055 * 10 ** 18; // Epochs 1-6
-    uint256 public constant EMISSION_AMOUNT_2 = 406_833 * 10 ** 18; // Epochs 7-12
-    uint256 public constant EMISSION_AMOUNT_3 = 244_100 * 10 ** 18; // Epochs 13-18
-    uint256 public constant EMISSION_AMOUNT_4 = 146_460 * 10 ** 18; // Epochs 19-24
-    uint256 public constant EMISSION_AMOUNT_5 = 87_876 * 10 ** 18; // Epochs 25-30
-    uint256 public constant EMISSION_AMOUNT_6 = 52_726 * 10 ** 18; // Epochs 31-36
-    uint256 public constant EMISSION_AMOUNT_7 = 31_635 * 10 ** 18; // Epochs 37-42
-    uint256 public constant EMISSION_AMOUNT_8 = 18_981 * 10 ** 18; // Epochs 43-48
+    // Emission timing constants
+    uint256 public constant EPOCH_DURATION = 30 days; // 30 days per epoch
+    uint256 public constant TOTAL_EPOCHS = 48; // 48 epochs = ~4 years total
+
+    // Emission amounts per epoch (in wei) - organized by 6-epoch periods with decay
+    uint256[TOTAL_EPOCHS] public emissionSchedule;
 
     // Emissions state
-    bool public emissionsStarted;
+    bool public emissionsActive; // Covers both started and can be paused
     uint256 public emissionsStartTime;
     uint256 public currentEpoch;
     uint256 public totalEmissionsMinted;
 
-    // Bridge configuration
-    address public bridgeAddress; // The Optimism StandardBridge contract address
-    address public l2TokenAddress; // The remote token address on L2
-    address public l2DestinationAddress; // The destination address on L2 (splitter contract)
-    uint32 public bridgeGasLimit; // Gas limit for bridge transaction
-    bytes public bridgeExtraData; // Extra data for bridge transaction
+    // Bridge configuration for upgradeable bridge logic
+    address public bridgeProxy; // The bridge proxy contract address
+    bytes public bridgeData; // Encoded bridge configuration data
 
-    // Emission schedule (tokens per epoch in wei)
-    uint256[TOTAL_EPOCHS] public emissionSchedule;
-
-    // Events
+    // Events - Emissions
     event EmissionsStarted(uint256 startTime);
-    event EmissionMinted(uint256 epoch, uint256 amount, address indexed l2DestinationAddress);
-    event BridgeConfigurationUpdated(
-        address indexed bridgeAddress,
-        address indexed l2TokenAddress,
-        address indexed l2DestinationAddress,
-        uint32 gasLimit
-    );
+    event EmissionsPaused();
+    event EmissionsResumed();
+    event EmissionMinted(uint256 epoch, uint256 amount, address indexed destination);
+    event BridgeProxyUpdated(address indexed oldProxy, address indexed newProxy);
+    event BridgeDataUpdated(bytes oldData, bytes newData);
 
-    constructor(address defaultAdmin, address syndFoundationAddress, address emissionsManager)
-        ERC20("Syndicate", "SYND")
-        ERC20Permit("Syndicate")
+    constructor(address defaultAdmin, address syndFoundationAddress, address emissionsManager, address pauser)
+        AbstractXERC20("Syndicate", "SYND")
     {
-        require(defaultAdmin != address(0), "Default admin cannot be zero address");
-        require(syndFoundationAddress != address(0), "Foundation address cannot be zero address");
-        require(emissionsManager != address(0), "Emissions manager cannot be zero address");
+        if (defaultAdmin == address(0)) revert ZeroAddress();
+        if (syndFoundationAddress == address(0)) revert ZeroAddress();
+        if (emissionsManager == address(0)) revert ZeroAddress();
+        if (pauser == address(0)) revert ZeroAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(EMISSIONS_MANAGER_ROLE, emissionsManager);
+        _grantRole(BRIDGE_MANAGER_ROLE, defaultAdmin);
+        _grantRole(PAUSER_ROLE, pauser);
 
         // Mint initial supply to foundation
         _mint(syndFoundationAddress, INITIAL_MINT_SUPPLY);
@@ -79,32 +76,50 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit {
         _initializeEmissionSchedule();
     }
 
+    // =============================================================================
+    // EMISSIONS LOGIC
+    // =============================================================================
+
     /**
      * @notice Start the emissions process (can only be called once)
      */
     function startEmissions() external onlyRole(EMISSIONS_MANAGER_ROLE) {
-        require(!emissionsStarted, "Emissions already started");
-        require(bridgeAddress != address(0), "Bridge address not set");
-        require(l2TokenAddress != address(0), "L2 token address not set");
-        require(l2DestinationAddress != address(0), "L2 destination address not set");
-        require(bridgeGasLimit > 0, "Bridge gas limit not set");
+        if (emissionsStartTime != 0) revert EmissionsAlreadyStarted();
+        if (bridgeProxy == address(0)) revert BridgeNotConfigured();
 
-        emissionsStarted = true;
+        emissionsActive = true;
         emissionsStartTime = block.timestamp;
 
         emit EmissionsStarted(block.timestamp);
     }
 
     /**
+     * @notice Pause emissions (emergency function)
+     */
+    function pauseEmissions() external onlyRole(PAUSER_ROLE) {
+        emissionsActive = false;
+        emit EmissionsPaused();
+    }
+
+    /**
+     * @notice Resume emissions
+     */
+    function resumeEmissions() external onlyRole(EMISSIONS_MANAGER_ROLE) {
+        if (emissionsStartTime == 0) revert EmissionsNotStarted();
+        emissionsActive = true;
+        emit EmissionsResumed();
+    }
+
+    /**
      * @notice Mint emission tokens and bridge them to L2
      * Can be called by anyone once the time for an epoch has passed
      */
-    function mintEmission() external {
-        require(emissionsStarted, "Emissions not started");
-        require(currentEpoch < TOTAL_EPOCHS, "All emissions completed");
+    function mintEmission() external whenNotPaused {
+        if (!emissionsActive) revert EmissionsNotActive();
+        if (emissionsEnded()) revert AllEmissionsCompleted();
 
         uint256 epochsSinceStart = (block.timestamp - emissionsStartTime) / EPOCH_DURATION;
-        require(epochsSinceStart > currentEpoch, "Current epoch already minted");
+        if (epochsSinceStart <= currentEpoch) revert EpochAlreadyMinted();
 
         // Calculate how many epochs we can mint (in case we're behind)
         uint256 epochsToMint = epochsSinceStart - currentEpoch;
@@ -117,7 +132,9 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit {
             totalToMint += emissionSchedule[currentEpoch + i];
         }
 
-        require(totalEmissionsMinted + totalToMint <= EMISSIONS_SUPPLY, "Cannot exceed emissions supply");
+        if (totalEmissionsMinted + totalToMint > EMISSIONS_SUPPLY) {
+            revert ExceedsEmissionsSupply();
+        }
 
         currentEpoch += epochsToMint;
         totalEmissionsMinted += totalToMint;
@@ -125,65 +142,52 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit {
         // Mint tokens to this contract first
         _mint(address(this), totalToMint);
 
-        // Approve the bridge to spend the tokens
-        _approve(address(this), bridgeAddress, totalToMint);
+        // Bridge the tokens using the proxy
+        _approve(address(this), bridgeProxy, totalToMint);
+        IBridgeProxy(bridgeProxy).executeBridge(address(this), totalToMint, bridgeData);
 
-        // Bridge the tokens to L2
-        IStandardBridge(bridgeAddress).bridgeERC20To(
-            address(this), // _localToken (this contract)
-            l2TokenAddress, // _remoteToken (L2 token address)
-            l2DestinationAddress, // _to (destination on L2)
-            totalToMint, // _amount
-            bridgeGasLimit, // _minGasLimit
-            bridgeExtraData // _extraData
-        );
+        emit EmissionMinted(currentEpoch, totalToMint, address(0));
+    }
 
-        emit EmissionMinted(currentEpoch - 1, totalToMint, l2DestinationAddress);
+    // =============================================================================
+    // BRIDGE PROXY CONFIGURATION
+    // =============================================================================
+
+    /**
+     * @notice Set the bridge proxy for upgradeable bridge logic
+     * @param _bridgeProxy The bridge proxy contract address
+     */
+    function setBridgeProxy(address _bridgeProxy) external onlyRole(BRIDGE_MANAGER_ROLE) {
+        if (_bridgeProxy == address(0)) revert ZeroAddress();
+
+        address oldProxy = bridgeProxy;
+        bridgeProxy = _bridgeProxy;
+
+        emit BridgeProxyUpdated(oldProxy, _bridgeProxy);
     }
 
     /**
-     * @notice Set the bridge configuration for L2 emissions
-     * @param _bridgeAddress The Optimism StandardBridge contract address
-     * @param _l2TokenAddress The remote token address on L2
-     * @param _l2DestinationAddress The destination address on L2 (splitter contract)
-     * @param _gasLimit The gas limit for bridge transactions
-     * @param _extraData Extra data for bridge transactions
+     * @notice Set bridge configuration data
+     * @param _bridgeData Encoded bridge configuration data
      */
-    function setBridgeConfiguration(
-        address _bridgeAddress,
-        address _l2TokenAddress,
-        address _l2DestinationAddress,
-        uint32 _gasLimit,
-        bytes calldata _extraData
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(_bridgeAddress != address(0), "Bridge address cannot be zero");
-        require(_l2TokenAddress != address(0), "L2 token address cannot be zero");
-        require(_l2DestinationAddress != address(0), "L2 destination address cannot be zero");
-        require(_gasLimit > 0, "Gas limit must be greater than zero");
+    function setBridgeData(bytes calldata _bridgeData) external onlyRole(BRIDGE_MANAGER_ROLE) {
+        bytes memory oldData = bridgeData;
+        bridgeData = _bridgeData;
 
-        bridgeAddress = _bridgeAddress;
-        l2TokenAddress = _l2TokenAddress;
-        l2DestinationAddress = _l2DestinationAddress;
-        bridgeGasLimit = _gasLimit;
-        bridgeExtraData = _extraData;
-
-        emit BridgeConfigurationUpdated(_bridgeAddress, _l2TokenAddress, _l2DestinationAddress, _gasLimit);
+        emit BridgeDataUpdated(oldData, _bridgeData);
     }
+
+    // =============================================================================
+    // VIEW FUNCTIONS
+    // =============================================================================
 
     /**
      * @notice Get bridge configuration
-     * @return bridgeAddr The current bridge address
-     * @return l2TokenAddr The L2 token address
-     * @return l2DestAddr The L2 destination address
-     * @return gasLimit The bridge gas limit
-     * @return extraData The bridge extra data
+     * @return proxy The current bridge proxy address
+     * @return data The bridge configuration data
      */
-    function getBridgeConfiguration()
-        external
-        view
-        returns (address bridgeAddr, address l2TokenAddr, address l2DestAddr, uint32 gasLimit, bytes memory extraData)
-    {
-        return (bridgeAddress, l2TokenAddress, l2DestinationAddress, bridgeGasLimit, bridgeExtraData);
+    function getBridgeConfiguration() external view returns (address proxy, bytes memory data) {
+        return (bridgeProxy, bridgeData);
     }
 
     /**
@@ -196,31 +200,26 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit {
 
     /**
      * @notice Get current epoch information
-     * @return epoch Current epoch number
-     * @return nextEmissionTime Timestamp when next emission can be minted
-     * @return nextEmissionAmount Amount of tokens for next emission
-     * @return canMintEmission Whether emission can be minted now
      */
     function getCurrentEpochInfo()
         external
         view
         returns (uint256 epoch, uint256 nextEmissionTime, uint256 nextEmissionAmount, bool canMintEmission)
     {
-        if (!emissionsStarted) {
+        if (emissionsStartTime == 0) {
             return (0, 0, 0, false);
         }
 
         uint256 epochsSinceStart = (block.timestamp - emissionsStartTime) / EPOCH_DURATION;
         uint256 nextEmissionTimestamp = emissionsStartTime + ((currentEpoch + 1) * EPOCH_DURATION);
         uint256 nextAmount = currentEpoch < TOTAL_EPOCHS ? emissionSchedule[currentEpoch] : 0;
-        bool canMint = epochsSinceStart > currentEpoch && currentEpoch < TOTAL_EPOCHS;
+        bool canMint = emissionsActive && epochsSinceStart > currentEpoch && currentEpoch < TOTAL_EPOCHS;
 
         return (currentEpoch, nextEmissionTimestamp, nextAmount, canMint);
     }
 
     /**
      * @notice Get total emissions remaining
-     * @return Amount of tokens still to be emitted
      */
     function getRemainingEmissions() external view returns (uint256) {
         return EMISSIONS_SUPPLY - totalEmissionsMinted;
@@ -228,54 +227,64 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit {
 
     /**
      * @notice Check if all emissions have been completed
-     * @return True if all epochs have been minted
      */
-    function isEmissionComplete() external view returns (bool) {
+    function emissionsEnded() public view returns (bool) {
         return currentEpoch >= TOTAL_EPOCHS;
     }
+
+    /**
+     * @notice Check if emissions have been started
+     */
+    function emissionsStarted() public view returns (bool) {
+        return emissionsStartTime > 0;
+    }
+
+    // =============================================================================
+    // EMERGENCY CONTROLS
+    // =============================================================================
+
+    /**
+     * @notice Pause the contract (emergency function)
+     */
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract
+     */
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
+
+    // =============================================================================
+    // INTERNAL FUNCTIONS
+    // =============================================================================
 
     /**
      * @dev Initialize the emission schedule according to the decay table
      */
     function _initializeEmissionSchedule() private {
-        // Epochs 1-6: EMISSION_AMOUNT_1 tokens each
-        for (uint256 i = 0; i < 6; i++) {
-            emissionSchedule[i] = EMISSION_AMOUNT_1;
-        }
+        // Define emission amounts per period (6 epochs each)
+        uint256[8] memory emissionAmounts = [
+            uint256(678_055 * 10 ** 18), // Epochs 1-6
+            uint256(406_833 * 10 ** 18), // Epochs 7-12
+            uint256(244_100 * 10 ** 18), // Epochs 13-18
+            uint256(146_460 * 10 ** 18), // Epochs 19-24
+            uint256(87_876 * 10 ** 18), // Epochs 25-30
+            uint256(52_726 * 10 ** 18), // Epochs 31-36
+            uint256(31_635 * 10 ** 18), // Epochs 37-42
+            uint256(18_981 * 10 ** 18) // Epochs 43-48
+        ];
 
-        // Epochs 7-12: EMISSION_AMOUNT_2 tokens each
-        for (uint256 i = 6; i < 12; i++) {
-            emissionSchedule[i] = EMISSION_AMOUNT_2;
-        }
-
-        // Epochs 13-18: EMISSION_AMOUNT_3 tokens each
-        for (uint256 i = 12; i < 18; i++) {
-            emissionSchedule[i] = EMISSION_AMOUNT_3;
-        }
-
-        // Epochs 19-24: EMISSION_AMOUNT_4 tokens each
-        for (uint256 i = 18; i < 24; i++) {
-            emissionSchedule[i] = EMISSION_AMOUNT_4;
-        }
-
-        // Epochs 25-30: EMISSION_AMOUNT_5 tokens each
-        for (uint256 i = 24; i < 30; i++) {
-            emissionSchedule[i] = EMISSION_AMOUNT_5;
-        }
-
-        // Epochs 31-36: EMISSION_AMOUNT_6 tokens each
-        for (uint256 i = 30; i < 36; i++) {
-            emissionSchedule[i] = EMISSION_AMOUNT_6;
-        }
-
-        // Epochs 37-42: EMISSION_AMOUNT_7 tokens each
-        for (uint256 i = 36; i < 42; i++) {
-            emissionSchedule[i] = EMISSION_AMOUNT_7;
-        }
-
-        // Epochs 43-48: EMISSION_AMOUNT_8 tokens each
-        for (uint256 i = 42; i < 48; i++) {
-            emissionSchedule[i] = EMISSION_AMOUNT_8;
+        // Fill the emission schedule array
+        for (uint256 period = 0; period < 8; period++) {
+            for (uint256 epoch = 0; epoch < 6; epoch++) {
+                uint256 scheduleIndex = period * 6 + epoch;
+                if (scheduleIndex < TOTAL_EPOCHS) {
+                    emissionSchedule[scheduleIndex] = emissionAmounts[period];
+                }
+            }
         }
     }
 }
