@@ -406,26 +406,41 @@ func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (
 	return &output, nil
 }
 
-func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput string) (string, error) {
+func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySequencingChainInput) (VerifySequencingChainOutput, error) {
 	// TODO (SEQ-961): Implement Sequencing Chain Verifier Component
 	// Sequencing chain verification
 	// Sequencing chain block verifier
 	// Sign & return
-	return "", nil
+	return VerifySequencingChainOutput{}, nil
 }
 
-func (s *Server) VerifyAppchain(ctx context.Context, config string, sequencingChainInput string, settlementChainInput string, appchainConfigHash string) (string, error) {
+func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainInput) (VerifyAppchainOutput, error) {
+	// Sanitize to ensure non-nil slices for correct JSON serialization
+	SanitizeVerifyAppchainInput(&verifyInput)
+
 	// Execute Appchain Verifier Rust Binary
+	config, err := json.Marshal(verifyInput.VerifyAppchainConfig)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal verify appchain config: %w", err)
+	}
+	sequencingChainInput, err := json.Marshal(verifyInput.SequencingChainInput)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
+	}
+	settlementChainInput, err := json.Marshal(verifyInput.SettlementChainInput)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal settlement chain input: %w", err)
+	}
 	cmd := exec.Command("cargo", "run", "--bin", "synd-appchain-verifier", "--",
-		"--config", config,
-		"--sequencing-chain-input", sequencingChainInput,
-		"--settlement-chain-input", settlementChainInput,
-		"--appchain-config-hash", appchainConfigHash,
+		"--config", string(config),
+		"--sequencing-chain-input", string(sequencingChainInput),
+		"--settlement-chain-input", string(settlementChainInput),
+		"--appchain-config-hash", verifyInput.AppchainConfigHash.Hex(),
 	)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
 	}
 
 	log.Debug("VerifyAppchain Output", "output", string(out))
@@ -443,25 +458,30 @@ func (s *Server) VerifyAppchain(ctx context.Context, config string, sequencingCh
 	var batches []wavmio.Batch
 	log.Debug("VerifyAppchain Output Line", "outputLine", outputLine)
 	if err := json.Unmarshal([]byte(outputLine), &batches); err != nil {
-		return "", fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
 	}
 
-	// TODO: set block hash, preimage data properly
-	var input = wavmio.ValidationInput{
+	var blockVerifierInput = wavmio.ValidationInput{
 		BlockHash:    common.Hash{},
-		PreimageData: nil,
+		PreimageData: verifyInput.AppchainPreImageData,
 		Batches:      batches,
 	}
 
-	// Appchain block verifier
-	// TODO (SEQ-781): Block verifier
-	log.Debug("VerifyAppchain Input", "input", input)
-
-	data, err := Verify(input)
+	log.Debug("Appchain BlockVerifierInput Input", "input", blockVerifierInput)
+	data, err := Verify(blockVerifierInput)
 	if err != nil {
-		return "", err
+		return VerifyAppchainOutput{}, fmt.Errorf("Failed to verify appchain: %w", err)
 	}
 
 	// Sign & return
-	return fmt.Sprintf("%s %s", data.BlockHash, data.SendRoot), nil
+	output := VerifyAppchainOutput{
+		LastAppchainBlockHash: data.BlockHash,
+		LastAppchainSendRoot:  data.SendRoot,
+		// TODO: set output properly
+		L1SequencingBlockHash: verifyInput.VerifySequencingChainOutput.L1SequencingBlockHash,
+		L1EndBlockHash:        verifyInput.VerifySequencingChainOutput.L1EndBlockHash,
+		Signature:             verifyInput.VerifySequencingChainOutput.Signature,
+	}
+	log.Debug("Appchain BlockVerifierOutput Output", "output", output)
+	return output, nil
 }
