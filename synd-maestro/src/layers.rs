@@ -16,7 +16,7 @@ use std::{
     task::{Context, Poll},
 };
 use tower::{Layer, Service};
-use tracing::trace;
+use tracing::{info, trace};
 
 /// Layer to check for headers in the request
 #[derive(Debug, Clone)]
@@ -74,15 +74,16 @@ where
         // Process headers and collect valid ones
         let mut header_map = HashMap::new();
         for header_name in optional_headers.iter() {
+            info!(%header_name);
             // Get header value if it exists
             let Some(header_value) = request.headers().get(header_name) else {
-                trace!("Header '{}' not found in request; skipping it", header_name);
+                info!("Header '{}' not found in request; skipping it", header_name);
                 continue;
             };
 
             // Validate header value is ASCII
             let Ok(value) = header_value.to_str() else {
-                trace!("Header '{}' value contains non-ASCII characters; skipping it", header_name);
+                info!("Header '{}' value contains non-ASCII characters; skipping it", header_name);
                 continue;
             };
 
@@ -91,6 +92,7 @@ where
 
         // Add collected headers to request if any were found
         if !header_map.is_empty() {
+            info!(headers = ?header_map, "X_X_X added headers_map to requests.extensions");
             request.extensions_mut().insert(header_map);
         }
 

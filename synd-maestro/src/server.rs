@@ -42,6 +42,7 @@ pub async fn run(
 
     let optional_headers =
         vec![HEADER_CHAIN_ID.to_string(), "traceparent".to_string(), "tracestate".to_string()];
+    // let optional_headers = vec![HEADER_CHAIN_ID.to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
         .layer(ProxyGetRequestLayer::new("/health", "health")?);
@@ -114,8 +115,9 @@ pub async fn send_raw_transaction_handler(
     service_arc_arc: Arc<Arc<MaestroService>>,
     extensions: Extensions,
 ) -> RpcResult<String> {
+    let map : HashMap<String, String> = HashMap::new();
     #[allow(clippy::expect_used)]
-    let headers = extensions.get::<HashMap<_, _>>().expect("should have headers as a HashMap");
+    let headers = extensions.get::<HashMap<String, String>>().unwrap_or(&map);
     extract_tracing_context(headers);
 
     let service = service_arc_arc.as_ref();
