@@ -160,17 +160,15 @@ mod tests {
         sync::{Mutex, RwLock},
     };
 
-    #[allow(clippy::redundant_pub_crate)]
     #[derive(Debug)]
-    pub(crate) struct TestDB(pub(crate) RwLock<HashMap<Bytes, Bytes>>);
+    struct TestDB(RwLock<HashMap<Bytes, Bytes>>);
 
     impl TestDB {
-        pub(crate) fn new() -> Self {
+        fn new() -> Self {
             Self(RwLock::new(HashMap::new()))
         }
     }
 
-    #[allow(clippy::unwrap_used)]
     impl ArbitrumDB for TestDB {
         fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
             self.0.read().unwrap().get(key.as_ref()).cloned()
