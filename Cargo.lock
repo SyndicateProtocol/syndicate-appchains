@@ -1621,7 +1621,7 @@ name = "batcher"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "axum",
+ "axum 0.8.3",
  "byte-unit",
  "clap",
  "contract-bindings",
