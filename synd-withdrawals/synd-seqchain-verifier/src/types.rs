@@ -330,8 +330,6 @@ impl Default for BatchType {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ArbitrumBatch {
-    /// After accumulator  
-    pub after_acc: B256,
     /// Delayed accumulator
     pub delayed_acc: B256,
     /// Number of delayed messages read
@@ -480,7 +478,6 @@ mod tests {
             },
             data: BatchType::EigenDA(Box::new((cert, Bytes::default()))),
             after_delayed_messages_read: U256::from(24),
-            ..Default::default()
         };
 
         let input = L1ChainInput {
