@@ -11,12 +11,6 @@ use std::fmt::Debug;
 pub struct SeqchainVerifierConfig {
     /// Bridge address on the L1
     #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
-       value_parser = parse_address, default_value = "0x0000000000000000000000000000000000000000")]
+       value_parser = parse_address)]
     pub arbitrum_bridge_address: Address,
-}
-
-impl Default for SeqchainVerifierConfig {
-    fn default() -> Self {
-        Self { arbitrum_bridge_address: Address::ZERO }
-    }
 }

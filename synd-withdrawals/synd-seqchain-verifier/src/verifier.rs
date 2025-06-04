@@ -22,7 +22,7 @@ impl Verifier {
         Self { arbitrum_bridge_address: config.arbitrum_bridge_address }
     }
 
-    /// Verifies both the sequencing and settlement chains and creates an array of
+    /// Verifies L1 inputs and creates an array of
     /// [`BlockVerifierInput`] objects.
     pub fn verify_and_create_output(
         &self,

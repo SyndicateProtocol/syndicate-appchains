@@ -2,7 +2,6 @@
 
 use clap::Parser;
 use eyre::Result;
-use serde::Serialize;
 use shared::logger::set_global_default_subscriber;
 use synd_seqchain_verifier::{
     config::SeqchainVerifierConfig,
@@ -10,11 +9,6 @@ use synd_seqchain_verifier::{
     verifier::Verifier,
 };
 use tracing::debug;
-
-#[derive(Serialize)]
-struct OutputWrapper {
-    verify_seqchain_output: Vec<BlockVerifierInput>,
-}
 
 #[derive(Parser, Debug)]
 struct VerifierCliArgs {
@@ -33,10 +27,7 @@ fn main() {
         Ok(outputs) => {
             // Print raw JSON to stdout
             println!("Outputs created successfully");
-            println!(
-                "{}",
-                serde_json::to_string(&OutputWrapper { verify_seqchain_output: outputs }).unwrap()
-            );
+            println!("{}", serde_json::to_string(&outputs).unwrap());
         }
         Err(e) => {
             debug!("Error: {:?}", e);
@@ -65,10 +56,11 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy::primitives::Address;
 
     #[test]
     fn test_generate_input() {
-        let config = SeqchainVerifierConfig::default();
+        let config = SeqchainVerifierConfig { arbitrum_bridge_address: Address::ZERO };
         let config_json = serde_json::to_string(&config).unwrap();
         println!("{}", config_json);
         let l1_chain_input = L1ChainInput::default();
