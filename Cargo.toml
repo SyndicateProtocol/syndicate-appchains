@@ -22,6 +22,16 @@ members = [
   "test-framework",
 ]
 
+# Default members are the services that are built by default when running `cargo build` (leveraged by docker build to build less crates)
+default-members = [
+  "synd-batch-sequencer",
+  "synd-chain-ingestor",
+  "synd-maestro",
+  "synd-mchain",
+  "synd-translator/bin/synd-translator",
+  "synd-withdrawals/synd-proposer",
+]
+
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
 resolver = "2"
