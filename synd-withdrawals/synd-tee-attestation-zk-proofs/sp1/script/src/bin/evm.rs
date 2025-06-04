@@ -1,20 +1,14 @@
 //! This script is used to generate a proof of a program that can be verified on-chain.
 
-// Directly include utils.rs as a module using its path
-#[path = "../utils.rs"]
-mod utils;
-
 use alloy::sol_types::SolValue;
 use clap::{Parser, ValueEnum};
 use serde::{Deserialize, Serialize};
-use sp1_sdk::{
-    include_elf, HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey,
-};
+use sp1_sdk::{HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey};
 use std::path::PathBuf;
 use synd_tee_attestation_zk_proofs_aws_nitro::PublicValuesStruct;
-
-/// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
-pub const X509_ELF: &[u8] = include_elf!("synd-tee-attestation-zk-proofs-sp1-program");
+use synd_tee_attestation_zk_proofs_sp1_script::shared::{
+    read_and_decode_attestation_docs, TEE_ATTESTATION_VALIDATION_ELF,
+};
 
 /// The arguments for the EVM command.
 #[derive(Parser, Debug)]
@@ -64,13 +58,13 @@ fn main() {
     let client = ProverClient::from_env();
 
     // Set up the program.
-    let (pk, vk) = client.setup(X509_ELF);
+    let (pk, vk) = client.setup(TEE_ATTESTATION_VALIDATION_ELF);
 
     // Set up the inputs.
     let mut stdin = SP1Stdin::new();
 
     let (cbor_encoded_attestation_document, der_encoded_root_cert) =
-        utils::read_and_decode_attestation_docs(&args.att_doc, &args.root_cert);
+        read_and_decode_attestation_docs(&args.att_doc, &args.root_cert);
 
     stdin.write(&cbor_encoded_attestation_document);
     stdin.write(&der_encoded_root_cert);

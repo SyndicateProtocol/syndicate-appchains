@@ -1,15 +1,12 @@
 //! This script is used to execute the program or generate a proof of the program.
 
-#[path = "../utils.rs"]
-mod utils;
-
 use alloy::{primitives::keccak256, sol_types::SolType};
 use clap::Parser;
-use sp1_sdk::{include_elf, ProverClient, SP1Stdin};
+use sp1_sdk::{ProverClient, SP1Stdin};
 use synd_tee_attestation_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, PublicValuesStruct};
-
-/// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
-pub const X509_ELF: &[u8] = include_elf!("synd-tee-attestation-zk-proofs-sp1-program");
+use synd_tee_attestation_zk_proofs_sp1_script::shared::{
+    read_and_decode_attestation_docs, TEE_ATTESTATION_VALIDATION_ELF,
+};
 
 /// The arguments for the command.
 #[derive(Parser, Debug)]
@@ -44,7 +41,7 @@ fn main() {
     }
 
     let (cbor_encoded_attestation_document, der_encoded_root_cert) =
-        utils::read_and_decode_attestation_docs(&args.att_doc, &args.root_cert);
+        read_and_decode_attestation_docs(&args.att_doc, &args.root_cert);
 
     // Setup the prover client.
     let client = ProverClient::from_env();
@@ -56,7 +53,8 @@ fn main() {
 
     if args.execute {
         // Execute the program
-        let (output, report) = client.execute(X509_ELF, &stdin).run().unwrap();
+        let (output, report) =
+            client.execute(TEE_ATTESTATION_VALIDATION_ELF, &stdin).run().unwrap();
         println!("Program executed successfully.");
 
         // Read the output.
@@ -100,7 +98,7 @@ fn main() {
         println!("Number of cycles: {}", report.total_instruction_count());
     } else {
         // Setup the program for proving.
-        let (pk, vk) = client.setup(X509_ELF);
+        let (pk, vk) = client.setup(TEE_ATTESTATION_VALIDATION_ELF);
 
         // Generate the proof
         let proof = client.prove(&pk, &stdin).run().expect("failed to generate proof");
