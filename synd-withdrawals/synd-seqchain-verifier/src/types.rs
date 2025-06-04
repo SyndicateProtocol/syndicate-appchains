@@ -12,10 +12,15 @@ use alloy::{
 use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
 
+// Storage slot of the batch accumulator
+// Since the batch accumulator is a dynamic array, this slot contains the length of the array
 const BATCH_ACCUMULATOR_STORAGE_SLOT: B256 =
     fixed_bytes!("0x0000000000000000000000000000000000000000000000000000000000000007");
+// Storage slot of the first element in the batch accumulator array
+// Dynamic types are stored starting at the keccak256 of the original storage slot plus an offset
+// This value is Keccak256("0x7")
 const BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT: B256 =
-    fixed_bytes!("0xa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688"); // Keccak256("0x7")
+    fixed_bytes!("0xa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688");
 
 /// Calculate the slot for the batch accumulator
 #[allow(clippy::unwrap_used)]
