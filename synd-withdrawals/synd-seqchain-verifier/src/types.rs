@@ -111,7 +111,7 @@ impl L1ChainInput {
             return Err(VerifierError::InvalidL1ChainInput {
                 reason: "Invalid delayed message count".to_string(),
                 expected: delayed_message_count.to_string(),
-                actual: last_delayed_message.header.request_id.to_string(),
+                actual: last_batch.after_delayed_messages_read.to_string(),
             });
         }
         Ok(())
@@ -315,8 +315,8 @@ pub struct TimeBounds {
 pub enum BatchType {
     /// Calldata
     Calldata(Bytes),
-    /// `EiganDA`
-    EiganDA(Box<(EigenDACert, Bytes)>),
+    /// `EigenDA`
+    EigenDA(Box<(EigenDACert, Bytes)>),
     // TODO: Impl Blobs
 }
 
@@ -358,7 +358,7 @@ impl ArbitrumBatch {
 
         match &self.data {
             BatchType::Calldata(data) => keccak256((header, data).abi_encode_packed()),
-            BatchType::EiganDA(eigan_data) => keccak256(
+            BatchType::EigenDA(eigan_data) => keccak256(
                 (header, [EIGENDA_MESSAGE_HEADER_FLAG], eigan_data.0.abi_encode())
                     .abi_encode_packed(),
             ),
@@ -373,7 +373,7 @@ impl ArbitrumBatch {
     pub fn get_data(&self) -> Bytes {
         match &self.data {
             BatchType::Calldata(data) => data.clone(),
-            BatchType::EiganDA(eigan_data) => eigan_data.1.clone(),
+            BatchType::EigenDA(eigan_data) => eigan_data.1.clone(),
         }
     }
 }
@@ -478,7 +478,7 @@ mod tests {
                 min_block_number: 3200322,
                 max_block_number: 4640322,
             },
-            data: BatchType::EiganDA(Box::new((cert, Bytes::default()))),
+            data: BatchType::EigenDA(Box::new((cert, Bytes::default()))),
             after_delayed_messages_read: U256::from(24),
             ..Default::default()
         };
@@ -495,6 +495,57 @@ mod tests {
         };
 
         input.verify_accumulator().unwrap();
+    }
+
+    #[test]
+    fn test_delayed_message_accumulator() {
+        // Using data from a real deposit on Exo
+        // <https://holesky.etherscan.io/tx/0x6808715298914e24afc7f0b4df89794df640c44ec4ea1673e3d8b2c9a60844be>
+        let first_batch = ArbitrumBatch {
+            delayed_acc: fixed_bytes!(
+                "0xf96de52c50990e0b0bfeed04059c8baf6ae634d4a8d416b53e36f2f2c889fcdf"
+            ),
+            after_delayed_messages_read: U256::from(22),
+            ..Default::default()
+        };
+
+        let last_batch = ArbitrumBatch {
+            delayed_acc: fixed_bytes!(
+                "0xdfc8a2a4675e75cf9321ccfdc5d3d0cd97d8754b2b2d3d693a180d2deb01330c"
+            ),
+            after_delayed_messages_read: U256::from(23),
+            ..Default::default()
+        };
+
+        let message = L1IncomingMessage {
+            header: L1IncomingMessageHeader {
+                kind: 12,
+                sender: Address::from_str("0x3A0BB3a5B69711cc64b09240D2694d9f0F07fD07").unwrap(),
+                block_number: 3673425,
+                timestamp: 1744667292,
+                request_id: B256::from_str(
+                    "0x0000000000000000000000000000000000000000000000000000000000000017",
+                )
+                .unwrap(),
+                base_fee_l1: U256::ZERO,
+            },
+            l2msg: bytes!(
+                "0x28fab3a5b69711cc64b09240d2694d9f0f07ebf60000000000000000000000000000000000000000000000008ac7230489e80000"
+            ),
+        };
+
+        let input = L1ChainInput {
+            start_batch_accumulator_merkle_proof: EIP1186AccountProofResponse::default(),
+            end_batch_accumulator_merkle_proof: EIP1186AccountProofResponse::default(),
+            start_block_header: Header::default(),
+            end_block_header: Header::default(),
+            delayed_messages: vec![message],
+            batches: vec![first_batch, last_batch],
+            start_block_hash: B256::ZERO,
+            end_block_hash: B256::ZERO,
+        };
+
+        input.verify_delayed_message_accumulator().unwrap();
     }
 
     #[tokio::test]
