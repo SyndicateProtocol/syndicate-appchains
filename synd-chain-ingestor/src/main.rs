@@ -25,7 +25,7 @@ struct Config {
     rpc_url: String,
     #[arg(long, env = "DB_FILE")]
     db_file: String,
-    #[arg(long, env = "START_BLOCK")]
+    #[arg(long, env = "START_BLOCK", default_value_t = 0)]
     start_block: u64,
     #[arg(long, env = "CHANNEL_SIZE", default_value_t = 1024)]
     channel_size: usize,
@@ -60,6 +60,8 @@ async fn main() {
     let mut provider = new_provider(&cfg).await;
     let mut metrics_state = MetricsState::default();
     let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
+    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
+
     let (module, ctx) = server::start(
         &provider,
         &cfg.rpc_url,
@@ -96,7 +98,6 @@ async fn main() {
         std::process::exit(0);
     });
 
-    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
     loop {
         if let Err(err) = ingestor::run(&ctx, &provider, &metrics).await {
             error!("ingestor failed: {}", err);
