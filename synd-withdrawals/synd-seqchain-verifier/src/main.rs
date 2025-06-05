@@ -5,7 +5,7 @@ use eyre::Result;
 use shared::logger::set_global_default_subscriber;
 use synd_seqchain_verifier::{
     config::SeqchainVerifierConfig,
-    types::{BlockVerifierInput, L1ChainInput},
+    types::{parse_json, BlockVerifierInput, L1ChainInput},
     verifier::Verifier,
 };
 use tracing::debug;
@@ -13,12 +13,12 @@ use tracing::debug;
 #[derive(Parser, Debug)]
 struct VerifierCliArgs {
     /// Config
-    #[arg(long)]
-    config: String,
+    #[arg(long, value_parser = |s: &str| parse_json::<SeqchainVerifierConfig>(s))]
+    config: SeqchainVerifierConfig,
 
     /// L1 chain input
-    #[arg(long)]
-    l1_chain_input: String,
+    #[arg(long, value_parser = |s: &str| parse_json::<L1ChainInput>(s))]
+    l1_chain_input: L1ChainInput,
 }
 
 #[allow(clippy::unwrap_used)]
@@ -42,14 +42,9 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
     let args = VerifierCliArgs::parse();
     debug!("VerifierCliArgs: {:?}", args);
 
-    let l1_chain_input: L1ChainInput = serde_json::from_str(&args.l1_chain_input)?;
-    debug!("L1 input: {:?}", l1_chain_input);
-
-    let config: SeqchainVerifierConfig = serde_json::from_str(&args.config)?;
-
-    let verifier = Verifier::new(&config);
+    let verifier = Verifier::new(&args.config);
     verifier
-        .verify_and_create_output(&l1_chain_input)
+        .verify_and_create_output(&args.l1_chain_input)
         .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
 }
 

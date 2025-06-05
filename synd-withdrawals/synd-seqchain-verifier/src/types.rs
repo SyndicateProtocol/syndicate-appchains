@@ -13,6 +13,7 @@ use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
 
 // Storage slot of the batch accumulator
+// <https://github.com/SyndicateProtocol/nitro-contracts/blob/9a100a86242176b633a1d907e5efd41296922144/src/bridge/AbsBridge.sol#L51>
 // Since the batch accumulator is a dynamic array, this slot contains the length of the array
 const BATCH_ACCUMULATOR_STORAGE_SLOT: B256 =
     fixed_bytes!("0x0000000000000000000000000000000000000000000000000000000000000007");
@@ -94,6 +95,7 @@ impl L1ChainInput {
         Ok(())
     }
 
+    // TODO [SEQ-1002]: Move to a shared crate
     #[allow(clippy::unwrap_used)]
     fn verify_delayed_message_accumulator(&self) -> Result<(), VerifierError> {
         let mut acc = self.batches.first().unwrap().delayed_acc;
@@ -229,7 +231,7 @@ impl L1ChainInput {
     }
 }
 
-// TODO: Move to a shared crate
+// TODO [SEQ-1002]: Move to a shared crate
 /// `BlockVerifierInput` is the output of the `synd-seqchain-verifier`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -248,6 +250,7 @@ pub struct BlockVerifierInput {
     pub batch: Bytes,
 }
 
+// TODO [SEQ-1002]: Move to a shared crate
 /// L1 incoming message
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -258,6 +261,7 @@ pub struct L1IncomingMessage {
     pub l2msg: Bytes,
 }
 
+// TODO [SEQ-1002]: Move to a shared crate
 /// L1 incoming message header
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -276,6 +280,7 @@ pub struct L1IncomingMessageHeader {
     pub base_fee_l1: U256,
 }
 
+// TODO [SEQ-1002]: Move to a shared crate
 impl L1IncomingMessage {
     /// Hash the L1 incoming message
     fn hash(&self) -> B256 {
@@ -379,6 +384,16 @@ impl ArbitrumBatch {
             BatchType::EigenDA(eigan_data) => eigan_data.1.clone(),
         }
     }
+}
+
+// TODO [SEQ-1002]: Move to a shared crate
+// --------------------------------------------
+// JSON Helpers
+// --------------------------------------------
+
+/// Parse JSON into a type
+pub fn parse_json<T: serde::de::DeserializeOwned>(s: &str) -> Result<T, String> {
+    serde_json::from_str(s).map_err(|e| format!("Invalid JSON: {}", e))
 }
 
 #[cfg(test)]
