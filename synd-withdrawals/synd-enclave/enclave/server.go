@@ -460,7 +460,7 @@ func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySe
 
 	output := VerifySequencingChainOutput{
 		L1SequencingBlockHash: data.BlockHash,
-		L1EndBlockHash:        verifyInput.L1ChainInput.EndBlockHash
+		L1EndBlockHash:        verifyInput.L1ChainInput.EndBlockHash,
 	}
 	log.Debug("Sequencing Chain BlockVerifierOutput Output", "output", output)
 	return output, nil
