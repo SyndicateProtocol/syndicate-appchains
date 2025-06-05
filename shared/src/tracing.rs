@@ -17,10 +17,7 @@ use thiserror::Error;
 use tracing::Span;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::{
-    filter::{FromEnvError, LevelFilter, Targets},
-    layer::SubscriberExt as _,
-    util::SubscriberInitExt as _,
-    EnvFilter,
+    filter, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter,
 };
 
 // Re-exports for usability without requiring additional dependencies
@@ -101,18 +98,13 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
     let tracer = tracer_provider.tracer("tracing-opentelemetry");
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
 
-    let env_filter =
-        EnvFilter::builder().with_default_directive(LevelFilter::INFO.into()).from_env()?;
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(filter::LevelFilter::INFO.into())
+        .from_env()?
+        // disable spammy and unconnected jsonrpsee_server `connection` spans
+        .add_directive("jsonrpsee_server=off".parse()?);
 
     tracing_subscriber::registry()
-        // some sane defaults
-        .with(
-            Targets::new()
-                // TODO: will this conflict with env_filter? is printing DEBUG logs possible?
-                .with_default(LevelFilter::INFO)
-                // disable spammy and unconnected jsonrpsee_server `connection` spans
-                .with_target("jsonrpsee_server", LevelFilter::OFF),
-        )
         // logging to stdout
         .with(
             tracing_subscriber::fmt::layer()
@@ -192,7 +184,10 @@ impl Drop for OtelGuard {
 pub enum Error {
     /// error parsing `RUST_LOG` variable
     #[error("unable to get env filter from RUST_LOG env variable: {0}")]
-    EnvFilter(#[from] FromEnvError),
+    EnvFilter(#[from] filter::FromEnvError),
+    /// error parsing filtering directive
+    #[error("failed to parse filtering directive: {0}")]
+    ParseFilter(#[from] filter::ParseError),
     /// error initializing the default logger
     #[error("unable to initialize default logger - did you call this more than once?: {0} ")]
     DefaultLoggerInit(String),
