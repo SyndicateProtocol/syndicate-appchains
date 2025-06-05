@@ -28,7 +28,10 @@ tokio                                     = { workspace = true, features = ["mac
 x509-cert                                 = { workspace = true }
 
 [dev-dependencies]
-mockito = { workspace = true }
+mockito    = { workspace = true }
+serde      = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+test-utils = { workspace = true }
 
 [lints]
 workspace = true
