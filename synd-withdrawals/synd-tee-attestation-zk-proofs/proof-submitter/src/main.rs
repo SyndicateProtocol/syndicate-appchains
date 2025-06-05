@@ -13,7 +13,7 @@ use contract_bindings::synd::teekeymanager::TeeKeyManager;
 use jsonrpsee::{core::client::ClientT, http_client::HttpClientBuilder};
 use shared::parse::parse_address;
 use sp1_sdk::{ProverClient, SP1ProofWithPublicValues, SP1Stdin};
-use std::{str::FromStr, time::Duration};
+use std::{path::PathBuf, str::FromStr, time::Duration};
 use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
 use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
 use x509_cert::der::{DecodePem, Encode};
@@ -28,7 +28,7 @@ pub struct Args {
     /// path for the root certificate in PEM format. Will use the built-in aws nitro root
     /// certificate if not provided.
     #[arg(long)]
-    root_certificate_path: String,
+    root_certificate_path: Option<PathBuf>,
 
     #[arg(long, value_enum, default_value = "groth16")]
     proof_system: ProofSystem,
@@ -41,12 +41,12 @@ pub struct Args {
     /// The URL of the chain RPC server
     /// (if missing, on-chain submission will be skipped)
     #[arg(long)]
-    chain_rpc_url: String,
+    chain_rpc_url: Option<String>,
 
     /// The private key to submit the proof
     /// (if missing, on-chain submission will be skipped)
     #[arg(long)]
-    private_key: String,
+    private_key: Option<String>,
 }
 
 /// Enum representing the available proof systems
@@ -112,10 +112,10 @@ async fn run(args: Args) -> Result<(), ProofSubmitterError> {
     let cbor_attestation_doc = hex::decode(attestation_doc_hex)?;
 
     // get root certificate DER
-    let pem_root_cert = if args.root_certificate_path.is_empty() {
-        AWS_NITRO_ROOT_CERT_PEM.to_vec()
+    let pem_root_cert = if let Some(root_certificate_path) = args.root_certificate_path {
+        std::fs::read(root_certificate_path)?
     } else {
-        std::fs::read(args.root_certificate_path)?
+        AWS_NITRO_ROOT_CERT_PEM.to_vec()
     };
 
     let der_root_cert = x509_cert::Certificate::from_pem(&pem_root_cert)?.to_der()?;
@@ -124,28 +124,20 @@ async fn run(args: Args) -> Result<(), ProofSubmitterError> {
     verify_aws_nitro_attestation(&cbor_attestation_doc, &der_root_cert)
         .map_err(ProofSubmitterError::InvalidAttestationDocument)?;
 
+    // TODO pass `generate_proof` as a parameter so it can be mocked in tests
     // generate the proof
     let proof = generate_proof(cbor_attestation_doc, der_root_cert, args.proof_system).await?;
     println!("Proof generated successfully");
 
-    if args.chain_rpc_url.is_empty() ||
-        args.private_key.is_empty() ||
-        args.contract_address.is_none()
-    {
-        println!("Skipping submission to chain");
-        println!("proof: 0x{}", hex::encode(proof.bytes()));
-        return Ok(());
+    match (args.chain_rpc_url, args.private_key, args.contract_address) {
+        (Some(chain_rpc_url), Some(private_key), Some(contract_address)) => {
+            submit_proof_to_chain(chain_rpc_url, contract_address, private_key, proof).await?;
+        }
+        _ => {
+            println!("Skipping submission to chain");
+            println!("proof: 0x{}", hex::encode(proof.bytes()));
+        }
     }
-
-    // submit the proof to the chain
-    submit_proof_to_chain(
-        args.chain_rpc_url,
-        #[allow(clippy::unwrap_used)] //checked above
-        args.contract_address.unwrap(),
-        args.private_key,
-        proof,
-    )
-    .await?;
 
     Ok(())
 }
@@ -233,5 +225,16 @@ mod tests {
         drop(server);
         assert!(result.is_ok(), "get_attestation_doc call failed: {:?}", result.err());
         assert_eq!(result.unwrap(), expected_attestation_doc);
+    }
+
+    #[tokio::test]
+    async fn post_attestaion_proof_onchain() {
+        // TODO
+        // setup anvil
+        // mock anvil timestamp
+        // deploy AttestationDocVerifier and TeeKeyManager (use contract bindings)
+        // mock the enclave RPC server, output the attestation doc from `testdata`
+        // call `run``
+        // assert the proof was submitted to the chain and the key was added to the contract
     }
 }
