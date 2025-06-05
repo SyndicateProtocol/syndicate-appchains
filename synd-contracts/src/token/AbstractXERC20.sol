@@ -328,15 +328,6 @@ abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Vote
         return totalSupply();
     }
 
-    /**
-     * @notice Get past total supply at a specific block
-     * @param blockNumber The block number to check
-     * @return The total supply at that block
-     */
-    function getPastTotalSupply(uint256 blockNumber) public view override returns (uint256) {
-        return getPastTotalSupply(blockNumber);
-    }
-
     // =============================================================================
     // REQUIRED OVERRIDES FOR MULTIPLE INHERITANCE
     // =============================================================================
