@@ -25,7 +25,7 @@ struct Config {
     rpc_url: String,
     #[arg(long, env = "DB_FILE")]
     db_file: String,
-    #[arg(long, env = "START_BLOCK")]
+    #[arg(long, env = "START_BLOCK", default_value_t = 0)]
     start_block: u64,
     #[arg(long, env = "CHANNEL_SIZE", default_value_t = 1024)]
     channel_size: usize,
