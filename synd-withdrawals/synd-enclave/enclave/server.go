@@ -407,11 +407,64 @@ func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (
 }
 
 func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySequencingChainInput) (VerifySequencingChainOutput, error) {
-	// TODO (SEQ-961): Implement Sequencing Chain Verifier Component
-	// Sequencing chain verification
-	// Sequencing chain block verifier
-	// Sign & return
-	return VerifySequencingChainOutput{}, nil
+	// Sanitize to ensure non-nil slices for correct JSON serialization
+	SanitizeVerifySequencingChainInput(&verifyInput)
+
+	// Execute Sequencing Chain Verifier Rust Binary
+	config, err := json.Marshal(verifyInput.VerifySequencingChainConfig)
+	if err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("failed to marshal verify sequencing chain config: %w", err)
+	}
+	sequencingChainInput, err := json.Marshal(verifyInput.L1ChainInput)
+	if err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
+	}
+	cmd := exec.Command("cargo", "run", "--bin", "synd-seqchain-verifier", "--",
+		"--config", string(config),
+		"--sequencing-chain-input", string(sequencingChainInput),
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("failed to run synd-seqchain-verifier: %w. Output: %s", err, string(out))
+	}
+
+	log.Debug("VerifySequencingChain Output", "output", string(out))
+
+	lines := strings.Split(string(out), "\n")
+	var outputLine string
+	for i := len(lines) - 1; i >= 0; i-- {
+		trimmed := strings.TrimSpace(lines[i])
+		if trimmed != "" {
+			outputLine = trimmed
+			break
+		}
+	}
+
+	var batches []wavmio.Batch
+	log.Debug("VerifySequencingChain Output Line", "outputLine", outputLine)
+	if err := json.Unmarshal([]byte(outputLine), &batches); err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
+	}
+
+	var blockVerifierInput = wavmio.ValidationInput{
+		BlockHash:    verifyInput.L1ChainInput.StartBlockHash,
+		PreimageData: verifyInput.SequencingPreImageData,
+		Batches:      batches,
+	}
+
+	log.Debug("Sequencing Chain BlockVerifierInput Input", "input", blockVerifierInput)
+	data, err := Verify(blockVerifierInput)
+	if err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("Failed to verify sequencing chain: %w", err)
+	}
+
+	output := VerifySequencingChainOutput{
+		L1SequencingBlockHash: data.BlockHash,
+		L1EndBlockHash:        verifyInput.L1ChainInput.EndBlockHash
+	}
+	log.Debug("Sequencing Chain BlockVerifierOutput Output", "output", output)
+	return output, nil
+
 }
 
 func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainInput) (VerifyAppchainOutput, error) {
@@ -480,7 +533,6 @@ func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainI
 		// TODO: set output properly
 		L1SequencingBlockHash: verifyInput.VerifySequencingChainOutput.L1SequencingBlockHash,
 		L1EndBlockHash:        verifyInput.VerifySequencingChainOutput.L1EndBlockHash,
-		Signature:             verifyInput.VerifySequencingChainOutput.Signature,
 	}
 	log.Debug("Appchain BlockVerifierOutput Output", "output", output)
 	return output, nil

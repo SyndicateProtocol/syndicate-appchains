@@ -84,12 +84,23 @@ type VerifySequencingChainConfig struct {
 type VerifySequencingChainInput struct {
 	VerifySequencingChainConfig VerifySequencingChainConfig `json:"verifySequencingChainConfig"`
 	L1ChainInput                L1ChainInput                `json:"l1ChainInput"`
-	SequencingPreImageData      []byte                      `json:"sequencingPreImageData"`
+	SequencingPreImageData      [][]byte                    `json:"sequencingPreImageData"`
 }
 type VerifySequencingChainOutput struct {
 	L1SequencingBlockHash common.Hash `json:"l1SequencingBlockHash"`
 	L1EndBlockHash        common.Hash `json:"l1EndBlockHash"`
-	Signature             []byte      `json:"signature"`
+}
+
+func SanitizeVerifySequencingChainInput(input *VerifySequencingChainInput) {
+	if input.L1ChainInput.Batches == nil {
+		input.L1ChainInput.Batches = []ArbitrumBatch{}
+	}
+	if input.L1ChainInput.DelayedMessages == nil {
+		input.L1ChainInput.DelayedMessages = []arbostypes.L1IncomingMessage{}
+	}
+	sanitizeAccountProof(&input.L1ChainInput.StartBatchCountMerkleProof)
+	sanitizeAccountProof(&input.L1ChainInput.EndBatchCountMerkleProof)
+	sanitizeAccountProof(&input.L1ChainInput.EndBatchAccumulatorMerkleProof)
 }
 
 // Verify appchain input & output (Second call to the TEE synd-enclave)
@@ -151,7 +162,6 @@ type VerifyAppchainOutput struct {
 	LastAppchainBlockHash common.Hash `json:"lastAppchainBlockHash"`
 	LastAppchainSendRoot  common.Hash `json:"lastAppchainSendRoot"`
 	BatchCount            uint64      `json:"batchCount"`
-	Signature             []byte      `json:"signature"`
 }
 
 // Block verifier inputs
