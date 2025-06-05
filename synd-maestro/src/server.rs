@@ -114,9 +114,7 @@ pub async fn send_raw_transaction_handler(
     service_arc_arc: Arc<Arc<MaestroService>>,
     extensions: Extensions,
 ) -> RpcResult<String> {
-    #[allow(clippy::expect_used)]
-    let headers = extensions.get::<HashMap<_, _>>().expect("should have headers as a HashMap");
-    extract_tracing_context(headers);
+    extract_tracing_context(&extensions);
 
     let service = service_arc_arc.as_ref();
     let req_start = Instant::now();

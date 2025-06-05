@@ -1,5 +1,6 @@
 //! The `tracing` module contains code for setting up logs, tracing and metrics
 
+use http::Extensions;
 pub use opentelemetry::{
     global as otel_global,
     propagation::TextMapPropagator,
@@ -177,7 +178,9 @@ pub fn current_traceparent() -> Option<String> {
 
 /// Extract the tracing context from the request headers
 /// and set it as the parent context for the current span.
-pub fn extract_tracing_context(headers: &HashMap<String, String>) -> Option<()> {
+pub fn extract_tracing_context(extensions: &Extensions) -> Option<()> {
+    let fallback_map = HashMap::<String, String>::new();
+    let headers = extensions.get::<HashMap<_, _>>().unwrap_or(&fallback_map);
     let traceparent = headers.get("traceparent")?;
     let mut carrier = HashMap::new();
     // TODO(SEQ-973): '-03' sent by universal-relay is incompatible with Rust TraceContextPropagator
