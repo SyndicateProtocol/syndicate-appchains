@@ -1,3 +1,5 @@
+//! The `eth` method implementations for the `synd-mchain` RPC server
+
 #[cfg(test)]
 use crate::methods::common::test_utils::SystemTime;
 use crate::{
@@ -245,7 +247,6 @@ pub fn eth_call(
     let input = input.input.input.ok_or_else(|| err("missing calldata"))?;
     let selector = input.get(0..4).ok_or_else(|| err("missing selector"))?;
     match TryInto::<[u8; 4]>::try_into(selector).map_err(to_err)? {
-        // TODO(SEQ-767): make sure the max data size property is set properly
         IInboxBase::maxDataSizeCall::SELECTOR => Ok(117964.abi_encode().into()),
         IBridge::delayedMessageCountCall::SELECTOR => {
             Ok(db.get_state().message_count.abi_encode().into())

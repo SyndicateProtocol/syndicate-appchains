@@ -1,3 +1,5 @@
+//! Shared functions and constants for the `synd-mchain` RPC server methods
+
 use alloy::primitives::{address, Address, FixedBytes, U256};
 use jsonrpsee::{
     server::SubscriptionSink,
@@ -6,16 +8,19 @@ use jsonrpsee::{
 use std::collections::VecDeque;
 
 /// The chain id of the mockchain. This is the same for all appchains.
-/// TODO(SEQ-652): this should be configurable
+/// TODO [SEQ-942]: Possibly change this to a custom value
 pub const MCHAIN_ID: u64 = 84532;
 
 /// The address of the Appchain contract
+/// TODO [SEQ-942]: Possibly change this to a custom value
 pub const APPCHAIN_CONTRACT: Address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
 
+/// Helper function to create an error object
 pub fn err(message: &'static str) -> ErrorObjectOwned {
     ErrorObjectOwned::borrowed(INTERNAL_ERROR_CODE, message, None)
 }
 
+/// Helper function to create a mock log object
 pub fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rpc::types::Log {
     alloy::rpc::types::Log {
         inner: alloy::primitives::Log { address: APPCHAIN_CONTRACT, data },
@@ -26,6 +31,7 @@ pub fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rp
     }
 }
 
+/// Helper function to create a mock header object
 pub fn create_header(
     block_num: u64,
     l1_block_num: u64,
@@ -88,10 +94,14 @@ pub fn appchain_config(chain_id: u64) -> String {
     cfg
 }
 
+/// The context of the mockchain
 #[derive(Debug)]
 pub struct Context {
+    /// The finalized block number
     pub finalized_block: u64,
+    /// The pending timestamps
     pub pending_ts: VecDeque<u64>,
+    /// The subscriptions
     pub subs: Vec<SubscriptionSink>,
 }
 

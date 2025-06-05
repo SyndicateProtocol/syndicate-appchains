@@ -1,3 +1,6 @@
+//! The `synd-mchain` RPC server
+
+// Use mock time for testing (see `methods::common::test_utils::SystemTime`)
 #[cfg(test)]
 use crate::methods::common::test_utils::SystemTime;
 use crate::{
@@ -25,6 +28,7 @@ use tracing::error;
 // 000b00800203 corresponds to a batch containing a single delayed message
 const EMPTY_BATCH: Bytes = Bytes::from_static(&alloy::hex!("000b00800203"));
 
+/// Starts the `synd-mchain` RPC server
 #[allow(clippy::unwrap_used)]
 pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
@@ -77,7 +81,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     ));
 
     // -------------------------------------------------
-    // synd-mchain methods
+    // mchain methods
     // -------------------------------------------------
     module.register_method("mchain_addBatch", add_batch).unwrap();
     module.register_method("mchain_rollbackToBlock", rollback_to_block).unwrap();

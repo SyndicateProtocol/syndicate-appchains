@@ -1,3 +1,5 @@
+//! The `mchain` method implementations for the `synd-mchain` RPC server
+
 use crate::{
     db::{to_err, ArbitrumDB, MBlock, Slot, State},
     methods::common::{create_header, err, Context},

@@ -1,3 +1,5 @@
+//! The `synd-mchain` client
+
 use crate::db::{MBlock, Slot};
 use alloy::eips::BlockNumberOrTag;
 pub use jsonrpsee::core::{traits::ToRpcParams, ClientError};
@@ -18,29 +20,39 @@ pub struct KnownState {
     pub settlement_block: BlockRef,
 }
 
+/// The trait for the provider of the synd-mchain
 #[async_trait]
 #[allow(clippy::unwrap_used)]
 pub trait Provider: Send + Sync {
+    /// Sends a request to the provider with the given method and parameters
+    /// Returns the deserialized response of type T
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
         &self,
         method: &'static str,
         params: Params,
     ) -> Result<T, ClientError>;
 
+    /// Gets the current block number from the chain
     async fn get_block_number(&self) -> u64 {
         let block: alloy::rpc::types::Block =
             self.request("eth_getBlockByNumber", (BlockNumberOrTag::Latest, false)).await.unwrap();
         block.header.number
     }
+
+    /// Adds a new batch to the chain
     async fn add_batch(&self, batch: &MBlock) -> eyre::Result<Option<u64>> {
         Ok(self.request("mchain_addBatch", [batch]).await?)
     }
+
+    /// Gets the processed blocks from source chains for a given block tag
     async fn get_source_chains_processed_blocks(
         &self,
         tag: BlockNumberOrTag,
     ) -> eyre::Result<(Slot, u64)> {
         Ok(self.request("mchain_getSourceChainsProcessedBlocks", [tag]).await?)
     }
+
+    /// Rolls back the chain to a specific block number
     async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
@@ -146,10 +158,12 @@ async fn validate_block_add_timestamp(
     block.hash == expected_block.hash
 }
 
+/// The provider for the synd-mchain
 #[derive(Debug)]
 pub struct MProvider(WsClient);
 
 impl MProvider {
+    /// Creates a new provider for the synd-mchain
     pub async fn new(url: &str) -> eyre::Result<Self> {
         Ok(Self(WsClientBuilder::new().build(url).await?))
     }
