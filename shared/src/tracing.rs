@@ -1,18 +1,9 @@
 //! The `tracing` module contains code for setting up logs, tracing and metrics
 
 use http::Extensions;
-pub use opentelemetry::{
-    global as otel_global,
-    propagation::TextMapPropagator,
-    trace::{SpanKind, Status as TraceStatus, TraceContextExt},
-};
 use opentelemetry::{trace::TracerProvider as _, KeyValue};
-use opentelemetry_otlp::{
-    ExporterBuildError, MetricExporter as OtlpMetricExporter, SpanExporter as OtlpSpanExporter,
-};
-pub use opentelemetry_sdk::propagation::TraceContextPropagator;
+use opentelemetry_otlp::{ExporterBuildError, SpanExporter as OtlpSpanExporter};
 use opentelemetry_sdk::{
-    metrics::{MeterProviderBuilder, SdkMeterProvider, Temporality},
     trace::{RandomIdGenerator, SdkTracerProvider},
     Resource,
 };
@@ -24,14 +15,22 @@ use opentelemetry_stdout::SpanExporter as StdoutSpanExporter;
 use std::collections::HashMap;
 use thiserror::Error;
 use tracing::Span;
-pub use tracing_opentelemetry::OpenTelemetrySpanExt;
-use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
+use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::{
     filter::{FromEnvError, LevelFilter, Targets},
     layer::SubscriberExt as _,
     util::SubscriberInitExt as _,
     EnvFilter,
 };
+
+// Re-exports for usability without requiring additional dependencies
+pub use opentelemetry::{
+    global as otel_global,
+    propagation::TextMapPropagator,
+    trace::{SpanKind, Status as TraceStatus, TraceContextExt},
+};
+pub use opentelemetry_sdk::propagation::TraceContextPropagator;
+pub use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 /// Configuration for the tracing system
 #[derive(Debug, Clone)]
@@ -73,24 +72,6 @@ impl From<ServiceTracingConfig> for Resource {
     }
 }
 
-// Construct MeterProvider for MetricsLayer
-fn init_meter_provider(config: &ServiceTracingConfig) -> Result<SdkMeterProvider, Error> {
-    let otlp_exporter = OtlpMetricExporter::builder()
-        .with_http()
-        .with_temporality(Temporality::default())
-        .build()
-        .map_err(Error::SpanExporter)?;
-
-    let meter_provider = MeterProviderBuilder::default()
-        .with_resource(Resource::from(config.clone()))
-        .with_periodic_exporter(otlp_exporter)
-        .build();
-
-    opentelemetry::global::set_meter_provider(meter_provider.clone());
-
-    Ok(meter_provider)
-}
-
 // Construct `TracerProvider` for `OpenTelemetryLayer`
 fn init_tracer_provider(config: &ServiceTracingConfig) -> Result<SdkTracerProvider, Error> {
     let otlp_exporter =
@@ -116,7 +97,6 @@ fn init_tracer_provider(config: &ServiceTracingConfig) -> Result<SdkTracerProvid
 /// for OpenTelemetry-related termination processing.
 pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, Error> {
     let tracer_provider = init_tracer_provider(&config)?;
-    let meter_provider = init_meter_provider(&config)?;
 
     let tracer = tracer_provider.tracer("tracing-opentelemetry");
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
@@ -144,7 +124,6 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
         )
         .with(env_filter)
         // OpenTelemetry tracing + metrics layers
-        .with(MetricsLayer::new(meter_provider))
         .with(OpenTelemetryLayer::new(tracer))
         .try_init()
         .map_err(|e| Error::DefaultLoggerInit(e.to_string()))?;
@@ -196,7 +175,6 @@ pub fn extract_tracing_context(extensions: &Extensions) -> Option<()> {
 #[derive(Debug)]
 pub struct OtelGuard {
     tracer_provider: SdkTracerProvider,
-    // meter_provider: SdkMeterProvider,
 }
 
 impl Drop for OtelGuard {
@@ -205,9 +183,6 @@ impl Drop for OtelGuard {
         if let Err(err) = self.tracer_provider.shutdown() {
             eprintln!("failed to shutdown OpenTelemetry tracing: {err:?}");
         }
-        // if let Err(err) = self.meter_provider.shutdown() {
-        //     eprintln!("failed to shutdown OpenTelemetry metrics: {err:?}");
-        // }
     }
 }
 
