@@ -169,7 +169,7 @@ impl L1ChainInput {
         if proof.storage_proof.len() == slot.len() {
             return Err(VerifierError::InvalidL1ChainInput {
                 reason: "Invalid number of storage proofs".to_string(),
-                expected: "1".to_string(),
+                expected: slot.len().to_string(),
                 actual: proof.storage_proof.len().to_string(),
             });
         }
