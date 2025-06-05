@@ -19,6 +19,10 @@ struct VerifierCliArgs {
     /// L1 chain input
     #[arg(long, value_parser = |s: &str| parse_json::<L1ChainInput>(s))]
     l1_chain_input: L1ChainInput,
+
+    /// Config hash
+    #[arg(long)]
+    config_hash: String,
 }
 
 #[allow(clippy::unwrap_used)]
@@ -41,6 +45,11 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
 
     let args = VerifierCliArgs::parse();
     debug!("VerifierCliArgs: {:?}", args);
+
+    // Verify config hash matches config
+    if args.config_hash != args.config.hash_verifier_config_sha256().to_string() {
+        return Err(eyre::eyre!("Config hash mismatch"));
+    }
 
     let verifier = Verifier::new(&args.config);
     verifier

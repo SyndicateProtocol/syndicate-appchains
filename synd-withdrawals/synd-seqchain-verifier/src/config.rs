@@ -1,6 +1,6 @@
 //! Configuration for the `synd-seqchain-verifier`
 
-use alloy::primitives::Address;
+use alloy::primitives::{keccak256, Address, B256};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 use shared::parse::parse_address;
@@ -13,4 +13,13 @@ pub struct SeqchainVerifierConfig {
     #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
        value_parser = parse_address)]
     pub arbitrum_bridge_address: Address,
+}
+
+impl SeqchainVerifierConfig {
+    /// Hash the verifier config
+    #[allow(clippy::unwrap_used)]
+    pub fn hash_verifier_config_sha256(&self) -> B256 {
+        let encoded = serde_json::to_string(self).unwrap();
+        keccak256(encoded)
+    }
 }

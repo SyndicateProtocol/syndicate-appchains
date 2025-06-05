@@ -325,7 +325,7 @@ pub struct TimeBounds {
 pub enum DALayer {
     /// `EigenDA`
     EigenDA(Box<EigenDACert>),
-    // TODO: Impl Blobs
+    // TODO [SEQ-1004]: Support Blobs
 }
 
 /// Arbitrum batch
