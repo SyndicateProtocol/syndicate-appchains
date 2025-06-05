@@ -21,7 +21,7 @@ COPY . .
 
 # Perform cargo build with cached Cargo and target directories
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
-    cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --workspace
+    cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
 
 # Stage 3: Optional Foundry install

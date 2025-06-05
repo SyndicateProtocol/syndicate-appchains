@@ -1,0 +1,24 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-seqchain-verifier"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy      = { workspace = true }
+alloy-trie = { workspace = true }
+clap       = { workspace = true, features = ["derive", "env"] }
+eyre       = { workspace = true }
+serde      = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+shared     = { workspace = true }
+thiserror  = { workspace = true }
+tokio      = { workspace = true }
+tracing    = { workspace = true }
+
+[lints]
+workspace = true
