@@ -442,7 +442,7 @@ interface AbstractXERC20 {
     function getBridgeInfo(address bridge) external view returns (bool authorized, uint256 mintingMax, uint256 mintingCurrent, uint256 burningMax, uint256 burningCurrent);
     function getBridgeUtilization(address bridge) external view returns (uint256 mintingUtilization, uint256 burningUtilization);
     function getCurrentTotalSupply() external view returns (uint256);
-    function getPastTotalSupply(uint256 blockNumber) external view returns (uint256);
+    function getPastTotalSupply(uint256 timepoint) external view returns (uint256);
     function getPastVotes(address account, uint256 timepoint) external view returns (uint256);
     function getPastVotingPower(address account, uint256 blockNumber) external view returns (uint256);
     function getRoleAdmin(bytes32 role) external view returns (bytes32);
@@ -974,7 +974,7 @@ interface AbstractXERC20 {
     "name": "getPastTotalSupply",
     "inputs": [
       {
-        "name": "blockNumber",
+        "name": "timepoint",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -8708,13 +8708,13 @@ function getCurrentTotalSupply() external view returns (uint256);
     };
     /**Function with signature `getPastTotalSupply(uint256)` and selector `0x8e539e8c`.
 ```solidity
-function getPastTotalSupply(uint256 blockNumber) external view returns (uint256);
+function getPastTotalSupply(uint256 timepoint) external view returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPastTotalSupplyCall {
         #[allow(missing_docs)]
-        pub blockNumber: alloy::sol_types::private::primitives::aliases::U256,
+        pub timepoint: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getPastTotalSupply(uint256)`](getPastTotalSupplyCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
@@ -8754,7 +8754,7 @@ function getPastTotalSupply(uint256 blockNumber) external view returns (uint256)
             impl ::core::convert::From<getPastTotalSupplyCall>
             for UnderlyingRustTuple<'_> {
                 fn from(value: getPastTotalSupplyCall) -> Self {
-                    (value.blockNumber,)
+                    (value.timepoint,)
                 }
             }
             #[automatically_derived]
@@ -8762,7 +8762,7 @@ function getPastTotalSupply(uint256 blockNumber) external view returns (uint256)
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for getPastTotalSupplyCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { blockNumber: tuple.0 }
+                    Self { timepoint: tuple.0 }
                 }
             }
         }
@@ -8825,7 +8825,7 @@ function getPastTotalSupply(uint256 blockNumber) external view returns (uint256)
                 (
                     <alloy::sol_types::sol_data::Uint<
                         256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.blockNumber),
+                    > as alloy_sol_types::SolType>::tokenize(&self.timepoint),
                 )
             }
             #[inline]
@@ -15151,11 +15151,11 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`getPastTotalSupply`] function.
         pub fn getPastTotalSupply(
             &self,
-            blockNumber: alloy::sol_types::private::primitives::aliases::U256,
+            timepoint: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<T, &P, getPastTotalSupplyCall, N> {
             self.call_builder(
                 &getPastTotalSupplyCall {
-                    blockNumber,
+                    timepoint,
                 },
             )
         }
