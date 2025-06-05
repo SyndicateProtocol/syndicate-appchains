@@ -322,18 +322,10 @@ pub struct TimeBounds {
 
 /// Batch type
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BatchType {
-    /// Calldata
-    Calldata(Bytes),
+pub enum DALayer {
     /// `EigenDA`
-    EigenDA(Box<(EigenDACert, Bytes)>),
+    EigenDA(Box<EigenDACert>),
     // TODO: Impl Blobs
-}
-
-impl Default for BatchType {
-    fn default() -> Self {
-        Self::Calldata(Bytes::default())
-    }
 }
 
 /// Arbitrum batch
@@ -347,7 +339,9 @@ pub struct ArbitrumBatch {
     /// Time bounds
     pub time_bounds: TimeBounds,
     /// Batch data
-    pub data: BatchType,
+    pub data: Bytes,
+    /// Optional: DA layer
+    pub da_layer: Option<DALayer>,
 }
 
 impl ArbitrumBatch {
@@ -364,25 +358,16 @@ impl ArbitrumBatch {
         )
             .abi_encode_packed();
 
-        match &self.data {
-            BatchType::Calldata(data) => keccak256((header, data).abi_encode_packed()),
-            BatchType::EigenDA(eigan_data) => keccak256(
-                (header, [EIGENDA_MESSAGE_HEADER_FLAG], eigan_data.0.abi_encode())
-                    .abi_encode_packed(),
+        match &self.da_layer {
+            Some(DALayer::EigenDA(cert)) => keccak256(
+                (header, [EIGENDA_MESSAGE_HEADER_FLAG], cert.abi_encode()).abi_encode_packed(),
             ),
+            None => keccak256(header.abi_encode_packed()),
         }
     }
     /// Accumulate the batch
     pub fn accumulate(&self, acc: B256) -> B256 {
         keccak256((acc, self.hash(), self.delayed_acc).abi_encode_packed())
-    }
-
-    /// Get the data of the batch
-    pub fn get_data(&self) -> Bytes {
-        match &self.data {
-            BatchType::Calldata(data) => data.clone(),
-            BatchType::EigenDA(eigan_data) => eigan_data.1.clone(),
-        }
     }
 }
 
@@ -401,7 +386,7 @@ mod tests {
     use super::*;
     use crate::eigen_da_types::*;
     use alloy::{
-        primitives::{bytes, fixed_bytes, Bytes, Uint, U256},
+        primitives::{bytes, fixed_bytes, Uint, U256},
         providers::{Provider as _, ProviderBuilder, RootProvider},
         rpc::types::EIP1186StorageProof,
     };
@@ -496,8 +481,9 @@ mod tests {
                 min_block_number: 3200322,
                 max_block_number: 4640322,
             },
-            data: BatchType::EigenDA(Box::new((cert, Bytes::default()))),
+            da_layer: Some(DALayer::EigenDA(Box::new(cert))),
             after_delayed_messages_read: U256::from(24),
+            ..Default::default()
         };
 
         let input = L1ChainInput {
