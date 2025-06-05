@@ -16,6 +16,7 @@ members = [
   "synd-translator/tests",
   "synd-withdrawals/synd-appchain-verifier",
   "synd-withdrawals/synd-proposer",
+  "synd-withdrawals/synd-seqchain-verifier",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script",

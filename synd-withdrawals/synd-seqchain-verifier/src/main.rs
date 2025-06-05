@@ -1,0 +1,74 @@
+//! Main entrypoint for the `synd-seqchain-verifier`
+
+use clap::Parser;
+use eyre::Result;
+use shared::logger::set_global_default_subscriber;
+use synd_seqchain_verifier::{
+    config::SeqchainVerifierConfig,
+    types::{parse_json, BlockVerifierInput, L1ChainInput},
+    verifier::Verifier,
+};
+use tracing::debug;
+
+#[derive(Parser, Debug)]
+struct VerifierCliArgs {
+    /// Config
+    #[arg(long, value_parser = |s: &str| parse_json::<SeqchainVerifierConfig>(s))]
+    config: SeqchainVerifierConfig,
+
+    /// L1 chain input
+    #[arg(long, value_parser = |s: &str| parse_json::<L1ChainInput>(s))]
+    l1_chain_input: L1ChainInput,
+
+    /// Config hash
+    #[arg(long)]
+    config_hash: String,
+}
+
+#[allow(clippy::unwrap_used)]
+fn main() {
+    match run() {
+        Ok(outputs) => {
+            // Print raw JSON to stdout
+            println!("Outputs created successfully");
+            println!("{}", serde_json::to_string(&outputs).unwrap());
+        }
+        Err(e) => {
+            debug!("Error: {:?}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn run() -> Result<Vec<BlockVerifierInput>> {
+    set_global_default_subscriber()?;
+
+    let args = VerifierCliArgs::parse();
+    debug!("VerifierCliArgs: {:?}", args);
+
+    // Verify config hash matches config
+    if args.config_hash != args.config.hash_verifier_config_sha256().to_string() {
+        return Err(eyre::eyre!("Config hash mismatch"));
+    }
+
+    let verifier = Verifier::new(&args.config);
+    verifier
+        .verify_and_create_output(&args.l1_chain_input)
+        .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy::primitives::Address;
+
+    #[test]
+    fn test_generate_input() {
+        let config = SeqchainVerifierConfig { arbitrum_bridge_address: Address::ZERO };
+        let config_json = serde_json::to_string(&config).unwrap();
+        println!("{}", config_json);
+        let l1_chain_input = L1ChainInput::default();
+        let l1_chain_input_json = serde_json::to_string(&l1_chain_input).unwrap();
+        println!("{}", l1_chain_input_json);
+    }
+}

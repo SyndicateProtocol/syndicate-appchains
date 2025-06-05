@@ -7276,6 +7276,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-seqchain-verifier"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-trie 0.7.9",
+ "clap",
+ "eyre",
+ "serde",
+ "serde_json",
+ "shared",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "synd-slotter"
 version = "0.1.0"
 dependencies = [
