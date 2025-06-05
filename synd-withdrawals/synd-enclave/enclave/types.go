@@ -5,96 +5,104 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
 )
 
 // Appchain verifier inputs
 type SettlementChainInput struct {
 	// Trustless input
-	DelayedMessages                 []arbostypes.L1IncomingMessage `json:"delayed_messages"`
-	StartDelayedMessagesAccumulator common.Hash                    `json:"start_delayed_messages_accumulator"`
+	DelayedMessages                 []arbostypes.L1IncomingMessage
+	StartDelayedMessagesAccumulator common.Hash
 
 	// Trusted input
-	EndDelayedMessagesAccumulator common.Hash `json:"end_delayed_messages_accumulator"`
+	EndDelayedMessagesAccumulator common.Hash
 }
 
 type SequencingChainInput struct {
 	// Trustless input
-	StartSyndicateAccumulatorMerkleProof AccountProofResponse        `json:"start_syndicate_accumulator_merkle_proof"`
-	EndSyndicateAccumulatorMerkleProof   AccountProofResponse        `json:"end_syndicate_accumulator_merkle_proof"`
-	SyndicateTransactionEvents           []SyndicateTransactionEvent `json:"syndicate_transaction_events"`
-	BlockHeaders                         []types.Header              `json:"block_headers"`
+	StartSyndicateAccumulatorMerkleProof AccountProofResponse
+	EndSyndicateAccumulatorMerkleProof   AccountProofResponse
+	SyndicateTransactionEvents           []SyndicateTransactionEvent
+	BlockHeaders                         []types.Header
 
 	// Trusted input
-	StartBlockHash common.Hash `json:"start_block_hash"`
-	EndBlockHash   common.Hash `json:"end_block_hash"`
+	StartBlockHash common.Hash
+	EndBlockHash   common.Hash
 }
 
 type AccountProofResponse struct {
-	Address      common.Address  `json:"address"`
-	Balance      *big.Int        `json:"balance"`
-	CodeHash     common.Hash     `json:"codeHash"`
-	Nonce        uint64          `json:"nonce"`
-	StorageHash  common.Hash     `json:"storageHash"`
-	AccountProof []string        `json:"accountProof"`
-	StorageProof []StorageResult `json:"storageProof"`
+	Address      common.Address
+	Balance      *big.Int
+	CodeHash     common.Hash
+	Nonce        uint64
+	StorageHash  common.Hash
+	AccountProof []string
+	StorageProof []StorageResult
 }
 
 type StorageResult struct {
-	Key   common.Hash `json:"key"`
-	Value *big.Int    `json:"value"`
-	Proof []string    `json:"proof"`
+	Key   common.Hash
+	Value *big.Int
+	Proof []string
 }
 
 type SyndicateTransactionEvent struct {
-	BlockNumber uint64         `json:"blockNumber"`
-	Timestamp   uint64         `json:"timestamp"`
-	Sender      common.Address `json:"sender"`
-	Payload     []byte         `json:"payload"`
+	BlockNumber uint64
+	Timestamp   uint64
+	Sender      common.Address
+	Payload     []byte
 }
 
 // Sequencing chain verifier inputs
 type L1ChainInput struct {
 	// Trustless input
-	StartBatchAccumulatorMerkleProof AccountProofResponse           `json:"startBatchAccumulatorMerkleProof"`
-	EndBatchAccumulatorMerkleProof   AccountProofResponse           `json:"endBatchAccumulatorMerkleProof"`
-	StartBlockHeader                 types.Header                   `json:"startBlockHeader"`
-	EndBlockHeader                   types.Header                   `json:"endBlockHeader"`
-	DelayedMessages                  []arbostypes.L1IncomingMessage `json:"delayedMessages"`
-	Batches                          []ArbitrumBatch                `json:"batches"`
+	StartBatchAccumulatorMerkleProof AccountProofResponse
+	EndBatchAccumulatorMerkleProof   AccountProofResponse
+	StartBlockHeader                 types.Header
+	EndBlockHeader                   types.Header
+	DelayedMessages                  []arbostypes.L1IncomingMessage
+	Batches                          []ArbitrumBatch
 
 	// Trusted input
-	StartBlockHash common.Hash `json:"startBlockHash"`
-	EndBlockHash   common.Hash `json:"endBlockHash"`
+	StartBlockHash common.Hash
+	EndBlockHash   common.Hash
 }
 
 type ArbitrumBatch struct {
-	DelayedAccumulator       common.Hash  `json:"delayedAccumulator"`
-	AfterDelayedMessagesRead uint64       `json:"afterDelayedMessagesRead"`
-	TimeBounds               TimeBounds   `json:"timeBounds"`
-	Data                     []byte       `json:"data"`
-	DALayer                  *EigenDACert `json:"cert"`
+	DelayedAccumulator       common.Hash
+	AfterDelayedMessagesRead uint64
+	TimeBounds               TimeBounds
+	Data                     []byte
 }
 
 type TimeBounds struct {
-	MinTimestamp   uint64 `json:"minTimestamp"`
-	MaxTimestamp   uint64 `json:"maxTimestamp"`
-	MinBlockNumber uint64 `json:"minBlockNumber"`
-	MaxBlockNumber uint64 `json:"maxBlockNumber"`
+	MinTimestamp   uint64
+	MaxTimestamp   uint64
+	MinBlockNumber uint64
+	MaxBlockNumber uint64
 }
 
 // Verify sequencing chain input & output (First call to the TEE synd-enclave)
 type VerifySequencingChainConfig struct {
-	ArbitrumBridgeAddress common.Address `json:"arbitrumBridgeAddress"`
+	ArbitrumBridgeAddress common.Address
 }
 type VerifySequencingChainInput struct {
-	VerifySequencingChainConfig VerifySequencingChainConfig `json:"verifySequencingChainConfig"`
-	L1ChainInput                L1ChainInput                `json:"l1ChainInput"`
-	SequencingPreImageData      [][]byte                    `json:"sequencingPreImageData"`
+	SeqConfigHash               common.Hash
+	VerifySequencingChainConfig VerifySequencingChainConfig
+	L1ChainInput                L1ChainInput
+	SequencingStartBlockHash    common.Hash
+	SequencingPreImageData      [][]byte
 }
+
+func (input *VerifySequencingChainInput) hash() common.Hash {
+	return crypto.Keccak256Hash(input.SeqConfigHash[:], input.L1ChainInput.StartBlockHash[:], input.L1ChainInput.EndBlockHash[:], input.SequencingStartBlockHash[:])
+
+}
+
 type VerifySequencingChainOutput struct {
-	L1SequencingBlockHash common.Hash `json:"l1SequencingBlockHash"`
-	L1EndBlockHash        common.Hash `json:"l1EndBlockHash"`
+	SequencingBlockHash common.Hash
+	Signature           []byte
 }
 
 func SanitizeVerifySequencingChainInput(input *VerifySequencingChainInput) {
@@ -111,17 +119,25 @@ func SanitizeVerifySequencingChainInput(input *VerifySequencingChainInput) {
 // Verify appchain input & output (Second call to the TEE synd-enclave)
 
 type VerifyAppchainConfig struct {
-	SequenceContractAddress common.Address `json:"sequencing_contract_address"`
-	SettlementDelay         uint64         `json:"settlement_delay"`
+	SequenceContractAddress common.Address
+	SettlementDelay         uint64
 }
 
 type VerifyAppchainInput struct {
-	AppchainConfigHash          common.Hash                 `json:"appchainConfigHash"`
-	VerifyAppchainConfig        VerifyAppchainConfig        `json:"verifyAppchainConfig"`
-	SettlementChainInput        SettlementChainInput        `json:"settlementChainInput"`
-	SequencingChainInput        SequencingChainInput        `json:"sequencingChainInput"`
-	AppchainPreImageData        [][]byte                    `json:"appchainPreImageData"`
-	VerifySequencingChainOutput VerifySequencingChainOutput `json:"verifySequencingChainOutput"`
+	SeqConfigHash               common.Hash
+	L1StartBlockHash            common.Hash
+	L1EndBlockHash              common.Hash
+	AppchainConfigHash          common.Hash
+	VerifyAppchainConfig        VerifyAppchainConfig
+	SettlementChainInput        SettlementChainInput
+	SequencingChainInput        SequencingChainInput
+	AppchainPreImageData        [][]byte
+	VerifySequencingChainOutput VerifySequencingChainOutput
+	AppchainStartBlockHash      common.Hash
+}
+
+func (input *VerifyAppchainInput) hash() common.Hash {
+	return crypto.Keccak256Hash(input.AppchainConfigHash[:], input.AppchainStartBlockHash[:], input.SeqConfigHash[:], input.SequencingChainInput.StartBlockHash[:], input.SequencingChainInput.EndBlockHash[:], input.SequencingChainInput.StartBlockHash[:], input.SettlementChainInput.EndDelayedMessagesAccumulator[:], input.L1StartBlockHash[:], input.L1EndBlockHash[:])
 }
 
 func SanitizeVerifyAppchainInput(input *VerifyAppchainInput) {
@@ -162,19 +178,18 @@ func sanitizeAccountProof(proof *AccountProofResponse) {
 }
 
 type VerifyAppchainOutput struct {
-	L1SequencingBlockHash common.Hash `json:"l1SequencingBlockHash"`
-	L1EndBlockHash        common.Hash `json:"l1EndBlockHash"`
-	LastAppchainBlockHash common.Hash `json:"lastAppchainBlockHash"`
-	LastAppchainSendRoot  common.Hash `json:"lastAppchainSendRoot"`
-	BatchCount            uint64      `json:"batchCount"`
+	SequencingBlockHash common.Hash
+	AppchainBlockHash   common.Hash
+	AppchainSendRoot    common.Hash
+	Signature           []byte
 }
 
 // Block verifier inputs
 type BlockVerifierInput struct {
-	MinTimestamp   uint64                         `json:"minTimestamp"`
-	MaxTimestamp   uint64                         `json:"maxTimestamp"`
-	MinBlockNumber uint64                         `json:"minBlockNumber"`
-	MaxBlockNumber uint64                         `json:"maxBlockNumber"`
-	Messages       []arbostypes.L1IncomingMessage `json:"messages"`
-	Batch          []byte                         `json:"batch"`
+	MinTimestamp   uint64
+	MaxTimestamp   uint64
+	MinBlockNumber uint64
+	MaxBlockNumber uint64
+	Messages       []arbostypes.L1IncomingMessage
+	Batch          []byte
 }

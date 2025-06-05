@@ -3,6 +3,7 @@
 use alloy::primitives::B256;
 use clap::Parser;
 use eyre::Result;
+use serde::{Deserialize, Serialize};
 use shared::logger::set_global_default_subscriber;
 use synd_appchain_verifier::{
     config::AppchainVerifierConfig,
@@ -11,7 +12,8 @@ use synd_appchain_verifier::{
 };
 use tracing::{debug, info};
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct VerifierCliArgs {
     /// Config
     #[arg(long, value_parser = |s: &str| parse_json::<AppchainVerifierConfig>(s))]
@@ -62,10 +64,10 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
     }
 
     let verifier = Verifier::new(&args.config);
-    verifier
-        .verify_and_create_output(&args.sequencing_chain_input, &args.settlement_chain_input)
-        .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
-    // Ok(vec![])
+    // verifier
+    //     .verify_and_create_output(&args.sequencing_chain_input, &args.settlement_chain_input)
+    //     .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
+    Ok(vec![])
 }
 
 #[cfg(test)]

@@ -69,7 +69,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_verifier_creation() {
+    const fn test_verifier_creation() {
         let config = SeqchainVerifierConfig { arbitrum_bridge_address: Address::ZERO };
         let _verifier = Verifier::new(&config);
     }
