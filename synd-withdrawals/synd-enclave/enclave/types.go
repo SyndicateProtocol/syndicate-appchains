@@ -56,14 +56,12 @@ type SyndicateTransactionEvent struct {
 // Sequencing chain verifier inputs
 type L1ChainInput struct {
 	// Trustless input
-	StartBatchCountMerkleProof      AccountProofResponse           `json:"startBatchCountMerkleProof"`
-	EndBatchCountMerkleProof        AccountProofResponse           `json:"endBatchCountMerkleProof"`
-	EndBatchAccumulatorMerkleProof  AccountProofResponse           `json:"endBatchAccumulatorMerkleProof"`
-	StartDelayedMessagesAccumulator common.Hash                    `json:"startDelayedMessagesAccumulator"`
-	StartBlockHeader                types.Header                   `json:"startBlockHeader"`
-	EndBlockHeader                  types.Header                   `json:"endBlockHeader"`
-	DelayedMessages                 []arbostypes.L1IncomingMessage `json:"delayedMessages"`
-	Batches                         []ArbitrumBatch                `json:"batches"`
+	StartBatchAccumulatorMerkleProof AccountProofResponse           `json:"startBatchAccumulatorMerkleProof"`
+	EndBatchAccumulatorMerkleProof   AccountProofResponse           `json:"endBatchAccumulatorMerkleProof"`
+	StartBlockHeader                 types.Header                   `json:"startBlockHeader"`
+	EndBlockHeader                   types.Header                   `json:"endBlockHeader"`
+	DelayedMessages                  []arbostypes.L1IncomingMessage `json:"delayedMessages"`
+	Batches                          []ArbitrumBatch                `json:"batches"`
 
 	// Trusted input
 	StartBlockHash common.Hash `json:"startBlockHash"`
@@ -71,10 +69,18 @@ type L1ChainInput struct {
 }
 
 type ArbitrumBatch struct {
-	BatchNumber uint64         `json:"batchNumber"`
-	Timestamp   uint64         `json:"timestamp"`
-	Sender      common.Address `json:"sender"`
-	Data        []byte         `json:"payload"`
+	DelayedAccumulator       common.Hash  `json:"delayedAccumulator"`
+	AfterDelayedMessagesRead uint64       `json:"afterDelayedMessagesRead"`
+	TimeBounds               TimeBounds   `json:"timeBounds"`
+	Data                     []byte       `json:"data"`
+	DALayer                  *EigenDACert `json:"cert"`
+}
+
+type TimeBounds struct {
+	MinTimestamp   uint64 `json:"minTimestamp"`
+	MaxTimestamp   uint64 `json:"maxTimestamp"`
+	MinBlockNumber uint64 `json:"minBlockNumber"`
+	MaxBlockNumber uint64 `json:"maxBlockNumber"`
 }
 
 // Verify sequencing chain input & output (First call to the TEE synd-enclave)
@@ -98,8 +104,7 @@ func SanitizeVerifySequencingChainInput(input *VerifySequencingChainInput) {
 	if input.L1ChainInput.DelayedMessages == nil {
 		input.L1ChainInput.DelayedMessages = []arbostypes.L1IncomingMessage{}
 	}
-	sanitizeAccountProof(&input.L1ChainInput.StartBatchCountMerkleProof)
-	sanitizeAccountProof(&input.L1ChainInput.EndBatchCountMerkleProof)
+	sanitizeAccountProof(&input.L1ChainInput.StartBatchAccumulatorMerkleProof)
 	sanitizeAccountProof(&input.L1ChainInput.EndBatchAccumulatorMerkleProof)
 }
 
