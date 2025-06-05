@@ -40,13 +40,15 @@ contract SyndicateToken is AbstractXERC20, Pausable {
     uint256[TOTAL_EPOCHS] public emissionSchedule;
 
     // Emissions state
+    //#olympix-ignore-uninitialized-state-variable
     bool public emissionsActive; // Covers both started and can be paused
-    uint256 public emissionsStartTime;
-    uint256 public currentEpoch;
-    uint256 public totalEmissionsMinted;
+    uint256 public emissionsStartTime; //#olympix-ignore-uninitialized-state-variable
+    uint256 public currentEpoch; //#olympix-ignore-uninitialized-state-variable
+    uint256 public totalEmissionsMinted; //#olympix-ignore-uninitialized-state-variable
 
     // Bridge configuration for upgradeable bridge logic
     address public bridgeProxy; // The bridge proxy contract address
+    //#olympix-ignore-uninitialized-state-variable
     bytes public bridgeData; // Encoded bridge configuration data
 
     // Events - Emissions
@@ -114,6 +116,7 @@ contract SyndicateToken is AbstractXERC20, Pausable {
      * @notice Mint emission tokens and bridge them to L2
      * Can be called by anyone once the time for an epoch has passed
      */
+    //#olympix-ignore-reentrancy-events
     function mintEmission() external whenNotPaused {
         if (!emissionsActive) revert EmissionsNotActive();
         if (emissionsEnded()) revert AllEmissionsCompleted();

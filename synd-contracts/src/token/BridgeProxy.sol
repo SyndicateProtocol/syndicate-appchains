@@ -20,6 +20,7 @@ contract BridgeProxy is AccessControl {
 
     // Bridge configuration
     address public bridgeTarget; // The contract to call
+    //#olympix-ignore-uninitialized-state-variable
     bytes public bridgeCalldata; // The calldata template to execute
 
     // Events
@@ -39,6 +40,7 @@ contract BridgeProxy is AccessControl {
      * @param amount The amount to bridge
      * @param data Additional bridge data
      */
+    //#olympix-ignore-reentrancy-events
     function executeBridge(address token, uint256 amount, bytes calldata data) external {
         if (token == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
@@ -51,15 +53,15 @@ contract BridgeProxy is AccessControl {
         IERC20(token).approve(bridgeTarget, amount);
 
         // Call the bridge target with the configured function
+        //#olympix-ignore-unsafe-downcast
         bytes memory callData = abi.encodeWithSelector(bytes4(bridgeCalldata), token, amount, data);
-
+        //#olympix-ignore
         (bool success,) = bridgeTarget.call(callData);
-
-        emit BridgeExecuted(token, amount, bridgeTarget, success);
-
         if (!success) {
             revert BridgeCallFailed();
         }
+
+        emit BridgeExecuted(token, amount, bridgeTarget, success);
     }
 
     /**

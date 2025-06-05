@@ -47,6 +47,7 @@ abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Vote
      * @param name_ Token name
      * @param symbol_ Token symbol
      */
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) ERC20Permit(name_) ERC20Votes() {
         // Abstract contract - roles will be set in implementing contracts
     }

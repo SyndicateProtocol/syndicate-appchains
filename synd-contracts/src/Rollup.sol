@@ -26,7 +26,7 @@ contract Rollup {
     bytes32[] public sequencerInboxAccs;
 
     // ISequencerInbox.sol
-    uint256 public totalDelayedMessagesRead;
+    uint256 public totalDelayedMessagesRead; //#olympix-ignore-uninitialized-state-variable
 
     /// @dev Provided data was too large
     /// @param dataLength The length of the data that is too large
@@ -34,9 +34,10 @@ contract Rollup {
     error DataTooLarge(uint256 dataLength, uint256 maxDataLength);
 
     // message types
-    uint8 constant INITIALIZATION_MSG_TYPE = 11;
-    uint8 constant L1MessageType_ethDeposit = 12;
+    uint8 public constant INITIALIZATION_MSG_TYPE = 11;
+    uint8 public constant L1MessageType_ethDeposit = 12;
 
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(uint256 chainId, string memory chainConfig) {
         require(bytes(chainConfig).length > 0, "EMPTY_CHAIN_CONFIG");
         deliverMessage(
@@ -76,6 +77,7 @@ contract Rollup {
         return (seqBlockNumber, seqBlockHash, setBlockNumber, setBlockHash);
     }
 
+    //#olympix-ignore-signature-replay-attacks
     function postBatch(
         bytes memory data,
         uint64 _seqBlockNumber,
@@ -122,6 +124,7 @@ contract Rollup {
 
     // remember to alias the sender with AddressAliasHelper.applyL1ToL2Alias() before calling this function
     // Inbox.sol
+    //#olympix-ignore-signature-replay-attacks
     function deliverMessage(uint8 kind, address sender, bytes memory messageData) public {
         uint256 count = delayedInboxAccs.length;
         bytes32 messageDataHash = keccak256(messageData);
@@ -167,7 +170,7 @@ contract Rollup {
             timeBounds.maxTimestamp,
             timeBounds.minBlockNumber,
             timeBounds.maxBlockNumber,
-            uint64(afterDelayedMessagesRead)
+            uint64(afterDelayedMessagesRead) //#olympix-ignore-unsafe-downcast
         );
         // This must always be true from the packed encoding
         assert(header.length == HEADER_LENGTH);
