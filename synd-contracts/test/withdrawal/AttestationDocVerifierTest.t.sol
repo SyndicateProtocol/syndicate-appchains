@@ -46,8 +46,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
 
     function getFixturePath() public pure virtual returns (string memory);
 
-
-    // TODO this shouldn't be necessary
     function getProofType() internal virtual returns (bytes4);
 
     function deploySp1Verifier() internal virtual returns (address);
