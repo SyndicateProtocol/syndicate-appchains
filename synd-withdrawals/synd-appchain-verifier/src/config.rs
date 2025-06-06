@@ -8,6 +8,7 @@ use std::fmt::Debug;
 
 /// Configuration for the verifier
 #[derive(Parser, Clone, Debug, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "PascalCase")]
 pub struct AppchainVerifierConfig {
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "SEQUENCING_CONTRACT_ADDRESS",

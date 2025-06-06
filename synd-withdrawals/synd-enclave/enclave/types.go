@@ -32,19 +32,19 @@ type SequencingChainInput struct {
 }
 
 type AccountProofResponse struct {
-	Address      common.Address
-	Balance      *big.Int
-	CodeHash     common.Hash
-	Nonce        uint64
-	StorageHash  common.Hash
-	AccountProof []string
-	StorageProof []StorageResult
+	Address      common.Address  `json:"address"`
+	Balance      *big.Int        `json:"balance"`
+	CodeHash     common.Hash     `json:"codeHash"`
+	Nonce        uint64          `json:"nonce"`
+	StorageHash  common.Hash     `json:"storageHash"`
+	AccountProof []string        `json:"accountProof"`
+	StorageProof []StorageResult `json:"storageProof"`
 }
 
 type StorageResult struct {
-	Key   common.Hash
-	Value *big.Int
-	Proof []string
+	Key   common.Hash `json:"key"`
+	Value *big.Int    `json:"value"`
+	Proof []string    `json:"proof"`
 }
 
 type SyndicateTransactionEvent struct {
@@ -119,8 +119,8 @@ func SanitizeVerifySequencingChainInput(input *VerifySequencingChainInput) {
 // Verify appchain input & output (Second call to the TEE synd-enclave)
 
 type VerifyAppchainConfig struct {
-	SequenceContractAddress common.Address
-	SettlementDelay         uint64
+	SequencingContractAddress common.Address
+	SettlementDelay           uint64
 }
 
 type VerifyAppchainInput struct {

@@ -31,6 +31,7 @@ fn calculate_slot(start_slot: B256, index: U256) -> B256 {
 
 /// L1 chain input
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "PascalCase")]
 pub struct L1ChainInput {
     /// Start batch accumulator merkle proof
     /// Storage proof 0: count

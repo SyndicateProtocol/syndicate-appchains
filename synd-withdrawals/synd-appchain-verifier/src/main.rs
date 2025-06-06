@@ -10,10 +10,10 @@ use synd_appchain_verifier::{
     types::{parse_json, BlockVerifierInput, SequencingChainInput, SettlementChainInput},
     verifier::Verifier,
 };
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "PascalCase")]
 struct VerifierCliArgs {
     /// Config
     #[arg(long, value_parser = |s: &str| parse_json::<AppchainVerifierConfig>(s))]
@@ -56,18 +56,20 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
 
     // Verify config hash matches config
     if args.appchain_config_hash != args.config.hash_verifier_config_sha256() {
-        return Err(eyre::eyre!(
+        let err_msg = format!(
             "Config hash mismatch: Got {:?}, Expected {:?}",
             args.appchain_config_hash,
             args.config.hash_verifier_config_sha256()
-        ));
+        );
+        error!("{}", err_msg);
+        return Err(eyre::eyre!(err_msg));
     }
 
     let verifier = Verifier::new(&args.config);
-    // verifier
-    //     .verify_and_create_output(&args.sequencing_chain_input, &args.settlement_chain_input)
-    //     .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
-    Ok(vec![])
+    verifier
+        .verify_and_create_output(&args.sequencing_chain_input, &args.settlement_chain_input)
+        .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
+    // Ok(vec![])
 }
 
 #[cfg(test)]
