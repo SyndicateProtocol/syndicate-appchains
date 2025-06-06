@@ -1,12 +1,15 @@
 [package]
-edition.workspace      = true
-exclude.workspace      = true
-homepage.workspace     = true
-license.workspace      = true
-name                   = "synd-tee-attestation-zk-proofs-aws-nitro"
-repository.workspace   = true
-rust-version.workspace = true
-version.workspace      = true
+edition.workspace    = true
+exclude.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "synd-tee-attestation-zk-proofs-aws-nitro"
+repository.workspace = true
+version.workspace    = true
+
+# pinned because of sp1 toolchain
+rust-version = "1.85"
+
 
 [dependencies]
 alloy      = { workspace = true, features = ["sol-types"] }

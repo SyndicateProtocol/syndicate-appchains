@@ -44,27 +44,27 @@ exclude      = [".github/"]
 homepage     = ""
 license      = ""
 repository   = ""
-rust-version = "1.84"
+rust-version = "1.87"
 version      = "0.1.0"
 
 [workspace.dependencies]
 
 # workspace dependencies (members of the workspace)
-batcher                                    = { path = "synd-batch-sequencer/crates/batcher" }
-common                                     = { path = "synd-translator/crates/common" }
-contract-bindings                          = { path = "shared/contract-bindings" }
-metrics                                    = { path = "synd-translator/crates/metrics" }
-shared                                     = { path = "shared" }
-synd-block-builder                         = { path = "synd-translator/crates/synd-block-builder" }
-synd-chain-ingestor                        = { path = "synd-chain-ingestor" }
-synd-maestro                               = { path = "synd-maestro" }
-synd-mchain                                = { path = "synd-mchain" }
-synd-slotter                               = { path = "synd-translator/crates/synd-slotter" }
-synd-tee-attestation-zk-proofs-aws-nitro   = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro" }
+batcher                                   = { path = "synd-batch-sequencer/crates/batcher" }
+common                                    = { path = "synd-translator/crates/common" }
+contract-bindings                         = { path = "shared/contract-bindings" }
+metrics                                   = { path = "synd-translator/crates/metrics" }
+shared                                    = { path = "shared" }
+synd-block-builder                        = { path = "synd-translator/crates/synd-block-builder" }
+synd-chain-ingestor                       = { path = "synd-chain-ingestor" }
+synd-maestro                              = { path = "synd-maestro" }
+synd-mchain                               = { path = "synd-mchain" }
+synd-slotter                              = { path = "synd-translator/crates/synd-slotter" }
+synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro" }
 synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }
-synd-translator                            = { path = "synd-translator/bin/synd-translator" }
-tc-client                                  = { path = "synd-batch-sequencer/crates/tc-client" }
-test-utils                                 = { path = "shared/test-utils" }
+synd-translator                           = { path = "synd-translator/bin/synd-translator" }
+tc-client                                 = { path = "synd-batch-sequencer/crates/tc-client" }
+test-utils                                = { path = "shared/test-utils" }
 
 # dependencies
 alloy              = { version = "0.13.0", default-features = false }
@@ -108,9 +108,9 @@ serde              = { version = "1.0.217", default-features = false }
 serde-hex          = "0.1.0"
 serde_cbor         = { version = "0.11.2", default-features = false }
 serde_json         = { version = "1.0.135", default-features = false }
-sp1-build          = "4.2.0"
-sp1-sdk            = "4.2.0"
-sp1-zkvm           = "4.2.0"
+sp1-build          = "5.0.0"
+sp1-sdk            = "5.0.3"
+sp1-zkvm           = "5.0.0"
 strum              = "0.27.1"
 strum_macros       = "0.27.1"
 thiserror          = { version = "2.0.11" }

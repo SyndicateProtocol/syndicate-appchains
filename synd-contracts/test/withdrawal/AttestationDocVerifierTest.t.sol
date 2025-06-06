@@ -76,13 +76,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         vm.warp(1748509951); // timestamp within the validity window
 
         bytes memory proof = fixture.proof;
-    // TODO this shouldn't be necessary
-        bytes4 newSelector = getProofType();
-
-        assembly {
-            mstore(add(proof, 0x20), newSelector)
-        }
-
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(fixture.publicValues, proof);
 
         assert(publicKey == address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E));

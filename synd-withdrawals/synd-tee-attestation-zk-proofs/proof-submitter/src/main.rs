@@ -240,10 +240,7 @@ mod tests {
         providers::{ext::AnvilApi, WalletProvider},
     };
     use contract_bindings::{
-        sp1::{
-            groth16verifier::Groth16Verifier, sp1verifier::SP1Verifier,
-            sp1verifiergateway::SP1VerifierGateway,
-        },
+        sp1::{sp1verifiergateway::SP1VerifierGateway, sp1verifiergroth16::SP1VerifierGroth16},
         synd::{attestationdocverifier::AttestationDocVerifier, teekeymanager::TeeKeyManager},
     };
     use serde::Deserialize;
@@ -283,11 +280,10 @@ mod tests {
             SP1VerifierGateway::deploy(provider.clone(), provider.default_signer_address())
                 .await
                 .unwrap();
-        let sp1_verifier_contract = SP1Verifier::deploy(provider.clone()).await.unwrap();
+        let sp1_verifier_contract = SP1VerifierGroth16::deploy(provider.clone()).await.unwrap();
 
-        //TODO remove(?)
         let version = sp1_verifier_contract.VERSION().call().await.unwrap();
-        println!("SP1Verifier version: {}", version._0);
+        assert_eq!(version._0, "v5.0.0");
 
         sp1_verifier_gateway_contract
             .addRoute(*sp1_verifier_contract.address())

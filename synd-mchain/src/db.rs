@@ -85,7 +85,7 @@ impl Block {
     pub fn after_message_acc(&self) -> FixedBytes<32> {
         self.messages.last().map_or(self.before_message_acc, |x| x.1)
     }
-    pub fn after_message_count(&self) -> u64 {
+    pub const fn after_message_count(&self) -> u64 {
         self.before_message_count + self.messages.len() as u64
     }
 }
