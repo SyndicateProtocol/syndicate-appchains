@@ -1,10 +1,8 @@
-use sp1_sdk::{include_elf, HashableKey, Prover, ProverClient};
-
-/// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
-pub const X509_ELF: &[u8] = include_elf!("synd-tee-attestation-zk-proofs-sp1-program");
+use sp1_sdk::{HashableKey, Prover, ProverClient};
+use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
 
 fn main() {
     let prover = ProverClient::builder().cpu().build();
-    let (_, vk) = prover.setup(X509_ELF);
+    let (_, vk) = prover.setup(TEE_ATTESTATION_VALIDATION_ELF);
     println!("{}", vk.bytes32());
 }
