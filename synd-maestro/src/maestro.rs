@@ -134,11 +134,11 @@ impl MaestroService {
                 match provider.get_transaction_count(signer).await {
                     Ok(nonce) => {
                         if nonce == tx.nonce() {
-                            debug!(%tx_hash, "Valid transaction is not finalized, resubmitting");
+                            warn!(%tx_hash, "Valid transaction is not finalized, resubmitting");
                             metrics.increment_maestro_resubmitted_transactions_total(1);
                             return CheckFinalizationResult::ReSubmit;
                         }
-                        debug!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
+                        warn!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
                         CheckFinalizationResult::Done
                     }
                     Err(err) => {
