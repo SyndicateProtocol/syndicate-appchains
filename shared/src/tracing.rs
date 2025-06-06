@@ -1,8 +1,15 @@
 //! The `tracing` module contains code for setting up logs, tracing and metrics
 
 use http::Extensions;
+// Re-exports for usability without requiring additional dependencies
+pub use opentelemetry::{
+    global as otel_global,
+    propagation::TextMapPropagator,
+    trace::{SpanKind, Status as TraceStatus, TraceContextExt},
+};
 use opentelemetry::{trace::TracerProvider as _, KeyValue};
 use opentelemetry_otlp::{ExporterBuildError, SpanExporter as OtlpSpanExporter};
+pub use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::{
     trace::{RandomIdGenerator, SdkTracerProvider},
     Resource,
@@ -16,18 +23,10 @@ use std::collections::HashMap;
 use thiserror::Error;
 use tracing::Span;
 use tracing_opentelemetry::OpenTelemetryLayer;
+pub use tracing_opentelemetry::OpenTelemetrySpanExt;
 use tracing_subscriber::{
     filter, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter,
 };
-
-// Re-exports for usability without requiring additional dependencies
-pub use opentelemetry::{
-    global as otel_global,
-    propagation::TextMapPropagator,
-    trace::{SpanKind, Status as TraceStatus, TraceContextExt},
-};
-pub use opentelemetry_sdk::propagation::TraceContextPropagator;
-pub use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 /// Configuration for the tracing system
 #[derive(Debug, Clone)]
