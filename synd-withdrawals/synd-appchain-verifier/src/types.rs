@@ -21,6 +21,7 @@ const SYNDICATE_ACCUMULATOR_STORAGE_SLOT: B256 =
 
 /// Settlement chain input
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "PascalCase")]
 pub struct SettlementChainInput {
     // TRUSTLESS INPUT
     /// Delayed messages
@@ -52,6 +53,7 @@ impl SettlementChainInput {
 }
 /// Sequencing chain input
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "PascalCase")]
 pub struct SequencingChainInput {
     // TRUSTLESS INPUT
     /// Start syndicate accumulator merkle proof
@@ -238,7 +240,7 @@ impl SequencingChainInput {
 // TODO: Move to a shared crate
 /// `BlockVerifierInput` is the output of the `synd-appchain-verifier`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "PascalCase")]
 pub struct BlockVerifierInput {
     /// Minimum timestamp
     pub min_timestamp: u64,
@@ -256,7 +258,7 @@ pub struct BlockVerifierInput {
 
 /// L1 incoming message
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "PascalCase")]
 pub struct L1IncomingMessage {
     /// Header
     pub header: L1IncomingMessageHeader,
@@ -266,7 +268,7 @@ pub struct L1IncomingMessage {
 
 /// L1 incoming message header
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "PascalCase")]
 pub struct L1IncomingMessageHeader {
     /// Kind
     pub kind: u8,
@@ -456,6 +458,15 @@ pub fn get_input_batches_with_timestamps(
     }
 
     Ok(batches)
+}
+
+// --------------------------------------------
+// JSON Helpers
+// --------------------------------------------
+
+/// Parse JSON into a type
+pub fn parse_json<T: serde::de::DeserializeOwned>(s: &str) -> Result<T, String> {
+    serde_json::from_str(s).map_err(|e| format!("Invalid JSON: {}", e))
 }
 
 #[cfg(test)]

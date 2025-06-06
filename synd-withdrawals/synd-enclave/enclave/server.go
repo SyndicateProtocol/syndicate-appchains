@@ -250,25 +250,20 @@ type SeqVerifyInput struct {
 	Batches []wavmio.Batch
 }
 
-type SeqVerifyOutput struct {
-	BlockHash common.Hash
-	Signature []byte
-}
-
-func (output *SeqVerifyOutput) sign(input common.Hash, key *ecdsa.PrivateKey) (err error) {
-	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.BlockHash[:]))
+func (output *VerifySequencingChainOutput) sign(input common.Hash, key *ecdsa.PrivateKey) (err error) {
+	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.SequencingBlockHash[:]))
 	output.Signature, err = crypto.Sign(payload, key)
 	return
 }
 
-func (output *SeqVerifyOutput) validate(input common.Hash, key *ecdsa.PublicKey) bool {
-	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.BlockHash[:]))
+func (output *VerifySequencingChainOutput) validate(input common.Hash, key *ecdsa.PublicKey) bool {
+	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.SequencingBlockHash[:]))
 	return crypto.VerifySignature(crypto.FromECDSAPub(key), payload, output.Signature)
 }
 
 type AppVerifyExtraInput struct {
 	// trustless old output
-	Output AppVerifyOutput
+	Output VerifyAppchainOutput
 	// trusted new inputs which replace the old ones
 	L1EndBlockHash       common.Hash
 	SetDelayedMessageAcc common.Hash
@@ -296,7 +291,7 @@ type AppVerifyInput struct {
 	ExtraInput *AppVerifyExtraInput
 
 	// seq trustless output for either TrustedInput or ExtraInput
-	SeqOutput SeqVerifyOutput
+	SeqOutput VerifySequencingChainOutput
 
 	// trustless preimage data
 	PreimageData [][]byte
@@ -305,26 +300,19 @@ type AppVerifyInput struct {
 	Batches []wavmio.Batch
 }
 
-type AppVerifyOutput struct {
-	BlockHash    common.Hash
-	SendRoot     common.Hash
-	SeqBlockHash common.Hash
-	Signature    []byte
-}
-
-func (output *AppVerifyOutput) sign(input common.Hash, priv *ecdsa.PrivateKey) (err error) {
-	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.BlockHash[:], output.SendRoot[:], output.SeqBlockHash[:]))
+func (output *VerifyAppchainOutput) sign(input common.Hash, priv *ecdsa.PrivateKey) (err error) {
+	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.AppchainBlockHash[:], output.AppchainSendRoot[:], output.SequencingBlockHash[:]))
 	output.Signature, err = crypto.Sign(payload, priv)
 	return
 }
 
-func (output *AppVerifyOutput) validate(input common.Hash, key *ecdsa.PublicKey) bool {
-	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.BlockHash[:], output.SendRoot[:], output.SeqBlockHash[:]))
+func (output *VerifyAppchainOutput) validate(input common.Hash, key *ecdsa.PublicKey) bool {
+	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.AppchainBlockHash[:], output.AppchainSendRoot[:], output.SequencingBlockHash[:]))
 	return crypto.VerifySignature(crypto.FromECDSAPub(key), payload, output.Signature)
 }
 
 // skips all rust code
-func (s *Server) TestVerifySequencingChain(ctx context.Context, input SeqVerifyInput) (*SeqVerifyOutput, error) {
+func (s *Server) TestVerifySequencingChain(ctx context.Context, input SeqVerifyInput) (*VerifySequencingChainOutput, error) {
 	// todo: add verifier code here before calling the block verifier Verify function
 
 	result, err := Verify(wavmio.ValidationInput{
@@ -335,8 +323,9 @@ func (s *Server) TestVerifySequencingChain(ctx context.Context, input SeqVerifyI
 	if err != nil {
 		return nil, err
 	}
-	output := SeqVerifyOutput{
-		BlockHash: result.BlockHash,
+	output := VerifySequencingChainOutput{
+		SequencingBlockHash: result.BlockHash,
+		Signature:           []byte{},
 	}
 	if err := output.sign(input.TrustedInput.hash(), s.signerKey); err != nil {
 		return nil, err
@@ -345,7 +334,7 @@ func (s *Server) TestVerifySequencingChain(ctx context.Context, input SeqVerifyI
 }
 
 // skips all rust code
-func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (*AppVerifyOutput, error) {
+func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (*VerifyAppchainOutput, error) {
 	// backup old start values
 	l1StartBlockHash := input.TrustedInput.SeqTrustedInput.L1StartBlockHash
 	appStartBlockHash := input.TrustedInput.AppStartBlockHash
@@ -368,8 +357,8 @@ func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (
 
 		// temporarily update to new start values
 		input.TrustedInput.SeqTrustedInput.L1StartBlockHash = input.TrustedInput.SeqTrustedInput.L1EndBlockHash
-		input.TrustedInput.AppStartBlockHash = input.ExtraInput.Output.BlockHash
-		input.TrustedInput.SeqTrustedInput.SeqStartBlockHash = input.ExtraInput.Output.SeqBlockHash
+		input.TrustedInput.AppStartBlockHash = input.ExtraInput.Output.AppchainBlockHash
+		input.TrustedInput.SeqTrustedInput.SeqStartBlockHash = input.ExtraInput.Output.SequencingBlockHash
 
 		// permanently update end values
 		input.TrustedInput.SeqTrustedInput.L1EndBlockHash = input.ExtraInput.L1EndBlockHash
@@ -395,10 +384,11 @@ func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (
 	input.TrustedInput.AppStartBlockHash = appStartBlockHash
 	input.TrustedInput.SeqTrustedInput.SeqStartBlockHash = seqStartBlockHash
 
-	output := AppVerifyOutput{
-		BlockHash:    result.BlockHash,
-		SendRoot:     result.SendRoot,
-		SeqBlockHash: input.SeqOutput.BlockHash,
+	output := VerifyAppchainOutput{
+		AppchainBlockHash:   result.BlockHash,
+		AppchainSendRoot:    result.SendRoot,
+		SequencingBlockHash: input.SeqOutput.SequencingBlockHash,
+		Signature:           []byte{},
 	}
 	if err := output.sign(input.TrustedInput.hash(), s.signerKey); err != nil {
 		return nil, err
@@ -406,26 +396,95 @@ func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (
 	return &output, nil
 }
 
-func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput string) (string, error) {
-	// TODO (SEQ-961): Implement Sequencing Chain Verifier Component
-	// Sequencing chain verification
-	// Sequencing chain block verifier
-	// Sign & return
-	return "", nil
+func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySequencingChainInput) (VerifySequencingChainOutput, error) {
+	// Sanitize to ensure non-nil slices for correct JSON serialization
+	SanitizeVerifySequencingChainInput(&verifyInput)
+
+	// Execute Sequencing Chain Verifier Rust Binary
+	config, err := json.Marshal(verifyInput.VerifySequencingChainConfig)
+	if err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("failed to marshal verify sequencing chain config: %w", err)
+	}
+	sequencingChainInput, err := json.Marshal(verifyInput.L1ChainInput)
+	if err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
+	}
+	cmd := exec.Command("cargo", "run", "--release", "--bin", "synd-seqchain-verifier", "--",
+		"--config", string(config),
+		"--sequencing-chain-input", string(sequencingChainInput),
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("failed to run synd-seqchain-verifier: %w. Output: %s", err, string(out))
+	}
+
+	log.Debug("VerifySequencingChain Output", "output", string(out))
+
+	lines := strings.Split(string(out), "\n")
+	var outputLine string
+	for i := len(lines) - 1; i >= 0; i-- {
+		trimmed := strings.TrimSpace(lines[i])
+		if trimmed != "" {
+			outputLine = trimmed
+			break
+		}
+	}
+
+	var batches []wavmio.Batch
+	log.Debug("VerifySequencingChain Output Line", "outputLine", outputLine)
+	if err := json.Unmarshal([]byte(outputLine), &batches); err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
+	}
+
+	var blockVerifierInput = wavmio.ValidationInput{
+		BlockHash:    verifyInput.L1ChainInput.StartBlockHash,
+		PreimageData: verifyInput.SequencingPreImageData,
+		Batches:      batches,
+	}
+
+	log.Debug("Sequencing Chain BlockVerifierInput Input", "input", blockVerifierInput)
+	data, err := Verify(blockVerifierInput)
+	if err != nil {
+		return VerifySequencingChainOutput{}, fmt.Errorf("Failed to verify sequencing chain: %w", err)
+	}
+
+	output := VerifySequencingChainOutput{
+		SequencingBlockHash: data.BlockHash,
+		Signature:           []byte{},
+	}
+	output.sign(verifyInput.hash(), s.signerKey)
+	log.Debug("Sequencing Chain BlockVerifierOutput Output", "output", output)
+	return output, nil
+
 }
 
-func (s *Server) VerifyAppchain(ctx context.Context, config string, sequencingChainInput string, settlementChainInput string, appchainConfigHash string) (string, error) {
+func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainInput) (VerifyAppchainOutput, error) {
+	// Sanitize to ensure non-nil slices for correct JSON serialization
+	SanitizeVerifyAppchainInput(&verifyInput)
+
 	// Execute Appchain Verifier Rust Binary
-	cmd := exec.Command("cargo", "run", "--bin", "synd-appchain-verifier", "--",
-		"--config", config,
-		"--sequencing-chain-input", sequencingChainInput,
-		"--settlement-chain-input", settlementChainInput,
-		"--appchain-config-hash", appchainConfigHash,
+	config, err := json.Marshal(verifyInput.VerifyAppchainConfig)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal verify appchain config: %w", err)
+	}
+	sequencingChainInput, err := json.Marshal(verifyInput.SequencingChainInput)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
+	}
+	settlementChainInput, err := json.Marshal(verifyInput.SettlementChainInput)
+	if err != nil {
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal settlement chain input: %w", err)
+	}
+	cmd := exec.Command("cargo", "run", "--release", "--bin", "synd-appchain-verifier", "--",
+		"--config", string(config),
+		"--sequencing-chain-input", string(sequencingChainInput),
+		"--settlement-chain-input", string(settlementChainInput),
+		"--appchain-config-hash", verifyInput.AppchainConfigHash.Hex(),
 	)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
 	}
 
 	log.Debug("VerifyAppchain Output", "output", string(out))
@@ -443,25 +502,29 @@ func (s *Server) VerifyAppchain(ctx context.Context, config string, sequencingCh
 	var batches []wavmio.Batch
 	log.Debug("VerifyAppchain Output Line", "outputLine", outputLine)
 	if err := json.Unmarshal([]byte(outputLine), &batches); err != nil {
-		return "", fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
+		return VerifyAppchainOutput{}, fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
 	}
 
-	// TODO: set block hash, preimage data properly
-	var input = wavmio.ValidationInput{
+	var blockVerifierInput = wavmio.ValidationInput{
 		BlockHash:    common.Hash{},
-		PreimageData: nil,
+		PreimageData: verifyInput.AppchainPreImageData,
 		Batches:      batches,
 	}
 
-	// Appchain block verifier
-	// TODO (SEQ-781): Block verifier
-	log.Debug("VerifyAppchain Input", "input", input)
-
-	data, err := Verify(input)
+	log.Debug("Appchain BlockVerifierInput Input", "input", blockVerifierInput)
+	data, err := Verify(blockVerifierInput)
 	if err != nil {
-		return "", err
+		return VerifyAppchainOutput{}, fmt.Errorf("Failed to verify appchain: %w", err)
 	}
 
 	// Sign & return
-	return fmt.Sprintf("%s %s", data.BlockHash, data.SendRoot), nil
+	output := VerifyAppchainOutput{
+		AppchainBlockHash:   data.BlockHash,
+		AppchainSendRoot:    data.SendRoot,
+		SequencingBlockHash: verifyInput.SequencingChainInput.EndBlockHash,
+		Signature:           []byte{},
+	}
+	output.sign(verifyInput.hash(), s.signerKey)
+	log.Debug("Appchain BlockVerifierOutput Output", "output", output)
+	return output, nil
 }

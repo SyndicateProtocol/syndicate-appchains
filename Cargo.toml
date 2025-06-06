@@ -31,7 +31,9 @@ default-members = [
   "synd-maestro",
   "synd-mchain",
   "synd-translator/bin/synd-translator",
+  "synd-withdrawals/synd-appchain-verifier",
   "synd-withdrawals/synd-proposer",
+  "synd-withdrawals/synd-seqchain-verifier",
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021

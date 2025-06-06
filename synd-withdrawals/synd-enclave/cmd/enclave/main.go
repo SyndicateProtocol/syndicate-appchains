@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/ethereum/go-ethereum/log"
@@ -10,6 +11,7 @@ import (
 )
 
 func main() {
+	log.SetDefault(log.NewLogger(log.LogfmtHandlerWithLevel(os.Stdout, log.LevelDebug)))
 	log.Info("Starting Enclave")
 
 	s := rpc.NewServer()

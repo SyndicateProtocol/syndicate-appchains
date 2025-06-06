@@ -1,38 +1,35 @@
 //! Main entrypoint for the `synd-appchain-verifier`
 
+use alloy::primitives::B256;
 use clap::Parser;
 use eyre::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shared::logger::set_global_default_subscriber;
 use synd_appchain_verifier::{
     config::AppchainVerifierConfig,
-    types::{BlockVerifierInput, SequencingChainInput, SettlementChainInput},
+    types::{parse_json, BlockVerifierInput, SequencingChainInput, SettlementChainInput},
     verifier::Verifier,
 };
-use tracing::debug;
+use tracing::{debug, error, info};
 
-#[derive(Serialize)]
-struct OutputWrapper {
-    verify_appchain_output: Vec<BlockVerifierInput>,
-}
-
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct VerifierCliArgs {
     /// Config
-    #[arg(long)]
-    config: String,
+    #[arg(long, value_parser = |s: &str| parse_json::<AppchainVerifierConfig>(s))]
+    config: AppchainVerifierConfig,
 
     /// Sequencing chain input
-    #[arg(long)]
-    sequencing_chain_input: String,
+    #[arg(long, value_parser = |s: &str| parse_json::<SequencingChainInput>(s))]
+    sequencing_chain_input: SequencingChainInput,
 
     /// Settlement chain input
-    #[arg(long)]
-    settlement_chain_input: String,
+    #[arg(long, value_parser = |s: &str| parse_json::<SettlementChainInput>(s))]
+    settlement_chain_input: SettlementChainInput,
 
     /// Config hash
     #[arg(long)]
-    appchain_config_hash: String,
+    appchain_config_hash: B256,
 }
 
 #[allow(clippy::unwrap_used)]
@@ -41,10 +38,7 @@ fn main() {
         Ok(outputs) => {
             // Print raw JSON to stdout
             println!("Outputs created successfully");
-            println!(
-                "{}",
-                serde_json::to_string(&OutputWrapper { verify_appchain_output: outputs }).unwrap()
-            );
+            println!("{}", serde_json::to_string(&outputs).unwrap());
         }
         Err(e) => {
             debug!("Error: {:?}", e);
@@ -55,27 +49,27 @@ fn main() {
 
 fn run() -> Result<Vec<BlockVerifierInput>> {
     set_global_default_subscriber()?;
+    info!("Starting Appchain Verifier. Parsing inputs...");
+
     let args = VerifierCliArgs::parse();
-
-    let config: AppchainVerifierConfig = serde_json::from_str(&args.config)?;
-    let sequencing_chain_input: SequencingChainInput =
-        serde_json::from_str(&args.sequencing_chain_input)?;
-    let settlement_chain_input: SettlementChainInput =
-        serde_json::from_str(&args.settlement_chain_input)?;
-
-    debug!("Appchain Verifier Config: {:?}", config);
-    debug!("Sequencing chain input: {:?}", sequencing_chain_input);
-    debug!("Settlement chain input: {:?}", settlement_chain_input);
+    info!("Verifier CLI Args: {:?}", args);
 
     // Verify config hash matches config
-    if args.appchain_config_hash != config.hash_verifier_config_sha256().to_string() {
-        return Err(eyre::eyre!("Config hash mismatch"));
+    if args.appchain_config_hash != args.config.hash_verifier_config_sha256() {
+        let err_msg = format!(
+            "Config hash mismatch: Got {:?}, Expected {:?}",
+            args.appchain_config_hash,
+            args.config.hash_verifier_config_sha256()
+        );
+        error!("{}", err_msg);
+        return Err(eyre::eyre!(err_msg));
     }
 
-    let verifier = Verifier::new(&config);
+    let verifier = Verifier::new(&args.config);
     verifier
-        .verify_and_create_output(&sequencing_chain_input, &settlement_chain_input)
+        .verify_and_create_output(&args.sequencing_chain_input, &args.settlement_chain_input)
         .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
+    // Ok(vec![])
 }
 
 #[cfg(test)]
