@@ -1,14 +1,15 @@
 [package]
-default-run            = "tee-attestation-verifier"
-edition.workspace      = true
-exclude.workspace      = true
-homepage.workspace     = true
-license.workspace      = true
-name                   = "synd-tee-attestation-zk-proofs-sp1-script"
-repository.workspace   = true
-rust-version.workspace = true
-version.workspace      = true
+default-run          = "tee-attestation-verifier"
+edition.workspace    = true
+exclude.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "synd-tee-attestation-zk-proofs-sp1-script"
+repository.workspace = true
+version.workspace    = true
 
+# pinned because of sp1 toolchain
+rust-version = "1.85"
 
 [[bin]]
 name = "tee-attestation-verifier"
