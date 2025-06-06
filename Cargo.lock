@@ -6962,7 +6962,7 @@ name = "synd-seqchain-verifier"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-trie 0.7.9",
+ "alloy-trie",
  "clap",
  "eyre",
  "serde",
