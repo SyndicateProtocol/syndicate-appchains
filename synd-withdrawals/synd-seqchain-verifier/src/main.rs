@@ -2,15 +2,17 @@
 
 use clap::Parser;
 use eyre::Result;
+use serde::{Deserialize, Serialize};
 use shared::logger::set_global_default_subscriber;
 use synd_seqchain_verifier::{
     config::SeqchainVerifierConfig,
     types::{parse_json, BlockVerifierInput, L1ChainInput},
     verifier::Verifier,
 };
-use tracing::debug;
+use tracing::{debug, error};
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct VerifierCliArgs {
     /// Config
     #[arg(long, value_parser = |s: &str| parse_json::<SeqchainVerifierConfig>(s))]
@@ -22,7 +24,7 @@ struct VerifierCliArgs {
 
     /// Config hash
     #[arg(long)]
-    config_hash: String,
+    seq_config_hash: String,
 }
 
 #[allow(clippy::unwrap_used)]
@@ -47,8 +49,14 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
     debug!("VerifierCliArgs: {:?}", args);
 
     // Verify config hash matches config
-    if args.config_hash != args.config.hash_verifier_config_sha256().to_string() {
-        return Err(eyre::eyre!("Config hash mismatch"));
+    if args.seq_config_hash != args.config.hash_verifier_config_sha256().to_string() {
+        let err_msg = format!(
+            "Config hash mismatch: Got {:?}, Expected {:?}",
+            args.seq_config_hash,
+            args.config.hash_verifier_config_sha256()
+        );
+        error!("{}", err_msg);
+        return Err(eyre::eyre!(err_msg));
     }
 
     let verifier = Verifier::new(&args.config);

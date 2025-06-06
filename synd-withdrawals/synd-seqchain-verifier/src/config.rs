@@ -8,6 +8,7 @@ use std::fmt::Debug;
 
 /// Configuration for the verifier
 #[derive(Parser, Clone, Debug, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct SeqchainVerifierConfig {
     /// Bridge address on the L1
     #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
