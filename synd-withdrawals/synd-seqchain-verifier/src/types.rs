@@ -405,7 +405,7 @@ mod tests {
             ..Default::default()
         };
         let end_acc =
-            fixed_bytes!("0xe85d8130b71f8085c9e4a8171810b9e55ede11e8cda9dd69a10a6593c9f143fa");
+            fixed_bytes!("0xce20c7f55228e3becbbb511ae6b1687d899fe9198ae203cae0a6825c8871183d");
         let end_acc_uint: Uint<256, 4> =
             U256::from_be_bytes::<32>(end_acc.as_slice().try_into().unwrap());
         let end_batch_accumulator_merkle_proof = EIP1186AccountProofResponse {
