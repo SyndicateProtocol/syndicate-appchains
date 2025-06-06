@@ -4,8 +4,8 @@ use clap::Parser;
 use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
 use rocksdb::DB;
 use shared::{
-    logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
+    tracing::setup_global_logging,
 };
 use synd_mchain::{metrics::MchainMetrics, server::start_mchain};
 use tokio::signal::unix::{signal, SignalKind};
@@ -34,7 +34,7 @@ struct Config {
 async fn main() -> eyre::Result<()> {
     // Initialize logging
     #[allow(clippy::unwrap_used)]
-    set_global_default_subscriber().unwrap();
+    setup_global_logging().unwrap();
 
     let cfg = Config::parse();
     info!("loading rockdb db {}", cfg.datadir);

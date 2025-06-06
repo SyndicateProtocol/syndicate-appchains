@@ -6,7 +6,7 @@ use test_utils::docker::start_mchain;
 
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber();
+    shared::tracing::setup_global_logging();
 }
 
 async fn run_mchain(signal: &str) -> Result<()> {

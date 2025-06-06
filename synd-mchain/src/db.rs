@@ -186,7 +186,7 @@ pub trait ArbitrumDB {
     fn add_batch(&self, mblock: MBlock) -> Result<Option<u64>, ErrorObjectOwned> {
         let state = self.get_state();
         if state.batch_count == 0 && mblock.payload.is_none() {
-            return Err(to_err("invalid first batch: must contain a payload"))
+            return Err(to_err("invalid first batch: must contain a payload"));
         }
         if state.batch_count > 0 &&
             (mblock.timestamp < state.timestamp ||
@@ -203,7 +203,7 @@ pub trait ArbitrumDB {
                 state.slot.seq_block_number + 1,
                 mblock.slot.set_block_number,
                 state.slot.set_block_number
-            )))
+            )));
         }
         // if the payload is empty, update the state with pending slot / timestamp info and return
         let (batch, messages) = match mblock.payload {

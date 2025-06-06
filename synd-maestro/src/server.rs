@@ -18,12 +18,13 @@ use shared::{
         InvalidInputError::ChainIdMismatched,
         RpcError::{self, InvalidInput},
     },
+    tracing::{extract_tracing_context, SpanKind},
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, future::Future, net::SocketAddr, pin::Pin, sync::Arc};
 use tokio::time::Instant;
 use tower::ServiceBuilder;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 
 /// Request header for `eth_sendRawTransaction` calls that holds the intended `chain_id`
 pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
@@ -39,7 +40,8 @@ pub async fn run(
 ) -> eyre::Result<(SocketAddr, ShutdownFn)> {
     info!("Starting Maestro server:run");
 
-    let optional_headers = vec![HEADER_CHAIN_ID.to_string()];
+    let optional_headers =
+        vec![HEADER_CHAIN_ID.to_string(), "traceparent".to_string(), "tracestate".to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
         .layer(ProxyGetRequestLayer::new("/health", "health")?);
@@ -100,18 +102,28 @@ pub async fn run(
 }
 
 /// The handler for the `eth_sendRawTransaction` JSON-RPC method
+#[instrument(
+    skip_all,
+    err,
+    fields(
+        otel.kind = ?SpanKind::Server,
+    )
+)]
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
     service_arc_arc: Arc<Arc<MaestroService>>,
     extensions: Extensions,
 ) -> RpcResult<String> {
+    extract_tracing_context(&extensions);
+
     let service = service_arc_arc.as_ref();
     let req_start = Instant::now();
     service.metrics.increment_maestro_requests_total(1);
 
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let (tx, signer) = validate_transaction(&raw_tx)?;
-    let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
+
+    let chain_id = validate_chain_id(get_request_chain_id(&extensions), tx.chain_id())?;
 
     // fail fast if rpc provider for chain isn't configured
     service.get_rpc_provider(&chain_id)?;
@@ -134,7 +146,7 @@ pub async fn send_raw_transaction_handler(
     Ok(tx_hash)
 }
 
-fn get_request_chain_id(extensions: Extensions) -> Option<ChainId> {
+fn get_request_chain_id(extensions: &Extensions) -> Option<ChainId> {
     extensions
         .get::<HashMap<String, String>>()
         .and_then(|map| map.get(HEADER_CHAIN_ID))
@@ -176,7 +188,7 @@ mod tests {
         extensions.insert::<HashMap<String, String>>(headers);
 
         // Ensure the function correctly parses the chain ID
-        let result = get_request_chain_id(extensions);
+        let result = get_request_chain_id(&extensions);
         assert_eq!(result, Some(12345u64));
     }
 
@@ -190,7 +202,7 @@ mod tests {
         extensions.insert::<HashMap<String, String>>(headers);
 
         // Ensure the function returns None when the chain ID key is missing
-        let result = get_request_chain_id(extensions);
+        let result = get_request_chain_id(&extensions);
         assert_eq!(result, None);
     }
 
@@ -204,7 +216,7 @@ mod tests {
         extensions.insert::<HashMap<String, String>>(headers);
 
         // Ensure the function returns None for an invalid chain ID value
-        let result = get_request_chain_id(extensions);
+        let result = get_request_chain_id(&extensions);
         assert_eq!(result, None);
     }
 
@@ -213,7 +225,7 @@ mod tests {
         let extensions = Extensions::new();
 
         // Ensure the function returns None when Extensions is empty
-        let result = get_request_chain_id(extensions);
+        let result = get_request_chain_id(&extensions);
         assert_eq!(result, None);
     }
 

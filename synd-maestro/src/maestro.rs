@@ -31,11 +31,12 @@ use alloy::{
 use redis::{aio::MultiplexedConnection, AsyncCommands};
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
+    tracing::SpanKind,
     tx_validation::{check_signature, decode_transaction},
 };
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, instrument, trace, warn, Instrument};
 
 /// The service for filtering and directing transactions
 #[derive(Debug)]
@@ -227,6 +228,15 @@ impl MaestroService {
     /// spawned to check for and process any waiting transactions with sequential nonces.
     /// This allows the method to return quickly while potentially processing a chain of
     /// transactions in the background.
+    #[instrument(
+        skip(self, raw_tx, tx),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Producer,
+            tx_hash = format!("0x{}", hex::encode(keccak256(raw_tx.as_ref()))),
+            chain_id, wallet = %wallet, tx_nonce
+        )
+    )]
     pub async fn handle_transaction(
         self: &Arc<Self>,
         raw_tx: Bytes,
@@ -237,6 +247,7 @@ impl MaestroService {
     ) -> Result<(), MaestroRpcError> {
         let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
         let _guard = chain_wallet_lock.lock().await;
+        trace!(chain_id, %wallet, "got lock");
 
         let expected_nonce = self.get_cached_or_rpc_nonce(wallet, chain_id).await?;
 
@@ -257,7 +268,7 @@ impl MaestroService {
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
-                        trace!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
+                        error!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
                         JsonRpcError(TransactionRejected(rejection))
                     }
                     )?;
@@ -268,11 +279,14 @@ impl MaestroService {
 
                 // 3. check cache for waiting txns (background task)
                 let service_clone = self.clone();
-                let _handle = tokio::spawn(async move {
-                    service_clone
-                        .check_for_and_enqueue_waiting_transactions(chain_id, wallet, new_nonce)
-                        .await
-                });
+                let _handle = tokio::spawn(
+                    async move {
+                        service_clone
+                            .check_for_and_enqueue_waiting_transactions(chain_id, wallet, new_nonce)
+                            .await
+                    }
+                    .in_current_span(),
+                );
             }
             Ordering::Less => {
                 let rejection = NonceTooLow(expected_nonce, tx_nonce);
@@ -344,6 +358,15 @@ impl MaestroService {
     /// * Valkey connection fails
     /// * RPC provider is missing for the specified chain
     /// * RPC request to fetch the nonce fails
+    #[instrument(
+        skip(self, signer),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Client,
+            wallet = %signer,
+            chain_id = %chain_id,
+        )
+    )]
     pub async fn get_cached_or_rpc_nonce(
         &self,
         signer: Address,
@@ -438,6 +461,7 @@ impl MaestroService {
     /// # Returns
     /// * `Ok(String)` - The result of the Valkey SET operation if successful
     /// * `Err(Error)` - If the Valkey operation fails
+    #[instrument(skip(self), err)]
     pub async fn increment_wallet_nonce(
         &self,
         chain_id: ChainId,
@@ -504,6 +528,14 @@ impl MaestroService {
     ///
     /// # Returns
     /// * `Result<(), Error>` - Result containing possible [`WaitingTransaction`] errors
+    #[instrument(
+        name = "enqueue_waiting",
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Producer,
+        )
+    )]
     pub async fn check_for_and_enqueue_waiting_transactions(
         &self,
         chain_id: ChainId,
@@ -581,7 +613,7 @@ impl MaestroService {
     ///
     /// This method attempts to retrieve a transaction from the waiting gap cache
     /// for a specific wallet, chain, and nonce combination. By "contiguous", we mean transactions
-    /// with adjacent nonces starting from `starting_nonce` onward.  
+    /// with adjacent nonces starting from `starting_nonce` onward.
     ///
     /// For example, if transactions with nonce 5, 6, 7, 9, 10, and 11 exist in the cache and this
     /// function is called with `starting_nonce` 5, then 3 transactions will be returned - those
@@ -695,6 +727,13 @@ impl MaestroService {
     ///
     /// # Errors
     /// Returns an error if the cache operation fails
+    #[instrument(
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Consumer,
+        )
+    )]
     pub async fn remove_waiting_transactions_from_cache(
         &self,
         waiting_txns: &[WaitingTransactionId],
@@ -792,7 +831,7 @@ mod tests {
 
     #[ctor::ctor]
     fn init() {
-        shared::logger::set_global_default_subscriber();
+        shared::tracing::setup_global_logging();
     }
 
     // Helper to create a test service with real Valkey and mock RPC

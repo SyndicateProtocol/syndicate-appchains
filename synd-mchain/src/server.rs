@@ -336,7 +336,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     }
                     let block = db.get_block(ind + 1)?;
                     if block.batch.is_empty() {
-                        return Err(err("batch is empty - SequencerBatchData event does not exist"))
+                        return Err(err("batch is empty - SequencerBatchData event does not exist"));
                     }
                     return Ok(vec![create_log(
                         ind + 1,
