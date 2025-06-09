@@ -11,7 +11,6 @@ interface SyndicateFactory {
     error ExpectedPause();
     error FailedDeployment();
     error InsufficientBalance(uint256 balance, uint256 needed);
-    error ReservedNamespace();
     error StringsInvalidChar();
     error ZeroAddress();
     error ZeroValue();
@@ -641,11 +640,6 @@ interface SyndicateFactory {
   },
   {
     "type": "error",
-    "name": "ReservedNamespace",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "StringsInvalidChar",
     "inputs": []
   },
@@ -1246,70 +1240,6 @@ error InsufficientBalance(uint256 balance, uint256 needed);
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.needed),
                 )
-            }
-        }
-    };
-    /**Custom error with signature `ReservedNamespace()` and selector `0x6a225391`.
-```solidity
-error ReservedNamespace();
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct ReservedNamespace {}
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[doc(hidden)]
-        type UnderlyingSolTuple<'a> = ();
-        #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = ();
-        #[cfg(test)]
-        #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(
-            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-        ) {
-            match _t {
-                alloy_sol_types::private::AssertTypeEq::<
-                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                >(_) => {}
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<ReservedNamespace> for UnderlyingRustTuple<'_> {
-            fn from(value: ReservedNamespace) -> Self {
-                ()
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for ReservedNamespace {
-            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolError for ReservedNamespace {
-            type Parameters<'a> = UnderlyingSolTuple<'a>;
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "ReservedNamespace()";
-            const SELECTOR: [u8; 4] = [106u8, 34u8, 83u8, 145u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
             }
         }
     };
@@ -6167,8 +6097,6 @@ function usedChainIds(uint256) external view returns (bool);
         #[allow(missing_docs)]
         InsufficientBalance(InsufficientBalance),
         #[allow(missing_docs)]
-        ReservedNamespace(ReservedNamespace),
-        #[allow(missing_docs)]
         StringsInvalidChar(StringsInvalidChar),
         #[allow(missing_docs)]
         ZeroAddress(ZeroAddress),
@@ -6187,7 +6115,6 @@ function usedChainIds(uint256) external view returns (bool);
             [36u8, 89u8, 29u8, 137u8],
             [76u8, 162u8, 73u8, 220u8],
             [102u8, 151u8, 178u8, 50u8],
-            [106u8, 34u8, 83u8, 145u8],
             [124u8, 148u8, 110u8, 215u8],
             [141u8, 252u8, 32u8, 43u8],
             [148u8, 226u8, 115u8, 126u8],
@@ -6202,7 +6129,7 @@ function usedChainIds(uint256) external view returns (bool);
     impl alloy_sol_types::SolInterface for SyndicateFactoryErrors {
         const NAME: &'static str = "SyndicateFactoryErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 12usize;
+        const COUNT: usize = 11usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -6229,9 +6156,6 @@ function usedChainIds(uint256) external view returns (bool);
                 }
                 Self::InsufficientBalance(_) => {
                     <InsufficientBalance as alloy_sol_types::SolError>::SELECTOR
-                }
-                Self::ReservedNamespace(_) => {
-                    <ReservedNamespace as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::StringsInvalidChar(_) => {
                     <StringsInvalidChar as alloy_sol_types::SolError>::SELECTOR
@@ -6299,19 +6223,6 @@ function usedChainIds(uint256) external view returns (bool);
                             .map(SyndicateFactoryErrors::AccessControlBadConfirmation)
                     }
                     AccessControlBadConfirmation
-                },
-                {
-                    fn ReservedNamespace(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<SyndicateFactoryErrors> {
-                        <ReservedNamespace as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
-                            .map(SyndicateFactoryErrors::ReservedNamespace)
-                    }
-                    ReservedNamespace
                 },
                 {
                     fn ZeroValue(
@@ -6469,11 +6380,6 @@ function usedChainIds(uint256) external view returns (bool);
                         inner,
                     )
                 }
-                Self::ReservedNamespace(inner) => {
-                    <ReservedNamespace as alloy_sol_types::SolError>::abi_encoded_size(
-                        inner,
-                    )
-                }
                 Self::StringsInvalidChar(inner) => {
                     <StringsInvalidChar as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -6534,12 +6440,6 @@ function usedChainIds(uint256) external view returns (bool);
                 }
                 Self::InsufficientBalance(inner) => {
                     <InsufficientBalance as alloy_sol_types::SolError>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::ReservedNamespace(inner) => {
-                    <ReservedNamespace as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
