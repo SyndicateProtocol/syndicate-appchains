@@ -8,7 +8,7 @@ use crate::{
 };
 use alloy::primitives::{Address, U256};
 use eyre::Result;
-use tracing::{error, info};
+use tracing::error;
 
 /// The `Verifier` struct
 #[derive(Default, Debug, Clone)]
@@ -29,12 +29,10 @@ impl Verifier {
         &self,
         l1_chain_input: &L1ChainInput,
     ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
-        info!("Verifying L1 chain input");
         l1_chain_input.validate(self.arbitrum_bridge_address).map_err(|e| {
             error!("Error validating L1 chain input: {:?}", e);
             e
         })?;
-        info!("Generating output");
         self.generate_output(l1_chain_input).map_err(|e| {
             error!("Error generating output: {:?}", e);
             e
