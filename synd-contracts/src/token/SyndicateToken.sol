@@ -4,13 +4,13 @@ pragma solidity 0.8.28;
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AbstractXERC20} from "./AbstractXERC20.sol";
 import {IBridgeProxy} from "./interfaces/IBridgeProxy.sol";
+
 /**
  * @title SyndicateToken
  * @notice Syndicate Token with emissions and XERC20 functionality
  * @dev This is the main token contract deployed on Ethereum (L1)
  *      It includes emissions logic for distributing tokens to L2s
  */
-
 contract SyndicateToken is AbstractXERC20, Pausable {
     // Custom errors for emissions logic
     error EmissionsAlreadyStarted();
@@ -22,6 +22,7 @@ contract SyndicateToken is AbstractXERC20, Pausable {
     error BridgeNotConfigured();
     error ZeroGasLimit();
     error InvalidEpoch();
+    error EmissionTooEarly();
 
     // Role definitions for emissions
     bytes32 public constant EMISSIONS_MANAGER_ROLE = keccak256("EMISSIONS_MANAGER_ROLE");
@@ -35,6 +36,9 @@ contract SyndicateToken is AbstractXERC20, Pausable {
     // Emission timing constants
     uint256 public constant EPOCH_DURATION = 30 days; // 30 days per epoch
     uint256 public constant TOTAL_EPOCHS = 48; // 48 epochs = ~4 years total
+
+    // Emission buffer to prevent edge cases
+    uint256 public constant EMISSION_BUFFER_TIME = 1 hours; // 1 hour buffer before next emission
 
     // Emission amounts per epoch (in wei) - organized by 6-epoch periods with decay
     uint256[TOTAL_EPOCHS] public emissionSchedule;
@@ -114,15 +118,16 @@ contract SyndicateToken is AbstractXERC20, Pausable {
 
     /**
      * @notice Mint emission tokens and bridge them to L2
-     * Can be called by anyone once the time for an epoch has passed
+     * @dev This function can only be called by the emissions manager
+     * @dev It mints tokens based on the current epoch and bridges them using the configured bridge proxy
      */
-    //#olympix-ignore-reentrancy-events
-    function mintEmission() external whenNotPaused {
+    function mintEmission() external whenNotPaused nonReentrant onlyRole(EMISSIONS_MANAGER_ROLE) {
         if (!emissionsActive) revert EmissionsNotActive();
         if (emissionsEnded()) revert AllEmissionsCompleted();
 
         uint256 epochsSinceStart = (block.timestamp - emissionsStartTime) / EPOCH_DURATION;
         if (epochsSinceStart <= currentEpoch) revert EpochAlreadyMinted();
+        if (block.timestamp < getNextEmissionTime() - EMISSION_BUFFER_TIME) revert EmissionTooEarly();
 
         // Calculate how many epochs we can mint (in case we're behind)
         uint256 epochsToMint = epochsSinceStart - currentEpoch;
@@ -240,6 +245,14 @@ contract SyndicateToken is AbstractXERC20, Pausable {
      */
     function emissionsStarted() public view returns (bool) {
         return emissionsStartTime > 0;
+    }
+
+    /**
+     * @notice Get next emission time
+     */
+    function getNextEmissionTime() public view returns (uint256) {
+        if (emissionsStartTime == 0) return 0;
+        return emissionsStartTime + ((currentEpoch + 1) * EPOCH_DURATION);
     }
 
     // =============================================================================

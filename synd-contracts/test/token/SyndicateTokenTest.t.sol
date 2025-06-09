@@ -227,6 +227,7 @@ contract SyndicateTokenTest is Test {
         vm.expectEmit(false, false, false, true);
         emit EmissionMinted(1, expectedAmount, address(0));
 
+        vm.prank(emissionsManager);
         token.mintEmission();
 
         assertEq(token.currentEpoch(), 1);
@@ -246,6 +247,7 @@ contract SyndicateTokenTest is Test {
         vm.warp(block.timestamp + 90 days + 1); // 3 epochs
 
         uint256 expectedAmount = 678_055 * 10 ** 18 * 3;
+        vm.prank(emissionsManager);
         token.mintEmission();
 
         assertEq(token.currentEpoch(), 3);
@@ -261,6 +263,7 @@ contract SyndicateTokenTest is Test {
 
         vm.warp(block.timestamp + 30 days + 1);
         vm.expectRevert(SyndicateToken.EmissionsNotActive.selector);
+        vm.prank(emissionsManager);
         token.mintEmission();
     }
 
@@ -269,6 +272,7 @@ contract SyndicateTokenTest is Test {
         _startEmissions();
 
         vm.expectRevert(SyndicateToken.EpochAlreadyMinted.selector);
+        vm.prank(emissionsManager);
         token.mintEmission();
     }
 
@@ -281,6 +285,7 @@ contract SyndicateTokenTest is Test {
 
         vm.warp(block.timestamp + 30 days + 1);
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        vm.prank(emissionsManager);
         token.mintEmission();
     }
 
@@ -324,6 +329,7 @@ contract SyndicateTokenTest is Test {
         _setupBridgeConfiguration();
         _startEmissions();
         vm.warp(block.timestamp + 60 days + 1);
+        vm.prank(emissionsManager);
         token.mintEmission();
 
         uint256 minted = 678_055 * 10 ** 18 * 2;
@@ -339,6 +345,7 @@ contract SyndicateTokenTest is Test {
         assertFalse(token.emissionsEnded());
 
         vm.warp(block.timestamp + 48 * 30 days + 1);
+        vm.prank(emissionsManager);
         token.mintEmission();
 
         assertTrue(token.emissionsEnded());
@@ -442,6 +449,7 @@ contract SyndicateTokenTest is Test {
 
         // Mint first few epochs
         vm.warp(block.timestamp + 90 days + 1); // 3 epochs
+        vm.prank(emissionsManager);
         token.mintEmission();
 
         assertTrue(token.currentEpoch() > 0);
@@ -450,6 +458,7 @@ contract SyndicateTokenTest is Test {
 
         // Complete all emissions
         vm.warp(block.timestamp + 45 * 30 days + 1);
+        vm.prank(emissionsManager);
         token.mintEmission();
 
         assertTrue(token.emissionsEnded());
@@ -462,6 +471,7 @@ contract SyndicateTokenTest is Test {
         vm.warp(block.timestamp + 30 days + 1);
 
         uint256 bridgeCallsBefore = mockBridge.getBridgeCallCount();
+        vm.prank(emissionsManager);
         token.mintEmission();
         uint256 bridgeCallsAfter = mockBridge.getBridgeCallCount();
 
@@ -485,10 +495,12 @@ contract SyndicateTokenTest is Test {
             uint256 expectedEpochs = timeElapsed / 30 days;
             if (expectedEpochs > 48) expectedEpochs = 48;
 
+            vm.prank(emissionsManager);
             token.mintEmission();
             assertEq(token.currentEpoch(), expectedEpochs);
         } else {
             vm.expectRevert(SyndicateToken.EpochAlreadyMinted.selector);
+            vm.prank(emissionsManager);
             token.mintEmission();
         }
     }
