@@ -496,7 +496,6 @@ contract SyndicateFactoryTest is Test {
         // Test various chain ID concatenations
         RequireAndModule permissionModule1 = new RequireAndModule(admin);
         RequireOrModule permissionModule2 = new RequireOrModule(admin);
-        RequireCompositeModule permissionModule3 = new RequireCompositeModule(admin);
 
         // First: 510 + 1 = 5101
         bytes32 salt1 = keccak256(abi.encodePacked("concat-1"));

@@ -27,7 +27,6 @@ contract SyndicateFactory is AccessControl, Pausable {
 
     error ZeroAddress();
     error ZeroValue();
-    error ReservedNamespace();
     error ChainIdAlreadyExists();
 
     // Namespace configuration - made public for frontend access
