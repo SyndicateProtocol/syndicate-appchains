@@ -5,6 +5,8 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit, Nonces} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IXERC20} from "./interfaces/IXERC20.sol";
 
@@ -14,7 +16,9 @@ import {IXERC20} from "./interfaces/IXERC20.sol";
  * @dev This contract provides the complete XERC20 implementation that can be inherited
  *      by any token contract that needs cross-chain bridging capabilities
  */
-abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Votes, IXERC20 {
+abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Votes, IXERC20, ReentrancyGuard {
+    using Math for uint256;
+
     error ZeroAddress();
     error ZeroAmount();
     error InsufficientLimit();
@@ -23,6 +27,8 @@ abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Vote
     bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 
     uint256 public constant BRIDGE_LIMIT_DURATION = 1 days; // Bridge limits reset daily
+
+    uint256 public constant PRECISION_MULTIPLIER = 1e18; // For precision in calculations
 
     // Bridge limit tracking structure
     struct BridgeLimits {
@@ -61,7 +67,7 @@ abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Vote
      * @param _user The address to mint tokens to
      * @param _amount The amount of tokens to mint
      */
-    function mint(address _user, uint256 _amount) external virtual override {
+    function mint(address _user, uint256 _amount) external virtual override nonReentrant {
         if (_user == address(0)) revert ZeroAddress();
         if (_amount == 0) revert ZeroAmount();
         if (!authorizedBridges[msg.sender]) revert BridgeNotAuthorized();
@@ -83,7 +89,7 @@ abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Vote
      * @param _user The address to burn tokens from
      * @param _amount The amount of tokens to burn
      */
-    function burn(address _user, uint256 _amount) external virtual override {
+    function burn(address _user, uint256 _amount) external virtual override nonReentrant {
         if (_user == address(0)) revert ZeroAddress();
         if (_amount == 0) revert ZeroAmount();
         if (!authorizedBridges[msg.sender]) revert BridgeNotAuthorized();
@@ -262,11 +268,17 @@ abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Vote
             limits.burningCurrentLimit = limits.burningMaxLimit;
         } else if (elapsed > 0) {
             // Partial replenishment based on time elapsed
-            uint256 mintingReplenished = (limits.mintingMaxLimit * elapsed) / BRIDGE_LIMIT_DURATION;
-            uint256 burningReplenished = (limits.burningMaxLimit * elapsed) / BRIDGE_LIMIT_DURATION;
+            uint256 mintingReplenished = limits.mintingMaxLimit.mulDiv(
+                elapsed * PRECISION_MULTIPLIER, BRIDGE_LIMIT_DURATION * PRECISION_MULTIPLIER
+            );
+            uint256 burningReplenished = limits.burningMaxLimit.mulDiv(
+                elapsed * PRECISION_MULTIPLIER, BRIDGE_LIMIT_DURATION * PRECISION_MULTIPLIER
+            );
 
-            limits.mintingCurrentLimit = _min(limits.mintingCurrentLimit + mintingReplenished, limits.mintingMaxLimit);
-            limits.burningCurrentLimit = _min(limits.burningCurrentLimit + burningReplenished, limits.burningMaxLimit);
+            limits.mintingCurrentLimit =
+                Math.min(limits.mintingCurrentLimit + mintingReplenished, limits.mintingMaxLimit);
+            limits.burningCurrentLimit =
+                Math.min(limits.burningCurrentLimit + burningReplenished, limits.burningMaxLimit);
         }
 
         limits.lastUpdate = block.timestamp;
@@ -285,17 +297,10 @@ abstract contract AbstractXERC20 is ERC20, AccessControl, ERC20Permit, ERC20Vote
         uint256 elapsed = block.timestamp - lastUpdate;
         if (elapsed >= BRIDGE_LIMIT_DURATION) return maxLimit;
 
-        uint256 replenished = (maxLimit * elapsed) / BRIDGE_LIMIT_DURATION;
-        uint256 newLimit = currentLimit + replenished;
+        uint256 replenished =
+            maxLimit.mulDiv(elapsed * PRECISION_MULTIPLIER, BRIDGE_LIMIT_DURATION * PRECISION_MULTIPLIER);
 
-        return newLimit > maxLimit ? maxLimit : newLimit;
-    }
-
-    /**
-     * @dev Internal helper function to get minimum of two values
-     */
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
+        return Math.min(currentLimit + replenished, maxLimit);
     }
 
     // =============================================================================
