@@ -1,9 +1,15 @@
 //! Docker components for the integration tests
 
-use crate::{appchain::appchain_info, port_manager::PortManager, utils::test_path, wait_until};
+use crate::{
+    appchain::appchain_info,
+    chain_info::{default_signer, ChainInfo, ProcessInstance},
+    port_manager::PortManager,
+    utils::test_path,
+    wait_until,
+};
 use alloy::{
     primitives::Address,
-    providers::{Provider, ProviderBuilder, RootProvider},
+    providers::{Provider, ProviderBuilder},
     transports::http::Client,
 };
 use eyre::Result;
@@ -235,9 +241,9 @@ fn appchain_config(chain_id: u64, chain_owner: Address) -> String {
 pub async fn launch_nitro_node(
     chain_id: u64,
     chain_owner: Address,
-    mchain_url: &str,
+    parent_chain_url: &str,
     sequencer_port: Option<u16>,
-) -> Result<(Docker, RootProvider, String)> {
+) -> Result<ChainInfo> {
     let tag = env::var("NITRO_TAG").unwrap_or("v3.6.2-5b41a2d-slim".to_string());
     let port = PortManager::instance().next_port().await;
 
@@ -250,7 +256,7 @@ pub async fn launch_nitro_node(
             .arg("--rm")
             .arg("--net=host")
             .arg(format!("offchainlabs/nitro-node:{tag}"))
-            .arg(format!("--parent-chain.connection.url={mchain_url}"))
+            .arg(format!("--parent-chain.connection.url={parent_chain_url}"))
             .arg("--node.dangerous.disable-blob-reader")
             .arg("--node.inbox-reader.check-delay=100ms")
             .arg("--node.parent-chain-reader.poll-interval=100ms")
@@ -273,15 +279,15 @@ pub async fn launch_nitro_node(
 
     let url = format!("http://localhost:{}", port);
 
-    let appchain = ProviderBuilder::default().connect(&url).await?;
+    let provider = ProviderBuilder::new().wallet(default_signer()).connect(&url).await?;
     wait_until!(
         if let Some(status) = nitro.try_wait()? {
             panic!("nitro node exited with {}", status);
         };
-        appchain.get_chain_id().await.is_ok(),
+        provider.get_chain_id().await.is_ok(),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
-    Ok((nitro, appchain, url))
+    Ok(ChainInfo { instance: ProcessInstance::Docker(nitro), provider, ws_url: url })
 }
 
 pub async fn start_valkey() -> Result<(Docker, String)> {

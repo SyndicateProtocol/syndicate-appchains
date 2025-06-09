@@ -5,7 +5,6 @@ use alloy::{
     primitives::{address, utils::parse_ether, Address, Bytes, B256, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
-    signers::local::PrivateKeySigner,
     sol,
 };
 use contract_bindings::synd::{
@@ -14,14 +13,14 @@ use contract_bindings::synd::{
 };
 use eyre::Result;
 use serde::{Deserialize, Serialize};
-use std::{str::FromStr as _, time::Duration};
+use std::time::Duration;
 use synd_chain_ingestor::client::IngestorProvider;
 use synd_mchain::client::Provider as _;
 use test_framework::components::{
-    configuration::{ConfigurationOptions, ContractVersion},
+    configuration::{BaseChainsType, ConfigurationOptions},
     test_components::TestComponents,
 };
-use test_utils::{anvil::PRIVATE_KEY, wait_until};
+use test_utils::{chain_info::default_signer, preloaded_config::ContractVersion, wait_until};
 
 const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");
 const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
@@ -165,7 +164,10 @@ async fn e2e_deposit_213() -> Result<()> {
 async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
     // Sequencer fees go to the zero address
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: Some(version), ..Default::default() },
+        &ConfigurationOptions {
+            base_chains_type: BaseChainsType::PreLoaded(version),
+            ..Default::default()
+        },
         |components| async move {
             let wallet_address = components.settlement_provider.default_signer_address();
 
@@ -311,7 +313,10 @@ async fn e2e_fast_withdrawal_213() -> Result<()> {
 
 async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: Some(version), ..Default::default() },
+        &ConfigurationOptions {
+            base_chains_type: BaseChainsType::PreLoaded(version),
+            ..Default::default()
+        },
         |components| async move {
             let block: Block = components
                 .settlement_provider
@@ -439,7 +444,10 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
 #[tokio::test]
 async fn e2e_settlement_reorg() -> Result<()> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: Some(ContractVersion::V300), ..Default::default() },
+        &ConfigurationOptions {
+            base_chains_type: BaseChainsType::PreLoaded(ContractVersion::V300),
+            ..Default::default()
+        },
         |components| async move {
             // NOTE: at this point the synd-mchain is on block 1 (initial mchain block) - we
             // can't reorg to genesis, so we need to create two slots on top of it
@@ -578,11 +586,14 @@ sol! {
 #[tokio::test]
 async fn e2e_sequencing_reorg() -> Result<()> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: Some(ContractVersion::V300), ..Default::default() },
+        &ConfigurationOptions {
+            base_chains_type: BaseChainsType::PreLoaded(ContractVersion::V300),
+            ..Default::default()
+        },
         |components| async move {
             // deposit some funds to the appchain
 
-            let signer = PrivateKeySigner::from_str(PRIVATE_KEY).unwrap();
+            let signer = default_signer();
             let wallet_address = components.settlement_provider.default_signer_address();
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
 
@@ -664,80 +675,77 @@ async fn e2e_sequencing_reorg() -> Result<()> {
 
 #[tokio::test]
 async fn e2e_reboot_without_settlement_processed() -> Result<()> {
-    TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, ..Default::default() },
-        |components| async move {
-            let set_offset = components.settlement_provider.get_block_number().await?;
-            // synd-mchain is on genesis (block 1)
-            assert_eq!(components.mchain_provider.get_block_number().await, 1);
+    TestComponents::run(&Default::default(), |components| async move {
+        let set_offset = components.settlement_provider.get_block_number().await?;
+        // synd-mchain is on genesis (block 1)
+        assert_eq!(components.mchain_provider.get_block_number().await, 1);
 
-            // sequence any tx
-            components.sequence_tx(b"my_tx_calldata", 10, false).await?;
+        // sequence any tx
+        components.sequence_tx(b"my_tx_calldata", 10, false).await?;
 
-            // mine a set block to close the slot, but without any transactions
-            components.mine_set_block(100000).await?;
+        // mine a set block to close the slot, but without any transactions
+        components.mine_set_block(100000).await?;
 
-            // synd-mchain should be on block 2
-            wait_until!(
-                components.mchain_provider.get_block_number().await == 2,
-                Duration::from_secs(10)
-            );
-            let (slot, block_number) = components
-                .mchain_provider
-                .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
-                .await?;
-            assert_eq!(slot.seq_block_number, 2);
-            assert_eq!(slot.set_block_number, 1 + set_offset);
-            assert_eq!(block_number, 3);
+        // synd-mchain should be on block 2
+        wait_until!(
+            components.mchain_provider.get_block_number().await == 2,
+            Duration::from_secs(10)
+        );
+        let (slot, block_number) = components
+            .mchain_provider
+            .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
+            .await?;
+        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.set_block_number, 1 + set_offset);
+        assert_eq!(block_number, 3);
 
-            let (slot, block_number) = components
-                .mchain_provider
-                .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
-                .await?;
-            assert_eq!(slot.seq_block_number, 2);
-            assert_eq!(slot.set_block_number, 1 + set_offset);
-            assert_eq!(block_number, 2);
+        let (slot, block_number) = components
+            .mchain_provider
+            .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
+            .await?;
+        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.set_block_number, 1 + set_offset);
+        assert_eq!(block_number, 2);
 
-            // assert that restarting and rolling back here will not make synd-mchain go back to
-            // block 1
-            let seq_mchain_client =
-                IngestorProvider::new(&components.sequencing_rpc_url, Duration::from_secs(1)).await;
-            let settlement_client =
-                IngestorProvider::new(&components.settlement_rpc_url, Duration::from_secs(1)).await;
+        // assert that restarting and rolling back here will not make synd-mchain go back to
+        // block 1
+        let seq_mchain_client =
+            IngestorProvider::new(&components.sequencing_rpc_url, Duration::from_secs(1)).await;
+        let settlement_client =
+            IngestorProvider::new(&components.settlement_rpc_url, Duration::from_secs(1)).await;
 
-            components
-                .mchain_provider
-                .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client)
-                .await?;
+        components
+            .mchain_provider
+            .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client)
+            .await?;
 
-            // synd-mchain should be on the same block since no reorgs occurred
-            assert_eq!(components.mchain_provider.get_block_number().await, 2);
+        // synd-mchain should be on the same block since no reorgs occurred
+        assert_eq!(components.mchain_provider.get_block_number().await, 2);
 
-            let (slot, block_number) = components
-                .mchain_provider
-                .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
-                .await?;
-            assert_eq!(slot.seq_block_number, 2);
-            assert_eq!(slot.set_block_number, 1 + set_offset);
-            assert_eq!(block_number, 3);
+        let (slot, block_number) = components
+            .mchain_provider
+            .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
+            .await?;
+        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.set_block_number, 1 + set_offset);
+        assert_eq!(block_number, 3);
 
-            let (slot, block_number) = components
-                .mchain_provider
-                .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
-                .await?;
-            assert_eq!(slot.seq_block_number, 2);
-            assert_eq!(slot.set_block_number, 1 + set_offset);
-            assert_eq!(block_number, 2);
-            Ok(())
-        },
-    )
+        let (slot, block_number) = components
+            .mchain_provider
+            .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
+            .await?;
+        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.set_block_number, 1 + set_offset);
+        assert_eq!(block_number, 2);
+        Ok(())
+    })
     .await
 }
 
 #[tokio::test]
 async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
@@ -791,7 +799,6 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
 #[tokio::test]
 async fn e2e_maestro_reorg_handling() -> Result<()> {
     let config_opts = ConfigurationOptions {
-        pre_loaded: None,
         use_write_loop: true,
         // tx takes 3s to be considered final, and that is checked every second
         maestro_finalization_duration: Some(Duration::from_secs(5)),

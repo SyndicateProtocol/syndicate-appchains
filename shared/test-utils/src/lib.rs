@@ -2,6 +2,7 @@
 //! stack.
 pub mod anvil;
 pub mod appchain;
+pub mod chain_info;
 pub mod docker;
 pub mod port_manager;
 pub mod preloaded_config;

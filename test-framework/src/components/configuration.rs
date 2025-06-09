@@ -5,20 +5,20 @@ use contract_bindings::synd::arbconfigmanager::ArbConfigManager;
 use eyre::Result;
 use shared::types::FilledProvider;
 use std::time::Duration;
-use test_utils::anvil::mine_block;
+use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
+
+#[derive(Debug, Clone)]
+pub enum BaseChainsType {
+    Anvil,
+    PreLoaded(ContractVersion),
+    Nitro,
+}
 
 /// Arbitrum Nitro contract version on the settlement chain used for testing
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
-pub enum ContractVersion {
-    V213,
-    V300,
-}
-
-#[derive(Debug, Clone)]
-#[allow(clippy::redundant_pub_crate)]
 pub struct ConfigurationOptions {
-    pub pre_loaded: Option<ContractVersion>,
+    pub base_chains_type: BaseChainsType,
     pub use_write_loop: bool,
     pub sequencing_start_block: u64,
     pub settlement_start_block: u64,
@@ -33,7 +33,7 @@ pub struct ConfigurationOptions {
 impl Default for ConfigurationOptions {
     fn default() -> Self {
         Self {
-            pre_loaded: None,
+            base_chains_type: BaseChainsType::Anvil,
             // Spins up write loop components
             use_write_loop: false,
             // skip the genesis block

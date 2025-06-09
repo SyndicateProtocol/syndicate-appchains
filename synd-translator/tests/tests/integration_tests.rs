@@ -57,9 +57,10 @@ async fn arb_owner_test() -> Result<()> {
     // Start the appchain's node
     let appchain_owner = address!("0x0000000000000000000000000000000000000001");
     let (mchain_url, _mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let (_nitro, appchain, _) =
+    let chain_info =
         launch_nitro_node(APPCHAIN_CHAIN_ID, appchain_owner, &mchain_url, None).await?;
-    let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &appchain);
+    launch_nitro_node(APPCHAIN_CHAIN_ID, appchain_owner, &mchain_url, None).await?;
+    let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &chain_info.provider);
     assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [appchain_owner]);
     Ok(())
 }
@@ -69,9 +70,8 @@ async fn no_l1_fees_test() -> Result<()> {
     const ARB_GAS_INFO_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006c");
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let (_nitro, appchain, _) =
-        launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
-    let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &appchain);
+    let chain_info = launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
+    let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &chain_info.provider);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
     // Make sure adding delayed messages with a non-zero base fee does not increase the l1 fee.
     // The l1 fee should only be updated when BatchPostingReport messages are sent, which we
@@ -98,8 +98,8 @@ async fn no_l1_fees_test() -> Result<()> {
             slot: Slot { seq_block_number: 2, ..Default::default() },
         })
         .await?;
-    wait_until!(appchain.get_block_number().await? == 2, Duration::from_secs(2));
-    assert_eq!(appchain.get_balance(TEST_ADDR).await?, qty + qty);
+    wait_until!(chain_info.provider.get_block_number().await? == 2, Duration::from_secs(2));
+    assert_eq!(chain_info.provider.get_balance(TEST_ADDR).await?, qty + qty);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
     Ok(())
 }
@@ -110,8 +110,7 @@ async fn no_l1_fees_test() -> Result<()> {
 async fn test_nitro_batch() -> Result<()> {
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
 
-    let (_nitro, appchain, _) =
-        launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
+    let chain_info = launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
 
     let addr = get_signer().address();
 
@@ -128,10 +127,10 @@ async fn test_nitro_batch() -> Result<()> {
         .await?;
 
     // wait for the batch to be processed and for block 1 to be derived
-    wait_until!(appchain.get_block_number().await? == 1, Duration::from_secs(1));
+    wait_until!(chain_info.provider.get_block_number().await? == 1, Duration::from_secs(1));
 
     // check that the deposit succeeded
-    assert_eq!(appchain.get_balance(addr).await?, parse_ether("1")?);
+    assert_eq!(chain_info.provider.get_balance(addr).await?, parse_ether("1")?);
 
     // include a tx in a batch
     let mut tx = vec![];
@@ -159,10 +158,11 @@ async fn test_nitro_batch() -> Result<()> {
         .await?;
 
     // Wait for batch processing to complete and block 2 to be derived
-    wait_until!(appchain.get_block_number().await? == 2, Duration::from_millis(500));
+    wait_until!(chain_info.provider.get_block_number().await? == 2, Duration::from_millis(500));
 
     // check that the tx was sequenced
-    let block = appchain.get_block_by_number(BlockNumberOrTag::Number(2)).await?.unwrap();
+    let block =
+        chain_info.provider.get_block_by_number(BlockNumberOrTag::Number(2)).await?.unwrap();
     assert_eq!(block.transactions.len(), 2);
     // tx hash should match
     let transactions: Vec<_> = block.transactions.hashes().collect();
@@ -175,8 +175,7 @@ async fn test_nitro_batch() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_batch_two_tx() -> Result<()> {
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let (_nitro, appchain, _) =
-        launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
+    let chain_info = launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
     let addr = get_signer().address();
 
     // deposit 1 eth
@@ -192,10 +191,10 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
         .await?;
 
     // Wait for the batch to be processed and for block 1 to be derived
-    wait_until!(appchain.get_block_number().await? == 1, Duration::from_millis(500));
+    wait_until!(chain_info.provider.get_block_number().await? == 1, Duration::from_millis(500));
 
     // check that the deposit succeeded
-    assert_eq!(appchain.get_balance(addr).await?, parse_ether("1")?);
+    assert_eq!(chain_info.provider.get_balance(addr).await?, parse_ether("1")?);
 
     // include two tx in a batch
     let mut tx = vec![];
@@ -240,10 +239,11 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
         .await?;
 
     // Wait for the batch to be processed and for block 2 to be derived
-    wait_until!(appchain.get_block_number().await? == 2, Duration::from_millis(500));
+    wait_until!(chain_info.provider.get_block_number().await? == 2, Duration::from_millis(500));
 
     // check that the tx was sequenced
-    let block = appchain.get_block_by_number(BlockNumberOrTag::Number(2)).await?.unwrap();
+    let block =
+        chain_info.provider.get_block_by_number(BlockNumberOrTag::Number(2)).await?.unwrap();
     assert_eq!(block.transactions.len(), 3);
     // tx hash should match
     let transactions: Vec<_> = block.transactions.hashes().collect();
@@ -256,8 +256,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_end_of_block_tx() -> Result<()> {
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let (_nitro, appchain, _) =
-        launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
+    let chain_info = launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
 
     mchain
         .add_batch(&MBlock {
@@ -278,15 +277,14 @@ async fn test_nitro_end_of_block_tx() -> Result<()> {
         })
         .await?;
 
-    wait_until!(appchain.get_block_number().await? == 3, Duration::from_secs(1));
+    wait_until!(chain_info.provider.get_block_number().await? == 3, Duration::from_secs(1));
     Ok(())
 }
 
 #[tokio::test]
 async fn test_nitro_delayed_message_after_batch() -> Result<()> {
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let (_nitro, appchain, _) =
-        launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
+    let chain_info = launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
 
     let qty = parse_ether("1")?;
     let msg = deposit_eth(Address::ZERO, get_signer().address(), qty);
@@ -324,12 +322,13 @@ async fn test_nitro_delayed_message_after_batch() -> Result<()> {
         })
         .await?;
 
-    wait_until!(appchain.get_block_number().await? == 3, Duration::from_secs(1));
-    let block = appchain.get_block_by_number(BlockNumberOrTag::Number(2)).await?.unwrap();
+    wait_until!(chain_info.provider.get_block_number().await? == 3, Duration::from_secs(1));
+    let block =
+        chain_info.provider.get_block_by_number(BlockNumberOrTag::Number(2)).await?.unwrap();
     assert_eq!(block.transactions.len(), 2);
     let transactions: Vec<_> = block.transactions.hashes().collect();
     assert_eq!(transactions[1], *inner_tx.tx_hash());
-    assert_eq!(appchain.get_balance(TEST_ADDR).await?, U256::from(2));
+    assert_eq!(chain_info.provider.get_balance(TEST_ADDR).await?, U256::from(2));
 
     Ok(())
 }

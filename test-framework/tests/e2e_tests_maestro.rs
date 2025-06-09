@@ -34,7 +34,7 @@ fn init() {
 #[tokio::test]
 async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
@@ -90,7 +90,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
 #[tokio::test]
 async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
@@ -158,7 +158,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
 #[tokio::test]
 async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
@@ -339,7 +339,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
 #[tokio::test]
 async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
@@ -546,7 +546,7 @@ async fn create_and_fund_wallet(
 #[tokio::test]
 async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
@@ -620,7 +620,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
 #[tokio::test]
 async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;

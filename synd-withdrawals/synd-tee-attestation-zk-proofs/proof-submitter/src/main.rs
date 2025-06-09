@@ -244,7 +244,7 @@ mod tests {
         synd::{attestationdocverifier::AttestationDocVerifier, teekeymanager::TeeKeyManager},
     };
     use serde::Deserialize;
-    use test_utils::anvil::{start_anvil, PRIVATE_KEY as TEST_PRIVATE_KEY};
+    use test_utils::{anvil::start_anvil, chain_info::PRIVATE_KEY};
 
     #[tokio::test]
     async fn test_get_attestation_doc_success() {
@@ -272,7 +272,8 @@ mod tests {
     // executing the binary in sp1/script/evm )
     #[tokio::test]
     async fn post_attestation_proof_onchain() {
-        let (_anvil_port, anvil_instance, provider) = start_anvil(1).await.unwrap();
+        let chain_info = start_anvil(1).await.unwrap();
+        let provider = chain_info.provider;
         provider.anvil_set_auto_mine(true).await.unwrap();
         provider.anvil_set_time(1748509951).await.unwrap();
 
@@ -369,8 +370,8 @@ mod tests {
             root_certificate_path: None,
             proof_system: ProofSystem::Groth16,
             contract_address: Some(*key_mgr_contract.address()),
-            chain_rpc_url: Some(anvil_instance.endpoint_url().to_string()),
-            private_key: Some(TEST_PRIVATE_KEY.to_string()),
+            chain_rpc_url: Some(chain_info.ws_url.to_string()),
+            private_key: Some(PRIVATE_KEY.to_string()),
         };
 
         let mock_generate_proof = |_: Vec<u8>,

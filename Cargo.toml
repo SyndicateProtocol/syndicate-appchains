@@ -66,7 +66,9 @@ synd-slotter                              = { path = "synd-translator/crates/syn
 synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro" }
 synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }
 synd-translator                           = { path = "synd-translator/bin/synd-translator" }
-tc-client                                 = { path = "synd-batch-sequencer/crates/tc-client" }
+tc-client                                 = { path = "synd-batch-sequencer/crates/tc-client" } # TODO remove this (?)
+synd-appchain-verifier                   = { path = "synd-withdrawals/synd-appchain-verifier" }
+synd-seqchain-verifier                   = { path = "synd-withdrawals/synd-seqchain-verifier" }
 test-utils                                = { path = "shared/test-utils" }
 withdrawals-shared                        = { path = "synd-withdrawals/withdrawals-shared" }
 
