@@ -1,0 +1,46 @@
+{
+  "StartSyndicateAccumulatorMerkleProof": {
+    "address": "0x27b5ba9331f20afd816c247d53bdf1ec577b04cd",
+    "balance": "0x0",
+    "codeHash": "0xfd05a326f89b64ee21dc953966861286120f0b3e3ab9019cf8291bcaeadd2953",
+    "nonce": "0x1",
+    "storageHash": "0x2633986aacab6d88e441b8f7152b7b1fe85c147807202d74733b3173788b635a",
+    "accountProof": [],
+    "storageProof": [
+      {
+        "key": "0x0000000000000000000000000000000000000000000000000000000000000007",
+        "value": "0xa27",
+        "proof": []
+      },
+      {
+        "key": "0xa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736d0ae",
+        "value": "0xd93b0ed7cf14cccbaf2eb2f91b2bb9aeecdb6c4353ec2afe7e3e52a956288eb8",
+        "proof": []
+      }
+    ]
+  },
+  "EndSyndicateAccumulatorMerkleProof": {
+    "address": "0x27b5ba9331f20afd816c247d53bdf1ec577b04cd",
+    "balance": "0x0",
+    "codeHash": "0xfd05a326f89b64ee21dc953966861286120f0b3e3ab9019cf8291bcaeadd2953",
+    "nonce": "0x1",
+    "storageHash": "0x2633986aacab6d88e441b8f7152b7b1fe85c147807202d74733b3173788b635a",
+    "accountProof": [],
+    "storageProof": [
+      {
+        "key": "0x0000000000000000000000000000000000000000000000000000000000000007",
+        "value": "0xa27",
+        "proof": []
+      },
+      {
+        "key": "0xa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736d0ae",
+        "value": "0xd93b0ed7cf14cccbaf2eb2f91b2bb9aeecdb6c4353ec2afe7e3e52a956288eb8",
+        "proof": []
+      }
+    ]
+  },
+  "SyndicateTransactionEvents": [],
+  "BlockHeaders": [],
+  "StartBlockHash": "",
+  "EndBlockHash": ""
+}
