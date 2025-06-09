@@ -51,7 +51,8 @@ contract SyndicateSequencingChain is SequencingModuleChecker, SyndicateAccumulat
         uint256 dataCount = data.length;
 
         // Process all transactions
-        for (uint256 i = 0; i < dataCount; i++) {
+        uint256 i;
+        for (i = 0; i < dataCount; i++) {
             bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed

@@ -60,7 +60,7 @@ contract SyndicateAccumulator {
     /// @notice Returns the current accumulator hash value
     /// @dev Public view function to read the current state of the accumulator
     /// @return The current accumulator hash as bytes32
-    function accumulator() public view returns (bytes32) {
+    function accumulator() external view returns (bytes32) {
         return _getAccumulator().acc;
     }
 

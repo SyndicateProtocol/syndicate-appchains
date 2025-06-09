@@ -26,7 +26,6 @@ contract SyndicateFactory is AccessControl, Pausable {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     error ZeroAddress();
-    error ZeroValue();
     error ChainIdAlreadyExists();
 
     // Namespace configuration - made public for frontend access
