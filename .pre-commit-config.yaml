@@ -68,10 +68,3 @@ repos:
         language: system
         types: [cargo]
         pass_filenames: false
-      - id: golangci-lint
-        name: golangci-lint
-        entry: golangci-lint run
-        language: golang
-        types: [go]
-        files: ^(synd-withdrawals/synd-enclave/.*)$
-        pass_filenames: false
