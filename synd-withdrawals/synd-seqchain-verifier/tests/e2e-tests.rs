@@ -3,7 +3,7 @@ use std::process::Command;
 use synd_seqchain_verifier::types::BlockVerifierInput;
 
 #[tokio::test]
-async fn test_run_verifier() {
+async fn test_run_seqchain_verifier() {
     let input = std::fs::read_to_string("./tests/exo_input.json").unwrap();
 
     let output = Command::new("cargo")

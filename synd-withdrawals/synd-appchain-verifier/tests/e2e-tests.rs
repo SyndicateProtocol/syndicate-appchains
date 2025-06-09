@@ -3,7 +3,7 @@ use std::process::Command;
 use synd_appchain_verifier::types::BlockVerifierInput;
 
 #[tokio::test]
-async fn test_run_verifier() {
+async fn test_run_appchain_verifier() {
     let sequencing_chain_input = std::fs::read_to_string("./tests/seq_input.json").unwrap();
     let settlement_chain_input = std::fs::read_to_string("./tests/set_input.json").unwrap();
 
@@ -13,7 +13,7 @@ async fn test_run_verifier() {
         .arg("synd-appchain-verifier")
         .arg("--")
         .arg("--config")
-        .arg("{\"SequencingContractAddress\":\"0xb89d1d2e9bc9a14855e6c8509dd5435422ccdd8f\",\"SettlementDelay\":\"60\"}")
+        .arg("{\"SequencingContractAddress\":\"0xb89d1d2e9bc9a14855e6c8509dd5435422ccdd8f\",\"SettlementDelay\":60}")
         .arg("--sequencing-chain-input")
         .arg(sequencing_chain_input)
         .arg("--settlement-chain-input")
@@ -22,6 +22,8 @@ async fn test_run_verifier() {
         .arg("0xbfcbca07feca76b64a0aadd658c71e44f9ac6e77c1379d87a7748af65b82d160")
         .output()
         .expect("Failed to run verifier");
+
+    println!("OUTPUT: {:?}", output);
 
     assert!(output.status.success());
 
