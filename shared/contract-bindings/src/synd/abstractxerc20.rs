@@ -401,6 +401,7 @@ interface AbstractXERC20 {
     error InsufficientLimit();
     error InvalidAccountNonce(address account, uint256 currentNonce);
     error InvalidShortString();
+    error ReentrancyGuardReentrantCall();
     error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
     error StringTooLong(string str);
     error VotesExpiredSignature(uint256 expiry);
@@ -424,6 +425,7 @@ interface AbstractXERC20 {
     function CLOCK_MODE() external view returns (string memory);
     function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
     function DOMAIN_SEPARATOR() external view returns (bytes32);
+    function PRECISION_MULTIPLIER() external view returns (uint256);
     function allowance(address owner, address spender) external view returns (uint256);
     function approve(address spender, uint256 value) external returns (bool);
     function authorizedBridges(address) external view returns (bool);
@@ -533,6 +535,19 @@ interface AbstractXERC20 {
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PRECISION_MULTIPLIER",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1925,6 +1940,11 @@ interface AbstractXERC20 {
   {
     "type": "error",
     "name": "InvalidShortString",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
     "inputs": []
   },
   {
@@ -3569,6 +3589,72 @@ error InvalidShortString();
             > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "InvalidShortString()";
             const SELECTOR: [u8; 4] = [179u8, 81u8, 43u8, 12u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+        }
+    };
+    /**Custom error with signature `ReentrancyGuardReentrantCall()` and selector `0x3ee5aeb5`.
+```solidity
+error ReentrancyGuardReentrantCall();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct ReentrancyGuardReentrantCall {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<ReentrancyGuardReentrantCall>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: ReentrancyGuardReentrantCall) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for ReentrancyGuardReentrantCall {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self {}
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for ReentrancyGuardReentrantCall {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "ReentrancyGuardReentrantCall()";
+            const SELECTOR: [u8; 4] = [62u8, 229u8, 174u8, 181u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -6148,6 +6234,131 @@ function DOMAIN_SEPARATOR() external view returns (bytes32);
             > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "DOMAIN_SEPARATOR()";
             const SELECTOR: [u8; 4] = [54u8, 68u8, 229u8, 21u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_returns(
+                data: &[u8],
+                validate: bool,
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
+            }
+        }
+    };
+    /**Function with signature `PRECISION_MULTIPLIER()` and selector `0xae5ecbc6`.
+```solidity
+function PRECISION_MULTIPLIER() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct PRECISION_MULTIPLIERCall {}
+    ///Container type for the return parameters of the [`PRECISION_MULTIPLIER()`](PRECISION_MULTIPLIERCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct PRECISION_MULTIPLIERReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<PRECISION_MULTIPLIERCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: PRECISION_MULTIPLIERCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for PRECISION_MULTIPLIERCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<PRECISION_MULTIPLIERReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: PRECISION_MULTIPLIERReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for PRECISION_MULTIPLIERReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for PRECISION_MULTIPLIERCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = PRECISION_MULTIPLIERReturn;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "PRECISION_MULTIPLIER()";
+            const SELECTOR: [u8; 4] = [174u8, 94u8, 203u8, 198u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -12006,6 +12217,8 @@ function transferFrom(address from, address to, uint256 value) external returns 
         #[allow(missing_docs)]
         DOMAIN_SEPARATOR(DOMAIN_SEPARATORCall),
         #[allow(missing_docs)]
+        PRECISION_MULTIPLIER(PRECISION_MULTIPLIERCall),
+        #[allow(missing_docs)]
         allowance(allowanceCall),
         #[allow(missing_docs)]
         approve(approveCall),
@@ -12136,6 +12349,7 @@ function transferFrom(address from, address to, uint256 value) external returns 
             [160u8, 141u8, 86u8, 84u8],
             [162u8, 23u8, 253u8, 223u8],
             [169u8, 5u8, 156u8, 187u8],
+            [174u8, 94u8, 203u8, 198u8],
             [176u8, 202u8, 37u8, 62u8],
             [187u8, 77u8, 68u8, 54u8],
             [192u8, 42u8, 231u8, 84u8],
@@ -12152,7 +12366,7 @@ function transferFrom(address from, address to, uint256 value) external returns 
     impl alloy_sol_types::SolInterface for AbstractXERC20Calls {
         const NAME: &'static str = "AbstractXERC20Calls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 47usize;
+        const COUNT: usize = 48usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -12170,6 +12384,9 @@ function transferFrom(address from, address to, uint256 value) external returns 
                 }
                 Self::DOMAIN_SEPARATOR(_) => {
                     <DOMAIN_SEPARATORCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::PRECISION_MULTIPLIER(_) => {
+                    <PRECISION_MULTIPLIERCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::allowance(_) => {
                     <allowanceCall as alloy_sol_types::SolCall>::SELECTOR
@@ -12772,6 +12989,19 @@ function transferFrom(address from, address to, uint256 value) external returns 
                     transfer
                 },
                 {
+                    fn PRECISION_MULTIPLIER(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<AbstractXERC20Calls> {
+                        <PRECISION_MULTIPLIERCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
+                            .map(AbstractXERC20Calls::PRECISION_MULTIPLIER)
+                    }
+                    PRECISION_MULTIPLIER
+                },
+                {
                     fn getPastVotingPower(
                         data: &[u8],
                         validate: bool,
@@ -12935,6 +13165,11 @@ function transferFrom(address from, address to, uint256 value) external returns 
                 }
                 Self::DOMAIN_SEPARATOR(inner) => {
                     <DOMAIN_SEPARATORCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::PRECISION_MULTIPLIER(inner) => {
+                    <PRECISION_MULTIPLIERCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -13139,6 +13374,12 @@ function transferFrom(address from, address to, uint256 value) external returns 
                 }
                 Self::DOMAIN_SEPARATOR(inner) => {
                     <DOMAIN_SEPARATORCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::PRECISION_MULTIPLIER(inner) => {
+                    <PRECISION_MULTIPLIERCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -13416,6 +13657,8 @@ function transferFrom(address from, address to, uint256 value) external returns 
         #[allow(missing_docs)]
         InvalidShortString(InvalidShortString),
         #[allow(missing_docs)]
+        ReentrancyGuardReentrantCall(ReentrancyGuardReentrantCall),
+        #[allow(missing_docs)]
         SafeCastOverflowedUintDowncast(SafeCastOverflowedUintDowncast),
         #[allow(missing_docs)]
         StringTooLong(StringTooLong),
@@ -13439,6 +13682,7 @@ function transferFrom(address from, address to, uint256 value) external returns 
             [31u8, 42u8, 32u8, 5u8],
             [37u8, 32u8, 96u8, 29u8],
             [48u8, 90u8, 39u8, 169u8],
+            [62u8, 229u8, 174u8, 181u8],
             [70u8, 131u8, 175u8, 14u8],
             [75u8, 128u8, 14u8, 70u8],
             [98u8, 121u8, 19u8, 2u8],
@@ -13467,7 +13711,7 @@ function transferFrom(address from, address to, uint256 value) external returns 
     impl alloy_sol_types::SolInterface for AbstractXERC20Errors {
         const NAME: &'static str = "AbstractXERC20Errors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 26usize;
+        const COUNT: usize = 27usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -13533,6 +13777,9 @@ function transferFrom(address from, address to, uint256 value) external returns 
                 }
                 Self::InvalidShortString(_) => {
                     <InvalidShortString as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::ReentrancyGuardReentrantCall(_) => {
+                    <ReentrancyGuardReentrantCall as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::SafeCastOverflowedUintDowncast(_) => {
                     <SafeCastOverflowedUintDowncast as alloy_sol_types::SolError>::SELECTOR
@@ -13621,6 +13868,19 @@ function transferFrom(address from, address to, uint256 value) external returns 
                             .map(AbstractXERC20Errors::StringTooLong)
                     }
                     StringTooLong
+                },
+                {
+                    fn ReentrancyGuardReentrantCall(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<AbstractXERC20Errors> {
+                        <ReentrancyGuardReentrantCall as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
+                            .map(AbstractXERC20Errors::ReentrancyGuardReentrantCall)
+                    }
+                    ReentrancyGuardReentrantCall
                 },
                 {
                     fn VotesExpiredSignature(
@@ -14027,6 +14287,11 @@ function transferFrom(address from, address to, uint256 value) external returns 
                         inner,
                     )
                 }
+                Self::ReentrancyGuardReentrantCall(inner) => {
+                    <ReentrancyGuardReentrantCall as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::SafeCastOverflowedUintDowncast(inner) => {
                     <SafeCastOverflowedUintDowncast as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -14173,6 +14438,12 @@ function transferFrom(address from, address to, uint256 value) external returns 
                 }
                 Self::InvalidShortString(inner) => {
                     <InvalidShortString as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::ReentrancyGuardReentrantCall(inner) => {
+                    <ReentrancyGuardReentrantCall as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -15005,6 +15276,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<T, &P, DOMAIN_SEPARATORCall, N> {
             self.call_builder(&DOMAIN_SEPARATORCall {})
+        }
+        ///Creates a new call builder for the [`PRECISION_MULTIPLIER`] function.
+        pub fn PRECISION_MULTIPLIER(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<T, &P, PRECISION_MULTIPLIERCall, N> {
+            self.call_builder(&PRECISION_MULTIPLIERCall {})
         }
         ///Creates a new call builder for the [`allowance`] function.
         pub fn allowance(
