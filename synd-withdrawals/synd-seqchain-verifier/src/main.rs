@@ -60,6 +60,7 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
     verifier
         .verify_and_create_output(&args.l1_chain_input)
         .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
+    // Ok(vec![])
 }
 
 #[cfg(test)]
