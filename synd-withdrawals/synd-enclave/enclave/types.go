@@ -1,8 +1,6 @@
 package enclave
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -33,9 +31,9 @@ type SequencingChainInput struct {
 
 type AccountProofResponse struct {
 	Address      common.Address  `json:"address"`
-	Balance      *big.Int        `json:"balance"`
+	Balance      string          `json:"balance"`
 	CodeHash     common.Hash     `json:"codeHash"`
-	Nonce        uint64          `json:"nonce"`
+	Nonce        string          `json:"nonce"`
 	StorageHash  common.Hash     `json:"storageHash"`
 	AccountProof []string        `json:"accountProof"`
 	StorageProof []StorageResult `json:"storageProof"`
@@ -43,7 +41,7 @@ type AccountProofResponse struct {
 
 type StorageResult struct {
 	Key   common.Hash `json:"key"`
-	Value *big.Int    `json:"value"`
+	Value string      `json:"value"`
 	Proof []string    `json:"proof"`
 }
 
@@ -70,7 +68,7 @@ type L1ChainInput struct {
 }
 
 type ArbitrumBatch struct {
-	DelayedAccumulator       common.Hash
+	DelayedAcc               common.Hash
 	AfterDelayedMessagesRead uint64
 	TimeBounds               TimeBounds
 	Data                     []byte
@@ -158,8 +156,8 @@ func SanitizeVerifyAppchainInput(input *VerifyAppchainInput) {
 }
 
 func sanitizeAccountProof(proof *AccountProofResponse) {
-	if proof.Balance == nil {
-		proof.Balance = big.NewInt(0)
+	if proof.Balance == "" {
+		proof.Balance = "0x0"
 	}
 	if proof.AccountProof == nil {
 		proof.AccountProof = []string{}
@@ -168,8 +166,8 @@ func sanitizeAccountProof(proof *AccountProofResponse) {
 		proof.StorageProof = []StorageResult{}
 	}
 	for i := range proof.StorageProof {
-		if proof.StorageProof[i].Value == nil {
-			proof.StorageProof[i].Value = big.NewInt(0)
+		if proof.StorageProof[i].Value == "" {
+			proof.StorageProof[i].Value = "0x0"
 		}
 		if proof.StorageProof[i].Proof == nil {
 			proof.StorageProof[i].Proof = []string{}

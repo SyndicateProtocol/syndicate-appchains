@@ -411,7 +411,8 @@ func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySe
 	}
 	cmd := exec.Command("cargo", "run", "--release", "--bin", "synd-seqchain-verifier", "--",
 		"--config", string(config),
-		"--sequencing-chain-input", string(sequencingChainInput),
+		"--l1-chain-input", string(sequencingChainInput),
+		"--seq-config-hash", verifyInput.SeqConfigHash.Hex(),
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -437,7 +438,7 @@ func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySe
 	}
 
 	var blockVerifierInput = wavmio.ValidationInput{
-		BlockHash:    verifyInput.L1ChainInput.StartBlockHash,
+		BlockHash:    verifyInput.SequencingStartBlockHash,
 		PreimageData: verifyInput.SequencingPreImageData,
 		Batches:      batches,
 	}
@@ -506,7 +507,7 @@ func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainI
 	}
 
 	var blockVerifierInput = wavmio.ValidationInput{
-		BlockHash:    common.Hash{},
+		BlockHash:    verifyInput.AppchainStartBlockHash,
 		PreimageData: verifyInput.AppchainPreImageData,
 		Batches:      batches,
 	}

@@ -1,5 +1,6 @@
 //! Main entrypoint for the `synd-seqchain-verifier`
 
+use alloy::primitives::B256;
 use clap::Parser;
 use eyre::Result;
 use serde::{Deserialize, Serialize};
@@ -24,7 +25,7 @@ struct VerifierCliArgs {
 
     /// Config hash
     #[arg(long)]
-    seq_config_hash: String,
+    seq_config_hash: B256,
 }
 
 #[allow(clippy::unwrap_used)]
@@ -49,11 +50,11 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
     debug!("VerifierCliArgs: {:?}", args);
 
     // Verify config hash matches config
-    if args.seq_config_hash != args.config.hash_verifier_config_sha256().to_string() {
+    let expected_config_hash = args.config.hash_verifier_config_sha256();
+    if args.seq_config_hash != expected_config_hash {
         let err_msg = format!(
             "Config hash mismatch: Got {:?}, Expected {:?}",
-            args.seq_config_hash,
-            args.config.hash_verifier_config_sha256()
+            args.seq_config_hash, expected_config_hash
         );
         error!("{}", err_msg);
         return Err(eyre::eyre!(err_msg));
@@ -63,6 +64,7 @@ fn run() -> Result<Vec<BlockVerifierInput>> {
     verifier
         .verify_and_create_output(&args.l1_chain_input)
         .map_err(|e| eyre::eyre!("Error verifying and creating output: {:?}", e))
+    // Ok(vec![])
 }
 
 #[cfg(test)]
