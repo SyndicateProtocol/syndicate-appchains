@@ -10,7 +10,7 @@ use synd_appchain_verifier::{
     types::{parse_json, BlockVerifierInput, SequencingChainInput, SettlementChainInput},
     verifier::Verifier,
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -49,10 +49,9 @@ fn main() {
 
 fn run() -> Result<Vec<BlockVerifierInput>> {
     set_global_default_subscriber()?;
-    info!("Starting Appchain Verifier. Parsing inputs...");
 
     let args = VerifierCliArgs::parse();
-    info!("Verifier CLI Args: {:?}", args);
+    debug!("Verifier CLI Args: {:?}", args);
 
     // Verify config hash matches config
     if args.appchain_config_hash != args.config.hash_verifier_config_sha256() {

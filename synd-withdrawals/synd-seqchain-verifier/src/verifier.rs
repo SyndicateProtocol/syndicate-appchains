@@ -8,6 +8,7 @@ use crate::{
 };
 use alloy::primitives::{Address, U256};
 use eyre::Result;
+use tracing::error;
 
 /// The `Verifier` struct
 #[derive(Default, Debug, Clone)]
@@ -28,8 +29,14 @@ impl Verifier {
         &self,
         l1_chain_input: &L1ChainInput,
     ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
-        l1_chain_input.validate(self.arbitrum_bridge_address)?;
-        self.generate_output(l1_chain_input)
+        l1_chain_input.validate(self.arbitrum_bridge_address).map_err(|e| {
+            error!("Error validating L1 chain input: {:?}", e);
+            e
+        })?;
+        self.generate_output(l1_chain_input).map_err(|e| {
+            error!("Error generating output: {:?}", e);
+            e
+        })
     }
 
     fn generate_output(
@@ -40,7 +47,7 @@ impl Verifier {
         let delayed_messages = l1_chain_input.delayed_messages.clone();
 
         let mut block_verifier_inputs = vec![];
-        for batch in &batches[1..] {
+        for batch in &batches {
             let mut messages = vec![];
             for delayed_message in &delayed_messages {
                 let message_num: U256 = delayed_message.header.request_id.into();

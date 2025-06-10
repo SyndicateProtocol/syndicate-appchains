@@ -42,7 +42,7 @@ RUN cd safe-smart-account && yarn install
 COPY nitro/Makefile .
 RUN . ~/.bashrc && NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-solidity
 
-FROM rust:1.84.1-slim-bookworm AS prover-header-builder
+FROM rust:1.87-slim-bookworm AS prover-header-builder
 WORKDIR /workspace
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
@@ -68,7 +68,7 @@ RUN NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-prover-header
 FROM scratch AS prover-header-export
 COPY --from=prover-header-builder /workspace/target/ /
 
-FROM rust:1.84.1-slim-bookworm AS prover-builder
+FROM rust:1.87-slim-bookworm AS prover-builder
 WORKDIR /workspace
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \

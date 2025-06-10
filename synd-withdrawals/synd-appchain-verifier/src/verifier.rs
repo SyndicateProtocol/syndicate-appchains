@@ -12,6 +12,7 @@ use crate::{
 use alloy::primitives::{Address, U256};
 use eyre::Result;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::{ArbitrumAdapter, L1MessageType};
+use tracing::error;
 
 /// The `Verifier` struct
 #[derive(Default, Debug, Clone)]
@@ -39,9 +40,18 @@ impl Verifier {
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
     ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
-        settlement_chain_input.validate()?;
-        sequencing_chain_input.validate(self.sequencing_chain_contract_address)?;
-        self.generate_output(sequencing_chain_input, settlement_chain_input)
+        settlement_chain_input.validate().map_err(|e| {
+            error!("Error validating settlement chain input: {:?}", e);
+            e
+        })?;
+        sequencing_chain_input.validate(self.sequencing_chain_contract_address).map_err(|e| {
+            error!("Error validating sequencing chain input: {:?}", e);
+            e
+        })?;
+        self.generate_output(sequencing_chain_input, settlement_chain_input).map_err(|e| {
+            error!("Error generating output: {:?}", e);
+            e
+        })
     }
 
     fn process_delayed_message(&self, msg: L1IncomingMessage) -> L1IncomingMessage {
@@ -83,24 +93,29 @@ impl Verifier {
 
         let start_ts = batches_with_timestamp[0].timestamp;
         let mut delayed_messages_index = 0;
-        if delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay >
-            start_ts
-        {
-            return Err(VerifierError::InvalidSettlementChainInputWithReason {
-                reason: "Delayed message timestamp is greater than the start timestamp".to_string(),
-            });
-        }
-        while delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay <=
-            start_ts
-        {
-            delayed_messages_index += 1;
+
+        if !delayed_messages.is_empty() {
+            if delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay >
+                start_ts
+            {
+                return Err(VerifierError::InvalidSettlementChainInputWithReason {
+                    reason: "Delayed message timestamp is greater than the start timestamp"
+                        .to_string(),
+                });
+            }
+            while delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay <=
+                start_ts
+            {
+                delayed_messages_index += 1;
+            }
         }
 
         let mut block_verifier_inputs = vec![];
         for batch_with_timestamp in &batches_with_timestamp[1..] {
             let mut messages = vec![];
-            while delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay <=
-                batch_with_timestamp.timestamp
+            while !delayed_messages.is_empty() &&
+                delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay <=
+                    batch_with_timestamp.timestamp
             {
                 messages.push(delayed_messages[delayed_messages_index].clone());
                 delayed_messages_index += 1;
