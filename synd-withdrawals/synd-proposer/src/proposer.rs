@@ -4,19 +4,15 @@
 use crate::{
     config::Config,
     metrics::ProposerMetrics,
-    types::{ NitroBlock, SeqVerifyOutput},
+    types::{NitroBlock, SeqVerifyOutput},
 };
 use alloy::{
-    consensus::{BlockHeader, Transaction},
-    eips::{
-        BlockNumberOrTag,
-    },
-    network::{BlockResponse, Ethereum, EthereumWallet},
+    consensus::Transaction,
+    eips::BlockNumberOrTag,
+    network::{Ethereum, EthereumWallet},
     primitives::{fixed_bytes, keccak256, Address, B256, U256},
-    providers::{
-        Provider as _, ProviderBuilder, RootProvider, WalletProvider as _,
-    },
-    rpc::types::{Filter},
+    providers::{Provider as _, ProviderBuilder, RootProvider, WalletProvider as _},
+    rpc::types::Filter,
     signers::local::PrivateKeySigner,
     sol_types::{SolCall, SolEvent, SolValue},
     transports::TransportResult,
@@ -40,9 +36,7 @@ use contract_bindings::synd::{
 };
 use eyre::{eyre, Result};
 use log::warn;
-use shared::{
-    types::FilledProvider,
-};
+use shared::types::FilledProvider;
 use std::{
     collections::{BTreeMap, HashMap},
     default::Default,
@@ -57,7 +51,7 @@ use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
 use tracing::{error, info};
 use url::Url;
 
-const EIGENDA_MESSAGE_HEADER_FLAG: i32 = 0xed;
+const EIGENDA_MESSAGE_HEADER_FLAG: u8 = 0xed;
 
 #[derive(Debug)]
 pub struct Proposer {
@@ -367,21 +361,36 @@ impl Proposer {
             )
             .await?;
 
+        // let start_batch_accumulator_merkle_proof: EIP1186AccountProofResponse =
+        // Default::default();
         let start_batch_accumulator_merkle_proof = self
             .get_accumulator_proof(self.arbitrum_bridge_address, l1_start_block.header.number)
             .await?;
 
+        // let end_batch_accumulator_merkle_proof: EIP1186AccountProofResponse = Default::default();
         let end_batch_accumulator_merkle_proof = self
             .get_accumulator_proof(self.arbitrum_bridge_address, l1_end_block.header.number)
             .await?;
 
         println!("X_X_X_X start + end accumulator_proof - batches");
-        info!("start batch storage [0]: {}", start_batch_accumulator_merkle_proof.storage_proof[0].value);
-        info!("end batch storage [0]: {}", end_batch_accumulator_merkle_proof.storage_proof[0].value);
+        info!(
+            "start batch storage [0]: {}",
+            start_batch_accumulator_merkle_proof.storage_proof[0].value
+        );
+        info!(
+            "end batch storage [0]: {}",
+            end_batch_accumulator_merkle_proof.storage_proof[0].value
+        );
 
         println!("X_X_X_X start + end accumulator_proof - accumulators");
-        info!("start batch storage [1]: {}", start_batch_accumulator_merkle_proof.storage_proof[1].value);
-        info!("end batch storage [1]: {}", end_batch_accumulator_merkle_proof.storage_proof[1].value);
+        info!(
+            "start batch storage [1]: {}",
+            start_batch_accumulator_merkle_proof.storage_proof[1].value
+        );
+        info!(
+            "end batch storage [1]: {}",
+            end_batch_accumulator_merkle_proof.storage_proof[1].value
+        );
 
         let input = L1ChainInput {
             start_batch_accumulator_merkle_proof,
@@ -474,8 +483,8 @@ impl Proposer {
                                     envelope.input(),
                                     true,
                                 )?;
-                                let data =
-                                    (EIGENDA_MESSAGE_HEADER_FLAG, res.cert).abi_encode_packed();
+                                let data = ([EIGENDA_MESSAGE_HEADER_FLAG], res.cert.abi_encode())
+                                    .abi_encode_packed();
                                 arb_batch.data = data.into();
                             }
 
