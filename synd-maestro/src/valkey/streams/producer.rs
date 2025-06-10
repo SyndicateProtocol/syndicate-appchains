@@ -289,6 +289,7 @@ impl StreamProducer {
                     Ok(entries) => entries,
                     Err(e) => {
                         error!(%stream_key, %e, "Finalization checker: Failed to fetch old entries");
+                        tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
                 };
