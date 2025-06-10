@@ -8,7 +8,7 @@ use alloy::{
     rpc::types::{Filter, FilterBlockOption, Header},
     transports::{ws::WebSocketConfig, RpcError, TransportErrorKind},
 };
-use shared::types::Receipt;
+use shared::{retry::exponential_backoff_sleep, types::Receipt};
 use std::time::Duration;
 use tokio::time::timeout;
 use tracing::{error, info};
@@ -40,6 +40,7 @@ impl EthClient {
         log_timeout: Duration,
         channel_size: usize,
     ) -> Self {
+        let mut attempt = 0;
         loop {
             match tokio::time::timeout(
                 timeout,
@@ -49,8 +50,16 @@ impl EthClient {
             )
             .await
             {
-                Err(_) => error!("timed out connecting to websocket"),
-                Ok(Err(err)) => handle_rpc_error("failed to connect to websocket", &err),
+                Err(_) => {
+                    error!("timed out connecting to websocket");
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
+                Ok(Err(err)) => {
+                    handle_rpc_error("failed to connect to websocket", &err);
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
                 Ok(Ok(client)) => {
                     client.client().expect_pubsub_frontend().set_channel_size(channel_size);
                     return Self { client, timeout, log_timeout };
@@ -64,11 +73,24 @@ impl EthClient {
     /// Retrieves a block by its number with a timeout. Infinitely retries until the request
     /// succeeds.
     pub async fn get_block_header(&self, block_identifier: BlockNumberOrTag) -> Header {
+        let mut attempt = 0;
         loop {
             match timeout(self.timeout, self.client.get_block_by_number(block_identifier)).await {
-                Err(_) => error!("eth_getBlockByNumber request timed out"),
-                Ok(Err(err)) => handle_rpc_error("failed to fetch block header", &err),
-                Ok(Ok(None)) => error!("fetched empty block header"),
+                Err(_) => {
+                    error!("eth_getBlockByNumber request timed out");
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
+                Ok(Err(err)) => {
+                    handle_rpc_error("failed to fetch block header", &err);
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
+                Ok(Ok(None)) => {
+                    error!("fetched empty block header");
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
                 Ok(Ok(Some(block))) => {
                     if let BlockNumberOrTag::Number(number) = block_identifier {
                         assert_eq!(block.header.number, number);
@@ -82,6 +104,7 @@ impl EthClient {
     /// Retrieves the transaction receipts for a given block hash with a timeout. Infinitely retries
     /// until the request succeeds.
     pub async fn get_block_receipts(&self, number: u64) -> Vec<Receipt> {
+        let mut attempt = 0;
         loop {
             match timeout(
                 self.timeout,
@@ -92,8 +115,16 @@ impl EthClient {
             )
             .await
             {
-                Err(_) => error!("eth_getBlockReceipts request timed out"),
-                Ok(Err(err)) => handle_rpc_error("failed to fetch receipts", &err),
+                Err(_) => {
+                    error!("eth_getBlockReceipts request timed out");
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
+                Ok(Err(err)) => {
+                    handle_rpc_error("failed to fetch receipts", &err);
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
                 Ok(Ok(receipts)) => return receipts,
             }
         }
@@ -102,10 +133,19 @@ impl EthClient {
     /// Subscribe to blocks over the websocket connection with a timeout. Infinitely retries until
     /// the request succeeds.
     pub async fn subscribe_blocks(&self) -> Subscription<Header> {
+        let mut attempt = 0;
         loop {
             match timeout(self.timeout, self.client.subscribe_blocks()).await {
-                Err(_) => error!("eth_subscribe request timed out"),
-                Ok(Err(err)) => handle_rpc_error("failed to subscribe to blocks", &err),
+                Err(_) => {
+                    error!("eth_subscribe request timed out");
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
+                Ok(Err(err)) => {
+                    handle_rpc_error("failed to subscribe to blocks", &err);
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
                 Ok(Ok(sub)) => return sub,
             }
         }
@@ -113,10 +153,19 @@ impl EthClient {
 
     /// Get the chain id. Infinitely retries until the request succeeds.
     pub async fn get_chain_id(&self) -> u64 {
+        let mut attempt = 0;
         loop {
             match timeout(self.timeout, self.client.get_chain_id()).await {
-                Err(_) => error!("eth_chainId request timed out"),
-                Ok(Err(err)) => handle_rpc_error("failed to get chain id", &err),
+                Err(_) => {
+                    error!("eth_chainId request timed out");
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
+                Ok(Err(err)) => {
+                    handle_rpc_error("failed to get chain id", &err);
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
                 Ok(Ok(chain_id)) => return chain_id,
             }
         }

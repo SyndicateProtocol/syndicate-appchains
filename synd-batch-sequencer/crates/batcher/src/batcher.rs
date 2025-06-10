@@ -22,6 +22,7 @@ use derivative::Derivative;
 use eyre::{eyre, Result};
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client as RedisClient};
 use shared::{
+    retry::{handle_error_with_backoff, ErrorClassification},
     service_start_utils::{start_metrics_and_health, MetricsState},
     tracing::SpanKind,
     types::FilledProvider,
@@ -69,6 +70,34 @@ enum BatchError {
     SendBatchFailed(String),
 }
 
+impl ErrorClassification for BatchError {
+    fn is_recoverable(&self) -> bool {
+        match self {
+            // IO errors and batch send failures are usually temporary (network issues, RPC node
+            // issues)
+            Self::Io(_) | Self::SendBatchFailed(_) => true,
+
+            // For eyre::Report, we need to be conservative and assume recoverable
+            // unless we can detect specific unrecoverable cases
+            Self::Other(report) => {
+                let error_str = report.to_string().to_lowercase();
+
+                // Check for known unrecoverable error patterns
+                if error_str.contains("invalid config") ||
+                    error_str.contains("invalid private key") ||
+                    error_str.contains("failed to parse") ||
+                    error_str.contains("invalid address") ||
+                    error_str.contains("invalid chain id")
+                {
+                    false // Unrecoverable config errors
+                } else {
+                    true // Default to recoverable for unknown errors
+                }
+            }
+        }
+    }
+}
+
 /// Run the batcher service. Starts the server and listens for batch requests.
 pub async fn run_batcher(
     config: &BatcherConfig,
@@ -96,10 +125,26 @@ pub async fn run_batcher(
 
     let handle = tokio::spawn({
         async move {
+            let mut attempt = 0;
             loop {
                 debug!("Batcher reading and batching transactions at time {:?}", Instant::now());
-                if let Err(e) = batcher.process_transactions().await {
-                    error!("Batcher error: {:?}", e);
+                match batcher.process_transactions().await {
+                    Ok(()) => {
+                        // Reset attempt count on success
+                        attempt = 0;
+                    }
+                    Err(e) => {
+                        // Use smart error classification - config errors will cause immediate exit
+                        if let Some(new_attempt) =
+                            handle_error_with_backoff(&e, attempt, "synd-batch-sequencer").await
+                        {
+                            attempt = new_attempt;
+                        } else {
+                            // handle_error_with_backoff will have called std::process::exit(1) for
+                            // unrecoverable errors
+                            unreachable!("handle_error_with_backoff should have exited for unrecoverable errors");
+                        }
+                    }
                 }
             }
         }

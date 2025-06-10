@@ -3,6 +3,7 @@
 
 pub mod json_rpc;
 pub mod parse;
+pub mod retry;
 pub mod service_start_utils;
 pub mod tracing;
 pub mod tx_validation;

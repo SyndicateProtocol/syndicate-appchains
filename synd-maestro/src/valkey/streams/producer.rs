@@ -3,7 +3,10 @@
 
 use alloy::{hex, primitives::keccak256};
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisError};
-use shared::tracing::{current_traceparent, SpanKind};
+use shared::{
+    retry::exponential_backoff_sleep,
+    tracing::{current_traceparent, SpanKind},
+};
 use std::{self, time::Duration};
 use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
@@ -266,6 +269,7 @@ impl StreamProducer {
         let handle = tokio::spawn(async move {
             let mut interval_timer = tokio::time::interval(finalization_checker_interval);
             interval_timer.set_missed_tick_behavior(MissedTickBehavior::Skip);
+            let mut error_attempt = 0;
 
             loop {
                 tokio::select! {
@@ -286,9 +290,15 @@ impl StreamProducer {
                 )
                 .await
                 {
-                    Ok(entries) => entries,
+                    Ok(entries) => {
+                        // Reset error attempt count on success
+                        error_attempt = 0;
+                        entries
+                    }
                     Err(e) => {
                         error!(%stream_key, %e, "Finalization checker: Failed to fetch old entries");
+                        exponential_backoff_sleep(error_attempt).await;
+                        error_attempt += 1;
                         continue;
                     }
                 };

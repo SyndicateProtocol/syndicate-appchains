@@ -1,5 +1,6 @@
 use crate::config::IngestorConfigError;
 use eyre::Report;
+use shared::retry::ErrorClassification;
 use thiserror::Error;
 use tracing::error;
 
@@ -31,4 +32,27 @@ pub enum RuntimeError {
 
     #[error(transparent)]
     Other(#[from] Report),
+}
+
+impl ErrorClassification for RuntimeError {
+    fn is_recoverable(&self) -> bool {
+        match self {
+            // These are clearly unrecoverable - config issues that won't change
+            RuntimeError::InvalidConfig(_) => false,
+            RuntimeError::BlockBuilderConfig(_) => false,
+            RuntimeError::IngestorConfig(_) => false,
+            RuntimeError::TranslatorConfig(_) => false,
+
+            // Explicitly marked as unrecoverable
+            RuntimeError::TaskFailedUnrecoverable(_) => false,
+
+            // These might be recoverable - network issues, temporary failures, etc.
+            RuntimeError::TaskFailedRecoverable(_) => true,
+            RuntimeError::Initialization(_) => true, // Might be temporary startup issue
+            RuntimeError::Shutdown(_) => true,       // Might be able to restart
+
+            // Default: treat unknown errors as recoverable for safety
+            RuntimeError::Other(_) => true,
+        }
+    }
 }

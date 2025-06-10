@@ -4,7 +4,10 @@ use crate::{
 };
 use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
-use shared::service_start_utils::{start_metrics_and_health, MetricsState};
+use shared::{
+    retry::handle_error_with_backoff,
+    service_start_utils::{start_metrics_and_health, MetricsState},
+};
 use std::sync::Arc;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
@@ -12,7 +15,7 @@ use synd_chain_ingestor::{
     eth_client::EthClient,
 };
 use synd_mchain::client::{MProvider, Provider};
-use tracing::{error, log::info};
+use tracing::log::info;
 
 /// Entry point for the async runtime
 pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
@@ -22,15 +25,27 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
     start_metrics_and_health(metrics_state, config.metrics.metrics_port, None).await;
 
+    let mut attempt = 0;
     loop {
         info!("Starting Syndicate Translator");
         match start_slotter(config, &metrics).await {
             Ok(()) => std::process::exit(0),
             Err(e) => {
-                error!("restarting the translator components: {e}");
-                // Sleep for 1 second to avoid spamming the logs on unrecoverable errors
-                // TODO [SEQ-985]: Review errors thrown by slotter and handle them appropriately
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                // Convert eyre::Result error to RuntimeError for proper classification
+                let runtime_error = RuntimeError::Other(e);
+
+                // Use smart error classification - config errors will cause immediate exit
+                if let Some(new_attempt) =
+                    handle_error_with_backoff(&runtime_error, attempt, "synd-translator").await
+                {
+                    attempt = new_attempt;
+                } else {
+                    // handle_error_with_backoff will have called std::process::exit(1) for
+                    // unrecoverable errors
+                    unreachable!(
+                        "handle_error_with_backoff should have exited for unrecoverable errors"
+                    );
+                }
             }
         };
     }

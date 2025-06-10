@@ -21,7 +21,10 @@ use jsonrpsee::{
     ws_client::{PingConfig, WsClient, WsClientBuilder},
 };
 use serde::de::DeserializeOwned;
-use shared::types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock};
+use shared::{
+    retry::exponential_backoff_sleep,
+    types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock},
+};
 use std::{
     collections::{HashSet, VecDeque},
     pin::Pin,
@@ -330,6 +333,7 @@ pub struct IngestorProvider(Arc<WsClient>);
 #[allow(missing_docs)]
 impl IngestorProvider {
     pub async fn new(url: &str, timeout: Duration) -> Self {
+        let mut attempt = 0;
         loop {
             match tokio::time::timeout(
                 timeout,
@@ -342,7 +346,11 @@ impl IngestorProvider {
             )
             .await
             {
-                Err(_) => error!("timed out connecting to websocket"),
+                Err(_) => {
+                    error!("timed out connecting to websocket");
+                    exponential_backoff_sleep(attempt).await;
+                    attempt += 1;
+                }
                 Ok(Err(err)) => panic!("failed to connect to websocket: {}, url={}", err, url),
                 Ok(Ok(client)) => return Self(Arc::new(client)),
             }
