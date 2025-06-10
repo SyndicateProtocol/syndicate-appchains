@@ -51,7 +51,6 @@ impl EthClient {
             {
                 Err(_) => {
                     error!("timed out connecting to websocket");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
                     handle_rpc_error("failed to connect to websocket", &err);
@@ -74,7 +73,6 @@ impl EthClient {
             match timeout(self.timeout, self.client.get_block_by_number(block_identifier)).await {
                 Err(_) => {
                     error!("eth_getBlockByNumber request timed out");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
                     handle_rpc_error("failed to fetch block header", &err);
@@ -109,7 +107,6 @@ impl EthClient {
             {
                 Err(_) => {
                     error!("eth_getBlockReceipts request timed out");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
                     handle_rpc_error("failed to fetch receipts", &err);
@@ -127,7 +124,6 @@ impl EthClient {
             match timeout(self.timeout, self.client.subscribe_blocks()).await {
                 Err(_) => {
                     error!("eth_subscribe request timed out");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
                     handle_rpc_error("failed to subscribe to blocks", &err);
@@ -144,7 +140,6 @@ impl EthClient {
             match timeout(self.timeout, self.client.get_chain_id()).await {
                 Err(_) => {
                     error!("eth_chainId request timed out");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
                     handle_rpc_error("failed to get chain id", &err);
