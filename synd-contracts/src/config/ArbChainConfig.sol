@@ -72,7 +72,7 @@ contract ArbChainConfig is Initializable {
         address initialAppchainOwner,
         string memory sequencingChainRpcUrl,
         string memory appchainBlockExplorerUrl
-    ) public initializer {
+    ) external initializer {
         // Set the configuration parameters
         require(_owner != address(0), "Owner cannot be zero address");
         require(chainId != 0, "Chain ID cannot be zero");
@@ -145,6 +145,7 @@ contract ArbChainConfig is Initializable {
      * Internal function without access restriction.
      */
     function _transferOwnership(address newOwner) internal virtual {
+        require(newOwner != address(0), "New owner cannot be zero address");
         address oldOwner = owner;
         owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);

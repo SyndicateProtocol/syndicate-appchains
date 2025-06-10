@@ -7,7 +7,6 @@ import "@arbitrum/nitro-contracts/src/bridge/IDelayedMessageProvider.sol";
 
 /// @notice  This is a contract solely for testing purposes. Not to be used in production.
 contract Rollup {
-    // TODO: set these values properly
     uint64 public constant maxDataSize = 117964;
     uint64 public constant delayBlocks = 7200;
     uint64 public constant futureBlocks = 12;

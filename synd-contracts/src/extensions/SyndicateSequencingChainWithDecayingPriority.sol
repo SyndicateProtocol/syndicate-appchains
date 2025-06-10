@@ -67,7 +67,7 @@ contract SyndicateSequencingChainWithDecayingPriority is SyndicateSequencingChai
     /// @param currentTimestamp The current timestamp to calculate the decay against
     /// @return The effective priority after applying the decay formula
     function calculateEffectivePriority(uint256 originalPriority, uint256 submittedTimestamp, uint256 currentTimestamp)
-        public
+        external
         pure
         returns (uint256)
     {

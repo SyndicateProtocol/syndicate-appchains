@@ -28,7 +28,7 @@ contract ArbConfigManager is Ownable {
      * @dev Constructor to deploy the implementation contract and beacon
      */
     //#olympix-ignore-no-parameter-validation-in-constructor
-    constructor(address _owner) Ownable(_owner) {
+    constructor(address owner_) Ownable(owner_) {
         // Deploy the implementation contract
         // No need to pass constructor arguments as they'll be handled by initialize()
         address implementation = address(new ArbChainConfig());
@@ -107,7 +107,7 @@ contract ArbConfigManager is Ownable {
      * @param chainId The chain ID
      * @return The deterministic address where the config would be deployed
      */
-    function getArbChainConfigAddress(uint256 chainId) public view returns (address) {
+    function getArbChainConfigAddress(uint256 chainId) external view returns (address) {
         // Check if already deployed
         if (deployedConfigs[chainId] != address(0)) {
             return deployedConfigs[chainId];
