@@ -20,25 +20,13 @@ async fn main() -> Result<()> {
     let config = Config::initialize();
     info!("Config: {:?}", config);
 
-    // Validate config early and exit with non-zero code if invalid
-    if let Err(e) = config.validate().await {
-        error!("Configuration validation failed: {}", e);
-        std::process::exit(1);
-    }
-
     let mut metrics_state = MetricsState::default();
     let metrics = MaestroMetrics::new(&mut metrics_state.registry);
     tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port, None));
 
     // Server::run now creates the service internally and returns a shutdown function
     // that also handles stopping the server handle.
-    let (addr, shutdown_fn) = match synd_maestro::server::run(config, metrics).await {
-        Ok(result) => result,
-        Err(e) => {
-            error!("Failed to start Maestro server: {}", e);
-            std::process::exit(1);
-        }
-    };
+    let (addr, shutdown_fn) = synd_maestro::server::run(config, metrics).await?;
     info!(
         %addr,
         "Maestro server running"

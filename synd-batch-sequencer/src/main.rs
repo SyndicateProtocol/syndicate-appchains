@@ -6,7 +6,7 @@ use eyre::Result;
 use shared::tracing::{setup_global_tracing, ServiceTracingConfig};
 use synd_batch_sequencer::config::BatchSequencerConfig;
 use tokio::signal::unix::{signal, SignalKind};
-use tracing::{error, info};
+use tracing::info;
 
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
@@ -19,20 +19,8 @@ async fn main() -> Result<()> {
     let config = BatchSequencerConfig::initialize();
     info!("BatchSequencerConfig: {:?}", config);
 
-    // Validate config early and exit with non-zero code if invalid
-    if let Err(e) = config.validate().await {
-        error!("Configuration validation failed: {}", e);
-        std::process::exit(1);
-    }
-
     let batcher_handle =
-        match run_batcher(&config.batcher, config.sequencing_address, config.metrics_port).await {
-            Ok(handle) => handle,
-            Err(e) => {
-                error!("Failed to start batcher: {}", e);
-                std::process::exit(1);
-            }
-        };
+        run_batcher(&config.batcher, config.sequencing_address, config.metrics_port).await?;
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");

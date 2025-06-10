@@ -9,7 +9,7 @@ use shared::{
 };
 use synd_mchain::{metrics::MchainMetrics, server::start_mchain};
 use tokio::signal::unix::{signal, SignalKind};
-use tracing::{error, info};
+use tracing::info;
 
 /// CLI args for the `synd-mchain` executable
 #[derive(Parser, Debug, Clone)]
@@ -29,21 +29,6 @@ struct Config {
     appchain_chain_id: u64,
 }
 
-impl Config {
-    /// Validates the configuration
-    fn validate(&self) -> Result<(), String> {
-        if self.datadir.is_empty() {
-            return Err("DATADIR cannot be empty".to_string());
-        }
-
-        if self.appchain_chain_id == 0 {
-            return Err("APPCHAIN_CHAIN_ID must be greater than 0".to_string());
-        }
-
-        Ok(())
-    }
-}
-
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
 async fn main() -> eyre::Result<()> {
@@ -52,21 +37,8 @@ async fn main() -> eyre::Result<()> {
     setup_global_logging().unwrap();
 
     let cfg = Config::parse();
-
-    // Validate config early and exit with non-zero code if invalid
-    if let Err(e) = cfg.validate() {
-        error!("Configuration validation failed: {}", e);
-        std::process::exit(1);
-    }
-
     info!("loading rockdb db {}", cfg.datadir);
-    let db = match DB::open_default(&cfg.datadir) {
-        Ok(db) => db,
-        Err(e) => {
-            error!("Failed to open database: {}", e);
-            std::process::exit(1);
-        }
-    };
+    let db = DB::open_default(cfg.datadir)?;
 
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
@@ -74,19 +46,13 @@ async fn main() -> eyre::Result<()> {
     info!("starting synd-mchain server on port {}", cfg.port);
     let module = start_mchain(cfg.appchain_chain_id, cfg.finality_delay, db, metrics);
 
-    let handle = match Server::builder()
+    let handle = Server::builder()
         .ws_only()
         .set_id_provider(RandomStringIdProvider::new(64))
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))
-        .await
-    {
-        Ok(server) => server.start(module),
-        Err(e) => {
-            error!("Failed to build or start server: {}", e);
-            std::process::exit(1);
-        }
-    };
+        .await?
+        .start(module);
     tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
 
     #[allow(clippy::expect_used)]
@@ -96,10 +62,10 @@ async fn main() -> eyre::Result<()> {
 
     tokio::select! {
         _ = sigint.recv() => {
-            info!("Received SIGINT (Ctrl+C), initiating shutdown...");
+            println!("Received SIGINT (Ctrl+C), initiating shutdown...");
         }
         _ = sigterm.recv() => {
-            info!("Received SIGTERM, initiating shutdown...");
+            println!("Received SIGTERM, initiating shutdown...");
         }
     };
 
