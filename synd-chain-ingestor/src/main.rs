@@ -44,6 +44,29 @@ struct Config {
     request_timeout: Duration,
 }
 
+impl Config {
+    /// Validates the configuration
+    fn validate(&self) -> Result<(), String> {
+        if self.rpc_url.is_empty() {
+            return Err("RPC_URL cannot be empty".to_string());
+        }
+
+        if self.db_file.is_empty() {
+            return Err("DB_FILE cannot be empty".to_string());
+        }
+
+        if self.channel_size == 0 {
+            return Err("CHANNEL_SIZE must be greater than 0".to_string());
+        }
+
+        if self.parallel_sync_requests == 0 {
+            return Err("PARALLEL_SYNC_REQUESTS must be greater than 0".to_string());
+        }
+
+        Ok(())
+    }
+}
+
 async fn new_provider(cfg: &Config) -> EthClient {
     EthClient::new(&cfg.rpc_url, cfg.request_timeout, Duration::from_secs(300), cfg.channel_size)
         .await
@@ -57,12 +80,19 @@ async fn main() {
     setup_global_logging().unwrap();
 
     let cfg = Config::parse();
+
+    // Validate config early and exit with non-zero code if invalid
+    if let Err(e) = cfg.validate() {
+        error!("Configuration validation failed: {}", e);
+        std::process::exit(1);
+    }
+
     let mut provider = new_provider(&cfg).await;
     let mut metrics_state = MetricsState::default();
     let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
     tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
 
-    let (module, ctx) = server::start(
+    let (module, ctx) = match server::start(
         &provider,
         &cfg.rpc_url,
         &cfg.db_file,
@@ -71,16 +101,27 @@ async fn main() {
         &metrics,
     )
     .await
-    .unwrap();
+    {
+        Ok(result) => result,
+        Err(e) => {
+            error!("Failed to start chain ingestor server: {}", e);
+            std::process::exit(1);
+        }
+    };
 
     info!("starting synd-chain-ingestor server on {}", cfg.port);
-    let _handle = Server::builder()
+    let _handle = match Server::builder()
         .ws_only()
         .enable_ws_ping(PingConfig::default())
         .build(format!("0.0.0.0:{}", cfg.port))
         .await
-        .unwrap()
-        .start(module);
+    {
+        Ok(server) => server.start(module),
+        Err(e) => {
+            error!("Failed to build or start server: {}", e);
+            std::process::exit(1);
+        }
+    };
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");

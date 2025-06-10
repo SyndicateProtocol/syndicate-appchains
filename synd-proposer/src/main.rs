@@ -7,7 +7,7 @@ use shared::{
     tracing::setup_global_logging,
 };
 use synd_proposer::{config::Config, metrics::ProposerMetrics, proposer};
-use tracing::info;
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,10 +17,22 @@ async fn main() -> Result<()> {
     let config = Config::initialize();
     info!("Config: {:?}", config);
 
+    // Validate config early and exit with non-zero code if invalid
+    if let Err(e) = config.validate() {
+        error!("Configuration validation failed: {}", e);
+        std::process::exit(1);
+    }
+
     let mut metrics_state = MetricsState::default();
     let metrics = ProposerMetrics::new(&mut metrics_state.registry);
     tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port, None));
 
     info!("Starting Proposer service...");
-    proposer::run(config, metrics).await
+    match proposer::run(config, metrics).await {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            error!("Proposer service failed: {}", e);
+            std::process::exit(1);
+        }
+    }
 }

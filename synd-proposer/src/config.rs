@@ -44,4 +44,21 @@ impl Config {
     pub fn initialize() -> Self {
         Self::parse()
     }
+
+    /// Validates the configuration
+    pub fn validate(&self) -> Result<(), String> {
+        if self.private_key.is_empty() {
+            return Err("PROPOSER_PRIVATE_KEY cannot be empty".to_string());
+        }
+
+        if self.assertion_poster_contract_address == Address::ZERO {
+            return Err("ASSERTION_POSTER_CONTRACT_ADDRESS cannot be zero address".to_string());
+        }
+
+        if self.polling_interval.is_zero() {
+            return Err("PROPOSER_POLLING_INTERVAL must be greater than 0".to_string());
+        }
+
+        Ok(())
+    }
 }
