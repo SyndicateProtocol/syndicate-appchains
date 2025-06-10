@@ -93,10 +93,11 @@ mod tests {
     };
     use alloy::primitives::Address;
     use ctor::ctor;
+    use shared::tracing::setup_global_logging;
 
     #[ctor]
     fn init() {
-        shared::logger::set_global_default_subscriber();
+        setup_global_logging();
     }
 
     const TTL: Duration = Duration::from_secs(15 * 60);

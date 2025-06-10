@@ -53,7 +53,7 @@ impl EthClient {
                 Ok(Err(err)) => handle_rpc_error("failed to connect to websocket", &err),
                 Ok(Ok(client)) => {
                     client.client().expect_pubsub_frontend().set_channel_size(channel_size);
-                    return Self { client, timeout, log_timeout }
+                    return Self { client, timeout, log_timeout };
                 }
             }
         }
@@ -73,7 +73,7 @@ impl EthClient {
                     if let BlockNumberOrTag::Number(number) = block_identifier {
                         assert_eq!(block.header.number, number);
                     }
-                    return block.header
+                    return block.header;
                 }
             }
         }

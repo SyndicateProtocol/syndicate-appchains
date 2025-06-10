@@ -9,7 +9,9 @@ use redis::{
     streams::{StreamReadOptions, StreamReadReply},
     AsyncCommands,
 };
-use std::time::Duration;
+use shared::tracing::{otel_global, OpenTelemetrySpanExt, SpanKind, TraceContextExt};
+use std::{collections::HashMap, time::Duration};
+use tracing::{info_span, instrument, Span};
 
 /// A consumer for Valkey Streams that reads transaction data.
 ///
@@ -73,6 +75,14 @@ impl StreamConsumer {
     /// * Currently reads one message at a time for simplicity. For high-throughput scenarios,
     ///   consider implementing batch reading with an internal buffer.
     /// * Blocks for `block_duration` waiting for a new message to arrive
+    #[instrument(
+        name = "redis_receive",
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Consumer,
+        )
+    )]
     pub async fn recv(
         &mut self,
         max_msg_count: usize,
@@ -104,6 +114,28 @@ impl StreamConsumer {
         let mut results = Vec::with_capacity(key_data.ids.len());
 
         for id in &key_data.ids {
+            let traceparent = id
+                .map
+                .get("traceparent")
+                .ok_or_else(|| eyre::eyre!("No traceparent found in message"))?;
+            let producer_context = match traceparent {
+                redis::Value::BulkString(data) => {
+                    let carrier: HashMap<String, String> =
+                        [("traceparent".to_string(), String::from_utf8_lossy(data).to_string())]
+                            .into();
+                    otel_global::get_text_map_propagator(|propagator| propagator.extract(&carrier))
+                }
+                _ => return Err(eyre::eyre!("Expected binary data, got different type")),
+            };
+            let producer_span = producer_context.span();
+            let span = info_span!(
+                parent: Span::current(),
+                "redis_recv_transaction",
+                otel.kind = ?SpanKind::Consumer,
+            );
+            span.add_link(producer_span.span_context().clone());
+            let _guard = span.enter();
+
             let raw_tx =
                 id.map.get("data").ok_or_else(|| eyre::eyre!("No data found in message"))?;
 
@@ -130,7 +162,7 @@ mod tests {
     use std::time::Duration;
     use test_utils::docker::start_valkey;
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_produce_consume_transaction() {
         // Start Valkey container
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
@@ -166,6 +198,7 @@ mod tests {
         assert_eq!(received.len(), 1);
         assert_eq!(received[0].0, test_data);
         assert!(!received[0].1.is_empty());
+        tokio::time::sleep(Duration::from_secs(30)).await;
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -208,5 +241,6 @@ mod tests {
         assert_eq!(received[1].0, test_data2);
         assert!(!received[0].1.is_empty());
         assert!(!received[1].1.is_empty());
+        tokio::time::sleep(Duration::from_secs(30)).await;
     }
 }

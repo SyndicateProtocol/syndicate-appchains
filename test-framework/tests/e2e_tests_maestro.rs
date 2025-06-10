@@ -26,7 +26,7 @@ const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"
 
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber();
+    shared::tracing::setup_global_logging();
 }
 
 // Happy path - 1 txn submitted, 1 txn received. Identical to
@@ -79,6 +79,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             assert!(receipt.is_some());
             assert!(receipt.clone().unwrap().status());
             assert_eq!(receipt.unwrap().from, wallet_address);
+
             Ok(())
         },
     )
@@ -427,7 +428,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
                     // Server error
                     if json_resp.is_err() {
                         println!("hit a request error, we're at JSON-RPC server limit");
-                        return Ok::<_, eyre::Error>(("error", json!("")))
+                        return Ok::<_, eyre::Error>(("error", json!("")));
                     }
 
                     // Get time after receiving the response

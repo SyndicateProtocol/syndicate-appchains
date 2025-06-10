@@ -32,7 +32,7 @@ const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"
 
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber();
+    shared::tracing::setup_global_logging();
 }
 
 #[tokio::test]
