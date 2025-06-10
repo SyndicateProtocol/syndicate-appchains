@@ -4,26 +4,21 @@
 use crate::{
     config::Config,
     metrics::ProposerMetrics,
-    types::{Batch, BatchWithCount, NitroBlock, SeqVerifyOutput},
+    types::{ NitroBlock, SeqVerifyOutput},
 };
 use alloy::{
     consensus::{BlockHeader, Transaction},
     eips::{
         BlockNumberOrTag,
-        BlockNumberOrTag::{Earliest, Latest},
     },
     network::{BlockResponse, Ethereum, EthereumWallet},
-    primitives::{bytes, fixed_bytes, keccak256, Address, BlockNumber, B256, U256},
+    primitives::{fixed_bytes, keccak256, Address, B256, U256},
     providers::{
-        fillers::{
-            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
-            WalletFiller,
-        },
-        Identity, Provider as _, ProviderBuilder, RootProvider, WalletProvider as _,
+        Provider as _, ProviderBuilder, RootProvider, WalletProvider as _,
     },
-    rpc::types::{Block, Filter},
+    rpc::types::{Filter},
     signers::local::PrivateKeySigner,
-    sol_types::{sol, SolCall, SolEvent, SolValue},
+    sol_types::{SolCall, SolEvent, SolValue},
     transports::TransportResult,
 };
 use axum::{
@@ -46,14 +41,11 @@ use contract_bindings::synd::{
 use eyre::{eyre, Result};
 use log::warn;
 use shared::{
-    parse::{parse_address, parse_url},
-    tx_validation::validate_transaction,
     types::FilledProvider,
 };
 use std::{
     collections::{BTreeMap, HashMap},
     default::Default,
-    ops::Index,
     str::FromStr,
     sync::Arc,
     time::Duration,
@@ -362,7 +354,9 @@ impl Proposer {
         let batches =
             self.get_batches(l1_start_block.header.number, l1_end_block.header.number).await?;
         println!("X_X_X_X first batch");
-        // println!("{:?}", batches[0]);
+        if !batches.is_empty() {
+            println!("{:?}", batches[0]);
+        }
 
         let delayed_message_count: u64 = seq_start_block.header.nonce.into();
         let delayed_messages = self
@@ -382,12 +376,12 @@ impl Proposer {
             .await?;
 
         println!("X_X_X_X start + end accumulator_proof - batches");
-        info!("{}", start_batch_accumulator_merkle_proof.storage_proof[0].value);
-        info!("{}", end_batch_accumulator_merkle_proof.storage_proof[0].value);
+        info!("start batch storage [0]: {}", start_batch_accumulator_merkle_proof.storage_proof[0].value);
+        info!("end batch storage [0]: {}", end_batch_accumulator_merkle_proof.storage_proof[0].value);
 
         println!("X_X_X_X start + end accumulator_proof - accumulators");
-        info!("{}", start_batch_accumulator_merkle_proof.storage_proof[1].value);
-        info!("{}", end_batch_accumulator_merkle_proof.storage_proof[1].value);
+        info!("start batch storage [1]: {}", start_batch_accumulator_merkle_proof.storage_proof[1].value);
+        info!("end batch storage [1]: {}", end_batch_accumulator_merkle_proof.storage_proof[1].value);
 
         let input = L1ChainInput {
             start_batch_accumulator_merkle_proof,
@@ -511,7 +505,7 @@ impl Proposer {
         info!(%first_seq_number, %last_seq_number);
 
         let batches: Vec<ArbitrumBatch> = batch_map.into_values().collect();
-        info!(batch_length=%batches.len());
+        info!(batch_length=%batches.len(), "X_X_X_X batch_length");
         Ok(batches)
     }
 
@@ -741,13 +735,12 @@ mod tests {
     use crate::proposer::Proposer;
     use alloy::{
         eips::BlockNumberOrTag,
-        primitives::{address, fixed_bytes, Address, BlockHash},
+        primitives::{address, Address, BlockHash},
         providers::{Provider, ProviderBuilder, RootProvider},
         rpc::types::{Block, Filter},
     };
     use contract_bindings::synd::teemodule::TeeModule::teeTrustedInputReturn;
     use eyre::{eyre, Error};
-    use serde::Serialize;
     use std::{fs, str::FromStr, sync::Arc};
     use synd_seqchain_verifier::{config::SeqchainVerifierConfig, verifier::Verifier};
 
@@ -776,21 +769,8 @@ mod tests {
             ..Default::default()
         };
 
-        let ethereum_provider_arc: Arc<RootProvider> = Arc::new(
-            ProviderBuilder::default()
-                // .connect("https://eth-holesky.g.alchemy.com/v2/FFOCYExawZ3K46YRNHqaUEo3pbqS5F1F")
-                .connect(
-                    "https://ethereum-holesky.core.chainstack.com/71e6c446fa619c2e05cb50884da82f4a",
-                )
-                .await
-                .unwrap(),
-        );
-        let sequencing_provider_arc: Arc<RootProvider> = Arc::new(
-            ProviderBuilder::default()
-                .connect("https://syndicate-exo.g.alchemy.com/v2/K6cAUXQhrUT3KJPd9a-glciOF5ZA_F8Y")
-                .await
-                .unwrap(),
-        );
+        let ethereum_provider_arc: Arc<RootProvider> = Arc::new(ethereum_provider);
+        let sequencing_provider_arc: Arc<RootProvider> = Arc::new(sequencing_provider);
 
         // SequencerInbox contract address on Holesky L1 - https://eth-holesky.blockscout.com/address/0x47c3DEC256DB25c527d92AAceE1269C17805ce9d?tab=txs
         let l1_sequencer_inbox =
@@ -868,27 +848,6 @@ mod tests {
         };
         println!("X_X_X_X mock input");
         println!("{:?}", mock_input);
-
-        // let mock_input = teeTrustedInputReturn {
-        //     appchainConfigHash: Default::default(),     // ignore
-        //     appchainStartBlockHash: Default::default(), // ignore
-        //     seqConfigHash: Default::default(),          // ignore
-        //
-        //     // first batch from block 0 - https://syndicate-exo.explorer.alchemy.com/block/0?tab=index
-        //     seqStartBlockHash: fixed_bytes!(
-        //         "0xea7e440eb1d9e37d9b2fcb7883a1ca631331c2d5b54c4404ee21c0231fde5196"
-        //     ),
-        //     setDelayedMessageAcc: Default::default(),
-        //     // https://eth-holesky.blockscout.com/block/3326232
-        //     l1StartBlockHash: fixed_bytes!(
-        //         "0xe0158dfd5065d86cfe060317244aec0aa7ab27f58d4bef71bf9518282ce88d15"
-        //     ),
-        //     // 5th contract call down - https://eth-holesky.blockscout.com/tx/0x15854153b2b9d1851cbaa98c29bba607c58286cf822ca81afc465517aab1c84e?tab=index
-        //     // this block hash https://eth-holesky.blockscout.com/block/3328058
-        //     l1EndBlockHash: fixed_bytes!(
-        //         "0x7b10ea0111d6ea9e3a2b91010f89693f4c56378cabc2b95ae7decfe738bfa7d6"
-        //     ),
-        // };
 
         // TODO - get proof window issue fixed on Holesky
         let l1_chain_input = proposer.build_l1_input(mock_input).await.unwrap();
