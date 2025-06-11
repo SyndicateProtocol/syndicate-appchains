@@ -1,4 +1,4 @@
-//! Types for the `synd-seqchain-verifier`
+//! Shared types for the withdrawals
 
 use alloy::{
     primitives::{keccak256, Address, Bytes, B256, U256},
@@ -6,7 +6,7 @@ use alloy::{
 };
 use serde::{Deserialize, Serialize};
 
-/// `BlockVerifierInput` is the output of the `synd-seqchain-verifier`
+/// `BlockVerifierInput` is the output of the verifiers
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct BlockVerifierInput {
