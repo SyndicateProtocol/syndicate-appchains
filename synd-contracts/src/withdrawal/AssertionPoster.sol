@@ -14,8 +14,6 @@ import {IOwnable} from "@arbitrum/nitro-contracts/src/bridge/IOwnable.sol";
 import {IUpgradeExecutor} from "@offchainlabs/upgrade-executor/src/IUpgradeExecutor.sol";
 import {IGasRefunder} from "@arbitrum/nitro-contracts/src/libraries/IGasRefunder.sol";
 import {GlobalState} from "@arbitrum/nitro-contracts/src/state/GlobalState.sol";
-import {Machine} from "@arbitrum/nitro-contracts/src/state/Machine.sol";
-import {IOneStepProofEntry} from "@arbitrum/nitro-contracts/src/osp/IOneStepProofEntry.sol";
 
 // Grabbing these from the official v3 Arb contracts because they're missing in these v2 Eigen versions
 // https://github.com/OffchainLabs/nitro-contracts/blob/main/src/rollup/Assertion.sol
@@ -111,13 +109,9 @@ interface IRollupAdminExtended is IRollupAdmin {
      */
     function paused() external view returns (bool);
 
-    function setValidatorAfkBlocks(
-        uint64 newAfkBlocks
-    ) external;
+    function setValidatorAfkBlocks(uint64 newAfkBlocks) external;
 
-    function setAnyTrustFastConfirmer(
-        address _anyTrustFastConfirmer
-    ) external;
+    function setAnyTrustFastConfirmer(address _anyTrustFastConfirmer) external;
 }
 
 /**
