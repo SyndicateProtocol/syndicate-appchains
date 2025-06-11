@@ -45,10 +45,16 @@ use synd_seqchain_verifier::types::{
     calculate_slot, ArbitrumBatch, L1ChainInput, L1IncomingMessage, L1IncomingMessageHeader,
     TimeBounds,
 };
-use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
+use tokio::{net::TcpListener, sync::Mutex, task::JoinHandle};
 use tracing::{debug, error, info, warn};
 
 const EIGENDA_MESSAGE_HEADER_FLAG: u8 = 0xed;
+// Slot 7 (0x07) stores the batch count
+const BATCH_ACCUMULATOR_COUNT_SLOT: B256 =
+    fixed_bytes!("0x0000000000000000000000000000000000000000000000000000000000000007");
+// The accumulators are stored starting at keccak256(0x07)
+const BATCH_ACCUMULATOR_STORAGE_SLOT: B256 =
+    fixed_bytes!("0xa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688");
 
 /// The `Proposer` service is responsible for checking for new trusted input and verifying it using
 /// the TEE `synd-enclave`
@@ -63,10 +69,10 @@ pub struct Proposer {
     assertion_poster: AssertionPosterInstance<(), FilledProvider>,
     metrics: ProposerMetrics,
     tee_module: TeeModuleInstance<(), FilledProvider>,
-    last_tee_trusted_input_return_hash: Arc<RwLock<B256>>, // TODO revisit
+    last_tee_trusted_input_return_hash: Mutex<B256>,
     arbitrum_bridge_address: Address,
-    sequencer_inbox_address: Address, // batches
-    inbox_address: Address,           // deposits
+    sequencer_inbox_address: Address,
+    inbox_address: Address,
 }
 
 /// Starts the Proposer loop
@@ -188,7 +194,7 @@ impl Proposer {
             assertion_poster,
             tee_module,
             metrics,
-            last_tee_trusted_input_return_hash: Arc::new(RwLock::new(B256::default())),
+            last_tee_trusted_input_return_hash: Mutex::new(B256::default()),
             arbitrum_bridge_address: config.arbitrum_bridge_address,
             sequencer_inbox_address: config.sequencer_inbox_address,
             inbox_address: config.inbox_address,
@@ -202,21 +208,19 @@ impl Proposer {
             interval.tick().await;
 
             let tee_trusted_input = self.tee_module.teeTrustedInput().call().await?;
-            if self.check_was_tee_input_already_processed(&tee_trusted_input).await {
+            if self.check_was_tee_input_already_processed(&tee_trusted_input) {
                 // skip
                 continue;
             }
 
-            let (l1_chain_input, l1_start_block, l1_end_block) = match self
-                .build_l1_input(&tee_trusted_input)
-                .await
-            {
-                Ok(result) => result,
-                Err(e) => {
-                    error!(%e, "Failed to build L1 input for teeTrustedInput: {tee_trusted_input:?}");
-                    continue;
-                }
-            };
+            let (l1_chain_input, l1_start_block, l1_end_block) =
+                match self.build_l1_input(&tee_trusted_input).await {
+                    Ok(result) => result,
+                    Err(e) => {
+                        error!(%e, "Failed to build L1 input for teeTrustedInput");
+                        continue;
+                    }
+                };
 
             let sequencing_pre_image_data: Vec<Vec<u8>> = match self
                 .arb_debug_preimage_data(
@@ -252,7 +256,6 @@ impl Proposer {
                 }
             };
 
-            // TODO test this call. Skip for now
             let _seq_verify_output_res =
                 match self.enclave_verify_sequencing_chain(verify_seq_chain_input_string).await {
                     Ok(output) => output,
@@ -295,18 +298,19 @@ impl Proposer {
         }
     }
 
-    async fn check_was_tee_input_already_processed(
+    fn check_was_tee_input_already_processed(
         &self,
         tee_trusted_input: &teeTrustedInputReturn,
     ) -> bool {
         let hashed_tee_trusted_input = hash_tee_trusted_input(tee_trusted_input);
-        let last_hash = *self.last_tee_trusted_input_return_hash.read().await;
 
-        if last_hash == hashed_tee_trusted_input {
+        let mut last_hash = self.last_tee_trusted_input_return_hash.blocking_lock();
+
+        if *last_hash == hashed_tee_trusted_input {
             return true;
         }
         // Update the hash
-        *self.last_tee_trusted_input_return_hash.write().await = hashed_tee_trusted_input;
+        *last_hash = hashed_tee_trusted_input;
         false
     }
 
@@ -422,23 +426,8 @@ impl Proposer {
             ]);
         let batch_event_logs = self.ethereum_provider.get_logs(&batch_filter).await?;
 
-        // // Parse bridge events into a map for easy lookup
-        // let mut message_delivered_metadata = HashMap::new();
-        // #[allow(clippy::unwrap_used)]
-        // for log in batch_event_logs
-        //     .iter()
-        //     .filter(|log| *log.topic0().unwrap() == SequencerBatchData::SIGNATURE_HASH)
-        // {
-        //     let event = MessageDelivered::decode_log(log.as_ref(), true)?;
-        //     message_delivered_metadata.insert(event.messageIndex, event);
-        // }
-
         // Step 3: Combine the data
         let mut batch_map: BTreeMap<U256, ArbitrumBatch> = BTreeMap::new();
-
-        // TODO - DEBUG code, delete me
-        let mut first_seq_number = 0usize;
-        let mut last_seq_number = 0usize;
 
         // TODO listen for the eigen version of these contracts too? so we create a submodule for
         // layr-labs contracts?
@@ -459,11 +448,6 @@ impl Proposer {
                 SequencerBatchDelivered::SIGNATURE_HASH => {
                     match SequencerBatchDelivered::decode_log(log.as_ref(), true) {
                         Ok(decoded) => {
-                            if first_seq_number == 0 {
-                                first_seq_number = usize::try_from(decoded.batchSequenceNumber)?;
-                            }
-                            last_seq_number = usize::try_from(decoded.batchSequenceNumber)?;
-
                             // Batch data may be located on EigenDA, which is enum 4 in their
                             // version of the contract event https://github.com/Layr-Labs/nitro-contracts/blob/278fdbc39089fa86330f0c23f0a05aee61972c84/src/bridge/IBridge.sol#L25
                             // decoded.dataLocation.
@@ -506,10 +490,6 @@ impl Proposer {
                 }
             }
         }
-
-        // skip validation
-
-        info!(%first_seq_number, %last_seq_number);
 
         let batches: Vec<ArbitrumBatch> = batch_map.into_values().collect();
         Ok(batches)
@@ -627,17 +607,8 @@ impl Proposer {
 
         debug!("Accumulator proof - block_number: {block_number}, batch_count: {batch_count}");
 
-        // Calculate the storage slot for the accumulator
-        // Slot 7 (0x07) stores the batch count
-        // The accumulators are stored starting at keccak256(0x07)
-        const BATCH_ACCUMULATOR_STORAGE_SLOT: B256 =
-            fixed_bytes!("0x0000000000000000000000000000000000000000000000000000000000000007");
-        const BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT: B256 =
-            fixed_bytes!("0xa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688"); // Keccak256("0x7")
-
-        // Calculate the actual slot for the accumulator at this index
-        let accumulator_slot =
-            calculate_slot(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, batch_count);
+        // Calculate the slot for the accumulator at this index
+        let accumulator_slot = calculate_slot(BATCH_ACCUMULATOR_STORAGE_SLOT, batch_count);
 
         // Get proof for both the count slot and the accumulator slot
         let proof = self
@@ -661,12 +632,10 @@ impl Proposer {
         block_number: u64,
     ) -> Result<U256> {
         // Get the value at storage slot 7 (batch count)
-        const BATCH_COUNT_SLOT: B256 =
-            fixed_bytes!("0x0000000000000000000000000000000000000000000000000000000000000007");
 
         let count = self
             .ethereum_provider
-            .get_storage_at(bridge_address, BATCH_COUNT_SLOT.into())
+            .get_storage_at(bridge_address, BATCH_ACCUMULATOR_STORAGE_SLOT.into())
             .block_id(block_number.into())
             .await?;
 
@@ -739,7 +708,7 @@ mod tests {
     use synd_seqchain_verifier::{
         config::SeqchainVerifierConfig, types::L1ChainInput, verifier::Verifier,
     };
-    use tokio::sync::RwLock;
+    use tokio::sync::Mutex;
     use url::Url;
 
     impl Default for Proposer {
@@ -766,7 +735,7 @@ mod tests {
                 assertion_poster,
                 metrics: ProposerMetrics::default(),
                 tee_module,
-                last_tee_trusted_input_return_hash: Arc::new(RwLock::new(B256::default())),
+                last_tee_trusted_input_return_hash: Mutex::new(B256::default()),
                 arbitrum_bridge_address: Address::ZERO,
                 sequencer_inbox_address: Address::ZERO,
                 inbox_address: Address::ZERO,
@@ -868,17 +837,19 @@ mod tests {
             curr_block_number -= 1;
         }
         let mock_input = teeTrustedInputReturn {
-            appchainConfigHash: Default::default(),     // ignore
-            appchainStartBlockHash: Default::default(), // ignore
-            seqConfigHash: Default::default(),          // ignore
+            appchainConfigHash: Default::default(),
+            appchainStartBlockHash: Default::default(),
+            seqConfigHash: Default::default(),
+            setDelayedMessageAcc: Default::default(),
 
             seqStartBlockHash: _desired_seq_start_block_hash.unwrap(),
-            setDelayedMessageAcc: Default::default(),
             l1StartBlockHash: l1_latest_block_minus_n_hash,
             l1EndBlockHash: l1_latest_block_hash,
         };
-        println!("Mock_input");
-        println!("{mock_input:?}");
+        println!(
+            "mock_input. seqStartBlockHash: {} l1StartBlockHash: {} l1EndBlockHash: {}",
+            mock_input.seqStartBlockHash, mock_input.l1StartBlockHash, mock_input.l1EndBlockHash
+        );
 
         let (l1_chain_input, _, _) = proposer.build_l1_input(&mock_input).await.unwrap();
 
