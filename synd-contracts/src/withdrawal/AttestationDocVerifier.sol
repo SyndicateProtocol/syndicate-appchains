@@ -38,14 +38,14 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
     uint64 public immutable expirationTolerance;
 
     constructor(
-        address _verifier,
-        bytes32 _attestationDocVerifierVKey,
-        bytes32 _rootCertHash,
-        bytes32 _pcr0,
-        bytes32 _pcr1,
-        bytes32 _pcr2,
-        bytes32 _pcr8,
-        uint64 _expirationTolerance
+        address _verifier, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 _attestationDocVerifierVKey, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 _rootCertHash, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 _pcr0, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 _pcr1, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 _pcr2, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 _pcr8, //#olympix-ignore-no-parameter-validation-in-constructor
+        uint64 _expirationTolerance //#olympix-ignore-no-parameter-validation-in-constructor
     ) {
         verifier = _verifier;
         attestationDocVerifierVKey = _attestationDocVerifierVKey;
