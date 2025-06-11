@@ -318,9 +318,14 @@ impl TestComponents {
         .await?;
         info!("Nitro URL: {}", nitro_url);
 
+        // TODO write tests that actually use the RPCs below
+        let enclave_rpc_url = nitro_url.clone();
+        let ethereum_rpc_url = nitro_url.clone();
+
         let (proposer, proposer_url) = if options.pre_loaded.is_some() {
             info!("Starting proposer...");
             let proposer_config = ProposerConfig {
+                ethereum_rpc_url,
                 assertion_poster_contract_address: options.pre_loaded.as_ref().map_or(
                     Address::ZERO,
                     |version| match version {
@@ -328,10 +333,17 @@ impl TestComponents {
                         ContractVersion::V213 => PRELOAD_PROPOSER_ADDRESS_231,
                     },
                 ),
+                tee_module_contract_address: Default::default(),
+                arbitrum_bridge_address,
+                inbox_address: Default::default(),
+                sequencer_inbox_address: Default::default(),
                 settlement_rpc_url: settlement_anvil_url.clone(),
                 metrics_port: PortManager::instance().next_port().await,
                 port: PortManager::instance().next_port().await,
                 appchain_rpc_url: nitro_url.clone(),
+                sequencing_rpc_url: sequencing_anvil_url.clone(),
+                enclave_rpc_url,
+                polling_interval: "1m".to_string(),
             };
             (
                 Some(

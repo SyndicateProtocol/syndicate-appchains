@@ -31,7 +31,7 @@ pub struct Config {
     pub enclave_rpc_url: Url,
 
     /// Address of the assertion poster contract
-    #[arg(short = 'b', long, env = "ASSERTION_POSTER_CONTRACT_ADDRESS", value_parser = parse_address)]
+    #[arg(long, env = "ASSERTION_POSTER_CONTRACT_ADDRESS", value_parser = parse_address)]
     pub assertion_poster_contract_address: Address,
 
     /// Address of the assertion poster contract
@@ -49,7 +49,7 @@ pub struct Config {
     pub inbox_address: Address,
 
     /// Sequencer inbox address on the L1 - for batches
-    #[arg(short = 'b', long, env = "SEQUENCER_INBOX_ADDRESS",
+    #[arg(long, env = "SEQUENCER_INBOX_ADDRESS",
        value_parser = parse_address)]
     pub sequencer_inbox_address: Address,
 
@@ -58,7 +58,7 @@ pub struct Config {
     pub private_key: String,
 
     /// The interval between each block polling
-    #[arg( long, env = "PROPOSER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
+    #[arg(long, env = "PROPOSER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
     pub polling_interval: Duration,
 
     /// Port for Proposer
