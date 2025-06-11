@@ -27,7 +27,7 @@ pub struct Config {
     pub appchain_rpc_url: Url,
 
     /// URL of the synd-enclave RPC node
-    #[arg(short = 'e', long, env = "ENCLAVE_RPC_URL", value_parser = parse_url)]
+    #[arg(short = 'n', long, env = "ENCLAVE_RPC_URL", value_parser = parse_url)]
     pub enclave_rpc_url: Url,
 
     /// Address of the assertion poster contract
