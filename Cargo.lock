@@ -7049,7 +7049,6 @@ dependencies = [
  "eyre",
  "humantime",
  "jsonrpsee",
- "log",
  "prometheus-client",
  "reqwest",
  "serde",

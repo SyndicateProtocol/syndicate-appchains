@@ -33,7 +33,6 @@ use contract_bindings::synd::{
     teemodule::TeeModule::{teeTrustedInputReturn, TeeModuleInstance},
 };
 use eyre::{eyre, Result};
-use log::{debug, warn};
 use shared::types::FilledProvider;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -47,7 +46,7 @@ use synd_seqchain_verifier::types::{
     TimeBounds,
 };
 use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
-use tracing::{error, info};
+use tracing::{debug, error, info, warn};
 
 const EIGENDA_MESSAGE_HEADER_FLAG: u8 = 0xed;
 
