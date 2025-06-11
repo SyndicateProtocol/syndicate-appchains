@@ -8,6 +8,7 @@ use alloy::{
 };
 use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
+use withdrawals_shared::types::L1IncomingMessage;
 
 // Storage slot of the batch accumulator
 // <https://github.com/SyndicateProtocol/nitro-contracts/blob/9a100a86242176b633a1d907e5efd41296922144/src/bridge/AbsBridge.sol#L51>
@@ -232,81 +233,6 @@ impl L1ChainInput {
     }
 }
 
-// TODO [SEQ-1002]: Move to a shared crate
-/// `BlockVerifierInput` is the output of the `synd-seqchain-verifier`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct BlockVerifierInput {
-    /// Minimum timestamp
-    pub min_timestamp: u64,
-    /// Maximum timestamp
-    pub max_timestamp: u64,
-    /// Minimum block number
-    pub min_block_number: u64,
-    /// Maximum block number    
-    pub max_block_number: u64,
-    /// Messages
-    pub messages: Vec<L1IncomingMessage>,
-    /// Batch
-    pub batch: Bytes,
-}
-
-// TODO [SEQ-1002]: Move to a shared crate
-/// L1 incoming message
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct L1IncomingMessage {
-    /// Header
-    pub header: L1IncomingMessageHeader,
-    /// L2 message
-    pub l2msg: Bytes,
-}
-
-// TODO [SEQ-1002]: Move to a shared crate
-/// L1 incoming message header
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct L1IncomingMessageHeader {
-    /// Kind
-    pub kind: u8,
-    /// Sender
-    pub sender: Address,
-    /// Block number
-    pub block_number: u64,
-    /// Timestamp
-    pub timestamp: u64,
-    /// Request ID
-    pub request_id: B256,
-    /// L1 base fee
-    pub base_fee_l1: U256,
-}
-
-// TODO [SEQ-1002]: Move to a shared crate
-impl L1IncomingMessage {
-    /// Hash the L1 incoming message
-    fn hash(&self) -> B256 {
-        let message_hash = keccak256(&self.l2msg);
-        keccak256(
-            (
-                [self.header.kind],
-                self.header.sender,
-                self.header.block_number,
-                self.header.timestamp,
-                self.header.request_id,
-                self.header.base_fee_l1,
-                message_hash,
-            )
-                .abi_encode_packed(),
-        )
-    }
-
-    /// Accumulate the L1 incoming message
-    pub fn accumulate(&self, acc: B256) -> B256 {
-        let message_hash = self.hash();
-        keccak256((acc, message_hash).abi_encode_packed())
-    }
-}
-
 /// Time bounds
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
@@ -376,6 +302,7 @@ mod tests {
         rpc::types::EIP1186StorageProof,
     };
     use std::str::FromStr;
+    use withdrawals_shared::types::L1IncomingMessageHeader;
 
     //`EigenDA` message header flag
     // <https://github.com/Layr-Labs/nitro-contracts/blob/278fdbc39089fa86330f0c23f0a05aee61972c84/src/bridge/SequencerInbox.sol#L133>

@@ -1,6 +1,6 @@
 //! Test the verifier by running it with the input and config files
 use std::process::Command;
-use synd_appchain_verifier::types::BlockVerifierInput;
+use withdrawals_shared::types::BlockVerifierInput;
 #[tokio::test]
 async fn test_run_appchain_verifier() {
     let sequencing_chain_input = std::fs::read_to_string("./tests/seq_input.json").unwrap();

@@ -1,0 +1,28 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "withdrawals-shared"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy      = { workspace = true }
+alloy-trie = { workspace = true }
+clap       = { workspace = true, features = ["derive", "env"] }
+eyre       = { workspace = true }
+serde      = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+shared     = { workspace = true }
+thiserror  = { workspace = true }
+tokio      = { workspace = true, features = ["process"] }
+tracing    = { workspace = true }
+
+[dev-dependencies]
+shared = { workspace = true }
+
+
+[lints]
+workspace = true

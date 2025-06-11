@@ -4,15 +4,13 @@
 use crate::{
     config::AppchainVerifierConfig,
     errors::VerifierError,
-    types::{
-        get_input_batches_with_timestamps, BlockVerifierInput, L1IncomingMessage,
-        L1IncomingMessageHeader, SequencingChainInput, SettlementChainInput,
-    },
+    types::{get_input_batches_with_timestamps, SequencingChainInput, SettlementChainInput},
 };
 use alloy::primitives::{Address, U256};
 use eyre::Result;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::{ArbitrumAdapter, L1MessageType};
 use tracing::error;
+use withdrawals_shared::types::{BlockVerifierInput, L1IncomingMessage, L1IncomingMessageHeader};
 
 /// The `Verifier` struct
 #[derive(Default, Debug, Clone)]

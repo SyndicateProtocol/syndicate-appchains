@@ -2,7 +2,7 @@
 
 use crate::errors::VerifierError;
 use alloy::{
-    primitives::{fixed_bytes, keccak256, map::HashMap, Address, Bytes, B256, U256},
+    primitives::{fixed_bytes, keccak256, map::HashMap, Address, Bytes, B256},
     rpc::types::{EIP1186AccountProofResponse, Header},
     sol_types::SolValue as _,
 };
@@ -15,6 +15,7 @@ use synd_block_builder::appchains::{
     },
     shared::SequencingTransactionParser,
 };
+use withdrawals_shared::types::L1IncomingMessage;
 
 const SYNDICATE_ACCUMULATOR_STORAGE_SLOT: B256 =
     fixed_bytes!("0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90"); // Keccak256("syndicate.accumulator")
@@ -237,78 +238,6 @@ impl SequencingChainInput {
     }
 }
 
-// TODO: Move to a shared crate
-/// `BlockVerifierInput` is the output of the `synd-appchain-verifier`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct BlockVerifierInput {
-    /// Minimum timestamp
-    pub min_timestamp: u64,
-    /// Maximum timestamp
-    pub max_timestamp: u64,
-    /// Minimum block number
-    pub min_block_number: u64,
-    /// Maximum block number    
-    pub max_block_number: u64,
-    /// Messages
-    pub messages: Vec<L1IncomingMessage>,
-    /// Batch
-    pub batch: Bytes,
-}
-
-/// L1 incoming message
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct L1IncomingMessage {
-    /// Header
-    pub header: L1IncomingMessageHeader,
-    /// L2 message
-    pub l2msg: Bytes,
-}
-
-/// L1 incoming message header
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct L1IncomingMessageHeader {
-    /// Kind
-    pub kind: u8,
-    /// Sender
-    pub sender: Address,
-    /// Block number
-    pub block_number: u64,
-    /// Timestamp
-    pub timestamp: u64,
-    /// Request ID
-    pub request_id: B256,
-    /// L1 base fee
-    pub base_fee_l1: U256,
-}
-
-impl L1IncomingMessage {
-    /// Hash the L1 incoming message
-    fn hash(&self) -> B256 {
-        let message_hash = keccak256(&self.l2msg);
-        keccak256(
-            (
-                [self.header.kind],
-                self.header.sender,
-                self.header.block_number,
-                self.header.timestamp,
-                self.header.request_id,
-                self.header.base_fee_l1,
-                message_hash,
-            )
-                .abi_encode_packed(),
-        )
-    }
-
-    /// Accumulate the L1 incoming message
-    pub fn accumulate(&self, acc: B256) -> B256 {
-        let message_hash = self.hash();
-        keccak256((acc, message_hash).abi_encode_packed())
-    }
-}
-
 /// Synd batch
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -460,15 +389,6 @@ pub fn get_input_batches_with_timestamps(
     Ok(batches)
 }
 
-// --------------------------------------------
-// JSON Helpers
-// --------------------------------------------
-
-/// Parse JSON into a type
-pub fn parse_json<T: serde::de::DeserializeOwned>(s: &str) -> Result<T, String> {
-    serde_json::from_str(s).map_err(|e| format!("Invalid JSON: {}", e))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -477,6 +397,7 @@ mod tests {
         providers::{Provider as _, ProviderBuilder, RootProvider},
     };
     use std::str::FromStr;
+    use withdrawals_shared::types::{L1IncomingMessage, L1IncomingMessageHeader};
 
     #[test]
     fn test_accumulator_storage_slot() {

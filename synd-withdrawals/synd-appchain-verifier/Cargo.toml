@@ -20,6 +20,7 @@ synd-block-builder = { workspace = true }
 thiserror          = { workspace = true }
 tokio              = { workspace = true }
 tracing            = { workspace = true }
+withdrawals-shared = { workspace = true }
 
 [lints]
 workspace = true

@@ -6,10 +6,11 @@ use eyre::Result;
 use serde::{Deserialize, Serialize};
 use synd_seqchain_verifier::{
     config::SeqchainVerifierConfig,
-    types::{parse_json, BlockVerifierInput, L1ChainInput},
+    types::{parse_json, L1ChainInput},
     verifier::Verifier,
 };
 use tracing::{debug, error};
+use withdrawals_shared::types::BlockVerifierInput;
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
