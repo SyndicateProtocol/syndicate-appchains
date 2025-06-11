@@ -23,7 +23,13 @@ byte-unit = { workspace = true, features = ["default"] }
 bytes = { workspace = true }
 eyre = { workspace = true }
 flate2 = { workspace = true }
+http = { workspace = true }
 jsonrpsee = { workspace = true, features = ["jsonrpsee-types"] }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry-semantic-conventions = { workspace = true }
+opentelemetry-stdout = { workspace = true }
+opentelemetry_sdk = { workspace = true }
 prometheus-client = { workspace = true }
 rlp = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -31,6 +37,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 url = { workspace = true }
 

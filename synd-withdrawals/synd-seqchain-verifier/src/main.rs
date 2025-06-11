@@ -4,7 +4,6 @@ use alloy::primitives::B256;
 use clap::Parser;
 use eyre::Result;
 use serde::{Deserialize, Serialize};
-use shared::logger::set_global_default_subscriber;
 use synd_seqchain_verifier::{
     config::SeqchainVerifierConfig,
     types::{parse_json, BlockVerifierInput, L1ChainInput},
@@ -44,8 +43,6 @@ fn main() {
 }
 
 fn run() -> Result<Vec<BlockVerifierInput>> {
-    set_global_default_subscriber()?;
-
     let args = VerifierCliArgs::parse();
     debug!("VerifierCliArgs: {:?}", args);
 

@@ -32,7 +32,7 @@ const TEST_ADDR: Address = address!("0x0000000000000000000000000000000000000001"
 
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber();
+    shared::tracing::setup_global_logging();
 }
 
 fn get_signer() -> PrivateKeySigner {

@@ -6,6 +6,7 @@ use flate2::{write::ZlibEncoder, Compression};
 use rlp::RlpStream;
 use shared::zlib_compression::is_valid_cm_bits_8_only;
 use std::io::{Error, Write};
+use tracing::instrument;
 
 /// A batch of transactions.
 #[derive(Debug, Clone)]
@@ -47,6 +48,12 @@ impl SequencingBatch {
 /// # Returns
 ///
 /// * `SequencingBatch::Uncompressed(Vec<Vec<u8>>)` - The uncompressed batch
+#[instrument(
+    skip_all,
+    fields(
+        tx_count = txs.len() + 1,
+    )
+)]
 pub fn uncompressed_batch(txs: &[Bytes], tx: &Bytes) -> SequencingBatch {
     let mut final_tx_list: Vec<Vec<u8>> = txs.iter().map(|t| t.to_vec()).collect();
     final_tx_list.push(tx.to_vec());
@@ -80,6 +87,13 @@ pub fn uncompressed_batch(txs: &[Bytes], tx: &Bytes) -> SequencingBatch {
 /// let new_tx = Bytes::from(vec![4, 5, 6]);
 /// let compressed = compress_batch(&existing_txs, &new_tx).unwrap();
 /// ```
+#[instrument(
+    skip_all,
+    err,
+    fields(
+        tx_count = txs.len() + 1,
+    )
+)]
 pub fn compress_batch(txs: &[Bytes], tx: &Bytes) -> Result<SequencingBatch, Error> {
     let mut stream = RlpStream::new_list(txs.len() + 1);
     for t in txs {

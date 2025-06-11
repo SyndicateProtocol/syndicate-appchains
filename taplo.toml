@@ -8,6 +8,6 @@ exclude = [
 [formatting]
 align_entries        = true
 array_trailing_comma = true
-column_width         = 80
+column_width         = 100
 reorder_arrays       = true
 reorder_keys         = true

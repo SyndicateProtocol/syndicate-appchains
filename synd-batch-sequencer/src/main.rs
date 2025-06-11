@@ -3,7 +3,7 @@
 
 use batcher::batcher::run_batcher;
 use eyre::Result;
-use shared::logger::set_global_default_subscriber;
+use shared::tracing::{setup_global_tracing, ServiceTracingConfig};
 use synd_batch_sequencer::config::BatchSequencerConfig;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
@@ -11,8 +11,10 @@ use tracing::info;
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
-    // Initialize logging
-    set_global_default_subscriber()?;
+    let _guard = setup_global_tracing(ServiceTracingConfig::from_env(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION"),
+    ))?;
 
     let config = BatchSequencerConfig::initialize();
     info!("BatchSequencerConfig: {:?}", config);

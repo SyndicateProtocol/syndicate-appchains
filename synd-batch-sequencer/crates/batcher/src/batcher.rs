@@ -23,6 +23,7 @@ use eyre::{eyre, Result};
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client as RedisClient};
 use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
+    tracing::SpanKind,
     types::FilledProvider,
 };
 use std::{
@@ -32,7 +33,7 @@ use std::{
 };
 use synd_maestro::valkey::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 /// Batcher service
 #[derive(Derivative)]
@@ -99,6 +100,7 @@ pub async fn run_batcher(
                 debug!("Batcher reading and batching transactions at time {:?}", Instant::now());
                 if let Err(e) = batcher.process_transactions().await {
                     error!("Batcher error: {:?}", e);
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             }
         }
@@ -163,6 +165,14 @@ impl Batcher {
         }
     }
 
+    #[instrument(
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Consumer,
+            chain_id = %self.chain_id
+        )
+    )]
     async fn read_and_batch_transactions(&mut self) -> Result<SequencingBatch> {
         let start = Instant::now();
         let mut txs = vec![];
@@ -225,6 +235,14 @@ impl Batcher {
         Ok(batch)
     }
 
+    #[instrument(
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Consumer,
+            chain_id = %self.chain_id
+        )
+    )]
     async fn process_transactions(&mut self) -> Result<(), BatchError> {
         let start = Instant::now();
 
@@ -246,6 +264,15 @@ impl Batcher {
         Ok(())
     }
 
+    #[instrument(
+        skip_all,
+        err,
+        fields(
+            otel.kind = ?SpanKind::Producer,
+            chain_id = %self.chain_id,
+            batch_size = %batch.len()
+        )
+    )]
     async fn send_batch(&self, batch: SequencingBatch) -> Result<(), BatchError> {
         debug!(
             %self.chain_id, "Batch sent - size: {} bytes",

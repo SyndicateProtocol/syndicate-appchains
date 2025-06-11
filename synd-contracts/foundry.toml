@@ -17,5 +17,6 @@ syndicate_frame = "https://rpc-frame.syndicate.io"
 holesky = "https://ethereum-holesky-rpc.publicnode.com"
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 exo = "${EXO_RPC_URL}"
+risa_devnet = "https://rpc.devnet.alchemy.com/63239a3f-77bf-4c60-b1af-cb1e5ee44769"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

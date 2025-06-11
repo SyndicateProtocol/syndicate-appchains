@@ -1,3 +1,5 @@
+//! The `synd-mchain` database
+
 use alloy::{
     primitives::{keccak256, Address, Bytes, FixedBytes, U256},
     sol_types::SolValue as _,
@@ -11,11 +13,15 @@ use std::fmt;
 const VERSION: u64 = 2;
 
 /// Each delayed message is used to derive an appchain block
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct DelayedMessage {
+    /// The kind of the delayed message
     pub kind: u8,
+    /// The sender of the delayed message
     pub sender: Address,
+    /// The data of the delayed message
     pub data: Bytes,
+    /// The base fee of the delayed message
     pub base_fee_l1: U256,
 }
 
@@ -24,34 +30,39 @@ pub struct DelayedMessage {
 pub struct Slot {
     /// The sequencing block that seals the slot, which is also included in the slot
     pub seq_block_number: u64,
+    /// The sequencing block hash
     pub seq_block_hash: FixedBytes<32>,
     /// The settlement block that seals the slot, which is not included in the slot
     pub set_block_number: u64,
+    /// The settlement block hash
     pub set_block_hash: FixedBytes<32>,
 }
 
 /// The current state of the synd-mchain
-// `batch_count` is the latest number of batches
-// `batch_acc` is the latest batch accumulator
-// `message_count` is the latest number of messages
-// `message_acc` is the latest message accumulator
-// `timestamp` is the timestamp of the pending slot
-// `slot` is the pending `Slot`
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct State {
+    /// The latest number of batches
     pub batch_count: u64,
+    /// The latest batch accumulator
     pub batch_acc: FixedBytes<32>,
+    /// The latest number of delayed messages
     pub message_count: u64,
+    /// The latest delayed message accumulator
     pub message_acc: FixedBytes<32>,
+    /// The timestamp of the pending slot
     pub timestamp: u64,
+    /// The pending `Slot`
     pub slot: Slot,
 }
 
 /// `MBlock` contains all information necessary to build a `Block`
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MBlock {
+    /// The timestamp of the block
     pub timestamp: u64,
+    /// The slot of the block
     pub slot: Slot,
+    /// The payload of the block
     pub payload: Option<(Bytes, Vec<DelayedMessage>)>,
 }
 
@@ -80,11 +91,12 @@ pub struct Block {
     pub slot: Slot,
 }
 
-#[allow(missing_docs)]
 impl Block {
+    /// The delayed message accumulator
     pub fn after_message_acc(&self) -> FixedBytes<32> {
         self.messages.last().map_or(self.before_message_acc, |x| x.1)
     }
+    /// The delayed message count
     pub const fn after_message_count(&self) -> u64 {
         self.before_message_count + self.messages.len() as u64
     }
@@ -131,9 +143,13 @@ impl fmt::Display for DBKey {
 /// generic db trait for reading and writing block data
 #[allow(clippy::unwrap_used)]
 pub trait ArbitrumDB {
+    /// Gets the value associated with the given key
     fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes>;
+    /// Puts the value associated with the given key
     fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V);
+    /// Deletes the value associated with the given key
     fn delete<K: AsRef<[u8]>>(&self, key: K);
+    /// Gets the block associated with the given key
     fn get_block(&self, key: u64) -> Result<Block, ErrorObjectOwned> {
         let state = self.get_state();
         if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
@@ -142,12 +158,15 @@ pub trait ArbitrumDB {
                 |x| Ok(bincode::deserialize(&x).unwrap()),
             )
     }
+    /// Puts the block associated with the given key
     fn put_block(&self, key: u64, value: &Block) {
         self.put(DBKey::Block(key).to_string(), bincode::serialize(value).unwrap())
     }
+    /// Deletes the block associated with the given key
     fn delete_block(&self, key: u64) {
         self.delete(DBKey::Block(key).to_string())
     }
+    /// Gets the message accumulator associated with the given key
     fn get_message_acc(&self, key: u64) -> Result<FixedBytes<32>, ErrorObjectOwned> {
         let state = self.get_state();
         if key < state.message_count { self.get(DBKey::MessageAcc(key).to_string()) } else { None }
@@ -156,20 +175,25 @@ pub trait ArbitrumDB {
                 |x| Ok(bincode::deserialize(&x).unwrap()),
             )
     }
+    /// Puts the message accumulator associated with the given key
     fn put_message_acc(&self, key: u64, value: &FixedBytes<32>) {
         self.put(DBKey::MessageAcc(key).to_string(), bincode::serialize(value).unwrap())
     }
+    /// Deletes the message accumulator associated with the given key
     fn delete_message_acc(&self, key: u64) {
         self.delete(DBKey::MessageAcc(key).to_string())
     }
+    /// Gets the state of the chain
     fn get_state(&self) -> State {
         self.get(DBKey::State.to_string())
             .map(|x| bincode::deserialize(&x).unwrap())
             .unwrap_or_default()
     }
+    /// Puts the state of the chain
     fn put_state(&self, value: &State) {
         self.put(DBKey::State.to_string(), bincode::serialize(value).unwrap())
     }
+    /// Checks the version of the chain
     fn check_version(&self) {
         match self.get(DBKey::Version.to_string()) {
             Some(version) => {
@@ -182,11 +206,12 @@ pub trait ArbitrumDB {
             }
         }
     }
-    // returns the block number if a new block is added
+    /// Adds a new batch to the chain
+    /// Returns the block number if a new block is added
     fn add_batch(&self, mblock: MBlock) -> Result<Option<u64>, ErrorObjectOwned> {
         let state = self.get_state();
         if state.batch_count == 0 && mblock.payload.is_none() {
-            return Err(to_err("invalid first batch: must contain a payload"))
+            return Err(to_err("invalid first batch: must contain a payload"));
         }
         if state.batch_count > 0 &&
             (mblock.timestamp < state.timestamp ||
@@ -203,7 +228,7 @@ pub trait ArbitrumDB {
                 state.slot.seq_block_number + 1,
                 mblock.slot.set_block_number,
                 state.slot.set_block_number
-            )))
+            )));
         }
         // if the payload is empty, update the state with pending slot / timestamp info and return
         let (batch, messages) = match mblock.payload {

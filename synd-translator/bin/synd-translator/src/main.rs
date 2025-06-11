@@ -1,5 +1,5 @@
 use eyre::Result;
-use shared::logger::set_global_default_subscriber;
+use shared::tracing::setup_global_logging;
 use synd_block_builder::config::TargetAppchainType::{ARBITRUM, OPTIMISM};
 use synd_translator::{config::TranslatorConfig, config_manager::with_onchain_config, spawn::run};
 use tokio::signal::unix::{signal, SignalKind};
@@ -8,7 +8,7 @@ use tracing::{error, info};
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    set_global_default_subscriber()?;
+    setup_global_logging()?;
 
     let base_config = TranslatorConfig::initialize();
 
