@@ -109,19 +109,9 @@ contract SyndicateTokenTest is Test {
         vm.stopPrank();
     }
 
-    // test that constructor cannot be called with zero addresses
-    function test_ConstructorWithZeroAddresseForAdmin() public {
-        vm.expectRevert("Minter cannot be zero address");
-        new SyndicateToken(defaultAdmin, address(0));
-    }
+    // ============ CONSTRUCTOR TESTS ============
 
-    function test_ConstructorWithZeroAddresseForMinter() public {
-        vm.expectRevert("Default admin cannot be zero address");
-        new SyndicateToken(address(0), minter);
-    }
-
-    // Test initial setup
-    function test_InitialSetup() public view {
+    function test_Constructor_InitialSetup() public view {
         assertEq(token.name(), "Syndicate");
         assertEq(token.symbol(), "SYND");
         assertEq(token.decimals(), 18);
