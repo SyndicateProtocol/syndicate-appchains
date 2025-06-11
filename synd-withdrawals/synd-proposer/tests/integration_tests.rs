@@ -31,6 +31,7 @@ async fn e2e_proposer_test() -> Result<()> {
     let app_port = PortManager::instance().next_port().await;
     let l1_port = PortManager::instance().next_port().await;
     let proposer_port = PortManager::instance().next_port().await;
+    let enclave_port = PortManager::instance().next_port().await;
 
     let (_set_anvil, set_provider) = utils::start_anvil(1, set_port).await?;
 
@@ -55,10 +56,11 @@ async fn e2e_proposer_test() -> Result<()> {
     let tee_module_contract_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828D"); // TODO (SEQ-936)
     let arbitrum_bridge_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828D"); // TODO (SEQ-936)
     let config = Config {
-        ethereum_rpc_url: Url::from_str(&format!("http://localhost:{}", l1_port))?,
-        settlement_rpc_url: Url::from_str(&format!("http://localhost:{}", set_port))?,
-        sequencing_rpc_url: Url::from_str(&format!("http://localhost:{}", seq_port))?,
-        appchain_rpc_url: Url::from_str(&format!("http://localhost:{}", app_port))?,
+        ethereum_rpc_url: Url::from_str(&format!("http://localhost:{l1_port}"))?,
+        settlement_rpc_url: Url::from_str(&format!("http://localhost:{set_port}"))?,
+        sequencing_rpc_url: Url::from_str(&format!("http://localhost:{seq_port}"))?,
+        appchain_rpc_url: Url::from_str(&format!("http://localhost:{app_port}"))?,
+        enclave_rpc_url: Url::from_str(&format!("http://localhost:{enclave_port}"))?,
         assertion_poster_contract_address,
         tee_module_contract_address,
         arbitrum_bridge_address,
