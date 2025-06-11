@@ -1,11 +1,10 @@
 //! The `types` module handles types for the Proposer.
-
 use alloy::{
     primitives::{Address, Bytes, B256, U256},
     rpc::types::{EIP1186AccountProofResponse, Header},
 };
 use serde::{Deserialize, Serialize};
-use synd_seqchain_verifier::types::{ArbitrumBatch, L1ChainInput, L1IncomingMessage};
+use synd_seqchain_verifier::types::{L1ChainInput, L1IncomingMessage};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Copy)]
 #[serde(rename_all = "camelCase")]

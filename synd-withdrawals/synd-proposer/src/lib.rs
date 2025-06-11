@@ -4,4 +4,5 @@
 pub mod config;
 pub mod metrics;
 pub mod proposer;
+#[allow(missing_docs)]
 pub mod types;
