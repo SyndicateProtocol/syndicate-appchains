@@ -7052,11 +7052,14 @@ dependencies = [
  "prometheus-client",
  "reqwest",
  "serde",
+ "serde_json",
  "shared",
+ "synd-seqchain-verifier",
  "test-utils",
  "tokio",
  "tracing",
  "url",
+ "withdrawals-shared",
 ]
 
 [[package]]

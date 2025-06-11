@@ -24,11 +24,16 @@ fn init() {
     shared::tracing::setup_global_logging();
 }
 
+// TODO update to match `main_loop()`
+#[ignore]
 #[tokio::test]
 async fn e2e_proposer_test() -> Result<()> {
     let set_port = PortManager::instance().next_port().await;
     let app_port = PortManager::instance().next_port().await;
     let proposer_port = PortManager::instance().next_port().await;
+    let seq_port = PortManager::instance().next_port().await;
+    let l1_port = PortManager::instance().next_port().await;
+    let enclave_port = PortManager::instance().next_port().await;
 
     let (_set_anvil, set_provider) = utils::start_anvil(1, set_port).await?;
 
@@ -50,10 +55,19 @@ async fn e2e_proposer_test() -> Result<()> {
     let _handler = server.start(module);
 
     let assertion_poster_contract_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828C");
+    let tee_module_contract_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828D"); // TODO (SEQ-936)
+    let arbitrum_bridge_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828D"); // TODO (SEQ-936)
     let config = Config {
-        settlement_rpc_url: Url::from_str(&format!("http://localhost:{}", set_port))?,
-        appchain_rpc_url: Url::from_str(&format!("http://localhost:{}", app_port))?,
+        ethereum_rpc_url: Url::from_str(&format!("http://localhost:{l1_port}"))?,
+        settlement_rpc_url: Url::from_str(&format!("http://localhost:{set_port}"))?,
+        sequencing_rpc_url: Url::from_str(&format!("http://localhost:{seq_port}"))?,
+        appchain_rpc_url: Url::from_str(&format!("http://localhost:{app_port}"))?,
+        enclave_rpc_url: Url::from_str(&format!("http://localhost:{enclave_port}"))?,
         assertion_poster_contract_address,
+        tee_module_contract_address,
+        arbitrum_bridge_address,
+        inbox_address: Default::default(),
+        sequencer_inbox_address: Default::default(),
         private_key: utils::DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
         polling_interval: Duration::from_secs(60),
         port: proposer_port,

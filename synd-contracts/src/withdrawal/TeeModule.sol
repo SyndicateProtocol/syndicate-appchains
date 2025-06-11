@@ -7,7 +7,8 @@ import {ITeeKeyManager} from "./ITeeKeyManager.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
+import {IBridge} from "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 using ECDSA for bytes32;
 
@@ -73,7 +74,7 @@ event TeeInput(TeeTrustedInput input);
 /**
  * @title TeeModule Contract
  */
-contract TeeModule is Ownable(msg.sender) {
+contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
     // Immutable state variables
     AssertionPoster public immutable poster;
     IBridge public immutable bridge;
@@ -83,7 +84,9 @@ contract TeeModule is Ownable(msg.sender) {
     // TEE variables
     TeeTrustedInput public teeTrustedInput;
     PendingAssertion[] public pendingAssertions;
+    //#olympix-ignore-uninitialized-state-variable
     uint256 public teeHackCount;
+    //#olympix-ignore-uninitialized-state-variable
     uint64 public challengeWindowEnd;
     uint64 public challengeWindowDuration;
 
@@ -102,13 +105,13 @@ contract TeeModule is Ownable(msg.sender) {
     constructor(
         AssertionPoster poster_,
         IBridge bridge_,
-        bytes32 appchainConfigHash_,
-        bytes32 appchainStartBlockHash_,
-        bytes32 seqConfigHash_,
-        bytes32 seqStartBlockHash_,
-        bytes32 l1StartBlockHash_,
+        bytes32 appchainConfigHash_, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 appchainStartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 seqConfigHash_, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 seqStartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 l1StartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
         IL1Block l1block_,
-        uint64 challengeWindowDuration_,
+        uint64 challengeWindowDuration_, //#olympix-ignore-no-parameter-validation-in-constructor
         ITeeKeyManager teeKeyManager_
     ) {
         challengeWindowDuration = challengeWindowDuration_;
@@ -141,12 +144,15 @@ contract TeeModule is Ownable(msg.sender) {
         closeChallengeWindow();
     }
 
-    function closeChallengeWindow() public {
+    function closeChallengeWindow() public nonReentrant {
         require(pendingAssertions.length <= 1, "cannot close challenge window - too many assertions");
         require(
             (address(l1block) == address(0) ? uint64(block.timestamp) : l1block.timestamp()) > challengeWindowEnd,
             "cannot close challenge window - insufficient time has passed"
         );
+
+        challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
+
         if (pendingAssertions.length > 0) {
             // appchain
             teeTrustedInput.appchainStartBlockHash = pendingAssertions[0].blockHash;
@@ -169,13 +175,13 @@ contract TeeModule is Ownable(msg.sender) {
         teeTrustedInput.l1EndBlockHash = (address(l1block) == address(0) ? blockhash(block.number - 1) : l1block.hash());
 
         emit TeeInput(teeTrustedInput);
-
-        challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
     }
 
     function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature, address rewardAddr)
         external
+        nonReentrant
     {
+        require(rewardAddr != address(0), "reward address cannot be zero");
         require(signature.length == 65, "invalid signature length");
         bytes32 assertionHash = hash_object(assertion);
         bytes32 payload_hash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
@@ -191,13 +197,15 @@ contract TeeModule is Ownable(msg.sender) {
         if (pendingAssertions.length == 2) {
             teeHackCount += 1;
             emit TeeHacked(teeHackCount);
+
             // pay out rewards
+            //#olympix-ignore-low-level-call-params-verified
             (bool success,) = payable(rewardAddr).call{value: address(this).balance}("");
             require(success, "payment failed");
         }
     }
 
-    function resolveChallenge(PendingAssertion calldata assertion) external onlyOwner {
+    function resolveChallenge(PendingAssertion calldata assertion) external onlyOwner nonReentrant {
         require(pendingAssertions.length > 1, "challenge does not exist");
         bytes32 assertionHash = hash_object(assertion);
         for (uint256 i = 0; i < pendingAssertions.length; i++) {

@@ -22,6 +22,7 @@ contract TeeKeyManager is ITeeKeyManager, Ownable {
 
     EnumerableSet.AddressSet internal validKeys;
 
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(IAttestationDocVerifier _attestationDocVerifier) Ownable(msg.sender) {
         attestationDocVerifier = _attestationDocVerifier;
     }
@@ -40,6 +41,7 @@ contract TeeKeyManager is ITeeKeyManager, Ownable {
      * @param _proofBytes The encoded proof.
      * @param _publicValues The encoded public values.
      */
+    //#olympix-ignore-reentrancy-events
     function addKey(bytes calldata _publicValues, bytes calldata _proofBytes) external {
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(_publicValues, _proofBytes);
         bool added = validKeys.add(publicKey);

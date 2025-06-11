@@ -13,3 +13,5 @@ upgrade-executor/=lib/upgrade-executor/src/
 @arbitrum/nitro-contracts/=lib/nitro-contracts/
 @offchainlabs/upgrade-executor/=lib/upgrade-executor/
 lib/openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/
+@eigenda/contracts/=lib/eigenda-contracts/
+lib/eigenda-contracts/lib/eigenlayer-middleware/=lib/eigenlayer-middleware/

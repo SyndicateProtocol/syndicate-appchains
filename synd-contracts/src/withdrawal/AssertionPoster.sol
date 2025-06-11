@@ -5,9 +5,6 @@ import {
     IRollupCore,
     ExecutionState,
     MachineStatus,
-    AssertionState,
-    AssertionInputs,
-    ConfigData,
     GlobalState
 } from "@arbitrum/nitro-contracts/src/rollup/IRollupCore.sol";
 import {IRollupAdmin} from "@arbitrum/nitro-contracts/src/rollup/IRollupAdmin.sol";
@@ -16,6 +13,39 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IOwnable} from "@arbitrum/nitro-contracts/src/bridge/IOwnable.sol";
 import {IUpgradeExecutor} from "@offchainlabs/upgrade-executor/src/IUpgradeExecutor.sol";
 import {IGasRefunder} from "@arbitrum/nitro-contracts/src/libraries/IGasRefunder.sol";
+import {GlobalState} from "@arbitrum/nitro-contracts/src/state/GlobalState.sol";
+
+// Grabbing these from the official v3 Arb contracts because they're missing in these v2 Eigen versions
+// https://github.com/OffchainLabs/nitro-contracts/blob/main/src/rollup/Assertion.sol
+struct AssertionState {
+    GlobalState globalState;
+    MachineStatus machineStatus;
+    bytes32 endHistoryRoot;
+}
+
+struct BeforeStateData {
+    // The assertion hash of the prev of the beforeState(prev)
+    bytes32 prevPrevAssertionHash;
+    // The sequencer inbox accumulator asserted by the beforeState(prev)
+    bytes32 sequencerBatchAcc;
+    // below are the components of config hash
+    ConfigData configData;
+}
+
+struct AssertionInputs {
+    // Additional data used to validate the before state
+    BeforeStateData beforeStateData;
+    AssertionState beforeState;
+    AssertionState afterState;
+}
+
+struct ConfigData {
+    bytes32 wasmModuleRoot;
+    uint256 requiredStake;
+    address challengeManager;
+    uint64 confirmPeriodBlocks;
+    uint64 nextInboxPosition;
+}
 
 /**
  * @title IRollup Interface
@@ -63,6 +93,9 @@ interface IRollup is IRollupCore, IOwnable {
      * @param expectedAssertionHash Expected hash of the assertion
      */
     function fastConfirmNewAssertion(AssertionInputs calldata assertion, bytes32 expectedAssertionHash) external;
+
+    function genesisAssertionHash() external pure returns (bytes32);
+    function getValidators() external view returns (address[] memory);
 }
 
 /**
@@ -75,6 +108,10 @@ interface IRollupAdminExtended is IRollupAdmin {
      * @return True if the rollup contract is paused
      */
     function paused() external view returns (bool);
+
+    function setValidatorAfkBlocks(uint64 newAfkBlocks) external;
+
+    function setAnyTrustFastConfirmer(address _anyTrustFastConfirmer) external;
 }
 
 /**
@@ -192,8 +229,8 @@ contract AssertionPoster is Ownable {
         require(rollup.getValidators().length == 0, "validators not empty");
 
         // Prevent the validator whitelist from being disabled due to inactivity
-        IRollupAdmin(address(rollup)).setValidatorAfkBlocks(type(uint64).max);
-        IRollupAdmin(address(rollup)).setAnyTrustFastConfirmer(self);
+        IRollupAdminExtended(address(rollup)).setValidatorAfkBlocks(type(uint64).max);
+        IRollupAdminExtended(address(rollup)).setAnyTrustFastConfirmer(self);
 
         // Post a batch if sequencer inbox count is too low
         if (rollup.bridge().sequencerMessageCount() == 1) {

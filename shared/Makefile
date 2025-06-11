@@ -1,5 +1,6 @@
 create-contract-bindings: 
 	git submodule update --init --recursive
+	git submodule update --remote ../synd-contracts/lib/nitro-contracts # needs specific branch
 	git submodule status --recursive
 	rm -rf ../synd-contracts/out contract-bindings/src/synd/*
 	cd ../synd-contracts  && forge bind --alloy --force
