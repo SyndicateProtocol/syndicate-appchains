@@ -48,7 +48,7 @@ use withdrawals_shared::types::{L1IncomingMessage, L1IncomingMessageHeader};
 
 const EIGENDA_MESSAGE_HEADER_FLAG: u8 = 0xed;
 // Slot 7 (0x07) stores the batch count
-const BATCH_ACCUMULATOR_COUNT_SLOT: B256 =
+const _BATCH_ACCUMULATOR_COUNT_SLOT: B256 =
     fixed_bytes!("0x0000000000000000000000000000000000000000000000000000000000000007");
 // The accumulators are stored starting at keccak256(0x07)
 const BATCH_ACCUMULATOR_STORAGE_SLOT: B256 =
@@ -163,6 +163,7 @@ fn hash_tee_trusted_input(input: &teeTrustedInputReturn) -> B256 {
     keccak256(&packed)
 }
 
+#[allow(dead_code)]
 enum PreimageSource {
     Sequencing,
     Appchain,
