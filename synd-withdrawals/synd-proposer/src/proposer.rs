@@ -4,7 +4,7 @@
 use crate::{
     config::Config,
     metrics::ProposerMetrics,
-    types::{NitroBlock, SeqVerifyOutput},
+    types::{NitroBlock, SeqVerifyOutput, VerifySequencingChainConfig, VerifySequencingChainInput},
 };
 use alloy::{
     consensus::Transaction,
@@ -12,7 +12,7 @@ use alloy::{
     network::{Ethereum, EthereumWallet},
     primitives::{fixed_bytes, keccak256, Address, B256, U256},
     providers::{Provider as _, ProviderBuilder, RootProvider, WalletProvider as _},
-    rpc::types::Filter,
+    rpc::types::{Block, Filter},
     signers::local::PrivateKeySigner,
     sol_types::{SolCall, SolEvent, SolValue},
     transports::TransportResult,
@@ -35,7 +35,7 @@ use contract_bindings::synd::{
     teemodule::TeeModule::{teeTrustedInputReturn, TeeModuleInstance},
 };
 use eyre::{eyre, Result};
-use log::warn;
+use log::{debug, warn};
 use shared::types::FilledProvider;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -45,7 +45,8 @@ use std::{
     time::Duration,
 };
 use synd_seqchain_verifier::types::{
-    ArbitrumBatch, L1ChainInput, L1IncomingMessage, L1IncomingMessageHeader, TimeBounds,
+    calculate_slot, ArbitrumBatch, L1ChainInput, L1IncomingMessage, L1IncomingMessageHeader,
+    TimeBounds,
 };
 use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
 use tracing::{error, info};
@@ -57,8 +58,9 @@ const EIGENDA_MESSAGE_HEADER_FLAG: u8 = 0xed;
 pub struct Proposer {
     appchain_provider: RootProvider,
     sequencing_provider: RootProvider,
-    settlement_provider: FilledProvider,
+    _settlement_provider: FilledProvider,
     ethereum_provider: RootProvider,
+    enclave_provider: RootProvider,
     polling_interval: Duration,
     assertion_poster: AssertionPosterInstance<(), FilledProvider>,
     metrics: ProposerMetrics,
@@ -90,12 +92,16 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
     let tee_module =
         TeeModuleInstance::new(config.tee_module_contract_address, settlement_provider.clone());
 
+    let enclave_provider: RootProvider =
+        ProviderBuilder::default().connect(config.enclave_rpc_url.as_str()).await?;
+
     let proposer = Proposer::new(
         &config,
         metrics,
         appchain_provider,
         sequencing_provider,
         ethereum_provider,
+        enclave_provider,
         settlement_provider,
         assertion_poster,
         tee_module,
@@ -106,10 +112,10 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
     let proposer_polling = Arc::clone(&proposer);
     let proposer_http = Arc::clone(&proposer);
 
-    // Start polling loop - no more mutex needed
     let polling_task: JoinHandle<Result<()>> =
         tokio::spawn(async move { proposer_polling.main_loop().await });
 
+    // TODO remove /propose endpoint
     // Start HTTP server with /propose endpoint
     let app =
         Router::new().route("/propose", post(post_assertion_handler)).with_state(proposer_http);
@@ -160,52 +166,25 @@ enum PreimageSource {
     Appchain,
 }
 
-impl Default for Proposer {
-    fn default() -> Self {
-        let url_str = "localhost:8080";
-        #[allow(clippy::unwrap_used)]
-        let dummy_url = Url::from_str(url_str).unwrap();
-        let dummy_root_provider = ProviderBuilder::default().on_http(dummy_url.clone());
-        let dummy_filled_provider =
-            ProviderBuilder::new().wallet(EthereumWallet::default()).on_http(dummy_url);
-
-        let assertion_poster = AssertionPoster::new(Address::ZERO, dummy_filled_provider.clone());
-
-        let tee_module = TeeModuleInstance::new(Address::ZERO, dummy_filled_provider.clone());
-
-        Proposer {
-            appchain_provider: dummy_root_provider.clone(),
-            sequencing_provider: dummy_root_provider.clone(),
-            settlement_provider: dummy_filled_provider.clone(),
-            ethereum_provider: dummy_root_provider.clone(),
-            polling_interval: Duration::from_secs(1),
-            assertion_poster,
-            metrics: ProposerMetrics::default(),
-            tee_module,
-            last_tee_trusted_input_return_hash: Arc::new(RwLock::new(B256::default())),
-            arbitrum_bridge_address: Address::ZERO,
-            sequencer_inbox_address: Address::ZERO,
-            inbox_address: Address::ZERO,
-        }
-    }
-}
-
 impl Proposer {
+    /// Create a new [`Proposer`]
     pub fn new(
         config: &Config,
         metrics: ProposerMetrics,
         appchain_provider: RootProvider,
         sequencing_provider: RootProvider,
         ethereum_provider: RootProvider,
-        settlement_provider: FilledProvider,
+        enclave_provider: RootProvider,
+        _settlement_provider: FilledProvider,
         assertion_poster: AssertionPosterInstance<(), FilledProvider>,
         tee_module: TeeModuleInstance<(), FilledProvider>,
     ) -> Self {
         Proposer {
             appchain_provider,
             sequencing_provider,
-            settlement_provider,
+            _settlement_provider,
             ethereum_provider,
+            enclave_provider,
             polling_interval: config.polling_interval,
             assertion_poster,
             tee_module,
@@ -219,44 +198,114 @@ impl Proposer {
 
     async fn main_loop(&self) -> Result<()> {
         let mut interval = tokio::time::interval(self.polling_interval);
-
-        // call view func for `teeTrustedInput()`, get the data
-        // check "have I submitted this teeTrustedInput before?" via state variable
-
-        let x = self.tee_module.teeTrustedInput().call().await?;
-
-        if self.check_was_tee_input_already_processed(&x).await {
-            // skip
-            return Ok(());
-        }
-
-        // this gets submitted to synd-enclave
-
-        #[allow(clippy::unwrap_used)]
-        let l1_start_block =
-            self.ethereum_provider.get_block_by_hash(x.l1StartBlockHash).await?.unwrap();
-        #[allow(clippy::unwrap_used)]
-        let l1_end_block =
-            self.ethereum_provider.get_block_by_hash(x.l1EndBlockHash).await?.unwrap();
-        // let (l1_input, l1_preimages) = self.build_l1_input_with_preimages(x).await?;
-        let l1_input = self.build_l1_input(x).await?;
-        let l1_preimages: Vec<Vec<u8>> = self
-            .arb_debug_preimage_data(
-                PreimageSource::Sequencing,
-                l1_start_block.header.number,
-                l1_end_block.header.number,
-            )
-            .await?;
-
-        // assume we get SeqVerifyOutput from synd-enclave
-        let seq_verify_output =
-            SeqVerifyOutput { block_hash: Default::default(), signature: Default::default() };
-
-        // query 4 nodes
         loop {
             interval.tick().await;
-            self.fetch_block_and_post().await?;
+
+            let tee_trusted_input = self.tee_module.teeTrustedInput().call().await?;
+            if self.check_was_tee_input_already_processed(&tee_trusted_input).await {
+                // skip
+                continue;
+            }
+
+            let (l1_chain_input, l1_start_block, l1_end_block) = match self
+                .build_l1_input(&tee_trusted_input)
+                .await
+            {
+                Ok(result) => result,
+                Err(e) => {
+                    error!(%e, "Failed to build L1 input for teeTrustedInput: {:?}", tee_trusted_input);
+                    continue;
+                }
+            };
+
+            let sequencing_pre_image_data: Vec<Vec<u8>> = match self
+                .arb_debug_preimage_data(
+                    PreimageSource::Sequencing,
+                    l1_start_block.header.number,
+                    l1_end_block.header.number,
+                )
+                .await
+            {
+                Ok(preimages) => preimages,
+                Err(e) => {
+                    error!(%e, "Failed to get L1 preimages");
+                    continue;
+                }
+            };
+
+            let verify_seq_chain_input = VerifySequencingChainInput {
+                seq_config_hash: tee_trusted_input.seqConfigHash,
+                verify_sequencing_chain_config: VerifySequencingChainConfig {
+                    arbitrum_bridge_address: self.arbitrum_bridge_address,
+                },
+                l1_chain_input,
+                sequencing_start_block_hash: tee_trusted_input.seqStartBlockHash,
+                sequencing_pre_image_data,
+            };
+
+            let verify_seq_chain_input_string = match serde_json::to_string(&verify_seq_chain_input)
+            {
+                Ok(string) => string,
+                Err(e) => {
+                    error!(%e, "Failed to serialize sequencing chain input: {:?}", verify_seq_chain_input);
+                    continue;
+                }
+            };
+
+            // TODO test this call. Skip for now
+            let _seq_verify_output_res =
+                match self.enclave_verify_sequencing_chain(verify_seq_chain_input_string).await {
+                    Ok(output) => output,
+                    Err(e) => {
+                        error!(%e, "failed to verify sequencing chain input");
+                        continue
+                    }
+                };
+
+            // assume we successfully get SeqVerifyOutput from synd-enclave
+            let seq_verify_output =
+                SeqVerifyOutput { block_hash: Default::default(), signature: Default::default() };
+
+            // TODO appchain verification
         }
+    }
+
+    async fn get_l1_start_end_block(
+        &self,
+        tee_trusted_input: &teeTrustedInputReturn,
+    ) -> Option<(Block, Block)> {
+        let l1_start_block = match self
+            .ethereum_provider
+            .get_block_by_hash(tee_trusted_input.l1StartBlockHash)
+            .await
+        {
+            Ok(Some(block)) => block,
+            Ok(None) => {
+                error!(%tee_trusted_input.l1StartBlockHash, "L1 start block not found with hash");
+                return None;
+            }
+            Err(e) => {
+                error!(%e, %tee_trusted_input.l1StartBlockHash, "Error fetching L1 start block");
+                return None;
+            }
+        };
+
+        let l1_end_block = match self
+            .ethereum_provider
+            .get_block_by_hash(tee_trusted_input.l1EndBlockHash)
+            .await
+        {
+            Ok(Some(block)) => block,
+            Ok(None) => {
+                error!(% tee_trusted_input.l1EndBlockHash, "L1 end block not found with hash");
+                return None;
+            }
+            Err(e) => {
+                error!(%e, "Error fetching L1 end block");
+                return None;
+            }
+        };
+        Some((l1_start_block, l1_end_block))
     }
 
     async fn check_was_tee_input_already_processed(&self, x: &teeTrustedInputReturn) -> bool {
@@ -270,32 +319,6 @@ impl Proposer {
         *self.last_tee_trusted_input_return_hash.write().await = hashed_tee_trusted_input;
         false
     }
-
-    // /// Enhanced build_l1_input that also gets preimages
-    // async fn build_l1_input_with_preimages(
-    //     &self,
-    //     x: teeTrustedInputReturn,
-    // ) -> Result<(L1ChainInput, Vec<Vec<u8>>)> {
-    //     // Build the L1ChainInput as before
-    //     // #[allow(clippy::unwrap_used)]
-    //     // let l1_start_block =
-    //     //     self.ethereum_provider.get_block_by_hash(x.l1StartBlockHash).await?.unwrap();
-    //     // #[allow(clippy::unwrap_used)]
-    //     // let l1_end_block =
-    //     //     self.ethereum_provider.get_block_by_hash(x.l1EndBlockHash).await?.unwrap();
-    //     let l1_input = self.build_l1_input(x, l1_start_block.clone(),
-    // l1_end_block.clone()).await?;
-    //
-    //     let l1_preimages: Vec<Vec<u8>> = self
-    //         .arb_debug_preimage_data(
-    //             PreimageSource::Sequencing,
-    //             l1_start_block.header.number,
-    //             l1_end_block.header.number,
-    //         )
-    //         .await?;
-    //
-    //     Ok((l1_input, l1_preimages))
-    // }
 
     async fn arb_debug_preimage_data(
         &self,
@@ -321,36 +344,39 @@ impl Proposer {
             .await
     }
 
-    async fn build_l1_input(&self, x: teeTrustedInputReturn) -> Result<L1ChainInput> {
-        // setDelayedMessageAcc is the endpoint,
-        #[allow(clippy::unwrap_used)]
-        let l1_start_block =
-            self.ethereum_provider.get_block_by_hash(x.l1StartBlockHash).await?.unwrap();
-        #[allow(clippy::unwrap_used)]
-        let l1_end_block =
-            self.ethereum_provider.get_block_by_hash(x.l1EndBlockHash).await?.unwrap();
+    async fn enclave_verify_sequencing_chain(
+        &self,
+        verify_seq_chain_input: String,
+    ) -> TransportResult<SeqVerifyOutput> {
+        self.enclave_provider
+            .raw_request("enclave_verifySequencingChain".into(), verify_seq_chain_input)
+            .await
+    }
 
-        let sequencer_inbox =
-            ISequencerInboxInstance::new(self.sequencer_inbox_address, &self.ethereum_provider);
+    async fn build_l1_input(
+        &self,
+        tee_trusted_input: &teeTrustedInputReturn,
+    ) -> Result<(L1ChainInput, Block, Block)> {
+        let (l1_start_block, l1_end_block) = self
+            .get_l1_start_end_block(&tee_trusted_input)
+            .await
+            .ok_or_else(|| eyre!("failed to get l1 start and end blocks"))?;
 
-        #[allow(clippy::unwrap_used)]
-        let seq_start_block =
-            self.sequencing_provider.get_block_by_hash(x.seqStartBlockHash).await?.unwrap();
+        let seq_start_block = self
+            .sequencing_provider
+            .get_block_by_hash(tee_trusted_input.seqStartBlockHash)
+            .await?
+            .ok_or_else(|| eyre!("failed to get sequencing start block"))?;
 
-        println!("X_X_X_X");
-        println!(
-            "X_X_X_X l1_start_block {} l1_end_block {} seq_start_block {}",
+        debug!(
+            "build_l1_input - l1_start_block: {} l1_end_block: {} seq_start_block: {}",
             l1_start_block.header.number, l1_end_block.header.number, seq_start_block.header.number
         );
 
-        // get batches first
-        // TODO batches size 0
         let batches =
             self.get_batches(l1_start_block.header.number, l1_end_block.header.number).await?;
-        println!("X_X_X_X first batch");
-        if !batches.is_empty() {
-            println!("{:?}", batches[0]);
-        }
+        debug!("L1 batches - count: {}", batches.len());
+        debug!("L1 batches within range: {:?}", batches);
 
         let delayed_message_count: u64 = seq_start_block.header.nonce.into();
         let delayed_messages = self
@@ -361,48 +387,34 @@ impl Proposer {
             )
             .await?;
 
-        // let start_batch_accumulator_merkle_proof: EIP1186AccountProofResponse =
-        // Default::default();
         let start_batch_accumulator_merkle_proof = self
             .get_accumulator_proof(self.arbitrum_bridge_address, l1_start_block.header.number)
             .await?;
 
-        // let end_batch_accumulator_merkle_proof: EIP1186AccountProofResponse = Default::default();
         let end_batch_accumulator_merkle_proof = self
             .get_accumulator_proof(self.arbitrum_bridge_address, l1_end_block.header.number)
             .await?;
 
-        println!("X_X_X_X start + end accumulator_proof - batches");
-        info!(
-            "start batch storage [0]: {}",
-            start_batch_accumulator_merkle_proof.storage_proof[0].value
-        );
-        info!(
-            "end batch storage [0]: {}",
-            end_batch_accumulator_merkle_proof.storage_proof[0].value
-        );
-
-        println!("X_X_X_X start + end accumulator_proof - accumulators");
-        info!(
-            "start batch storage [1]: {}",
-            start_batch_accumulator_merkle_proof.storage_proof[1].value
-        );
-        info!(
-            "end batch storage [1]: {}",
+        debug!(
+            "Accumulator proof data - start batch count: {}, end batch count: {}, start accumulator: {}, end accumulator: {}",
+            start_batch_accumulator_merkle_proof.storage_proof[0].value,
+            end_batch_accumulator_merkle_proof.storage_proof[0].value,
+            start_batch_accumulator_merkle_proof.storage_proof[1].value,
             end_batch_accumulator_merkle_proof.storage_proof[1].value
         );
-
+        let start_block_header = l1_start_block.header.clone();
+        let end_block_header = l1_end_block.header.clone();
         let input = L1ChainInput {
             start_batch_accumulator_merkle_proof,
             end_batch_accumulator_merkle_proof,
-            start_block_header: l1_start_block.header,
-            end_block_header: l1_end_block.header,
+            start_block_header,
+            end_block_header,
             delayed_messages,
             batches,
-            start_block_hash: x.l1StartBlockHash,
-            end_block_hash: x.l1EndBlockHash,
+            start_block_hash: tee_trusted_input.l1StartBlockHash,
+            end_block_hash: tee_trusted_input.l1EndBlockHash,
         };
-        Ok(input)
+        Ok((input, l1_start_block, l1_end_block))
     }
 
     // only called once, for L1
@@ -514,7 +526,6 @@ impl Proposer {
         info!(%first_seq_number, %last_seq_number);
 
         let batches: Vec<ArbitrumBatch> = batch_map.into_values().collect();
-        info!(batch_length=%batches.len(), "X_X_X_X batch_length");
         Ok(batches)
     }
 
@@ -627,14 +638,11 @@ impl Proposer {
     ) -> Result<alloy::rpc::types::EIP1186AccountProofResponse> {
         println!("accumulator proof holesky - block number: {}", block_number);
 
-        // Get the batch count at this block to know which accumulator slot to query
-        // let bridge = IBridgeInstance::new(bridge_address, &self.ethereum_provider);
-
         // Get the sequencer inbox accumulator count (batch count)
         // Note: This needs to be done at the specific block
         let batch_count = self.get_batch_count_at_block(bridge_address, block_number).await?;
 
-        info!(%batch_count, %block_number, "X_X_X_X batch count at block number");
+        debug!("Accumulator proof - block_number: {}, batch_count: {}", block_number, batch_count);
 
         // Calculate the storage slot for the accumulator
         // Slot 7 (0x07) stores the batch count
@@ -646,7 +654,7 @@ impl Proposer {
 
         // Calculate the actual slot for the accumulator at this index
         let accumulator_slot =
-            self.calculate_slot(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, batch_count);
+            calculate_slot(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, batch_count);
 
         // Get proof for both the count slot and the accumulator slot
         let proof = self
@@ -662,16 +670,6 @@ impl Proposer {
             .await?;
 
         Ok(proof)
-    }
-
-    // TODO use shared
-    // This matches the calculate_slot function in types.rs
-    #[allow(clippy::unwrap_used)]
-    fn calculate_slot(&self, start_slot: B256, index: U256) -> B256 {
-        B256::from(
-            U256::from_be_bytes::<32>(start_slot.as_slice().try_into().unwrap()) + index -
-                U256::from(1),
-        )
     }
 
     async fn get_batch_count_at_block(
@@ -741,20 +739,66 @@ impl Proposer {
 
 #[cfg(test)]
 mod tests {
-    use crate::proposer::Proposer;
+    use crate::{metrics::ProposerMetrics, proposer::Proposer};
     use alloy::{
         eips::BlockNumberOrTag,
-        primitives::{address, Address, BlockHash},
+        network::EthereumWallet,
+        primitives::{address, Address, BlockHash, B256},
         providers::{Provider, ProviderBuilder, RootProvider},
         rpc::types::{Block, Filter},
     };
-    use contract_bindings::synd::teemodule::TeeModule::teeTrustedInputReturn;
+    use contract_bindings::synd::{
+        assertionposter::AssertionPoster,
+        teemodule::TeeModule::{teeTrustedInputReturn, TeeModuleInstance},
+    };
     use eyre::{eyre, Error};
-    use std::{fs, str::FromStr, sync::Arc};
-    use synd_seqchain_verifier::{config::SeqchainVerifierConfig, verifier::Verifier};
+    use std::{str::FromStr, sync::Arc, time::Duration};
+    use synd_seqchain_verifier::{
+        config::SeqchainVerifierConfig, types::L1ChainInput, verifier::Verifier,
+    };
+    use tokio::sync::RwLock;
+    use url::Url;
 
+    impl Default for Proposer {
+        fn default() -> Self {
+            let url_str = "localhost:8080";
+            #[allow(clippy::unwrap_used)]
+            let dummy_url = Url::from_str(url_str).unwrap();
+            let dummy_root_provider = ProviderBuilder::default().on_http(dummy_url.clone());
+            let dummy_filled_provider =
+                ProviderBuilder::new().wallet(EthereumWallet::default()).on_http(dummy_url);
+
+            let assertion_poster =
+                AssertionPoster::new(Address::ZERO, dummy_filled_provider.clone());
+
+            let tee_module = TeeModuleInstance::new(Address::ZERO, dummy_filled_provider.clone());
+
+            Proposer {
+                appchain_provider: dummy_root_provider.clone(),
+                sequencing_provider: dummy_root_provider.clone(),
+                _settlement_provider: dummy_filled_provider.clone(),
+                ethereum_provider: dummy_root_provider.clone(),
+                enclave_provider: dummy_root_provider.clone(),
+                polling_interval: Duration::from_secs(1),
+                assertion_poster,
+                metrics: ProposerMetrics::default(),
+                tee_module,
+                last_tee_trusted_input_return_hash: Arc::new(RwLock::new(B256::default())),
+                arbitrum_bridge_address: Address::ZERO,
+                sequencer_inbox_address: Address::ZERO,
+                inbox_address: Address::ZERO,
+            }
+        }
+    }
+
+    /// This test produces a JSON file of the input that is passed into the seq-chain-verifier based
+    /// on the most recent content in the `sequencer_inbox_address`. It currently relies on a
+    /// Chainstack Eth Holesky RPC node that doesn't support archived block, so the call to
+    /// `eth_getProof` will only succeed within ~20min of the latest transaction to the
+    /// `sequencer_inbox_address` contract address. Therefore, this test will intermittently fail
+    #[ignore]
     #[tokio::test]
-    async fn test1() {
+    async fn test_proposer_build_l1_input() {
         shared::logger::set_global_default_subscriber().unwrap();
 
         let arbitrum_bridge_address = address!("0x27b5BA9331f20afd816C247d53BDf1EC577b04CD");
@@ -784,16 +828,11 @@ mod tests {
         // SequencerInbox contract address on Holesky L1 - https://eth-holesky.blockscout.com/address/0x47c3DEC256DB25c527d92AAceE1269C17805ce9d?tab=txs
         let l1_sequencer_inbox =
             Address::from_str("0x47c3DEC256DB25c527d92AAceE1269C17805ce9d").unwrap();
-        // FAILING below - includes batch
+        // Input - includes 1 batch
         let (l1_latest_block, l1_latest_tx_hash) =
             get_latest_contract_txn_block(ethereum_provider_arc.clone(), l1_sequencer_inbox)
                 .await
                 .unwrap();
-        // WORKING below, has no batches
-        // let l1_latest_block_number = ethereum_provider.get_block_number().await.unwrap();
-        // let l1_latest_block =
-        // ethereum_provider.get_block_by_number(BlockNumberOrTag::Number(l1_latest_block_number)).
-        // await.unwrap().unwrap(); let l1_latest_tx_hash = l1_latest_block.header.hash;
 
         let l1_latest_block_hash = l1_latest_block.header.hash;
         let l1_latest_block_ts = l1_latest_block.header.timestamp;
@@ -812,7 +851,7 @@ mod tests {
             .ok_or("block {} doesn't exist")
             .unwrap();
         let l1_latest_block_minus_n_hash = l1_latest_block_minus_n.header.hash;
-        let l1_latest_block_minus_n_ts = l1_latest_block_minus_n.header.timestamp;
+        let _l1_latest_block_minus_n_ts = l1_latest_block_minus_n.header.timestamp;
         println!("Latest minus n ({}) L1 sequencer_inbox block:", n);
         println!("  Block Number: {}", l1_latest_block_minus_n.header.number);
         println!("  Block Hash: {:?}", l1_latest_block_minus_n.header.hash);
@@ -823,7 +862,7 @@ mod tests {
         let seq_latest_block_number = sequencing_provider_arc.get_block_number().await.unwrap();
         let mut curr_block_number = seq_latest_block_number;
 
-        let mut desired_seq_start_block_hash: Option<BlockHash> = None;
+        let mut _desired_seq_start_block_hash: Option<BlockHash> = None;
         loop {
             let seq_latest_block = sequencing_provider_arc
                 .get_block_by_number(BlockNumberOrTag::Number(curr_block_number))
@@ -839,7 +878,7 @@ mod tests {
                 println!("  Block Number: {}", seq_latest_block.header.number);
                 println!("  Block Hash: {:?}", seq_latest_block.header.hash);
                 println!("  Block Timestamp: {}", seq_latest_block.header.timestamp);
-                desired_seq_start_block_hash = Some(seq_latest_block.header.hash);
+                _desired_seq_start_block_hash = Some(seq_latest_block.header.hash);
                 break;
             } else {
                 curr_block_number -= 1;
@@ -850,25 +889,37 @@ mod tests {
             appchainStartBlockHash: Default::default(), // ignore
             seqConfigHash: Default::default(),          // ignore
 
-            seqStartBlockHash: desired_seq_start_block_hash.unwrap(),
+            seqStartBlockHash: _desired_seq_start_block_hash.unwrap(),
             setDelayedMessageAcc: Default::default(),
             l1StartBlockHash: l1_latest_block_minus_n_hash,
             l1EndBlockHash: l1_latest_block_hash,
         };
-        println!("X_X_X_X mock input");
+        println!("Mock_input");
         println!("{:?}", mock_input);
 
-        // TODO - get proof window issue fixed on Holesky
-        let l1_chain_input = proposer.build_l1_input(mock_input).await.unwrap();
+        let (l1_chain_input, _, _) = proposer.build_l1_input(&mock_input).await.unwrap();
 
         let seq_chain_verifier = Verifier::new(&SeqchainVerifierConfig { arbitrum_bridge_address });
         let l1_chain_input_json = serde_json::to_string_pretty(&l1_chain_input);
-        fs::write("l1_chain_input_eigenda.json", l1_chain_input_json.unwrap()).unwrap();
+        std::fs::write("./tests/l1_chain_input_eigenda.json", l1_chain_input_json.unwrap())
+            .unwrap();
         let res = seq_chain_verifier.verify_and_create_output(&l1_chain_input);
         assert!(res.is_ok());
     }
 
-    // Given a contract address, get the latest txn call and the block it is part of
+    /// Same as `test_proposer_build_l1_input_from_file()` above, except this test parses the
+    /// JSON artifact produced by that test and verifies it. To update the artifact, run the test.
+    #[tokio::test]
+    async fn test_proposer_build_l1_input_from_file() {
+        let arbitrum_bridge_address = address!("0x27b5BA9331f20afd816C247d53BDf1EC577b04CD");
+        let seq_chain_verifier = Verifier::new(&SeqchainVerifierConfig { arbitrum_bridge_address });
+        let json_content = std::fs::read_to_string("./tests/l1_chain_input_eigenda.json").unwrap();
+        let input: L1ChainInput = serde_json::from_str(&json_content).unwrap();
+        let res = seq_chain_verifier.verify_and_create_output(&input);
+        assert!(res.is_ok());
+    }
+
+    /// Given a contract address, get the latest txn call and the block that it belongs to
     async fn get_latest_contract_txn_block(
         ethereum_provider: Arc<RootProvider>,
         sequencer_inbox: Address,

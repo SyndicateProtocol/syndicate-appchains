@@ -25,7 +25,7 @@ const BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT: B256 =
 
 /// Calculate the slot for the batch accumulator
 #[allow(clippy::unwrap_used)]
-fn calculate_slot(start_slot: B256, index: U256) -> B256 {
+pub fn calculate_slot(start_slot: B256, index: U256) -> B256 {
     B256::from(
         U256::from_be_bytes::<32>(start_slot.as_slice().try_into().unwrap()) + index -
             U256::from(1),

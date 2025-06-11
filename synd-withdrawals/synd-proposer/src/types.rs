@@ -1,8 +1,11 @@
 //! The `types` module handles types for the Proposer.
 
-use alloy::primitives::{Bytes, B256, U256};
+use alloy::{
+    primitives::{Address, Bytes, B256, U256},
+    rpc::types::{EIP1186AccountProofResponse, Header},
+};
 use serde::{Deserialize, Serialize};
-use synd_seqchain_verifier::types::{L1ChainInput, L1IncomingMessage};
+use synd_seqchain_verifier::types::{ArbitrumBatch, L1ChainInput, L1IncomingMessage};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
@@ -15,15 +18,139 @@ pub struct NitroBlock {
     pub send_root: B256,
 }
 
-//WIP types
-pub struct VerifyPayload1 {
-    pub l1_chain_input: L1ChainInput,
-    /// Trustless preimage data
-    pub seq_preimage_data: Vec<Vec<u8>>,
+// Appchain verifier inputs
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SettlementChainInput {
+    /// Trustless input
+    pub delayed_messages: Vec<L1IncomingMessage>,
+    pub start_delayed_messages_accumulator: B256,
+
+    /// Trusted input
+    pub end_delayed_messages_accumulator: B256,
 }
 
-// Enclave types below
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SequencingChainInput {
+    /// Trustless input
+    pub start_syndicate_accumulator_merkle_proof: EIP1186AccountProofResponse,
+    pub end_syndicate_accumulator_merkle_proof: EIP1186AccountProofResponse,
+    pub syndicate_transaction_events: Vec<SyndicateTransactionEvent>,
+    pub block_headers: Vec<Header>,
 
+    /// Trusted input
+    pub start_block_hash: B256,
+    pub end_block_hash: B256,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SyndicateTransactionEvent {
+    pub block_number: u64,
+    pub timestamp: u64,
+    pub sender: Address,
+    pub payload: Bytes,
+}
+
+// Verify sequencing chain input & output (First call to the TEE synd-enclave)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VerifySequencingChainConfig {
+    pub arbitrum_bridge_address: Address,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VerifySequencingChainInput {
+    pub seq_config_hash: B256,
+    pub verify_sequencing_chain_config: VerifySequencingChainConfig,
+    pub l1_chain_input: L1ChainInput,
+    pub sequencing_start_block_hash: B256,
+    pub sequencing_pre_image_data: Vec<Vec<u8>>,
+}
+
+impl VerifySequencingChainInput {
+    pub fn hash(&self) -> B256 {
+        use alloy::primitives::keccak256;
+        let mut data = Vec::new();
+        data.extend_from_slice(&self.seq_config_hash.0);
+        data.extend_from_slice(&self.l1_chain_input.start_block_hash.0);
+        data.extend_from_slice(&self.l1_chain_input.end_block_hash.0);
+        data.extend_from_slice(&self.sequencing_start_block_hash.0);
+        keccak256(&data)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VerifySequencingChainOutput {
+    pub sequencing_block_hash: B256,
+    pub signature: Bytes,
+}
+
+// Verify appchain input & output (Second call to the TEE synd-enclave)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VerifyAppchainConfig {
+    pub sequencing_contract_address: Address,
+    pub settlement_delay: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VerifyAppchainInput {
+    pub seq_config_hash: B256,
+    pub l1_start_block_hash: B256,
+    pub l1_end_block_hash: B256,
+    pub appchain_config_hash: B256,
+    pub verify_appchain_config: VerifyAppchainConfig,
+    pub settlement_chain_input: SettlementChainInput,
+    pub sequencing_chain_input: SequencingChainInput,
+    pub appchain_pre_image_data: Vec<Vec<u8>>,
+    pub verify_sequencing_chain_output: VerifySequencingChainOutput,
+    pub appchain_start_block_hash: B256,
+}
+
+impl VerifyAppchainInput {
+    pub fn hash(&self) -> B256 {
+        use alloy::primitives::keccak256;
+        let mut data = Vec::new();
+        data.extend_from_slice(&self.appchain_config_hash.0);
+        data.extend_from_slice(&self.appchain_start_block_hash.0);
+        data.extend_from_slice(&self.seq_config_hash.0);
+        data.extend_from_slice(&self.sequencing_chain_input.start_block_hash.0);
+        data.extend_from_slice(&self.sequencing_chain_input.end_block_hash.0);
+        data.extend_from_slice(&self.sequencing_chain_input.start_block_hash.0);
+        data.extend_from_slice(&self.settlement_chain_input.end_delayed_messages_accumulator.0);
+        data.extend_from_slice(&self.l1_start_block_hash.0);
+        data.extend_from_slice(&self.l1_end_block_hash.0);
+        keccak256(&data)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VerifyAppchainOutput {
+    pub sequencing_block_hash: B256,
+    pub appchain_block_hash: B256,
+    pub appchain_send_root: B256,
+    pub signature: Bytes,
+}
+
+// Block verifier inputs
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct BlockVerifierInput {
+    pub min_timestamp: u64,
+    pub max_timestamp: u64,
+    pub min_block_number: u64,
+    pub max_block_number: u64,
+    pub messages: Vec<L1IncomingMessage>,
+    pub batch: Bytes,
+}
+
+// Keep your existing types that weren't in the Go file
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SeqVerifyOutput {
@@ -38,61 +165,6 @@ pub struct AppVerifyOutput {
     pub send_root: B256,
     pub seq_block_hash: B256,
     pub signature: Bytes,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SeqTrustedInput {
-    pub seq_config_hash: B256,
-    pub l1_start_block_hash: B256,
-    pub l1_end_block_hash: B256,
-    pub seq_start_block_hash: B256,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SeqVerifyInput {
-    pub trusted_input: SeqTrustedInput,
-    /// Trustless preimage data
-    pub preimage_data: Vec<Vec<u8>>,
-    /// The output of the verifier - should be replaced with verifier inputs instead
-    pub batches: Vec<Batch>, // You'll need to define Batch based on wavmio.Batch
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AppTrustedInput {
-    pub seq_trusted_input: SeqTrustedInput,
-    pub app_config_hash: B256,
-    pub app_start_block_hash: B256,
-    pub set_delayed_message_acc: B256,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AppVerifyExtraInput {
-    /// Trustless old output
-    pub output: AppVerifyOutput,
-    /// Trusted new inputs which replace the old ones
-    pub l1_end_block_hash: B256,
-    pub set_delayed_message_acc: B256,
-    /// Trustless message hashes to derive the new accumulator from the old one
-    pub delayed_message_hashes: Vec<B256>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AppVerifyInput {
-    /// Appchain trusted input
-    pub trusted_input: AppTrustedInput,
-    /// Optional extra input data to concat results with a previous AppVerifyOutput
-    pub extra_input: Option<AppVerifyExtraInput>,
-    /// Seq trustless output for either TrustedInput or ExtraInput
-    pub seq_output: SeqVerifyOutput,
-    /// Trustless preimage data
-    pub preimage_data: Vec<Vec<u8>>,
-    /// The output of the verifier - should be replaced with verifier inputs instead
-    pub batches: Vec<Batch>,
 }
 
 // The Batch type based on wavmio.Batch
@@ -120,32 +192,4 @@ pub struct ValidationInput {
     pub block_hash: B256,
     pub preimage_data: Vec<Vec<u8>>,
     pub batches: Vec<Batch>,
-}
-
-// Helper methods
-impl SeqTrustedInput {
-    pub fn hash(&self) -> B256 {
-        use alloy::primitives::keccak256;
-        let mut data = Vec::new();
-        data.extend_from_slice(&self.seq_config_hash.0);
-        data.extend_from_slice(&self.l1_start_block_hash.0);
-        data.extend_from_slice(&self.l1_end_block_hash.0);
-        data.extend_from_slice(&self.seq_start_block_hash.0);
-        keccak256(&data)
-    }
-}
-
-impl AppTrustedInput {
-    pub fn hash(&self) -> B256 {
-        use alloy::primitives::keccak256;
-        let mut data = Vec::new();
-        data.extend_from_slice(&self.app_config_hash.0);
-        data.extend_from_slice(&self.app_start_block_hash.0);
-        data.extend_from_slice(&self.seq_trusted_input.seq_config_hash.0);
-        data.extend_from_slice(&self.seq_trusted_input.seq_start_block_hash.0);
-        data.extend_from_slice(&self.set_delayed_message_acc.0);
-        data.extend_from_slice(&self.seq_trusted_input.l1_start_block_hash.0);
-        data.extend_from_slice(&self.seq_trusted_input.l1_end_block_hash.0);
-        keccak256(&data)
-    }
 }
