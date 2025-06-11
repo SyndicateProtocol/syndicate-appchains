@@ -3,8 +3,8 @@
 
 use eyre::Result;
 use shared::{
-    logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
+    tracing::setup_global_logging,
 };
 use synd_proposer::{config::Config, metrics::ProposerMetrics, proposer};
 use tracing::info;
@@ -12,7 +12,7 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    set_global_default_subscriber()?;
+    setup_global_logging()?;
 
     let config = Config::initialize();
     info!("Config: {:?}", config);

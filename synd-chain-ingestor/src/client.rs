@@ -342,7 +342,10 @@ impl IngestorProvider {
             )
             .await
             {
-                Err(_) => error!("timed out connecting to websocket"),
+                Err(_) => {
+                    error!("timed out connecting to websocket");
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
                 Ok(Err(err)) => panic!("failed to connect to websocket: {}, url={}", err, url),
                 Ok(Ok(client)) => return Self(Arc::new(client)),
             }
@@ -385,7 +388,7 @@ mod tests {
 
     #[ctor::ctor]
     fn init() {
-        shared::logger::set_global_default_subscriber();
+        shared::tracing::setup_global_logging();
     }
 
     fn convert_error(e: MethodsError) -> ClientError {

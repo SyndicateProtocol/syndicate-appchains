@@ -5,8 +5,8 @@ import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
 import "@arbitrum/nitro-contracts/src/bridge/ISequencerInbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IDelayedMessageProvider.sol";
 
+/// @notice  This is a contract solely for testing purposes. Not to be used in production.
 contract Rollup {
-    // TODO: set these values properly
     uint64 public constant maxDataSize = 117964;
     uint64 public constant delayBlocks = 7200;
     uint64 public constant futureBlocks = 12;
@@ -77,7 +77,7 @@ contract Rollup {
         return (seqBlockNumber, seqBlockHash, setBlockNumber, setBlockHash);
     }
 
-    //#olympix-ignore-signature-replay-attacks
+    //#olympix-ignore
     function postBatch(
         bytes memory data,
         uint64 _seqBlockNumber,
@@ -122,9 +122,8 @@ contract Rollup {
         deliverMessage(L1MessageType_ethDeposit, src, abi.encodePacked(dest, value));
     }
 
-    // remember to alias the sender with AddressAliasHelper.applyL1ToL2Alias() before calling this function
-    // Inbox.sol
-    //#olympix-ignore-signature-replay-attacks
+    // remember to alias the sender with AddressAliasHelper.applyL1ToL2Alias() before calling this function. Inbox.sol
+    //#olympix-ignore
     function deliverMessage(uint8 kind, address sender, bytes memory messageData) public {
         uint256 count = delayedInboxAccs.length;
         bytes32 messageDataHash = keccak256(messageData);
@@ -170,7 +169,7 @@ contract Rollup {
             timeBounds.maxTimestamp,
             timeBounds.minBlockNumber,
             timeBounds.maxBlockNumber,
-            uint64(afterDelayedMessagesRead) //#olympix-ignore-unsafe-downcast
+            uint64(afterDelayedMessagesRead) //#olympix-ignore
         );
         // This must always be true from the packed encoding
         assert(header.length == HEADER_LENGTH);

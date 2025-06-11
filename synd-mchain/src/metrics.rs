@@ -3,28 +3,42 @@
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+/// Metrics for a block
 #[derive(Debug, Default, Clone)]
 pub struct BlockMetrics {
+    /// The number of the block
     pub number: Gauge,
+    /// The timestamp of the block
     pub timestamp: Gauge,
+    /// The delay of the block
     pub delay: Gauge,
 }
 
+/// Metrics for a reorg
 #[derive(Debug, Default, Clone)]
 pub struct ReorgMetrics {
+    /// The number of blocks in the reorg
     pub blocks: Gauge,
+    /// The duration of the reorg
     pub duration: Gauge,
 }
 
-/// Structure holding metrics related to the `Mchain`.
+/// Metrics for the Mchain as a whole
 #[derive(Debug, Default, Clone)]
 pub struct MchainMetrics {
+    /// The latest sequencing block
     pub sequencing_block: BlockMetrics,
+    /// The latest synd-mchain block
     pub last_block: BlockMetrics,
+    /// The finalized synd-mchain block
     pub finalized_block: BlockMetrics,
+    /// The latest reorg
     pub last_reorg: ReorgMetrics,
+    /// The total reorg
     pub total_reorg: ReorgMetrics,
+    /// The timestamp of the latest reorg
     pub last_reorg_timestamp: Gauge,
+    /// The number of reorgs
     pub total_reorg_count: Gauge,
 }
 
@@ -115,14 +129,17 @@ impl MchainMetrics {
         metrics
     }
 
+    /// Records the latest sequencing block
     pub fn record_sequencing_block(&self, number: u64, timestamp: u64) {
         Self::record_block(&self.sequencing_block, number, timestamp);
     }
 
+    /// Records the latest synd-mchain block
     pub fn record_last_block(&self, number: u64, timestamp: u64) {
         Self::record_block(&self.last_block, number, timestamp);
     }
 
+    /// Records the finalized synd-mchain block
     pub fn record_finalized_block(&self, number: u64, timestamp: u64) {
         Self::record_block(&self.finalized_block, number, timestamp);
     }
@@ -135,6 +152,7 @@ impl MchainMetrics {
         now
     }
 
+    /// Records a reorg
     pub fn record_reorg(&self, start_block: u64, end_block: u64, start_timestamp: u64) {
         let now = Self::record_block(&self.last_block, start_block, start_timestamp);
         let depth = end_block as i64 - start_block as i64;

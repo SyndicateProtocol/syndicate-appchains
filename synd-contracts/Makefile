@@ -45,4 +45,4 @@ docs-pre-audit-gen :; forge doc --build --out docs-pre-audit
 
 docs-pre-audit-serve :; forge doc --serve --out docs-pre-audit
 
-test-coverage :; forge coverage --ir-minimum --no-match-coverage "(script|test)"
+test-coverage :; forge coverage --ir-minimum --no-match-coverage "(script|test|src/Rollup.sol)"

@@ -24,12 +24,8 @@ workspace = true
 env-tests = []
 
 [dev-dependencies]
-alloy = { workspace = true, features = [
-  "node-bindings",
-  "rpc-types-anvil",
-  "sol-types",
-] }
-ctor = { workspace = true }
-jsonrpsee = { workspace = true, features = ["server"] }
-reqwest = { workspace = true }
+alloy      = { workspace = true, features = ["node-bindings", "rpc-types-anvil", "sol-types"] }
+ctor       = { workspace = true }
+jsonrpsee  = { workspace = true, features = ["server"] }
+reqwest    = { workspace = true }
 test-utils = { workspace = true }
