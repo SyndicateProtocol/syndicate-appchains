@@ -3,11 +3,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {AssertionPoster, Assertion, IRollup, Ownable} from "src/withdrawal/AssertionPoster.sol";
-import {
-    ExecutionState,
-    MachineStatus,
-    GlobalState
-} from "@arbitrum/nitro-contracts/src/rollup/IRollupCore.sol";
+import {MachineStatus, GlobalState} from "@arbitrum/nitro-contracts/src/rollup/IRollupCore.sol";
 import {IGasRefunder} from "@arbitrum/nitro-contracts/src/libraries/IGasRefunder.sol";
 
 // Grabbing these from the official v3 Arb contracts because they're missing in these v2 Eigen versions
