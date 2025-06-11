@@ -103,7 +103,7 @@ impl L1ChainInput {
 
         let acc = get_delayed_messages_accumulator(
             &self.delayed_messages,
-            self.start_batch_accumulator(),
+            self.batches.first().unwrap().delayed_acc,
         );
 
         let last_batch = self.batches.last().unwrap();
