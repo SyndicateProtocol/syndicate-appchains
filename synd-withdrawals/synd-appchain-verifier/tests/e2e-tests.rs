@@ -21,9 +21,7 @@ async fn test_run_appchain_verifier() {
         .arg("0xee916e135c68392315f7b10e2b304e5e519950e64c111e816e0cdef42b8e8763")
         .output()
         .expect("Failed to run verifier");
-
-    println!("OUTPUT: {:?}", output);
-
+    
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
