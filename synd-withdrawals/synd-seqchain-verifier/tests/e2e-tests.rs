@@ -1,6 +1,6 @@
 //! Test the verifier by running it with the input and config files
 use std::process::Command;
-use synd_seqchain_verifier::types::BlockVerifierInput;
+use withdrawals_shared::types::BlockVerifierInput;
 
 #[tokio::test]
 async fn test_run_seqchain_verifier() {

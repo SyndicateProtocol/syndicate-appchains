@@ -3,16 +3,14 @@
 
 use crate::{
     config::AppchainVerifierConfig,
-    errors::VerifierError,
-    types::{
-        get_input_batches_with_timestamps, BlockVerifierInput, L1IncomingMessage,
-        L1IncomingMessageHeader, SequencingChainInput, SettlementChainInput,
-    },
+    errors::AppchainVerifierError,
+    types::{get_input_batches_with_timestamps, SequencingChainInput, SettlementChainInput},
 };
 use alloy::primitives::{Address, U256};
 use eyre::Result;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::{ArbitrumAdapter, L1MessageType};
 use tracing::error;
+use withdrawals_shared::types::{BlockVerifierInput, L1IncomingMessage, L1IncomingMessageHeader};
 
 /// The `Verifier` struct
 #[derive(Default, Debug, Clone)]
@@ -39,7 +37,7 @@ impl Verifier {
         &self,
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
-    ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
+    ) -> Result<Vec<BlockVerifierInput>, AppchainVerifierError> {
         settlement_chain_input.validate().map_err(|e| {
             error!("Error validating settlement chain input: {:?}", e);
             e
@@ -82,7 +80,7 @@ impl Verifier {
         &self,
         sequencing_chain_input: &SequencingChainInput,
         settlement_chain_input: &SettlementChainInput,
-    ) -> Result<Vec<BlockVerifierInput>, VerifierError> {
+    ) -> Result<Vec<BlockVerifierInput>, AppchainVerifierError> {
         let batches_with_timestamp = get_input_batches_with_timestamps(sequencing_chain_input)?;
         let delayed_messages = settlement_chain_input
             .delayed_messages
@@ -98,7 +96,7 @@ impl Verifier {
             if delayed_messages[delayed_messages_index].header.timestamp + self.settlement_delay >
                 start_ts
             {
-                return Err(VerifierError::InvalidSettlementChainInputWithReason {
+                return Err(AppchainVerifierError::InvalidSettlementChainInputWithReason {
                     reason: "Delayed message timestamp is greater than the start timestamp"
                         .to_string(),
                 });

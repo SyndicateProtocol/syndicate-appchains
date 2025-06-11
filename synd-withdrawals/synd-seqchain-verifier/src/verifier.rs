@@ -1,14 +1,11 @@
 //! The `synd-seqchain-verifier` crate verifies batches of blocks from the L1 chain,
 //! producing `BlockVerifierInput` objects for further processing.
 
-use crate::{
-    config::SeqchainVerifierConfig,
-    errors::VerifierError,
-    types::{BlockVerifierInput, L1ChainInput},
-};
+use crate::{config::SeqchainVerifierConfig, types::L1ChainInput};
 use alloy::primitives::{Address, U256};
 use eyre::Result;
 use tracing::error;
+use withdrawals_shared::{error::VerifierError, types::BlockVerifierInput};
 
 /// The `Verifier` struct
 #[derive(Default, Debug, Clone)]

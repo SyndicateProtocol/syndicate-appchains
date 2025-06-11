@@ -10,7 +10,6 @@ version.workspace      = true
 
 [dependencies]
 alloy              = { workspace = true }
-alloy-trie         = { workspace = true }
 clap               = { workspace = true }
 eyre               = { workspace = true }
 serde              = { workspace = true, features = ["derive"] }
@@ -20,6 +19,7 @@ synd-block-builder = { workspace = true }
 thiserror          = { workspace = true }
 tokio              = { workspace = true }
 tracing            = { workspace = true }
+withdrawals-shared = { workspace = true }
 
 [lints]
 workspace = true

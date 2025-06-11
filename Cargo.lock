@@ -6910,7 +6910,6 @@ name = "synd-appchain-verifier"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-trie",
  "clap",
  "eyre",
  "serde",
@@ -6920,6 +6919,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tracing",
+ "withdrawals-shared",
 ]
 
 [[package]]
@@ -7064,15 +7064,14 @@ name = "synd-seqchain-verifier"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-trie",
  "clap",
  "eyre",
  "serde",
  "serde_json",
  "shared",
- "thiserror 2.0.12",
  "tokio",
  "tracing",
+ "withdrawals-shared",
 ]
 
 [[package]]
@@ -8586,6 +8585,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f42320e61fe2cfd34354ecb597f86f413484a798ba44a8ca1165c58d42da6c1"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "withdrawals-shared"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-trie",
+ "serde",
+ "serde_json",
+ "shared",
+ "thiserror 2.0.12",
+ "tokio",
 ]
 
 [[package]]
