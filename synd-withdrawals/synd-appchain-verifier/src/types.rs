@@ -15,7 +15,7 @@ use synd_block_builder::appchains::{
     },
     shared::SequencingTransactionParser,
 };
-use withdrawals_shared::types::L1IncomingMessage;
+use withdrawals_shared::types::{get_delayed_messages_accumulator, L1IncomingMessage};
 
 const SYNDICATE_ACCUMULATOR_STORAGE_SLOT: B256 =
     fixed_bytes!("0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90"); // Keccak256("syndicate.accumulator")
@@ -38,10 +38,10 @@ pub struct SettlementChainInput {
 impl SettlementChainInput {
     /// Validate the settlement chain input
     pub fn validate(&self) -> Result<(), VerifierError> {
-        let mut acc = self.start_delayed_messages_accumulator;
-        for delayed_message in &self.delayed_messages {
-            acc = delayed_message.accumulate(acc);
-        }
+        let acc = get_delayed_messages_accumulator(
+            &self.delayed_messages,
+            self.start_delayed_messages_accumulator,
+        );
         if acc != self.end_delayed_messages_accumulator {
             return Err(VerifierError::InvalidSettlementChainInput {
                 reason: "Invalid end delayed messages accumulator".to_string(),

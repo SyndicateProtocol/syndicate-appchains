@@ -8,7 +8,7 @@ use alloy::{
 };
 use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
-use withdrawals_shared::types::L1IncomingMessage;
+use withdrawals_shared::types::{get_delayed_messages_accumulator, L1IncomingMessage};
 
 // Storage slot of the batch accumulator
 // <https://github.com/SyndicateProtocol/nitro-contracts/blob/9a100a86242176b633a1d907e5efd41296922144/src/bridge/AbsBridge.sol#L51>
@@ -93,17 +93,16 @@ impl L1ChainInput {
         Ok(())
     }
 
-    // TODO [SEQ-1002]: Move to a shared crate
     #[allow(clippy::unwrap_used)]
     fn verify_delayed_message_accumulator(&self) -> Result<(), VerifierError> {
         if self.delayed_messages.is_empty() {
             return Ok(());
         }
 
-        let mut acc = self.batches.first().unwrap().delayed_acc;
-        for message in &self.delayed_messages {
-            acc = message.accumulate(acc);
-        }
+        let acc = get_delayed_messages_accumulator(
+            &self.delayed_messages,
+            self.start_batch_accumulator(),
+        );
 
         let last_batch = self.batches.last().unwrap();
         if acc != last_batch.delayed_acc {
