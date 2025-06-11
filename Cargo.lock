@@ -6910,7 +6910,6 @@ name = "synd-appchain-verifier"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-trie",
  "clap",
  "eyre",
  "serde",
@@ -7065,13 +7064,11 @@ name = "synd-seqchain-verifier"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-trie",
  "clap",
  "eyre",
  "serde",
  "serde_json",
  "shared",
- "thiserror 2.0.12",
  "tokio",
  "tracing",
  "withdrawals-shared",
@@ -8596,14 +8593,11 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "alloy-trie",
- "clap",
- "eyre",
  "serde",
  "serde_json",
  "shared",
  "thiserror 2.0.12",
  "tokio",
- "tracing",
 ]
 
 [[package]]

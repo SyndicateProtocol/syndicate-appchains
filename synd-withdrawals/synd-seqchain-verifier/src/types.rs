@@ -1,14 +1,16 @@
 //! Types for the `synd-seqchain-verifier`
 
-use crate::errors::VerifierError;
 use alloy::{
     primitives::{fixed_bytes, keccak256, Address, Bytes, B256, U256},
     rpc::types::{EIP1186AccountProofResponse, Header},
     sol_types::SolValue as _,
 };
-use alloy_trie::{proof::verify_proof, Nibbles, TrieAccount};
 use serde::{Deserialize, Serialize};
-use withdrawals_shared::types::{get_delayed_messages_accumulator, L1IncomingMessage};
+use withdrawals_shared::{
+    error::VerifierError,
+    merkle_proof::verify_merkle_proof,
+    types::{get_delayed_messages_accumulator, L1IncomingMessage},
+};
 
 // Storage slot of the batch accumulator
 // <https://github.com/SyndicateProtocol/nitro-contracts/blob/9a100a86242176b633a1d907e5efd41296922144/src/bridge/AbsBridge.sol#L51>
@@ -84,7 +86,7 @@ impl L1ChainInput {
             acc = batch.accumulate(acc);
         }
         if acc != self.end_batch_accumulator() {
-            return Err(VerifierError::InvalidL1ChainInput {
+            return Err(VerifierError::InvalidInput {
                 reason: "Invalid end accumulator".to_string(),
                 expected: self.end_batch_accumulator().to_string(),
                 actual: acc.to_string(),
@@ -106,7 +108,7 @@ impl L1ChainInput {
 
         let last_batch = self.batches.last().unwrap();
         if acc != last_batch.delayed_acc {
-            return Err(VerifierError::InvalidL1ChainInput {
+            return Err(VerifierError::InvalidInput {
                 reason: "Invalid delayed accumulator".to_string(),
                 expected: last_batch.delayed_acc.to_string(),
                 actual: acc.to_string(),
@@ -116,86 +118,12 @@ impl L1ChainInput {
         let last_delayed_message = self.delayed_messages.last().unwrap();
         let delayed_message_count: U256 = last_delayed_message.header.request_id.into();
         if delayed_message_count != last_batch.after_delayed_messages_read {
-            return Err(VerifierError::InvalidL1ChainInput {
+            return Err(VerifierError::InvalidInput {
                 reason: "Invalid delayed message count".to_string(),
                 expected: delayed_message_count.to_string(),
                 actual: last_batch.after_delayed_messages_read.to_string(),
             });
         }
-        Ok(())
-    }
-
-    fn verify_account_proof_response(
-        proof: &EIP1186AccountProofResponse,
-        state_root: B256,
-    ) -> Result<(), VerifierError> {
-        let key: Nibbles = Nibbles::unpack(keccak256(proof.address));
-        let expected_value = alloy::rlp::encode(TrieAccount {
-            nonce: proof.nonce,
-            balance: proof.balance,
-            storage_root: proof.storage_hash,
-            code_hash: proof.code_hash,
-        });
-        verify_proof(state_root, key, Some(expected_value), &proof.account_proof)
-            .map_err(|e| VerifierError::ErrorVerifyingProof(e.to_string()))?;
-        for p in &proof.storage_proof {
-            let k = Nibbles::unpack(keccak256(p.key.as_b256()));
-            let expected_value = Some(alloy::rlp::encode_fixed_size(&p.value).to_vec());
-            verify_proof(proof.storage_hash, k, expected_value, &p.proof)
-                .map_err(|e| VerifierError::ErrorVerifyingProof(e.to_string()))?;
-        }
-        Ok(())
-    }
-
-    fn verify_merkle_proof(
-        proof: &EIP1186AccountProofResponse,
-        header: &Header,
-        block_hash: B256,
-        contract_address: Address,
-        slot: Vec<B256>,
-    ) -> Result<(), VerifierError> {
-        // Verify header
-        let actual_block_hash = header.hash_slow();
-        if actual_block_hash != block_hash {
-            return Err(VerifierError::InvalidL1ChainInput {
-                reason: "Invalid block hash".to_string(),
-                expected: block_hash.to_string(),
-                actual: actual_block_hash.to_string(),
-            });
-        }
-        // Verify end merkle proof
-        Self::verify_account_proof_response(proof, header.state_root)?;
-
-        // Verify there are the same number of storage proofs as slots
-        if proof.storage_proof.len() != slot.len() {
-            return Err(VerifierError::InvalidL1ChainInput {
-                reason: "Invalid number of storage proofs".to_string(),
-                expected: slot.len().to_string(),
-                actual: proof.storage_proof.len().to_string(),
-            });
-        }
-        // Verify storage slot
-        for (i, slot) in slot.iter().enumerate() {
-            let storage_proof = &proof.storage_proof[i];
-
-            if storage_proof.key.as_b256() != *slot {
-                return Err(VerifierError::InvalidL1ChainInput {
-                    reason: "Invalid storage slot".to_string(),
-                    expected: slot.to_string(),
-                    actual: storage_proof.key.as_b256().to_string(),
-                });
-            }
-        }
-
-        // Verify address
-        if proof.address != contract_address {
-            return Err(VerifierError::InvalidL1ChainInput {
-                reason: "Invalid address".to_string(),
-                expected: contract_address.to_string(),
-                actual: proof.address.to_string(),
-            });
-        }
-
         Ok(())
     }
 
@@ -209,7 +137,7 @@ impl L1ChainInput {
         // Validate start batch accumulator merkle proof
         let start_acc_slot =
             calculate_slot(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, self.start_batch_count());
-        Self::verify_merkle_proof(
+        verify_merkle_proof(
             &self.start_batch_accumulator_merkle_proof,
             &self.start_block_header,
             self.start_block_hash,
@@ -220,7 +148,7 @@ impl L1ChainInput {
         // Validate end batch accumulator merkle proof
         let end_acc_slot =
             calculate_slot(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, self.end_batch_count());
-        Self::verify_merkle_proof(
+        verify_merkle_proof(
             &self.end_batch_accumulator_merkle_proof,
             &self.end_block_header,
             self.end_block_hash,
@@ -287,7 +215,6 @@ mod tests {
     use super::*;
     use alloy::{
         primitives::{bytes, fixed_bytes, FixedBytes, Uint, U256},
-        providers::{Provider as _, ProviderBuilder, RootProvider},
         rpc::types::EIP1186StorageProof,
     };
     use std::str::FromStr;
@@ -414,37 +341,5 @@ mod tests {
         };
 
         input.verify_delayed_message_accumulator().unwrap();
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_verify_account_proof_response() {
-        let client: RootProvider = ProviderBuilder::default()
-            .connect("https://syndicate-exo.g.alchemy.com/v2/K6cAUXQhrUT3KJPd9a-glciOF5ZA_F8Y")
-            .await
-            .unwrap();
-        let proof: EIP1186AccountProofResponse = client
-            .raw_request(
-                "eth_getProof".into(),
-                (
-                    Address::from_str("0x180972BF154c9Aea86c43149D83B7Ea078c33f48").unwrap(),
-                    vec![U256::from(1)],
-                    "latest",
-                ),
-            )
-            .await
-            .unwrap();
-        println!("Proof {:?}", proof);
-        let block_hash = client
-            .get_block_by_number(alloy::eips::BlockNumberOrTag::Latest)
-            .await
-            .unwrap()
-            .unwrap()
-            .header
-            .hash;
-        println!("Block hash {:?}", block_hash);
-        let result = L1ChainInput::verify_account_proof_response(&proof, block_hash);
-        println!("Result {:?}", result);
-        assert!(result.is_ok());
     }
 }

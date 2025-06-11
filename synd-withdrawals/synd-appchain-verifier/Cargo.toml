@@ -10,7 +10,6 @@ version.workspace      = true
 
 [dependencies]
 alloy              = { workspace = true }
-alloy-trie         = { workspace = true }
 clap               = { workspace = true }
 eyre               = { workspace = true }
 serde              = { workspace = true, features = ["derive"] }

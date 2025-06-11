@@ -10,7 +10,7 @@ use synd_appchain_verifier::{
     verifier::Verifier,
 };
 use tracing::{debug, error};
-use withdrawals_shared::types::{parse_json, BlockVerifierInput};
+use withdrawals_shared::{types::BlockVerifierInput, utils::parse_json};
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
