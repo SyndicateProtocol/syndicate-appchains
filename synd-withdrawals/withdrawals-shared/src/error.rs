@@ -1,4 +1,4 @@
-//! Errors for the `synd-seqchain-verifier`
+//! Shared errors for withdrawals
 use thiserror::Error;
 
 #[derive(Error, Debug)]
