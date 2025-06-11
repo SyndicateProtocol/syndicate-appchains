@@ -53,8 +53,9 @@ impl Verifier {
     }
 
     fn process_delayed_message(&self, msg: L1IncomingMessage) -> L1IncomingMessage {
-        assert!(
-            msg.header.kind != L1MessageType::Initialize as u8,
+        assert_ne!(
+            msg.header.kind,
+            L1MessageType::Initialize as u8,
             "Initialize message received. This should not happen."
         );
         if ArbitrumAdapter::should_ignore_delayed_message(&L1MessageType::from_u8_panic(

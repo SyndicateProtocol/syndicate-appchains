@@ -47,7 +47,7 @@ pub struct L1IncomingMessageHeader {
     /// Timestamp
     pub timestamp: u64,
     /// Request ID
-    pub request_id: B256,
+    pub request_id: B256, // corresponds to the MessageIndex
     /// L1 base fee
     pub base_fee_l1: U256,
 }

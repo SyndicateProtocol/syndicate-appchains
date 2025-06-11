@@ -14,6 +14,7 @@ prometheus-client      = { workspace = true }
 serde                  = { workspace = true }
 serde_json             = { workspace = true }
 shared                 = { workspace = true }
+synd-appchain-verifier = { workspace = true }
 synd-seqchain-verifier = { workspace = true }
 tokio                  = { workspace = true, features = ["full", "sync"] }
 tracing                = { workspace = true }

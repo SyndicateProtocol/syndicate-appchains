@@ -31,27 +31,42 @@ pub struct Config {
     pub enclave_rpc_url: Url,
 
     /// Address of the assertion poster contract
-    #[arg(long, env = "ASSERTION_POSTER_CONTRACT_ADDRESS", value_parser = parse_address)]
-    pub assertion_poster_contract_address: Address,
-
-    /// Address of the assertion poster contract
     #[arg(short = 't', long, env = "TEE_MODULE_CONTRACT_ADDRESS", value_parser = parse_address)]
     pub tee_module_contract_address: Address,
 
     /// Bridge address on the L1
-    #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
+    #[arg(long, env = "L1_ARBITRUM_BRIDGE_ADDRESS",
        value_parser = parse_address)]
-    pub arbitrum_bridge_address: Address,
+    pub l1_arbitrum_bridge_address: Address,
 
-    /// Inbox address on the L1 - for deposits
-    #[arg(short = 'i', long, env = "INBOX_ADDRESS",
+    /// Bridge address on the settlement chain
+    #[arg(long, env = "SETTLEMENT_ARBITRUM_BRIDGE_ADDRESS",
        value_parser = parse_address)]
-    pub inbox_address: Address,
+    pub settlement_arbitrum_bridge_address: Address,
+
+    /// Inbox address on the L1 - for deposits from settlement
+    #[arg(long, env = "SETTLEMENT_INBOX_ADDRESS",
+       value_parser = parse_address)]
+    pub settlement_inbox_address: Address,
+
+    /// Inbox address on the settlement chain - for deposits from appchain
+    #[arg(long, env = "APPCHAIN_INBOX_ADDRESS",
+       value_parser = parse_address)]
+    pub appchain_inbox_address: Address,
 
     /// Sequencer inbox address on the L1 - for batches
     #[arg(long, env = "SEQUENCER_INBOX_ADDRESS",
        value_parser = parse_address)]
     pub sequencer_inbox_address: Address,
+
+    /// Sequencing contract address on the L2, inherits from accumulator contract
+    #[arg(long, env = "SEQUENCING_CONTRACT_ADDRESS",
+       value_parser = parse_address)]
+    pub sequencing_contract_address: Address,
+
+    /// Settlement delay on the L2
+    #[arg(long, env = "SETTLEMENT_DELAY", default_value_t = 0)]
+    pub settlement_delay: u64,
 
     /// Private key    
     #[arg(short = 'k', long, env = "PROPOSER_PRIVATE_KEY")]
