@@ -19,7 +19,7 @@ pub struct Config {
     pub settlement_rpc_url: Url,
 
     /// URL of the app-chain RPC node
-    #[arg(short = 'a', long, env = "SEQUENCING_RPC_URL", value_parser = parse_url)]
+    #[arg(short = 'q', long, env = "SEQUENCING_RPC_URL", value_parser = parse_url)]
     pub sequencing_rpc_url: Url,
 
     /// URL of the app-chain RPC node
@@ -27,7 +27,7 @@ pub struct Config {
     pub appchain_rpc_url: Url,
 
     /// URL of the synd-enclave RPC node
-    #[arg(short = 's', long, env = "ENCLAVE_RPC_URL", value_parser = parse_url)]
+    #[arg(short = 'e', long, env = "ENCLAVE_RPC_URL", value_parser = parse_url)]
     pub enclave_rpc_url: Url,
 
     /// Address of the assertion poster contract
