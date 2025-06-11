@@ -41,12 +41,10 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use synd_seqchain_verifier::types::{
-    calculate_slot, ArbitrumBatch, L1ChainInput, L1IncomingMessage, L1IncomingMessageHeader,
-    TimeBounds,
-};
+use synd_seqchain_verifier::types::{calculate_slot, ArbitrumBatch, L1ChainInput, TimeBounds};
 use tokio::{net::TcpListener, sync::Mutex, task::JoinHandle};
 use tracing::{debug, error, info, warn};
+use withdrawals_shared::types::{L1IncomingMessage, L1IncomingMessageHeader};
 
 const EIGENDA_MESSAGE_HEADER_FLAG: u8 = 0xed;
 // Slot 7 (0x07) stores the batch count
@@ -751,7 +749,7 @@ mod tests {
     #[ignore]
     #[tokio::test]
     async fn test_proposer_build_l1_input() {
-        shared::logger::set_global_default_subscriber().unwrap();
+        shared::tracing::setup_global_logging().expect("logging setup failed");
 
         let arbitrum_bridge_address = address!("0x27b5BA9331f20afd816C247d53BDf1EC577b04CD");
         let sequencer_inbox_address = address!("0x47c3DEC256DB25c527d92AAceE1269C17805ce9d");

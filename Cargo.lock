@@ -7059,6 +7059,7 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+ "withdrawals-shared",
 ]
 
 [[package]]

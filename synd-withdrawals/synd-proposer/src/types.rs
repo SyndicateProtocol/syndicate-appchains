@@ -4,7 +4,8 @@ use alloy::{
     rpc::types::{EIP1186AccountProofResponse, Header},
 };
 use serde::{Deserialize, Serialize};
-use synd_seqchain_verifier::types::{L1ChainInput, L1IncomingMessage};
+use synd_seqchain_verifier::types::L1ChainInput;
+use withdrawals_shared::types::L1IncomingMessage;
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
