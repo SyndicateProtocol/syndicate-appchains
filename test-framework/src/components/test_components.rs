@@ -13,8 +13,8 @@ use crate::components::{
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
-    primitives::{address, hex, keccak256, Address, Bytes, TxHash, U256},
-    providers::{ext::AnvilApi as _, Provider, WalletProvider},
+    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U256},
+    providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, TransactionReceipt},
 };
 use contract_bindings::synd::{
@@ -33,11 +33,18 @@ use std::{
     time::{Duration, SystemTime},
 };
 use synd_maestro::server::HEADER_CHAIN_ID;
-use synd_mchain::{client::MProvider, server::MCHAIN_ID};
+use synd_mchain::{
+    client::MProvider,
+    methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID},
+};
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args},
-    chain_info::{ChainInfo, ProcessInstance, PRIVATE_KEY},
-    docker::{launch_nitro_node, start_component, start_mchain, start_valkey, Docker},
+    chain_info::{default_signer, ChainInfo, ProcessInstance, PRIVATE_KEY},
+    docker::{
+        launch_enclave_server, launch_nitro_node, start_component, start_mchain, start_valkey,
+        Docker,
+    },
+    nitro_chain::chain_config,
     port_manager::PortManager,
     preloaded_config::{
         get_anvil_file, get_assertion_poster_address, get_bridge_address, get_inbox_address,
@@ -49,13 +56,14 @@ use tracing::info;
 
 #[derive(Debug)]
 struct ComponentHandles {
-    l1_instance: Option<ProcessInstance>,
-    seq_instance: ProcessInstance,
-    set_instance: ProcessInstance,
+    l1_chain: Option<ProcessInstance>,
+    seq_chain: ProcessInstance,
+    set_chain: ProcessInstance,
+    appchain_chain: ProcessInstance,
     mchain: Docker,
-    appchain_instance: ProcessInstance,
     translator: Docker,
     proposer: Option<Docker>,
+    enclave_server: Option<Docker>,
     sequencing_chain_ingestor: Docker,
     settlement_chain_ingestor: Docker,
 
@@ -99,6 +107,8 @@ pub struct TestComponents {
 
     #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
+
+    pub tee_attestation_doc: String,
 }
 
 impl TestComponents {
@@ -117,10 +127,10 @@ impl TestComponents {
             e = handles.sequencing_chain_ingestor.wait() => panic!("sequencing ingestor died: {:#?}", e),
             e = handles.settlement_chain_ingestor.wait() => panic!("settlement ingestor died: {:#?}", e),
             e = handles.mchain.wait() => panic!("synd-mchain died: {:#?}", e),
-            e = async {handles.l1_instance.as_mut().unwrap().wait().await}, if handles.l1_instance.is_some() => panic!("l1 chain died: {:#?}", e),
-            e = handles.seq_instance.wait() => panic!("sequencing chain died: {:#?}", e),
-            e = handles.set_instance.wait() => panic!("settlement chain died: {:#?}", e),
-            e = handles.appchain_instance.wait() => panic!("nitro died: {:#?}", e),
+            e = async {handles.l1_chain.as_mut().unwrap().wait().await}, if handles.l1_chain.is_some() => panic!("l1 chain died: {:#?}", e),
+            e = handles.seq_chain.wait() => panic!("sequencing chain died: {:#?}", e),
+            e = handles.set_chain.wait() => panic!("settlement chain died: {:#?}", e),
+            e = handles.appchain_chain.wait() => panic!("nitro died: {:#?}", e),
             e = handles.translator.wait() => panic!("synd-translator died: {:#?}", e),
             e = async {proposer.unwrap().wait().await}, if proposer.is_some() => panic!("synd-proposer died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("synd-maestro died: {:#?}", e),
@@ -137,7 +147,11 @@ impl TestComponents {
 
         let l1_info = match options.base_chains_type {
             BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => None,
-            BaseChainsType::Nitro => Some(start_anvil(1).await?),
+            BaseChainsType::Nitro => {
+                let info = start_anvil(1).await?;
+                info.provider.anvil_set_auto_mine(true).await?; //auto-mine enabled
+                Some(info)
+            }
         };
 
         // Launch mock sequencing chain and deploy contracts
@@ -146,15 +160,23 @@ impl TestComponents {
             match options.base_chains_type {
                 BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => start_anvil(15).await?,
                 BaseChainsType::Nitro => {
+                    let chain_id = 15;
+                    let l1_provider = l1_info.as_ref().unwrap().provider.clone();
+                    let rollup_address = deploy_mock_rollup(&l1_provider, chain_id).await?;
+
                     info!("Starting sequencing chain's nitro node...");
-                    launch_nitro_node(
-                        15,
-                        options.rollup_owner,
+                    let nitro_info = launch_nitro_node(
+                        chain_id,
+                        Address::ZERO,
                         &l1_info.as_ref().unwrap().ws_url,
                         1,
                         None,
+                        rollup_address,
+                        rollup_address,
                     )
-                    .await?
+                    .await?;
+
+                    nitro_info
                 }
             };
 
@@ -201,14 +223,22 @@ impl TestComponents {
                 (ws_url, instance, provider)
             }
             BaseChainsType::Nitro => {
+                let chain_id = 20;
+                let l1_provider = l1_info.as_ref().unwrap().provider.clone();
+                let rollup_address = deploy_mock_rollup(&l1_provider, chain_id).await?;
+
                 let ChainInfo { ws_url, instance, provider } = launch_nitro_node(
-                    20,
-                    options.rollup_owner,
+                    chain_id,
+                    Address::ZERO,
                     &l1_info.as_ref().unwrap().ws_url,
                     1,
                     None,
+                    rollup_address,
+                    rollup_address,
                 )
                 .await?;
+
+                // deploy the rollup contract for the appchain on the settlement chain
                 let _ = Rollup::deploy_builder(
                     &provider,
                     U256::from(options.appchain_chain_id),
@@ -348,6 +378,8 @@ impl TestComponents {
             &mchain_rpc_url,
             MCHAIN_ID,
             None,
+            APPCHAIN_CONTRACT,
+            APPCHAIN_CONTRACT,
         )
         .await?;
         info!("Nitro URL: {}", appchain_rpc_url);
@@ -365,43 +397,45 @@ impl TestComponents {
             }
         };
 
-        let (proposer, proposer_url) = match options.base_chains_type {
-            BaseChainsType::Anvil => (None, String::new()),
-            BaseChainsType::PreLoaded(_) | BaseChainsType::Nitro => {
-                // TODO write tests that actually use the RPCs below
-                let enclave_rpc_url = appchain_rpc_url.clone();
-                let ethereum_rpc_url = appchain_rpc_url.clone();
+        let (proposer_instance, proposer_url, enclave_server_instance, tee_attestation_doc) =
+            match options.base_chains_type {
+                BaseChainsType::Anvil => (None, String::new(), None, String::new()),
+                BaseChainsType::PreLoaded(_) | BaseChainsType::Nitro => {
+                    let (enclave_server_instance, enclave_rpc_url, attestation_doc) =
+                        launch_enclave_server().await?;
 
-                info!("Starting proposer...");
-                let proposer_config = ProposerConfig {
-                    ethereum_rpc_url,
-                    assertion_poster_contract_address,
-                    tee_module_contract_address: Default::default(),
-                    arbitrum_bridge_address,
-                    inbox_address: Default::default(),
-                    sequencer_inbox_address: Default::default(),
-                    settlement_rpc_url: set_rpc_url.clone(),
-                    metrics_port: PortManager::instance().next_port().await,
-                    port: PortManager::instance().next_port().await,
-                    appchain_rpc_url: appchain_rpc_url.clone(),
-                    sequencing_rpc_url: sequencing_anvil_url.clone(),
-                    enclave_rpc_url,
-                    polling_interval: "1m".to_string(),
-                };
-                (
-                    Some(
-                        start_component(
-                            "synd-proposer",
-                            proposer_config.metrics_port,
-                            proposer_config.cli_args(),
-                            Default::default(),
-                        )
-                        .await?,
-                    ),
-                    format!("http://localhost:{}", proposer_config.port),
-                )
-            }
-        };
+                    info!("Starting proposer...");
+                    let proposer_config = ProposerConfig {
+                        ethereum_rpc_url: l1_info.as_ref().unwrap().ws_url.clone(),
+                        assertion_poster_contract_address,
+                        tee_module_contract_address: Default::default(),
+                        arbitrum_bridge_address,
+                        inbox_address: Default::default(),
+                        sequencer_inbox_address: Default::default(),
+                        settlement_rpc_url: set_rpc_url.clone(),
+                        metrics_port: PortManager::instance().next_port().await,
+                        port: PortManager::instance().next_port().await,
+                        appchain_rpc_url: appchain_rpc_url.clone(),
+                        sequencing_rpc_url: sequencing_rpc_url.clone(),
+                        enclave_rpc_url,
+                        polling_interval: "1m".to_string(),
+                    };
+
+                    let proposer_instance = start_component(
+                        "synd-proposer",
+                        proposer_config.metrics_port,
+                        proposer_config.cli_args(),
+                        Default::default(),
+                    )
+                    .await?;
+                    (
+                        Some(proposer_instance),
+                        format!("http://localhost:{}", proposer_config.port),
+                        Some(enclave_server_instance),
+                        attestation_doc,
+                    )
+                }
+            };
 
         let (mut valkey, mut maestro, mut batch_sequencer) = (None, None, None);
         let mut valkey_url_init = String::new();
@@ -479,17 +513,20 @@ impl TestComponents {
                 maestro_url,
                 valkey_url: valkey_url_init,
                 appchain_block_explorer_url,
+
+                tee_attestation_doc,
             },
             ComponentHandles {
-                l1_instance,
-                seq_instance,
-                set_instance,
+                l1_chain: l1_instance,
+                seq_chain: seq_instance,
+                set_chain: set_instance,
                 sequencing_chain_ingestor,
                 settlement_chain_ingestor,
                 mchain,
-                appchain_instance,
+                appchain_chain: appchain_instance,
                 translator,
-                proposer,
+                proposer: proposer_instance,
+                enclave_server: enclave_server_instance,
                 batch_sequencer,
                 valkey,
                 maestro,
@@ -602,4 +639,34 @@ impl TestComponents {
             false => Ok(None),
         }
     }
+}
+
+#[allow(clippy::unwrap_used)]
+/// Deploys a mock rollup contract.
+/// NOTE: only used for the base chains when in Nitro mode, it expects `l1_provider` to have
+/// automine enabled
+async fn deploy_mock_rollup(l1_provider: &FilledProvider, rollup_chain_id: u64) -> Result<Address> {
+    let cfg = chain_config(rollup_chain_id, Address::ZERO);
+    let tx_hash = Rollup::deploy_builder(l1_provider, U256::from(rollup_chain_id), cfg)
+        .send()
+        .await?
+        .watch()
+        .await?;
+    let receipt = l1_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+    assert!(receipt.status());
+
+    let rollup_address = receipt.contract_address.unwrap();
+
+    // deposit some funds to the default signer
+    let wallet_address = default_signer().address();
+    let tx_hash = Rollup::new(rollup_address, &l1_provider)
+        .depositEth(wallet_address, wallet_address, parse_ether("10")?)
+        .send()
+        .await?
+        .watch()
+        .await?;
+    let receipt = l1_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+    assert!(receipt.status());
+
+    Ok(rollup_address)
 }

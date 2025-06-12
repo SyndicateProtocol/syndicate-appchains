@@ -34,7 +34,7 @@ use test_utils::{
 
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber();
+    shared::tracing::setup_global_logging();
 }
 
 // MockZkVerifier is a mock implementation of the IAttestationDocVerifier interface for testing
@@ -146,11 +146,10 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             assert!(receipt.status());
 
             // launch the TEE enclave server
-            let (_enclave_server, attestation_doc) = launch_enclave_server().await?;
 
             // verify the attestation document
             let ValidationResult { tee_signing_key, .. } = verify_aws_nitro_attestation(
-                &alloy::hex::decode(attestation_doc)?,
+                &alloy::hex::decode(components.tee_attestation_doc)?,
                 pem_to_der(AWS_NITRO_ROOT_CERT_PEM)?.as_slice(),
             )
             .unwrap();
@@ -170,9 +169,8 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             assert!(receipt.status());
 
             // TODO continue:
-            // start synd-proposer
-
             // init withdrawal from the appchain
+
             // wait until the withdrawal root is posted
 
             // finish the withdrawal on the settlement chain

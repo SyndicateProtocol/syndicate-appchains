@@ -1,8 +1,8 @@
 //! Docker components for the integration tests
 
 use crate::{
-    appchain::appchain_info_json,
     chain_info::{default_signer, ChainInfo, ProcessInstance},
+    nitro_chain::nitro_chain_info_json,
     port_manager::PortManager,
     utils::test_path,
     wait_until,
@@ -207,6 +207,8 @@ pub async fn launch_nitro_node(
     parent_chain_url: &str,
     parent_chain_id: u64,
     sequencer_port: Option<u16>,
+    bridge_address: Address,
+    sequencer_inbox_address: Address,
 ) -> Result<ChainInfo> {
     let tag = env::var("NITRO_TAG").unwrap_or("v3.6.2-5b41a2d-slim".to_string());
     let port = PortManager::instance().next_port().await;
@@ -228,7 +230,14 @@ pub async fn launch_nitro_node(
             .arg("--ensure-rollup-deployment=false")
             .arg(format!(
                 "--chain.info-json={}",
-                appchain_info_json(chain_id, parent_chain_id, chain_owner, "test")
+                nitro_chain_info_json(
+                    chain_id,
+                    parent_chain_id,
+                    chain_owner,
+                    "test",
+                    bridge_address,
+                    sequencer_inbox_address
+                )
             ))
             .arg("--http.addr=0.0.0.0")
             .arg("--http.api=net,web3,eth,debug,trace")
@@ -281,7 +290,7 @@ pub async fn start_valkey() -> Result<(Docker, String)> {
     Ok((valkey, valkey_url))
 }
 
-pub async fn launch_enclave_server() -> Result<(Docker, String)> {
+pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
     info!("launching enclave server");
     let executable_name = "enclave-server";
     let port = PortManager::instance().next_port().await;
@@ -321,11 +330,13 @@ pub async fn launch_enclave_server() -> Result<(Docker, String)> {
             .arg(image_name),
     )?;
 
+    let enclave_rpc_url = format!("http://localhost:{port}");
+
     wait_until!(
-        get_attestation_doc(format!("http://localhost:{port}")).await.is_ok(),
+        get_attestation_doc(enclave_rpc_url.clone()).await.is_ok(),
         Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
-    let attestation_doc = get_attestation_doc(format!("http://localhost:{port}")).await?;
+    let attestation_doc = get_attestation_doc(enclave_rpc_url.clone()).await?;
 
-    Ok((docker, attestation_doc))
+    Ok((docker, enclave_rpc_url, attestation_doc))
 }
