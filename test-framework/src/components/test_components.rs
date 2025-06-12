@@ -33,7 +33,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use synd_maestro::server::HEADER_CHAIN_ID;
-use synd_mchain::client::MProvider;
+use synd_mchain::{client::MProvider, server::MCHAIN_ID};
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args},
     chain_info::{ChainInfo, ProcessInstance, PRIVATE_KEY},
@@ -151,6 +151,7 @@ impl TestComponents {
                         15,
                         options.rollup_owner,
                         &l1_info.as_ref().unwrap().ws_url,
+                        1,
                         None,
                     )
                     .await?
@@ -204,6 +205,7 @@ impl TestComponents {
                     20,
                     options.rollup_owner,
                     &l1_info.as_ref().unwrap().ws_url,
+                    1,
                     None,
                 )
                 .await?;
@@ -344,6 +346,7 @@ impl TestComponents {
             options.appchain_chain_id,
             options.rollup_owner,
             &mchain_rpc_url,
+            MCHAIN_ID,
             None,
         )
         .await?;

@@ -3,11 +3,13 @@ edition.workspace      = true
 exclude.workspace      = true
 homepage.workspace     = true
 license.workspace      = true
-name                   = "proof-submitter"
+name                   = "synd-tee-attestation-zk-proofs-submitter"
 repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
+[lib]
+path = "src/lib.rs"
 
 [[bin]]
 name = "proof-submitter"

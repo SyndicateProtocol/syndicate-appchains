@@ -1,7 +1,7 @@
 //! Docker components for the integration tests
 
 use crate::{
-    appchain::appchain_info,
+    appchain::appchain_info_json,
     chain_info::{default_signer, ChainInfo, ProcessInstance},
     port_manager::PortManager,
     utils::test_path,
@@ -20,6 +20,7 @@ use std::{
     time::Duration,
 };
 use synd_mchain::client::MProvider;
+use synd_tee_attestation_zk_proofs_submitter::{self, get_attestation_doc};
 use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
@@ -199,49 +200,12 @@ pub async fn start_mchain(
     Ok((url, docker, mchain))
 }
 
-/// Return the on-chain config for a rollup with a given chain id
-fn appchain_config(chain_id: u64, chain_owner: Address) -> String {
-    let mut cfg = format!(
-        r#"{{
-            "chainId": {chain_id},
-            "homesteadBlock": 0,
-            "daoForkBlock": null,
-            "daoForkSupport": true,
-            "eip150Block": 0,
-            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "eip155Block": 0,
-            "eip158Block": 0,
-            "byzantiumBlock": 0,
-            "constantinopleBlock": 0,
-            "petersburgBlock": 0,
-            "istanbulBlock": 0,
-            "muirGlacierBlock": 0,
-            "berlinBlock": 0,
-            "londonBlock": 0,
-            "clique": {{
-            "period": 0,
-            "epoch": 0
-            }},
-            "arbitrum": {{
-            "EnableArbOS": true,
-            "AllowDebugPrecompiles": false,
-            "DataAvailabilityCommittee": false,
-            "InitialArbOSVersion": 32,
-            "InitialChainOwner": "{chain_owner}",
-            "GenesisBlockNum": 0
-            }}
-        }}"#
-    );
-    cfg.retain(|c| !c.is_whitespace());
-    cfg.shrink_to_fit();
-    cfg
-}
-
 /// Starts nitro instance
 pub async fn launch_nitro_node(
     chain_id: u64,
     chain_owner: Address,
     parent_chain_url: &str,
+    parent_chain_id: u64,
     sequencer_port: Option<u16>,
 ) -> Result<ChainInfo> {
     let tag = env::var("NITRO_TAG").unwrap_or("v3.6.2-5b41a2d-slim".to_string());
@@ -264,7 +228,7 @@ pub async fn launch_nitro_node(
             .arg("--ensure-rollup-deployment=false")
             .arg(format!(
                 "--chain.info-json={}",
-                appchain_info(&appchain_config(chain_id, chain_owner), "test")
+                appchain_info_json(chain_id, parent_chain_id, chain_owner, "test")
             ))
             .arg("--http.addr=0.0.0.0")
             .arg("--http.api=net,web3,eth,debug,trace")
@@ -315,4 +279,53 @@ pub async fn start_valkey() -> Result<(Docker, String)> {
         Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
     Ok((valkey, valkey_url))
+}
+
+pub async fn launch_enclave_server() -> Result<(Docker, String)> {
+    info!("launching enclave server");
+    let executable_name = "enclave-server";
+    let port = PortManager::instance().next_port().await;
+    let image_name =
+        if let Ok(tag) = env::var(executable_name.to_uppercase().replace('-', "_") + "_TAG") {
+            format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}")
+        } else {
+            let project_root = env!("CARGO_WORKSPACE_DIR");
+            let enclave_path = format!("{project_root}/synd-withdrawals/synd-enclave");
+            let image_name = format!("ghcr.io/syndicateprotocol/{executable_name}:latest");
+
+            let build_output = Command::new("docker")
+                .arg("buildx")
+                .arg("build")
+                .arg(&enclave_path)
+                .arg("--tag")
+                .arg(&image_name)
+                .output()
+                .await?;
+
+            if !build_output.status.success() {
+                return Err(eyre::eyre!(
+                    "failed to build enclave-server docker image. Stderr: {}",
+                    String::from_utf8_lossy(&build_output.stderr)
+                ));
+            }
+            image_name
+        };
+
+    let docker = Docker::new(
+        Command::new("docker")
+            .arg("run")
+            .arg("--init")
+            .arg("--rm")
+            .arg("-p")
+            .arg(format!("{port}:1234"))
+            .arg(image_name),
+    )?;
+
+    wait_until!(
+        get_attestation_doc(format!("http://localhost:{port}")).await.is_ok(),
+        Duration::from_secs(5 * 60) // give it time to download the image if necessary
+    );
+    let attestation_doc = get_attestation_doc(format!("http://localhost:{port}")).await?;
+
+    Ok((docker, attestation_doc))
 }

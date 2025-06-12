@@ -22,22 +22,18 @@
 //! transactions.
 
 use alloy::{
-    hex,
-    network::EthereumWallet,
-    primitives::Address,
-    providers::{PendingTransactionError, ProviderBuilder},
-    signers::local::{LocalSignerError, PrivateKeySigner},
-    transports::{RpcError, TransportErrorKind},
+    hex, network::EthereumWallet, primitives::Address, providers::ProviderBuilder,
+    signers::local::PrivateKeySigner,
 };
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use contract_bindings::synd::teekeymanager::TeeKeyManager;
-use jsonrpsee::{core::client::ClientT, http_client::HttpClientBuilder};
 use shared::parse::parse_address;
-use sp1_sdk::{ProverClient, SP1Stdin};
-use std::{path::PathBuf, str::FromStr, time::Duration};
+use std::{path::PathBuf, str::FromStr};
 use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
-use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
-use x509_cert::der::{DecodePem, Encode};
+use synd_tee_attestation_zk_proofs_submitter::{
+    generate_proof, get_attestation_doc, pem_to_der, GenerateProofResult, ProofSubmitterError,
+    ProofSystem, AWS_NITRO_ROOT_CERT_PEM,
+};
 
 /// The arguments for the command.
 #[derive(Parser, Debug)]
@@ -69,50 +65,6 @@ pub struct Args {
     #[arg(long)]
     private_key: Option<String>,
 }
-
-/// Enum representing the available proof systems
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
-enum ProofSystem {
-    Plonk,
-    Groth16,
-}
-
-#[allow(missing_docs)]
-#[derive(Debug, thiserror::Error)]
-pub enum ProofSubmitterError {
-    #[error("Failed to get attestation doc")]
-    GetAttestationDoc(#[from] jsonrpsee::core::client::Error),
-
-    #[error("Failed to decode attestation doc")]
-    DecodeAttestationDoc(#[from] hex::FromHexError),
-
-    #[error("Failed to read root certificate")]
-    ReadRootCertificate(#[from] std::io::Error),
-
-    #[error("Failed to parse root certificate")]
-    ParseRootCertificate(#[from] x509_cert::der::Error),
-
-    #[error("Invalid attestation document: {0:?}")]
-    InvalidAttestationDocument(synd_tee_attestation_zk_proofs_aws_nitro::VerificationError),
-
-    #[error("Failed to generate proof: {0}")]
-    GenerateProof(String),
-
-    #[error("Failed to parse private key: {0}")]
-    ParsePrivateKey(#[from] LocalSignerError),
-
-    #[error("Failed to connect to chain: {0}")]
-    ConnectToChain(#[from] RpcError<TransportErrorKind>),
-
-    #[error("Failed to submit proof to chain: {0}")]
-    SubmitProofToChain(String),
-
-    #[error("Failed to wait for pending transaction: {0}")]
-    WaitForPendingTransaction(#[from] PendingTransactionError),
-}
-
-const AWS_NITRO_ROOT_CERT_PEM: &[u8] =
-    include_bytes!("../../aws-nitro/src/testdata/aws_nitro_root.pem");
 
 #[tokio::main]
 async fn main() {
@@ -146,7 +98,7 @@ async fn run(
         AWS_NITRO_ROOT_CERT_PEM.to_vec()
     };
 
-    let der_root_cert = x509_cert::Certificate::from_pem(&pem_root_cert)?.to_der()?;
+    let der_root_cert = pem_to_der(&pem_root_cert)?;
 
     // make sure the attestation is vaild for the provided root certificate
     verify_aws_nitro_attestation(&cbor_attestation_doc, &der_root_cert)
@@ -197,41 +149,6 @@ async fn submit_proof_to_chain(
     Ok(())
 }
 
-struct GenerateProofResult {
-    proof: Vec<u8>,
-    public_values: Vec<u8>,
-}
-
-fn generate_proof(
-    cbor_attestation_doc: Vec<u8>,
-    der_root_cert: Vec<u8>,
-    proof_system: ProofSystem,
-) -> Result<GenerateProofResult, ProofSubmitterError> {
-    // Set up the prover client.
-    let client = ProverClient::from_env();
-
-    let (pk, _vk) = client.setup(TEE_ATTESTATION_VALIDATION_ELF);
-    let mut stdin = SP1Stdin::new();
-    stdin.write(&cbor_attestation_doc);
-    stdin.write(&der_root_cert);
-
-    let proof = match proof_system {
-        ProofSystem::Plonk => client.prove(&pk, &stdin).plonk().run(),
-        ProofSystem::Groth16 => client.prove(&pk, &stdin).groth16().run(),
-    }
-    .map_err(|e| ProofSubmitterError::GenerateProof(e.to_string()))?;
-
-    Ok(GenerateProofResult { proof: proof.bytes(), public_values: proof.public_values.to_vec() })
-}
-
-async fn get_attestation_doc(enclave_rpc_url: String) -> Result<String, ProofSubmitterError> {
-    let client = HttpClientBuilder::default()
-        .request_timeout(Duration::from_secs(10))
-        .build(enclave_rpc_url)?;
-
-    Ok(client.request::<String, [(); 0]>("enclave_signerAttestation", []).await?)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,28 +162,6 @@ mod tests {
     };
     use serde::Deserialize;
     use test_utils::{anvil::start_anvil, chain_info::PRIVATE_KEY};
-
-    #[tokio::test]
-    async fn test_get_attestation_doc_success() {
-        let mut server = mockito::Server::new_async().await;
-        let mock_url = server.url();
-
-        let expected_attestation_doc = "test_attestation_doc_hex";
-        let mock_response =
-            format!(r#"{{"jsonrpc":"2.0","id":0,"result":"{}"}}"#, expected_attestation_doc);
-
-        server.mock("POST", "/")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(mock_response)
-            .match_body(mockito::Matcher::JsonString("{\"jsonrpc\":\"2.0\",\"method\":\"enclave_signerAttestation\",\"params\":[],\"id\":0}".to_string()))
-            .create_async().await;
-
-        let result = get_attestation_doc(mock_url.clone()).await;
-        drop(server);
-        assert!(result.is_ok(), "get_attestation_doc call failed: {:?}", result.err());
-        assert_eq!(result.unwrap(), expected_attestation_doc);
-    }
 
     // NOTE this test relies on the groth16 fixture in synd-contracts (that is generated by
     // executing the binary in sp1/script/evm )

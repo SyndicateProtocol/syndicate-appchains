@@ -5063,27 +5063,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proof-submitter"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "clap",
- "contract-bindings",
- "jsonrpsee",
- "mockito",
- "serde",
- "serde_json",
- "shared",
- "sp1-sdk",
- "synd-tee-attestation-zk-proofs-aws-nitro",
- "synd-tee-attestation-zk-proofs-sp1-script",
- "test-utils",
- "thiserror 2.0.12",
- "tokio",
- "x509-cert",
-]
-
-[[package]]
 name = "proptest"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7134,6 +7113,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-tee-attestation-zk-proofs-submitter"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "clap",
+ "contract-bindings",
+ "jsonrpsee",
+ "mockito",
+ "serde",
+ "serde_json",
+ "shared",
+ "sp1-sdk",
+ "synd-tee-attestation-zk-proofs-aws-nitro",
+ "synd-tee-attestation-zk-proofs-sp1-script",
+ "test-utils",
+ "thiserror 2.0.12",
+ "tokio",
+ "x509-cert",
+]
+
+[[package]]
 name = "synd-translator"
 version = "0.1.0"
 dependencies = [
@@ -7255,6 +7255,8 @@ dependencies = [
  "synd-maestro",
  "synd-mchain",
  "synd-seqchain-verifier",
+ "synd-tee-attestation-zk-proofs-aws-nitro",
+ "synd-tee-attestation-zk-proofs-submitter",
  "test-utils",
  "tokio",
  "tracing",
@@ -7269,6 +7271,7 @@ dependencies = [
  "redis",
  "shared",
  "synd-mchain",
+ "synd-tee-attestation-zk-proofs-submitter",
  "tokio",
  "tracing",
 ]

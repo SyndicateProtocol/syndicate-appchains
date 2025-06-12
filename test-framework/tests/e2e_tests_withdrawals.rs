@@ -9,25 +9,25 @@ use alloy::{
     rpc::types::{anvil::MineOptions, Block, TransactionReceipt, TransactionRequest},
     signers::local::{LocalSigner, PrivateKeySigner},
     sol,
+    sol_types::SolValue,
 };
 use contract_bindings::synd::{
-    arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
-    nodeinterface::NodeInterface, rollup::Rollup, teekeymanager::TeeKeyManager,
-    teemodule::TeeModule,
+    arbsys::ArbSys, assertionposter::AssertionPoster, ibridge::IBridge, iinbox::IInbox,
+    ioutbox::IOutbox, irollupcore::IRollupCore, nodeinterface::NodeInterface, rollup::Rollup,
+    teekeymanager::TeeKeyManager, teemodule::TeeModule,
 };
 use eyre::Result;
-use serde::{Deserialize, Serialize};
-use std::{str::FromStr as _, time::Duration};
 use synd_appchain_verifier::config::AppchainVerifierConfig;
-use synd_chain_ingestor::client::IngestorProvider;
-use synd_mchain::client::Provider as _;
 use synd_seqchain_verifier::config::SeqchainVerifierConfig;
+use synd_tee_attestation_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, ValidationResult};
+use synd_tee_attestation_zk_proofs_submitter::{pem_to_der, AWS_NITRO_ROOT_CERT_PEM};
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     test_components::TestComponents,
 };
 use test_utils::{
     chain_info::default_signer,
+    docker::launch_enclave_server,
     preloaded_config::{get_assertion_poster_address, ContractVersion},
     wait_until,
 };
@@ -52,7 +52,6 @@ sol! {
 }
 
 #[tokio::test]
-#[ignore]
 #[allow(clippy::unwrap_used)]
 async fn e2e_tee_withdrawal() -> Result<()> {
     TestComponents::run(
@@ -135,16 +134,46 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             )
             .await?;
 
-            // TODO continue:
-            // start the enclave server
-            // call `enclave_signerAttestation` RPC method
-            // call verify_attestation rust code to get the address
-            // add the TEE address to the key manager using a mock proof
+            // set the TEE module as the owner for the assertion poster contract
+            let assertion_poster = AssertionPoster::new(
+                components.assertion_poster_address,
+                &components.settlement_provider,
+            );
+            let tx_hash =
+                assertion_poster.transferOwnership(tee_module_addr).send().await?.watch().await?;
+            let receipt =
+                components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+            assert!(receipt.status());
 
+            // launch the TEE enclave server
+            let (_enclave_server, attestation_doc) = launch_enclave_server().await?;
+
+            // verify the attestation document
+            let ValidationResult { tee_signing_key, .. } = verify_aws_nitro_attestation(
+                &alloy::hex::decode(attestation_doc)?,
+                pem_to_der(AWS_NITRO_ROOT_CERT_PEM)?.as_slice(),
+            )
+            .unwrap();
+
+            // add the TEE address to the key manager using a mock proof
+            let key_mgr = TeeKeyManager::new(key_mgr_addr, &components.settlement_provider);
+            let public_values = tee_signing_key.abi_encode();
+            let proof_bytes = vec![];
+            let tx_hash = key_mgr
+                .addKey(public_values.into(), proof_bytes.into())
+                .send()
+                .await?
+                .watch()
+                .await?;
+            let receipt =
+                components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+            assert!(receipt.status());
+
+            // TODO continue:
             // start synd-proposer
 
             // init withdrawal from the appchain
-            //  wait until the withdrawal root is posted
+            // wait until the withdrawal root is posted
 
             // finish the withdrawal on the settlement chain
 
@@ -167,21 +196,16 @@ where
     let chain_id = components.settlement_provider.get_chain_id().await?;
     let nonce = components.settlement_provider.get_transaction_count(signer.address()).await?;
 
-    let raw_tx = call_builder
+    let tx_hash = call_builder
         .nonce(nonce)
         .chain_id(chain_id)
         .gas(100_000_000)
         .max_fee_per_gas(100_000_000)
         .max_priority_fee_per_gas(0)
-        .build_raw_transaction(signer.clone())
+        .send()
+        .await?
+        .watch()
         .await?;
-
-    let pending_tx =
-        components.settlement_provider.send_raw_transaction(&raw_tx).await?.register().await?;
-
-    components.mine_set_block(0).await?;
-    let tx_hash = pending_tx.await?;
-    println!("tx_hash: {:?}", tx_hash);
 
     let receipt = components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
     assert!(receipt.status());
