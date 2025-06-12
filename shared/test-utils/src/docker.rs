@@ -298,58 +298,37 @@ pub async fn start_valkey() -> Result<(Docker, String)> {
 
 pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
     info!("launching enclave server");
-    let executable_name = "enclave-server";
+
+    let project_root = env!("CARGO_WORKSPACE_DIR");
+    let enclave_path = format!("{project_root}/synd-withdrawals/synd-enclave");
+    let image_name = "ghcr.io/syndicateprotocol/enclave-server:local-dev".to_string();
+
+    info!("building enclave server docker image - NOTE: this may take a while");
+    let status = Docker::new(
+        Command::new("docker")
+            .arg("buildx")
+            .arg("build")
+            .arg("--load")
+            .arg("--progress=plain")
+            .arg(&enclave_path)
+            .arg("--tag")
+            .arg(&image_name)
+            .arg("--target")
+            .arg("local-dev"),
+        "building-enclave-server",
+    )?
+    .wait()
+    .await?;
+
+    if !status.success() {
+        return Err(eyre::eyre!(
+            "failed to build enclave-server docker image. Exit status: {}",
+            status
+        ));
+    }
+    info!("enclave server docker image built successfully");
+
     let port = PortManager::instance().next_port().await;
-    let image_name =
-        if let Ok(tag) = env::var(executable_name.to_uppercase().replace('-', "_") + "_TAG") {
-            format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}")
-        } else {
-            let project_root = env!("CARGO_WORKSPACE_DIR");
-            let enclave_path = format!("{project_root}/synd-withdrawals/synd-enclave");
-            let image_name = format!("ghcr.io/syndicateprotocol/{executable_name}:latest");
-
-            info!("building enclave server docker image - NOTE: this may take a while");
-
-            let mut child = Command::new("docker")
-                .arg("buildx")
-                .arg("build")
-                .arg("--load")
-                .arg("--progress=plain")
-                .arg(&enclave_path)
-                .arg("--tag")
-                .arg(&image_name)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()?;
-
-            let stdout = child.stdout.take().unwrap();
-            tokio::spawn(async move {
-                let mut reader = BufReader::new(stdout).lines();
-                while let Some(line) = reader.next_line().await.unwrap() {
-                    println!("{}", line);
-                }
-            });
-
-            let stderr = child.stderr.take().unwrap();
-            tokio::spawn(async move {
-                let mut reader = BufReader::new(stderr).lines();
-                while let Some(line) = reader.next_line().await.unwrap() {
-                    eprintln!("{}", line);
-                }
-            });
-
-            let status = child.wait().await?;
-
-            if !status.success() {
-                return Err(eyre::eyre!(
-                    "failed to build enclave-server docker image. Exit status: {}",
-                    status
-                ));
-            }
-            info!("enclave server docker image built successfully");
-            image_name
-        };
-
     let docker = Docker::new(
         Command::new("docker")
             .arg("run")
@@ -360,16 +339,14 @@ pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
             .arg(image_name),
         "enclave-server",
     )?;
-    println!("potato"); // TODO remove
 
     let enclave_rpc_url = format!("http://localhost:{port}");
 
     wait_until!(
         get_attestation_doc(enclave_rpc_url.clone()).await.is_ok(),
-        Duration::from_secs(5 * 60) // give it time to download the image if necessary
+        Duration::from_secs(5 * 60)
     );
     let attestation_doc = get_attestation_doc(enclave_rpc_url.clone()).await?;
-    println!("potato"); // TODO remove
 
     Ok((docker, enclave_rpc_url, attestation_doc))
 }

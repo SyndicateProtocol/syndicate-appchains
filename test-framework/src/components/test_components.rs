@@ -403,8 +403,8 @@ impl TestComponents {
             match options.base_chains_type {
                 BaseChainsType::Anvil => (None, String::new(), None, String::new()),
                 BaseChainsType::PreLoaded(_) | BaseChainsType::Nitro => {
-                    // let (enclave_server_instance, enclave_rpc_url, attestation_doc) =
-                    //     launch_enclave_server().await?;
+                    let (enclave_server_instance, enclave_rpc_url, attestation_doc) =
+                        launch_enclave_server().await?;
 
                     info!("Starting proposer...");
                     let proposer_config = ProposerConfig {
@@ -421,7 +421,7 @@ impl TestComponents {
                         port: PortManager::instance().next_port().await,
                         appchain_rpc_url: appchain_rpc_url.clone(),
                         sequencing_rpc_url: sequencing_rpc_url.clone(),
-                        enclave_rpc_url: appchain_rpc_url.clone(), // TODO revert
+                        enclave_rpc_url,
                         polling_interval: "1m".to_string(),
                     };
 
@@ -435,11 +435,8 @@ impl TestComponents {
                     (
                         Some(proposer_instance),
                         format!("http://localhost:{}", proposer_config.port),
-                        None,
-                        String::new(),
-                        // TODO revert
-                        // Some(enclave_server_instance),
-                        // attestation_doc,
+                        Some(enclave_server_instance),
+                        attestation_doc,
                     )
                 }
             };
