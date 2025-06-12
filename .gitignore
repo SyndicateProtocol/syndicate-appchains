@@ -70,3 +70,7 @@ broadcast/
 /broadcast/**/dry-run/
 documentation/local/heaptrack_output/
 documentation/local/chains/
+
+
+# Claude
+synd-contracts/.claude/settings.local.json
