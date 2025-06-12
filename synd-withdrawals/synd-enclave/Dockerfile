@@ -1,5 +1,18 @@
 # syntax=docker/dockerfile:1.7-labs
 
+# Build verifiers binary
+FROM rust:1.87-slim-bookworm AS verifier-builder
+WORKDIR /workspace
+RUN apt-get update && \
+    apt-get install -y pkg-config libssl-dev clang cmake
+
+COPY . .
+
+RUN rustup target add x86_64-unknown-linux-musl
+RUN cargo build --release --target x86_64-unknown-linux-musl --manifest-path synd-appchain-verifier/Cargo.toml
+RUN cargo build --release --target x86_64-unknown-linux-musl --manifest-path synd-seqchain-verifier/Cargo.toml
+
+# Build eif
 FROM debian:bookworm-slim AS brotli-wasm-builder
 WORKDIR /workspace
 RUN apt-get update && \
@@ -8,8 +21,8 @@ RUN apt-get update && \
     cd emsdk && \
     ./emsdk install 3.1.7 && \
     ./emsdk activate 3.1.7
-COPY nitro/scripts/build-brotli.sh scripts/
-COPY nitro/brotli brotli
+COPY synd-withdrawals/synd-enclave/nitro/scripts/build-brotli.sh scripts/
+COPY synd-withdrawals/synd-enclave/nitro/brotli brotli
 RUN cd emsdk && . ./emsdk_env.sh && cd .. && ./scripts/build-brotli.sh -w -t /workspace/install/
 
 FROM scratch AS brotli-wasm-export
@@ -17,8 +30,8 @@ COPY --from=brotli-wasm-builder /workspace/install/ /
 
 FROM debian:bookworm-slim AS brotli-library-builder
 WORKDIR /workspace
-COPY nitro/scripts/build-brotli.sh scripts/
-COPY nitro/brotli brotli
+COPY synd-withdrawals/synd-enclave/nitro/scripts/build-brotli.sh scripts/
+COPY synd-withdrawals/synd-enclave/nitro/brotli brotli
 RUN apt-get update && \
     apt-get install -y cmake make gcc git && \
     ./scripts/build-brotli.sh -l -t /workspace/install/
@@ -31,15 +44,15 @@ RUN apt-get update && \
     apt-get install -y git python3 make g++ curl
 RUN curl -L https://foundry.paradigm.xyz | bash && . ~/.bashrc && ~/.foundry/bin/foundryup -i 1.0.0
 WORKDIR /workspace
-COPY nitro/contracts-legacy/package.json nitro/contracts-legacy/yarn.lock contracts-legacy/
+COPY synd-withdrawals/synd-enclave/nitro/contracts-legacy/package.json synd-withdrawals/synd-enclave/nitro/contracts-legacy/yarn.lock contracts-legacy/
 RUN cd contracts-legacy && yarn install
-COPY nitro/contracts/package.json nitro/contracts/yarn.lock contracts/
+COPY synd-withdrawals/synd-enclave/nitro/contracts/package.json synd-withdrawals/synd-enclave/nitro/contracts/yarn.lock contracts/
 RUN cd contracts && yarn install
-COPY nitro/contracts-legacy contracts-legacy/
-COPY nitro/contracts contracts/
-COPY nitro/safe-smart-account safe-smart-account/
+COPY synd-withdrawals/synd-enclave/nitro/contracts-legacy contracts-legacy/
+COPY synd-withdrawals/synd-enclave/nitro/contracts contracts/
+COPY synd-withdrawals/synd-enclave/nitro/safe-smart-account safe-smart-account/
 RUN cd safe-smart-account && yarn install
-COPY nitro/Makefile .
+COPY synd-withdrawals/synd-enclave/nitro/Makefile .
 RUN . ~/.bashrc && NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-solidity
 
 FROM rust:1.87-slim-bookworm AS prover-header-builder
@@ -48,20 +61,20 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y make clang wabt && \
     cargo install --force cbindgen
-COPY nitro/arbitrator/Cargo.* arbitrator/
-COPY nitro/Makefile ./
-COPY nitro/arbitrator/arbutil arbitrator/arbutil
-COPY nitro/arbitrator/bench arbitrator/bench
-COPY nitro/arbitrator/brotli arbitrator/brotli
-COPY nitro/arbitrator/caller-env arbitrator/caller-env
-COPY nitro/arbitrator/prover arbitrator/prover
-COPY nitro/arbitrator/wasm-libraries arbitrator/wasm-libraries
-COPY nitro/arbitrator/jit arbitrator/jit
-COPY nitro/arbitrator/stylus arbitrator/stylus
-COPY nitro/arbitrator/tools/wasmer arbitrator/tools/wasmer
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/Cargo.* arbitrator/
+COPY synd-withdrawals/synd-enclave/nitro/Makefile ./
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/arbutil arbitrator/arbutil
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/bench arbitrator/bench
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/brotli arbitrator/brotli
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/caller-env arbitrator/caller-env
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/prover arbitrator/prover
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/wasm-libraries arbitrator/wasm-libraries
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/jit arbitrator/jit
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/stylus arbitrator/stylus
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/tools/wasmer arbitrator/tools/wasmer
 COPY --from=brotli-wasm-export / target/
-COPY nitro/scripts/build-brotli.sh scripts/
-COPY nitro/brotli brotli
+COPY synd-withdrawals/synd-enclave/nitro/scripts/build-brotli.sh scripts/
+COPY synd-withdrawals/synd-enclave/nitro/brotli brotli
 RUN apt-get update && apt-get install -y cmake
 RUN NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-prover-header
 
@@ -78,18 +91,18 @@ RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
     apt-get update && \
     apt-get install -y llvm-15-dev libclang-common-15-dev
 COPY --from=brotli-library-export / target/
-COPY nitro/arbitrator/Cargo.* arbitrator/
-COPY nitro/arbitrator/arbutil arbitrator/arbutil
-COPY nitro/arbitrator/bench arbitrator/bench
-COPY nitro/arbitrator/brotli arbitrator/brotli
-COPY nitro/arbitrator/caller-env arbitrator/caller-env
-COPY nitro/arbitrator/prover/Cargo.toml arbitrator/prover/
-COPY nitro/arbitrator/prover/benches arbitrator/prover/benches
-COPY nitro/arbitrator/bench/Cargo.toml arbitrator/bench/
-COPY nitro/arbitrator/jit/Cargo.toml arbitrator/jit/
-COPY nitro/arbitrator/stylus/Cargo.toml arbitrator/stylus/
-COPY nitro/arbitrator/tools/wasmer arbitrator/tools/wasmer
-COPY nitro/arbitrator/wasm-libraries/user-host-trait/Cargo.toml arbitrator/wasm-libraries/user-host-trait/Cargo.toml
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/Cargo.* arbitrator/
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/arbutil arbitrator/arbutil
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/bench arbitrator/bench
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/brotli arbitrator/brotli
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/caller-env arbitrator/caller-env
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/prover/Cargo.toml arbitrator/prover/
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/prover/benches arbitrator/prover/benches
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/bench/Cargo.toml arbitrator/bench/
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/jit/Cargo.toml arbitrator/jit/
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/stylus/Cargo.toml arbitrator/stylus/
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/tools/wasmer arbitrator/tools/wasmer
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/wasm-libraries/user-host-trait/Cargo.toml arbitrator/wasm-libraries/user-host-trait/Cargo.toml
 RUN bash -c 'mkdir arbitrator/{prover,jit,stylus}/src arbitrator/wasm-libraries/user-host-trait/src'
 RUN echo "fn test() {}" > arbitrator/jit/src/lib.rs && \
     echo "fn test() {}" > arbitrator/prover/src/lib.rs && \
@@ -102,14 +115,14 @@ RUN echo "fn test() {}" > arbitrator/jit/src/lib.rs && \
     rm arbitrator/wasm-libraries/user-host-trait/src/lib.rs && \
     rm arbitrator/prover/benches/merkle_bench.rs && \
     rm arbitrator/bench/src/lib.rs
-COPY nitro/Makefile ./
-COPY nitro/arbitrator/prover arbitrator/prover
-COPY nitro/arbitrator/wasm-libraries arbitrator/wasm-libraries
-COPY nitro/arbitrator/jit arbitrator/jit
-COPY nitro/arbitrator/stylus arbitrator/stylus
+COPY synd-withdrawals/synd-enclave/nitro/Makefile ./
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/prover arbitrator/prover
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/wasm-libraries arbitrator/wasm-libraries
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/jit arbitrator/jit
+COPY synd-withdrawals/synd-enclave/nitro/arbitrator/stylus arbitrator/stylus
 COPY --from=brotli-wasm-export / target/
-COPY nitro/scripts/build-brotli.sh scripts/
-COPY nitro/brotli brotli
+COPY synd-withdrawals/synd-enclave/nitro/scripts/build-brotli.sh scripts/
+COPY synd-withdrawals/synd-enclave/nitro/brotli brotli
 RUN touch -a -m arbitrator/prover/src/lib.rs
 RUN NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-prover-lib
 RUN NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-prover-bin
@@ -147,11 +160,12 @@ ENV NITRO_MODIFIED=$modified
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y wabt
-COPY --parents **/go.mod **/go.sum .
+COPY --parents synd-withdrawals/synd-enclave/**/go.mod synd-withdrawals/synd-enclave/**/go.sum .
+RUN mv synd-withdrawals/synd-enclave/* .
 RUN go mod download
-COPY cmd/enclave/main.go cmd/enclave/main.go
-COPY enclave enclave
-COPY nitro nitro
+COPY synd-withdrawals/synd-enclave/cmd/enclave/main.go cmd/enclave/main.go
+COPY synd-withdrawals/synd-enclave/enclave enclave
+COPY synd-withdrawals/synd-enclave/nitro nitro
 WORKDIR /build/nitro
 COPY --from=contracts-builder workspace/contracts/build/ contracts/build/
 COPY --from=contracts-builder workspace/contracts/out/ contracts/out/
@@ -164,13 +178,15 @@ COPY --from=prover-header-export / target/
 COPY --from=brotli-library-export / target/
 COPY --from=prover-export / target/
 RUN mkdir -p target/bin
-COPY nitro/.nitro-tag.txt /nitro-tag.txt
+COPY synd-withdrawals/synd-enclave/nitro/.nitro-tag.txt /nitro-tag.txt
 RUN NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-node-deps
 
 WORKDIR /build
 RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/enclave ./cmd/enclave
+COPY --from=verifier-builder /workspace/target/release/synd-appchain-verifier bin/synd-appchain-verifier
+COPY --from=verifier-builder /workspace/target/release/synd-seqchain-verifier bin/synd-seqchain-verifier
 
-COPY eif/init-ramdisk.yaml eif/user-ramdisk.yaml eif/
+COPY synd-withdrawals/synd-enclave/eif/init-ramdisk.yaml synd-withdrawals/synd-enclave/eif/user-ramdisk.yaml eif/
 COPY --from=bootstrap /build/out bootstrap
 RUN linuxkit build --format kernel+initrd --no-sbom --name init-ramdisk ./eif/init-ramdisk.yaml
 RUN linuxkit build --format kernel+initrd --no-sbom --name user-ramdisk ./eif/user-ramdisk.yaml
@@ -191,7 +207,7 @@ RUN git init && \
 RUN cargo build --all --release
 
 ARG TARGETARCH
-COPY "eif/cmdline-${TARGETARCH}" cmdline
+COPY "synd-withdrawals/synd-enclave/eif/cmdline-${TARGETARCH}" cmdline
 COPY --from=bootstrap /build/out bootstrap
 COPY --from=builder /build/init-ramdisk-initrd.img .
 COPY --from=builder /build/user-ramdisk-initrd.img .

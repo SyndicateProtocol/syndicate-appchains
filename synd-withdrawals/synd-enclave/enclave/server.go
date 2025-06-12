@@ -409,7 +409,8 @@ func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySe
 	if err != nil {
 		return VerifySequencingChainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
 	}
-	cmd := exec.Command("cargo", "run", "--release", "--bin", "synd-seqchain-verifier", "--",
+	// Check if it's running locally or in the enclave
+	cmd := exec.Command("./bin/synd-seqchain-verifier",
 		"--config", string(config),
 		"--l1-chain-input", string(sequencingChainInput),
 		"--seq-config-hash", verifyInput.SeqConfigHash.Hex(),
@@ -476,7 +477,7 @@ func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainI
 	if err != nil {
 		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal settlement chain input: %w", err)
 	}
-	cmd := exec.Command("cargo", "run", "--release", "--bin", "synd-appchain-verifier", "--",
+	cmd := exec.Command("./bin/synd-appchain-verifier",
 		"--config", string(config),
 		"--sequencing-chain-input", string(sequencingChainInput),
 		"--settlement-chain-input", string(settlementChainInput),
