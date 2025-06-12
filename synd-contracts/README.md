@@ -142,12 +142,15 @@ run `aderyn --help`
 Look at Makefile for more details.
 
 #### Setup
+
 Import dev private key to cast, this will ask for private key and a password
+
 ```bash
-cast wallet import devKey --interactive
+cast wallet import deployer --interactive
 ```
 
 add the public address of the wallet in `.env` file
+
 ```bash
 DEV_PUB_ADDRESS=xxxx
 ```
@@ -189,6 +192,7 @@ $ make deploy-syndicate-factory
 
 ### ETH Sepolia
 
-| Contract Name  | Address                                                                                                                       |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| SyndicateToken | [0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23](https://sepolia.etherscan.io/address/0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23) |
+| Contract Name      | Address                                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| SyndicateToken New | [0xb80c82702791664f59dF773e8b50dE921fC026fE](https://sepolia.etherscan.io/address/0xb80c82702791664f59dF773e8b50dE921fC026fE) |
+| SyndicateToken Old | [0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23](https://sepolia.etherscan.io/address/0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23) |
