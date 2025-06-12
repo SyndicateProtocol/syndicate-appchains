@@ -141,6 +141,17 @@ run `aderyn --help`
 
 Look at Makefile for more details.
 
+#### Setup
+Import dev private key to cast, this will ask for private key and a password
+```bash
+cast wallet import devKey --interactive
+```
+
+add the public address of the wallet in `.env` file
+```bash
+DEV_PUB_ADDRESS=xxxx
+```
+
 Example:
 
 ```shell
