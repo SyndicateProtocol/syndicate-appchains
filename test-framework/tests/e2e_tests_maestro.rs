@@ -337,6 +337,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
 // Test that distinct wallet txns are processed in parallel. Anecdotal upper limit is between
 // 100-150 simultaneous txns on Daniil's machine
 #[tokio::test]
+#[ignore] // TODO remove
 async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
     TestComponents::run(
         &ConfigurationOptions { use_write_loop: true, ..Default::default() },

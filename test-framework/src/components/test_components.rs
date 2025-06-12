@@ -119,6 +119,7 @@ impl TestComponents {
     ) -> Result<()> {
         let (components, mut handles) = Self::new(options).await?;
         let proposer = handles.proposer.take();
+        let enclave_server = handles.enclave_server.take();
         let maestro = handles.maestro.take();
         let batch_sequencer = handles.batch_sequencer.take();
         let valkey = handles.valkey.take();
@@ -133,6 +134,7 @@ impl TestComponents {
             e = handles.appchain_chain.wait() => panic!("nitro died: {:#?}", e),
             e = handles.translator.wait() => panic!("synd-translator died: {:#?}", e),
             e = async {proposer.unwrap().wait().await}, if proposer.is_some() => panic!("synd-proposer died: {:#?}", e),
+            e = async {enclave_server.unwrap().wait().await}, if enclave_server.is_some() => panic!("enclave server died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("synd-maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
             e = async {valkey.unwrap().wait().await}, if valkey.is_some() => panic!("valkey died: {:#?}", e),
@@ -401,23 +403,25 @@ impl TestComponents {
             match options.base_chains_type {
                 BaseChainsType::Anvil => (None, String::new(), None, String::new()),
                 BaseChainsType::PreLoaded(_) | BaseChainsType::Nitro => {
-                    let (enclave_server_instance, enclave_rpc_url, attestation_doc) =
-                        launch_enclave_server().await?;
+                    // let (enclave_server_instance, enclave_rpc_url, attestation_doc) =
+                    //     launch_enclave_server().await?;
 
                     info!("Starting proposer...");
                     let proposer_config = ProposerConfig {
-                        ethereum_rpc_url: l1_info.as_ref().unwrap().ws_url.clone(),
+                        ethereum_rpc_url: l1_info
+                            .as_ref()
+                            .map_or(set_rpc_url.clone(), |info| info.ws_url.clone()),
                         assertion_poster_contract_address,
-                        tee_module_contract_address: Default::default(),
+                        tee_module_contract_address: Default::default(), // TODO fill this in
                         arbitrum_bridge_address,
-                        inbox_address: Default::default(),
-                        sequencer_inbox_address: Default::default(),
+                        inbox_address: arbitrum_inbox_address,
+                        sequencer_inbox_address: arbitrum_inbox_address,
                         settlement_rpc_url: set_rpc_url.clone(),
                         metrics_port: PortManager::instance().next_port().await,
                         port: PortManager::instance().next_port().await,
                         appchain_rpc_url: appchain_rpc_url.clone(),
                         sequencing_rpc_url: sequencing_rpc_url.clone(),
-                        enclave_rpc_url,
+                        enclave_rpc_url: appchain_rpc_url.clone(), // TODO revert
                         polling_interval: "1m".to_string(),
                     };
 
@@ -431,8 +435,11 @@ impl TestComponents {
                     (
                         Some(proposer_instance),
                         format!("http://localhost:{}", proposer_config.port),
-                        Some(enclave_server_instance),
-                        attestation_doc,
+                        None,
+                        String::new(),
+                        // TODO revert
+                        // Some(enclave_server_instance),
+                        // attestation_doc,
                     )
                 }
             };

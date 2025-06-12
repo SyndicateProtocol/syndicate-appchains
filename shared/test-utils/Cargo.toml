@@ -9,9 +9,11 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy                                    = { workspace = true, features = ["node-bindings", "rpc-types-anvil"] }
+alloy                                    = { workspace = true, features = ["node-bindings", "providers", "rpc-types-anvil"] }
+contract-bindings                        = { workspace = true }
 eyre                                     = { workspace = true }
 redis                                    = { workspace = true, features = ["tokio-comp"] }
+serde                                    = { workspace = true }
 shared                                   = { workspace = true }
 synd-mchain                              = { workspace = true }
 synd-tee-attestation-zk-proofs-submitter = { workspace = true }

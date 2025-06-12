@@ -31,23 +31,25 @@ use tracing::{info, warn};
 pub struct Docker(Child);
 
 impl Docker {
-    pub fn new(cmd: &mut Command) -> Result<Self> {
+    pub fn new(cmd: &mut Command, command_name: &str) -> Result<Self> {
         let mut child =
             cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
         let stdout = child.stdout.take().unwrap();
         // force tests to capture output from stdout
+        let command_name_clone = command_name.to_string();
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout).lines();
             while let Some(line) = reader.next_line().await.unwrap() {
-                println!("{}", line);
+                println!("{}: {}", command_name_clone, line);
             }
         });
         // force tests to capture output from stderr
         let stderr = child.stderr.take().unwrap();
+        let command_name_clone = command_name.to_string();
         tokio::spawn(async move {
             let mut reader = BufReader::new(stderr).lines();
             while let Some(line) = reader.next_line().await.unwrap() {
-                eprintln!("{}", line);
+                eprintln!("{}: {}", command_name_clone, line);
             }
         });
         Ok(Self(child))
@@ -127,6 +129,7 @@ pub async fn start_component(
                     .arg("--net=host")
                     .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
                     .args(args),
+                executable_name,
             )
         } else {
             Docker::new(
@@ -147,6 +150,7 @@ pub async fn start_component(
                     .arg("--")
                     .args(args)
                     .args(cargs),
+                executable_name,
             )
         }?;
 
@@ -248,6 +252,7 @@ pub async fn launch_nitro_node(
             } else {
                 "--execution.forwarding-target=null".to_string()
             }),
+        format!("nitro-node-{}", chain_id).as_str(),
     )?;
 
     let url = format!("http://localhost:{}", port);
@@ -274,6 +279,7 @@ pub async fn start_valkey() -> Result<(Docker, String)> {
             .arg(format!("{port}:6379"))
             .arg("valkey/valkey:latest")
             .arg("--loglevel debug"),
+        "valkey",
     )?;
 
     // Not a typo - `valkey` URL should have the `redis` prefix
@@ -302,21 +308,45 @@ pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
             let enclave_path = format!("{project_root}/synd-withdrawals/synd-enclave");
             let image_name = format!("ghcr.io/syndicateprotocol/{executable_name}:latest");
 
-            let build_output = Command::new("docker")
+            info!("building enclave server docker image - NOTE: this may take a while");
+
+            let mut child = Command::new("docker")
                 .arg("buildx")
                 .arg("build")
+                .arg("--load")
+                .arg("--progress=plain")
                 .arg(&enclave_path)
                 .arg("--tag")
                 .arg(&image_name)
-                .output()
-                .await?;
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()?;
 
-            if !build_output.status.success() {
+            let stdout = child.stdout.take().unwrap();
+            tokio::spawn(async move {
+                let mut reader = BufReader::new(stdout).lines();
+                while let Some(line) = reader.next_line().await.unwrap() {
+                    println!("{}", line);
+                }
+            });
+
+            let stderr = child.stderr.take().unwrap();
+            tokio::spawn(async move {
+                let mut reader = BufReader::new(stderr).lines();
+                while let Some(line) = reader.next_line().await.unwrap() {
+                    eprintln!("{}", line);
+                }
+            });
+
+            let status = child.wait().await?;
+
+            if !status.success() {
                 return Err(eyre::eyre!(
-                    "failed to build enclave-server docker image. Stderr: {}",
-                    String::from_utf8_lossy(&build_output.stderr)
+                    "failed to build enclave-server docker image. Exit status: {}",
+                    status
                 ));
             }
+            info!("enclave server docker image built successfully");
             image_name
         };
 
@@ -328,7 +358,9 @@ pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
             .arg("-p")
             .arg(format!("{port}:1234"))
             .arg(image_name),
+        "enclave-server",
     )?;
+    println!("potato"); // TODO remove
 
     let enclave_rpc_url = format!("http://localhost:{port}");
 
@@ -337,6 +369,7 @@ pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
         Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
     let attestation_doc = get_attestation_doc(enclave_rpc_url.clone()).await?;
+    println!("potato"); // TODO remove
 
     Ok((docker, enclave_rpc_url, attestation_doc))
 }

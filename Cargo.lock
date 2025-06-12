@@ -7267,8 +7267,10 @@ name = "test-utils"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "contract-bindings",
  "eyre",
  "redis",
+ "serde",
  "shared",
  "synd-mchain",
  "synd-tee-attestation-zk-proofs-submitter",

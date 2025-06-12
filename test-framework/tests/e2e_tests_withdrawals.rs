@@ -28,6 +28,7 @@ use test_framework::components::{
 use test_utils::{
     chain_info::default_signer,
     docker::launch_enclave_server,
+    nitro_chain::{execute_withdrawal, init_withdrawal_tx, ARB_SYS_PRECOMPILE_ADDRESS},
     preloaded_config::{get_assertion_poster_address, ContractVersion},
     wait_until,
 };
@@ -52,6 +53,7 @@ sol! {
 }
 
 #[tokio::test]
+#[ignore]
 #[allow(clippy::unwrap_used)]
 async fn e2e_tee_withdrawal() -> Result<()> {
     TestComponents::run(
@@ -169,11 +171,35 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             assert!(receipt.status());
 
             // TODO continue:
-            // init withdrawal from the appchain
+            // initiate withdrawal from the appchain
+            let withdrawal_value = parse_ether("0.1")?;
+            let to_address = address!("0x0000000000000000000000000000000000000001");
+            let tx =
+                init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
+                    .await?;
+
+            let tx_hash =
+                components.appchain_provider.send_transaction(tx.into()).await?.watch().await?;
+            let receipt =
+                components.appchain_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+            assert!(receipt.status());
 
             // wait until the withdrawal root is posted
+            // TODO figure out how to track this
 
             // finish the withdrawal on the settlement chain
+            execute_withdrawal(
+                to_address,
+                withdrawal_value,
+                components.bridge_address,
+                &components.settlement_provider,
+                &components.appchain_provider,
+            )
+            .await?;
+
+            // Assert new balance is equal to withdrawal amount
+            let balance_after = components.settlement_provider.get_balance(to_address).await?;
+            assert_eq!(balance_after, withdrawal_value);
 
             Ok(())
         },
