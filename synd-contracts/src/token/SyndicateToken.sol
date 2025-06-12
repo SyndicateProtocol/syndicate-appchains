@@ -114,6 +114,7 @@ contract SyndicateToken is AbstractXERC20, Pausable {
     uint256 public totalEmissionsMinted;
 
     /// @notice Bridge proxy contract for cross-chain emissions distribution
+    //#olympix-ignore-uninitialized-state-variable
     IBridgeProxy public bridgeProxy;
 
     /// @notice Bridge-specific configuration data
