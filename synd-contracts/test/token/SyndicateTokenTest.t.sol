@@ -72,8 +72,8 @@ contract SyndicateTokenTest is Test {
     address public l2Token = address(0x2222);
     address public recipient = address(0x3333);
     uint32 public l2Gas = 200000;
-    uint256 public maxSingleTransfer = 20_000_000 * 10 ** 18;
-    uint256 public dailyLimit = 10_000_000 * 10 ** 18;
+    uint256 public maxSingleTransfer = 200_000_000 * 10 ** 18; // 10x increase for 1B supply
+    uint256 public dailyLimit = 100_000_000 * 10 ** 18; // 10x increase for 1B supply
 
     // Events
     event EmissionsStarted(uint256 startTime);
@@ -115,9 +115,9 @@ contract SyndicateTokenTest is Test {
         assertEq(token.name(), "Syndicate");
         assertEq(token.symbol(), "SYND");
         assertEq(token.decimals(), 18);
-        assertEq(token.TOTAL_SUPPLY(), 100_000_000 * 10 ** 18);
-        assertEq(token.INITIAL_MINT_SUPPLY(), 90_000_000 * 10 ** 18);
-        assertEq(token.EMISSIONS_SUPPLY(), 10_000_000 * 10 ** 18);
+        assertEq(token.TOTAL_SUPPLY(), 1_000_000_000 * 10 ** 18);
+        assertEq(token.INITIAL_MINT_SUPPLY(), 900_000_000 * 10 ** 18);
+        assertEq(token.EMISSIONS_SUPPLY(), 100_000_000 * 10 ** 18);
         assertEq(token.EPOCH_DURATION(), 30 days);
         assertEq(token.TOTAL_EPOCHS(), 48);
     }
@@ -259,7 +259,7 @@ contract SyndicateTokenTest is Test {
 
         vm.warp(block.timestamp + 30 days + 1);
 
-        uint256 expectedAmount = 678_055 * 10 ** 18;
+        uint256 expectedAmount = 6_780_550 * 10 ** 18;
         uint256 initialSupply = token.totalSupply();
 
         vm.expectEmit(false, false, false, true);
@@ -286,7 +286,7 @@ contract SyndicateTokenTest is Test {
 
         vm.warp(block.timestamp + 90 days + 1); // 3 epochs
 
-        uint256 expectedAmount = 678_055 * 10 ** 18 * 3;
+        uint256 expectedAmount = 6_780_550 * 10 ** 18 * 3;
         vm.prank(emissionsManager);
         token.mintEmission();
 
@@ -304,7 +304,7 @@ contract SyndicateTokenTest is Test {
         token.mintEmission();
 
         // TODO: still need to check if this is the correct final supply
-        uint256 mintRoundingError = 4 * 10 ** 18; // Adjust for rounding errors in test
+        uint256 mintRoundingError = 40 * 10 ** 18; // Adjust for rounding errors in test (10x scale)
 
         assertEq(token.currentEpoch(), 48);
         assertEq(
@@ -365,7 +365,7 @@ contract SyndicateTokenTest is Test {
             expectedTotal += schedule[i];
         }
 
-        uint256 totalSupplyRoundingError = 4 * 10 ** 18; // Adjust for rounding errors in test
+        uint256 totalSupplyRoundingError = 40 * 10 ** 18; // Adjust for rounding errors in test (10x scale)
 
         // Verify expected total equals EMISSIONS_SUPPLY constant
         assertEq(
@@ -391,8 +391,8 @@ contract SyndicateTokenTest is Test {
         uint256 expectedFinalSupply = token.INITIAL_MINT_SUPPLY() + token.EMISSIONS_SUPPLY();
 
         // TODO: still need to check if this is the correct final supply
-        assertEq(token.totalSupply(), expectedFinalSupply - 4 * 10 ** 18, "F1"); // Adjusted for rounding errors in test
-        assertEq(token.totalSupply(), token.TOTAL_SUPPLY() - 4 * 10 ** 18, "F2"); // Adjusted for rounding errors in test
+        assertEq(token.totalSupply(), expectedFinalSupply - 40 * 10 ** 18, "F1"); // Adjusted for rounding errors in test (10x scale)
+        assertEq(token.totalSupply(), token.TOTAL_SUPPLY() - 40 * 10 ** 18, "F2"); // Adjusted for rounding errors in test (10x scale)
     }
 
     function test_EmissionSchedule_ValidatesCorrectly() public view {
@@ -404,7 +404,7 @@ contract SyndicateTokenTest is Test {
             total += schedule[i];
         }
 
-        uint256 totalSupplyRoundingError = 4 * 10 ** 18; // Adjust for rounding errors in test
+        uint256 totalSupplyRoundingError = 40 * 10 ** 18; // Adjust for rounding errors in test (10x scale)
         // TODO: still need to check if this is the correct final supply
         assertEq(
             total,
@@ -434,7 +434,7 @@ contract SyndicateTokenTest is Test {
 
         assertEq(epoch, 0);
         assertEq(nextEmissionTime, block.timestamp + 30 days);
-        assertEq(nextEmissionAmount, 678_055 * 10 ** 18);
+        assertEq(nextEmissionAmount, 6_780_550 * 10 ** 18);
         assertFalse(canMint);
     }
 
@@ -445,7 +445,7 @@ contract SyndicateTokenTest is Test {
 
         (,, uint256 nextEmissionAmount, bool canMint) = token.getCurrentEpochInfo();
 
-        assertEq(nextEmissionAmount, 678_055 * 10 ** 18);
+        assertEq(nextEmissionAmount, 6_780_550 * 10 ** 18);
         assertTrue(canMint);
     }
 
@@ -456,7 +456,7 @@ contract SyndicateTokenTest is Test {
         vm.prank(emissionsManager);
         token.mintEmission();
 
-        uint256 minted = 678_055 * 10 ** 18 * 2;
+        uint256 minted = 6_780_550 * 10 ** 18 * 2;
         uint256 expected = token.EMISSIONS_SUPPLY() - minted;
 
         assertEq(token.getRemainingEmissions(), expected);
@@ -603,7 +603,7 @@ contract SyndicateTokenTest is Test {
 
         MockOptimismBridge.BridgeCall memory call = mockBridge.getLastBridgeCall();
         assertEq(call.l1Token, address(token));
-        assertEq(call.amount, 678_055 * 10 ** 18);
+        assertEq(call.amount, 6_780_550 * 10 ** 18);
         assertEq(call.l2Token, l2Token);
         assertEq(call.to, recipient);
     }

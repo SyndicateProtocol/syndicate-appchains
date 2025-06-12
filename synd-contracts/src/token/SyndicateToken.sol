@@ -13,7 +13,7 @@ import {IBridgeProxy} from "./interfaces/IBridgeProxy.sol";
  *      bridge proxies and full XERC20 compatibility for cross-chain functionality.
  *
  * Key Features:
- * - ERC20 token with 100M total supply (90M initial + 10M emissions)
+ * - ERC20 token with 1B total supply (900M initial + 100M emissions)
  * - Automated emissions over 48 epochs (~4 years) with decay schedule
  * - XERC20 functionality for cross-chain bridging with rate limits
  * - Voting functionality via ERC20Votes for governance
@@ -21,8 +21,8 @@ import {IBridgeProxy} from "./interfaces/IBridgeProxy.sol";
  * - Comprehensive access controls and emergency mechanisms
  *
  * Supply Distribution:
- * - 90M tokens (90%): Initial mint to foundation
- * - 10M tokens (10%): Emissions over 4 years to L2 chains
+ * - 900M tokens (90%): Initial mint to foundation
+ * - 100M tokens (10%): Emissions over 4 years to L2 chains
  *
  * Emissions Schedule:
  * - 48 epochs of 30 days each (~4 years total)
@@ -72,14 +72,14 @@ contract SyndicateToken is AbstractXERC20, Pausable {
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Total token supply: 100 million tokens
-    uint256 public constant TOTAL_SUPPLY = 100_000_000 * 10 ** 18;
+    /// @notice Total token supply: 1 billion tokens
+    uint256 public constant TOTAL_SUPPLY = 1_000_000_000 * 10 ** 18;
 
-    /// @notice Initial mint to foundation: 90 million tokens (90%)
-    uint256 public constant INITIAL_MINT_SUPPLY = 90_000_000 * 10 ** 18;
+    /// @notice Initial mint to foundation: 900 million tokens (90%)
+    uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
 
-    /// @notice Reserved for emissions: 10 million tokens (10%)
-    uint256 public constant EMISSIONS_SUPPLY = 10_000_000 * 10 ** 18;
+    /// @notice Reserved for emissions: 100 million tokens (10%)
+    uint256 public constant EMISSIONS_SUPPLY = 100_000_000 * 10 ** 18;
 
     /// @notice Duration of each emission epoch: 30 days
     uint256 public constant EPOCH_DURATION = 30 days;
@@ -425,17 +425,17 @@ contract SyndicateToken is AbstractXERC20, Pausable {
      */
     function _initializeEmissionSchedule() private {
         // Define emission amounts per period (6 epochs each)
-        // These amounts are designed to distribute 10M tokens over 48 epochs
+        // These amounts are designed to distribute 100M tokens over 48 epochs
         // with a decreasing pattern to incentivize early adoption
         uint256[8] memory emissionAmounts = [
-            uint256(678_055 * 10 ** 18), // Epochs 1-6: Highest emissions
-            uint256(406_833 * 10 ** 18), // Epochs 7-12
-            uint256(244_100 * 10 ** 18), // Epochs 13-18
-            uint256(146_460 * 10 ** 18), // Epochs 19-24
-            uint256(87_876 * 10 ** 18), // Epochs 25-30
-            uint256(52_726 * 10 ** 18), // Epochs 31-36
-            uint256(31_635 * 10 ** 18), // Epochs 37-42
-            uint256(18_981 * 10 ** 18) // Epochs 43-48: Lowest emissions
+            uint256(6_780_550 * 10 ** 18), // Epochs 1-6: Highest emissions
+            uint256(4_068_330 * 10 ** 18), // Epochs 7-12
+            uint256(2_441_000 * 10 ** 18), // Epochs 13-18
+            uint256(1_464_600 * 10 ** 18), // Epochs 19-24
+            uint256(878_760 * 10 ** 18), // Epochs 25-30
+            uint256(527_260 * 10 ** 18), // Epochs 31-36
+            uint256(316_350 * 10 ** 18), // Epochs 37-42
+            uint256(189_810 * 10 ** 18) // Epochs 43-48: Lowest emissions
         ];
 
         // Fill the emission schedule array
