@@ -4,13 +4,13 @@
 FROM rust:1.87-slim-bookworm AS verifier-builder
 WORKDIR /workspace
 RUN apt-get update && \
-    apt-get install -y pkg-config libssl-dev clang cmake
+    apt-get install -y pkg-config libssl-dev clang cmake musl-tools
 
 COPY . .
 
 RUN rustup target add x86_64-unknown-linux-musl
-RUN cargo build --release --target x86_64-unknown-linux-musl --manifest-path synd-appchain-verifier/Cargo.toml
-RUN cargo build --release --target x86_64-unknown-linux-musl --manifest-path synd-seqchain-verifier/Cargo.toml
+RUN cargo build --release --target x86_64-unknown-linux-musl --manifest-path synd-withdrawals/synd-appchain-verifier/Cargo.toml
+RUN cargo build --release --target x86_64-unknown-linux-musl --manifest-path synd-withdrawals/synd-seqchain-verifier/Cargo.toml
 
 # Build eif
 FROM debian:bookworm-slim AS brotli-wasm-builder
@@ -34,6 +34,7 @@ COPY synd-withdrawals/synd-enclave/nitro/scripts/build-brotli.sh scripts/
 COPY synd-withdrawals/synd-enclave/nitro/brotli brotli
 RUN apt-get update && \
     apt-get install -y cmake make gcc git && \
+    rm -rf brotli/buildfiles/build-local && \
     ./scripts/build-brotli.sh -l -t /workspace/install/
 
 FROM scratch AS brotli-library-export
