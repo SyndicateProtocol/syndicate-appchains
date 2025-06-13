@@ -4,7 +4,8 @@
 FROM rust:1.87-slim-bookworm AS verifier-builder
 WORKDIR /workspace
 RUN apt-get update && \
-    apt-get install -y pkg-config libssl-dev clang cmake musl-tools
+    apt-get install -y pkg-config libssl-dev clang cmake musl-tools g++ && \
+    ln -s /usr/bin/musl-gcc /usr/bin/musl-g++
 
 COPY . .
 
