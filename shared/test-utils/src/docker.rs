@@ -8,6 +8,7 @@ use crate::{
     wait_until,
 };
 use alloy::{
+    hex,
     primitives::Address,
     providers::{Provider, ProviderBuilder},
     transports::http::Client,
@@ -20,7 +21,7 @@ use std::{
     time::Duration,
 };
 use synd_mchain::client::MProvider;
-use synd_tee_attestation_zk_proofs_submitter::{self, get_attestation_doc};
+use synd_tee_attestation_zk_proofs_submitter::{self, get_signer_public_key};
 use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
@@ -296,7 +297,7 @@ pub async fn start_valkey() -> Result<(Docker, String)> {
     Ok((valkey, valkey_url))
 }
 
-pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
+pub async fn launch_enclave_server() -> Result<(Docker, String, Address)> {
     info!("launching enclave server");
 
     let project_root = env!("CARGO_WORKSPACE_DIR");
@@ -328,6 +329,8 @@ pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
     }
     info!("enclave server docker image built successfully");
 
+    println!("potato");
+
     let port = PortManager::instance().next_port().await;
     let docker = Docker::new(
         Command::new("docker")
@@ -343,10 +346,14 @@ pub async fn launch_enclave_server() -> Result<(Docker, String, String)> {
     let enclave_rpc_url = format!("http://localhost:{port}");
 
     wait_until!(
-        get_attestation_doc(enclave_rpc_url.clone()).await.is_ok(),
+        get_signer_public_key(enclave_rpc_url.clone()).await.is_ok(),
         Duration::from_secs(5 * 60)
     );
-    let attestation_doc = get_attestation_doc(enclave_rpc_url.clone()).await?;
+    // NOTE: in theory we we should get the attestation doc instead, but it's hard to get that
+    // function to work outside the AWS enclave. We'll just use the public key for now.
+    let signer_pub_key_hex = get_signer_public_key(enclave_rpc_url.clone()).await?;
+    let signer_pub_key_bytes = hex::decode(signer_pub_key_hex).unwrap();
+    let signer_address = Address::from_raw_public_key(&signer_pub_key_bytes[..64]);
 
-    Ok((docker, enclave_rpc_url, attestation_doc))
+    Ok((docker, enclave_rpc_url, signer_address))
 }

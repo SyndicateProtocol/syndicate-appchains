@@ -1,36 +1,27 @@
 //! e2e tests for the `synd-withdrawals`
 use alloy::{
-    consensus::Receipt,
     contract::CallBuilder,
-    eips::{BlockId, BlockNumberOrTag, Encodable2718},
-    network::{self, Ethereum, Network, TransactionBuilder},
-    primitives::{address, keccak256, utils::parse_ether, Address, Bytes, B256, U256},
-    providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::{anvil::MineOptions, Block, TransactionReceipt, TransactionRequest},
-    signers::local::{LocalSigner, PrivateKeySigner},
+    eips::BlockNumberOrTag,
+    network::Ethereum,
+    primitives::{address, utils::parse_ether, Address, B256},
+    providers::Provider,
+    signers::local::PrivateKeySigner,
     sol,
     sol_types::SolValue,
 };
 use contract_bindings::synd::{
-    arbsys::ArbSys, assertionposter::AssertionPoster, ibridge::IBridge, iinbox::IInbox,
-    ioutbox::IOutbox, irollupcore::IRollupCore, nodeinterface::NodeInterface, rollup::Rollup,
-    teekeymanager::TeeKeyManager, teemodule::TeeModule,
+    assertionposter::AssertionPoster, teekeymanager::TeeKeyManager, teemodule::TeeModule,
 };
 use eyre::Result;
 use synd_appchain_verifier::config::AppchainVerifierConfig;
 use synd_seqchain_verifier::config::SeqchainVerifierConfig;
-use synd_tee_attestation_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, ValidationResult};
-use synd_tee_attestation_zk_proofs_submitter::{pem_to_der, AWS_NITRO_ROOT_CERT_PEM};
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     test_components::TestComponents,
 };
 use test_utils::{
     chain_info::default_signer,
-    docker::launch_enclave_server,
-    nitro_chain::{execute_withdrawal, init_withdrawal_tx, ARB_SYS_PRECOMPILE_ADDRESS},
-    preloaded_config::{get_assertion_poster_address, ContractVersion},
-    wait_until,
+    nitro_chain::{execute_withdrawal, init_withdrawal_tx},
 };
 
 #[ctor::ctor]
@@ -53,7 +44,6 @@ sol! {
 }
 
 #[tokio::test]
-#[ignore]
 #[allow(clippy::unwrap_used)]
 async fn e2e_tee_withdrawal() -> Result<()> {
     TestComponents::run(
@@ -147,18 +137,9 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
             assert!(receipt.status());
 
-            // launch the TEE enclave server
-
-            // verify the attestation document
-            let ValidationResult { tee_signing_key, .. } = verify_aws_nitro_attestation(
-                &alloy::hex::decode(components.tee_attestation_doc)?,
-                pem_to_der(AWS_NITRO_ROOT_CERT_PEM)?.as_slice(),
-            )
-            .unwrap();
-
-            // add the TEE address to the key manager using a mock proof
+            // add the TEE signer address to the key manager using a mock proof
             let key_mgr = TeeKeyManager::new(key_mgr_addr, &components.settlement_provider);
-            let public_values = tee_signing_key.abi_encode();
+            let public_values = components.tee_signer_address.abi_encode();
             let proof_bytes = vec![];
             let tx_hash = key_mgr
                 .addKey(public_values.into(), proof_bytes.into())
@@ -170,7 +151,6 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
             assert!(receipt.status());
 
-            // TODO continue:
             // initiate withdrawal from the appchain
             let withdrawal_value = parse_ether("0.1")?;
             let to_address = address!("0x0000000000000000000000000000000000000001");
@@ -185,7 +165,9 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             assert!(receipt.status());
 
             // wait until the withdrawal root is posted
-            // TODO figure out how to track this
+            // TODO look for `AssertionConfirmed` event on the `RollupCore` contract
+            // TODO call `closeChallengeWindow` on the TEEmodule - to force the assertion to be
+            // posted
 
             // finish the withdrawal on the settlement chain
             execute_withdrawal(

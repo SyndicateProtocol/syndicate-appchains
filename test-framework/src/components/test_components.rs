@@ -108,7 +108,7 @@ pub struct TestComponents {
     #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
 
-    pub tee_attestation_doc: String,
+    pub tee_signer_address: Address,
 }
 
 impl TestComponents {
@@ -167,7 +167,7 @@ impl TestComponents {
                     let rollup_address = deploy_mock_rollup(&l1_provider, chain_id).await?;
 
                     info!("Starting sequencing chain's nitro node...");
-                    let nitro_info = launch_nitro_node(
+                    let chain_info = launch_nitro_node(
                         chain_id,
                         Address::ZERO,
                         &l1_info.as_ref().unwrap().ws_url,
@@ -178,7 +178,14 @@ impl TestComponents {
                     )
                     .await?;
 
-                    nitro_info
+                    // wait until those funds arrive on the sequencing chain
+                    wait_until!(
+                        chain_info.provider.get_balance(default_signer().address()).await? ==
+                            parse_ether("10")?,
+                        Duration::from_secs(10)
+                    );
+
+                    chain_info
                 }
             };
 
@@ -207,69 +214,84 @@ impl TestComponents {
 
         // Launch mock settlement chain
         info!("Starting settlement chain...");
-        let (set_rpc_url, set_instance, set_provider) = match options.base_chains_type {
-            BaseChainsType::Anvil => {
-                let ChainInfo { ws_url, instance, provider } = start_anvil(20).await?;
-                // Use the mock rollup contract for the test instead of deploying all the nitro
-                // rollup contracts
-                let _ = Rollup::deploy_builder(
-                    &provider,
-                    U256::from(options.appchain_chain_id),
-                    "null".to_string(),
-                )
-                .nonce(0)
-                .send()
-                .await?;
-
-                mine_block(&provider, 0).await?;
-                (ws_url, instance, provider)
-            }
-            BaseChainsType::Nitro => {
-                let chain_id = 20;
-                let l1_provider = l1_info.as_ref().unwrap().provider.clone();
-                let rollup_address = deploy_mock_rollup(&l1_provider, chain_id).await?;
-
-                let ChainInfo { ws_url, instance, provider } = launch_nitro_node(
-                    chain_id,
-                    Address::ZERO,
-                    &l1_info.as_ref().unwrap().ws_url,
-                    1,
-                    None,
-                    rollup_address,
-                    rollup_address,
-                )
-                .await?;
-
-                // deploy the rollup contract for the appchain on the settlement chain
-                let _ = Rollup::deploy_builder(
-                    &provider,
-                    U256::from(options.appchain_chain_id),
-                    "null".to_string(),
-                )
-                .nonce(0)
-                .send()
-                .await?;
-                (ws_url, instance, provider)
-            }
-            BaseChainsType::PreLoaded(version) => {
-                // If flag is set, load the anvil state from a file
-                // This is the full set of Arb contracts
-                let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("config")
-                    .join(get_anvil_file(&version));
-
-                let ChainInfo { ws_url, instance, provider } =
-                    start_anvil_with_args(31337, &["--load-state", state_file.to_str().unwrap()])
-                        .await?;
-
-                // Sync the tips of the sequencing and settlement chains
-                let block = provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
-                seq_provider
-                    .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
+        let ChainInfo { ws_url: set_rpc_url, instance: set_instance, provider: set_provider } =
+            match options.base_chains_type {
+                BaseChainsType::Anvil => {
+                    let chain_info = start_anvil(20).await?;
+                    // Use the mock rollup contract for the test instead of deploying all the nitro
+                    // rollup contracts
+                    let _ = Rollup::deploy_builder(
+                        &chain_info.provider,
+                        U256::from(options.appchain_chain_id),
+                        "null".to_string(),
+                    )
+                    .nonce(0)
+                    .send()
                     .await?;
-                (ws_url, instance, provider)
-            }
-        };
+
+                    mine_block(&chain_info.provider, 0).await?;
+                    chain_info
+                }
+                BaseChainsType::Nitro => {
+                    let chain_id = 20;
+                    let l1_provider = l1_info.as_ref().unwrap().provider.clone();
+                    let rollup_address = deploy_mock_rollup(&l1_provider, chain_id).await?;
+
+                    let chain_info = launch_nitro_node(
+                        chain_id,
+                        Address::ZERO,
+                        &l1_info.as_ref().unwrap().ws_url,
+                        1,
+                        None,
+                        rollup_address,
+                        rollup_address,
+                    )
+                    .await?;
+
+                    // wait until those funds arrive on the sequencing chain
+                    wait_until!(
+                        chain_info.provider.get_balance(default_signer().address()).await? ==
+                            parse_ether("10")?,
+                        Duration::from_secs(10)
+                    );
+
+                    // deploy the rollup contract for the appchain on the settlement chain
+                    let _ = Rollup::deploy_builder(
+                        &chain_info.provider,
+                        U256::from(options.appchain_chain_id),
+                        "null".to_string(),
+                    )
+                    .nonce(0)
+                    .send()
+                    .await?;
+
+                    chain_info
+                }
+                BaseChainsType::PreLoaded(version) => {
+                    // If flag is set, load the anvil state from a file
+                    // This is the full set of Arb contracts
+                    let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                        .join("config")
+                        .join(get_anvil_file(&version));
+
+                    let chain_info = start_anvil_with_args(
+                        31337,
+                        &["--load-state", state_file.to_str().unwrap()],
+                    )
+                    .await?;
+
+                    // Sync the tips of the sequencing and settlement chains
+                    let block = chain_info
+                        .provider
+                        .get_block_by_number(BlockNumberOrTag::Latest)
+                        .await?
+                        .unwrap();
+                    seq_provider
+                        .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
+                        .await?;
+                    chain_info
+                }
+            };
 
         let (arbitrum_bridge_address, arbitrum_inbox_address) = match options.base_chains_type {
             BaseChainsType::Anvil | BaseChainsType::Nitro => (
@@ -399,11 +421,12 @@ impl TestComponents {
             }
         };
 
-        let (proposer_instance, proposer_url, enclave_server_instance, tee_attestation_doc) =
+        let (proposer_instance, proposer_url, enclave_server_instance, tee_signer_address) =
             match options.base_chains_type {
-                BaseChainsType::Anvil => (None, String::new(), None, String::new()),
+                BaseChainsType::Anvil => (None, String::new(), None, Address::ZERO),
                 BaseChainsType::PreLoaded(_) | BaseChainsType::Nitro => {
-                    let (enclave_server_instance, enclave_rpc_url, attestation_doc) =
+                    // TODO do not launch enclave if not in Nitro mode. It takes a long time
+                    let (enclave_server_instance, enclave_rpc_url, tee_public_key) =
                         launch_enclave_server().await?;
 
                     info!("Starting proposer...");
@@ -411,7 +434,7 @@ impl TestComponents {
                         ethereum_rpc_url: l1_info
                             .as_ref()
                             .map_or(set_rpc_url.clone(), |info| info.ws_url.clone()),
-                        assertion_poster_contract_address,
+                        assertion_poster_contract_address, // TODO remove
                         tee_module_contract_address: Default::default(), // TODO fill this in
                         arbitrum_bridge_address,
                         inbox_address: arbitrum_inbox_address,
@@ -422,7 +445,7 @@ impl TestComponents {
                         appchain_rpc_url: appchain_rpc_url.clone(),
                         sequencing_rpc_url: sequencing_rpc_url.clone(),
                         enclave_rpc_url,
-                        polling_interval: "1m".to_string(),
+                        polling_interval: "1m".to_string(), // TODO needs to be much lower
                     };
 
                     let proposer_instance = start_component(
@@ -436,7 +459,7 @@ impl TestComponents {
                         Some(proposer_instance),
                         format!("http://localhost:{}", proposer_config.port),
                         Some(enclave_server_instance),
-                        attestation_doc,
+                        tee_public_key,
                     )
                 }
             };
@@ -518,7 +541,7 @@ impl TestComponents {
                 valkey_url: valkey_url_init,
                 appchain_block_explorer_url,
 
-                tee_attestation_doc,
+                tee_signer_address,
             },
             ComponentHandles {
                 l1_chain: l1_instance,
@@ -645,6 +668,7 @@ impl TestComponents {
     }
 }
 
+// TODO deploy the real stuff (nitro-contracts)
 #[allow(clippy::unwrap_used)]
 /// Deploys a mock rollup contract.
 /// NOTE: only used for the base chains when in Nitro mode, it expects `l1_provider` to have

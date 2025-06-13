@@ -11,6 +11,7 @@ use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
 pub enum BaseChainsType {
     Anvil,
     PreLoaded(ContractVersion),
+    /// auto-mine enabled
     Nitro,
 }
 
