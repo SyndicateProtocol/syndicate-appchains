@@ -1233,7 +1233,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_proposer_build_seq_chain_input() {
+    async fn test_proposer_build_seq_and_sett_chain_input() {
         shared::tracing::setup_global_logging().expect("logging setup failed");
 
         let ethereum_provider = ProviderBuilder::default()
