@@ -970,7 +970,7 @@ impl Proposer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{metrics::ProposerMetrics, proposer::Proposer};
+    use crate::{metrics::ProposerMetrics, proposer::Proposer, types::SeqVerifyOutput};
     use alloy::{
         eips::BlockNumberOrTag,
         network::EthereumWallet,
@@ -1179,6 +1179,8 @@ mod tests {
         Ok((block, tx_hash))
     }
 
+    ///TODO will need a `SeqVerifyOutput` to start from, either a mock or real saved JSON artifact
+    /// from the `synd-enclave`. Possible that an E2E test is more useful for this
     #[tokio::test]
     async fn test_proposer_build_seq_and_sett_chain_input() {
         shared::tracing::setup_global_logging().expect("logging setup failed");
@@ -1229,6 +1231,10 @@ mod tests {
             .await
             .unwrap();
 
+        //TODO
+        let seq_verify_output =
+            SeqVerifyOutput { block_hash: Default::default(), signature: Default::default() };
+
         let sett_chain_input = proposer
             .build_settlement_chain_input(&mock_input, seq_end_block, &seq_chain_input)
             .await
@@ -1244,9 +1250,15 @@ mod tests {
         assert!(res.is_ok());
     }
 
-    //TODO
-    // no-touch driver test, external calls mocked or returning correctly. Prefer a real running
-    // `synd-enclave`
+    ///TODO
+    /// no-touch driver test, need external calls mocked or returning correctly. Prefer a real
+    /// running `synd-enclave`.
+    /// Required external calls:
+    /// - `eth_getProof` from Ethereum + sequencing providers
+    /// - `eth_getStorageAt` from Ethereum provider
+    /// - `enclave_verifySequencingChain` + `enclave_verifyAppchain` from TEE enclave
+    /// - `arbdebug_preimageData` from Sequencing + Appchain nitro nodes/providers
+    /// This might be easier to do in E2E tests
     #[tokio::test]
     async fn test_proposer_tee_verify() {
         shared::tracing::setup_global_logging().expect("logging setup failed");
