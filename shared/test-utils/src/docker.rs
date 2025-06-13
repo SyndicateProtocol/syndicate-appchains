@@ -28,10 +28,12 @@ use tokio::{
 };
 use tracing::{info, warn};
 
+/// Wraps a `tokio::process::Command`, prefixes and redirects the output to the test logger, and
+/// handles cleanup.
 #[derive(Debug)]
-pub struct Docker(Child);
+pub struct E2EProcess(Child);
 
-impl Docker {
+impl E2EProcess {
     pub fn new(cmd: &mut Command, command_name: &str) -> Result<Self> {
         let mut child =
             cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
@@ -66,19 +68,19 @@ impl Docker {
     }
 }
 
-impl Drop for Docker {
+impl Drop for E2EProcess {
     fn drop(&mut self) {
         if self.0.try_wait().is_ok_and(|status| status.is_some()) {
-            info!("Docker process for Drop already exited or was not running.");
+            info!("process for Drop already exited or was not running.");
             return;
         }
 
         let Some(pid) = self.0.id() else {
-            info!("Docker process for Drop had no PID, likely already exited or failed to start.");
+            info!("process for Drop had no PID, likely already exited or failed to start.");
             return;
         };
 
-        info!("Attempting to stop Docker container process (PID: {}) via Drop", pid);
+        info!("Attempting to stop process (PID: {}) via Drop", pid);
         let kill_proc = match std::process::Command::new("kill")
             .arg(pid.to_string())
             .stdout(Stdio::piped())
@@ -118,11 +120,11 @@ pub async fn start_component(
     api_port: u16,
     args: Vec<String>,
     cargs: Vec<String>,
-) -> Result<Docker> {
+) -> Result<E2EProcess> {
     info!("launching {}", executable_name);
     let mut docker =
         if let Ok(tag) = env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG") {
-            Docker::new(
+            E2EProcess::new(
                 Command::new("docker")
                     .arg("run")
                     .arg("--init")
@@ -133,7 +135,7 @@ pub async fn start_component(
                 executable_name,
             )
         } else {
-            Docker::new(
+            E2EProcess::new(
                 Command::new("cargo")
                     // ring has a custom build.rs script that rebuilds whenever certain environment
                     // vars change
@@ -159,7 +161,7 @@ pub async fn start_component(
     Ok(docker)
 }
 
-pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut Docker) {
+pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2EProcess) {
     let client = Client::new();
     wait_until!(
         if let Some(status) = docker.try_wait()? {
@@ -177,7 +179,7 @@ pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut Doc
 pub async fn start_mchain(
     appchain_chain_id: u64,
     finality_delay: u64,
-) -> Result<(String, Docker, MProvider)> {
+) -> Result<(String, E2EProcess, MProvider)> {
     let temp = test_path("synd-mchain");
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
@@ -220,7 +222,7 @@ pub async fn launch_nitro_node(
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
 
-    let mut nitro = Docker::new(
+    let mut nitro = E2EProcess::new(
         Command::new("docker")
             .arg("run")
             .arg("--init")
@@ -269,9 +271,9 @@ pub async fn launch_nitro_node(
     Ok(ChainInfo { instance: ProcessInstance::Docker(nitro), provider, ws_url: url })
 }
 
-pub async fn start_valkey() -> Result<(Docker, String)> {
+pub async fn start_valkey() -> Result<(E2EProcess, String)> {
     let port = PortManager::instance().next_port().await;
-    let mut valkey = Docker::new(
+    let mut valkey = E2EProcess::new(
         Command::new("docker")
             .arg("run")
             .arg("--init")
@@ -297,7 +299,7 @@ pub async fn start_valkey() -> Result<(Docker, String)> {
     Ok((valkey, valkey_url))
 }
 
-pub async fn launch_enclave_server() -> Result<(Docker, String, Address)> {
+pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     info!("launching enclave server");
 
     let project_root = env!("CARGO_WORKSPACE_DIR");
@@ -305,7 +307,7 @@ pub async fn launch_enclave_server() -> Result<(Docker, String, Address)> {
     let image_name = "ghcr.io/syndicateprotocol/enclave-server:local-dev".to_string();
 
     info!("building enclave server docker image - NOTE: this may take a while");
-    let status = Docker::new(
+    let status = E2EProcess::new(
         Command::new("docker")
             .arg("buildx")
             .arg("build")
@@ -329,10 +331,8 @@ pub async fn launch_enclave_server() -> Result<(Docker, String, Address)> {
     }
     info!("enclave server docker image built successfully");
 
-    println!("potato");
-
     let port = PortManager::instance().next_port().await;
-    let docker = Docker::new(
+    let docker = E2EProcess::new(
         Command::new("docker")
             .arg("run")
             .arg("--init")

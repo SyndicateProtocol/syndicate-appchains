@@ -29,3 +29,6 @@
 [submodule "synd-contracts/lib/eigenlayer-middleware"]
     path = synd-contracts/lib/eigenlayer-middleware
     url = https://github.com/Layr-Labs/eigenlayer-middleware
+[submodule "test-framework/external/nitro-contracts"]
+	path = test-framework/external/nitro-contracts
+	url = https://github.com/OffchainLabs/nitro-contracts.git

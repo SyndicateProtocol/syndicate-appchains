@@ -54,6 +54,7 @@ pub fn nitro_chain_info_json(
 
 /// Return the on-chain config for a rollup with a given chain id
 pub fn chain_config(chain_id: u64, chain_owner: Address) -> String {
+    // TODO DataAvailabilityCommittee might need to be true for base chains
     let mut cfg = format!(
         r#"{{
           "chainId": {chain_id},

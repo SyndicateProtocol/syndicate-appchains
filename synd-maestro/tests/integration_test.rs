@@ -18,7 +18,7 @@ mod tests {
         server::{ShutdownFn, HEADER_CHAIN_ID},
     };
     use test_utils::{
-        docker::{start_valkey, Docker},
+        docker::{start_valkey, E2EProcess},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
     };
     use wiremock::{
@@ -35,7 +35,7 @@ mod tests {
     async fn setup_server(
         mock_rpc_server_4: Option<MockServer>,
         mock_rpc_server_5: Option<MockServer>,
-    ) -> (SocketAddr, ShutdownFn, String, Docker, MockServer, MockServer) {
+    ) -> (SocketAddr, ShutdownFn, String, E2EProcess, MockServer, MockServer) {
         // Create new mock servers if not provided, otherwise use the ones passed in
         let mock_rpc_server_4 = match mock_rpc_server_4 {
             Some(server) => server,

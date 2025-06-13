@@ -1,4 +1,4 @@
-use crate::docker::Docker;
+use crate::docker::E2EProcess;
 use alloy::{node_bindings::AnvilInstance, signers::local::PrivateKeySigner};
 use shared::types::FilledProvider;
 use std::{future, process::ExitStatus, str::FromStr};
@@ -13,7 +13,7 @@ pub struct ChainInfo {
 #[derive(Debug)]
 pub enum ProcessInstance {
     Anvil(AnvilInstance),
-    Docker(Docker),
+    Docker(E2EProcess),
 }
 
 impl ProcessInstance {

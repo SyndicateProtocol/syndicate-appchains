@@ -4,7 +4,7 @@ use alloy::{
     eips::BlockNumberOrTag,
     network::Ethereum,
     primitives::{address, utils::parse_ether, Address, B256},
-    providers::Provider,
+    providers::{ext::AnvilApi, Provider},
     signers::local::PrivateKeySigner,
     sol,
     sol_types::SolValue,
@@ -17,9 +17,10 @@ use synd_appchain_verifier::config::AppchainVerifierConfig;
 use synd_seqchain_verifier::config::SeqchainVerifierConfig;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
-    test_components::TestComponents,
+    test_components::{deploy_nitro_rollup, TestComponents},
 };
 use test_utils::{
+    anvil::start_anvil,
     chain_info::default_signer,
     nitro_chain::{execute_withdrawal, init_withdrawal_tx},
 };
@@ -187,6 +188,15 @@ async fn e2e_tee_withdrawal() -> Result<()> {
         },
     )
     .await
+}
+
+// TODO remove me
+#[tokio::test]
+async fn silly_test() {
+    let anvil = start_anvil(1).await.unwrap();
+    anvil.provider.anvil_set_auto_mine(true).await.unwrap();
+
+    deploy_nitro_rollup(&anvil.ws_url.replace("ws://", "http://"), 10).await.unwrap();
 }
 
 #[allow(clippy::unwrap_used)]
