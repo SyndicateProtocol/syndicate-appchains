@@ -5,7 +5,7 @@ use crate::{
     config::Config,
     metrics::ProposerMetrics,
     types::{
-        AppVerifyOutput, NitroBlock, SeqVerifyOutput, VerifyAppchainConfig, VerifyAppchainInput,
+        AppVerifyOutput, SeqVerifyOutput, VerifyAppchainConfig, VerifyAppchainInput,
         VerifySequencingChainConfig, VerifySequencingChainInput, VerifySequencingChainOutput,
     },
 };
@@ -19,13 +19,6 @@ use alloy::{
     signers::local::PrivateKeySigner,
     sol_types::{SolCall, SolEvent, SolValue},
     transports::TransportResult,
-};
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    routing::post,
-    serve, Router,
 };
 use contract_bindings::synd::{
     ibridge::IBridge::MessageDelivered,
@@ -50,8 +43,12 @@ use synd_appchain_verifier::types::{
     SequencingChainInput, SettlementChainInput, SyndicateTransactionEvent,
 };
 use synd_seqchain_verifier::types::{calculate_slot, ArbitrumBatch, L1ChainInput, TimeBounds};
-use tokio::{net::TcpListener, sync::Mutex, task::JoinHandle};
-use tracing::{debug, error, warn};
+use tokio::{
+    signal::unix::{signal, SignalKind},
+    sync::Mutex,
+    task::JoinHandle,
+};
+use tracing::{debug, error, log::info, warn};
 use withdrawals_shared::types::{L1IncomingMessage, L1IncomingMessageHeader};
 
 const EIGENDA_MESSAGE_HEADER_FLAG: u8 = 0xed;
@@ -66,15 +63,14 @@ const SYNDICATE_ACCUMULATOR_STORAGE_SLOT: B256 =
     fixed_bytes!("0x847fe1a0bfd701c2dbb0b62670ad8712eed4c0ff4d2c6c0917f4c8d260ed0b90");
 
 /// The `Proposer` service is responsible for checking for new trusted input and verifying it using
-/// the TEE `synd-enclave`
+/// the `synd-enclave` TEE
 #[derive(Debug)]
 pub struct Proposer {
     appchain_provider: RootProvider,
     sequencing_provider: RootProvider,
     settlement_provider: FilledProvider,
     ethereum_provider: RootProvider,
-    enclave_provider: RootProvider, // TODO shouldn't be RootProvider, just generic jsonrpsee
-    // RPC provider?
+    enclave_provider: RootProvider,
     polling_interval: Duration,
     metrics: ProposerMetrics,
     tee_module: TeeModuleInstance<(), FilledProvider>,
@@ -121,39 +117,26 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
     );
     let proposer = Arc::new(proposer);
 
-    // Clone for both tasks
-    let proposer_polling = Arc::clone(&proposer);
-    let proposer_http = Arc::clone(&proposer);
-
     let polling_task: JoinHandle<Result<()>> =
-        tokio::spawn(async move { proposer_polling.main_loop().await });
+        tokio::spawn(async move { proposer.polling_loop().await });
 
-    // TODO remove /propose endpoint
-    // Start HTTP server with /propose endpoint
-    let app =
-        Router::new().route("/propose", post(post_assertion_handler)).with_state(proposer_http);
-    let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port)).await?;
+    #[allow(clippy::expect_used)]
+    let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
+    #[allow(clippy::expect_used)]
+    let mut sigterm = signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
 
-    let server_task = tokio::spawn(async move {
-        if let Err(err) = serve(listener, app).await {
-            eprintln!("HTTP server error: {err}");
+    tokio::select! {
+        _ = sigint.recv() => {
+            info!("Received SIGINT (Ctrl+C), initiating shutdown...");
         }
-    });
-
-    // Wait for both tasks
-    let _ = tokio::try_join!(polling_task, server_task)?;
-    Ok(())
-}
-
-async fn post_assertion_handler(State(proposer): State<Arc<Proposer>>) -> Response {
-    match proposer.fetch_block_and_post().await {
-        Ok(_) => (StatusCode::OK, "Assertion posted successfully").into_response(),
-        Err(err) => {
-            error!("Handler error: {err:?}");
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to post assertion: {err}"))
-                .into_response()
+        _ = sigterm.recv() => {
+            info!("Received SIGTERM, initiating shutdown...");
+        }
+        _ = polling_task => {
+            info!("Proposer stopped, initiating shutdown...");
         }
     }
+    Ok(())
 }
 
 fn hash_tee_trusted_input(input: &teeTrustedInputReturn) -> B256 {
@@ -161,7 +144,7 @@ fn hash_tee_trusted_input(input: &teeTrustedInputReturn) -> B256 {
     // For bytes32 values, they're already 32 bytes each
     let mut packed = Vec::new();
 
-    // Append each field in the same order as Solidity
+    // Append each field in the same order as `TEEModule.sol`
     packed.extend_from_slice(&input.appchainConfigHash.0);
     packed.extend_from_slice(&input.appchainStartBlockHash.0);
     packed.extend_from_slice(&input.seqConfigHash.0);
@@ -170,7 +153,6 @@ fn hash_tee_trusted_input(input: &teeTrustedInputReturn) -> B256 {
     packed.extend_from_slice(&input.l1StartBlockHash.0);
     packed.extend_from_slice(&input.l1EndBlockHash.0);
 
-    // Hash the packed data
     keccak256(&packed)
 }
 
@@ -250,7 +232,8 @@ impl Proposer {
         }
     }
 
-    async fn main_loop(&self) -> Result<()> {
+    #[allow(clippy::cognitive_complexity)]
+    async fn polling_loop(&self) -> Result<()> {
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             interval.tick().await;
@@ -498,16 +481,16 @@ impl Proposer {
         &self,
         tee_trusted_input: &teeTrustedInputReturn,
     ) -> Result<SeqVerifyOutput> {
-        let (l1_chain_input, l1_start_block, l1_end_block) =
-            self.build_l1_input(tee_trusted_input).await?;
+        let (l1_chain_input, seq_start_block) = self.build_l1_input(tee_trusted_input).await?;
 
         //TODO - this is wrong, need sequencing l1 start and end. Q - how to get seq end block?
         // Pranav will update the  preimage endpoint
+        let seq_end_block_number = 0; // TODO get seq_end_block_hash once endpoint is updated
         let sequencing_pre_image_data: Vec<Vec<u8>> = self
             .arb_debug_preimage_data(
                 PreimageSource::Sequencing,
-                l1_start_block.header.number,
-                l1_end_block.header.number,
+                seq_start_block.header.number,
+                seq_end_block_number,
             )
             .await?;
 
@@ -626,7 +609,7 @@ impl Proposer {
     async fn build_l1_input(
         &self,
         tee_trusted_input: &teeTrustedInputReturn,
-    ) -> Result<(L1ChainInput, Block, Block)> {
+    ) -> Result<(L1ChainInput, Block)> {
         let (l1_start_block, l1_end_block) = self
             .get_start_end_block(
                 ChainProvider::L1,
@@ -687,7 +670,7 @@ impl Proposer {
             start_block_hash: tee_trusted_input.l1StartBlockHash,
             end_block_hash: tee_trusted_input.l1EndBlockHash,
         };
-        Ok((input, l1_start_block, l1_end_block))
+        Ok((input, seq_start_block))
     }
 
     // only called once, for L1
@@ -770,7 +753,8 @@ impl Proposer {
         Ok(batches)
     }
 
-    /// Get all delayed messages between `start_criteria` and `end_block` using
+    /// Get all delayed messages between `start_criteria` and `end_block` using a pagination
+    /// algorithm.
     async fn get_delayed_messages(
         &self,
         delayed_message_source: DelayedMessagesSource,
@@ -778,8 +762,8 @@ impl Proposer {
         end_block: u64,
     ) -> Result<(Vec<L1IncomingMessage>, FixedBytes<32>)> {
         let mut messages: Vec<L1IncomingMessage> = Vec::new();
-        let page_diff = 1000;
-        let mut curr_start = end_block.saturating_sub(page_diff);
+        let page_diff_num_blocks = 1000; // TODO tweak me for performance. Could be config?
+        let mut curr_start = end_block.saturating_sub(page_diff_num_blocks);
         let mut curr_end = end_block + 1;
 
         let (message_delivered_address, inbox_message_delivered_address) =
@@ -809,21 +793,28 @@ impl Proposer {
             for msg in delayed_msgs.into_iter().rev() {
                 let is_met = is_delayed_message_criterion_met(&msg, start_criteria);
                 messages.push(msg);
+
+                // Happy path
                 if is_met {
                     messages.reverse();
                     return Ok((messages, first_msg_acc));
                 }
             }
+
+            // Panic if we have exhausted all blocks prior to `end_block`
             assert!(
-                curr_end >= page_diff,
-                "we have exhausted all message pages without success. No more messages"
+                curr_end >= page_diff_num_blocks,
+                "all block messages in range exhausted without success. No more messages to check"
             );
 
-            curr_start = curr_start.saturating_sub(page_diff);
-            curr_end -= page_diff;
+            curr_start = curr_start.saturating_sub(page_diff_num_blocks);
+            curr_end -= page_diff_num_blocks;
         }
     }
 
+    /// This function parses a vec of delayed messages from the range of blocks. It listens for 2
+    /// events to combine the data and metadata for each message event, which are uniquely indexed
+    /// by messageIndex/requestId.
     async fn parse_delayed_messages(
         &self,
         start_block: u64,
@@ -857,7 +848,6 @@ impl Proposer {
 
         // Combine the data
         let mut delayed_messages = Vec::new();
-
         for log in inbox_message_delivered_logs {
             let event_signature_hash = log.topics()[0];
             if event_signature_hash != InboxMessageDelivered::SIGNATURE_HASH {
@@ -904,6 +894,7 @@ impl Proposer {
         Ok((delayed_messages, first_msg_acc))
     }
 
+    /// Get proofs for a chain and block number via `eth_getProof`
     async fn get_accumulator_proof(
         &self,
         provider_type: ChainProvider,
@@ -974,52 +965,6 @@ impl Proposer {
             .await?;
 
         Ok(count)
-    }
-
-    async fn get_block_by_number_latest(&self) -> Result<NitroBlock> {
-        self.appchain_provider
-            .raw_request("eth_getBlockByNumber".into(), ("latest", false))
-            .await
-            .map_err(|err| eyre!("eth_getBlockByNumber request failed: {:?}", err))
-    }
-
-    // async fn appchain_validation_inputs(&self) -> Result {
-    //     self.appchain_provider
-    //         .raw_request("arbdebug_validationInputsAt".into())
-    // }
-
-    // async fn record_wallet_balance(&self) -> Result<()> {
-    //     let provider = self.assertion_poster.provider();
-    //     let wallet_address = provider.default_signer_address();
-    //
-    //     let balance = provider.get_balance(wallet_address).await?;
-    //     self.metrics.record_wallet_balance(balance.to());
-    //     Ok(())
-    // }
-    //
-    // async fn post_assertion(&self, block: NitroBlock) -> Result<()> {
-    //     // TODO make non-blocking?
-    //     // self.record_wallet_balance().await?;
-    //
-    //     let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
-    //     self.metrics.record_last_block_posted(block.number.to());
-    //
-    //     info!("Assertion submitted for block: {:?}", block);
-    //     Ok(())
-    // }
-
-    async fn fetch_block_and_post(&self) -> Result<()> {
-        match self.get_block_by_number_latest().await {
-            Ok(block) => {
-                // if let Err(err) = self.post_assertion(block).await {
-                //     error!("Failed to post assertion: {:?}", err);
-                // }
-            }
-            Err(err) => {
-                error!("Failed to fetch block: {:?}", err);
-            }
-        }
-        Ok(())
     }
 }
 
@@ -1144,7 +1089,7 @@ mod tests {
         println!("  Block Timestamp: {}", l1_latest_block_minus_n.header.timestamp);
 
         // Getting latest seq block, then stepping back until the timestamp is within the l1
-        // start-end range
+        // start-end range. This range will yield 1 batch.
         let seq_latest_block_number = sequencing_provider_arc.get_block_number().await.unwrap();
         let mut curr_block_number = seq_latest_block_number;
 
@@ -1185,7 +1130,8 @@ mod tests {
             mock_input.seqStartBlockHash, mock_input.l1StartBlockHash, mock_input.l1EndBlockHash
         );
 
-        let (l1_chain_input, _, _) = proposer.build_l1_input(&mock_input).await.unwrap();
+        let (l1_chain_input, _seq_start_block) =
+            proposer.build_l1_input(&mock_input).await.unwrap();
 
         let seq_chain_verifier = Verifier::new(&SeqchainVerifierConfig {
             arbitrum_bridge_address: L1_ARBITRUM_BRIDGE_ADDRESS,
@@ -1198,7 +1144,8 @@ mod tests {
     }
 
     /// Same as `test_proposer_build_l1_input_from_file()` above, except this test parses the
-    /// JSON artifact produced by that test and verifies it. To update the artifact, run the test.
+    /// JSON artifact produced by that test and verifies it. To update the artifact, run the test
+    /// above.
     #[tokio::test]
     async fn test_proposer_build_l1_input_from_file() {
         let seq_chain_verifier = Verifier::new(&SeqchainVerifierConfig {
