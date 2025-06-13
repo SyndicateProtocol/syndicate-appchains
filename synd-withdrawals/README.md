@@ -44,6 +44,39 @@ Validates the structure and integrity of blocks from the appchain using Arbitrum
 
 The secure enclave environment executes core logic for verifying withdrawal proofs. This is a forked version of [base/op-enclave](https://github.com/base/op-enclave).
 
+##### How to run it?
+
+There are two main ways to execute the enclave logic depending on your environment:
+
+###### Running Locally
+
+If you're developing or testing locally:
+
+Build the enclave binary
+From the `synd-enclave` folder, run:
+`go build -C cmd/enclave`
+After building, you can execute it directly with:
+`./cmd/enclave/enclave`
+
+###### Mimicking Enclave Behavior with Binaries
+
+If you want to simulate the behavior of the enclave without actually running inside a TEE, you can mimic the logic by placing compiled binaries in the expected location:
+
+- Create a bin/ directory inside synd-enclave/
+
+- Place the following binaries in that folder:
+
+  - synd-seqchain-verifier
+
+  - synd-appchain-verifier
+
+These will be used by the orchestrator to mimic enclave verification flows in a non-secure mode.
+
 ### Synd-Tee-Attestation-ZK-Proofs
 
 Generation and verification of zk proofs for synd-enclave TEE attestation documents.
+
+## Docker
+
+To build the withdrawals Docker image for the enclave:
+`docker build -f synd-withdrawals/synd-enclave/Dockerfile . --platform linux/amd64`
