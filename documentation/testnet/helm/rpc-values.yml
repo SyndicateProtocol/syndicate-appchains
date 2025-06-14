@@ -55,7 +55,7 @@ initContainers:
   - -c
   - |
     for i in $(seq 1 300); do
-      if echo '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' | websocat -1 {{ LOCAL_MCHAIN_WS_RPC_URL }} | grep -q "result"; then
+      if echo '{"jsonrpc":"2.0","id":1,"method":"eth_getBlockByNumber","params":["latest",false]}' | websocat -1 {{ LOCAL_MCHAIN_WS_RPC_URL }} | grep -q "result"; then
         sleep 5 && exit 0
       fi
       echo "Waiting for mchain WebSocket RPC to be available... (attempt $i/300)"
