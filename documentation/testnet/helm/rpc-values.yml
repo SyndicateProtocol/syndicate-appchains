@@ -15,7 +15,7 @@ env:
 - name: RUST_LOG
   value: "warn"
 - name: APPCHAIN_CHAIN_ID
-  value: "510000"
+  value: "{{ CHAIN_ID }}"
 - name: DATADIR
   value: "/datadir"
 translator:
@@ -26,7 +26,7 @@ env:
 - name: RUST_LOG
   value: "warn"
 - name: APPCHAIN_CHAIN_ID
-  value: "510000"
+  value: "{{ CHAIN_ID }}"
 - name: CONFIG_MANAGER_ADDRESS
   value: {{ CONFIG_MANAGER_ADDRESS }}
 - name: SEQUENCING_RPC_URL
@@ -43,8 +43,8 @@ configmap:
       connection:
         url: {{ LOCAL_MCHAIN_WS_RPC_URL }}
     chain:
-      id: 510000
-      name: Manchego
+      id: {{ CHAIN_ID }}
+      name: {{ CHAIN_NAME }}
       info-json: |-
         {{ CHAIN_INFO_JSON }}
 initContainers:
