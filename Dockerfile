@@ -36,6 +36,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Stage 3: Runtime images
+
+# SECURITY WARNING: All runtime containers currently run as root user (UID 0)
+# This poses security risks as compromised containers would have root privileges.
+# TODO [SEQ-1022]: Add non-root user configuration for better security posture:
+# Create a non-root user (or USER 1000:1000) and ensure each application has proper file permissions for non-root execution
+
 FROM gcr.io/distroless/cc AS runtime-base
 
 # Runtime images
