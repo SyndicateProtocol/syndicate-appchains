@@ -1,0 +1,72 @@
+ingress:
+hosts:
+  - host: {{ HOST }}
+    paths:
+      - path: /
+        pathType: Prefix
+        service:
+          name: {{ SERVICE_NAME }}
+          port: 8449
+mchain:
+image:
+  pullPolicy: IfNotPresent
+  tag: "v0.10.1-dev.3"
+env:
+- name: RUST_LOG
+  value: "warn"
+- name: APPCHAIN_CHAIN_ID
+  value: "510000"
+- name: DATADIR
+  value: "/datadir"
+translator:
+image:
+  pullPolicy: IfNotPresent
+  tag: "v0.10.1-dev.3"
+env:
+- name: RUST_LOG
+  value: "warn"
+- name: APPCHAIN_CHAIN_ID
+  value: "510000"
+- name: CONFIG_MANAGER_ADDRESS
+  value: {{ CONFIG_MANAGER_ADDRESS }}
+- name: SEQUENCING_RPC_URL
+  value: {{ SEQUENCING_RPC_URL }}
+- name: SETTLEMENT_RPC_URL
+  value: {{ SETTLEMENT_RPC_URL }}
+- name: MCHAIN_RPC_URL
+  value: {{ LOCAL_MCHAIN_WS_RPC_URL }}
+nitro:
+configmap:
+  data:
+    parent-chain:
+      id: 84532
+      connection:
+        url: {{ LOCAL_MCHAIN_WS_RPC_URL }}
+    chain:
+      id: 510000
+      name: Manchego
+      info-json: |-
+        {{ CHAIN_INFO_JSON }}
+initContainers:
+- name: init-nitro
+  image: solsson/websocat
+  command: 
+  - /bin/sh
+  - -c
+  - |
+    for i in $(seq 1 300); do
+      if echo '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' | websocat -1 {{ LOCAL_MCHAIN_WS_RPC_URL }} | grep -q "result"; then
+        sleep 5 && exit 0
+      fi
+      echo "Waiting for mchain WebSocket RPC to be available... (attempt $i/300)"
+      sleep 2
+    done
+    echo "Timeout waiting for mchain WebSocket RPC"
+    exit 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
