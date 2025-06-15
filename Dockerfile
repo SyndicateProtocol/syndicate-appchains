@@ -1,6 +1,6 @@
 # Global build arguments
 ARG BUILD_PROFILE=release
-ARG FEATURES=""
+ARG FEATURES="rocksdb" 
 
 # Stage 1: Base image with Rust
 FROM rust:slim-bookworm AS builder

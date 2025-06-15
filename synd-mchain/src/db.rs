@@ -5,6 +5,7 @@ use alloy::{
     sol_types::SolValue as _,
 };
 use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
+#[cfg(feature = "rocksdb")]
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -104,6 +105,7 @@ impl Block {
 
 /// rocksdb implements the key-value trait
 #[allow(clippy::unwrap_used)]
+#[cfg(feature = "rocksdb")]
 impl<T: ThreadMode> ArbitrumDB for DBWithThreadMode<T> {
     fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
         self.get(key).unwrap().map(|x| x.into())

@@ -112,7 +112,6 @@ reqwest                            = "0.12.12"
 risc0-build                        = "2.1.1"
 risc0-zkvm                         = "2.0.2"
 rlp                                = "0.6.1"
-rocksdb                            = "0.23.0"
 serde                              = { version = "1.0.217", default-features = false }
 serde-hex                          = "0.1.0"
 serde_cbor                         = { version = "0.11.2", default-features = false }
