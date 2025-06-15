@@ -185,7 +185,7 @@ RUN NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-node-deps
 
 WORKDIR /build
 RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/enclave ./cmd/enclave
-COPY --from=verifier-builder /workspace/target/x86_64-unknown-linux-musl/release/synd-withdrawals/synd-appchain-verifier bin/synd-appchain-verifier
+COPY --from=verifier-builder /workspace/target/x86_64-unknown-linux-musl/release/synd-appchain-verifier bin/synd-appchain-verifier
 COPY --from=verifier-builder /workspace/target/x86_64-unknown-linux-musl/release/synd-seqchain-verifier bin/synd-seqchain-verifier
 
 COPY synd-withdrawals/synd-enclave/eif/init-ramdisk.yaml synd-withdrawals/synd-enclave/eif/user-ramdisk.yaml eif/
