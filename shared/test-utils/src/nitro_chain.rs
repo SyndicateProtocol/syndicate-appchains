@@ -42,6 +42,7 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
         native_token,
         upgrade_executor,
         validator_wallet_creator,
+        validator_utils,
         ..
     } = deployment;
 
@@ -66,6 +67,7 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
                 "rollup": "{rollup}",
                 "native-token": "{native_token}",
                 "upgrade-executor": "{upgrade_executor}",
+                "validator-utils": "{validator_utils}",
                 "validator-wallet-creator": "{validator_wallet_creator}"
               }}
             }}]"#
@@ -312,7 +314,7 @@ pub async fn deploy_nitro_rollup(
             .arg("custom")
             .env("DEPLOYER_PRIVKEY", PRIVATE_KEY)
             .env("PARENT_CHAIN_RPC", l1_rpc_url_http)
-            .env("PARENT_CHAIN_ID", rollup_chain_id.to_string())
+            .env("PARENT_CHAIN_ID", 1.to_string())
             .env("CUSTOM_RPC_URL", l1_rpc_url_http)
             .env("CHILD_CHAIN_NAME", format!("local-rollup-{rollup_chain_id}"))
             .env("CHILD_CHAIN_CONFIG_PATH", "./l2_chain_config.json")
@@ -335,16 +337,14 @@ pub async fn deploy_nitro_rollup(
     let deploy_info: NitroDeployment =
         serde_json::from_reader(std::fs::File::open(deploy_json_path)?)?;
 
-    // Cleanup -  reset the submodule repo - It's annoying to leave pending changes in the submodule
-    let status = E2EProcess::new(
-        Command::new("git").current_dir(nitro_contracts_dir.clone()).arg("clean").arg("-fd"),
-        "cleanup-nitro-contracts-submodule",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "failed to cleanup nitro contracts submodule");
-
-    // TODO post an empty batch?
+    // // Cleanup -  reset the submodule repo - It's annoying to leave pending changes in the
+    // submodule let status = E2EProcess::new(
+    //     Command::new("git").current_dir(nitro_contracts_dir.clone()).arg("clean").arg("-fd"),
+    //     "cleanup-nitro-contracts-submodule",
+    // )?
+    // .wait()
+    // .await?;
+    // assert!(status.success(), "failed to cleanup nitro contracts submodule");
 
     Ok(deploy_info)
 }

@@ -155,7 +155,7 @@ impl TestComponents {
         let l1_info = match options.base_chains_type {
             BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => None,
             BaseChainsType::Nitro => {
-                let info = start_anvil(11111).await?;
+                let info = start_anvil(1).await?;
                 // avoid "latest L1 block is old" error log from nitro
                 let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
                 info.provider.evm_mine(Some(MineOptions::Timestamp(Some(now)))).await?;

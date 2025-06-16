@@ -251,10 +251,11 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
                     "--node.batch-poster.parent-chain-wallet.private-key={}",
                     PRIVATE_KEY.strip_prefix("0x").unwrap()
                 ),
-                // TODO maybe remove, just testing if these fix the issue
-                "--node.parent-chain-reader.use-finality-data=false".to_string(),
-                "--node.batch-poster.l1-block-bound=ignore".to_string(),
-                "--node.delayed-sequencer.use-merge-finality=false".to_string(),
+                "--node.batch-poster.data-poster.wait-for-l1-finality=false".to_string(),
+                // // TODO maybe remove, just testing if these fix the issue
+                // "--node.parent-chain-reader.use-finality-data=false".to_string(),
+                // "--node.batch-poster.l1-block-bound=ignore".to_string(),
+                // "--node.delayed-sequencer.use-merge-finality=false".to_string(),
             ]
         }
     };
