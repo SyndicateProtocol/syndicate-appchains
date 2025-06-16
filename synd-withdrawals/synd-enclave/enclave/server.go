@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -41,6 +42,8 @@ const (
 var (
 	defaultRoot = createAWSNitroRoot()
 )
+
+var isLocal = flag.Bool("local", false, "Run in local mode")
 
 func createAWSNitroRoot() *x509.CertPool {
 	roots, err := base64.StdEncoding.DecodeString(DefaultCARoots)
@@ -534,11 +537,7 @@ func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainI
 }
 
 func isLocalhost() bool {
-	host, err := os.Hostname()
-	if err != nil {
-		return false
-	}
-	return strings.Contains(host, "local") || strings.HasPrefix(host, "127.") || strings.HasPrefix(host, "::1")
+	return *isLocal
 }
 
 func RunVerifier(verifierName string, args ...string) ([]byte, error) {

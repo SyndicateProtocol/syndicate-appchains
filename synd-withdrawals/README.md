@@ -57,7 +57,7 @@ This system manages the validation and submission of withdrawal proofs through a
    ```
 2. Run the enclave:
    ```bash
-   ./cmd/enclave/enclave
+   ./cmd/enclave/enclave [--local]
    ```
 
 ##### ➤ Simulated Execution (Non-TEE Mode)
