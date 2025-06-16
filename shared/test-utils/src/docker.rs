@@ -1,8 +1,8 @@
 //! Docker components for the integration tests
 
 use crate::{
-    chain_info::{default_signer, ChainInfo, ProcessInstance},
-    nitro_chain::nitro_chain_info_json,
+    chain_info::{default_signer, ChainInfo, ProcessInstance, PRIVATE_KEY},
+    nitro_chain::{nitro_chain_info_json, NitroChainInfoArgs, NitroDeployment},
     port_manager::PortManager,
     utils::test_path,
     wait_until,
@@ -207,20 +207,57 @@ pub async fn start_mchain(
     Ok((url, docker, mchain))
 }
 
+pub enum NitroSequencerMode {
+    // No sequencer mode - used for the appchain that will simply derive the state
+    None,
+    // Forwarding mode - used for using an external sequencer, used to test the synd-sequencer
+    Forwarding(u16),
+    // Sequencer mode - used for base chains when E2E's Nitro mode is enabled, these chains will
+    // post batch data to L1
+    Sequencer,
+    // TODO add EigenDA mode
+}
+
+pub struct NitroNodeArgs {
+    pub chain_id: u64,
+    pub chain_name: String,
+    pub chain_owner: Address,
+    pub parent_chain_url: String,
+    pub parent_chain_id: u64,
+    pub sequencer_mode: NitroSequencerMode,
+    pub deployment: NitroDeployment,
+}
+
 /// Starts nitro instance
-pub async fn launch_nitro_node(
-    chain_id: u64,
-    chain_owner: Address,
-    parent_chain_url: &str,
-    parent_chain_id: u64,
-    sequencer_port: Option<u16>,
-    bridge_address: Address,
-    sequencer_inbox_address: Address,
-) -> Result<ChainInfo> {
+pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
     let tag = env::var("NITRO_TAG").unwrap_or("v3.6.2-5b41a2d-slim".to_string());
     let port = PortManager::instance().next_port().await;
 
-    let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
+    let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
+
+    let sequencer_args = match args.sequencer_mode {
+        NitroSequencerMode::None => vec!["--execution.forwarding-target=null".to_string()],
+        NitroSequencerMode::Forwarding(port) => {
+            vec![format!("--execution.forwarding-target=http://localhost:{port}")]
+        }
+        NitroSequencerMode::Sequencer => {
+            vec![
+                "--node.sequencer=true".to_string(),
+                "--node.batch-poster.enable=true".to_string(),
+                "--execution.sequencer.enable=true".to_string(),
+                "--node.delayed-sequencer.enable".to_string(),
+                "--node.dangerous.no-sequencer-coordinator".to_string(),
+                format!(
+                    "--node.batch-poster.parent-chain-wallet.private-key={}",
+                    PRIVATE_KEY.strip_prefix("0x").unwrap()
+                ),
+                // TODO maybe remove, just testing if these fix the issue
+                "--node.parent-chain-reader.use-finality-data=false".to_string(),
+                "--node.batch-poster.l1-block-bound=ignore".to_string(),
+                "--node.delayed-sequencer.use-merge-finality=false".to_string(),
+            ]
+        }
+    };
 
     let mut nitro = E2EProcess::new(
         Command::new("docker")
@@ -229,7 +266,7 @@ pub async fn launch_nitro_node(
             .arg("--rm")
             .arg("--net=host")
             .arg(format!("offchainlabs/nitro-node:{tag}"))
-            .arg(format!("--parent-chain.connection.url={parent_chain_url}"))
+            .arg(format!("--parent-chain.connection.url={}", args.parent_chain_url))
             .arg("--node.dangerous.disable-blob-reader")
             .arg("--node.inbox-reader.check-delay=100ms")
             .arg("--node.parent-chain-reader.poll-interval=100ms")
@@ -237,30 +274,26 @@ pub async fn launch_nitro_node(
             .arg("--ensure-rollup-deployment=false")
             .arg(format!(
                 "--chain.info-json={}",
-                nitro_chain_info_json(
-                    chain_id,
-                    parent_chain_id,
-                    chain_owner,
-                    "test",
-                    bridge_address,
-                    sequencer_inbox_address
-                )
+                nitro_chain_info_json(NitroChainInfoArgs {
+                    chain_id: args.chain_id,
+                    parent_chain_id: args.parent_chain_id,
+                    chain_owner: args.chain_owner,
+                    chain_name: args.chain_name.clone(),
+                    deployment: args.deployment,
+                })
             ))
             .arg("--http.addr=0.0.0.0")
             .arg("--http.api=net,web3,eth,debug,trace")
             .arg(format!("--http.port={}", port))
             .arg(format!("--log-level={log_level}"))
-            .arg(if let Some(port) = sequencer_port {
-                format!("--execution.forwarding-target=http://localhost:{port}")
-            } else {
-                "--execution.forwarding-target=null".to_string()
-            }),
-        format!("nitro-node-{}", chain_id).as_str(),
+            .args(sequencer_args),
+        format!("nitro-{}", args.chain_name).as_str(),
     )?;
 
-    let url = format!("http://localhost:{}", port);
+    let http_url = format!("http://localhost:{}", port);
+    let ws_url = format!("ws://localhost:{}", port);
 
-    let provider = ProviderBuilder::new().wallet(default_signer()).connect(&url).await?;
+    let provider = ProviderBuilder::new().wallet(default_signer()).connect(&http_url).await?;
     wait_until!(
         if let Some(status) = nitro.try_wait()? {
             panic!("nitro node exited with {}", status);
@@ -268,7 +301,7 @@ pub async fn launch_nitro_node(
         provider.get_chain_id().await.is_ok(),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
-    Ok(ChainInfo { instance: ProcessInstance::Docker(nitro), provider, ws_url: url })
+    Ok(ChainInfo { instance: ProcessInstance::Docker(nitro), provider, ws_url, http_url })
 }
 
 pub async fn start_valkey() -> Result<(E2EProcess, String)> {

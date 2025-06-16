@@ -28,6 +28,7 @@ pub async fn start_anvil_with_args(chain_id: u64, args: &[&str]) -> Result<Chain
         ProviderBuilder::new().wallet(default_signer()).connect(&anvil.ws_endpoint()).await?;
     Ok(ChainInfo {
         ws_url: format!("ws://localhost:{}", port),
+        http_url: format!("http://localhost:{}", port),
         instance: ProcessInstance::Anvil(anvil),
         provider,
     })

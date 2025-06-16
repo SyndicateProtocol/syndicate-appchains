@@ -1,5 +1,9 @@
 //! Appchain utils for the integration tests
 
+use crate::{
+    chain_info::{default_signer, PRIVATE_KEY},
+    docker::E2EProcess,
+};
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     network::TransactionBuilder,
@@ -12,20 +16,36 @@ use contract_bindings::synd::{
 };
 use eyre::Ok;
 use serde::{Deserialize, Serialize};
-use shared::types::FilledProvider;
+use shared::{
+    parse::parse_address,
+    types::{deserialize_address, FilledProvider},
+};
+use tokio::{fs, process::Command};
+
+pub struct NitroChainInfoArgs {
+    pub chain_id: u64,
+    pub parent_chain_id: u64,
+    pub chain_owner: Address,
+    pub chain_name: String,
+    pub deployment: NitroDeployment,
+}
 
 /// Get the nitro json configuration data for the appchain
-pub fn nitro_chain_info_json(
-    chain_id: u64,
-    parent_chain_id: u64,
-    chain_owner: Address,
-    chain_name: &str,
-    bridge_address: Address,
-    sequencer_inbox_address: Address,
-) -> String {
-    let appchain_config = chain_config(chain_id, chain_owner);
-    let deployed_at: u64 = 1;
-    let zero = Address::ZERO;
+pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
+    let NitroChainInfoArgs { chain_name, parent_chain_id, deployment, .. } = args;
+    let NitroDeployment {
+        bridge,
+        inbox,
+        sequencer_inbox,
+        deployed_at,
+        rollup,
+        native_token,
+        upgrade_executor,
+        validator_wallet_creator,
+        ..
+    } = deployment;
+
+    let appchain_config = chain_config(args.chain_id, args.chain_owner);
     format!(
         r#"[{{
               "chain-name": "{chain_name}",
@@ -39,14 +59,14 @@ pub fn nitro_chain_info_json(
               "has-genesis-state": false,
               "chain-config": {appchain_config},
               "rollup": {{
-                "bridge": "{bridge_address}",
-                "inbox": "{zero}",
-                "sequencer-inbox": "{sequencer_inbox_address}",
+                "bridge": "{bridge}",
+                "inbox": "{inbox}",
+                "sequencer-inbox": "{sequencer_inbox}",
                 "deployed-at": {deployed_at},
-                "rollup": "{zero}",
-                "native-token": "{zero}",
-                "upgrade-executor": "{zero}",
-                "validator-wallet-creator": "{zero}"
+                "rollup": "{rollup}",
+                "native-token": "{native_token}",
+                "upgrade-executor": "{upgrade_executor}",
+                "validator-wallet-creator": "{validator_wallet_creator}"
               }}
             }}]"#
     )
@@ -54,7 +74,7 @@ pub fn nitro_chain_info_json(
 
 /// Return the on-chain config for a rollup with a given chain id
 pub fn chain_config(chain_id: u64, chain_owner: Address) -> String {
-    // TODO DataAvailabilityCommittee might need to be true for base chains
+    // TODO DataAvailabilityCommittee might need to be true for set/seq chains with eigenDA
     let mut cfg = format!(
         r#"{{
           "chainId": {chain_id},
@@ -167,4 +187,164 @@ pub async fn execute_withdrawal(
         .send()
         .await?;
     Ok(())
+}
+
+#[allow(dead_code)]
+#[derive(Debug, serde::Deserialize, Default, Clone)]
+pub struct NitroDeployment {
+    #[serde(deserialize_with = "deserialize_address")]
+    pub bridge: Address,
+
+    #[serde(deserialize_with = "deserialize_address")]
+    pub inbox: Address,
+
+    #[serde(rename = "sequencer-inbox", deserialize_with = "deserialize_address")]
+    pub sequencer_inbox: Address,
+
+    #[serde(deserialize_with = "deserialize_address")]
+    pub rollup: Address,
+
+    #[serde(rename = "native-token", deserialize_with = "deserialize_address")]
+    pub native_token: Address,
+
+    #[serde(rename = "upgrade-executor", deserialize_with = "deserialize_address")]
+    pub upgrade_executor: Address,
+
+    #[serde(rename = "validator-utils", deserialize_with = "deserialize_address")]
+    pub validator_utils: Address,
+
+    #[serde(rename = "validator-wallet-creator", deserialize_with = "deserialize_address")]
+    pub validator_wallet_creator: Address,
+
+    #[serde(rename = "deployed-at")]
+    pub deployed_at: u64,
+}
+
+#[allow(clippy::unwrap_used)]
+/// Deploys a mock rollup contract. - It expects `yarn` and `hardhat` to be installed.
+/// NOTE: only used for the base chains when in Nitro mode, it expects `l1_provider` to have
+/// automine enabled
+pub async fn deploy_nitro_rollup(
+    l1_rpc_url_http: &str,
+    // l1_provider: &FilledProvider,
+    rollup_chain_id: u64,
+) -> eyre::Result<NitroDeployment> {
+    let project_root = env!("CARGO_WORKSPACE_DIR");
+    let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
+
+    // install and build dependencies
+    let status = E2EProcess::new(
+        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("install"),
+        "nitro-contracts-install",
+    )?
+    .wait()
+    .await?;
+    assert!(status.success(), "Failed to run `yarn install` in nitro contracts");
+
+    let status = E2EProcess::new(
+        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build:all"),
+        "nitro-contracts-build",
+    )?
+    .wait()
+    .await?;
+    assert!(status.success(), "Failed to run `yarn build` in nitro contracts");
+
+    let default_signer = default_signer().address();
+    let chain_config_json = chain_config(rollup_chain_id, default_signer);
+    let zero_address = Address::ZERO;
+
+    // setup config.ts (unfortunately, the script expects the config to be in a specific path)
+    let config_ts = format!(
+        r#"
+        import {{ ethers }} from 'ethers'
+
+        // 90% of Geth's 128KB tx size limit, leaving ~13KB for proving
+        // This need to be adjusted for Orbit chains
+        export const maxDataSize = 117964
+
+        export const isUsingFeeToken = false;
+
+        export const config = {{
+            rollupConfig: {{
+                confirmPeriodBlocks: ethers.BigNumber.from('45818'),
+                extraChallengeTimeBlocks: ethers.BigNumber.from('200'),
+                stakeToken: ethers.constants.AddressZero,
+                baseStake: ethers.utils.parseEther('1'),
+                wasmModuleRoot:    '0xda4e3ad5e7feacb817c21c8d0220da7650fe9051ece68a3f0b1c5d38bbb27b21',
+                owner: '{default_signer}',
+                loserStakeEscrow: ethers.constants.AddressZero,
+                chainId: ethers.BigNumber.from('{rollup_chain_id}'),
+                minimumAssertionPeriod: 75,
+                validatorAfkBlocks: 201600,
+                chainConfig: '{chain_config_json}',
+                genesisBlockNum: ethers.BigNumber.from('0'),
+                sequencerInboxMaxTimeVariation: {{
+                    delayBlocks: ethers.BigNumber.from('7200'),
+                    futureBlocks: ethers.BigNumber.from('12'),
+                    delaySeconds: ethers.BigNumber.from('86400'),
+                    futureSeconds: ethers.BigNumber.from('3600'),
+                }},
+                bufferConfig: {{
+                    threshold: ethers.BigNumber.from('600'),
+                    max: ethers.BigNumber.from('14400'),
+                    replenishRateInBasis: ethers.BigNumber.from('833'),
+                }},
+            }},
+            // validators: [],
+            // batchPosterManager: '{zero_address}',
+            // batchPosters: []
+        }}
+    "#
+    );
+    let config_ts_path = format!("{nitro_contracts_dir}/scripts/config.ts");
+    fs::write(config_ts_path, config_ts).await?;
+
+    let l2_chain_config_path = format!("{nitro_contracts_dir}/l2_chain_config.json");
+    fs::write(l2_chain_config_path, chain_config_json).await?;
+
+    // deploy the rollup
+    let status = E2EProcess::new(
+        Command::new("yarn")
+            .current_dir(nitro_contracts_dir.clone())
+            .arg("run")
+            .arg("create-rollup-testnode")
+            .arg("--network")
+            .arg("custom")
+            .env("DEPLOYER_PRIVKEY", PRIVATE_KEY)
+            .env("PARENT_CHAIN_RPC", l1_rpc_url_http)
+            .env("PARENT_CHAIN_ID", rollup_chain_id.to_string())
+            .env("CUSTOM_RPC_URL", l1_rpc_url_http)
+            .env("CHILD_CHAIN_NAME", format!("local-rollup-{rollup_chain_id}"))
+            .env("CHILD_CHAIN_CONFIG_PATH", "./l2_chain_config.json")
+            .env("OWNER_ADDRESS", default_signer.to_string())
+            .env("SEQUENCER_ADDRESS", default_signer.to_string())
+            // .env("BATCH_POSTERS", default_signer.to_string())
+            // .env("BATCH_POSTER_MANAGER", default_signer.to_string())
+            .env(
+                "WASM_MODULE_ROOT",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            ),
+        "nitro-contracts-deploy-rollup",
+    )?
+    .wait()
+    .await?;
+    assert!(status.success(), "failed to deploy rollup");
+
+    // Read the deploy.json file
+    let deploy_json_path = format!("{nitro_contracts_dir}/deploy.json");
+    let deploy_info: NitroDeployment =
+        serde_json::from_reader(std::fs::File::open(deploy_json_path)?)?;
+
+    // Cleanup -  reset the submodule repo - It's annoying to leave pending changes in the submodule
+    let status = E2EProcess::new(
+        Command::new("git").current_dir(nitro_contracts_dir.clone()).arg("clean").arg("-fd"),
+        "cleanup-nitro-contracts-submodule",
+    )?
+    .wait()
+    .await?;
+    assert!(status.success(), "failed to cleanup nitro contracts submodule");
+
+    // TODO post an empty batch?
+
+    Ok(deploy_info)
 }

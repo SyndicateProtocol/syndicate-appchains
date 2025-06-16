@@ -7271,6 +7271,7 @@ dependencies = [
  "eyre",
  "redis",
  "serde",
+ "serde_json",
  "shared",
  "synd-mchain",
  "synd-tee-attestation-zk-proofs-submitter",

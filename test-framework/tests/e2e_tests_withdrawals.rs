@@ -17,12 +17,12 @@ use synd_appchain_verifier::config::AppchainVerifierConfig;
 use synd_seqchain_verifier::config::SeqchainVerifierConfig;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
-    test_components::{deploy_nitro_rollup, TestComponents},
+    test_components::TestComponents,
 };
 use test_utils::{
     anvil::start_anvil,
     chain_info::default_signer,
-    nitro_chain::{execute_withdrawal, init_withdrawal_tx},
+    nitro_chain::{deploy_nitro_rollup, execute_withdrawal, init_withdrawal_tx},
 };
 
 #[ctor::ctor]
@@ -196,7 +196,7 @@ async fn silly_test() {
     let anvil = start_anvil(1).await.unwrap();
     anvil.provider.anvil_set_auto_mine(true).await.unwrap();
 
-    deploy_nitro_rollup(&anvil.ws_url.replace("ws://", "http://"), 10).await.unwrap();
+    deploy_nitro_rollup(&anvil.http_url, 10).await.unwrap();
 }
 
 #[allow(clippy::unwrap_used)]

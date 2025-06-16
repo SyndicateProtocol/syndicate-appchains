@@ -20,6 +20,7 @@ use alloy::{
 use contract_bindings::synd::{
     alwaysallowedmodule::AlwaysAllowedModule,
     assertionposter::AssertionPoster,
+    iinbox::IInbox,
     rollup::Rollup,
     syndicatesequencingchain::SyndicateSequencingChain::{self, SyndicateSequencingChainInstance},
 };
@@ -45,9 +46,9 @@ use test_utils::{
     chain_info::{default_signer, ChainInfo, ProcessInstance, PRIVATE_KEY},
     docker::{
         launch_enclave_server, launch_nitro_node, start_component, start_mchain, start_valkey,
-        E2EProcess,
+        E2EProcess, NitroNodeArgs, NitroSequencerMode,
     },
-    nitro_chain::chain_config,
+    nitro_chain::{chain_config, deploy_nitro_rollup, NitroDeployment},
     port_manager::PortManager,
     preloaded_config::{
         get_anvil_file, get_assertion_poster_address, get_bridge_address, get_inbox_address,
@@ -55,7 +56,7 @@ use test_utils::{
     utils::test_path,
     wait_until,
 };
-use tokio::{fs, process::Command};
+use tokio::{fs, process::Command, time::sleep};
 use tracing::info;
 
 #[derive(Debug)]
@@ -154,7 +155,10 @@ impl TestComponents {
         let l1_info = match options.base_chains_type {
             BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => None,
             BaseChainsType::Nitro => {
-                let info = start_anvil(1).await?;
+                let info = start_anvil(11111).await?;
+                // avoid "latest L1 block is old" error log from nitro
+                let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
+                info.provider.evm_mine(Some(MineOptions::Timestamp(Some(now)))).await?;
                 info.provider.anvil_set_auto_mine(true).await?; //auto-mine enabled
                 Some(info)
             }
@@ -162,37 +166,83 @@ impl TestComponents {
 
         // Launch mock sequencing chain and deploy contracts
         info!("Starting sequencing chain...");
-        let ChainInfo { ws_url: seq_rpc_url, instance: seq_instance, provider: seq_provider } =
-            match options.base_chains_type {
-                BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => start_anvil(15).await?,
-                BaseChainsType::Nitro => {
-                    let chain_id = 15;
-                    let l1_provider = l1_info.as_ref().unwrap().provider.clone();
-                    // TODO resume here
-                    let rollup_address = Address::ZERO; //deploy_mock_rollup(&l1_provider, chain_id).await?;
+        let ChainInfo {
+            ws_url: seq_rpc_url,
+            instance: seq_instance,
+            provider: seq_provider,
+            http_url: _,
+        } = match options.base_chains_type {
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => start_anvil(15).await?,
+            BaseChainsType::Nitro => {
+                let chain_id = 15;
+                let l1_info = l1_info.as_ref().unwrap();
 
-                    info!("Starting sequencing chain's nitro node...");
-                    let chain_info = launch_nitro_node(
-                        chain_id,
-                        Address::ZERO,
-                        &l1_info.as_ref().unwrap().ws_url,
-                        1,
-                        None,
-                        rollup_address,
-                        rollup_address,
-                    )
-                    .await?;
+                let deployment = deploy_nitro_rollup(&l1_info.http_url, chain_id).await?;
 
-                    // wait until those funds arrive on the sequencing chain
-                    wait_until!(
-                        chain_info.provider.get_balance(default_signer().address()).await? ==
-                            parse_ether("10")?,
-                        Duration::from_secs(10)
-                    );
+                // TODO remove this
 
-                    chain_info
-                }
-            };
+                println!("DEBUG INFO");
+                println!("parent chain id: {}", l1_info.provider.get_chain_id().await?);
+                println!("deployment: {:?}", deployment);
+                println!(
+                    "rollup code: {:?}",
+                    l1_info.provider.get_code_at(deployment.rollup).await?
+                );
+                println!("inbox code: {:?}", l1_info.provider.get_code_at(deployment.inbox).await?);
+                println!(
+                    "bridge code: {:?}",
+                    l1_info.provider.get_code_at(deployment.bridge).await?
+                );
+                println!(
+                    "sequencer inbox code: {:?}",
+                    l1_info.provider.get_code_at(deployment.sequencer_inbox).await?
+                );
+                println!(
+                    "native token code: {:?}",
+                    l1_info.provider.get_code_at(deployment.native_token).await?
+                );
+                println!(
+                    "upgrade executor code: {:?}",
+                    l1_info.provider.get_code_at(deployment.upgrade_executor).await?
+                );
+                println!(
+                    "validator utils code: {:?}",
+                    l1_info.provider.get_code_at(deployment.validator_utils).await?
+                );
+                println!(
+                    "validator wallet creator code: {:?}",
+                    l1_info.provider.get_code_at(deployment.validator_wallet_creator).await?
+                );
+                println!("deployed at: {}", deployment.deployed_at);
+                println!("--------------------------------");
+                // ------------------------------------------------------------
+
+                info!("Starting sequencing chain's nitro node...");
+                let chain_info = launch_nitro_node(NitroNodeArgs {
+                    chain_id,
+                    chain_owner: default_signer().address(),
+                    parent_chain_url: l1_info.ws_url.clone(),
+                    parent_chain_id: l1_info.provider.get_chain_id().await?,
+                    sequencer_mode: NitroSequencerMode::Sequencer,
+                    chain_name: "sequencing".to_string(),
+                    deployment: deployment.clone(),
+                })
+                .await?;
+
+                // deposit some funds for the default signer
+                let inbox = IInbox::new(deployment.inbox, &l1_info.provider);
+                let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
+
+                // wait until those funds arrive on the sequencing chain
+                wait_until!(
+                    chain_info.provider.get_balance(default_signer().address()).await? ==
+                        parse_ether("10")?,
+                    Duration::from_secs(10)
+                );
+
+                chain_info
+            }
+        };
 
         info!("Sequencing chain Nitro URL: {}", seq_rpc_url);
 
@@ -219,85 +269,92 @@ impl TestComponents {
 
         // Launch mock settlement chain
         info!("Starting settlement chain...");
-        let ChainInfo { ws_url: set_rpc_url, instance: set_instance, provider: set_provider } =
-            match options.base_chains_type {
-                BaseChainsType::Anvil => {
-                    let chain_info = start_anvil(20).await?;
-                    // Use the mock rollup contract for the test instead of deploying all the nitro
-                    // rollup contracts
-                    let _ = Rollup::deploy_builder(
-                        &chain_info.provider,
-                        U256::from(options.appchain_chain_id),
-                        "null".to_string(),
-                    )
-                    .nonce(0)
-                    .send()
-                    .await?;
+        let ChainInfo {
+            ws_url: set_rpc_url,
+            instance: set_instance,
+            provider: set_provider,
+            http_url: _,
+        } = match options.base_chains_type {
+            BaseChainsType::Anvil => {
+                let chain_info = start_anvil(20).await?;
+                // Use the mock rollup contract for the test instead of deploying all the nitro
+                // rollup contracts
+                let _ = Rollup::deploy_builder(
+                    &chain_info.provider,
+                    U256::from(options.appchain_chain_id),
+                    "null".to_string(),
+                )
+                .nonce(0)
+                .send()
+                .await?;
 
-                    mine_block(&chain_info.provider, 0).await?;
-                    chain_info
-                }
-                BaseChainsType::Nitro => {
-                    let chain_id = 20;
-                    let l1_provider = l1_info.as_ref().unwrap().provider.clone();
-                    // TODO resume here
-                    let rollup_address = Address::ZERO; //deploy_mock_rollup(&l1_provider, chain_id).await?;
+                mine_block(&chain_info.provider, 0).await?;
+                chain_info
+            }
+            BaseChainsType::Nitro => {
+                let chain_id = 20;
+                let l1_info = l1_info.as_ref().unwrap();
 
-                    let chain_info = launch_nitro_node(
-                        chain_id,
-                        Address::ZERO,
-                        &l1_info.as_ref().unwrap().ws_url,
-                        1,
-                        None,
-                        rollup_address,
-                        rollup_address,
-                    )
-                    .await?;
+                let deployment = deploy_nitro_rollup(&l1_info.http_url, chain_id).await?;
 
-                    // wait until those funds arrive on the sequencing chain
-                    wait_until!(
-                        chain_info.provider.get_balance(default_signer().address()).await? ==
-                            parse_ether("10")?,
-                        Duration::from_secs(10)
-                    );
+                info!("Starting settlement chain's nitro node...");
+                let chain_info = launch_nitro_node(NitroNodeArgs {
+                    chain_id,
+                    chain_owner: default_signer().address(),
+                    parent_chain_url: l1_info.ws_url.clone(),
+                    parent_chain_id: l1_info.provider.get_chain_id().await?,
+                    sequencer_mode: NitroSequencerMode::Sequencer,
+                    chain_name: "settlement".to_string(),
+                    deployment: deployment.clone(),
+                })
+                .await?;
 
-                    // deploy the rollup contract for the appchain on the settlement chain
-                    let _ = Rollup::deploy_builder(
-                        &chain_info.provider,
-                        U256::from(options.appchain_chain_id),
-                        "null".to_string(),
-                    )
-                    .nonce(0)
-                    .send()
-                    .await?;
+                // deposit some funds for the default signer
+                let inbox = IInbox::new(deployment.inbox, &l1_info.provider);
+                let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
 
-                    chain_info
-                }
-                BaseChainsType::PreLoaded(version) => {
-                    // If flag is set, load the anvil state from a file
-                    // This is the full set of Arb contracts
-                    let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                        .join("config")
-                        .join(get_anvil_file(&version));
+                // wait until those funds arrive on the sequencing chain
+                wait_until!(
+                    chain_info.provider.get_balance(default_signer().address()).await? ==
+                        parse_ether("10")?,
+                    Duration::from_secs(10)
+                );
 
-                    let chain_info = start_anvil_with_args(
-                        31337,
-                        &["--load-state", state_file.to_str().unwrap()],
-                    )
-                    .await?;
+                // deploy the rollup contract for the appchain on the settlement chain
+                let _ = Rollup::deploy_builder(
+                    &chain_info.provider,
+                    U256::from(options.appchain_chain_id),
+                    "null".to_string(),
+                )
+                .nonce(0)
+                .send()
+                .await?;
 
-                    // Sync the tips of the sequencing and settlement chains
-                    let block = chain_info
-                        .provider
-                        .get_block_by_number(BlockNumberOrTag::Latest)
-                        .await?
-                        .unwrap();
-                    seq_provider
-                        .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
+                chain_info
+            }
+            BaseChainsType::PreLoaded(version) => {
+                // If flag is set, load the anvil state from a file
+                // This is the full set of Arb contracts
+                let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("config")
+                    .join(get_anvil_file(&version));
+
+                let chain_info =
+                    start_anvil_with_args(31337, &["--load-state", state_file.to_str().unwrap()])
                         .await?;
-                    chain_info
-                }
-            };
+
+                // Sync the tips of the sequencing and settlement chains
+                let block = chain_info
+                    .provider
+                    .get_block_by_number(BlockNumberOrTag::Latest)
+                    .await?
+                    .unwrap();
+                seq_provider
+                    .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
+                    .await?;
+                chain_info
+            }
+        };
 
         let (arbitrum_bridge_address, arbitrum_inbox_address) = match options.base_chains_type {
             BaseChainsType::Anvil | BaseChainsType::Nitro => (
@@ -402,15 +459,21 @@ impl TestComponents {
             instance: appchain_instance,
             provider: appchain_provider,
             ws_url: appchain_rpc_url,
-        } = launch_nitro_node(
-            options.appchain_chain_id,
-            options.rollup_owner,
-            &mchain_rpc_url,
-            MCHAIN_ID,
-            None,
-            APPCHAIN_CONTRACT,
-            APPCHAIN_CONTRACT,
-        )
+            http_url: _,
+        } = launch_nitro_node(NitroNodeArgs {
+            chain_id: options.appchain_chain_id,
+            chain_owner: options.rollup_owner,
+            parent_chain_url: mchain_rpc_url.clone(),
+            parent_chain_id: MCHAIN_ID,
+            sequencer_mode: NitroSequencerMode::None,
+            chain_name: "appchain".to_string(),
+            deployment: NitroDeployment {
+                bridge: APPCHAIN_CONTRACT,
+                sequencer_inbox: APPCHAIN_CONTRACT,
+                deployed_at: 1,
+                ..Default::default()
+            },
+        })
         .await?;
         info!("Nitro URL: {}", appchain_rpc_url);
 
@@ -672,151 +735,4 @@ impl TestComponents {
             false => Ok(None),
         }
     }
-}
-
-#[allow(dead_code)]
-#[derive(Debug, serde::Deserialize)]
-pub struct NitroDeployment {
-    #[serde(deserialize_with = "deserialize_address")]
-    pub bridge: Address,
-    #[serde(deserialize_with = "deserialize_address")]
-    pub inbox: Address,
-    #[serde(rename = "sequencer-inbox", deserialize_with = "deserialize_address")]
-    pub sequencer_inbox: Address,
-    #[serde(deserialize_with = "deserialize_address")]
-    pub rollup: Address,
-    #[serde(rename = "native-token", deserialize_with = "deserialize_address")]
-    pub native_token: Address,
-    #[serde(rename = "upgrade-executor", deserialize_with = "deserialize_address")]
-    pub upgrade_executor: Address,
-    #[serde(rename = "validator-utils", deserialize_with = "deserialize_address")]
-    pub validator_utils: Address,
-    #[serde(rename = "validator-wallet-creator", deserialize_with = "deserialize_address")]
-    pub validator_wallet_creator: Address,
-}
-
-// TODO take care of the sequencer to write data to L1
-#[allow(clippy::unwrap_used)]
-/// Deploys a mock rollup contract. - It expects `yarn` and `hardhat` to be installed.
-/// NOTE: only used for the base chains when in Nitro mode, it expects `l1_provider` to have
-/// automine enabled
-//TODO does not need to be public
-pub async fn deploy_nitro_rollup(
-    l1_rpc_url_http: &str,
-    // l1_provider: &FilledProvider,
-    rollup_chain_id: u64,
-) -> Result<NitroDeployment> {
-    let project_root = env!("CARGO_WORKSPACE_DIR");
-    let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
-
-    // install and build dependencies
-    let status = E2EProcess::new(
-        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("install"),
-        "nitro-contracts-install",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "Failed to run `yarn install` in nitro contracts");
-
-    let status = E2EProcess::new(
-        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build:all"),
-        "nitro-contracts-build",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "Failed to run `yarn build` in nitro contracts");
-
-    let default_signer = default_signer().address();
-    let chain_config_json = chain_config(rollup_chain_id, default_signer);
-
-    // setup config.ts (unfortunately, the script expects the config to be in a specific path)
-    let config_ts = format!(
-        r#"
-        import {{ ethers }} from 'ethers'
-
-        // 90% of Geth's 128KB tx size limit, leaving ~13KB for proving
-        // This need to be adjusted for Orbit chains
-        export const maxDataSize = 117964
-
-        export const isUsingFeeToken = false;
-
-        export const config = {{
-            rollupConfig: {{
-                confirmPeriodBlocks: ethers.BigNumber.from('45818'),
-                extraChallengeTimeBlocks: ethers.BigNumber.from('200'),
-                stakeToken: ethers.constants.AddressZero,
-                baseStake: ethers.utils.parseEther('1'),
-                wasmModuleRoot:    '0xda4e3ad5e7feacb817c21c8d0220da7650fe9051ece68a3f0b1c5d38bbb27b21',
-                owner: '{default_signer}',
-                loserStakeEscrow: ethers.constants.AddressZero,
-                chainId: ethers.BigNumber.from('{rollup_chain_id}'),
-                minimumAssertionPeriod: 75,
-                validatorAfkBlocks: 201600,
-                chainConfig: '{chain_config_json}',
-                genesisBlockNum: ethers.BigNumber.from('0'),
-                sequencerInboxMaxTimeVariation: {{
-                    delayBlocks: ethers.BigNumber.from('7200'),
-                    futureBlocks: ethers.BigNumber.from('12'),
-                    delaySeconds: ethers.BigNumber.from('86400'),
-                    futureSeconds: ethers.BigNumber.from('3600'),
-                }},
-                bufferConfig: {{
-                    threshold: ethers.BigNumber.from('600'),
-                    max: ethers.BigNumber.from('14400'),
-                    replenishRateInBasis: ethers.BigNumber.from('833'),
-                }},
-            }},
-            validators: [
-                '0x1234123412341234123412341234123412341234',
-                '0x1234512345123451234512345123451234512345',
-            ],
-            batchPosterManager: '0x1234123412341234123412341234123412341234',
-            batchPosters: [
-                '0x1234123412341234123412341234123412341234'
-            ]
-        }}
-    "#
-    );
-    let config_ts_path = format!("{nitro_contracts_dir}/scripts/config.ts");
-    fs::write(config_ts_path, config_ts).await?;
-
-    let l2_chain_config_path = format!("{nitro_contracts_dir}/l2_chain_config.json");
-    fs::write(l2_chain_config_path, chain_config_json).await?;
-
-    // deploy the rollup
-    let status = E2EProcess::new(
-        Command::new("yarn")
-            .current_dir(nitro_contracts_dir.clone())
-            .arg("run")
-            .arg("create-rollup-testnode")
-            .arg("--network")
-            .arg("custom")
-            .env("DEPLOYER_PRIVKEY", PRIVATE_KEY)
-            .env("PARENT_CHAIN_RPC", l1_rpc_url_http)
-            .env("PARENT_CHAIN_ID", rollup_chain_id.to_string())
-            .env("CUSTOM_RPC_URL", l1_rpc_url_http)
-            .env("CHILD_CHAIN_NAME", format!("local-rollup-{rollup_chain_id}"))
-            .env("CHILD_CHAIN_CONFIG_PATH", "./l2_chain_config.json")
-            .env("OWNER_ADDRESS", default_signer.to_string())
-            .env("SEQUENCER_ADDRESS", default_signer.to_string())
-            .env("BATCH_POSTERS", default_signer.to_string())
-            .env("BATCH_POSTER_MANAGER", default_signer.to_string())
-            .env(
-                "WASM_MODULE_ROOT",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-            ),
-        "nitro-contracts-deploy-rollup",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "failed to deploy rollup");
-
-    // Read the deploy.json file
-    let deploy_json_path = format!("{nitro_contracts_dir}/deploy.json");
-    let deploy_info: NitroDeployment =
-        serde_json::from_reader(std::fs::File::open(deploy_json_path)?)?;
-
-    // TODO reset the submodule repo - It's annoying to have changes in the submodule repo
-
-    Ok(deploy_info)
 }

@@ -14,6 +14,7 @@ contract-bindings                        = { workspace = true }
 eyre                                     = { workspace = true }
 redis                                    = { workspace = true, features = ["tokio-comp"] }
 serde                                    = { workspace = true }
+serde_json                               = { workspace = true }
 shared                                   = { workspace = true }
 synd-mchain                              = { workspace = true }
 synd-tee-attestation-zk-proofs-submitter = { workspace = true }

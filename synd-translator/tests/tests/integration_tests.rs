@@ -18,7 +18,8 @@ use synd_mchain::{
     methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID},
 };
 use test_utils::{
-    docker::{launch_nitro_node, start_mchain},
+    docker::{launch_nitro_node, start_mchain, NitroNodeArgs, NitroSequencerMode},
+    nitro_chain::NitroDeployment,
     wait_until,
 };
 
@@ -58,15 +59,20 @@ async fn arb_owner_test() -> Result<()> {
     // Start the appchain's node
     let appchain_owner = address!("0x0000000000000000000000000000000000000001");
     let (mchain_url, _mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let chain_info = launch_nitro_node(
-        APPCHAIN_CHAIN_ID,
-        appchain_owner,
-        &mchain_url,
-        MCHAIN_ID,
-        None,
-        APPCHAIN_CONTRACT,
-        APPCHAIN_CONTRACT,
-    )
+    let chain_info = launch_nitro_node(NitroNodeArgs {
+        chain_id: APPCHAIN_CHAIN_ID,
+        chain_owner: appchain_owner,
+        parent_chain_url: mchain_url,
+        parent_chain_id: MCHAIN_ID,
+        sequencer_mode: NitroSequencerMode::None,
+        chain_name: "appchain".to_string(),
+        deployment: NitroDeployment {
+            bridge: APPCHAIN_CONTRACT,
+            sequencer_inbox: APPCHAIN_CONTRACT,
+            deployed_at: 1,
+            ..Default::default()
+        },
+    })
     .await?;
     let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &chain_info.provider);
     assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [appchain_owner]);
@@ -78,15 +84,20 @@ async fn no_l1_fees_test() -> Result<()> {
     const ARB_GAS_INFO_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006c");
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let chain_info = launch_nitro_node(
-        APPCHAIN_CHAIN_ID,
-        Address::ZERO,
-        &mchain_url,
-        MCHAIN_ID,
-        None,
-        APPCHAIN_CONTRACT,
-        APPCHAIN_CONTRACT,
-    )
+    let chain_info = launch_nitro_node(NitroNodeArgs {
+        chain_id: APPCHAIN_CHAIN_ID,
+        chain_owner: Address::ZERO,
+        parent_chain_url: mchain_url,
+        parent_chain_id: MCHAIN_ID,
+        sequencer_mode: NitroSequencerMode::None,
+        chain_name: "appchain".to_string(),
+        deployment: NitroDeployment {
+            bridge: APPCHAIN_CONTRACT,
+            sequencer_inbox: APPCHAIN_CONTRACT,
+            deployed_at: 1,
+            ..Default::default()
+        },
+    })
     .await?;
     let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &chain_info.provider);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
@@ -127,15 +138,20 @@ async fn no_l1_fees_test() -> Result<()> {
 async fn test_nitro_batch() -> Result<()> {
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
 
-    let chain_info = launch_nitro_node(
-        APPCHAIN_CHAIN_ID,
-        Address::ZERO,
-        &mchain_url,
-        MCHAIN_ID,
-        None,
-        APPCHAIN_CONTRACT,
-        APPCHAIN_CONTRACT,
-    )
+    let chain_info = launch_nitro_node(NitroNodeArgs {
+        chain_id: APPCHAIN_CHAIN_ID,
+        chain_owner: Address::ZERO,
+        parent_chain_url: mchain_url,
+        parent_chain_id: MCHAIN_ID,
+        sequencer_mode: NitroSequencerMode::None,
+        chain_name: "appchain".to_string(),
+        deployment: NitroDeployment {
+            bridge: APPCHAIN_CONTRACT,
+            sequencer_inbox: APPCHAIN_CONTRACT,
+            deployed_at: 1,
+            ..Default::default()
+        },
+    })
     .await?;
 
     let addr = get_signer().address();
@@ -201,15 +217,20 @@ async fn test_nitro_batch() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_batch_two_tx() -> Result<()> {
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let chain_info = launch_nitro_node(
-        APPCHAIN_CHAIN_ID,
-        Address::ZERO,
-        &mchain_url,
-        MCHAIN_ID,
-        None,
-        APPCHAIN_CONTRACT,
-        APPCHAIN_CONTRACT,
-    )
+    let chain_info = launch_nitro_node(NitroNodeArgs {
+        chain_id: APPCHAIN_CHAIN_ID,
+        chain_owner: Address::ZERO,
+        parent_chain_url: mchain_url,
+        parent_chain_id: MCHAIN_ID,
+        sequencer_mode: NitroSequencerMode::None,
+        chain_name: "appchain".to_string(),
+        deployment: NitroDeployment {
+            bridge: APPCHAIN_CONTRACT,
+            sequencer_inbox: APPCHAIN_CONTRACT,
+            deployed_at: 1,
+            ..Default::default()
+        },
+    })
     .await?;
     let addr = get_signer().address();
 
@@ -291,15 +312,20 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_end_of_block_tx() -> Result<()> {
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let chain_info = launch_nitro_node(
-        APPCHAIN_CHAIN_ID,
-        Address::ZERO,
-        &mchain_url,
-        MCHAIN_ID,
-        None,
-        APPCHAIN_CONTRACT,
-        APPCHAIN_CONTRACT,
-    )
+    let chain_info = launch_nitro_node(NitroNodeArgs {
+        chain_id: APPCHAIN_CHAIN_ID,
+        chain_owner: Address::ZERO,
+        parent_chain_url: mchain_url,
+        parent_chain_id: MCHAIN_ID,
+        sequencer_mode: NitroSequencerMode::None,
+        chain_name: "appchain".to_string(),
+        deployment: NitroDeployment {
+            bridge: APPCHAIN_CONTRACT,
+            sequencer_inbox: APPCHAIN_CONTRACT,
+            deployed_at: 1,
+            ..Default::default()
+        },
+    })
     .await?;
 
     mchain
@@ -328,15 +354,20 @@ async fn test_nitro_end_of_block_tx() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_delayed_message_after_batch() -> Result<()> {
     let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
-    let chain_info = launch_nitro_node(
-        APPCHAIN_CHAIN_ID,
-        Address::ZERO,
-        &mchain_url,
-        MCHAIN_ID,
-        None,
-        APPCHAIN_CONTRACT,
-        APPCHAIN_CONTRACT,
-    )
+    let chain_info = launch_nitro_node(NitroNodeArgs {
+        chain_id: APPCHAIN_CHAIN_ID,
+        chain_owner: Address::ZERO,
+        parent_chain_url: mchain_url,
+        parent_chain_id: MCHAIN_ID,
+        sequencer_mode: NitroSequencerMode::None,
+        chain_name: "appchain".to_string(),
+        deployment: NitroDeployment {
+            bridge: APPCHAIN_CONTRACT,
+            sequencer_inbox: APPCHAIN_CONTRACT,
+            deployed_at: 1,
+            ..Default::default()
+        },
+    })
     .await?;
 
     let qty = parse_ether("1")?;

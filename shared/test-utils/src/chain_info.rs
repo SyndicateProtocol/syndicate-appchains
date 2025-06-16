@@ -6,6 +6,7 @@ use std::{future, process::ExitStatus, str::FromStr};
 #[derive(Debug)]
 pub struct ChainInfo {
     pub ws_url: String,
+    pub http_url: String,
     pub instance: ProcessInstance,
     pub provider: FilledProvider,
 }
