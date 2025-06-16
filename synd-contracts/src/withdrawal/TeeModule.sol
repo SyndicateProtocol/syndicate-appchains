@@ -177,11 +177,7 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
         emit TeeInput(teeTrustedInput);
     }
 
-    function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature, address rewardAddr)
-        external
-        nonReentrant
-    {
-        require(rewardAddr != address(0), "reward address cannot be zero");
+    function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature) external nonReentrant {
         require(signature.length == 65, "invalid signature length");
         bytes32 assertionHash = hash_object(assertion);
         bytes32 payload_hash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
@@ -200,7 +196,7 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
 
             // pay out rewards
             //#olympix-ignore-low-level-call-params-verified
-            (bool success,) = payable(rewardAddr).call{value: address(this).balance}("");
+            (bool success,) = payable(msg.sender).call{value: address(this).balance}("");
             require(success, "payment failed");
         }
     }

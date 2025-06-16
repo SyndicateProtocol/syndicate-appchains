@@ -291,10 +291,9 @@ impl Proposer {
             sendRoot: verify_appchain_output.send_root,
             seqBlockHash: verify_appchain_output.seq_block_hash,
         };
-        let reward_address = Address::ZERO; // TODO - populate this - from config?
         let submit_assertion_return = match self
             .tee_module
-            .submitAssertion(assertion, verify_appchain_output.signature, reward_address)
+            .submitAssertion(assertion, verify_appchain_output.signature)
             .call()
             .await
         {
