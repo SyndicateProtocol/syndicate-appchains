@@ -12,7 +12,7 @@ const PRELOAD_BRIDGE_ADDRESS_231: Address = address!("0x8dAF17A20c9DBA35f005b632
 const PRELOAD_ASSERTION_POSTER_ADDRESS_231: Address =
     address!("0x09635F643e140090A9A8Dcd712eD6285858ceBef");
 
-#[derive(Copy, Debug, Clone)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq)]
 pub enum ContractVersion {
     V213,
     V300,

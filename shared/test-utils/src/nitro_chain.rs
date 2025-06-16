@@ -337,14 +337,14 @@ pub async fn deploy_nitro_rollup(
     let deploy_info: NitroDeployment =
         serde_json::from_reader(std::fs::File::open(deploy_json_path)?)?;
 
-    // // Cleanup -  reset the submodule repo - It's annoying to leave pending changes in the
-    // submodule let status = E2EProcess::new(
-    //     Command::new("git").current_dir(nitro_contracts_dir.clone()).arg("clean").arg("-fd"),
-    //     "cleanup-nitro-contracts-submodule",
-    // )?
-    // .wait()
-    // .await?;
-    // assert!(status.success(), "failed to cleanup nitro contracts submodule");
+    // Cleanup -  reset the submodule repo - It's annoying to leave pending changes in the submodule
+    let status = E2EProcess::new(
+        Command::new("git").current_dir(nitro_contracts_dir.clone()).arg("clean").arg("-fd"),
+        "cleanup-nitro-contracts-submodule",
+    )?
+    .wait()
+    .await?;
+    assert!(status.success(), "failed to cleanup nitro contracts submodule");
 
     Ok(deploy_info)
 }

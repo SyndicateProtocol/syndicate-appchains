@@ -4,7 +4,8 @@ use alloy::{
     eips::BlockNumberOrTag,
     network::Ethereum,
     primitives::{address, utils::parse_ether, Address, B256},
-    providers::{ext::AnvilApi, Provider},
+    providers::{ext::DebugApi, Provider},
+    rpc::types::trace::geth::GethDebugTracingOptions,
     signers::local::PrivateKeySigner,
     sol,
     sol_types::SolValue,
@@ -190,15 +191,6 @@ async fn e2e_tee_withdrawal() -> Result<()> {
     .await
 }
 
-// TODO remove me
-#[tokio::test]
-async fn silly_test() {
-    let anvil = start_anvil(1).await.unwrap();
-    anvil.provider.anvil_set_auto_mine(true).await.unwrap();
-
-    deploy_nitro_rollup(&anvil.http_url, 10).await.unwrap();
-}
-
 #[allow(clippy::unwrap_used)]
 async fn deploy_on_settlement_chain<T, P, D>(
     components: &TestComponents,
@@ -224,6 +216,15 @@ where
         .await?;
 
     let receipt = components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+    if !receipt.status() {
+        println!("receipt: {:?}", receipt);
+        let trace = components
+            .settlement_provider
+            .debug_trace_transaction(tx_hash, GethDebugTracingOptions::default())
+            .await
+            .unwrap();
+        println!("trace: {:?}", trace);
+    }
     assert!(receipt.status());
     Ok(receipt.contract_address.unwrap())
 }

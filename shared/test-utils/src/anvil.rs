@@ -40,6 +40,9 @@ pub async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
         .get_block_by_number(BlockNumberOrTag::Latest)
         .await?
         .ok_or_else(|| eyre!("Block not found"))?;
-    provider.evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp + delay)))).await?;
+    provider
+        .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp + delay))))
+        .await
+        .unwrap();
     Ok(())
 }

@@ -245,17 +245,18 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
                 "--node.sequencer=true".to_string(),
                 "--node.batch-poster.enable=true".to_string(),
                 "--execution.sequencer.enable=true".to_string(),
-                "--node.delayed-sequencer.enable".to_string(),
-                "--node.dangerous.no-sequencer-coordinator".to_string(),
+                "--node.delayed-sequencer.enable=true".to_string(),
+                "--node.delayed-sequencer.require-full-finality=false".to_string(),
+                "--node.delayed-sequencer.use-merge-finality=false".to_string(),
+                "--node.delayed-sequencer.finalize-distance=0".to_string(),
+                "--node.dangerous.no-sequencer-coordinator=true".to_string(),
                 format!(
                     "--node.batch-poster.parent-chain-wallet.private-key={}",
                     PRIVATE_KEY.strip_prefix("0x").unwrap()
                 ),
                 "--node.batch-poster.data-poster.wait-for-l1-finality=false".to_string(),
-                // // TODO maybe remove, just testing if these fix the issue
-                // "--node.parent-chain-reader.use-finality-data=false".to_string(),
-                // "--node.batch-poster.l1-block-bound=ignore".to_string(),
-                // "--node.delayed-sequencer.use-merge-finality=false".to_string(),
+                "--node.parent-chain-reader.use-finality-data=false".to_string(),
+                "--execution.parent-chain-reader.use-finality-data=false".to_string(),
             ]
         }
     };
@@ -272,6 +273,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg("--node.inbox-reader.check-delay=100ms")
             .arg("--node.parent-chain-reader.poll-interval=100ms")
             .arg("--node.staker.enable=false")
+            .arg("--execution.tx-pre-checker.strictness=20")
             .arg("--ensure-rollup-deployment=false")
             .arg(format!(
                 "--chain.info-json={}",
@@ -286,6 +288,10 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg("--http.addr=0.0.0.0")
             .arg("--http.api=net,web3,eth,debug,trace")
             .arg(format!("--http.port={}", port))
+            .arg("--ws.expose-all")
+            .arg(format!("--ws.port={}", port))
+            .arg("--ws.addr=0.0.0.0")
+            .arg("--ws.origins=\\*")
             .arg(format!("--log-level={log_level}"))
             .args(sequencer_args),
         format!("nitro-{}", args.chain_name).as_str(),

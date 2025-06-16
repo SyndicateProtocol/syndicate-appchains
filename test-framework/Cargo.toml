@@ -11,6 +11,7 @@ version.workspace      = true
 [dependencies]
 alloy = { workspace = true, features = [
   "node-bindings",
+  "provider-debug-api",
   "provider-engine-api",
   "provider-ipc",
   "providers",

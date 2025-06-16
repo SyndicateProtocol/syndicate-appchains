@@ -7,7 +7,7 @@ use shared::types::FilledProvider;
 use std::time::Duration;
 use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BaseChainsType {
     Anvil,
     PreLoaded(ContractVersion),
@@ -66,7 +66,11 @@ pub(super) async fn setup_config_manager(
     let config_manager_owner = set_provider.default_signer_address();
     let config_manager_tx =
         ArbConfigManager::deploy_builder(set_provider, config_manager_owner).send().await?;
-    mine_block(set_provider, 0).await?;
+
+    if options.base_chains_type != BaseChainsType::Nitro {
+        mine_block(set_provider, 0).await?;
+    }
+
     let config_manager_address = config_manager_tx.get_receipt().await?.contract_address.unwrap();
     let config_manager = ArbConfigManager::new(config_manager_address, set_provider.clone());
 
@@ -91,7 +95,9 @@ pub(super) async fn setup_config_manager(
         )
         .send()
         .await?;
-    mine_block(set_provider, 0).await?;
+    if options.base_chains_type != BaseChainsType::Nitro {
+        mine_block(set_provider, 0).await?;
+    }
 
     assert!(create_chain_config_tx.get_receipt().await?.status());
 
