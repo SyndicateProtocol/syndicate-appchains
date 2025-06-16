@@ -635,7 +635,6 @@ impl Proposer {
         debug!("L1 batches within range: {batches:?}");
 
         let delayed_message_count: u64 = seq_start_block.header.nonce.into();
-        // TODO confirm - we don't need the first msg accumulator for this L1 case?
         let (delayed_messages, _first_msg_acc) = self
             .get_delayed_messages(
                 DelayedMessagesSource::L1,
