@@ -124,7 +124,7 @@ pub async fn start_component(
                 .args(args),
         )
     } else if executable_name == "synd-proposer" {
-        // Go service
+        // Synd-proposer is a Go service, so we need to use the Go command to run it
         let mut cmd = Command::new("go");
         cmd.current_dir(format!("{}/synd-withdrawals/synd-proposer", env!("CARGO_WORKSPACE_DIR")));
         cmd.arg("run").arg("./cmd/synd-proposer");
