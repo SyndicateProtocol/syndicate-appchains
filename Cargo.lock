@@ -7246,7 +7246,6 @@ dependencies = [
  "eyre",
  "redis",
  "reqwest",
- "serde",
  "serde_json",
  "shared",
  "synd-chain-ingestor",
