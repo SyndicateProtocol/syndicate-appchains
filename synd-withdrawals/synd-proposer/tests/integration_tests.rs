@@ -70,6 +70,7 @@ async fn e2e_proposer_test() -> Result<()> {
         sequencer_inbox_address: Default::default(),
         private_key: utils::DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
         polling_interval: Duration::from_secs(60),
+        close_challenge_interval: Duration::from_secs(60),
         port: proposer_port,
         metrics_port: 9090,
     };

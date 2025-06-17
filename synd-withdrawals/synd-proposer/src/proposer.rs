@@ -4,28 +4,20 @@
 use crate::{
     config::Config,
     metrics::ProposerMetrics,
-    types::{NitroBlock, SeqVerifyOutput, VerifySequencingChainConfig, VerifySequencingChainInput},
+    types::{SeqVerifyOutput, VerifySequencingChainConfig, VerifySequencingChainInput},
 };
 use alloy::{
     consensus::Transaction,
     eips::BlockNumberOrTag,
     network::{Ethereum, EthereumWallet},
     primitives::{fixed_bytes, keccak256, Address, B256, U256},
-    providers::{Provider as _, ProviderBuilder, RootProvider, WalletProvider as _},
+    providers::{Provider as _, ProviderBuilder, RootProvider},
     rpc::types::{Block, Filter},
     signers::local::PrivateKeySigner,
     sol_types::{SolCall, SolEvent, SolValue},
     transports::TransportResult,
 };
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    routing::post,
-    serve, Router,
-};
 use contract_bindings::synd::{
-    assertionposter::AssertionPoster::{self, AssertionPosterInstance},
     ibridge::IBridge::{IBridgeInstance, MessageDelivered},
     iinbox::IInbox::InboxMessageDelivered,
     isequencerinbox::ISequencerInbox::{addSequencerL2BatchFromEigenDACall, SequencerBatchData},
@@ -42,7 +34,11 @@ use std::{
     time::Duration,
 };
 use synd_seqchain_verifier::types::{calculate_slot, ArbitrumBatch, L1ChainInput, TimeBounds};
-use tokio::{net::TcpListener, sync::Mutex, task::JoinHandle};
+use tokio::{
+    signal::unix::{signal, SignalKind},
+    sync::Mutex,
+    task::JoinHandle,
+};
 use tracing::{debug, error, info, warn};
 use withdrawals_shared::types::{L1IncomingMessage, L1IncomingMessageHeader};
 
@@ -64,7 +60,7 @@ pub struct Proposer {
     ethereum_provider: RootProvider,
     enclave_provider: RootProvider,
     polling_interval: Duration,
-    assertion_poster: AssertionPosterInstance<(), FilledProvider>,
+    close_challenge_interval: Duration,
     metrics: ProposerMetrics,
     tee_module: TeeModuleInstance<(), FilledProvider>,
     last_tee_trusted_input_return_hash: Mutex<B256>,
@@ -88,9 +84,6 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
         .connect(config.settlement_rpc_url.as_str())
         .await?;
 
-    let assertion_poster =
-        AssertionPoster::new(config.assertion_poster_contract_address, settlement_provider.clone());
-
     let tee_module =
         TeeModuleInstance::new(config.tee_module_contract_address, settlement_provider.clone());
 
@@ -105,44 +98,38 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
         ethereum_provider,
         enclave_provider,
         settlement_provider,
-        assertion_poster,
         tee_module,
     );
     let proposer = Arc::new(proposer);
 
-    // Clone for both tasks
-    let proposer_polling = Arc::clone(&proposer);
-    let proposer_http = Arc::clone(&proposer);
-
+    let polling_proposer = Arc::clone(&proposer);
     let polling_task: JoinHandle<Result<()>> =
-        tokio::spawn(async move { proposer_polling.main_loop().await });
+        tokio::spawn(async move { polling_proposer.polling_loop().await });
 
-    // TODO remove /propose endpoint
-    // Start HTTP server with /propose endpoint
-    let app =
-        Router::new().route("/propose", post(post_assertion_handler)).with_state(proposer_http);
-    let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port)).await?;
+    let close_challenge_proposer = Arc::clone(&proposer);
+    let close_challenge_task: JoinHandle<Result<()>> =
+        tokio::spawn(async move { close_challenge_proposer.close_challenge_loop().await });
 
-    let server_task = tokio::spawn(async move {
-        if let Err(err) = serve(listener, app).await {
-            eprintln!("HTTP server error: {err}");
+    #[allow(clippy::expect_used)]
+    let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
+    #[allow(clippy::expect_used)]
+    let mut sigterm = signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
+
+    tokio::select! {
+        _ = sigint.recv() => {
+            info!("Received SIGINT (Ctrl+C), initiating shutdown...");
         }
-    });
-
-    // Wait for both tasks
-    let _ = tokio::try_join!(polling_task, server_task)?;
-    Ok(())
-}
-
-async fn post_assertion_handler(State(proposer): State<Arc<Proposer>>) -> Response {
-    match proposer.fetch_block_and_post().await {
-        Ok(_) => (StatusCode::OK, "Assertion posted successfully").into_response(),
-        Err(err) => {
-            error!("Handler error: {err:?}");
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to post assertion: {err}"))
-                .into_response()
+        _ = sigterm.recv() => {
+            info!("Received SIGTERM, initiating shutdown...");
+        }
+        _ = polling_task => {
+            info!("Proposer stopped, initiating shutdown...");
+        }
+        _ = close_challenge_task => {
+            info!("Challenge window task stopped, initiating shutdown...");
         }
     }
+    Ok(())
 }
 
 fn hash_tee_trusted_input(input: &teeTrustedInputReturn) -> B256 {
@@ -180,7 +167,6 @@ impl Proposer {
         ethereum_provider: RootProvider,
         enclave_provider: RootProvider,
         _settlement_provider: FilledProvider,
-        assertion_poster: AssertionPosterInstance<(), FilledProvider>,
         tee_module: TeeModuleInstance<(), FilledProvider>,
     ) -> Self {
         Self {
@@ -190,7 +176,7 @@ impl Proposer {
             ethereum_provider,
             enclave_provider,
             polling_interval: config.polling_interval,
-            assertion_poster,
+            close_challenge_interval: config.close_challenge_interval,
             tee_module,
             metrics,
             last_tee_trusted_input_return_hash: Mutex::new(B256::default()),
@@ -200,8 +186,27 @@ impl Proposer {
         }
     }
 
+    async fn close_challenge_loop(&self) -> Result<()> {
+        let mut interval = tokio::time::interval(self.close_challenge_interval);
+        loop {
+            interval.tick().await;
+            // Try estimating gas. If it fails, skip this iteration.
+            match self.tee_module.closeChallengeWindow().estimate_gas().await {
+                Ok(_) => {
+                    // Estimation succeeded, proceed to make the actual call.
+                    if let Err(e) = self.tee_module.closeChallengeWindow().call().await {
+                        tracing::warn!("Failed to call closeChallengeWindow: {:?}", e);
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Gas estimation for closeChallengeWindow failed: {:?}", e);
+                }
+            }
+        }
+    }
+
     #[allow(clippy::cognitive_complexity)]
-    async fn main_loop(&self) -> Result<()> {
+    async fn polling_loop(&self) -> Result<()> {
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             interval.tick().await;
@@ -640,52 +645,6 @@ impl Proposer {
 
         Ok(count)
     }
-
-    async fn fetch_block(&self) -> Result<NitroBlock> {
-        self.appchain_provider
-            .raw_request("eth_getBlockByNumber".into(), ("latest", false))
-            .await
-            .map_err(|err| eyre!("eth_getBlockByNumber request failed: {:?}", err))
-    }
-
-    // async fn appchain_validation_inputs(&self) -> Result {
-    //     self.appchain_provider
-    //         .raw_request("arbdebug_validationInputsAt".into())
-    // }
-
-    async fn record_wallet_balance(&self) -> Result<()> {
-        let provider = self.assertion_poster.provider();
-        let wallet_address = provider.default_signer_address();
-
-        let balance = provider.get_balance(wallet_address).await?;
-        self.metrics.record_wallet_balance(balance.to());
-        Ok(())
-    }
-
-    async fn post_assertion(&self, block: NitroBlock) -> Result<()> {
-        // TODO make non-blocking?
-        self.record_wallet_balance().await?;
-
-        let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
-        self.metrics.record_last_block_posted(block.number.to());
-
-        info!("Assertion submitted for block: {:?}", block);
-        Ok(())
-    }
-
-    async fn fetch_block_and_post(&self) -> Result<()> {
-        match self.fetch_block().await {
-            Ok(block) => {
-                if let Err(err) = self.post_assertion(block).await {
-                    error!("Failed to post assertion: {:?}", err);
-                }
-            }
-            Err(err) => {
-                error!("Failed to fetch block: {:?}", err);
-            }
-        }
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -698,10 +657,7 @@ mod tests {
         providers::{Provider, ProviderBuilder, RootProvider},
         rpc::types::{Block, Filter},
     };
-    use contract_bindings::synd::{
-        assertionposter::AssertionPoster,
-        teemodule::TeeModule::{teeTrustedInputReturn, TeeModuleInstance},
-    };
+    use contract_bindings::synd::teemodule::TeeModule::{teeTrustedInputReturn, TeeModuleInstance};
     use eyre::{eyre, Error};
     use std::{str::FromStr, sync::Arc, time::Duration};
     use synd_seqchain_verifier::{
@@ -718,10 +674,6 @@ mod tests {
             let dummy_root_provider = ProviderBuilder::default().on_http(dummy_url.clone());
             let dummy_filled_provider =
                 ProviderBuilder::new().wallet(EthereumWallet::default()).on_http(dummy_url);
-
-            let assertion_poster =
-                AssertionPoster::new(Address::ZERO, dummy_filled_provider.clone());
-
             let tee_module = TeeModuleInstance::new(Address::ZERO, dummy_filled_provider.clone());
 
             Self {
@@ -731,7 +683,7 @@ mod tests {
                 ethereum_provider: dummy_root_provider.clone(),
                 enclave_provider: dummy_root_provider,
                 polling_interval: Duration::from_secs(1),
-                assertion_poster,
+                close_challenge_interval: Duration::from_secs(1),
                 metrics: ProposerMetrics::default(),
                 tee_module,
                 last_tee_trusted_input_return_hash: Mutex::new(B256::default()),

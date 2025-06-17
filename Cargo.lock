@@ -7042,7 +7042,6 @@ name = "synd-proposer"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "axum 0.8.3",
  "clap",
  "contract-bindings",
  "ctor",

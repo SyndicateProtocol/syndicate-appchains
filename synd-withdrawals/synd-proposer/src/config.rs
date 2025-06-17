@@ -61,6 +61,10 @@ pub struct Config {
     #[arg(long, env = "PROPOSER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
     pub polling_interval: Duration,
 
+    /// The interval for closing the challenge window
+    #[arg(long, env = "PROPOSER_CLOSE_CHALLENGE_INTERVAL", default_value = "5m", value_parser = humantime::parse_duration )]
+    pub close_challenge_interval: Duration,
+
     /// Port for Proposer
     #[arg(short = 'p', long, env = "PROPOSER_PORT", default_value_t = 8080)]
     pub port: u16,

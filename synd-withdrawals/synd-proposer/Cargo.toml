@@ -5,7 +5,6 @@ version.workspace = true
 
 [dependencies]
 alloy                  = { workspace = true, features = ["provider-engine-api", "providers", "signer-local"] }
-axum                   = { workspace = true }
 clap                   = { workspace = true, features = ["derive", "env"] }
 contract-bindings      = { workspace = true }
 eyre                   = { workspace = true }
