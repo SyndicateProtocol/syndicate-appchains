@@ -27,6 +27,8 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
 FROM golang:1.22-bookworm AS go-synd-proposer-build
 WORKDIR /go/src/synd-proposer
 COPY ./synd-withdrawals/synd-proposer .
+# Download Go dependencies for better build caching
+RUN go mod download
 RUN go mod tidy
 RUN CGO_ENABLED=0 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
 
@@ -53,7 +55,6 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
 LABEL service=synd-translator
-
 FROM runtime-base AS synd-proposer
 COPY --from=go-synd-proposer-build /go/bin/synd-proposer /usr/local/bin/synd-proposer
 ENTRYPOINT ["/usr/local/bin/synd-proposer"]

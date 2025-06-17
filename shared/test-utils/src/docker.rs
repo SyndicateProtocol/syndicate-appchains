@@ -122,6 +122,13 @@ pub async fn start_component(
                     .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
                     .args(args),
             )
+        } else if executable_name == "synd-proposer" {
+            // Go service
+            let mut cmd = Command::new("go");
+            cmd.current_dir(env!("CARGO_WORKSPACE_DIR"));
+            cmd.arg("run").arg("./synd-withdrawals/synd-proposer/cmd/synd-proposer");
+            cmd.args(args).args(cargs);
+            Docker::new(&mut cmd)
         } else {
             let mut cmd = Command::new("cargo");
             // ring has a custom build.rs script that rebuilds whenever certain environment

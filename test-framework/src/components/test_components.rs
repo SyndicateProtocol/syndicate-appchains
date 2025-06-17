@@ -299,6 +299,8 @@ impl TestComponents {
             settlement_delay: None,
         };
 
+        info!("Starting proposer...");
+
         let translator = start_component(
             "synd-translator",
             translator_config.metrics_port,
