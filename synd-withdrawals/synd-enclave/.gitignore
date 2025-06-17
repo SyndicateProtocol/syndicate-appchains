@@ -1,3 +1,4 @@
-cmd/server/server
-cmd/verifier/verifier
 cmd/enclave/enclave
+scripts/server/server
+scripts/verifier/verifier
+scripts/tee-verifier/tee_verifier

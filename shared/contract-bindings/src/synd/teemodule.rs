@@ -66,7 +66,7 @@ interface TeeModule {
       {
         "name": "poster_",
         "type": "address",
-        "internalType": "contract AssertionPoster"
+        "internalType": "contract IAssertionPoster"
       },
       {
         "name": "bridge_",
@@ -229,7 +229,7 @@ interface TeeModule {
       {
         "name": "",
         "type": "address",
-        "internalType": "contract AssertionPoster"
+        "internalType": "contract IAssertionPoster"
       }
     ],
     "stateMutability": "view"

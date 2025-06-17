@@ -6906,23 +6906,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "synd-appchain-verifier"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "clap",
- "eyre",
- "serde",
- "serde_json",
- "shared",
- "synd-block-builder",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
- "withdrawals-shared",
-]
-
-[[package]]
 name = "synd-batch-sequencer"
 version = "0.1.0"
 dependencies = [
@@ -7054,26 +7037,10 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
- "synd-seqchain-verifier",
  "test-utils",
  "tokio",
  "tracing",
  "url",
- "withdrawals-shared",
-]
-
-[[package]]
-name = "synd-seqchain-verifier"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "clap",
- "eyre",
- "serde",
- "serde_json",
- "shared",
- "tokio",
- "tracing",
  "withdrawals-shared",
 ]
 

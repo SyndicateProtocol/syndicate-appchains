@@ -4,7 +4,10 @@
 use crate::{
     config::Config,
     metrics::ProposerMetrics,
-    types::{NitroBlock, SeqVerifyOutput, VerifySequencingChainConfig, VerifySequencingChainInput},
+    types::{
+        ArbitrumBatch, L1ChainInput, NitroBlock, SeqVerifyOutput, VerifySequencingChainConfig,
+        VerifySequencingChainInput,
+    },
 };
 use alloy::{
     consensus::Transaction,
@@ -41,7 +44,6 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use synd_seqchain_verifier::types::{calculate_slot, ArbitrumBatch, L1ChainInput, TimeBounds};
 use tokio::{net::TcpListener, sync::Mutex, task::JoinHandle};
 use tracing::{debug, error, info, warn};
 use withdrawals_shared::types::{L1IncomingMessage, L1IncomingMessageHeader};
@@ -690,7 +692,10 @@ impl Proposer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{metrics::ProposerMetrics, proposer::Proposer};
+    use crate::{
+        config::SeqchainVerifierConfig, metrics::ProposerMetrics, proposer::Proposer,
+        types::L1ChainInput, verifier::Verifier,
+    };
     use alloy::{
         eips::BlockNumberOrTag,
         network::EthereumWallet,
@@ -704,9 +709,6 @@ mod tests {
     };
     use eyre::{eyre, Error};
     use std::{str::FromStr, sync::Arc, time::Duration};
-    use synd_seqchain_verifier::{
-        config::SeqchainVerifierConfig, types::L1ChainInput, verifier::Verifier,
-    };
     use tokio::sync::Mutex;
     use url::Url;
 

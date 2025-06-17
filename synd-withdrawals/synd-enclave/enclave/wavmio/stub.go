@@ -11,22 +11,21 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
 	"github.com/offchainlabs/nitro/arbutil"
+	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
 )
 
-var (
+type Wavm struct {
 	seqMsgs            [][]byte
 	posWithinMsg       uint64
 	delayedMsgs        [][]byte
 	delayedMsgFirstPos uint64
-	lastBlockHash      common.Hash
 	preimages          map[common.Hash][]byte
 	seqAdvanced        uint64
-)
+}
 
 func serialize(headerVals []uint64, batch []byte) []byte {
 	var msg []byte
@@ -44,8 +43,8 @@ func serialize(headerVals []uint64, batch []byte) []byte {
 	return msg
 }
 
-func GetBlockHeaderByHash(hash common.Hash) (*types.Header, error) {
-	enc, err := ResolveTypedPreimage(arbutil.Keccak256PreimageType, hash)
+func (w *Wavm) GetBlockHeaderByHash(hash common.Hash) (*types.Header, error) {
+	enc, err := w.ResolveTypedPreimage(arbutil.Keccak256PreimageType, hash)
 	if err != nil {
 		return nil, fmt.Errorf("error resolving preimage: %w", err)
 	}
@@ -58,12 +57,9 @@ func GetBlockHeaderByHash(hash common.Hash) (*types.Header, error) {
 }
 
 type Batch struct {
-	MinTimestamp   uint64
-	MaxTimestamp   uint64
-	MinBlockNumber uint64
-	MaxBlockNumber uint64
-	Batch          []byte
-	Messages       []arbostypes.L1IncomingMessage
+	TimeBounds bridgegen.IBridgeTimeBounds
+	Data       []byte
+	Messages   []arbostypes.L1IncomingMessage
 }
 
 type ValidationInput struct {
@@ -72,90 +68,74 @@ type ValidationInput struct {
 	Batches      []Batch
 }
 
-func StubInit(data ValidationInput) error {
-	lastBlockHash = data.BlockHash
-
-	preimages = make(map[common.Hash][]byte)
+func Init(data ValidationInput) (*Wavm, error) {
+	w := Wavm{}
+	w.preimages = make(map[common.Hash][]byte)
 	for _, preimage := range data.PreimageData {
-		preimages[crypto.Keccak256Hash(preimage)] = preimage
+		w.preimages[crypto.Keccak256Hash(preimage)] = preimage
 	}
 
-	header, err := GetBlockHeaderByHash(lastBlockHash)
+	header, err := w.GetBlockHeaderByHash(data.BlockHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	delayedMsgFirstPos = types.NewBlockWithHeader(header).Nonce()
+	w.delayedMsgFirstPos = types.NewBlockWithHeader(header).Nonce()
 
-	delayedMsgPos := delayedMsgFirstPos
+	delayedMsgPos := w.delayedMsgFirstPos
 	for _, batch := range data.Batches {
 		for _, msg := range batch.Messages {
 			if msg.BatchGasCost != nil {
-				return errors.New("batch gas cost is a computed property and must be nil")
+				return nil, errors.New("batch gas cost is a computed property and must be nil")
 			}
 			if msg.Header.RequestId.Big().Uint64() != delayedMsgPos {
-				return fmt.Errorf("unexpected request id: got %d, expected %d", msg.Header.RequestId.Big().Uint64(), delayedMsgPos)
+				return nil, fmt.Errorf("unexpected request id: got %d, expected %d", msg.Header.RequestId.Big().Uint64(), delayedMsgPos)
 			}
 			data, err := msg.Serialize()
 			if err != nil {
-				return err
+				return nil, err
 			}
-			delayedMsgs = append(delayedMsgs, data)
+			w.delayedMsgs = append(w.delayedMsgs, data)
 			delayedMsgPos += 1
 		}
-		seqMsgs = append(seqMsgs, serialize([]uint64{batch.MinTimestamp, batch.MaxTimestamp, batch.MinBlockNumber, batch.MaxBlockNumber, delayedMsgPos}, batch.Batch))
+		w.seqMsgs = append(w.seqMsgs, serialize([]uint64{batch.TimeBounds.MinTimestamp, batch.TimeBounds.MaxTimestamp, batch.TimeBounds.MinBlockNumber, batch.TimeBounds.MaxBlockNumber, delayedMsgPos}, batch.Data))
 	}
-	return nil
+	return &w, nil
 }
 
-func StubFinal() {
-	log.Info("End state", "lastblockHash", lastBlockHash, "InboxPosition", seqAdvanced, "positionWithinMessage", posWithinMsg)
-}
-
-func GetLastBlockHash() (hash common.Hash) {
-	return lastBlockHash
-}
-
-func ReadInboxMessage(msgNum uint64) ([]byte, error) {
-	if msgNum >= uint64(len(seqMsgs)) {
+func (w *Wavm) ReadInboxMessage(msgNum uint64) ([]byte, error) {
+	if msgNum >= uint64(len(w.seqMsgs)) {
 		return nil, fmt.Errorf("trying to read bad msg %d", msgNum)
 	}
-	return seqMsgs[msgNum], nil
+	return w.seqMsgs[msgNum], nil
 }
 
-func ReadDelayedInboxMessage(seqNum uint64) ([]byte, error) {
-	if seqNum < delayedMsgFirstPos || (seqNum-delayedMsgFirstPos >= uint64(len(delayedMsgs))) {
+func (w *Wavm) ReadDelayedInboxMessage(seqNum uint64) ([]byte, error) {
+	if seqNum < w.delayedMsgFirstPos || (seqNum-w.delayedMsgFirstPos >= uint64(len(w.delayedMsgs))) {
 		return nil, fmt.Errorf("trying to read bad delayed msg %d", seqNum)
 	}
-	return delayedMsgs[seqNum-delayedMsgFirstPos], nil
+	return w.delayedMsgs[seqNum-w.delayedMsgFirstPos], nil
 }
 
-func AdvanceInboxMessage() {
-	seqAdvanced++
+func (w *Wavm) AdvanceInboxMessage() {
+	w.seqAdvanced++
 }
 
-func ResolveTypedPreimage(ty arbutil.PreimageType, hash common.Hash) ([]byte, error) {
-	val, ok := preimages[hash]
+func (w *Wavm) ResolveTypedPreimage(ty arbutil.PreimageType, hash common.Hash) ([]byte, error) {
+	val, ok := w.preimages[hash]
 	if !ok {
 		return []byte{}, errors.New("preimage not found")
 	}
 	return val, nil
 }
 
-func SetLastBlockHash(hash [32]byte) {
-	lastBlockHash = hash
+func (w *Wavm) GetPositionWithinMessage() uint64 {
+	return w.posWithinMsg
 }
 
-func SetSendRoot(hash [32]byte) {
+func (w *Wavm) SetPositionWithinMessage(pos uint64) {
+	w.posWithinMsg = pos
 }
 
-func GetPositionWithinMessage() uint64 {
-	return posWithinMsg
-}
-
-func SetPositionWithinMessage(pos uint64) {
-	posWithinMsg = pos
-}
-
-func GetInboxPosition() uint64 {
-	return seqAdvanced
+func (w *Wavm) GetInboxPosition() uint64 {
+	return w.seqAdvanced
 }

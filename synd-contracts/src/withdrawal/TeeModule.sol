@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {AssertionPoster} from "./AssertionPoster.sol";
+import {IAssertionPoster} from "./IAssertionPoster.sol";
 import {ITeeKeyManager} from "./ITeeKeyManager.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -18,52 +18,52 @@ interface IL1Block {
 }
 
 struct TeeTrustedInput {
-    // appchain - requires a full node
-    bytes32 appchainConfigHash;
-    bytes32 appchainStartBlockHash;
-    // sequencing chain - requires a full node
-    bytes32 seqConfigHash;
+    bytes32 configHash;
+    // appchain - requires a custom node
+    bytes32 appStartBlockHash;
+    // sequencing chain - requires a custom node
     bytes32 seqStartBlockHash;
-    // settlement chain - does not require a full node
+    // settlement chain - does not require a custom node
     bytes32 setDelayedMessageAcc;
-    // l1 chain - does not require a full node
-    bytes32 l1StartBlockHash;
-    bytes32 l1EndBlockHash;
+    // l1 chain - does not require a custom node
+    // the start sequencing chain batch accumulator on the l1 chain
+    bytes32 l1StartBatchAcc;
+    // l1EndHash is either a l1 block hash or a seq batch accumulator hash
+    bytes32 l1EndHash;
 }
 
 struct PendingAssertion {
     // appchain
-    bytes32 blockHash;
-    bytes32 sendRoot;
+    bytes32 appBlockHash;
+    bytes32 appSendRoot;
     // sequencing chain
     bytes32 seqBlockHash;
+    // l1 chain
+    bytes32 l1BatchAcc;
 }
 
 function hash_object(TeeTrustedInput storage a) view returns (bytes32) {
     return keccak256(
         abi.encodePacked(
-            a.appchainConfigHash,
-            a.appchainStartBlockHash,
-            a.seqConfigHash,
+            a.configHash,
+            a.appStartBlockHash,
             a.seqStartBlockHash,
             a.setDelayedMessageAcc,
-            a.l1StartBlockHash,
-            a.l1EndBlockHash
+            a.l1StartBatchAcc,
+            a.l1EndHash
         )
     );
 }
 
 function hash_object(PendingAssertion storage a) view returns (bytes32) {
-    return keccak256(abi.encodePacked(a.blockHash, a.sendRoot, a.seqBlockHash));
+    return keccak256(abi.encodePacked(a.appBlockHash, a.appSendRoot, a.seqBlockHash, a.l1BatchAcc));
 }
 
 function hash_object(PendingAssertion calldata a) pure returns (bytes32) {
-    return keccak256(abi.encodePacked(a.blockHash, a.sendRoot, a.seqBlockHash));
+    return keccak256(abi.encodePacked(a.appBlockHash, a.appSendRoot, a.seqBlockHash, a.l1BatchAcc));
 }
 
-event TeeAppchainConfigHash(bytes32 configHash, bytes32 blockHash);
-
-event TeeSeqConfigHash(bytes32 configHash, bytes32 blockHash);
+event TeeConfigHash(bytes32 configHash);
 
 event TeeHacked(uint256);
 
@@ -76,9 +76,11 @@ event TeeInput(TeeTrustedInput input);
  */
 contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
     // Immutable state variables
-    AssertionPoster public immutable poster;
+    IAssertionPoster public immutable poster;
     IBridge public immutable bridge;
-    IL1Block public immutable l1block;
+    // the l1 block contract or bridge from the l1 chain to the sequencing chain (when the settlement chain is the same as the l1 chain)
+    address public immutable l1BlockOrBridge;
+    bool public immutable isL1Chain;
     ITeeKeyManager public immutable teeKeyManager;
 
     // TEE variables
@@ -96,29 +98,35 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
      * @notice Constructs the AssertionPoster contract
      * @param poster_ Address of the assertion poster contract
      * @param bridge_ Settlement chain address of the appchain `Bridge` contract
-     * @param appchainConfigHash_ Hash of the appchain configuration data passed to the TEE
-     * @param seqConfigHash_ Hash of the sequencing chain configuration data passed to the TEE - currently unused
-     * @param l1block_ Address of the l1 block contract - 0x4200000000000000000000000000000000000015 for bedrock rollups
-     * and zero for ethereum itself
+     * @param configHash_ Hash of the configuration data passed to the TEE
+     * @param l1BlockOrBridge_ Address of the l1 block contract - 0x4200000000000000000000000000000000000015 for bedrock rollups - or the l1 <-> sequencing chain bridge if the settlement chain is the same as the l1 chain.
      * Note that the AssertionPoster must be owned by the TeeModule for closing the challenge window to work properly
      */
     constructor(
-        AssertionPoster poster_,
+        IAssertionPoster poster_,
         IBridge bridge_,
-        bytes32 appchainConfigHash_, //#olympix-ignore-no-parameter-validation-in-constructor
-        bytes32 appchainStartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
-        bytes32 seqConfigHash_, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 configHash_, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 appStartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
         bytes32 seqStartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
-        bytes32 l1StartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
-        IL1Block l1block_,
+        bytes32 l1StartBatchAcc_, //#olympix-ignore-no-parameter-validation-in-constructor
+        address l1BlockOrBridge_,
+        bool isL1Chain_,
         uint64 challengeWindowDuration_, //#olympix-ignore-no-parameter-validation-in-constructor
         ITeeKeyManager teeKeyManager_
     ) {
         challengeWindowDuration = challengeWindowDuration_;
-        require(
-            address(l1block_) == address(0) || (l1block_.timestamp() > 0 && l1block_.hash() > 0), "l1 contract invalid"
-        );
-        l1block = l1block_;
+        l1BlockOrBridge = l1BlockOrBridge_;
+        isL1Chain = isL1Chain_;
+        teeTrustedInput.configHash = configHash_;
+        emit TeeConfigHash(configHash_);
+
+        if (isL1Chain) {
+            require(l1BlockOrBridge != address(0x4200000000000000000000000000000000000015), "unexpected seq bridge address");
+            require(IBridge(l1BlockOrBridge).sequencerMessageCount() > 0, "sequencing chain must have at least one batch");
+        } else {
+            require(l1BlockOrBridge == address(0x4200000000000000000000000000000000000015), "unexpected l1 block address");
+            require(IL1Block(l1BlockOrBridge).timestamp() > 0 && IL1Block(l1BlockOrBridge).hash() > 0, "l1 block contract invalid");
+        }
 
         require(address(poster_).code.length > 0, "poster address does not have any code");
         poster = poster_;
@@ -129,50 +137,52 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
         teeKeyManager = teeKeyManager_;
 
         // appchain
-        teeTrustedInput.appchainConfigHash = appchainConfigHash_;
-        teeTrustedInput.appchainStartBlockHash = appchainStartBlockHash_;
-        emit TeeAppchainConfigHash(appchainConfigHash_, appchainStartBlockHash_);
+        teeTrustedInput.appStartBlockHash = appStartBlockHash_;
 
         // sequencing chain
-        teeTrustedInput.seqConfigHash = seqConfigHash_;
         teeTrustedInput.seqStartBlockHash = seqStartBlockHash_;
-        emit TeeSeqConfigHash(seqConfigHash_, seqStartBlockHash_);
 
         // l1 chain
-        teeTrustedInput.l1StartBlockHash = l1StartBlockHash_;
+        teeTrustedInput.l1StartBatchAcc = l1StartBatchAcc_;
 
         closeChallengeWindow();
     }
 
     function closeChallengeWindow() public nonReentrant {
-        require(pendingAssertions.length <= 1, "cannot close challenge window - too many assertions");
         require(
-            (address(l1block) == address(0) ? uint64(block.timestamp) : l1block.timestamp()) > challengeWindowEnd,
+            (isL1Chain ? uint64(block.timestamp) : IL1Block(l1BlockOrBridge).timestamp()) > challengeWindowEnd,
             "cannot close challenge window - insufficient time has passed"
         );
 
         challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
 
-        if (pendingAssertions.length > 0) {
-            // appchain
-            teeTrustedInput.appchainStartBlockHash = pendingAssertions[0].blockHash;
+        if (pendingAssertions.length == 1) {
+            // l1 chain
+            teeTrustedInput.l1StartBatchAcc = pendingAssertions[0].l1BatchAcc;
 
             // sequencing chain
             teeTrustedInput.seqStartBlockHash = pendingAssertions[0].seqBlockHash;
 
-            // l1 chain
-            teeTrustedInput.l1StartBlockHash = teeTrustedInput.l1EndBlockHash;
-
-            poster.postAssertion(pendingAssertions[0].blockHash, pendingAssertions[0].sendRoot);
+            // appchain
+            if (teeTrustedInput.appStartBlockHash != pendingAssertions[0].appBlockHash) {
+                teeTrustedInput.appStartBlockHash = pendingAssertions[0].appBlockHash;
+                poster.postAssertion(pendingAssertions[0].appBlockHash, pendingAssertions[0].appSendRoot);
+            }
 
             delete pendingAssertions;
+        } else {
+            require(pendingAssertions.length == 0, "cannot close challenge window - too many assertions");
         }
 
         // settlement chain
         teeTrustedInput.setDelayedMessageAcc = bridge.delayedInboxAccs(bridge.delayedMessageCount() - 1);
 
         // l1 chain
-        teeTrustedInput.l1EndBlockHash = (address(l1block) == address(0) ? blockhash(block.number - 1) : l1block.hash());
+        if (isL1Chain) {
+            teeTrustedInput.l1EndHash = IBridge(l1BlockOrBridge).sequencerInboxAccs(IBridge(l1BlockOrBridge).sequencerMessageCount() - 1);
+        } else {
+            teeTrustedInput.l1EndHash = IL1Block(l1BlockOrBridge).hash();
+        }
 
         emit TeeInput(teeTrustedInput);
     }
@@ -186,7 +196,7 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
         bytes32 assertionHash = hash_object(assertion);
         bytes32 payload_hash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
         require(teeKeyManager.isKeyValid(payload_hash.recover(signature)), "invalid tee signature");
-        require(assertion.blockHash != teeTrustedInput.appchainStartBlockHash, "appchain block hash unchanged");
+        require(!isL1Chain || assertion.l1BatchAcc == teeTrustedInput.l1EndHash, "unexpected l1 end batch acc");
         for (uint256 i = 0; i < pendingAssertions.length; i++) {
             require(assertionHash != hash_object(pendingAssertions[i]), "assertion already exists");
         }
@@ -221,23 +231,18 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
         revert("assertion not found");
     }
 
-    // TODO: should this function be removed?
+    /*
+    // These functions are disabled currently.
+
     function setChallengeWindowDuration(uint64 duration) external onlyOwner {
         require(pendingAssertions.length == 0, "cannot update challenge window while assertion is pending");
         challengeWindowDuration = duration;
     }
 
-    // TODO: should this function be removed?
-    function setAppchainConfigHash(bytes32 hash) external onlyOwner {
+    function setConfigHash(bytes32 hash) external onlyOwner {
         require(pendingAssertions.length == 0, "cannot update config hash while assertions are pending");
-        teeTrustedInput.appchainConfigHash = hash;
-        emit TeeAppchainConfigHash(hash, teeTrustedInput.appchainStartBlockHash);
+        teeTrustedInput.configHash = hash;
+        emit TeeConfigHash(hash);
     }
-
-    // TODO: should this function be removed?
-    function setSeqConfigHash(bytes32 hash) external onlyOwner {
-        require(pendingAssertions.length == 0, "cannot update config hash while assertions are pending");
-        teeTrustedInput.seqConfigHash = hash;
-        emit TeeSeqConfigHash(hash, teeTrustedInput.seqStartBlockHash);
-    }
+    */
 }
