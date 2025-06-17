@@ -7,15 +7,10 @@ import (
 	"time"
 )
 
-// Config is defined in config.go in the same package.
-
-// Proposer is the main service struct.
 type Proposer struct {
 	Config *Config
-	// Add other dependencies here as needed
 }
 
-// NewProposer creates a new Proposer instance.
 func NewProposer(cfg *Config) *Proposer {
 	return &Proposer{
 		Config: cfg,

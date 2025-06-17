@@ -23,6 +23,12 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
     cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
+# --- Go build stage for synd-proposer ---
+FROM golang:1.22-bookworm AS go-synd-proposer-build
+WORKDIR /go/src/synd-proposer
+COPY ./synd-withdrawals/synd-proposer .
+RUN go mod tidy
+RUN CGO_ENABLED=0 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
 
 # Stage 3: Optional Foundry install
 FROM debian:bookworm-slim AS foundry
@@ -49,8 +55,7 @@ EXPOSE 8545 8546
 LABEL service=synd-translator
 
 FROM runtime-base AS synd-proposer
-ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/synd-proposer /usr/local/bin/synd-proposer
+COPY --from=go-synd-proposer-build /go/bin/synd-proposer /usr/local/bin/synd-proposer
 ENTRYPOINT ["/usr/local/bin/synd-proposer"]
 LABEL service=synd-proposer
 

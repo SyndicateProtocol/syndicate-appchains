@@ -14,14 +14,10 @@ members = [
   "synd-translator/crates/synd-block-builder",
   "synd-translator/crates/synd-slotter",
   "synd-translator/tests",
-  "synd-withdrawals/synd-appchain-verifier",
-  "synd-withdrawals/synd-proposer-rust",
-  "synd-withdrawals/synd-seqchain-verifier",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script",
-  "synd-withdrawals/withdrawals-shared",
   "test-framework",
 ]
 
@@ -32,9 +28,6 @@ default-members = [
   "synd-maestro",
   "synd-mchain",
   "synd-translator/bin/synd-translator",
-  "synd-withdrawals/synd-appchain-verifier",
-  "synd-withdrawals/synd-proposer-rust",
-  "synd-withdrawals/synd-seqchain-verifier",
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
@@ -68,7 +61,6 @@ synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-
 synd-translator                           = { path = "synd-translator/bin/synd-translator" }
 tc-client                                 = { path = "synd-batch-sequencer/crates/tc-client" }
 test-utils                                = { path = "shared/test-utils" }
-withdrawals-shared                        = { path = "synd-withdrawals/withdrawals-shared" }
 
 # dependencies
 alloy                              = { version = "0.13.0", default-features = false }

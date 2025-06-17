@@ -348,7 +348,7 @@ impl TestComponents {
             (
                 Some(
                     start_component(
-                        "synd-proposer-rust",
+                        "synd-proposer",
                         proposer_config.metrics_port,
                         proposer_config.cli_args(),
                         Default::default(),
