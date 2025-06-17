@@ -2,17 +2,13 @@
 use alloy::{
     eips::{BlockId, BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
-    primitives::{address, utils::parse_ether, Address, Bytes, B256, U256},
+    primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
     sol,
 };
-use contract_bindings::synd::{
-    arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
-    nodeinterface::NodeInterface, rollup::Rollup,
-};
+use contract_bindings::synd::{iinbox::IInbox, rollup::Rollup};
 use eyre::Result;
-use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use synd_chain_ingestor::client::IngestorProvider;
 use synd_mchain::client::Provider as _;
@@ -22,10 +18,7 @@ use test_framework::components::{
 };
 use test_utils::{
     chain_info::default_signer,
-    nitro_chain::{
-        execute_withdrawal, init_withdrawal_tx, NitroBlock, ARB_SYS_PRECOMPILE_ADDRESS,
-        NODE_INTERFACE_PRECOMPILE_ADDRESS,
-    },
+    nitro_chain::{execute_withdrawal, init_withdrawal_tx},
     preloaded_config::ContractVersion,
     wait_until,
 };
@@ -43,7 +36,8 @@ async fn e2e_send_transaction() -> Result<()> {
     let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
     TestComponents::run(&config, |components| async move {
         // Set up the settlement appchain contract
-        let set_appchain = Rollup::new(components.inbox_address, &components.settlement_provider);
+        let set_appchain =
+            Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
         let wallet_address = components.settlement_provider.default_signer_address();
 
         // Send a deposit
@@ -177,7 +171,8 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 
             // Send a deposit (unaliased address) delayed message
             // Deposit is from the arbos address and does not increment the nonce
-            let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
             const L2_MESSAGE_KIND_SIGNED_TX: u8 = 4;
@@ -333,7 +328,8 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
 
             let wallet_address = components.settlement_provider.default_signer_address();
             let value = parse_ether("1")?;
-            let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth().value(value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -374,7 +370,7 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
             execute_withdrawal(
                 to_address,
                 withdrawal_value,
-                components.bridge_address,
+                components.appchain_deployment.bridge,
                 &components.settlement_provider,
                 &components.appchain_provider,
             )
@@ -415,7 +411,8 @@ async fn e2e_settlement_reorg() -> Result<()> {
             );
 
             let wallet_address = components.settlement_provider.default_signer_address();
-            let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
 
             // create a deposit1 (that won't be rolled back) that will fit on synd-mchain's block 3
             let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
@@ -546,7 +543,8 @@ async fn e2e_sequencing_reorg() -> Result<()> {
 
             let signer = default_signer();
             let wallet_address = components.settlement_provider.default_signer_address();
-            let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
 
             // create a deposit1 (that won't be rolled back) that will fit on synd-mchain's block 3
             let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
@@ -703,7 +701,8 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -763,7 +762,8 @@ async fn e2e_maestro_reorg_handling() -> Result<()> {
 
         // 1. Deposit funds to ensure the wallet can send a transaction
         let deposit_value = parse_ether("0.01")?;
-        let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+        let inbox =
+            Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
         let _ = inbox.depositEth(wallet_address, wallet_address, deposit_value).send().await?;
         components.mine_set_block(0).await?;
         components.mine_set_block(10000000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately

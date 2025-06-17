@@ -1,25 +1,19 @@
 //! Appchain utils for the integration tests
 
-use crate::{
-    chain_info::{default_signer, PRIVATE_KEY},
-    docker::E2EProcess,
-};
+use crate::{chain_info::PRIVATE_KEY, docker::E2EProcess};
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     network::TransactionBuilder,
-    primitives::{address, utils::parse_ether, Address, Bytes, B256, U256},
+    primitives::{address, Address, Bytes, B256, U256},
     providers::{Provider, WalletProvider},
 };
 use contract_bindings::synd::{
-    arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
-    nodeinterface::NodeInterface, rollup::Rollup,
+    arbsys::ArbSys, ibridge::IBridge, ioutbox::IOutbox, irollupcore::IRollupCore,
+    nodeinterface::NodeInterface,
 };
 use eyre::Ok;
 use serde::{Deserialize, Serialize};
-use shared::{
-    parse::parse_address,
-    types::{deserialize_address, FilledProvider},
-};
+use shared::types::{deserialize_address, FilledProvider};
 use tokio::{fs, process::Command};
 
 pub struct NitroChainInfoArgs {
@@ -228,8 +222,8 @@ pub struct NitroDeployment {
 /// automine enabled
 pub async fn deploy_nitro_rollup(
     l1_rpc_url_http: &str,
-    // l1_provider: &FilledProvider,
     rollup_chain_id: u64,
+    rollup_owner: Address,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
     let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
@@ -251,8 +245,7 @@ pub async fn deploy_nitro_rollup(
     .await?;
     assert!(status.success(), "Failed to run `yarn build` in nitro contracts");
 
-    let default_signer = default_signer().address();
-    let chain_config_json = chain_config(rollup_chain_id, default_signer);
+    let chain_config_json = chain_config(rollup_chain_id, rollup_owner);
     let zero_address = Address::ZERO;
 
     // setup config.ts (unfortunately, the script expects the config to be in a specific path)
@@ -273,7 +266,7 @@ pub async fn deploy_nitro_rollup(
                 stakeToken: ethers.constants.AddressZero,
                 baseStake: ethers.utils.parseEther('1'),
                 wasmModuleRoot:    '0xda4e3ad5e7feacb817c21c8d0220da7650fe9051ece68a3f0b1c5d38bbb27b21',
-                owner: '{default_signer}',
+                owner: '{rollup_owner}',
                 loserStakeEscrow: ethers.constants.AddressZero,
                 chainId: ethers.BigNumber.from('{rollup_chain_id}'),
                 minimumAssertionPeriod: 75,
@@ -318,8 +311,8 @@ pub async fn deploy_nitro_rollup(
             .env("CUSTOM_RPC_URL", l1_rpc_url_http)
             .env("CHILD_CHAIN_NAME", format!("local-rollup-{rollup_chain_id}"))
             .env("CHILD_CHAIN_CONFIG_PATH", "./l2_chain_config.json")
-            .env("OWNER_ADDRESS", default_signer.to_string())
-            .env("SEQUENCER_ADDRESS", default_signer.to_string())
+            .env("OWNER_ADDRESS", rollup_owner.to_string())
+            .env("SEQUENCER_ADDRESS", rollup_owner.to_string())
             // .env("BATCH_POSTERS", default_signer.to_string())
             // .env("BATCH_POSTER_MANAGER", default_signer.to_string())
             .env(

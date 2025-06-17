@@ -14,22 +14,24 @@ use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
     primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U256},
-    providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::{anvil::MineOptions, TransactionReceipt},
+    providers::{
+        ext::{AnvilApi, DebugApi},
+        Provider, WalletProvider,
+    },
+    rpc::types::{anvil::MineOptions, trace::geth::GethDebugTracingOptions, TransactionReceipt},
+    sol_types::SolCall,
 };
 use contract_bindings::synd::{
     alwaysallowedmodule::AlwaysAllowedModule,
     assertionposter::AssertionPoster,
     iinbox::IInbox,
+    iupgradeexecutor::IUpgradeExecutor,
     rollup::Rollup,
     syndicatesequencingchain::SyndicateSequencingChain::{self, SyndicateSequencingChainInstance},
 };
 use eyre::Result;
 use serde_json::{json, Value};
-use shared::{
-    parse::parse_address,
-    types::{deserialize_address, FilledProvider},
-};
+use shared::types::FilledProvider;
 use std::{
     env,
     future::Future,
@@ -48,7 +50,7 @@ use test_utils::{
         launch_enclave_server, launch_nitro_node, start_component, start_mchain, start_valkey,
         E2EProcess, NitroNodeArgs, NitroSequencerMode,
     },
-    nitro_chain::{chain_config, deploy_nitro_rollup, NitroDeployment},
+    nitro_chain::{deploy_nitro_rollup, NitroDeployment},
     port_manager::PortManager,
     preloaded_config::{
         get_anvil_file, get_assertion_poster_address, get_bridge_address, get_inbox_address,
@@ -56,7 +58,6 @@ use test_utils::{
     utils::test_path,
     wait_until,
 };
-use tokio::{fs, process::Command, time::sleep};
 use tracing::info;
 
 #[derive(Debug)]
@@ -95,13 +96,15 @@ pub struct TestComponents {
     /// Settlement
     pub settlement_provider: FilledProvider,
     pub settlement_rpc_url: String,
-    pub bridge_address: Address,
-    pub inbox_address: Address,
     pub assertion_poster_address: Address,
 
     /// Appchain
     pub appchain_provider: FilledProvider,
     pub appchain_chain_id: u64,
+
+    pub settlement_deployment: Option<NitroDeployment>,
+    pub sequencing_deployment: Option<NitroDeployment>,
+    pub appchain_deployment: NitroDeployment,
 
     /// Mchain
     pub mchain_provider: MProvider,
@@ -160,14 +163,16 @@ impl TestComponents {
                 let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
                 info.provider.evm_mine(Some(MineOptions::Timestamp(Some(now)))).await?;
                 info.provider.anvil_set_auto_mine(true).await?; //auto-mine enabled
+                info.provider.anvil_set_block_timestamp_interval(60).await?;
                 Some(info)
             }
         };
 
         // Launch mock sequencing chain and deploy contracts
         info!("Starting sequencing chain...");
+        let mut sequencing_deployment = None;
         let ChainInfo {
-            ws_url: seq_rpc_url,
+            ws_url: seq_rpc_ws_url,
             instance: seq_instance,
             provider: seq_provider,
             http_url: _,
@@ -177,7 +182,9 @@ impl TestComponents {
                 let chain_id = 15;
                 let l1_info = l1_info.as_ref().unwrap();
 
-                let seq_deployment = deploy_nitro_rollup(&l1_info.http_url, chain_id).await?;
+                let seq_deployment =
+                    deploy_nitro_rollup(&l1_info.http_url, chain_id, default_signer().address())
+                        .await?;
 
                 info!("Starting sequencing chain's nitro node...");
                 let seq_chain_info = launch_nitro_node(NitroNodeArgs {
@@ -202,11 +209,12 @@ impl TestComponents {
                     Duration::from_secs(10)
                 );
 
+                sequencing_deployment = Some(seq_deployment);
                 seq_chain_info
             }
         };
 
-        info!("Sequencing chain Nitro URL: {}", seq_rpc_url);
+        info!("Sequencing chain Nitro URL: {}", seq_rpc_ws_url);
 
         let _ = SyndicateSequencingChain::deploy_builder(
             &seq_provider,
@@ -233,11 +241,12 @@ impl TestComponents {
 
         // Launch mock settlement chain
         info!("Starting settlement chain...");
+        let mut settlement_deployment = None;
         let ChainInfo {
-            ws_url: set_rpc_url,
+            ws_url: set_rpc_ws_url,
             instance: set_instance,
             provider: set_provider,
-            http_url: _,
+            http_url: set_rpc_http_url,
         } = match options.base_chains_type {
             BaseChainsType::Anvil => {
                 let chain_info = start_anvil(20).await?;
@@ -260,7 +269,9 @@ impl TestComponents {
                 let chain_id = 20;
                 let l1_info = l1_info.as_ref().unwrap();
 
-                let set_deployment = deploy_nitro_rollup(&l1_info.http_url, chain_id).await?;
+                let set_deployment =
+                    deploy_nitro_rollup(&l1_info.http_url, chain_id, default_signer().address())
+                        .await?;
 
                 info!("Starting settlement chain's nitro node...");
                 let set_chain_info = launch_nitro_node(NitroNodeArgs {
@@ -296,6 +307,7 @@ impl TestComponents {
                 .send()
                 .await?;
 
+                settlement_deployment = Some(set_deployment);
                 set_chain_info
             }
             BaseChainsType::PreLoaded(version) => {
@@ -322,18 +334,37 @@ impl TestComponents {
             }
         };
 
-        let (arbitrum_bridge_address, arbitrum_inbox_address) = match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::Nitro => (
-                set_provider.default_signer_address().create(0),
-                set_provider.default_signer_address().create(0),
-            ),
-            BaseChainsType::PreLoaded(version) => {
-                (get_bridge_address(&version), get_inbox_address(&version))
+        let appchain_deployment = match options.base_chains_type {
+            BaseChainsType::Anvil => NitroDeployment {
+                bridge: set_provider.default_signer_address().create(0),
+                inbox: set_provider.default_signer_address().create(0),
+                sequencer_inbox: set_provider.default_signer_address().create(0),
+                rollup: set_provider.default_signer_address().create(0),
+                ..Default::default()
+            },
+            BaseChainsType::PreLoaded(version) => NitroDeployment {
+                bridge: get_bridge_address(&version),
+                inbox: get_inbox_address(&version),
+                sequencer_inbox: get_inbox_address(&version),
+                // we use the mock rollup so rollup contract == bridge contract
+                rollup: get_bridge_address(&version),
+                ..Default::default()
+            },
+            BaseChainsType::Nitro => {
+                deploy_nitro_rollup(
+                    &set_rpc_http_url,
+                    options.appchain_chain_id,
+                    options.rollup_owner,
+                )
+                .await?
+
+                // TODO it's probably necessary to set the assertion poster as the whitelisted
+                // address to submit assertions
             }
         };
 
-        info!("sequencing_rpc_url: {}", seq_rpc_url);
-        info!("settlement_rpc_url: {}", set_rpc_url);
+        info!("sequencing_rpc_url: {}", seq_rpc_ws_url);
+        info!("settlement_rpc_url: {}", set_rpc_ws_url);
 
         // overwrite the rollup owner in case it's not set (cannot be empty in config manager)
         if options.rollup_owner == Address::ZERO {
@@ -351,9 +382,9 @@ impl TestComponents {
             &set_provider,
             &options,
             sequencing_contract_address,
-            arbitrum_bridge_address,
-            arbitrum_inbox_address,
-            &seq_rpc_url,
+            appchain_deployment.bridge,
+            appchain_deployment.inbox,
+            &seq_rpc_ws_url,
             &appchain_block_explorer_url,
         )
         .await?;
@@ -361,7 +392,7 @@ impl TestComponents {
         info!("Starting chain ingestors...");
         let temp = test_path("chain_ingestor");
         let seq_chain_ingestor_cfg = ChainIngestorConfig {
-            rpc_url: seq_rpc_url.to_string(),
+            rpc_url: seq_rpc_ws_url.to_string(),
             db_file: temp.clone() + "/sequencing_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -376,7 +407,7 @@ impl TestComponents {
         .await?;
 
         let set_chain_ingestor_cfg = ChainIngestorConfig {
-            rpc_url: set_rpc_url.clone(),
+            rpc_url: set_rpc_ws_url.clone(),
             db_file: temp + "/settlement_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -401,21 +432,21 @@ impl TestComponents {
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_rpc_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port().await,
-            arbitrum_bridge_address: None,
-            arbitrum_inbox_address: None,
-            sequencing_contract_address: None,
+            arbitrum_bridge_address: Some(appchain_deployment.bridge),
+            arbitrum_inbox_address: Some(appchain_deployment.inbox),
+            sequencing_contract_address: Some(sequencing_contract_address),
             sequencing_rpc_url: Some(sequencing_rpc_url.clone()),
             appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
-            sequencing_start_block: None,
-            settlement_start_block: None,
-            settlement_delay: None,
+            sequencing_start_block: Some(options.sequencing_start_block),
+            settlement_start_block: Some(options.settlement_start_block),
+            settlement_delay: Some(options.settlement_delay),
         };
 
         let translator = start_component(
             "synd-translator",
             translator_config.metrics_port,
             translator_config.cli_args(),
-            Default::default(),
+            vec![],
         )
         .await?;
 
@@ -448,15 +479,30 @@ impl TestComponents {
             BaseChainsType::PreLoaded(version) => get_assertion_poster_address(&version),
             BaseChainsType::Nitro => {
                 let deploy_tx =
-                    AssertionPoster::deploy_builder(&set_provider, arbitrum_bridge_address)
+                    AssertionPoster::deploy_builder(&set_provider, appchain_deployment.rollup)
                         .gas(100_000_000)
-                        .max_fee_per_gas(100_000_000)
                         .max_priority_fee_per_gas(0);
 
                 let tx_hash = deploy_tx.send().await?.watch().await?;
                 let receipt = set_provider.get_transaction_receipt(tx_hash).await?.unwrap();
                 assert!(receipt.status(), "AssertionPoster deployment failed");
-                receipt.contract_address.unwrap()
+                let assertion_poster_address = receipt.contract_address.unwrap();
+
+                let upgrade_executor =
+                    IUpgradeExecutor::new(appchain_deployment.upgrade_executor, &set_provider);
+                let tx_hash = upgrade_executor
+                    .execute(
+                        assertion_poster_address,
+                        AssertionPoster::configureCall::SELECTOR.into(),
+                    )
+                    .send()
+                    .await?
+                    .watch()
+                    .await?;
+                let receipt = set_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+                assert!(receipt.status(), "setAnyTrustFastConfirmer failed");
+
+                assertion_poster_address
             }
         };
 
@@ -472,13 +518,13 @@ impl TestComponents {
                     let proposer_config = ProposerConfig {
                         ethereum_rpc_url: l1_info
                             .as_ref()
-                            .map_or(set_rpc_url.clone(), |info| info.ws_url.clone()),
+                            .map_or(set_rpc_ws_url.clone(), |info| info.ws_url.clone()),
                         assertion_poster_contract_address, // TODO remove
                         tee_module_contract_address: Default::default(), // TODO fill this in
-                        arbitrum_bridge_address,
-                        inbox_address: arbitrum_inbox_address,
-                        sequencer_inbox_address: arbitrum_inbox_address,
-                        settlement_rpc_url: set_rpc_url.clone(),
+                        arbitrum_bridge_address: appchain_deployment.bridge,
+                        inbox_address: appchain_deployment.inbox,
+                        sequencer_inbox_address: appchain_deployment.sequencer_inbox,
+                        settlement_rpc_url: set_rpc_ws_url.clone(),
                         metrics_port: PortManager::instance().next_port().await,
                         port: PortManager::instance().next_port().await,
                         appchain_rpc_url: appchain_rpc_url.clone(),
@@ -540,7 +586,7 @@ impl TestComponents {
                 valkey_url: valkey_url.clone(),
                 private_key: PRIVATE_KEY.to_string(),
                 sequencing_address: sequencing_contract_address,
-                sequencing_rpc_url: seq_rpc_url.to_string(),
+                sequencing_rpc_url: seq_rpc_ws_url.to_string(),
                 metrics_port: PortManager::instance().next_port().await,
             };
             let batch_sequencer_instance = start_component(
@@ -570,8 +616,6 @@ impl TestComponents {
                 settlement_rpc_url,
                 appchain_provider,
                 appchain_chain_id: options.appchain_chain_id,
-                bridge_address: arbitrum_bridge_address,
-                inbox_address: arbitrum_inbox_address,
                 assertion_poster_address: assertion_poster_contract_address,
 
                 mchain_provider,
@@ -579,6 +623,10 @@ impl TestComponents {
                 maestro_url,
                 valkey_url: valkey_url_init,
                 appchain_block_explorer_url,
+
+                sequencing_deployment,
+                settlement_deployment,
+                appchain_deployment,
 
                 tee_signer_address,
             },
@@ -687,7 +735,10 @@ impl TestComponents {
         let tx_bytes = Bytes::from(tx.to_vec());
         let seq_tx =
             self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;
-        self.mine_seq_block(seq_delay).await?;
+        if self.sequencing_deployment.is_none() {
+            // skip mining step when in nitro mode
+            self.mine_seq_block(seq_delay).await?;
+        }
         let seq_receipt =
             self.sequencing_provider.get_transaction_receipt(*seq_tx.tx_hash()).await?.unwrap();
         assert!(seq_receipt.status(), "Sequence transaction failed");
