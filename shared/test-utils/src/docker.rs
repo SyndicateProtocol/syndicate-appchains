@@ -111,45 +111,46 @@ pub async fn start_component(
 ) -> Result<Docker> {
     info!("launching {}", executable_name);
     let needs_rocksdb = executable_name == "synd-mchain";
-    let mut docker =
-        if let Ok(tag) = env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG") {
-            Docker::new(
-                Command::new("docker")
-                    .arg("run")
-                    .arg("--init")
-                    .arg("--rm")
-                    .arg("--net=host")
-                    .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
-                    .args(args),
-            )
-        } else if executable_name == "synd-proposer" {
-            // Go service
-            let mut cmd = Command::new("go");
-            cmd.current_dir(env!("CARGO_WORKSPACE_DIR"));
-            cmd.arg("run").arg("./synd-withdrawals/synd-proposer/cmd/synd-proposer");
-            cmd.args(args).args(cargs);
-            Docker::new(&mut cmd)
-        } else {
-            let mut cmd = Command::new("cargo");
-            // ring has a custom build.rs script that rebuilds whenever certain environment
-            // vars change
-            cmd.env_remove("CARGO_MANIFEST_DIR")
-                .env_remove("CARGO_PKG_NAME")
-                .env_remove("CARGO_PKG_VERSION_MAJOR")
-                .env_remove("CARGO_PKG_VERSION_MINOR")
-                .env_remove("CARGO_PKG_VERSION_PATCH")
-                .env_remove("CARGO_PKG_VERSION_PRE")
-                .env_remove("CARGO_MANIFEST_LINKS")
-                .current_dir(env!("CARGO_WORKSPACE_DIR"))
-                .arg("run");
+    let mut docker = if let Ok(tag) =
+        env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG")
+    {
+        Docker::new(
+            Command::new("docker")
+                .arg("run")
+                .arg("--init")
+                .arg("--rm")
+                .arg("--net=host")
+                .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
+                .args(args),
+        )
+    } else if executable_name == "synd-proposer" {
+        // Go service
+        let mut cmd = Command::new("go");
+        cmd.current_dir(format!("{}/synd-withdrawals/synd-proposer", env!("CARGO_WORKSPACE_DIR")));
+        cmd.arg("run").arg("./cmd/synd-proposer");
+        cmd.args(args).args(cargs);
+        Docker::new(&mut cmd)
+    } else {
+        let mut cmd = Command::new("cargo");
+        // ring has a custom build.rs script that rebuilds whenever certain environment
+        // vars change
+        cmd.env_remove("CARGO_MANIFEST_DIR")
+            .env_remove("CARGO_PKG_NAME")
+            .env_remove("CARGO_PKG_VERSION_MAJOR")
+            .env_remove("CARGO_PKG_VERSION_MINOR")
+            .env_remove("CARGO_PKG_VERSION_PATCH")
+            .env_remove("CARGO_PKG_VERSION_PRE")
+            .env_remove("CARGO_MANIFEST_LINKS")
+            .current_dir(env!("CARGO_WORKSPACE_DIR"))
+            .arg("run");
 
-            if needs_rocksdb {
-                cmd.arg("--features").arg("rocksdb");
-            }
+        if needs_rocksdb {
+            cmd.arg("--features").arg("rocksdb");
+        }
 
-            cmd.arg("--bin").arg(executable_name).arg("--").args(args).args(cargs);
-            Docker::new(&mut cmd)
-        }?;
+        cmd.arg("--bin").arg(executable_name).arg("--").args(args).args(cargs);
+        Docker::new(&mut cmd)
+    }?;
 
     health_check(executable_name, api_port, &mut docker).await;
     Ok(docker)
