@@ -52,28 +52,28 @@ contract TestnetSyndTokenTest is Test {
         new TestnetSyndToken(defaultAdmin, address(0));
     }
 
-    // ============ ADMIN MINT TESTS ============
+    // ============ MINT TESTS ============
 
-    function test_AdminMint_Success() public {
+    function test_Mint_Success() public {
         uint256 amount = 1000 * 10 ** 18;
 
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(0), user, amount);
 
         vm.prank(minter);
-        token.adminMint(user, amount);
+        token.mint(user, amount);
 
         assertEq(token.balanceOf(user), amount);
         assertEq(token.totalSupply(), amount);
     }
 
-    function test_AdminMint_MultipleMints() public {
+    function test_Mint_MultipleMints() public {
         uint256 amount1 = 500 * 10 ** 18;
         uint256 amount2 = 300 * 10 ** 18;
 
         vm.startPrank(minter);
-        token.adminMint(user, amount1);
-        token.adminMint(spender, amount2);
+        token.mint(user, amount1);
+        token.mint(spender, amount2);
         vm.stopPrank();
 
         assertEq(token.balanceOf(user), amount1);
@@ -81,19 +81,25 @@ contract TestnetSyndTokenTest is Test {
         assertEq(token.totalSupply(), amount1 + amount2);
     }
 
-    function test_RevertWhen_AdminMint_NotMinter() public {
+    function test_RevertWhen_Mint_NotMinter() public {
         vm.startPrank(user);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.MINTER_ROLE())
         );
-        token.adminMint(user, 1000 * 10 ** 18);
+        token.mint(user, 1000 * 10 ** 18);
         vm.stopPrank();
     }
 
-    function test_RevertWhen_AdminMint_ZeroAmount() public {
+    function test_RevertWhen_Mint_ZeroAddress() public {
+        vm.prank(minter);
+        vm.expectRevert(TestnetSyndToken.ZeroAddress.selector);
+        token.mint(address(0), 1000 * 10 ** 18);
+    }
+
+    function test_RevertWhen_Mint_ZeroAmount() public {
         vm.prank(minter);
         vm.expectRevert(TestnetSyndToken.ZeroAmount.selector);
-        token.adminMint(user, 0);
+        token.mint(user, 0);
     }
 
     // ============ ROLE MANAGEMENT TESTS ============
@@ -143,7 +149,7 @@ contract TestnetSyndTokenTest is Test {
         uint256 transferAmount = 300 * 10 ** 18;
 
         vm.prank(minter);
-        token.adminMint(user, amount);
+        token.mint(user, amount);
 
         vm.expectEmit(true, true, false, true);
         emit Transfer(user, spender, transferAmount);
@@ -173,7 +179,7 @@ contract TestnetSyndTokenTest is Test {
         uint256 transferAmount = 300 * 10 ** 18;
 
         vm.prank(minter);
-        token.adminMint(user, mintAmount);
+        token.mint(user, mintAmount);
 
         vm.prank(user);
         token.approve(spender, allowanceAmount);
@@ -252,7 +258,7 @@ contract TestnetSyndTokenTest is Test {
         uint256 amount = 1000 * 10 ** 18;
 
         vm.prank(minter);
-        token.adminMint(user, amount);
+        token.mint(user, amount);
 
         vm.prank(user);
         token.delegate(spender);
@@ -265,7 +271,7 @@ contract TestnetSyndTokenTest is Test {
         uint256 amount = 1000 * 10 ** 18;
 
         vm.prank(minter);
-        token.adminMint(user, amount);
+        token.mint(user, amount);
 
         vm.prank(user);
         token.delegate(user);
@@ -279,12 +285,12 @@ contract TestnetSyndTokenTest is Test {
 
     // ============ FUZZ TESTS ============
 
-    function testFuzz_AdminMint_ValidAmounts(address to, uint256 amount) public {
+    function testFuzz_Mint_ValidAmounts(address to, uint256 amount) public {
         vm.assume(to != address(0));
         amount = bound(amount, 1, type(uint128).max);
 
         vm.prank(minter);
-        token.adminMint(to, amount);
+        token.mint(to, amount);
 
         assertEq(token.balanceOf(to), amount);
         assertEq(token.totalSupply(), amount);
@@ -295,7 +301,7 @@ contract TestnetSyndTokenTest is Test {
         transferAmount = bound(transferAmount, 1, mintAmount);
 
         vm.prank(minter);
-        token.adminMint(user, mintAmount);
+        token.mint(user, mintAmount);
 
         vm.prank(user);
         token.transfer(spender, transferAmount);
@@ -312,9 +318,9 @@ contract TestnetSyndTokenTest is Test {
         uint256 amount3 = 3000 * 10 ** 18;
 
         vm.startPrank(minter);
-        token.adminMint(user, amount1);
-        token.adminMint(spender, amount2);
-        token.adminMint(makeAddr("user3"), amount3);
+        token.mint(user, amount1);
+        token.mint(spender, amount2);
+        token.mint(makeAddr("user3"), amount3);
         vm.stopPrank();
 
         uint256 totalSupply = token.totalSupply();

@@ -34,11 +34,12 @@ contract TestnetSyndToken is ERC20, AccessControl, ERC20Permit, ERC20Votes, Reen
     }
 
     /**
-     * @notice Traditional mint function for testing (uses MINTER_ROLE)
+     * @notice Mint function for testing (uses MINTER_ROLE)
      * @param to The address to mint tokens to
      * @param amount The amount of tokens to mint
      */
-    function adminMint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 
         _mint(to, amount);

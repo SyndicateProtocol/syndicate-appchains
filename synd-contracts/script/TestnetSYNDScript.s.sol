@@ -72,7 +72,7 @@ contract MintSYNDToAddresses is Script {
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid address");
 
-            synd.adminMint(recipients[i], amounts[i]);
+            synd.mint(recipients[i], amounts[i]);
 
             console.log("Minted", amounts[i], "SYND to", recipients[i]);
         }

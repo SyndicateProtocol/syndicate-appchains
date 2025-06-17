@@ -18,7 +18,7 @@ methods {
 rule onlyMinterCanMint(address to, uint256 amount) {
     env e;
 
-    adminMint@withrevert(e, to, amount);
+    mint@withrevert(e, to, amount);
 
     assert !lastReverted => hasRole(MINTER_ROLE(), e.msg.sender),
         "Non-minter able to mint";
@@ -41,7 +41,7 @@ rule mintUpdatesBalance(address to, uint256 amount) {
     require balanceBefore + amount <= max_uint256;
     require totalBefore + amount <= max_uint256;
 
-    adminMint(e, to, amount);
+    mint(e, to, amount);
 
     mathint balanceAfter = balanceOf(to);
     mathint totalAfter = totalSupply();
@@ -57,7 +57,7 @@ rule noMintToZero(uint256 amount) {
     env e;
     require hasRole(MINTER_ROLE(), e.msg.sender);
 
-    adminMint@withrevert(e, 0, amount);
+    mint@withrevert(e, 0, amount);
 
     assert lastReverted, "Should not mint to zero address";
 }
@@ -145,7 +145,7 @@ rule adminCanRevokeMinterRole(address minter) {
     require hasRole(MINTER_ROLE(), e.msg.sender);
 
 
-    adminMint@withrevert(e, to, 0);
+    mint@withrevert(e, to, 0);
 
     assert lastReverted, "Should not mint zero amount";
  }
