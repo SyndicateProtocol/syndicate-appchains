@@ -2,18 +2,14 @@
 use alloy::{
     eips::{BlockId, BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
-    primitives::{address, utils::parse_ether, Address, Bytes, B256, U256},
+    primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::{anvil::MineOptions, Block, TransactionRequest},
+    rpc::types::{Block, TransactionRequest},
     signers::local::PrivateKeySigner,
     sol,
 };
-use contract_bindings::synd::{
-    arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
-    nodeinterface::NodeInterface, rollup::Rollup,
-};
+use contract_bindings::synd::{iinbox::IInbox, rollup::Rollup};
 use eyre::Result;
-use serde::{Deserialize, Serialize};
 use std::{str::FromStr as _, time::Duration};
 use synd_chain_ingestor::client::IngestorProvider;
 use synd_mchain::client::Provider as _;
@@ -22,10 +18,6 @@ use test_framework::components::{
     test_components::TestComponents,
 };
 use test_utils::{anvil::PRIVATE_KEY, wait_until};
-
-const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");
-const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
-    address!("0x00000000000000000000000000000000000000c8");
 
 // an arbitrary eoa address used for testing
 const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380");
@@ -292,143 +284,6 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 components.appchain_provider.get_balance(wallet_address).await?,
                 parse_ether("4.7000337")?
             );
-
-            Ok(())
-        },
-    )
-    .await
-}
-
-#[tokio::test]
-async fn e2e_fast_withdrawal_300() -> Result<()> {
-    e2e_fast_withdrawal_base(ContractVersion::V300).await
-}
-
-#[tokio::test]
-async fn e2e_fast_withdrawal_213() -> Result<()> {
-    e2e_fast_withdrawal_base(ContractVersion::V213).await
-}
-
-async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
-    TestComponents::run(
-        &ConfigurationOptions { pre_loaded: Some(version), ..Default::default() },
-        |components| async move {
-            let block: Block = components
-                .settlement_provider
-                .raw_request("eth_getBlockByNumber".into(), ("latest", true))
-                .await?;
-            components
-                .sequencing_provider
-                .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
-                .await?;
-
-            let wallet_address = components.settlement_provider.default_signer_address();
-            let value = parse_ether("1")?;
-            let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
-            let _ = inbox.depositEth().value(value).send().await?;
-            components.mine_set_block(0).await?;
-            components.mine_set_block(1).await?;
-
-            // Wait for deposit to be processed
-            wait_until!(
-                components.appchain_provider.get_balance(wallet_address).await? >= value,
-                Duration::from_secs(10)
-            );
-            assert_eq!(components.appchain_provider.get_block_number().await?, 9);
-
-            let bridge = IBridge::new(components.bridge_address, &components.settlement_provider);
-
-            // 2. Send withdrawal transaction on the Appchain
-            let arbsys = ArbSys::new(ARB_SYS_PRECOMPILE_ADDRESS, &components.appchain_provider);
-            let gas_limit: u64 = 100_000;
-            let max_fee_per_gas: u128 = 100_000_000;
-            let withdrawal_value = parse_ether("0.1")?;
-            let withdrawal_wallet = components.sequencing_provider.wallet();
-            let to_address = address!("0x0000000000000000000000000000000000000001");
-            let tx = arbsys
-                .withdrawEth(to_address)
-                .value(withdrawal_value)
-                .nonce(0)
-                .gas(gas_limit)
-                .chain_id(components.appchain_chain_id)
-                .max_fee_per_gas(max_fee_per_gas)
-                .max_priority_fee_per_gas(0)
-                .into_transaction_request()
-                .build(withdrawal_wallet)
-                .await?;
-            _ = components
-                .sequencing_contract
-                .processTransactionUncompressed(tx.encoded_2718().into())
-                .send()
-                .await?;
-            components.mine_seq_block(0).await?;
-
-            // Wait for the withdrawal transaction to be processed
-            wait_until!(
-                components.appchain_provider.get_block_number().await? == 10,
-                Duration::from_secs(10)
-            );
-
-            // 2. Proposer service proposes
-            let client = reqwest::Client::new();
-            let response =
-                client.post(format!("{}/propose", components.proposer_url)).send().await?;
-            assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
-
-            // 3. Execute transaction (usually done by end-user)
-
-            // Generate proof
-            let node_interface = NodeInterface::new(
-                NODE_INTERFACE_PRECOMPILE_ADDRESS,
-                &components.appchain_provider,
-            );
-            let proof = node_interface.constructOutboxProof(1, 0).call().await?;
-
-            // Execute withdrawal
-            let outbox = IOutbox::new(
-                IRollupCore::new(bridge.rollup().call().await?._0, &components.settlement_provider)
-                    .outbox()
-                    .call()
-                    .await?
-                    ._0,
-                &components.settlement_provider,
-            );
-
-            #[derive(Serialize, Deserialize, Debug)]
-            #[serde(rename_all = "camelCase")]
-            struct NitroBlock {
-                hash: B256,
-                send_root: B256,
-                number: U256,
-                l1_block_number: U256,
-                timestamp: U256,
-            }
-
-            let block: NitroBlock = components
-                .appchain_provider
-                .raw_request("eth_getBlockByNumber".into(), ("latest", false))
-                .await?;
-
-            let _ = outbox
-                .executeTransaction(
-                    proof.proof,           // proof
-                    U256::from(0),         // index
-                    wallet_address,        // l2Sender
-                    to_address,            // to
-                    block.number,          // l2Block,
-                    block.l1_block_number, // l1Block,
-                    block.timestamp,       // l2Timestamp,
-                    withdrawal_value,      // value
-                    Bytes::new(),          // data (always empty)
-                )
-                .send()
-                .await?;
-
-            components.mine_set_block(0).await?;
-
-            // Assert new balance is equal to withdrawal amount
-            let balance_after = components.settlement_provider.get_balance(to_address).await?;
-            assert_eq!(balance_after, withdrawal_value);
 
             Ok(())
         },

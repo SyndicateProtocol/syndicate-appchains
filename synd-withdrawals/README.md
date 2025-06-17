@@ -24,22 +24,6 @@ This system manages the validation and submission of withdrawal proofs through a
   3. Submits the verified assertion on-chain via:
      - `submitPendingAssertion` → `TEEModule.sol`
 
-### 🔹 `Synd-Sequencing-Verifier`
-
-**Role:** Validates the correctness and consistency of L1 data that is used to build the sequencing chain.
-
-### 🔹 `Synd-Sequencing-Block-Verifier`
-
-**Role:** Verifies the structure and integrity of sequencing chain blocks using the Arbitrum Nitro State Transition Function (STF).
-
-### 🔹 `Synd-Appchain-Verifier`
-
-**Role:** Ensures that settlement and sequencing data used to construct the appchain is accurate and consistent.
-
-### 🔹 `Synd-Appchain-Block-Verifier`
-
-**Role:** Verifies the integrity of appchain blocks using Arbitrum Nitro STF logic.
-
 ### 🔹 `Synd-Enclave`
 
 **Role:** Secure enclave runtime that performs the core logic for withdrawal proof validation.  
@@ -59,17 +43,6 @@ This system manages the validation and submission of withdrawal proofs through a
    ```bash
    ./cmd/enclave/enclave [--local]
    ```
-
-##### ➤ Simulated Execution (Non-TEE Mode)
-
-To mimic enclave behavior without actual TEE hardware:
-
-1. Create a `bin/` directory in `synd-enclave/`.
-2. Place the following compiled binaries in `bin/`:
-   - `synd-seqchain-verifier`
-   - `synd-appchain-verifier`
-
-The proposer will use these binaries to simulate TEE verification logic.
 
 ### 🔹 `Synd-Tee-Attestation-ZK-Proofs`
 

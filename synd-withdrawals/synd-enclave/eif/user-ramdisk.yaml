@@ -44,9 +44,3 @@ files:
   - path: env
     contents: ""
     mode: "0644"
-  - path: rootfs/bin/synd-appchain-verifier
-    source: bin/synd-appchain-verifier
-    mode: "0644"
-  - path: rootfs/bin/synd-seqchain-verifier
-    source: bin/synd-seqchain-verifier
-    mode: "0644"

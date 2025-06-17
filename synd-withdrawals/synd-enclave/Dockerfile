@@ -1,18 +1,4 @@
 # syntax=docker/dockerfile:1.7-labs
-
-# Build verifiers binary
-FROM rust:1.87-slim-bookworm AS verifier-builder
-WORKDIR /workspace
-RUN apt-get update && \
-    apt-get install -y pkg-config libssl-dev clang cmake musl-tools g++ && \
-    ln -s /usr/bin/musl-gcc /usr/bin/musl-g++
-
-COPY . .
-
-RUN rustup target add x86_64-unknown-linux-musl
-RUN cargo build --release --target x86_64-unknown-linux-musl --manifest-path synd-withdrawals/synd-appchain-verifier/Cargo.toml
-RUN cargo build --release --target x86_64-unknown-linux-musl --manifest-path synd-withdrawals/synd-seqchain-verifier/Cargo.toml
-
 # Build eif
 FROM debian:bookworm-slim AS brotli-wasm-builder
 WORKDIR /workspace
@@ -185,8 +171,6 @@ RUN NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-node-deps
 
 WORKDIR /build
 RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/enclave ./cmd/enclave
-COPY --from=verifier-builder /workspace/target/x86_64-unknown-linux-musl/release/synd-appchain-verifier bin/synd-appchain-verifier
-COPY --from=verifier-builder /workspace/target/x86_64-unknown-linux-musl/release/synd-seqchain-verifier bin/synd-seqchain-verifier
 
 COPY synd-withdrawals/synd-enclave/eif/init-ramdisk.yaml synd-withdrawals/synd-enclave/eif/user-ramdisk.yaml eif/
 COPY --from=bootstrap /build/out bootstrap
