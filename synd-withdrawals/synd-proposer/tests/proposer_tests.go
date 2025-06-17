@@ -25,7 +25,6 @@ func TestInitProposerWithConfig(t *testing.T) {
 		PrivateKey:               "dummykey",
 		PollingInterval:          10 * time.Second,
 		CloseChallengeInterval:   5 * time.Second,
-		Port:                     8080,
 		MetricsPort:              9292,
 	}
 	proposer := pkg.NewProposer(dummyCfg)

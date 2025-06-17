@@ -20,7 +20,6 @@ type Config struct {
 	PrivateKey               string
 	PollingInterval          time.Duration
 	CloseChallengeInterval   time.Duration
-	Port                     int
 	MetricsPort              int
 }
 
@@ -68,7 +67,6 @@ func LoadConfig() (*Config, error) {
 		PrivateKey:               getEnv("PROPOSER_PRIVATE_KEY", true),
 		PollingInterval:          parseDuration("PROPOSER_POLLING_INTERVAL", "10m"),
 		CloseChallengeInterval:   parseDuration("PROPOSER_CLOSE_CHALLENGE_INTERVAL", "5m"),
-		Port:                     parseInt("PROPOSER_PORT", 8080),
 		MetricsPort:              parseInt("PROPOSER_METRICS_PORT", 9292),
 	}, nil
 }
