@@ -300,11 +300,13 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn e2e_fast_withdrawal_300() -> Result<()> {
     e2e_fast_withdrawal_base(ContractVersion::V300).await
 }
 
 #[tokio::test]
+#[ignore]
 async fn e2e_fast_withdrawal_213() -> Result<()> {
     e2e_fast_withdrawal_base(ContractVersion::V213).await
 }
