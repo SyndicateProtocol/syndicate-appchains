@@ -15,7 +15,6 @@ contract SyndicateTokenTest is Test {
     address public user = address(0x1111);
     address public user2 = address(0x2222);
 
-
     function setUp() public {
         vm.startPrank(defaultAdmin);
 
@@ -60,7 +59,6 @@ contract SyndicateTokenTest is Test {
         vm.expectRevert(SyndicateToken.ZeroAddress.selector);
         new SyndicateToken(defaultAdmin, address(0));
     }
-
 
     // ============ EMISSION MINTING TESTS ============
 
@@ -130,7 +128,6 @@ contract SyndicateTokenTest is Test {
         token.mint(user, exceedingAmount);
     }
 
-
     // ============ VIEW FUNCTION TESTS ============
 
     function test_GetRemainingEmissions_Initial() public view {
@@ -194,7 +191,6 @@ contract SyndicateTokenTest is Test {
 
         assertEq(token.getVotingPower(user), mintedAmount);
     }
-
 
     // ============ ERC20 FUNCTIONALITY TESTS ============
 
@@ -530,7 +526,6 @@ contract SyndicateTokenTest is Test {
         token.burnFrom(user, 0);
     }
 
-
     function test_MintingAllowedDuringLock() public {
         // Set lock
         uint256 futureTimestamp = block.timestamp + 30 days;
@@ -543,7 +538,6 @@ contract SyndicateTokenTest is Test {
 
         assertEq(token.balanceOf(user), 1000 * 10 ** 18);
     }
-
 
     function test_Integration_AirdropWorkflow() public {
         // Step 1: Set lock for airdrop

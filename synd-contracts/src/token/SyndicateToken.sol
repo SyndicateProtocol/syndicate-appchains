@@ -58,11 +58,9 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Thrown when trying to burn tokens outside of lock period
     error BurnOnlyDuringLockPeriod();
 
-
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/
-
 
     /// @notice Role for minting emission tokens (typically the emission scheduler)
     bytes32 public constant EMISSION_MINTER_ROLE = keccak256("EMISSION_MINTER_ROLE");
@@ -83,7 +81,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Maximum lock duration: 365 days (1 year)
     uint256 public constant MAX_LOCK_DURATION = 365 days;
 
-
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -93,7 +90,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
 
     /// @notice Maximum timestamp until which tokens can be locked
     uint256 public immutable maxLockTimestamp;
-
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -114,7 +110,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
      * @param burner Address that performed the burn
      */
     event TokensBurnedByManager(address indexed from, uint256 amount, address indexed burner);
-
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -204,7 +199,7 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     function setUnlockTimestamp(uint256 newUnlockTimestamp) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Can only set timestamp once - prevents manipulation after airdrop
         if (unlockTimestamp != 0) revert UnlockTimestampAlreadySet();
-        
+
         // Must be a future timestamp (cannot be 0 to disable restrictions)
         if (newUnlockTimestamp <= block.timestamp) revert UnlockTimestampInPast();
         if (newUnlockTimestamp > maxLockTimestamp) revert UnlockTimestampTooLate();
@@ -246,7 +241,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
         return unlockTimestamp - block.timestamp;
     }
 
-
     /*//////////////////////////////////////////////////////////////
                           GOVERNANCE HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -277,7 +271,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     function getCurrentTotalSupply() external view returns (uint256) {
         return totalSupply();
     }
-
 
     /*//////////////////////////////////////////////////////////////
                     REQUIRED OVERRIDES FOR MULTIPLE INHERITANCE

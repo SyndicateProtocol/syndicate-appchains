@@ -200,7 +200,6 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
         assertEq(emissionScheduler.emissionsStartTime(), block.timestamp);
     }
 
-
     function test_RevertWhen_StartEmissions_NotEmissionsManager() public {
         _setupBridgeConfiguration();
 
@@ -289,7 +288,6 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
         assertTrue(emissionScheduler.totalEmissionsMinted() > 0);
     }
 
-
     function test_RevertWhen_MintEmission_Paused() public {
         _setupBridgeConfiguration();
         _startEmissions();
@@ -349,7 +347,6 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
         assertEq(nextEmissionAmount, 6_780_550 * 10 ** 18);
         assertTrue(canMint);
     }
-
 
     function test_EmissionsEnded() public {
         _setupBridgeConfiguration();
@@ -486,7 +483,10 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
         // Verify that the schedule is reasonable (should be around 100M tokens)
         uint256 expectedTotal = 100_000_000 * 10 ** 18;
         uint256 tolerance = 1_000_000 * 10 ** 18; // 1M token tolerance
-        assertTrue(total > expectedTotal - tolerance && total < expectedTotal + tolerance, "Emission schedule total is not within expected range");
+        assertTrue(
+            total > expectedTotal - tolerance && total < expectedTotal + tolerance,
+            "Emission schedule total is not within expected range"
+        );
     }
 
     // ============ FUZZ TESTS ============

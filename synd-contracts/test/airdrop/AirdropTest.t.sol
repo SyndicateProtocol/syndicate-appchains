@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {Airdrop} from "src/airdrop/Airdrop.sol";
 import {TestnetSyndToken} from "src/token/TestnetSyndToken.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AirdropTest is Test {
     Airdrop public airdrop;
@@ -13,7 +12,7 @@ contract AirdropTest is Test {
     address public admin = address(0x1234);
     address public minter = address(0x5678);
     address public airdropper = address(0x9ABC);
-    
+
     address public recipient1 = address(0x1111);
     address public recipient2 = address(0x2222);
     address public recipient3 = address(0x3333);
@@ -40,10 +39,10 @@ contract AirdropTest is Test {
     function test_AirdropERC20_SingleRecipient() public {
         address[] memory addresses = new address[](1);
         uint256[] memory amounts = new uint256[](1);
-        
+
         addresses[0] = recipient1;
         amounts[0] = 1000 * 10 ** 18;
-        
+
         uint256 totalAmount = 1000 * 10 ** 18;
 
         uint256 airdropperBalanceBefore = token.balanceOf(airdropper);
@@ -59,17 +58,17 @@ contract AirdropTest is Test {
     function test_AirdropERC20_MultipleRecipients() public {
         address[] memory addresses = new address[](4);
         uint256[] memory amounts = new uint256[](4);
-        
+
         addresses[0] = recipient1;
         addresses[1] = recipient2;
         addresses[2] = recipient3;
         addresses[3] = recipient4;
-        
+
         amounts[0] = 1000 * 10 ** 18;
         amounts[1] = 2000 * 10 ** 18;
         amounts[2] = 3000 * 10 ** 18;
         amounts[3] = 4000 * 10 ** 18;
-        
+
         uint256 totalAmount = 10000 * 10 ** 18;
 
         uint256 airdropperBalanceBefore = token.balanceOf(airdropper);
@@ -92,16 +91,16 @@ contract AirdropTest is Test {
     function test_AirdropERC20_EqualAmounts() public {
         address[] memory addresses = new address[](3);
         uint256[] memory amounts = new uint256[](3);
-        
+
         addresses[0] = recipient1;
         addresses[1] = recipient2;
         addresses[2] = recipient3;
-        
+
         uint256 amountPerRecipient = 5000 * 10 ** 18;
         amounts[0] = amountPerRecipient;
         amounts[1] = amountPerRecipient;
         amounts[2] = amountPerRecipient;
-        
+
         uint256 totalAmount = amountPerRecipient * 3;
 
         uint256 airdropperBalanceBefore = token.balanceOf(airdropper);
@@ -118,13 +117,13 @@ contract AirdropTest is Test {
     function test_AirdropERC20_ZeroAmounts() public {
         address[] memory addresses = new address[](2);
         uint256[] memory amounts = new uint256[](2);
-        
+
         addresses[0] = recipient1;
         addresses[1] = recipient2;
-        
+
         amounts[0] = 0;
         amounts[1] = 1000 * 10 ** 18;
-        
+
         uint256 totalAmount = 1000 * 10 ** 18;
 
         uint256 airdropperBalanceBefore = token.balanceOf(airdropper);
@@ -142,15 +141,15 @@ contract AirdropTest is Test {
     function test_AirdropERC20_DuplicateRecipients() public {
         address[] memory addresses = new address[](3);
         uint256[] memory amounts = new uint256[](3);
-        
+
         addresses[0] = recipient1;
         addresses[1] = recipient1; // Duplicate
         addresses[2] = recipient2;
-        
+
         amounts[0] = 1000 * 10 ** 18;
         amounts[1] = 2000 * 10 ** 18;
         amounts[2] = 3000 * 10 ** 18;
-        
+
         uint256 totalAmount = 6000 * 10 ** 18;
 
         uint256 airdropperBalanceBefore = token.balanceOf(airdropper);
@@ -169,14 +168,14 @@ contract AirdropTest is Test {
     function test_RevertWhen_AirdropERC20_ArrayLengthMismatch() public {
         address[] memory addresses = new address[](2);
         uint256[] memory amounts = new uint256[](3); // Different length
-        
+
         addresses[0] = recipient1;
         addresses[1] = recipient2;
-        
+
         amounts[0] = 1000 * 10 ** 18;
         amounts[1] = 2000 * 10 ** 18;
         amounts[2] = 3000 * 10 ** 18;
-        
+
         uint256 totalAmount = 6000 * 10 ** 18;
 
         vm.prank(airdropper);
@@ -187,10 +186,10 @@ contract AirdropTest is Test {
     function test_RevertWhen_AirdropERC20_InsufficientAllowance() public {
         address[] memory addresses = new address[](1);
         uint256[] memory amounts = new uint256[](1);
-        
+
         addresses[0] = recipient1;
         amounts[0] = 1000 * 10 ** 18;
-        
+
         uint256 totalAmount = 1000 * 10 ** 18;
 
         // Reset allowance to 0
@@ -205,10 +204,10 @@ contract AirdropTest is Test {
     function test_RevertWhen_AirdropERC20_InsufficientBalance() public {
         address[] memory addresses = new address[](1);
         uint256[] memory amounts = new uint256[](1);
-        
+
         addresses[0] = recipient1;
         amounts[0] = 1000 * 10 ** 18;
-        
+
         uint256 totalAmount = INITIAL_BALANCE + 1; // More than balance
 
         vm.prank(airdropper);
@@ -219,13 +218,13 @@ contract AirdropTest is Test {
     function test_AirdropERC20_TotalAmountMismatch_StillWorks() public {
         address[] memory addresses = new address[](2);
         uint256[] memory amounts = new uint256[](2);
-        
+
         addresses[0] = recipient1;
         addresses[1] = recipient2;
-        
+
         amounts[0] = 1000 * 10 ** 18;
         amounts[1] = 2000 * 10 ** 18;
-        
+
         uint256 totalAmount = 4000 * 10 ** 18; // More than sum of amounts
 
         uint256 airdropperBalanceBefore = token.balanceOf(airdropper);
@@ -258,10 +257,10 @@ contract AirdropTest is Test {
         uint256 numRecipients = 100;
         address[] memory addresses = new address[](numRecipients);
         uint256[] memory amounts = new uint256[](numRecipients);
-        
+
         uint256 amountPerRecipient = 100 * 10 ** 18;
         uint256 totalAmount = amountPerRecipient * numRecipients;
-        
+
         // Generate recipients
         for (uint256 i = 0; i < numRecipients; i++) {
             addresses[i] = address(uint160(i + 1000));
@@ -274,7 +273,7 @@ contract AirdropTest is Test {
         airdrop.airdropERC20(address(token), addresses, amounts, totalAmount);
 
         assertEq(token.balanceOf(airdropper), airdropperBalanceBefore - totalAmount);
-        
+
         // Check a few random recipients
         assertEq(token.balanceOf(addresses[0]), amountPerRecipient);
         assertEq(token.balanceOf(addresses[50]), amountPerRecipient);
@@ -290,7 +289,7 @@ contract AirdropTest is Test {
         address[] memory addresses = new address[](numRecipients);
         uint256[] memory amounts = new uint256[](numRecipients);
         uint256 totalAmount = 0;
-        
+
         // Generate recipients and amounts
         for (uint256 i = 0; i < numRecipients; i++) {
             addresses[i] = address(uint160(i + 5000));
@@ -307,7 +306,7 @@ contract AirdropTest is Test {
         airdrop.airdropERC20(address(token), addresses, amounts, totalAmount);
 
         assertEq(token.balanceOf(airdropper), airdropperBalanceBefore - totalAmount);
-        
+
         // Check first and last recipients
         assertEq(token.balanceOf(addresses[0]), amounts[0]);
         if (numRecipients > 1) {
@@ -320,12 +319,12 @@ contract AirdropTest is Test {
     function test_AirdropERC20_GasEfficiency_SmallBatch() public {
         address[] memory addresses = new address[](5);
         uint256[] memory amounts = new uint256[](5);
-        
+
         for (uint256 i = 0; i < 5; i++) {
             addresses[i] = address(uint160(i + 6000));
             amounts[i] = 1000 * 10 ** 18;
         }
-        
+
         uint256 totalAmount = 5000 * 10 ** 18;
 
         vm.prank(airdropper);
@@ -341,13 +340,13 @@ contract AirdropTest is Test {
         uint256 batchSize = 50;
         address[] memory addresses = new address[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
-        
+
         uint256 amountPerRecipient = 1000 * 10 ** 18;
         for (uint256 i = 0; i < batchSize; i++) {
             addresses[i] = address(uint160(i + 7000));
             amounts[i] = amountPerRecipient;
         }
-        
+
         uint256 totalAmount = amountPerRecipient * batchSize;
 
         vm.prank(airdropper);
@@ -357,7 +356,7 @@ contract AirdropTest is Test {
 
         // Gas usage should be reasonable for 50 transfers (more realistic expectation)
         assertTrue(gasUsed < 2500000, "Gas usage too high for large batch");
-        
+
         // Average gas per transfer should be efficient
         uint256 avgGasPerTransfer = gasUsed / batchSize;
         assertTrue(avgGasPerTransfer < 50000, "Average gas per transfer too high");
@@ -403,15 +402,15 @@ contract AirdropTest is Test {
     function test_Invariant_TokenBalanceConservation() public {
         address[] memory addresses = new address[](3);
         uint256[] memory amounts = new uint256[](3);
-        
+
         addresses[0] = recipient1;
         addresses[1] = recipient2;
         addresses[2] = recipient3;
-        
+
         amounts[0] = 1000 * 10 ** 18;
         amounts[1] = 2000 * 10 ** 18;
         amounts[2] = 3000 * 10 ** 18;
-        
+
         uint256 totalAmount = 6000 * 10 ** 18;
 
         uint256 totalSupplyBefore = token.totalSupply();
@@ -422,11 +421,12 @@ contract AirdropTest is Test {
 
         uint256 totalSupplyAfter = token.totalSupply();
         uint256 airdropperBalanceAfter = token.balanceOf(airdropper);
-        uint256 recipientBalancesSum = token.balanceOf(recipient1) + token.balanceOf(recipient2) + token.balanceOf(recipient3);
+        uint256 recipientBalancesSum =
+            token.balanceOf(recipient1) + token.balanceOf(recipient2) + token.balanceOf(recipient3);
 
         // Total supply should remain constant
         assertEq(totalSupplyAfter, totalSupplyBefore);
-        
+
         // Tokens should be conserved
         assertEq(airdropperBalanceBefore - airdropperBalanceAfter, recipientBalancesSum);
         assertEq(airdropperBalanceAfter + recipientBalancesSum, airdropperBalanceBefore);
