@@ -1,0 +1,19 @@
+autoscaling:
+  enabled: false
+image:
+  tag: "v0.10.1-dev.3"
+  pullPolicy: IfNotPresent
+resources:
+  requests:
+    cpu: 100m
+    memory: 100Mi
+  limits:
+    cpu: 1000m
+    memory: 1000Mi
+env:
+  - name: RUST_LOG
+    value: "warn"
+  - name: START_BLOCK
+    value: {{ START_BLOCK_DEFAULTS_TO_ZERO }}
+  - name: RPC_URL
+    value: {{ RPC_URL }}
