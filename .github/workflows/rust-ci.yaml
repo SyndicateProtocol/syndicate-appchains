@@ -42,7 +42,7 @@ jobs:
           curl -L https://sp1.succinct.xyz | bash
           $HOME/.sp1/bin/sp1up 
           $HOME/.sp1/bin/cargo-prove prove --version
-  
+
       - name: Build SP1 ELF program
         run: |
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
@@ -98,7 +98,7 @@ jobs:
             "synd-translator"
             "synd-verifier"
             "synd-withdrawals/synd-appchain-verifier"
-            "synd-withdrawals/synd-proposer"
+            "synd-withdrawals/synd-proposer-rust"
             "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro"
             "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program"
             "test-framework"
@@ -167,7 +167,7 @@ jobs:
         run: |
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
           $HOME/.sp1/bin/cargo-prove prove build
-      
+
       - name: Verify Foundry Installation
         run: |
           which anvil

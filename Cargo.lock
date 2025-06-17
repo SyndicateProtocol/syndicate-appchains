@@ -7038,7 +7038,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "synd-proposer"
+name = "synd-proposer-rust"
 version = "0.1.0"
 dependencies = [
  "alloy",

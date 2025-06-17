@@ -15,7 +15,7 @@ members = [
   "synd-translator/crates/synd-slotter",
   "synd-translator/tests",
   "synd-withdrawals/synd-appchain-verifier",
-  "synd-withdrawals/synd-proposer",
+  "synd-withdrawals/synd-proposer-rust",
   "synd-withdrawals/synd-seqchain-verifier",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter",
@@ -33,7 +33,7 @@ default-members = [
   "synd-mchain",
   "synd-translator/bin/synd-translator",
   "synd-withdrawals/synd-appchain-verifier",
-  "synd-withdrawals/synd-proposer",
+  "synd-withdrawals/synd-proposer-rust",
   "synd-withdrawals/synd-seqchain-verifier",
 ]
 

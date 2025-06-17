@@ -42,7 +42,7 @@ repos:
             "synd-translator",
             "synd-verifier",
             "synd-withdrawals/synd-appchain-verifier",
-            "synd-withdrawals/synd-proposer",
+            "synd-withdrawals/synd-proposer-rust",
             "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
             "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program",
             "test-framework",
