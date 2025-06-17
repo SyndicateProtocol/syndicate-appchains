@@ -18,6 +18,8 @@ import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Vo
  * - Voting functionality via ERC20Votes for governance
  * - Permit functionality for gasless approvals
  * - Controlled minting for emissions (only by emission scheduler)
+ * - Time-based transfer restrictions for airdrop tokens
+ * - Airdrop manager controls for emergency actions during lock period
  * - Comprehensive access controls
  *
  * Supply Distribution:
@@ -41,6 +43,21 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Thrown when trying to mint more than the total supply allows
     error ExceedsTotalSupply();
 
+    /// @notice Thrown when transfers are locked and caller is not authorized
+    error TransfersLocked();
+
+    /// @notice Thrown when trying to set unlock timestamp beyond maximum allowed
+    error UnlockTimestampTooLate();
+
+    /// @notice Thrown when trying to set unlock timestamp in the past
+    error UnlockTimestampInPast();
+
+    /// @notice Thrown when trying to set unlock timestamp when it's already been set
+    error UnlockTimestampAlreadySet();
+
+    /// @notice Thrown when trying to burn tokens outside of lock period
+    error BurnOnlyDuringLockPeriod();
+
 
     /*//////////////////////////////////////////////////////////////
                                  ROLES
@@ -49,6 +66,9 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
 
     /// @notice Role for minting emission tokens (typically the emission scheduler)
     bytes32 public constant EMISSION_MINTER_ROLE = keccak256("EMISSION_MINTER_ROLE");
+
+    /// @notice Role for managing airdrop operations (transfer, burn during lock period)
+    bytes32 public constant AIRDROP_MANAGER_ROLE = keccak256("AIRDROP_MANAGER_ROLE");
 
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -60,15 +80,40 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Initial mint to foundation: 900 million tokens (90%)
     uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
 
+    /// @notice Maximum lock duration: 365 days (1 year)
+    uint256 public constant MAX_LOCK_DURATION = 365 days;
+
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Timestamp when tokens become transferable (0 = no restrictions)
+    uint256 public unlockTimestamp;
+
+    /// @notice Maximum timestamp until which tokens can be locked
+    uint256 public immutable maxLockTimestamp;
+
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Emitted when unlock timestamp is updated
+     * @param oldTimestamp Previous unlock timestamp
+     * @param newTimestamp New unlock timestamp
+     * @param updatedBy Address that updated the timestamp
+     */
+    event UnlockTimestampUpdated(uint256 oldTimestamp, uint256 newTimestamp, address indexed updatedBy);
+
+    /**
+     * @notice Emitted when tokens are burned by airdrop manager
+     * @param from Address tokens were burned from
+     * @param amount Amount of tokens burned
+     * @param burner Address that performed the burn
+     */
+    event TokensBurnedByManager(address indexed from, uint256 amount, address indexed burner);
 
 
     /*//////////////////////////////////////////////////////////////
@@ -88,6 +133,12 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
         // Input validation
         if (defaultAdmin == address(0)) revert ZeroAddress();
         if (syndFoundationAddress == address(0)) revert ZeroAddress();
+
+        // Set maximum lock timestamp (contract deployment + MAX_LOCK_DURATION)
+        maxLockTimestamp = block.timestamp + MAX_LOCK_DURATION;
+
+        // Initialize with no transfer restrictions (unlockTimestamp = 0)
+        unlockTimestamp = 0;
 
         // Grant roles
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
@@ -121,6 +172,50 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     }
 
     /*//////////////////////////////////////////////////////////////
+                        AIRDROP MANAGER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Burn tokens from a specific address (only during lock period)
+     * @dev Only callable by addresses with AIRDROP_MANAGER_ROLE and only during lock period
+     * @param from Address to burn tokens from
+     * @param amount Amount of tokens to burn
+     */
+    function burnFrom(address from, uint256 amount) external onlyRole(AIRDROP_MANAGER_ROLE) {
+        if (from == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
+        if (!transfersLocked()) revert BurnOnlyDuringLockPeriod();
+
+        _burn(from, amount);
+        emit TokensBurnedByManager(from, amount, msg.sender);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        LOCK MANAGEMENT FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Set the unlock timestamp for transfer restrictions
+     * @dev Only callable by addresses with DEFAULT_ADMIN_ROLE and can only be set once
+     *      Once set to a non-zero value, it cannot be changed again to prevent manipulation
+     *      after airdrop distribution. This ensures recipients know the exact unlock date.
+     * @param newUnlockTimestamp New timestamp when transfers become allowed (must be > 0 and future)
+     */
+    function setUnlockTimestamp(uint256 newUnlockTimestamp) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // Can only set timestamp once - prevents manipulation after airdrop
+        if (unlockTimestamp != 0) revert UnlockTimestampAlreadySet();
+        
+        // Must be a future timestamp (cannot be 0 to disable restrictions)
+        if (newUnlockTimestamp <= block.timestamp) revert UnlockTimestampInPast();
+        if (newUnlockTimestamp > maxLockTimestamp) revert UnlockTimestampTooLate();
+
+        uint256 oldTimestamp = unlockTimestamp;
+        unlockTimestamp = newUnlockTimestamp;
+
+        emit UnlockTimestampUpdated(oldTimestamp, newUnlockTimestamp, msg.sender);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -131,6 +226,26 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     function getRemainingEmissions() external view returns (uint256) {
         return TOTAL_SUPPLY - totalSupply();
     }
+
+    /**
+     * @notice Check if transfers are currently locked
+     * @return True if transfers are locked, false otherwise
+     */
+    function transfersLocked() public view returns (bool) {
+        return unlockTimestamp != 0 && block.timestamp < unlockTimestamp;
+    }
+
+    /**
+     * @notice Get remaining lock time in seconds
+     * @return Seconds remaining until unlock (0 if already unlocked)
+     */
+    function getRemainingLockTime() external view returns (uint256) {
+        if (unlockTimestamp == 0 || block.timestamp >= unlockTimestamp) {
+            return 0;
+        }
+        return unlockTimestamp - block.timestamp;
+    }
+
 
     /*//////////////////////////////////////////////////////////////
                           GOVERNANCE HELPER FUNCTIONS
@@ -170,8 +285,17 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
 
     /**
      * @dev Override required by Solidity for multiple inheritance
+     * @dev Implements transfer restrictions based on lock timestamp and roles
      */
     function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Votes) {
+        // Allow minting (from == address(0)) and burning (to == address(0))
+        if (from != address(0) && to != address(0)) {
+            // Check if transfers are locked and caller is not authorized
+            if (transfersLocked() && !hasRole(AIRDROP_MANAGER_ROLE, msg.sender)) {
+                revert TransfersLocked();
+            }
+        }
+
         super._update(from, to, value);
     }
 
