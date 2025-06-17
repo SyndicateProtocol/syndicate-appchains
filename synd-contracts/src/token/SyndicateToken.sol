@@ -1,22 +1,26 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Permit, Nonces} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {AbstractXERC20} from "./AbstractXERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IBridgeProxy} from "./interfaces/IBridgeProxy.sol";
 
 /**
  * @title SyndicateToken
- * @notice The main Syndicate Protocol token with emissions and XERC20 functionality
+ * @notice The main Syndicate Protocol token with emissions functionality
  * @dev This contract implements the core SYND token deployed on Ethereum L1.
  *      It includes automated emissions distribution to L2 chains via configurable
- *      bridge proxies and full XERC20 compatibility for cross-chain functionality.
+ *      bridge proxies and full ERC20Votes/ERC20Permit functionality.
  *
  * Key Features:
  * - ERC20 token with 1B total supply (900M initial + 100M emissions)
  * - Automated emissions over 48 epochs (~4 years) with decay schedule
- * - XERC20 functionality for cross-chain bridging with rate limits
  * - Voting functionality via ERC20Votes for governance
+ * - Permit functionality for gasless approvals
  * - Modular bridge architecture supporting multiple bridge providers
  * - Comprehensive access controls and emergency mechanisms
  *
@@ -32,10 +36,16 @@ import {IBridgeProxy} from "./interfaces/IBridgeProxy.sol";
  * @author Syndicate Protocol
  * @custom:security-contact security@syndicate.io
  */
-contract SyndicateToken is AbstractXERC20, Pausable {
+contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes, Pausable, ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Thrown when an address is zero
+    error ZeroAddress();
+
+    /// @notice Thrown when an amount is zero
+    error ZeroAmount();
 
     /// @notice Thrown when trying to start emissions that have already been started
     error EmissionsAlreadyStarted();
@@ -67,6 +77,9 @@ contract SyndicateToken is AbstractXERC20, Pausable {
 
     /// @notice Role for emergency pausing functionality
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    /// @notice Role for managing bridge configuration
+    bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -175,7 +188,9 @@ contract SyndicateToken is AbstractXERC20, Pausable {
      * @param pauser Address that can pause the contract in emergencies
      */
     constructor(address defaultAdmin, address syndFoundationAddress, address emissionsManager, address pauser)
-        AbstractXERC20("Syndicate", "SYND")
+        ERC20("Syndicate", "SYND")
+        ERC20Permit("Syndicate")
+        ERC20Votes()
     {
         // Input validation
         if (defaultAdmin == address(0)) revert ZeroAddress();
@@ -396,6 +411,37 @@ contract SyndicateToken is AbstractXERC20, Pausable {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          GOVERNANCE HELPER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Get voting power of an account at current block
+     * @param account The account to check
+     * @return The current voting power
+     */
+    function getVotingPower(address account) external view returns (uint256) {
+        return getVotes(account);
+    }
+
+    /**
+     * @notice Get past voting power of an account at a specific block
+     * @param account The account to check
+     * @param blockNumber The block number to check
+     * @return The voting power at that block
+     */
+    function getPastVotingPower(address account, uint256 blockNumber) external view returns (uint256) {
+        return getPastVotes(account, blockNumber);
+    }
+
+    /**
+     * @notice Get total supply at current block
+     * @return Current total supply
+     */
+    function getCurrentTotalSupply() external view returns (uint256) {
+        return totalSupply();
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           EMERGENCY CONTROLS
     //////////////////////////////////////////////////////////////*/
 
@@ -448,5 +494,23 @@ contract SyndicateToken is AbstractXERC20, Pausable {
                 }
             }
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    REQUIRED OVERRIDES FOR MULTIPLE INHERITANCE
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @dev Override required by Solidity for multiple inheritance
+     */
+    function _update(address from, address to, uint256 value) internal virtual override(ERC20, ERC20Votes) {
+        super._update(from, to, value);
+    }
+
+    /**
+     * @dev Override required by Solidity for multiple inheritance
+     */
+    function nonces(address owner) public view virtual override(ERC20Permit, Nonces) returns (uint256) {
+        return super.nonces(owner);
     }
 }

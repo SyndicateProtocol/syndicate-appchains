@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {SyndicateToken, AbstractXERC20} from "src/token/SyndicateToken.sol";
+import {SyndicateToken} from "src/token/SyndicateToken.sol";
 import {OptimismBridgeProxy} from "src/token/bridges/OptimismBridgeProxy.sol";
 import {IBridgeProxy} from "src/token/interfaces/IBridgeProxy.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
@@ -173,7 +173,7 @@ contract SyndicateTokenTest is Test {
 
     function test_RevertWhen_SetBridgeProxy_ZeroAddress() public {
         vm.startPrank(defaultAdmin);
-        vm.expectRevert(AbstractXERC20.ZeroAddress.selector);
+        vm.expectRevert(SyndicateToken.ZeroAddress.selector);
         token.setBridgeProxy(IBridgeProxy(address(0)));
         vm.stopPrank();
     }
@@ -523,46 +523,40 @@ contract SyndicateTokenTest is Test {
         vm.stopPrank();
     }
 
-    // ============ XERC20 FUNCTIONALITY TESTS ============
+    // ============ GOVERNANCE FUNCTIONALITY TESTS ============
 
-    function test_SetLimits_Success() public {
-        address bridge = address(0x123);
-        uint256 mintingLimit = 1000 * 10 ** 18;
-        uint256 burningLimit = 500 * 10 ** 18;
+    function test_GetVotingPower_WithTokens() public {
+        uint256 amount = 1000 * 10 ** 18;
 
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, mintingLimit, burningLimit);
+        vm.prank(syndFoundationAddress);
+        token.delegate(syndFoundationAddress);
 
-        assertEq(token.mintingMaxLimitOf(bridge), mintingLimit);
-        assertEq(token.burningMaxLimitOf(bridge), burningLimit);
-        assertTrue(token.isBridge(bridge));
+        assertEq(token.getVotingPower(syndFoundationAddress), token.INITIAL_MINT_SUPPLY());
     }
 
-    function test_Mint_AsBridge() public {
-        address bridge = address(0x123);
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, 1000 * 10 ** 18, 500 * 10 ** 18);
-
-        vm.prank(bridge);
-        token.mint(user, 100 * 10 ** 18);
-
-        assertEq(token.balanceOf(user), 100 * 10 ** 18);
+    function test_GetVotingPower_WithoutTokens() public view {
+        assertEq(token.getVotingPower(user), 0);
     }
 
-    function test_Burn_AsBridge() public {
-        address bridge = address(0x123);
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, 1000 * 10 ** 18, 500 * 10 ** 18);
+    function test_Delegate_Success() public {
+        vm.prank(syndFoundationAddress);
+        token.delegate(user);
 
-        // First mint some tokens
-        vm.prank(bridge);
-        token.mint(user, 200 * 10 ** 18);
+        assertEq(token.getVotes(user), token.INITIAL_MINT_SUPPLY());
+        assertEq(token.delegates(syndFoundationAddress), user);
+    }
 
-        // Then burn some
-        vm.prank(bridge);
-        token.burn(user, 50 * 10 ** 18);
+    function test_GetPastVotingPower() public {
+        vm.prank(syndFoundationAddress);
+        token.delegate(user);
 
-        assertEq(token.balanceOf(user), 150 * 10 ** 18);
+        vm.roll(block.number + 1);
+
+        assertEq(token.getPastVotingPower(user, block.number - 1), token.INITIAL_MINT_SUPPLY());
+    }
+
+    function test_GetCurrentTotalSupply() public view {
+        assertEq(token.getCurrentTotalSupply(), token.INITIAL_MINT_SUPPLY());
     }
 
     // ============ INTEGRATION TESTS ============
@@ -629,19 +623,6 @@ contract SyndicateTokenTest is Test {
             vm.prank(emissionsManager);
             token.mintEmission();
         }
-    }
-
-    function testFuzz_SetLimits_ValidParameters(uint256 mintingLimit, uint256 burningLimit) public {
-        mintingLimit = bound(mintingLimit, 0, 1e30);
-        burningLimit = bound(burningLimit, 0, 1e30);
-
-        address bridge = address(0x123);
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, mintingLimit, burningLimit);
-
-        assertEq(token.mintingMaxLimitOf(bridge), mintingLimit);
-        assertEq(token.burningMaxLimitOf(bridge), burningLimit);
     }
 
     // ============ HELPER FUNCTIONS ============

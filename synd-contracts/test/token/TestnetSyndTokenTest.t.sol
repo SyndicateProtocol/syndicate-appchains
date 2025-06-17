@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {TestnetSyndToken, AbstractXERC20} from "src/token/TestnetSyndToken.sol";
+import {TestnetSyndToken} from "src/token/TestnetSyndToken.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract TestnetSyndTokenTest is Test {
@@ -40,16 +40,15 @@ contract TestnetSyndTokenTest is Test {
     function test_Constructor_RoleAssignment() public view {
         assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), defaultAdmin));
         assertTrue(token.hasRole(token.MINTER_ROLE(), minter));
-        assertTrue(token.hasRole(token.BRIDGE_MANAGER_ROLE(), defaultAdmin));
     }
 
     function test_RevertWhen_Constructor_ZeroAdmin() public {
-        vm.expectRevert(AbstractXERC20.ZeroAddress.selector);
+        vm.expectRevert(TestnetSyndToken.ZeroAddress.selector);
         new TestnetSyndToken(address(0), minter);
     }
 
     function test_RevertWhen_Constructor_ZeroMinter() public {
-        vm.expectRevert(AbstractXERC20.ZeroAddress.selector);
+        vm.expectRevert(TestnetSyndToken.ZeroAddress.selector);
         new TestnetSyndToken(defaultAdmin, address(0));
     }
 
@@ -93,113 +92,8 @@ contract TestnetSyndTokenTest is Test {
 
     function test_RevertWhen_AdminMint_ZeroAmount() public {
         vm.prank(minter);
-        vm.expectRevert(AbstractXERC20.ZeroAmount.selector);
+        vm.expectRevert(TestnetSyndToken.ZeroAmount.selector);
         token.adminMint(user, 0);
-    }
-
-    // ============ XERC20 FUNCTIONALITY TESTS ============
-
-    function test_SetLimits_AuthorizesBridge() public {
-        address bridge = makeAddr("bridge");
-        uint256 mintingLimit = 1000 * 10 ** 18;
-        uint256 burningLimit = 500 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, mintingLimit, burningLimit);
-
-        assertTrue(token.isBridge(bridge));
-        assertEq(token.mintingMaxLimitOf(bridge), mintingLimit);
-        assertEq(token.burningMaxLimitOf(bridge), burningLimit);
-        assertEq(token.mintingCurrentLimitOf(bridge), mintingLimit);
-        assertEq(token.burningCurrentLimitOf(bridge), burningLimit);
-    }
-
-    function test_SetLimits_DeauthorizesBridge() public {
-        address bridge = makeAddr("bridge");
-
-        // First authorize
-        vm.startPrank(defaultAdmin);
-        token.setLimits(bridge, 1000 * 10 ** 18, 500 * 10 ** 18);
-        assertTrue(token.isBridge(bridge));
-
-        // Then deauthorize by setting limits to zero
-        token.setLimits(bridge, 0, 0);
-        assertFalse(token.isBridge(bridge));
-        vm.stopPrank();
-    }
-
-    function test_XercMint_Success() public {
-        address bridge = makeAddr("bridge");
-        uint256 amount = 100 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, 1000 * 10 ** 18, 500 * 10 ** 18);
-
-        vm.prank(bridge);
-        token.mint(user, amount);
-
-        assertEq(token.balanceOf(user), amount);
-        assertEq(token.mintingCurrentLimitOf(bridge), 1000 * 10 ** 18 - amount);
-    }
-
-    function test_XercBurn_Success() public {
-        address bridge = makeAddr("bridge");
-        uint256 mintAmount = 200 * 10 ** 18;
-        uint256 burnAmount = 50 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, 1000 * 10 ** 18, 500 * 10 ** 18);
-
-        // First mint tokens
-        vm.prank(bridge);
-        token.mint(user, mintAmount);
-
-        // Then burn some
-        vm.prank(bridge);
-        token.burn(user, burnAmount);
-
-        assertEq(token.balanceOf(user), mintAmount - burnAmount);
-        assertEq(token.burningCurrentLimitOf(bridge), 500 * 10 ** 18 - burnAmount);
-    }
-
-    function test_RevertWhen_XercMint_NotAuthorizedBridge() public {
-        vm.prank(user);
-        vm.expectRevert(AbstractXERC20.BridgeNotAuthorized.selector);
-        token.mint(user, 100 * 10 ** 18);
-    }
-
-    function test_RevertWhen_XercMint_ExceedsLimit() public {
-        address bridge = makeAddr("bridge");
-        uint256 limit = 100 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, limit, limit);
-
-        vm.prank(bridge);
-        vm.expectRevert(AbstractXERC20.InsufficientLimit.selector);
-        token.mint(user, limit + 1);
-    }
-
-    function test_RevertWhen_XercBurn_NotAuthorizedBridge() public {
-        vm.prank(user);
-        vm.expectRevert(AbstractXERC20.BridgeNotAuthorized.selector);
-        token.burn(user, 100 * 10 ** 18);
-    }
-
-    function test_RevertWhen_XercBurn_ExceedsLimit() public {
-        address bridge = makeAddr("bridge");
-        uint256 limit = 100 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, limit, limit);
-
-        // Mint tokens first
-        vm.prank(bridge);
-        token.mint(user, limit);
-
-        vm.prank(bridge);
-        vm.expectRevert(AbstractXERC20.InsufficientLimit.selector);
-        token.burn(user, limit + 1);
     }
 
     // ============ ROLE MANAGEMENT TESTS ============
@@ -383,113 +277,6 @@ contract TestnetSyndTokenTest is Test {
         assertEq(token.getVotingPower(user), 0);
     }
 
-    // ============ BRIDGE INFO TESTS ============
-
-    function test_GetBridgeInfo_AuthorizedBridge() public {
-        address bridge = makeAddr("bridge");
-        uint256 mintingLimit = 1000 * 10 ** 18;
-        uint256 burningLimit = 500 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, mintingLimit, burningLimit);
-
-        (bool authorized, uint256 mintingMax, uint256 mintingCurrent, uint256 burningMax, uint256 burningCurrent) =
-            token.getBridgeInfo(bridge);
-
-        assertTrue(authorized);
-        assertEq(mintingMax, mintingLimit);
-        assertEq(mintingCurrent, mintingLimit);
-        assertEq(burningMax, burningLimit);
-        assertEq(burningCurrent, burningLimit);
-    }
-
-    function test_GetBridgeInfo_UnauthorizedBridge() public {
-        address bridge = makeAddr("bridge");
-
-        (bool authorized, uint256 mintingMax, uint256 mintingCurrent, uint256 burningMax, uint256 burningCurrent) =
-            token.getBridgeInfo(bridge);
-
-        assertFalse(authorized);
-        assertEq(mintingMax, 0);
-        assertEq(mintingCurrent, 0);
-        assertEq(burningMax, 0);
-        assertEq(burningCurrent, 0);
-    }
-
-    function test_GetBridgeUtilization_NoUsage() public {
-        address bridge = makeAddr("bridge");
-        uint256 limit = 1000 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, limit, limit);
-
-        (uint256 mintingUtilization, uint256 burningUtilization) = token.getBridgeUtilization(bridge);
-
-        assertEq(mintingUtilization, 0); // 0% used
-        assertEq(burningUtilization, 0); // 0% used
-    }
-
-    function test_GetBridgeUtilization_PartialUsage() public {
-        address bridge = makeAddr("bridge");
-        uint256 limit = 1000 * 10 ** 18;
-        uint256 usedAmount = 300 * 10 ** 18; // 30% usage
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, limit, limit);
-
-        vm.prank(bridge);
-        token.mint(user, usedAmount);
-
-        (uint256 mintingUtilization, uint256 burningUtilization) = token.getBridgeUtilization(bridge);
-
-        assertEq(mintingUtilization, 3000); // 30% in basis points
-        assertEq(burningUtilization, 0); // 0% used for burning
-    }
-
-    // ============ LIMIT REPLENISHMENT TESTS ============
-
-    function test_LimitReplenishment_FullDuration() public {
-        address bridge = makeAddr("bridge");
-        uint256 limit = 1000 * 10 ** 18;
-        uint256 usedAmount = 300 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, limit, limit);
-
-        // Use some of the limit
-        vm.prank(bridge);
-        token.mint(user, usedAmount);
-
-        assertEq(token.mintingCurrentLimitOf(bridge), limit - usedAmount);
-
-        // Fast forward 1 day
-        vm.warp(block.timestamp + 1 days);
-
-        // Limits should be fully replenished
-        assertEq(token.mintingCurrentLimitOf(bridge), limit);
-    }
-
-    function test_LimitReplenishment_PartialDuration() public {
-        address bridge = makeAddr("bridge");
-        uint256 limit = 1000 * 10 ** 18;
-        uint256 usedAmount = 600 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, limit, limit);
-
-        // Use some of the limit
-        vm.prank(bridge);
-        token.mint(user, usedAmount);
-
-        // Fast forward 12 hours (50% of day)
-        vm.warp(block.timestamp + 12 hours);
-
-        uint256 expectedReplenishment = (limit * 12 hours) / 1 days; // 50% of limit
-        uint256 expectedCurrentLimit = (limit - usedAmount) + expectedReplenishment;
-
-        assertEq(token.mintingCurrentLimitOf(bridge), expectedCurrentLimit);
-    }
-
     // ============ FUZZ TESTS ============
 
     function testFuzz_AdminMint_ValidAmounts(address to, uint256 amount) public {
@@ -501,25 +288,6 @@ contract TestnetSyndTokenTest is Test {
 
         assertEq(token.balanceOf(to), amount);
         assertEq(token.totalSupply(), amount);
-    }
-
-    function testFuzz_SetLimits_ValidParameters(uint256 mintingLimit, uint256 burningLimit) public {
-        mintingLimit = bound(mintingLimit, 0, type(uint128).max);
-        burningLimit = bound(burningLimit, 0, type(uint128).max);
-
-        address bridge = makeAddr("bridge");
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, mintingLimit, burningLimit);
-
-        assertEq(token.mintingMaxLimitOf(bridge), mintingLimit);
-        assertEq(token.burningMaxLimitOf(bridge), burningLimit);
-
-        if (mintingLimit > 0 || burningLimit > 0) {
-            assertTrue(token.isBridge(bridge));
-        } else {
-            assertFalse(token.isBridge(bridge));
-        }
     }
 
     function testFuzz_Transfer_ValidAmounts(uint256 mintAmount, uint256 transferAmount) public {
@@ -553,21 +321,5 @@ contract TestnetSyndTokenTest is Test {
         uint256 sumOfBalances = token.balanceOf(user) + token.balanceOf(spender) + token.balanceOf(makeAddr("user3"));
 
         assertEq(totalSupply, sumOfBalances);
-    }
-
-    function test_Invariant_BridgeLimitsNeverNegative() public {
-        address bridge = makeAddr("bridge");
-        uint256 limit = 1000 * 10 ** 18;
-
-        vm.prank(defaultAdmin);
-        token.setLimits(bridge, limit, limit);
-
-        // Use the maximum allowed
-        vm.prank(bridge);
-        token.mint(user, limit);
-
-        // Limits should be exactly zero, not negative
-        assertEq(token.mintingCurrentLimitOf(bridge), 0);
-        assertTrue(token.mintingCurrentLimitOf(bridge) >= 0);
     }
 }
