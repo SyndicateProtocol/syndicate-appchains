@@ -61,7 +61,7 @@ pub struct Proposer {
     enclave_provider: RootProvider,
     polling_interval: Duration,
     close_challenge_interval: Duration,
-    metrics: ProposerMetrics,
+    _metrics: ProposerMetrics,
     tee_module: TeeModuleInstance<(), FilledProvider>,
     last_tee_trusted_input_return_hash: Mutex<B256>,
     arbitrum_bridge_address: Address,
@@ -70,7 +70,7 @@ pub struct Proposer {
 }
 
 /// Starts the Proposer loop
-pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
+pub async fn run(config: Config, _metrics: ProposerMetrics) -> Result<()> {
     let appchain_provider =
         ProviderBuilder::default().connect(config.appchain_rpc_url.as_str()).await?;
     let sequencing_provider =
@@ -92,7 +92,7 @@ pub async fn run(config: Config, metrics: ProposerMetrics) -> Result<()> {
 
     let proposer = Proposer::new(
         &config,
-        metrics,
+        _metrics,
         appchain_provider,
         sequencing_provider,
         ethereum_provider,
@@ -161,7 +161,7 @@ impl Proposer {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: &Config,
-        metrics: ProposerMetrics,
+        _metrics: ProposerMetrics,
         appchain_provider: RootProvider,
         sequencing_provider: RootProvider,
         ethereum_provider: RootProvider,
@@ -178,7 +178,7 @@ impl Proposer {
             polling_interval: config.polling_interval,
             close_challenge_interval: config.close_challenge_interval,
             tee_module,
-            metrics,
+            _metrics,
             last_tee_trusted_input_return_hash: Mutex::new(B256::default()),
             arbitrum_bridge_address: config.arbitrum_bridge_address,
             sequencer_inbox_address: config.sequencer_inbox_address,
@@ -684,7 +684,7 @@ mod tests {
                 enclave_provider: dummy_root_provider,
                 polling_interval: Duration::from_secs(1),
                 close_challenge_interval: Duration::from_secs(1),
-                metrics: ProposerMetrics::default(),
+                _metrics: ProposerMetrics::default(),
                 tee_module,
                 last_tee_trusted_input_return_hash: Mutex::new(B256::default()),
                 arbitrum_bridge_address: Address::ZERO,
