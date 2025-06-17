@@ -9,15 +9,19 @@ use eyre::Result;
 use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
 use tracing::{error, info, warn};
 
+/// Fetches chain config if it exists
 pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig {
+    let mut config = config.clone();
     let address = match config.config_manager_address {
         Some(addr) => addr,
         None => {
-            warn!("No config_manager_address provided, skipping on-chain config fetch");
-            return config.clone();
+            warn!("No config_manager_address provided, skipping onchain config fetch");
+            return config;
         }
     };
 
+    //TODO(LBL) @jorge - does the settlement_rpc_url now have to be a WS URL, since that's what
+    // `IngestorProvider` uses for a Builder?
     let ingestor_provider =
         IngestorProvider::new(&config.settlement.settlement_rpc_url, config.rpc_timeout).await;
 
@@ -31,12 +35,10 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
     let onchain = match get_config(address, U256::from(config.appchain_chain_id), provider).await {
         Ok(c) => c,
         Err(error) => {
-            error!(%error, "error obtaining on-chain config");
-            return config.clone();
+            error!(%error, "error obtaining onchain config");
+            return config
         }
     };
-
-    let mut config = config.clone();
 
     // Update config with onchain values
     if config.block_builder.arbitrum_bridge_address.is_none() {
