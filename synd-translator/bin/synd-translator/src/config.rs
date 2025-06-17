@@ -26,7 +26,7 @@ pub struct ChainIngestorConfig {
 #[derive(Debug, Error)]
 pub enum IngestorConfigError {
     #[error("Empty rpc url")]
-    EmptyRpcUrl(),
+    EmptyRpcUrl,
     #[error("Invalid start block: {0}")]
     InvalidStartBlock(String),
 }
@@ -39,18 +39,17 @@ impl Default for ChainIngestorConfig {
 
 impl ChainIngestorConfig {
     /// Creates a new [`ChainIngestorConfig`] instance
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(rpc_url: String, start_block: u64) -> Result<Self, IngestorConfigError> {
+    pub fn new(rpc_url: String, start_block: u64) -> Self {
         let config = Self { rpc_url, start_block };
         debug!("Created chain ingestor config: {:?}", config);
-        Ok(config)
+        config
     }
 
     /// Validates the configuration
     pub fn validate(&self, chain: Chain) -> Result<(), IngestorConfigError> {
         if chain == Chain::Settlement && self.rpc_url.is_empty() {
             // only the settlement rpc url is mandatory
-            return Err(IngestorConfigError::EmptyRpcUrl());
+            return Err(IngestorConfigError::EmptyRpcUrl);
         }
 
         Ok(())
@@ -60,7 +59,7 @@ impl ChainIngestorConfig {
     /// that might have been defined by the `ConfigManager` contract)
     pub fn validate_strict(&self) -> Result<(), IngestorConfigError> {
         if self.rpc_url.is_empty() {
-            return Err(IngestorConfigError::EmptyRpcUrl());
+            return Err(IngestorConfigError::EmptyRpcUrl);
         }
 
         if self.start_block == 0 {
@@ -131,7 +130,7 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
 }
 
 impl SequencingChainConfig {
-    #[allow(missing_docs)]
+    /// Validates the configuration
     pub fn validate(&self) -> Result<(), IngestorConfigError> {
         let generic_config: ChainIngestorConfig = self.clone().into();
         generic_config.validate(Chain::Sequencing)
@@ -146,7 +145,7 @@ impl SequencingChainConfig {
 }
 
 impl SettlementChainConfig {
-    #[allow(missing_docs)]
+    /// Validates the configuration
     pub fn validate(&self) -> Result<(), IngestorConfigError> {
         let generic_config: ChainIngestorConfig = self.clone().into();
         generic_config.validate(Chain::Settlement)
@@ -228,6 +227,7 @@ impl TranslatorConfig {
         Ok(())
     }
 
+    /// Generates a sample command with all possible config fields
     pub fn generate_sample_command() {
         let mut cmd = String::from("cargo run --bin synd-translator -- \\\n");
 
@@ -256,7 +256,7 @@ impl Default for TranslatorConfig {
     fn default() -> Self {
         Self {
             block_builder: BlockBuilderConfig::default(),
-            settlement_delay: Some(60),
+            settlement_delay: Some(Duration::from_secs(60)),
             sequencing: SequencingChainConfig::default(),
             settlement: SettlementChainConfig::default(),
             metrics: MetricsConfig::default(),
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_chain_ingestor_config_validation() {
         // Valid config
-        let config = ChainIngestorConfig::new("http://localhost:8545".to_string(), 100).unwrap();
+        let config = ChainIngestorConfig::new("http://localhost:8545".to_string(), 100);
         assert!(config.validate(Chain::Settlement).is_ok());
     }
 }

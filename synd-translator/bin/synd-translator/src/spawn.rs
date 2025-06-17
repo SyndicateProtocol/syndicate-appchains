@@ -6,6 +6,7 @@ use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
 use shared::service_start_utils::{start_metrics_and_health, MetricsState};
 use std::sync::Arc;
+use tokio::runtime::Runtime;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
     client::{IngestorProvider, Provider as IProvider},
@@ -37,9 +38,11 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
 }
 
 async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -> Result<()> {
+    // TODO(LBL) - is this a `ws_url` now?
     let mchain = MProvider::new(&config.block_builder.mchain_rpc_url)
         .await
-        .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {}", e)))?;
+        .map_err(|e| RuntimeError::InvalidConfig(
+            format!("Invalid synd-mchain rpc url: {} error: {}", config.block_builder.mchain_rpc_url, e)))?;
 
     let sequencing_client = IngestorProvider::new(
         config.sequencing.sequencing_rpc_url.as_ref().unwrap(),
@@ -47,11 +50,11 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     )
     .await;
 
-    let settlement_client =
+    let settlement_ingestor_client =
         IngestorProvider::new(&config.settlement.settlement_rpc_url, config.rpc_timeout).await;
 
     let safe_state =
-        mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
+        mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_ingestor_client).await?;
 
     let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
     let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();
@@ -85,26 +88,28 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         )
         .await?;
 
-    let set_client = EthClient::new(
-        &settlement_client.get_url().await?,
+    let settlement_client = EthClient::new(
+        &settlement_ingestor_client.get_url().await?,
         config.rpc_timeout,
         config.get_logs_timeout,
         1024,
     )
     .await;
-    let settlement = settlement_client
+    let settlement = settlement_ingestor_client
         .get_blocks(
             settlement_config.start_block,
             arbitrum_adapter.settlement_addresses(),
             arbitrum_adapter,
-            set_client,
+            settlement_client,
         )
         .await?;
 
-    let settlement_delay = config.settlement_delay;
+    let settlement_delay = config.settlement_delay.unwrap_or_else(
+        Err(RuntimeError::InvalidConfig("settlement_delay unset".into()))
+    );
 
     Ok(synd_slotter::slotter::run(
-        settlement_delay.unwrap(),
+        settlement_delay,
         safe_state,
         sequencing,
         settlement,

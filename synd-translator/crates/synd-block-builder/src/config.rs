@@ -33,11 +33,11 @@ pub struct BlockBuilderConfig {
     pub arbitrum_inbox_address: Option<Address>,
 }
 
-/// Possible target appchain types for the `synd-block-builder`
+/// Possible target appchain types for the `synd-block-builder`. More chains may be supported in
+/// the future
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Parser, ValueEnum)]
 pub enum TargetAppchainType {
-    OPTIMISM,
     ARBITRUM,
 }
 
