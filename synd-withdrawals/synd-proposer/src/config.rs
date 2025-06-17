@@ -31,10 +31,6 @@ pub struct Config {
     pub enclave_rpc_url: Url,
 
     /// Address of the assertion poster contract
-    #[arg(long, env = "ASSERTION_POSTER_CONTRACT_ADDRESS", value_parser = parse_address)]
-    pub assertion_poster_contract_address: Address,
-
-    /// Address of the assertion poster contract
     #[arg(short = 't', long, env = "TEE_MODULE_CONTRACT_ADDRESS", value_parser = parse_address)]
     pub tee_module_contract_address: Address,
 

@@ -54,7 +54,6 @@ async fn e2e_proposer_test() -> Result<()> {
     )?;
     let _handler = server.start(module);
 
-    let assertion_poster_contract_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828C");
     let tee_module_contract_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828D"); // TODO (SEQ-936)
     let arbitrum_bridge_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828D"); // TODO (SEQ-936)
     let config = Config {
@@ -63,7 +62,6 @@ async fn e2e_proposer_test() -> Result<()> {
         sequencing_rpc_url: Url::from_str(&format!("http://localhost:{seq_port}"))?,
         appchain_rpc_url: Url::from_str(&format!("http://localhost:{app_port}"))?,
         enclave_rpc_url: Url::from_str(&format!("http://localhost:{enclave_port}"))?,
-        assertion_poster_contract_address,
         tee_module_contract_address,
         arbitrum_bridge_address,
         inbox_address: Default::default(),
@@ -94,7 +92,6 @@ async fn e2e_proposer_test() -> Result<()> {
         _ => panic!("Empty block"),
     };
     let tx = transactions[0].clone();
-    assert_eq!(tx.inner.to(), Some(assertion_poster_contract_address));
     let decode = AssertionPoster::postAssertionCall::abi_decode(tx.inner.input(), true)?;
     assert_eq!(nitro_block.hash, decode.blockHash);
     assert_eq!(nitro_block.send_root, decode.sendRoot);
@@ -131,7 +128,6 @@ async fn e2e_proposer_test() -> Result<()> {
         _ => panic!("Empty block"),
     };
     let tx = transactions[0].clone();
-    assert_eq!(tx.inner.to(), Some(assertion_poster_contract_address));
     let decode = AssertionPoster::postAssertionCall::abi_decode(tx.inner.input(), true)?;
     assert_eq!(nitro_block.hash, decode.blockHash);
     assert_eq!(nitro_block.send_root, decode.sendRoot);
