@@ -1,6 +1,6 @@
 //! Configuration for the `synd-block-builder` service
 use alloy::primitives::Address;
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use shared::parse::parse_address;
 use std::fmt::Debug;
 use thiserror::Error;
