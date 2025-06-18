@@ -72,12 +72,6 @@ impl BlockBuilderConfig {
         match self.target_appchain_type {
             // Validate Arbitrum specific configuration
             TargetAppchainType::ARBITRUM => {}
-            // Validate Optimism specific configuration
-            TargetAppchainType::OPTIMISM => {
-                return Err(ConfigError::UnsupportedAppchainType(
-                    "Optimism is not supported yet".to_string(),
-                ));
-            }
         }
 
         Ok(())

@@ -6,7 +6,6 @@ use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
 use shared::service_start_utils::{start_metrics_and_health, MetricsState};
 use std::sync::Arc;
-use tokio::runtime::Runtime;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
     client::{IngestorProvider, Provider as IProvider},
@@ -104,9 +103,9 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         )
         .await?;
 
-    let settlement_delay = config.settlement_delay.unwrap_or_else(
-        Err(RuntimeError::InvalidConfig("settlement_delay unset".into()))
-    );
+    let settlement_delay = config.settlement_delay.ok_or_else(
+        || RuntimeError::InvalidConfig("settlement_delay unset".into())
+    )?;
 
     Ok(synd_slotter::slotter::run(
         settlement_delay,
