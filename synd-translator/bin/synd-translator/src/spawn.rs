@@ -37,7 +37,6 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
 }
 
 async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -> Result<()> {
-    // TODO(LBL) - is this a `ws_url` now?
     let mchain = MProvider::new(&config.block_builder.mchain_ws_url).await.map_err(|e| {
         RuntimeError::InvalidConfig(format!(
             "Invalid synd-mchain ws url: {} error: {}",
