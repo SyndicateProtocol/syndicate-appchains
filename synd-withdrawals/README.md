@@ -1,49 +1,61 @@
 # Syndicate Withdrawals
 
-This system handles the validation and submission of withdrawal proofs via a Trusted Execution Environment (TEE). It orchestrates input data from multiple chains and nodes, performs various verification steps inside a secure enclave, and outputs proofs to on-chain smart contracts.
+This system manages the validation and submission of withdrawal proofs through a Trusted Execution Environment (TEE). It ingests data from multiple chains and nodes, performs secure verification inside an enclave, and submits validated proofs to on-chain contracts.
 
-## Components
+---
 
-### Synd-Proposer
+## 🧩 Overview of Components
 
-The Proposer is the orchestrator of the withdrawal flow. It collects relevant inputs and generates assertions for TEE verification. Responsibilities include:
+### 🔹 `Synd-Proposer`
 
-- Aggregating data from:
+**Role:** Orchestrates the full withdrawal flow.  
+**Main responsibilities:**
 
-  - L1 node (eth_getProof)
+- **Data aggregation** from multiple sources:
 
-  - Settlement node (eth_getLogs)
+  - **L1 node:** `eth_getProof`
+  - **Settlement node:** `eth_getLogs`
+  - **Sequencing node:** `eth_getBlockByNumber`, `eth_getLogs`, `eth_getProof`, `arbdebug_validationInputsAt`
+  - **Appchain node:** `arbdebug_validationInputsAt`
 
-  - Sequencing node (eth_getBlockByNumber, eth_getLogs, eth_getProof, arbdebug_validationInputsAt)
+- **Workflow:**
+  1. Constructs a `PendingAssertion` using collected data.
+  2. Invokes the secure TEE module to verify the assertion.
+  3. Submits the verified assertion on-chain via:
+     - `submitPendingAssertion` → `TEEModule.sol`
 
-  - Appchain node (arbdebug_validationInputsAt)
+### 🔹 `Synd-Enclave`
 
-- Constructing the PendingAssertion and invoking the TEE module
+**Role:** Secure enclave runtime that performs the core logic for withdrawal proof validation.  
+**Codebase:** Forked from [base/op-enclave](https://github.com/base/op-enclave)
 
-- Submitting the verified assertion to smart contract:
+#### 🚀 Running the Enclave
 
-  - submitPendingAssertion (calls into TEEModule.sol)
+\*\*There are two supported execution modes:
 
-### Synd-Sequencing-Verifier
+##### ➤ Local Execution (Development Mode)
 
-This module verifies the consistency and correctness of the L1 data that is used to construct the sequencing chain.
+1. Build the enclave binary:
+   ```bash
+   go build -C cmd/enclave
+   ```
+2. Run the enclave:
+   ```bash
+   ./cmd/enclave/enclave [--local]
+   ```
 
-### Synd-Sequencing-Block-Verifier
+### 🔹 `Synd-Tee-Attestation-ZK-Proofs`
 
-Validates the structure and integrity of blocks from the sequencing chain using Arbitrum Nitro STF
+**Role:** Handles generation and verification of zk-SNARKs for attestation documents produced by `synd-enclave`.
 
-### Synd-Appchain-Verifer
+---
 
-This module verifies the consistency and correctness of the settlement & sequencing chains data that is used to construct the appchain.
+## 🐳 Docker
 
-### Synd-Appchain-Block-Verifer
+To build a Docker image for the `synd-enclave` in a compatible environment:
 
-Validates the structure and integrity of blocks from the appchain using Arbitrum Nitro STF
+```bash
+docker build -f synd-withdrawals/synd-enclave/Dockerfile . --platform linux/amd64
+```
 
-### Synd-Enclave
-
-The secure enclave environment executes core logic for verifying withdrawal proofs. This is a forked version of [base/op-enclave](https://github.com/base/op-enclave).
-
-### Synd-Tee-Attestation-ZK-Proofs
-
-Generation and verification of zk proofs for synd-enclave TEE attestation documents.
+---

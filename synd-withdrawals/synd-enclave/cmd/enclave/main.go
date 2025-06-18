@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 	"os"
 
@@ -13,6 +14,7 @@ import (
 func main() {
 	log.SetDefault(log.NewLogger(log.LogfmtHandlerWithLevel(os.Stdout, log.LevelDebug)))
 	log.Info("Starting Enclave")
+	flag.Parse()
 
 	s := rpc.NewServer()
 	serv, err := enclave.NewServer()

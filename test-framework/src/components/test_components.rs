@@ -526,18 +526,21 @@ impl TestComponents {
                         ethereum_rpc_url: l1_info
                             .as_ref()
                             .map_or(set_rpc_ws_url.clone(), |info| info.ws_url.clone()),
-                        assertion_poster_contract_address, // TODO remove
                         tee_module_contract_address: Default::default(), // TODO fill this in
                         arbitrum_bridge_address: appchain_deployment.bridge,
                         inbox_address: appchain_deployment.inbox,
                         sequencer_inbox_address: appchain_deployment.sequencer_inbox,
                         settlement_rpc_url: set_rpc_ws_url.clone(),
                         metrics_port: PortManager::instance().next_port().await,
-                        port: PortManager::instance().next_port().await,
+                        metrics_port: PortManager::instance().next_port().await,
                         appchain_rpc_url: appchain_rpc_url.clone(),
                         sequencing_rpc_url: sequencing_rpc_url.clone(),
                         enclave_rpc_url,
-                        polling_interval: "1m".to_string(), // TODO needs to be much lower
+                        polling_interval: "1m".to_string(),
+                        close_challenge_interval: format!(
+                            "{}s",
+                            options.close_challenge_interval.as_secs().to_string()
+                        ),
                     };
 
                     let proposer_instance = start_component(

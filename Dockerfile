@@ -1,6 +1,6 @@
 # Global build arguments
 ARG BUILD_PROFILE=release
-ARG FEATURES=""
+ARG FEATURES="rocksdb" 
 
 # Stage 1: Base image with Rust
 FROM rust:slim-bookworm AS builder
@@ -23,6 +23,14 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
     cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
+# --- Go build stage for synd-proposer ---
+FROM golang:1.22-bookworm AS go-synd-proposer-build
+WORKDIR /go/src/synd-proposer
+COPY ./synd-withdrawals/synd-proposer .
+# Download Go dependencies for better build caching
+RUN go mod download
+RUN go mod tidy
+RUN CGO_ENABLED=0 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
 
 # Stage 3: Optional Foundry install
 FROM debian:bookworm-slim AS foundry
@@ -36,6 +44,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Stage 3: Runtime images
+
+# SECURITY WARNING: All runtime containers currently run as root user (UID 0)
+# This poses security risks as compromised containers would have root privileges.
+# TODO [SEQ-1022]: Add non-root user configuration for better security posture:
+# Create a non-root user (or USER 1000:1000) and ensure each application has proper file permissions for non-root execution
+
 FROM gcr.io/distroless/cc AS runtime-base
 
 # Runtime images
@@ -47,10 +61,8 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
 LABEL service=synd-translator
-
 FROM runtime-base AS synd-proposer
-ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/synd-proposer /usr/local/bin/synd-proposer
+COPY --from=go-synd-proposer-build /go/bin/synd-proposer /usr/local/bin/synd-proposer
 ENTRYPOINT ["/usr/local/bin/synd-proposer"]
 LABEL service=synd-proposer
 

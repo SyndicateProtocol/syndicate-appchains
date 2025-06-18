@@ -2,10 +2,11 @@
 
 The Syndicate Proposer is responsible for extracting the appchain root state and submitting assertions to the settlement chain `AssertionPoster` contract.
 
-## Example command
+## Getting Started
 
-Sample CLI invocation of the `synd-proposer` package:
-
-```
-cargo run -p synd-proposer --
-```
+1. Install Go 1.22 or later
+2. Run `go mod tidy` to install dependencies
+3. Build and run the service:
+   ```sh
+   go run ./cmd/synd-proposer
+   ```

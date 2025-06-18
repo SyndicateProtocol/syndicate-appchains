@@ -12,10 +12,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -40,6 +42,8 @@ const (
 var (
 	defaultRoot = createAWSNitroRoot()
 )
+
+var isLocal = flag.Bool("local", false, "Run in local mode")
 
 func createAWSNitroRoot() *x509.CertPool {
 	roots, err := base64.StdEncoding.DecodeString(DefaultCARoots)
@@ -409,12 +413,14 @@ func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySe
 	if err != nil {
 		return VerifySequencingChainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
 	}
-	cmd := exec.Command("cargo", "run", "--release", "--bin", "synd-seqchain-verifier", "--",
+
+	args := []string{
 		"--config", string(config),
 		"--l1-chain-input", string(sequencingChainInput),
 		"--seq-config-hash", verifyInput.SeqConfigHash.Hex(),
-	)
-	out, err := cmd.CombinedOutput()
+	}
+
+	out, err := RunVerifier("synd-seqchain-verifier", args...)
 	if err != nil {
 		return VerifySequencingChainOutput{}, fmt.Errorf("failed to run synd-seqchain-verifier: %w. Output: %s", err, string(out))
 	}
@@ -476,14 +482,14 @@ func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainI
 	if err != nil {
 		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal settlement chain input: %w", err)
 	}
-	cmd := exec.Command("cargo", "run", "--release", "--bin", "synd-appchain-verifier", "--",
+	args := []string{
 		"--config", string(config),
 		"--sequencing-chain-input", string(sequencingChainInput),
 		"--settlement-chain-input", string(settlementChainInput),
 		"--appchain-config-hash", verifyInput.AppchainConfigHash.Hex(),
-	)
+	}
 
-	out, err := cmd.CombinedOutput()
+	out, err := RunVerifier("synd-appchain-verifier", args...)
 	if err != nil {
 		return VerifyAppchainOutput{}, fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
 	}
@@ -528,4 +534,22 @@ func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainI
 	output.sign(verifyInput.hash(), s.signerKey)
 	log.Debug("Appchain BlockVerifierOutput Output", "output", output)
 	return output, nil
+}
+
+func isLocalhost() bool {
+	return *isLocal
+}
+
+func RunVerifier(verifierName string, args ...string) ([]byte, error) {
+	var cmd *exec.Cmd
+	if isLocalhost() {
+		log.Debug("Running verifier locally", "verifierName", verifierName)
+		fullArgs := append([]string{"run", "--release", "--bin", verifierName, "--"}, args...)
+		cmd = exec.Command("cargo", fullArgs...)
+	} else {
+		log.Debug("Running verifier in enclave", "verifierName", verifierName)
+		binaryPath := filepath.Join("./bin", verifierName)
+		cmd = exec.Command(binaryPath, args...)
+	}
+	return cmd.CombinedOutput()
 }
