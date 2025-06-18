@@ -40,7 +40,7 @@ use test_utils::{
     port_manager::PortManager,
     preloaded_config::{
         PRELOAD_BRIDGE_ADDRESS_231, PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231,
-        PRELOAD_INBOX_ADDRESS_300, PRELOAD_PROPOSER_ADDRESS_231, PRELOAD_PROPOSER_ADDRESS_300,
+        PRELOAD_INBOX_ADDRESS_300,
     },
     utils::test_path,
     wait_until,
@@ -326,24 +326,17 @@ impl TestComponents {
             info!("Starting proposer...");
             let proposer_config = ProposerConfig {
                 ethereum_rpc_url,
-                assertion_poster_contract_address: options.pre_loaded.as_ref().map_or(
-                    Address::ZERO,
-                    |version| match version {
-                        ContractVersion::V300 => PRELOAD_PROPOSER_ADDRESS_300,
-                        ContractVersion::V213 => PRELOAD_PROPOSER_ADDRESS_231,
-                    },
-                ),
                 tee_module_contract_address: Default::default(),
                 arbitrum_bridge_address,
                 inbox_address: Default::default(),
                 sequencer_inbox_address: Default::default(),
                 settlement_rpc_url: settlement_anvil_url.clone(),
                 metrics_port: PortManager::instance().next_port().await,
-                port: PortManager::instance().next_port().await,
                 appchain_rpc_url: nitro_url.clone(),
                 sequencing_rpc_url: sequencing_anvil_url.clone(),
                 enclave_rpc_url,
                 polling_interval: "1m".to_string(),
+                close_challenge_interval: "1m".to_string(),
             };
             (
                 Some(
@@ -355,7 +348,7 @@ impl TestComponents {
                     )
                     .await?,
                 ),
-                format!("http://localhost:{}", proposer_config.port),
+                format!("http://localhost:{}", proposer_config.metrics_port),
             )
         } else {
             (None, Default::default())

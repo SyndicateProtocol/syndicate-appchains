@@ -2,9 +2,10 @@ package pkg
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"time"
+
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -23,50 +24,84 @@ type Config struct {
 	MetricsPort              int
 }
 
+var ConfigKeys = map[string]struct {
+	Description string
+	Default     string
+	Required    bool
+}{
+	"ethereum-rpc-url":            {"Ethereum RPC URL", "", true},
+	"settlement-rpc-url":          {"Settlement RPC URL", "", true},
+	"sequencing-rpc-url":          {"Sequencing RPC URL", "", true},
+	"appchain-rpc-url":            {"Appchain RPC URL", "", true},
+	"enclave-rpc-url":             {"Enclave RPC URL", "", true},
+	"tee-module-contract-address": {"TEE Module Contract Address", "", true},
+	"arbitrum-bridge-address":     {"Arbitrum Bridge Address", "", true},
+	"inbox-address":               {"Inbox Address", "", true},
+	"sequencer-inbox-address":     {"Sequencer Inbox Address", "", true},
+	"private-key":                 {"Private Key", "", true},
+	"polling-interval":            {"Polling interval", "10m", false},
+	"close-challenge-interval":    {"Close challenge interval", "5m", false},
+	"metrics-port":                {"Metrics port", "9292", false},
+}
+
+func BindFlags(flags *pflag.FlagSet) {
+	for key, meta := range ConfigKeys {
+		switch key {
+		case "metrics-port":
+			flags.Int(key, mustAtoi(meta.Default, 9292), meta.Description)
+		default:
+			flags.String(key, meta.Default, meta.Description)
+		}
+		if err := viper.BindPFlag(key, flags.Lookup(key)); err != nil {
+			panic(fmt.Sprintf("failed to bind flag %s: %v", key, err))
+		}
+	}
+}
+
 func LoadConfig() (*Config, error) {
-	getEnv := func(key string, required bool) string {
-		val := os.Getenv(key)
-		if required && val == "" {
-			log.Fatalf("missing required environment variable: %s", key)
+	for key, meta := range ConfigKeys {
+		if meta.Required && (!viper.IsSet(key) || viper.GetString(key) == "") {
+			return nil, fmt.Errorf("missing required config: --%s", key)
 		}
-		return val
 	}
-	parseDuration := func(key, def string) time.Duration {
-		val := os.Getenv(key)
-		if val == "" {
-			val = def
-		}
-		d, err := time.ParseDuration(val)
-		if err != nil {
-			log.Fatalf("invalid duration for %s: %v", key, err)
-		}
-		return d
+
+	pollingInterval, err := time.ParseDuration(viper.GetString("polling-interval"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid polling-interval: %v", err)
 	}
-	parseInt := func(key string, def int) int {
-		val := os.Getenv(key)
-		if val == "" {
-			return def
-		}
-		var i int
-		_, err := fmt.Sscanf(val, "%d", &i)
-		if err != nil {
-			log.Fatalf("invalid int for %s: %v", key, err)
-		}
-		return i
+
+	closeChallengeInterval, err := time.ParseDuration(viper.GetString("close-challenge-interval"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid close-challenge-interval: %v", err)
 	}
+
+	metricsPort := viper.GetInt("metrics-port")
+	if metricsPort == 0 {
+		metricsPort = 9292
+	}
+
 	return &Config{
-		EthereumRPCURL:           getEnv("ETH_RPC_URL", true),
-		SettlementRPCURL:         getEnv("SETTLEMENT_RPC_URL", true),
-		SequencingRPCURL:         getEnv("SEQUENCING_RPC_URL", true),
-		AppchainRPCURL:           getEnv("APPCHAIN_RPC_URL", true),
-		EnclaveRPCURL:            getEnv("ENCLAVE_RPC_URL", true),
-		TeeModuleContractAddress: getEnv("TEE_MODULE_CONTRACT_ADDRESS", true),
-		ArbitrumBridgeAddress:    getEnv("ARBITRUM_BRIDGE_ADDRESS", true),
-		InboxAddress:             getEnv("INBOX_ADDRESS", true),
-		SequencerInboxAddress:    getEnv("SEQUENCER_INBOX_ADDRESS", true),
-		PrivateKey:               getEnv("PROPOSER_PRIVATE_KEY", true),
-		PollingInterval:          parseDuration("PROPOSER_POLLING_INTERVAL", "10m"),
-		CloseChallengeInterval:   parseDuration("PROPOSER_CLOSE_CHALLENGE_INTERVAL", "5m"),
-		MetricsPort:              parseInt("PROPOSER_METRICS_PORT", 9292),
+		EthereumRPCURL:           viper.GetString("ethereum-rpc-url"),
+		SettlementRPCURL:         viper.GetString("settlement-rpc-url"),
+		SequencingRPCURL:         viper.GetString("sequencing-rpc-url"),
+		AppchainRPCURL:           viper.GetString("appchain-rpc-url"),
+		EnclaveRPCURL:            viper.GetString("enclave-rpc-url"),
+		TeeModuleContractAddress: viper.GetString("tee-module-contract-address"),
+		ArbitrumBridgeAddress:    viper.GetString("arbitrum-bridge-address"),
+		InboxAddress:             viper.GetString("inbox-address"),
+		SequencerInboxAddress:    viper.GetString("sequencer-inbox-address"),
+		PrivateKey:               viper.GetString("private-key"),
+		PollingInterval:          pollingInterval,
+		CloseChallengeInterval:   closeChallengeInterval,
+		MetricsPort:              metricsPort,
 	}, nil
+}
+
+func mustAtoi(s string, fallback int) int {
+	var i int
+	_, err := fmt.Sscanf(s, "%d", &i)
+	if err != nil || i == 0 {
+		return fallback
+	}
+	return i
 }
