@@ -20,10 +20,8 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
         }
     };
 
-    //TODO(LBL) @jorge - does the settlement_rpc_url now have to be a WS URL, since that's what
-    // `IngestorProvider` uses for a Builder?
     let ingestor_provider =
-        IngestorProvider::new(&config.settlement.settlement_rpc_url, config.rpc_timeout).await;
+        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout).await;
 
     let provider = ProviderBuilder::new().on_client(
         ClientBuilder::default()
@@ -89,12 +87,13 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
             Some(onchain.sequencing_contract_address);
     }
 
-    if config.sequencing.sequencing_rpc_url.is_none() {
+    // TODO(LBL) - does onchain need to change to `-ws_url` ?
+    if config.sequencing.sequencing_ws_url.is_none() {
         info!(
             "Using the sequencing_rpc_url from on-chain config: {}",
             onchain.default_sequencing_chain_rpc_url
         );
-        config.sequencing.sequencing_rpc_url = Some(onchain.default_sequencing_chain_rpc_url)
+        config.sequencing.sequencing_ws_url = Some(onchain.default_sequencing_chain_rpc_url)
     }
 
     config
