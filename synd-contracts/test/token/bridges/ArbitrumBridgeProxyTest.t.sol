@@ -22,9 +22,19 @@ contract MockArbitrumBridge {
 
     TransferCall[] public transferCalls;
     bool public shouldRevert;
+    address public mockGateway;
+
+    constructor() {
+        // Set mock gateway to this contract for simplicity
+        mockGateway = address(this);
+    }
 
     function setShouldRevert(bool _shouldRevert) external {
         shouldRevert = _shouldRevert;
+    }
+
+    function getGateway(address) external view returns (address) {
+        return mockGateway;
     }
 
     function outboundTransferCustomRefund(
@@ -160,8 +170,12 @@ contract ArbitrumBridgeProxyTest is Test {
         assertEq(call.amount, amount);
         assertEq(call.maxGas, maxGas);
         assertEq(call.gasPriceBid, gasPriceBid);
-        assertEq(call.data, "");
-        assertEq(call.ethValue, maxGas * gasPriceBid);
+        uint256 expectedMaxSubmissionCost = 1000000000000000; // 0.001 ETH
+        bytes memory expectedData = abi.encode(expectedMaxSubmissionCost, "");
+        assertEq(call.data, expectedData);
+        uint256 maxSubmissionCost = 1000000000000000; // 0.001 ETH
+        uint256 expectedEthValue = (maxGas * gasPriceBid) + maxSubmissionCost;
+        assertEq(call.ethValue, expectedEthValue);
     }
 
     function test_ExecuteBridge_Success_CustomParams() public {
@@ -185,7 +199,9 @@ contract ArbitrumBridgeProxyTest is Test {
         assertEq(call.amount, amount);
         assertEq(call.maxGas, customMaxGas);
         assertEq(call.gasPriceBid, customGasPriceBid);
-        assertEq(call.ethValue, customMaxGas * customGasPriceBid);
+        uint256 maxSubmissionCost = 1000000000000000; // 0.001 ETH
+        uint256 expectedEthValue = (customMaxGas * customGasPriceBid) + maxSubmissionCost;
+        assertEq(call.ethValue, expectedEthValue);
     }
 
     function test_ExecuteBridge_Success_MultipleTransfers() public {
@@ -222,7 +238,8 @@ contract ArbitrumBridgeProxyTest is Test {
         uint256 customGasPriceBid = 5 gwei;
         bytes memory dynamicData = abi.encode(recipient, customMaxGas, customGasPriceBid);
 
-        uint256 expectedEthValue = customMaxGas * customGasPriceBid;
+        uint256 maxSubmissionCost = 1000000000000000; // 0.001 ETH
+        uint256 expectedEthValue = (customMaxGas * customGasPriceBid) + maxSubmissionCost;
         uint256 initialBridgeEth = address(bridgeProxy).balance;
 
         vm.prank(caller);
@@ -333,7 +350,8 @@ contract ArbitrumBridgeProxyTest is Test {
 
         uint256 initialTokenBalance = token.balanceOf(caller);
         uint256 initialEthBalance = address(bridgeProxy).balance;
-        uint256 expectedEthCost = customMaxGas * customGasPriceBid;
+        uint256 maxSubmissionCost = 1000000000000000; // 0.001 ETH
+        uint256 expectedEthCost = (customMaxGas * customGasPriceBid) + maxSubmissionCost;
 
         vm.prank(caller);
         token.approve(address(bridgeProxy), amount);
@@ -365,7 +383,8 @@ contract ArbitrumBridgeProxyTest is Test {
     function test_Integration_MultipleTransfersGasCosts() public {
         uint256 amount = 200_000 * 10 ** 18;
         uint256 transferCount = 3;
-        uint256 expectedTotalEthCost = (maxGas * gasPriceBid) * transferCount;
+        uint256 maxSubmissionCost = 1000000000000000; // 0.001 ETH
+        uint256 expectedTotalEthCost = ((maxGas * gasPriceBid) + maxSubmissionCost) * transferCount;
         uint256 initialEthBalance = address(bridgeProxy).balance;
 
         vm.prank(caller);
@@ -426,7 +445,8 @@ contract ArbitrumBridgeProxyTest is Test {
         bytes memory dynamicData = abi.encode(recipient, customMaxGas, customGasPriceBid);
 
         // Ensure bridge has enough ETH
-        uint256 requiredEth = customMaxGas * customGasPriceBid;
+        uint256 maxSubmissionCost = 1000000000000000; // 0.001 ETH
+        uint256 requiredEth = (customMaxGas * customGasPriceBid) + maxSubmissionCost;
         vm.deal(address(bridgeProxy), requiredEth + 1 ether);
 
         vm.prank(caller);
