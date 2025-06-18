@@ -256,7 +256,7 @@ impl Default for TranslatorConfig {
     fn default() -> Self {
         Self {
             block_builder: BlockBuilderConfig::default(),
-            settlement_delay: Some(Duration::from_secs(60)),
+            settlement_delay: Some(60),
             sequencing: SequencingChainConfig::default(),
             settlement: SettlementChainConfig::default(),
             metrics: MetricsConfig::default(),
