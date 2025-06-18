@@ -51,7 +51,8 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     .await;
 
     let settlement_ingestor_client =
-        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout).await;
+        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
+            .await;
 
     let safe_state = mchain
         .reconcile_mchain_with_source_chains(&sequencing_client, &settlement_ingestor_client)
