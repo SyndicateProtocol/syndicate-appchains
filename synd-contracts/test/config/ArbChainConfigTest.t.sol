@@ -17,7 +17,7 @@ contract ArbChainConfigTestBase is Test {
     uint256 public constant SETTLEMENT_START_BLOCK = 100;
     address public constant SEQUENCING_CONTRACT_ADDRESS = address(0x9ABC);
     uint256 public constant SEQUENCING_START_BLOCK = 200;
-    string public constant DEFAULT_RPC_URL = "https://example.com/rpc";
+    string public constant DEFAULT_WS_RPC_URL = "https://example.com/rpc";
     string public constant APPCHAIN_BLOCK_EXPLORER_URL = "https://example.com/explorer";
 
     // Events for testing
@@ -46,7 +46,7 @@ contract ArbChainConfigTestBase is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -76,7 +76,7 @@ contract BasicTests is ArbChainConfigTestBase {
 
     function testInitialMutableValues() public view {
         assertEq(chainConfig.INITIAL_APPCHAIN_OWNER(), appchainOwner);
-        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), DEFAULT_RPC_URL);
+        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), DEFAULT_WS_RPC_URL);
         assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), APPCHAIN_BLOCK_EXPLORER_URL);
     }
 
@@ -103,7 +103,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -129,7 +129,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -151,7 +151,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -173,7 +173,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -195,7 +195,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             address(0), // Invalid address
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -217,7 +217,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             address(0), // Invalid address
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -239,7 +239,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -274,8 +274,8 @@ contract ArbChainConfigUpdateTests is ArbChainConfigTestBase {
         string memory newRpcUrl = "https://new-example.com/rpc";
         vm.expectEmit(true, false, false, true);
         emit DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
-        chainConfig.updateDefaultSequencingChainRpcUrl(newRpcUrl);
-        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), newRpcUrl);
+        chainConfig.updateDefaultSequencingChainWsRpcUrl(newRpcUrl);
+        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), newRpcUrl);
         vm.stopPrank();
     }
 
@@ -303,8 +303,8 @@ contract ArbChainConfigUpdateTests is ArbChainConfigTestBase {
         vm.expectEmit(true, false, false, true);
         emit DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
 
-        chainConfig.updateDefaultSequencingChainRpcUrl(newRpcUrl);
-        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), newRpcUrl);
+        chainConfig.updateDefaultSequencingChainWsRpcUrl(newRpcUrl);
+        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), newRpcUrl);
 
         vm.stopPrank();
     }
@@ -313,15 +313,15 @@ contract ArbChainConfigUpdateTests is ArbChainConfigTestBase {
         vm.prank(address(999)); // Non-owner address
 
         vm.expectRevert("Caller is not the owner");
-        chainConfig.updateDefaultSequencingChainRpcUrl("https://new-example.com/rpc");
+        chainConfig.updateDefaultSequencingChainWsRpcUrl("https://new-example.com/rpc");
     }
 
     function testEmptyDefaultRpcUrl() public {
         vm.startPrank(owner);
 
         // Test with empty RPC URL
-        chainConfig.updateDefaultSequencingChainRpcUrl("");
-        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), "");
+        chainConfig.updateDefaultSequencingChainWsRpcUrl("");
+        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), "");
 
         vm.stopPrank();
     }
@@ -390,7 +390,7 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         ArbChainConfig config2 = ArbChainConfig(config2Address);
@@ -398,11 +398,11 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
         string memory newRpcUrl1 = "https://new-example.com/rpc";
         string memory newRpcUrl2 = "https://new-example2.com/rpc";
         // Verify functionality on both configs
-        config1.updateDefaultSequencingChainRpcUrl(newRpcUrl1);
-        config2.updateDefaultSequencingChainRpcUrl(newRpcUrl2);
+        config1.updateDefaultSequencingChainWsRpcUrl(newRpcUrl1);
+        config2.updateDefaultSequencingChainWsRpcUrl(newRpcUrl2);
 
-        assertEq(config1.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), newRpcUrl1);
-        assertEq(config2.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), newRpcUrl2);
+        assertEq(config1.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), newRpcUrl1);
+        assertEq(config2.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), newRpcUrl2);
 
         vm.stopPrank();
     }
@@ -428,7 +428,7 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
         vm.stopPrank();
@@ -471,7 +471,7 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 

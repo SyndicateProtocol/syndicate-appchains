@@ -210,7 +210,7 @@ impl TranslatorConfig {
 
     /// Validate [`TranslatorConfig`]
     pub fn validate(&self) -> Result<(), ConfigError> {
-        self.block_builder.validate_strict().map_err(ConfigError::BlockBuilder)?;
+        self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
         self.sequencing.validate().map_err(ConfigError::Ingestor)?;
         self.settlement.validate().map_err(ConfigError::Ingestor)?;
         self.metrics.validate().map_err(ConfigError::Metrics)?;
@@ -221,7 +221,7 @@ impl TranslatorConfig {
     /// that might have been defined by the `ConfigManager` contract)
     pub fn validate_strict(&self) -> Result<(), ConfigError> {
         self.validate()?;
-        self.block_builder.validate_strict().map_err(ConfigError::BlockBuilder)?;
+        self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
         self.sequencing.validate_strict().map_err(ConfigError::Ingestor)?;
         self.settlement.validate_strict().map_err(ConfigError::Ingestor)?;
         Ok(())
