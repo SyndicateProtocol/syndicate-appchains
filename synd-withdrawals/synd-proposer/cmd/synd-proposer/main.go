@@ -58,7 +58,7 @@ func main() {
 
 			proposer := pkg.NewProposer(config)
 			proposer.Run(ctx)
-			log.Println("Synd-proposer-go service stopped.")
+			log.Println("Synd-proposer service stopped.")
 			return nil
 		},
 	}
