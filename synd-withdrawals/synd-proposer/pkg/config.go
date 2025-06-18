@@ -76,9 +76,6 @@ func LoadConfig() (*Config, error) {
 	}
 
 	metricsPort := viper.GetInt("metrics-port")
-	if metricsPort == 0 {
-		metricsPort = 9292
-	}
 
 	return &Config{
 		EthereumRPCURL:           viper.GetString("ethereum-rpc-url"),
