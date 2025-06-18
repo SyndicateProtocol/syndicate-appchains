@@ -16,8 +16,13 @@ import {IBridgeProxy} from "src/token/interfaces/IBridgeProxy.sol";
 contract TestOptimismBridgeFlow is Script {
     // ETH Mainnet Optimism bridge address
     // address constant OPTIMISM_L1_STANDARD_BRIDGE = 0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1;
+    // Optimism L2 token address
+    // address constant OP_L2_TOKEN = address(0x0); // OptmismMintableERC20 deployed on L2
+
     // ETH Sepolia Optimism bridge address (for testing)
     address constant OPTIMISM_L1_STANDARD_BRIDGE = 0xFBb0621E0B23b5478B630BD55a5f21f67730B0F1;
+    // Optimism L2 token address (for testing)
+    address constant OP_L2_TOKEN = 0x888BB38FB6480828e8Ec8e02824803528Ac358Ac; // OptmismMintableERC20 deployed on Optmism Sepolia
 
     // Configuration parameters
     uint256 constant MAX_SINGLE_TRANSFER = 100_000_000 * 10 ** 18; // 100M tokens
@@ -44,7 +49,7 @@ contract TestOptimismBridgeFlow is Script {
         emissionsManager = vm.envOr("EMISSIONS_MANAGER_ADDR", admin);
         pauser = vm.envOr("PAUSER_ADDR", admin);
         l2Recipient = vm.envOr("L2_RECIPIENT_ADDR", admin);
-        opL2Token = vm.envOr("OP_L2_TOKEN_ADDR", address(0x3333)); // Placeholder
+        opL2Token = vm.envOr("OP_L2_TOKEN_ADDR", OP_L2_TOKEN);
 
         console2.log("=== OPTIMISM BRIDGE FLOW TEST CONFIGURATION ===");
         console2.log("Admin:", admin);
@@ -62,6 +67,7 @@ contract TestOptimismBridgeFlow is Script {
         console2.log("=== DEPLOYING CONTRACTS ===");
 
         // Deploy SyndicateToken
+        // Actually, this should have already been deployed because OP_L2_TOKEN requires knowing the paired token it is serving.
         token = new SyndicateToken(admin, syndFoundation);
         console2.log("SyndicateToken deployed at:", address(token));
 
@@ -150,7 +156,4 @@ contract TestOptimismBridgeFlow is Script {
         console2.log("Bridge configuration verified");
         console2.log("=== TEST COMPLETE ===");
     }
-
-    // // Allow contract to receive ETH
-    // receive() external payable {}
 }

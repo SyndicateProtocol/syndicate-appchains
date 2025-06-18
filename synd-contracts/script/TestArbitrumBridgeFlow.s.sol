@@ -152,7 +152,4 @@ contract TestArbitrumBridgeFlow is Script {
         console2.log("Bridge proxy ETH balance:", address(arbitrumBridge).balance);
         console2.log("=== TEST COMPLETE ===");
     }
-
-    // // Allow contract to receive ETH
-    // receive() external payable {}
 }

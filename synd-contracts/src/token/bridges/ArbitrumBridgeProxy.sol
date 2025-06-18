@@ -31,6 +31,8 @@ interface IArbitrumBridge {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) external payable returns (bytes memory);
+
+    function getGateway(address) external view returns (address);
 }
 
 /**
@@ -143,11 +145,19 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
             ? abi.decode(dynamicData, (address, uint256, uint256))
             : (recipient, maxGas, gasPriceBid);
 
+        uint256 maxSubmissionCost = 1000000000000000; // hardcode 0.001 ETH
         // Calculate ETH value needed for L2 gas
-        uint256 ethValue = _maxGas * _gasPriceBid;
+        uint256 ethValue = (_maxGas * _gasPriceBid) + maxSubmissionCost;
 
         // Approve the Arbitrum bridge to spend tokens
         IERC20(token).forceApprove(bridgeTarget, amount);
+
+        address gateway = IArbitrumBridge(bridgeTarget).getGateway(token);
+        // approve the gateway to spend tokens
+        IERC20(token).forceApprove(gateway, amount);
+
+        // Encode the maxSubmissionCost in the data parameter
+        bytes memory bridgeData = abi.encode(maxSubmissionCost, "");
 
         // Call the Arbitrum bridge - if it fails, the entire transaction reverts automatically
         IArbitrumBridge(bridgeTarget).outboundTransferCustomRefund{value: ethValue}(
@@ -157,7 +167,7 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
             amount, // Amount to bridge
             _maxGas, // Maximum gas for L2 transaction
             _gasPriceBid, // Gas price bid
-            "" // No additional data
+            bridgeData
         );
     }
 
@@ -223,10 +233,10 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
     function withdrawEth(address payable to, uint256 amount) external onlyRole(BRIDGE_ADMIN_ROLE) {
         require(to != address(0), "ArbitrumBridgeProxy: zero address");
         require(amount <= address(this).balance, "ArbitrumBridgeProxy: insufficient balance");
-        
-        (bool success, ) = to.call{value: amount}("");
+
+        (bool success,) = to.call{value: amount}("");
         require(success, "ArbitrumBridgeProxy: ETH transfer failed");
-        
+
         emit EthWithdrawn(to, amount);
     }
 
