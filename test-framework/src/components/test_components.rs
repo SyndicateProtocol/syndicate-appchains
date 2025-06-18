@@ -284,15 +284,15 @@ impl TestComponents {
         // only set the settlement rpc URL, config_manager address and appchain_chain_id - the
         // translator will use the on-chain configuration
         let translator_config = TranslatorConfig {
-            settlement_rpc_url: settlement_rpc_url.clone(),
+            settlement_ws_url: settlement_rpc_url.clone(),
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
-            mchain_rpc_url: mchain_rpc_url.clone(),
+            mchain_ws_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port().await,
             arbitrum_bridge_address: None,
             arbitrum_inbox_address: None,
             sequencing_contract_address: None,
-            sequencing_rpc_url: Some(sequencing_rpc_url.clone()),
+            sequencing_ws_url: Some(sequencing_rpc_url.clone()),
             appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
             settlement_start_block: None,
