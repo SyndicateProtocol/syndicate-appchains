@@ -13,8 +13,8 @@ Note that this a multi-target Dockerfile, so specify `synd-translator`, `synd-pr
 docker build --target synd-translator -f Dockerfile . --tag synd-translator
 
 docker run -it -e RUST_LOG=debug synd-translator \ \
-  --sequencing-rpc-url <YOUR_URL_HERE> \
-  --settlement-rpc-url <YOUR_URL_HERE> \
+  --sequencing-ws-url <YOUR_URL_HERE> \
+  --settlement-ws-url <YOUR_URL_HERE> \
   --port 8888 \
   ...
   etc.
