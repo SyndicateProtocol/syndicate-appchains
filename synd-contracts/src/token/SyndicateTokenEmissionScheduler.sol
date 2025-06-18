@@ -4,11 +4,12 @@ pragma solidity 0.8.28;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IBridgeProxy} from "./interfaces/IBridgeProxy.sol";
 
 interface ISyndicateTokenMintable {
     function mint(address to, uint256 amount) external;
-    function approve(address spender, uint256 amount) external returns (bool);
 }
 
 /**
@@ -33,6 +34,8 @@ interface ISyndicateTokenMintable {
  * @custom:security-contact security@syndicate.io
  */
 contract SyndicateTokenEmissionScheduler is AccessControl, Pausable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -224,7 +227,8 @@ contract SyndicateTokenEmissionScheduler is AccessControl, Pausable, ReentrancyG
         syndicateToken.mint(address(this), totalToMint);
 
         // Approve the bridge proxy to spend our tokens
-        syndicateToken.approve(address(bridgeProxy), totalToMint);
+        IERC20 tokenInterface = IERC20(address(syndicateToken));
+        tokenInterface.forceApprove(address(bridgeProxy), totalToMint);
 
         // Bridge the tokens using the configured proxy
         bridgeProxy.executeBridge(address(syndicateToken), totalToMint, bridgeData);

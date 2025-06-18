@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {BaseBridgeProxy} from "./BaseBridgeProxy.sol";
 
 /**
@@ -50,6 +51,8 @@ interface IOptimismBridge {
  * @custom:security-contact security@syndicate.io
  */
 contract OptimismBridgeProxy is BaseBridgeProxy {
+    using SafeERC20 for IERC20;
+
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -128,7 +131,7 @@ contract OptimismBridgeProxy is BaseBridgeProxy {
             dynamicData.length > 0 ? abi.decode(dynamicData, (address, uint32)) : (recipient, l2Gas);
 
         // Approve the Optimism bridge to spend tokens
-        IERC20(token).approve(bridgeTarget, amount);
+        IERC20(token).forceApprove(bridgeTarget, amount);
 
         // Call the Optimism bridge - if it fails, the entire transaction reverts automatically
         IOptimismBridge(bridgeTarget).depositERC20To(

@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {BaseBridgeProxy} from "./BaseBridgeProxy.sol";
 
 /**
@@ -54,6 +55,8 @@ interface IArbitrumBridge {
  * @custom:security-contact security@syndicate.io
  */
 contract ArbitrumBridgeProxy is BaseBridgeProxy {
+    using SafeERC20 for IERC20;
+
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -78,6 +81,13 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
      * @param gasPriceBid The new default gas price bid
      */
     event ArbitrumConfigUpdated(address recipient, uint256 maxGas, uint256 gasPriceBid);
+
+    /**
+     * @notice Emitted when ETH is withdrawn from the contract
+     * @param to Address that received the ETH
+     * @param amount Amount of ETH withdrawn
+     */
+    event EthWithdrawn(address indexed to, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -137,7 +147,7 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
         uint256 ethValue = _maxGas * _gasPriceBid;
 
         // Approve the Arbitrum bridge to spend tokens
-        IERC20(token).approve(bridgeTarget, amount);
+        IERC20(token).forceApprove(bridgeTarget, amount);
 
         // Call the Arbitrum bridge - if it fails, the entire transaction reverts automatically
         IArbitrumBridge(bridgeTarget).outboundTransferCustomRefund{value: ethValue}(
@@ -200,6 +210,24 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
      */
     function calculateEthValue(uint256 _maxGas, uint256 _gasPriceBid) external pure returns (uint256 ethValue) {
         return _maxGas * _gasPriceBid;
+    }
+
+    /**
+     * @notice Withdraw ETH from the contract
+     * @dev Only callable by bridge admin. Allows removal of excess ETH that may
+     *      accumulate from gas refunds or over-funding of the contract.
+     *
+     * @param to Address to send the ETH to
+     * @param amount Amount of ETH to withdraw (in wei)
+     */
+    function withdrawEth(address payable to, uint256 amount) external onlyRole(BRIDGE_ADMIN_ROLE) {
+        require(to != address(0), "ArbitrumBridgeProxy: zero address");
+        require(amount <= address(this).balance, "ArbitrumBridgeProxy: insufficient balance");
+        
+        (bool success, ) = to.call{value: amount}("");
+        require(success, "ArbitrumBridgeProxy: ETH transfer failed");
+        
+        emit EthWithdrawn(to, amount);
     }
 
     /*//////////////////////////////////////////////////////////////

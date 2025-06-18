@@ -48,3 +48,13 @@ docs-pre-audit-gen :; forge doc --build --out docs-pre-audit
 docs-pre-audit-serve :; forge doc --serve --out docs-pre-audit
 
 test-coverage :; forge coverage --ir-minimum --no-match-coverage "(script|test|src/testing-purposes)"
+
+# Test bridge flows on sepolia
+test-arbitrum-bridge-flow :; forge script script/TestArbitrumBridgeFlow.s.sol:TestArbitrumBridgeFlow --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+
+test-optimism-bridge-flow :; forge script script/TestOptimismBridgeFlow.s.sol:TestOptimismBridgeFlow --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+
+# Test bridge flows on sepolia (simulation only)
+simulate-arbitrum-bridge-flow :; forge script script/TestArbitrumBridgeFlow.s.sol:TestArbitrumBridgeFlow --rpc-url sepolia --sender ${DEV_PUB_ADDRESS} -vv
+
+simulate-optimism-bridge-flow :; forge script script/TestOptimismBridgeFlow.s.sol:TestOptimismBridgeFlow --rpc-url sepolia --sender ${DEV_PUB_ADDRESS} -vv

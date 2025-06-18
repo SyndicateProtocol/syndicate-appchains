@@ -91,6 +91,7 @@ contract ArbitrumBridgeProxyTest is Test {
     // Events
     event ArbitrumConfigUpdated(address recipient, uint256 maxGas, uint256 gasPriceBid);
     event BridgeExecuted(address indexed token, uint256 amount, address indexed target);
+    event EthWithdrawn(address indexed to, uint256 amount);
 
     function setUp() public {
         token = new ERC20Mock();
@@ -438,5 +439,155 @@ contract ArbitrumBridgeProxyTest is Test {
         assertEq(call.maxGas, customMaxGas);
         assertEq(call.gasPriceBid, customGasPriceBid);
         assertEq(call.ethValue, requiredEth);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         ETH WITHDRAWAL TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_WithdrawEth_Success() public {
+        uint256 withdrawAmount = 1 ether;
+        uint256 initialBridgeBalance = address(bridgeProxy).balance;
+        uint256 initialUserBalance = user.balance;
+
+        vm.expectEmit(true, false, false, true);
+        emit EthWithdrawn(user, withdrawAmount);
+
+        vm.prank(admin);
+        bridgeProxy.withdrawEth(payable(user), withdrawAmount);
+
+        assertEq(address(bridgeProxy).balance, initialBridgeBalance - withdrawAmount);
+        assertEq(user.balance, initialUserBalance + withdrawAmount);
+    }
+
+    function test_WithdrawEth_Success_PartialBalance() public {
+        uint256 bridgeBalance = address(bridgeProxy).balance;
+        uint256 withdrawAmount = bridgeBalance / 2;
+        uint256 initialUserBalance = user.balance;
+
+        vm.prank(admin);
+        bridgeProxy.withdrawEth(payable(user), withdrawAmount);
+
+        assertEq(address(bridgeProxy).balance, bridgeBalance - withdrawAmount);
+        assertEq(user.balance, initialUserBalance + withdrawAmount);
+    }
+
+    function test_WithdrawEth_Success_FullBalance() public {
+        uint256 bridgeBalance = address(bridgeProxy).balance;
+        uint256 initialUserBalance = user.balance;
+
+        vm.prank(admin);
+        bridgeProxy.withdrawEth(payable(user), bridgeBalance);
+
+        assertEq(address(bridgeProxy).balance, 0);
+        assertEq(user.balance, initialUserBalance + bridgeBalance);
+    }
+
+    function test_RevertWhen_WithdrawEth_NotAdmin() public {
+        uint256 withdrawAmount = 1 ether;
+        bytes32 bridgeAdminRole = bridgeProxy.BRIDGE_ADMIN_ROLE();
+
+        vm.prank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, bridgeAdminRole)
+        );
+        bridgeProxy.withdrawEth(payable(user), withdrawAmount);
+    }
+
+    function test_RevertWhen_WithdrawEth_ZeroAddress() public {
+        uint256 withdrawAmount = 1 ether;
+
+        vm.prank(admin);
+        vm.expectRevert("ArbitrumBridgeProxy: zero address");
+        bridgeProxy.withdrawEth(payable(address(0)), withdrawAmount);
+    }
+
+    function test_RevertWhen_WithdrawEth_InsufficientBalance() public {
+        uint256 bridgeBalance = address(bridgeProxy).balance;
+        uint256 withdrawAmount = bridgeBalance + 1 ether;
+
+        vm.prank(admin);
+        vm.expectRevert("ArbitrumBridgeProxy: insufficient balance");
+        bridgeProxy.withdrawEth(payable(user), withdrawAmount);
+    }
+
+    function test_RevertWhen_WithdrawEth_TransferFails() public {
+        // Deploy a contract that rejects ETH transfers
+        RejectEthContract rejectContract = new RejectEthContract();
+        uint256 withdrawAmount = 1 ether;
+
+        vm.prank(admin);
+        vm.expectRevert("ArbitrumBridgeProxy: ETH transfer failed");
+        bridgeProxy.withdrawEth(payable(address(rejectContract)), withdrawAmount);
+    }
+
+    function test_WithdrawEth_EmitsCorrectEvent() public {
+        uint256 withdrawAmount = 0.5 ether;
+        address recipient = address(0x1234);
+
+        vm.expectEmit(true, false, false, true);
+        emit EthWithdrawn(recipient, withdrawAmount);
+
+        vm.prank(admin);
+        bridgeProxy.withdrawEth(payable(recipient), withdrawAmount);
+    }
+
+    function test_WithdrawEth_MultipleWithdrawals() public {
+        uint256 firstWithdraw = 1 ether;
+        uint256 secondWithdraw = 2 ether;
+        uint256 initialBalance = address(bridgeProxy).balance;
+        uint256 initialUserBalance = user.balance;
+
+        vm.startPrank(admin);
+        bridgeProxy.withdrawEth(payable(user), firstWithdraw);
+        bridgeProxy.withdrawEth(payable(user), secondWithdraw);
+        vm.stopPrank();
+
+        assertEq(address(bridgeProxy).balance, initialBalance - firstWithdraw - secondWithdraw);
+        assertEq(user.balance, initialUserBalance + firstWithdraw + secondWithdraw);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          FUZZ TESTS FOR WITHDRAWAL
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_WithdrawEth_ValidAmounts(uint256 withdrawAmount) public {
+        uint256 bridgeBalance = address(bridgeProxy).balance;
+        withdrawAmount = bound(withdrawAmount, 1 wei, bridgeBalance);
+
+        uint256 initialUserBalance = user.balance;
+
+        vm.prank(admin);
+        bridgeProxy.withdrawEth(payable(user), withdrawAmount);
+
+        assertEq(address(bridgeProxy).balance, bridgeBalance - withdrawAmount);
+        assertEq(user.balance, initialUserBalance + withdrawAmount);
+    }
+
+    function testFuzz_WithdrawEth_DifferentRecipients(address recipient) public {
+        vm.assume(recipient != address(0));
+        vm.assume(recipient.code.length == 0); // Not a contract
+
+        uint256 withdrawAmount = 1 ether;
+        uint256 initialBridgeBalance = address(bridgeProxy).balance;
+        uint256 initialRecipientBalance = recipient.balance;
+
+        vm.prank(admin);
+        bridgeProxy.withdrawEth(payable(recipient), withdrawAmount);
+
+        assertEq(address(bridgeProxy).balance, initialBridgeBalance - withdrawAmount);
+        assertEq(recipient.balance, initialRecipientBalance + withdrawAmount);
+    }
+}
+
+// Helper contract that rejects ETH transfers
+contract RejectEthContract {
+    // Fallback function that reverts
+    fallback() external payable {
+        revert("Cannot receive ETH");
+    }
+
+    receive() external payable {
+        revert("Cannot receive ETH");
     }
 }
