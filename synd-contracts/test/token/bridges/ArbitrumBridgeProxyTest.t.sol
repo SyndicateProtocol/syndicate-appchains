@@ -27,8 +27,9 @@ contract MockArbitrumBridge {
         shouldRevert = _shouldRevert;
     }
 
-    function outboundTransfer(
+    function outboundTransferCustomRefund(
         address _token,
+        address _refundTo,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
@@ -45,7 +46,7 @@ contract MockArbitrumBridge {
         transferCalls.push(
             TransferCall({
                 token: _token,
-                refundTo: address(0), // Not used in outboundTransfer
+                refundTo: _refundTo,
                 to: _to,
                 amount: _amount,
                 maxGas: _maxGas,
@@ -153,7 +154,7 @@ contract ArbitrumBridgeProxyTest is Test {
         // Verify Arbitrum bridge was called correctly
         MockArbitrumBridge.TransferCall memory call = arbitrumBridge.getLastTransferCall();
         assertEq(call.token, address(token));
-        assertEq(call.refundTo, address(0)); // outboundTransfer doesn't have refundTo parameter
+        assertEq(call.refundTo, address(bridgeProxy));
         assertEq(call.to, recipient);
         assertEq(call.amount, amount);
         assertEq(call.maxGas, maxGas);
@@ -178,7 +179,7 @@ contract ArbitrumBridgeProxyTest is Test {
         // Verify custom parameters were used
         MockArbitrumBridge.TransferCall memory call = arbitrumBridge.getLastTransferCall();
         assertEq(call.token, address(token));
-        assertEq(call.refundTo, address(0)); // outboundTransfer doesn't have refundTo parameter
+        assertEq(call.refundTo, address(bridgeProxy));
         assertEq(call.to, customRecipient);
         assertEq(call.amount, amount);
         assertEq(call.maxGas, customMaxGas);
@@ -349,7 +350,7 @@ contract ArbitrumBridgeProxyTest is Test {
         // Verify bridge call
         MockArbitrumBridge.TransferCall memory call = arbitrumBridge.getLastTransferCall();
         assertEq(call.token, address(token));
-        assertEq(call.refundTo, address(0)); // outboundTransfer doesn't have refundTo parameter
+        assertEq(call.refundTo, address(bridgeProxy));
         assertEq(call.to, customRecipient);
         assertEq(call.amount, amount);
         assertEq(call.maxGas, customMaxGas);

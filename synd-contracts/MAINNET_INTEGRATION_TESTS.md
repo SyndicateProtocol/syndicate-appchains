@@ -123,6 +123,40 @@ contract MainnetIntegrationTest is Test {
 - ✅ **Token Flow**: Tokens leave EmissionScheduler and enter bridge contracts
 - ✅ **Error Handling**: Failed bridges revert entire emission transaction
 
+### Bridge Function Analysis
+
+#### Arbitrum Bridge Function Selection
+The Arbitrum L1GatewayRouter provides two main functions for token bridging:
+
+1. **`outboundTransfer`**: Standard bridging function
+   - Simpler interface (6 parameters)
+   - Uses default refund logic
+   - Gas refunds go to tx.origin
+
+2. **`outboundTransferCustomRefund`**: Enhanced bridging function (CHOSEN)
+   - More control (7 parameters including refundTo)
+   - Explicit refund address specification
+   - Better for contract-based bridging
+
+#### Why outboundTransferCustomRefund?
+- **Gas Management**: Refunds excess gas to bridge proxy for reuse
+- **Contract Safety**: Ensures refunds don't go to EOA (emissions manager)
+- **Cost Efficiency**: Accumulated gas refunds can fund future bridges
+- **Production Ready**: Better suited for automated emission systems
+
+#### ETH Funding Requirements
+Both functions require ETH funding for bridge proxy contracts:
+```solidity
+uint256 ethValue = maxGas * gasPriceBid;
+// Bridge proxy must have >= ethValue in ETH balance
+```
+
+**Production Checklist:**
+- [ ] Fund bridge proxy contracts with ETH for gas payments
+- [ ] Monitor ETH balances and implement auto-refunding
+- [ ] Set appropriate gas parameters (maxGas, gasPriceBid)
+- [ ] Test gas estimation on target L2 networks
+
 ## Debugging
 
 ### Common Issues
