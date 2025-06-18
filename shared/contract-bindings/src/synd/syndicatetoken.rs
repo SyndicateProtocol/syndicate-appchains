@@ -422,7 +422,7 @@ interface SyndicateToken {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event UnlockTimestampUpdated(uint256 oldTimestamp, uint256 newTimestamp, address indexed updatedBy);
 
-    constructor(address defaultAdmin, address syndFoundationAddress);
+    constructor(address defaultAdmin, address syndTreasuryAddress);
 
     function AIRDROP_MANAGER_ROLE() external view returns (bytes32);
     function CLOCK_MODE() external view returns (string memory);
@@ -485,7 +485,7 @@ interface SyndicateToken {
         "internalType": "address"
       },
       {
-        "name": "syndFoundationAddress",
+        "name": "syndTreasuryAddress",
         "type": "address",
         "internalType": "address"
       }
@@ -5618,7 +5618,7 @@ event UnlockTimestampUpdated(uint256 oldTimestamp, uint256 newTimestamp, address
     };
     /**Constructor`.
 ```solidity
-constructor(address defaultAdmin, address syndFoundationAddress);
+constructor(address defaultAdmin, address syndTreasuryAddress);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5626,7 +5626,7 @@ constructor(address defaultAdmin, address syndFoundationAddress);
         #[allow(missing_docs)]
         pub defaultAdmin: alloy::sol_types::private::Address,
         #[allow(missing_docs)]
-        pub syndFoundationAddress: alloy::sol_types::private::Address,
+        pub syndTreasuryAddress: alloy::sol_types::private::Address,
     }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
@@ -5656,7 +5656,7 @@ constructor(address defaultAdmin, address syndFoundationAddress);
             #[doc(hidden)]
             impl ::core::convert::From<constructorCall> for UnderlyingRustTuple<'_> {
                 fn from(value: constructorCall) -> Self {
-                    (value.defaultAdmin, value.syndFoundationAddress)
+                    (value.defaultAdmin, value.syndTreasuryAddress)
                 }
             }
             #[automatically_derived]
@@ -5665,7 +5665,7 @@ constructor(address defaultAdmin, address syndFoundationAddress);
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {
                         defaultAdmin: tuple.0,
-                        syndFoundationAddress: tuple.1,
+                        syndTreasuryAddress: tuple.1,
                     }
                 }
             }
@@ -5692,7 +5692,7 @@ constructor(address defaultAdmin, address syndFoundationAddress);
                         &self.defaultAdmin,
                     ),
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        &self.syndFoundationAddress,
+                        &self.syndTreasuryAddress,
                     ),
                 )
             }
@@ -14746,7 +14746,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
     >(
         provider: P,
         defaultAdmin: alloy::sol_types::private::Address,
-        syndFoundationAddress: alloy::sol_types::private::Address,
+        syndTreasuryAddress: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<SyndicateTokenInstance<T, P, N>>,
     > {
@@ -14754,7 +14754,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
             T,
             P,
             N,
-        >::deploy(provider, defaultAdmin, syndFoundationAddress)
+        >::deploy(provider, defaultAdmin, syndTreasuryAddress)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -14769,13 +14769,13 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     >(
         provider: P,
         defaultAdmin: alloy::sol_types::private::Address,
-        syndFoundationAddress: alloy::sol_types::private::Address,
+        syndTreasuryAddress: alloy::sol_types::private::Address,
     ) -> alloy_contract::RawCallBuilder<T, P, N> {
         SyndicateTokenInstance::<
             T,
             P,
             N,
-        >::deploy_builder(provider, defaultAdmin, syndFoundationAddress)
+        >::deploy_builder(provider, defaultAdmin, syndTreasuryAddress)
     }
     /**A [`SyndicateToken`](self) instance.
 
@@ -14831,12 +14831,12 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         pub async fn deploy(
             provider: P,
             defaultAdmin: alloy::sol_types::private::Address,
-            syndFoundationAddress: alloy::sol_types::private::Address,
+            syndTreasuryAddress: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<SyndicateTokenInstance<T, P, N>> {
             let call_builder = Self::deploy_builder(
                 provider,
                 defaultAdmin,
-                syndFoundationAddress,
+                syndTreasuryAddress,
             );
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -14850,7 +14850,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn deploy_builder(
             provider: P,
             defaultAdmin: alloy::sol_types::private::Address,
-            syndFoundationAddress: alloy::sol_types::private::Address,
+            syndTreasuryAddress: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<T, P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
@@ -14859,7 +14859,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                     &alloy_sol_types::SolConstructor::abi_encode(
                         &constructorCall {
                             defaultAdmin,
-                            syndFoundationAddress,
+                            syndTreasuryAddress,
                         },
                     )[..],
                 ]

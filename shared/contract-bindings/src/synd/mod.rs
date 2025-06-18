@@ -20,6 +20,7 @@ pub mod r#arbsys;
 pub mod r#arbitrumbridgeproxy;
 pub mod r#iarbitrumbridge;
 pub mod r#mockarbitrumbridge;
+pub mod r#rejectethcontract;
 pub mod r#assertionnodelib;
 pub mod r#assertionposter;
 pub mod r#irollup;
