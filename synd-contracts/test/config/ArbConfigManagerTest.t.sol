@@ -21,7 +21,7 @@ contract ArbConfigManagerTest is Test {
     uint256 public constant SETTLEMENT_START_BLOCK = 100;
     address public constant SEQUENCING_CONTRACT_ADDRESS = address(0x9ABC);
     uint256 public constant SEQUENCING_START_BLOCK = 200;
-    string public constant DEFAULT_RPC_URL = "https://example.com/rpc";
+    string public constant DEFAULT_WS_RPC_URL = "https://example.com/rpc";
     string public constant APPCHAIN_BLOCK_EXPLORER_URL = "https://example.com/explorer";
 
     function setUp() public {
@@ -64,7 +64,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 
@@ -93,7 +93,7 @@ contract ArbConfigManagerTest is Test {
         assertEq(chainConfig.SEQUENCING_CONTRACT_ADDRESS(), SEQUENCING_CONTRACT_ADDRESS);
         assertEq(chainConfig.SEQUENCING_START_BLOCK(), SEQUENCING_START_BLOCK);
         assertEq(chainConfig.INITIAL_APPCHAIN_OWNER(), appchainOwner);
-        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), DEFAULT_RPC_URL);
+        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), DEFAULT_WS_RPC_URL);
         assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), APPCHAIN_BLOCK_EXPLORER_URL);
 
         vm.stopPrank();
@@ -114,7 +114,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 
@@ -131,7 +131,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 
@@ -153,7 +153,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 
@@ -175,7 +175,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
     }
@@ -194,7 +194,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 
@@ -222,7 +222,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 
@@ -254,7 +254,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 
@@ -338,7 +338,7 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             appchainOwner,
-            DEFAULT_RPC_URL,
+            DEFAULT_WS_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL
         );
 
