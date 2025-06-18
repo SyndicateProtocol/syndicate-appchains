@@ -11,9 +11,8 @@ import {BaseBridgeProxy} from "./BaseBridgeProxy.sol";
  */
 interface IArbitrumBridge {
     /**
-     * @notice Transfer tokens to L2 with custom refund address
+     * @notice Transfer tokens to L2 using the standard outboundTransfer function
      * @param _token Address of the L1 token being transferred
-     * @param _refundTo Address to refund excess gas fees on L1
      * @param _to Address of the recipient on L2
      * @param _amount Amount of tokens to transfer
      * @param _maxGas Maximum gas to use for the L2 transaction
@@ -21,9 +20,8 @@ interface IArbitrumBridge {
      * @param _data Optional data to pass to the L2 contract
      * @return Unique identifier for the transfer
      */
-    function outboundTransferCustomRefund(
+    function outboundTransfer(
         address _token,
-        address _refundTo,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
@@ -116,7 +114,7 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
     /**
      * @notice Execute the Arbitrum bridge call
      * @dev This function implements the bridge-specific logic for Arbitrum.
-     *      It approves the bridge contract to spend tokens and calls outboundTransferCustomRefund.
+     *      It approves the bridge contract to spend tokens and calls outboundTransfer.
      *      ETH value is calculated as maxGas * gasPriceBid to pay for L2 execution.
      *
      * Dynamic Data Format:
@@ -140,9 +138,8 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
         IERC20(token).approve(bridgeTarget, amount);
 
         // Call the Arbitrum bridge - if it fails, the entire transaction reverts automatically
-        IArbitrumBridge(bridgeTarget).outboundTransferCustomRefund{value: ethValue}(
+        IArbitrumBridge(bridgeTarget).outboundTransfer{value: ethValue}(
             token, // L1 token address
-            address(this), // Refund address (this contract)
             _recipient, // Recipient on L2
             amount, // Amount to bridge
             _maxGas, // Maximum gas for L2 transaction

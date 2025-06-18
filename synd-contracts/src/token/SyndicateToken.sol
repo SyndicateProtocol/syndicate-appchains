@@ -118,16 +118,16 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /**
      * @notice Initialize the Syndicate token contract
      * @param defaultAdmin Address that will have default admin privileges
-     * @param syndFoundationAddress Address to receive the initial token mint
+     * @param syndTreasuryAddress Address to receive the initial token mint
      */
-    constructor(address defaultAdmin, address syndFoundationAddress)
+    constructor(address defaultAdmin, address syndTreasuryAddress)
         ERC20("Syndicate", "SYND")
         ERC20Permit("Syndicate")
         ERC20Votes()
     {
         // Input validation
         if (defaultAdmin == address(0)) revert ZeroAddress();
-        if (syndFoundationAddress == address(0)) revert ZeroAddress();
+        if (syndTreasuryAddress == address(0)) revert ZeroAddress();
 
         // Set maximum lock timestamp (contract deployment + MAX_LOCK_DURATION)
         maxLockTimestamp = block.timestamp + MAX_LOCK_DURATION;
@@ -139,7 +139,7 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
 
         // Mint initial supply to foundation
-        _mint(syndFoundationAddress, INITIAL_MINT_SUPPLY);
+        _mint(syndTreasuryAddress, INITIAL_MINT_SUPPLY);
     }
 
     /*//////////////////////////////////////////////////////////////

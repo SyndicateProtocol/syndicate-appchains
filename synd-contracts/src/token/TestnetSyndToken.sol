@@ -5,14 +5,13 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit, Nonces} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title TestnetSyndToken
  * @notice Testnet version of Syndicate Token with testing utilities
  * @dev This contract is for testnet deployments. It is ERC20Votes and ERC20Permit compatible.
  */
-contract TestnetSyndToken is ERC20, AccessControl, ERC20Permit, ERC20Votes, ReentrancyGuard {
+contract TestnetSyndToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Thrown when an address is zero
     error ZeroAddress();
 

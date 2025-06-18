@@ -9,7 +9,7 @@ contract SyndicateTokenTest is Test {
     SyndicateToken public token;
 
     address public defaultAdmin = address(0x1234);
-    address public syndFoundationAddress = address(0x5678);
+    address public syndTreasuryAddress = address(0x5678);
     address public emissionMinter = address(0x9ABC); // Emission scheduler contract
     address public airdropManager = address(0xDEF0); // Airdrop manager
     address public user = address(0x1111);
@@ -19,7 +19,7 @@ contract SyndicateTokenTest is Test {
         vm.startPrank(defaultAdmin);
 
         // Deploy token
-        token = new SyndicateToken(defaultAdmin, syndFoundationAddress);
+        token = new SyndicateToken(defaultAdmin, syndTreasuryAddress);
 
         // Grant emission minter role to simulate emission scheduler
         token.grantRole(token.EMISSION_MINTER_ROLE(), emissionMinter);
@@ -46,13 +46,13 @@ contract SyndicateTokenTest is Test {
     }
 
     function test_Constructor_InitialMint() public view {
-        assertEq(token.balanceOf(syndFoundationAddress), token.INITIAL_MINT_SUPPLY());
+        assertEq(token.balanceOf(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY());
         assertEq(token.totalSupply(), token.INITIAL_MINT_SUPPLY());
     }
 
     function test_RevertWhen_Constructor_ZeroAdmin() public {
         vm.expectRevert(SyndicateToken.ZeroAddress.selector);
-        new SyndicateToken(address(0), syndFoundationAddress);
+        new SyndicateToken(address(0), syndTreasuryAddress);
     }
 
     function test_RevertWhen_Constructor_ZeroFoundation() public {
@@ -79,11 +79,11 @@ contract SyndicateTokenTest is Test {
 
         vm.startPrank(emissionMinter);
         token.mint(user, amount1);
-        token.mint(syndFoundationAddress, amount2);
+        token.mint(syndTreasuryAddress, amount2);
         vm.stopPrank();
 
         assertEq(token.balanceOf(user), amount1);
-        assertEq(token.balanceOf(syndFoundationAddress), token.INITIAL_MINT_SUPPLY() + amount2);
+        assertEq(token.balanceOf(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY() + amount2);
     }
 
     function test_Mint_ToTotalSupply() public {
@@ -147,10 +147,10 @@ contract SyndicateTokenTest is Test {
     // ============ GOVERNANCE FUNCTIONALITY TESTS ============
 
     function test_GetVotingPower_WithTokens() public {
-        vm.prank(syndFoundationAddress);
-        token.delegate(syndFoundationAddress);
+        vm.prank(syndTreasuryAddress);
+        token.delegate(syndTreasuryAddress);
 
-        assertEq(token.getVotingPower(syndFoundationAddress), token.INITIAL_MINT_SUPPLY());
+        assertEq(token.getVotingPower(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY());
     }
 
     function test_GetVotingPower_WithoutTokens() public view {
@@ -158,15 +158,15 @@ contract SyndicateTokenTest is Test {
     }
 
     function test_Delegate_Success() public {
-        vm.prank(syndFoundationAddress);
+        vm.prank(syndTreasuryAddress);
         token.delegate(user);
 
         assertEq(token.getVotes(user), token.INITIAL_MINT_SUPPLY());
-        assertEq(token.delegates(syndFoundationAddress), user);
+        assertEq(token.delegates(syndTreasuryAddress), user);
     }
 
     function test_GetPastVotingPower() public {
-        vm.prank(syndFoundationAddress);
+        vm.prank(syndTreasuryAddress);
         token.delegate(user);
 
         vm.roll(block.number + 1);
@@ -197,33 +197,33 @@ contract SyndicateTokenTest is Test {
     function test_Transfer_Success() public {
         uint256 transferAmount = 1000 * 10 ** 18;
 
-        vm.prank(syndFoundationAddress);
+        vm.prank(syndTreasuryAddress);
         token.transfer(user, transferAmount);
 
         assertEq(token.balanceOf(user), transferAmount);
-        assertEq(token.balanceOf(syndFoundationAddress), token.INITIAL_MINT_SUPPLY() - transferAmount);
+        assertEq(token.balanceOf(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY() - transferAmount);
     }
 
     function test_Approve_Success() public {
         uint256 amount = 500 * 10 ** 18;
 
-        vm.prank(syndFoundationAddress);
+        vm.prank(syndTreasuryAddress);
         token.approve(user, amount);
 
-        assertEq(token.allowance(syndFoundationAddress, user), amount);
+        assertEq(token.allowance(syndTreasuryAddress, user), amount);
     }
 
     function test_TransferFrom_Success() public {
         uint256 amount = 300 * 10 ** 18;
 
-        vm.prank(syndFoundationAddress);
+        vm.prank(syndTreasuryAddress);
         token.approve(user, amount);
 
         vm.prank(user);
-        token.transferFrom(syndFoundationAddress, user, amount);
+        token.transferFrom(syndTreasuryAddress, user, amount);
 
         assertEq(token.balanceOf(user), amount);
-        assertEq(token.allowance(syndFoundationAddress, user), 0);
+        assertEq(token.allowance(syndTreasuryAddress, user), 0);
     }
 
     // ============ ROLE MANAGEMENT TESTS ============
@@ -271,11 +271,11 @@ contract SyndicateTokenTest is Test {
     function testFuzz_Transfer_ValidAmounts(uint256 amount) public {
         amount = bound(amount, 1, token.INITIAL_MINT_SUPPLY());
 
-        vm.prank(syndFoundationAddress);
+        vm.prank(syndTreasuryAddress);
         token.transfer(user, amount);
 
         assertEq(token.balanceOf(user), amount);
-        assertEq(token.balanceOf(syndFoundationAddress), token.INITIAL_MINT_SUPPLY() - amount);
+        assertEq(token.balanceOf(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY() - amount);
     }
 
     // ============ INVARIANT TESTS ============
@@ -288,7 +288,7 @@ contract SyndicateTokenTest is Test {
 
         uint256 expectedTotalSupply = token.INITIAL_MINT_SUPPLY() + mintedAmount;
         assertEq(token.totalSupply(), expectedTotalSupply);
-        assertEq(token.totalSupply(), token.balanceOf(syndFoundationAddress) + token.balanceOf(user));
+        assertEq(token.totalSupply(), token.balanceOf(syndTreasuryAddress) + token.balanceOf(user));
     }
 
     function test_Invariant_RemainingEmissionsConsistency() public {
@@ -298,7 +298,7 @@ contract SyndicateTokenTest is Test {
 
         vm.startPrank(emissionMinter);
         token.mint(user, mint1);
-        token.mint(syndFoundationAddress, mint2);
+        token.mint(syndTreasuryAddress, mint2);
         vm.stopPrank();
 
         assertEq(token.getRemainingEmissions(), initialRemaining - (mint1 + mint2));

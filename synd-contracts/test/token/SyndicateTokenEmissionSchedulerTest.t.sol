@@ -65,7 +65,7 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
     MockOptimismBridge public mockBridge;
 
     address public defaultAdmin = address(0x1234);
-    address public syndFoundationAddress = address(0x5678);
+    address public syndTreasuryAddress = address(0x5678);
     address public emissionsManager = address(0x9ABC);
     address public pauser = address(0xDEF0);
     address public user = address(0x1111);
@@ -89,7 +89,7 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
         vm.startPrank(defaultAdmin);
 
         // Deploy token
-        token = new SyndicateToken(defaultAdmin, syndFoundationAddress);
+        token = new SyndicateToken(defaultAdmin, syndTreasuryAddress);
 
         // Deploy emission scheduler
         emissionScheduler = new SyndicateTokenEmissionScheduler(address(token), defaultAdmin, emissionsManager, pauser);
