@@ -66,10 +66,9 @@ impl Default for BlockBuilderConfig {
 }
 
 impl BlockBuilderConfig {
-    // Validates the config values and complains about impossible ones
-    pub fn validate(&self) -> Result<(), ConfigError> {
+    /// Validates the config values
+    pub const fn validate(&self) -> Result<(), ConfigError> {
         match self.target_appchain_type {
-            // Validate Arbitrum specific configuration
             TargetAppchainType::ARBITRUM => {}
         }
 
@@ -78,7 +77,7 @@ impl BlockBuilderConfig {
 
     /// Validates the config and ensures all mandatory fields have values (including optional fields
     /// that might have been defined by the `ConfigManager` contract)
-    pub fn validate_strict(&self) -> Result<(), ConfigError> {
+    pub const fn validate_strict(&self) -> Result<(), ConfigError> {
         if self.sequencing_contract_address.is_none() {
             return Err(ConfigError::SequencingContractAddressMissing);
         }

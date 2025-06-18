@@ -21,7 +21,8 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
     };
 
     let ingestor_provider =
-        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout).await;
+        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
+            .await;
 
     let provider = ProviderBuilder::new().on_client(
         ClientBuilder::default()
