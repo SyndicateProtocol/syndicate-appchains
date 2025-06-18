@@ -17,10 +17,6 @@ pub struct BlockBuilderConfig {
         value_parser = parse_address)]
     pub sequencing_contract_address: Option<Address>,
 
-    /// Target appchain type for the [`synd-block-builder`]
-    #[arg(long, env = "TARGET_APPCHAIN_TYPE", default_value = "arbitrum")]
-    pub target_appchain_type: TargetAppchainType,
-
     /// Bridge address on the settlement chain
     #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
         value_parser = parse_address)]
@@ -32,20 +28,11 @@ pub struct BlockBuilderConfig {
     pub arbitrum_inbox_address: Option<Address>,
 }
 
-/// Supported target appchain types for the `synd-block-builder`. More chains may be supported in
-/// the future
-#[allow(missing_docs)]
-#[derive(Debug, Clone, Parser, ValueEnum)]
-pub enum TargetAppchainType {
-    ARBITRUM,
-}
-
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
             .field("mchain_ws_url", &self.mchain_ws_url)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
-            .field("target_appchain_type", &self.target_appchain_type)
             .field("arbitrum_bridge_address", &self.arbitrum_bridge_address)
             .field("arbitrum_inbox_address", &self.arbitrum_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
@@ -58,7 +45,6 @@ impl Default for BlockBuilderConfig {
         Self {
             mchain_ws_url: String::new(),
             sequencing_contract_address: Some(Address::ZERO),
-            target_appchain_type: TargetAppchainType::ARBITRUM,
             arbitrum_bridge_address: Some(Address::ZERO),
             arbitrum_inbox_address: Some(Address::ZERO),
         }
