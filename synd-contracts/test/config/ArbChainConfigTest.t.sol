@@ -22,7 +22,7 @@ contract ArbChainConfigTestBase is Test {
 
     // Events for testing
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
+    event DefaultSequencingChainWsRpcUrlUpdated(string newRpcUrl);
     event ArbChainConfigCreated(uint256 indexed chainId, address configAddress);
     event ImplementationUpgraded(address newImplementation);
 
@@ -273,7 +273,7 @@ contract ArbChainConfigUpdateTests is ArbChainConfigTestBase {
         vm.startPrank(newOwner);
         string memory newRpcUrl = "https://new-example.com/rpc";
         vm.expectEmit(true, false, false, true);
-        emit DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
+        emit DefaultSequencingChainWsRpcUrlUpdated(newRpcUrl);
         chainConfig.updateDefaultSequencingChainWsRpcUrl(newRpcUrl);
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), newRpcUrl);
         vm.stopPrank();
@@ -301,7 +301,7 @@ contract ArbChainConfigUpdateTests is ArbChainConfigTestBase {
         string memory newRpcUrl = "https://new-example.com/rpc";
 
         vm.expectEmit(true, false, false, true);
-        emit DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
+        emit DefaultSequencingChainWsRpcUrlUpdated(newRpcUrl);
 
         chainConfig.updateDefaultSequencingChainWsRpcUrl(newRpcUrl);
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL(), newRpcUrl);
