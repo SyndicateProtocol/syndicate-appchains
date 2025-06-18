@@ -312,9 +312,7 @@ pub async fn deploy_nitro_rollup(
             .env("CHILD_CHAIN_NAME", format!("local-rollup-{rollup_chain_id}"))
             .env("CHILD_CHAIN_CONFIG_PATH", "./l2_chain_config.json")
             .env("OWNER_ADDRESS", rollup_owner.to_string())
-            .env("SEQUENCER_ADDRESS", rollup_owner.to_string())
-            // .env("BATCH_POSTERS", default_signer.to_string())
-            // .env("BATCH_POSTER_MANAGER", default_signer.to_string())
+            .env("SEQUENCER_ADDRESS", rollup_owner.to_string()) // is set as the batch poster manager by default
             .env(
                 "WASM_MODULE_ROOT",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",

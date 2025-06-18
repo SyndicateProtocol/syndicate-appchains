@@ -14,11 +14,8 @@ use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
     primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U256},
-    providers::{
-        ext::{AnvilApi, DebugApi},
-        Provider, WalletProvider,
-    },
-    rpc::types::{anvil::MineOptions, trace::geth::GethDebugTracingOptions, TransactionReceipt},
+    providers::{ext::AnvilApi, Provider, WalletProvider},
+    rpc::types::{anvil::MineOptions, TransactionReceipt},
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
@@ -45,7 +42,10 @@ use synd_mchain::{
 };
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args},
-    chain_info::{default_signer, ChainInfo, ProcessInstance, PRIVATE_KEY},
+    chain_info::{
+        default_signer, default_signer2, default_signer3, ChainInfo, ProcessInstance, PRIVATE_KEY,
+        PRIVATE_KEY2, PRIVATE_KEY3,
+    },
     docker::{
         launch_enclave_server, launch_nitro_node, start_component, start_mchain, start_valkey,
         E2EProcess, NitroNodeArgs, NitroSequencerMode,
@@ -163,7 +163,7 @@ impl TestComponents {
                 let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
                 info.provider.evm_mine(Some(MineOptions::Timestamp(Some(now)))).await?;
                 info.provider.anvil_set_auto_mine(true).await?; //auto-mine enabled
-                info.provider.anvil_set_block_timestamp_interval(60).await?;
+                info.provider.anvil_set_block_timestamp_interval(1).await?;
                 Some(info)
             }
         };
@@ -182,19 +182,22 @@ impl TestComponents {
                 let chain_id = 15;
                 let l1_info = l1_info.as_ref().unwrap();
 
+                // NOTE: use a different address to post batches to avoid nonce conflicts
+                let owner_address = default_signer2().address();
+
                 let seq_deployment =
-                    deploy_nitro_rollup(&l1_info.http_url, chain_id, default_signer().address())
-                        .await?;
+                    deploy_nitro_rollup(&l1_info.http_url, chain_id, owner_address).await?;
 
                 info!("Starting sequencing chain's nitro node...");
                 let seq_chain_info = launch_nitro_node(NitroNodeArgs {
                     chain_id,
-                    chain_owner: default_signer().address(),
+                    chain_owner: owner_address,
                     parent_chain_url: l1_info.ws_url.clone(),
                     parent_chain_id: l1_info.provider.get_chain_id().await?,
                     sequencer_mode: NitroSequencerMode::Sequencer,
                     chain_name: "sequencing".to_string(),
                     deployment: seq_deployment.clone(),
+                    sequencer_private_key: Some(PRIVATE_KEY2.to_string()),
                 })
                 .await?;
 
@@ -269,19 +272,22 @@ impl TestComponents {
                 let chain_id = 20;
                 let l1_info = l1_info.as_ref().unwrap();
 
+                // NOTE: use a different address to post batches to avoid nonce conflicts
+                let owner_address = default_signer3().address();
+
                 let set_deployment =
-                    deploy_nitro_rollup(&l1_info.http_url, chain_id, default_signer().address())
-                        .await?;
+                    deploy_nitro_rollup(&l1_info.http_url, chain_id, owner_address).await?;
 
                 info!("Starting settlement chain's nitro node...");
                 let set_chain_info = launch_nitro_node(NitroNodeArgs {
                     chain_id,
-                    chain_owner: default_signer().address(),
+                    chain_owner: owner_address,
                     parent_chain_url: l1_info.ws_url.clone(),
                     parent_chain_id: l1_info.provider.get_chain_id().await?,
                     sequencer_mode: NitroSequencerMode::Sequencer,
                     chain_name: "settlement".to_string(),
                     deployment: set_deployment.clone(),
+                    sequencer_private_key: Some(PRIVATE_KEY3.to_string()),
                 })
                 .await?;
 
@@ -470,6 +476,7 @@ impl TestComponents {
                 deployed_at: 1,
                 ..Default::default()
             },
+            sequencer_private_key: None,
         })
         .await?;
         info!("Nitro URL: {}", appchain_rpc_url);

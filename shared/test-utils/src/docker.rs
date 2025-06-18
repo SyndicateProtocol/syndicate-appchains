@@ -1,7 +1,7 @@
 //! Docker components for the integration tests
 
 use crate::{
-    chain_info::{default_signer, ChainInfo, ProcessInstance, PRIVATE_KEY},
+    chain_info::{default_signer, ChainInfo, ProcessInstance},
     nitro_chain::{nitro_chain_info_json, NitroChainInfoArgs, NitroDeployment},
     port_manager::PortManager,
     utils::test_path,
@@ -226,6 +226,7 @@ pub struct NitroNodeArgs {
     pub parent_chain_id: u64,
     pub sequencer_mode: NitroSequencerMode,
     pub deployment: NitroDeployment,
+    pub sequencer_private_key: Option<String>,
 }
 
 /// Starts nitro instance
@@ -250,13 +251,25 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
                 "--node.delayed-sequencer.use-merge-finality=false".to_string(),
                 "--node.delayed-sequencer.finalize-distance=0".to_string(),
                 "--node.dangerous.no-sequencer-coordinator=true".to_string(),
-                format!(
-                    "--node.batch-poster.parent-chain-wallet.private-key={}",
-                    PRIVATE_KEY.strip_prefix("0x").unwrap()
-                ),
+                args.sequencer_private_key
+                    .map(|key| {
+                        format!(
+                            "--node.batch-poster.parent-chain-wallet.private-key={}",
+                            key.strip_prefix("0x").unwrap()
+                        )
+                    })
+                    .unwrap_or_default(),
                 "--node.batch-poster.data-poster.wait-for-l1-finality=false".to_string(),
                 "--node.parent-chain-reader.use-finality-data=false".to_string(),
                 "--execution.parent-chain-reader.use-finality-data=false".to_string(),
+                "--node.batch-poster.reorg-resistance-margin=1ms".to_string(),
+                "--execution.parent-chain-reader.use-finality-data=false".to_string(),
+                "--execution.sync-monitor.safe-block-wait-for-block-validator=false".to_string(),
+                "--node.batch-poster.l1-block-bound=ignore".to_string(),
+                "--execution.sync-monitor.finalized-block-wait-for-block-validator=false"
+                    .to_string(),
+                "--node.batch-poster.max-delay=1s".to_string(),
+                "--node.batch-poster.wait-for-max-delay=false".to_string(),
             ]
         }
     };

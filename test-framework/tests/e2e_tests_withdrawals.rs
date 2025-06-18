@@ -1,21 +1,18 @@
 //! e2e tests for the `synd-withdrawals`
 use alloy::{
     contract::CallBuilder,
-    eips::{BlockId::Number, BlockNumberOrTag},
+    eips::{BlockNumberOrTag, Encodable2718},
     network::Ethereum,
-    primitives::{address, utils::parse_ether, Address, B256, U256},
+    primitives::{address, utils::parse_ether, Address, B256},
     providers::{ext::DebugApi, Provider},
-    rpc::types::{trace::geth::GethDebugTracingOptions, TransactionRequest},
+    rpc::types::trace::geth::GethDebugTracingOptions,
     signers::local::PrivateKeySigner,
     sol,
     sol_types::SolValue,
 };
 use contract_bindings::synd::{
-    assertionposter::AssertionPoster,
-    iinbox::IInbox,
-    irollup::{IRollup, IRollupCore},
-    teekeymanager::TeeKeyManager,
-    teemodule::TeeModule,
+    assertionposter::AssertionPoster, iinbox::IInbox, irollup::IRollup,
+    teekeymanager::TeeKeyManager, teemodule::TeeModule,
 };
 use eyre::Result;
 use std::time::Duration;
@@ -133,7 +130,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                     // TODO try to set this to not 0
                     B256::ZERO,
                     Address::ZERO,
-                    60 * 60, // challenge_window_duration - 1 hour
+                    1, // challenge_window_duration - 1 second
                     key_mgr_addr,
                 ),
                 &signer,
@@ -174,64 +171,18 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             println!("receipt: {:?}", receipt);
             assert!(receipt.status());
 
-            // TODO figure out why the appchain is not progressing
-            // TODO remove
-
-            let l1_provider = components.l1_provider.as_ref().unwrap();
-            let block = components
-                .settlement_provider
-                .get_block(Number(BlockNumberOrTag::Latest))
-                .await?
-                .unwrap()
-                .header;
-            println!("set block number: {:?}, timestamp: {:?}", block.number, block.timestamp);
-            let nonce = components
-                .settlement_provider
-                .get_transaction_count(default_signer().address())
-                .await?;
-            println!("nonce: {:?}", nonce);
-
-            // TODO remove? - we need the settlement chain timestamp to change
-            time::sleep(Duration::from_secs(10)).await;
-
-            // Mine a block on the L1 chain by sending a dummy transaction. This provides a
-            // timestamp update that the L2 Nitro sequencer needs to finalize the batch containing
-            // the deposit.
-            let tx = TransactionRequest::default()
-                .to(default_signer().address())
-                .value(U256::from(parse_ether("0.01")?));
-            components.settlement_provider.send_transaction(tx.clone()).await?.watch().await?;
-            components.settlement_provider.send_transaction(tx).await?.watch().await?;
-
-            components.sequence_tx(b"dummy_tx", 10, false).await?;
-            components.sequence_tx(b"dummy_tx_2", 10, false).await?;
-
-            // components.sequencing_provider.send_transaction(tx.clone()).await?.watch().await?;
-            // components.sequencing_provider.send_transaction(tx.clone()).await?.watch().await?;
-
-            let block = components
-                .settlement_provider
-                .get_block(Number(BlockNumberOrTag::Latest))
-                .await?
-                .unwrap()
-                .header;
-            println!("set block number: {:?}, timestamp: {:?}", block.number, block.timestamp);
-            let nonce = components
-                .settlement_provider
-                .get_transaction_count(default_signer().address())
-                .await?;
-            println!("nonce: {:?}", nonce);
-            // let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
-            // let wallet = default_signer().address();
-            // let value = parse_ether("1")?;
-            // let _ = inbox.depositEth(wallet, wallet, value).send().await?;
-
-            // ------------------------------------------------------------
+            // TODO: this deposit is a bit flaky, need to figure out why
+            // make sure the timstamps move enough
+            time::sleep(Duration::from_millis(1100)).await;
+            // send some dummy txs so that the sequencing chain progresses and the deposit is
+            // slotted in
+            components.sequence_tx(b"dummy_tx", 0, false).await?;
+            components.sequence_tx(b"dummy_tx_2", 0, false).await?;
 
             wait_until!(
                 components.appchain_provider.get_balance(default_signer().address()).await? >=
                     parse_ether("1")?,
-                Duration::from_secs(10)
+                Duration::from_secs(20)
             );
 
             // initiate a withdrawal from the appchain to an empty wallet
@@ -241,15 +192,14 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
                     .await?;
 
-            let tx_hash =
-                components.appchain_provider.send_transaction(tx.into()).await?.watch().await?;
-            let receipt =
-                components.appchain_provider.get_transaction_receipt(tx_hash).await?.unwrap();
-            assert!(receipt.status());
+            let receipt = components.sequence_tx(tx.encoded_2718().as_slice(), 0, true).await?;
+            let appchain_block_hash_to_prove = receipt.unwrap().block_hash.unwrap();
 
-            // wait until the withdrawal root is posted
+            //
+            // now wait until the withdrawal root is posted
 
             // call `closeChallengeWindow` on the TEEmodule - to force the assertion to be posted
+            time::sleep(Duration::from_secs(1)).await; // wait 1s (challenge window duration) to elapse
             let tee_module = TeeModule::new(tee_module_addr, &components.settlement_provider);
             let tx_hash = tee_module.closeChallengeWindow().send().await?.watch().await?;
             let receipt =
@@ -259,7 +209,6 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             // look for `AssertionConfirmed` event on the `RollupCore` contract
             // NOTE: `AssertionConfirmed` is only available on nito-contracts V3.... since this test
             // uses the legacy version we must check for `NodeConfirmed` event instead
-            let block_hash = receipt.block_hash.unwrap();
             let rollup_core = IRollup::new(
                 components.appchain_deployment.rollup,
                 &components.settlement_provider,
@@ -271,8 +220,8 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                     .query()
                     .await?
                     .iter()
-                    .any(|event| event.0.blockHash == block_hash),
-                Duration::from_secs(120)
+                    .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
+                Duration::from_secs(20)
             );
 
             // finish the withdrawal on the settlement chain
