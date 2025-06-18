@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -98,8 +99,7 @@ func LoadConfig() (*Config, error) {
 }
 
 func mustAtoi(s string, fallback int) int {
-	var i int
-	_, err := fmt.Sscanf(s, "%d", &i)
+	i, err := strconv.Atoi(s)
 	if err != nil || i == 0 {
 		return fallback
 	}

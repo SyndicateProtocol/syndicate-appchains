@@ -128,7 +128,7 @@ pub async fn start_component(
         let mut cmd = Command::new("go");
         cmd.current_dir(format!("{}/synd-withdrawals/synd-proposer", env!("CARGO_WORKSPACE_DIR")));
         cmd.arg("run").arg("./cmd/synd-proposer");
-        cmd.args(args.iter().chain(cargs.iter()));
+        cmd.args(args);
         Docker::new(&mut cmd)
     } else {
         let mut cmd = Command::new("cargo");
