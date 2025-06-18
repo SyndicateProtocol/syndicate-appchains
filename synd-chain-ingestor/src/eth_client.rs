@@ -35,7 +35,7 @@ fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
 impl EthClient {
     /// Creates a new `EthClient` instance. Infinitely retries until it is able to connect.
     pub async fn new(
-        rpc_url: &str,
+        ws_url: &str,
         timeout: Duration,
         log_timeout: Duration,
         channel_size: usize,
@@ -43,7 +43,7 @@ impl EthClient {
         loop {
             match tokio::time::timeout(
                 timeout,
-                ProviderBuilder::default().on_ws(WsConnect::new(rpc_url).with_config(
+                ProviderBuilder::default().on_ws(WsConnect::new(ws_url).with_config(
                     WebSocketConfig::default().max_message_size(None).max_frame_size(None),
                 )),
             )

@@ -65,7 +65,7 @@ impl<'a> BlockIngestor<'a> {
 #[allow(missing_docs)]
 pub async fn start(
     provider: &EthClient,
-    rpc_url: &str,
+    ws_url: &str,
     db_name: &str,
     start_block: u64,
     parallel_sync_requests: u64,
@@ -114,7 +114,7 @@ pub async fn start(
     info!("synced to latest block");
 
     let ctx = Arc::new(Mutex::new(Context { db, subs: Default::default() }));
-    Ok((create_module(ctx.clone(), rpc_url.to_string()), ctx))
+    Ok((create_module(ctx.clone(), ws_url.to_string()), ctx))
 }
 
 #[allow(clippy::unwrap_used)]
@@ -153,10 +153,10 @@ fn handle_subscription(
 }
 
 #[allow(clippy::unwrap_used)]
-fn create_module(ctx: Arc<Mutex<Context>>, rpc_url: String) -> RpcModule<Mutex<Context>> {
+fn create_module(ctx: Arc<Mutex<Context>>, ws_url: String) -> RpcModule<Mutex<Context>> {
     let mut module = RpcModule::from_arc(ctx);
 
-    module.register_method("url", move |_, _, _| rpc_url.clone()).unwrap();
+    module.register_method("url", move |_, _, _| ws_url.clone()).unwrap();
     module
         .register_method("eth_blockNumber", move |_, ctx, _| {
             ctx.lock().unwrap().db.next_block() - 1
