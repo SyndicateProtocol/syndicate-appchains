@@ -72,6 +72,9 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
     /// @notice Default gas price bid for L2 transactions
     uint256 public gasPriceBid;
 
+    /// @notice Maximum submission cost for Arbitrum L2 transactions
+    uint256 public maxSubmissionCost;
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -119,6 +122,7 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
         recipient = _recipient;
         maxGas = _maxGas;
         gasPriceBid = _gasPriceBid; //#olympix-ignore-events-price-change
+        maxSubmissionCost = 1000000000000000; // 0.001 ETH
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -145,7 +149,6 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
             ? abi.decode(dynamicData, (address, uint256, uint256))
             : (recipient, maxGas, gasPriceBid);
 
-        uint256 maxSubmissionCost = 1000000000000000; // hardcode 0.001 ETH
         // Calculate ETH value needed for L2 gas
         uint256 ethValue = (_maxGas * _gasPriceBid) + maxSubmissionCost;
 
@@ -192,6 +195,15 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
         maxGas = _maxGas;
         gasPriceBid = _gasPriceBid;
         emit ArbitrumConfigUpdated(_recipient, _maxGas, _gasPriceBid);
+    }
+
+    /**
+     * @notice Update the maximum submission cost for Arbitrum L2 transactions
+     * @dev Only callable by bridge admin
+     * @param _maxSubmissionCost New maximum submission cost value
+     */
+    function setMaxSubmissionCost(uint256 _maxSubmissionCost) external onlyRole(BRIDGE_ADMIN_ROLE) {
+        maxSubmissionCost = _maxSubmissionCost;
     }
 
     /*//////////////////////////////////////////////////////////////

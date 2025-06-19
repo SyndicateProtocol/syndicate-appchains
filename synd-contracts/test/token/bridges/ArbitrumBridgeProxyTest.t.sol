@@ -126,6 +126,7 @@ contract ArbitrumBridgeProxyTest is Test {
         assertEq(bridgeProxy.recipient(), recipient);
         assertEq(bridgeProxy.maxGas(), maxGas);
         assertEq(bridgeProxy.gasPriceBid(), gasPriceBid);
+        assertEq(bridgeProxy.maxSubmissionCost(), 1000000000000000); // 0.001 ETH
         assertEq(bridgeProxy.maxSingleTransfer(), MAX_SINGLE_TRANSFER);
         assertEq(bridgeProxy.dailyLimit(), DAILY_LIMIT);
         assertTrue(bridgeProxy.bridgeActive());
@@ -284,6 +285,54 @@ contract ArbitrumBridgeProxyTest is Test {
         );
         bridgeProxy.setArbitrumConfig(recipient, maxGas, gasPriceBid);
         vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        MAX SUBMISSION COST TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_SetMaxSubmissionCost_Success() public {
+        uint256 newMaxSubmissionCost = 2000000000000000; // 0.002 ETH
+
+        vm.prank(admin);
+        bridgeProxy.setMaxSubmissionCost(newMaxSubmissionCost);
+
+        assertEq(bridgeProxy.maxSubmissionCost(), newMaxSubmissionCost);
+    }
+
+    function test_RevertWhen_SetMaxSubmissionCost_NotAdmin() public {
+        uint256 newMaxSubmissionCost = 2000000000000000; // 0.002 ETH
+        bytes32 bridgeAdminRole = bridgeProxy.BRIDGE_ADMIN_ROLE();
+
+        vm.prank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, bridgeAdminRole)
+        );
+        bridgeProxy.setMaxSubmissionCost(newMaxSubmissionCost);
+    }
+
+    function test_ExecuteBridge_UsesUpdatedMaxSubmissionCost() public {
+        uint256 newMaxSubmissionCost = 2000000000000000; // 0.002 ETH
+        uint256 amount = 100_000 * 10 ** 18;
+
+        // Update maxSubmissionCost
+        vm.prank(admin);
+        bridgeProxy.setMaxSubmissionCost(newMaxSubmissionCost);
+
+        // Execute bridge
+        vm.prank(caller);
+        token.approve(address(bridgeProxy), amount);
+
+        vm.prank(caller);
+        bridgeProxy.executeBridge(address(token), amount, "");
+
+        // Verify the updated maxSubmissionCost is used in the bridge call
+        MockArbitrumBridge.TransferCall memory call = arbitrumBridge.getLastTransferCall();
+        bytes memory expectedData = abi.encode(newMaxSubmissionCost, "");
+        assertEq(call.data, expectedData);
+
+        uint256 expectedEthValue = (maxGas * gasPriceBid) + newMaxSubmissionCost;
+        assertEq(call.ethValue, expectedEthValue);
     }
 
     /*//////////////////////////////////////////////////////////////
