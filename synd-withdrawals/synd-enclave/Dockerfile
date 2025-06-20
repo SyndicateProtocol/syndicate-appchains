@@ -213,3 +213,13 @@ RUN mkdir /build
 WORKDIR /build
 
 COPY --from=eif /build/eif.bin .
+
+
+# custom target for local development
+FROM debian:bookworm-slim AS local-dev
+WORKDIR /app
+COPY --from=builder /build/bin/enclave .
+COPY --from=bootstrap /build/out bootstrap
+COPY --from=builder /build/init-ramdisk-initrd.img .
+COPY --from=builder /build/user-ramdisk-initrd.img .
+ENTRYPOINT ./enclave

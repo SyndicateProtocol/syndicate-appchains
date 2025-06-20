@@ -21,10 +21,10 @@ pub(super) struct ProposerConfig {
     pub(crate) polling_interval: String,
     pub(crate) close_challenge_interval: String,
     pub(crate) metrics_port: u16,
-}
+
 
 impl ProposerConfig {
-    pub(super) fn cli_args(&self) -> Vec<String> {
+    pub fn cli_args(&self) -> Vec<String> {
         vec![
             "--ethereum-rpc-url".to_string(),
             self.ethereum_rpc_url.to_string(),

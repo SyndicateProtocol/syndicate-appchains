@@ -440,8 +440,10 @@ dependencies = [
  "alloy-pubsub",
  "alloy-rpc-client",
  "alloy-rpc-types-anvil",
+ "alloy-rpc-types-debug",
  "alloy-rpc-types-engine",
  "alloy-rpc-types-eth",
+ "alloy-rpc-types-trace",
  "alloy-signer",
  "alloy-sol-types",
  "alloy-transport",
@@ -548,6 +550,7 @@ dependencies = [
  "alloy-rpc-types-anvil",
  "alloy-rpc-types-engine",
  "alloy-rpc-types-eth",
+ "alloy-rpc-types-trace",
  "alloy-serde",
  "serde",
 ]
@@ -573,6 +576,16 @@ dependencies = [
  "alloy-consensus-any",
  "alloy-rpc-types-eth",
  "alloy-serde",
+]
+
+[[package]]
+name = "alloy-rpc-types-debug"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "805eb9fa07f92f1225253e842b5454b4b3e258813445c1a1c9d8dd0fd90817c1"
+dependencies = [
+ "alloy-primitives 0.8.25",
+ "serde",
 ]
 
 [[package]]
@@ -607,6 +620,20 @@ dependencies = [
  "alloy-serde",
  "alloy-sol-types",
  "itertools 0.14.0",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
+name = "alloy-rpc-types-trace"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6019cd6a89230d765a621a7b1bc8af46a6a9cde2d2e540e6f9ce930e0fb7c6db"
+dependencies = [
+ "alloy-primitives 0.8.25",
+ "alloy-rpc-types-eth",
+ "alloy-serde",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -5063,27 +5090,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proof-submitter"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "clap",
- "contract-bindings",
- "jsonrpsee",
- "mockito",
- "serde",
- "serde_json",
- "shared",
- "sp1-sdk",
- "synd-tee-attestation-zk-proofs-aws-nitro",
- "synd-tee-attestation-zk-proofs-sp1-script",
- "test-utils",
- "thiserror 2.0.12",
- "tokio",
- "x509-cert",
-]
-
-[[package]]
 name = "proptest"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7077,6 +7083,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-tee-attestation-zk-proofs-submitter"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "clap",
+ "contract-bindings",
+ "jsonrpsee",
+ "mockito",
+ "serde",
+ "serde_json",
+ "shared",
+ "sp1-sdk",
+ "synd-tee-attestation-zk-proofs-aws-nitro",
+ "synd-tee-attestation-zk-proofs-sp1-script",
+ "test-utils",
+ "thiserror 2.0.12",
+ "tokio",
+ "x509-cert",
+]
+
+[[package]]
 name = "synd-translator"
 version = "0.1.0"
 dependencies = [
@@ -7190,6 +7217,7 @@ dependencies = [
  "eyre",
  "redis",
  "reqwest",
+ "serde",
  "serde_json",
  "shared",
  "synd-chain-ingestor",
@@ -7205,10 +7233,14 @@ name = "test-utils"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "contract-bindings",
  "eyre",
  "redis",
+ "serde",
+ "serde_json",
  "shared",
  "synd-mchain",
+ "synd-tee-attestation-zk-proofs-submitter",
  "tokio",
  "tracing",
 ]
