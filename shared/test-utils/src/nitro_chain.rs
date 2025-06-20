@@ -70,7 +70,8 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
 
 /// Return the on-chain config for a rollup with a given chain id
 pub fn chain_config(chain_id: u64, chain_owner: Address) -> String {
-    // TODO DataAvailabilityCommittee might need to be true for set/seq chains with eigenDA
+    // TODO SEQ-1032: DataAvailabilityCommittee might need to be true for set/seq chains with
+    // eigenDA
     let mut cfg = format!(
         r#"{{
           "chainId": {chain_id},
@@ -228,6 +229,21 @@ pub async fn deploy_nitro_rollup(
     let project_root = env!("CARGO_WORKSPACE_DIR");
     let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
 
+    // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
+    // apply patch to hardhat.config.ts to add custom network
+    let patch_path = format!("{project_root}/shared/test-utils/src/nitro-hardhat-config.patch");
+    let status = E2EProcess::new(
+        Command::new("git")
+            .current_dir(nitro_contracts_dir.clone())
+            .arg("apply")
+            .arg("--recount")
+            .arg(patch_path),
+        "patch-nitro-contracts",
+    )?
+    .wait()
+    .await?;
+    assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
+
     // install and build dependencies
     let status = E2EProcess::new(
         Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("install"),
@@ -329,6 +345,18 @@ pub async fn deploy_nitro_rollup(
         serde_json::from_reader(std::fs::File::open(deploy_json_path)?)?;
 
     // Cleanup -  reset the submodule repo - It's annoying to leave pending changes in the submodule
+    let status = E2EProcess::new(
+        Command::new("git")
+            .current_dir(nitro_contracts_dir.clone())
+            .arg("checkout")
+            .arg("--")
+            .arg("hardhat.config.ts"),
+        "cleanup-nitro-contracts-submodule-checkout",
+    )?
+    .wait()
+    .await?;
+    assert!(status.success(), "failed to cleanup nitro contracts submodule");
+
     let status = E2EProcess::new(
         Command::new("git").current_dir(nitro_contracts_dir.clone()).arg("clean").arg("-fd"),
         "cleanup-nitro-contracts-submodule",
