@@ -99,7 +99,7 @@ async fn main() {
 
     loop {
         if let Err(err) = ingestor::run(&ctx, &provider, &metrics).await {
-            error!("ingestor failed: {}", err);
+            error!("ingestor failed: {err}");
             sleep(Duration::from_secs(1)).await;
             // manually recreate the ws connection just in case.
             provider = new_provider(&cfg).await;

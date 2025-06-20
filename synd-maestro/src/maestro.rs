@@ -116,6 +116,7 @@ impl MaestroService {
             .map_or_else(|| Err(InternalError(RpcMissing(*chain_id))), Ok)
     }
 
+    #[allow(clippy::cognitive_complexity)]
     async fn handle_finalization(
         raw_tx: Vec<u8>,
         provider: &RpcProvider,
@@ -780,7 +781,9 @@ impl MaestroService {
         }
     }
 
+
     /// Shuts down the Maestro service and all its components gracefully.
+    #[allow(clippy::cognitive_complexity)]
     pub async fn shutdown(&self) {
         info!("Shutting down MaestroService...");
 

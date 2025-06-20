@@ -5,7 +5,7 @@ use synd_slotter::metrics::SlotterMetrics;
 /// Structure holding all metrics related to the translator.
 #[derive(Debug, Clone)]
 pub struct TranslatorMetrics {
-    /// Metrics for the synd-slotter
+    /// Metrics for the `synd-slotter`
     pub slotter: SlotterMetrics,
 }
 

@@ -82,7 +82,7 @@ mod tests {
         // Start the actual Maestro server with our mocked config
         let (addr, shutdown_fn) =
             server::run(config, metrics).await.expect("Failed to start server");
-        let base_url = format!("http://{}", addr);
+        let base_url = format!("http://{addr}");
 
         // Wait for server to be ready by checking health endpoint
         let client = Client::new();
@@ -260,8 +260,7 @@ mod tests {
             let tx_json: Value = tx_response.json().await?;
             assert!(
                 tx_json.get("result").is_some(),
-                "Transaction response missing 'result' field: {}",
-                tx_json
+                "Transaction response missing 'result' field: {tx_json}"
             );
             Ok(())
         })
@@ -319,8 +318,7 @@ mod tests {
             let json_resp: Value = response.json().await?;
             assert!(
                 json_resp.get("result").is_some(),
-                "Transaction response missing 'result' field: {}",
-                json_resp
+                "Transaction response missing 'result' field: {json_resp}"
             );
 
             Ok(())

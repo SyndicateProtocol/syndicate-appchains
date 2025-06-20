@@ -32,7 +32,7 @@ impl Docker {
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout).lines();
             while let Some(line) = reader.next_line().await.unwrap() {
-                println!("{}", line);
+                println!("{line}");
             }
         });
         // force tests to capture output from stderr
@@ -40,7 +40,7 @@ impl Docker {
         tokio::spawn(async move {
             let mut reader = BufReader::new(stderr).lines();
             while let Some(line) = reader.next_line().await.unwrap() {
-                eprintln!("{}", line);
+                eprintln!("{line}");
             }
         });
         Ok(Self(child))
@@ -151,7 +151,7 @@ pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut Doc
     let client = Client::new();
     wait_until!(
         if let Some(status) = docker.try_wait()? {
-            panic!("{} exited with {}", executable_name, status);
+            panic!("{executable_name} exited with {status}");
         };
         client
             .get(format!("http://localhost:{api_port}/health"))
@@ -262,7 +262,7 @@ pub async fn launch_nitro_node(
             ))
             .arg("--http.addr=0.0.0.0")
             .arg("--http.api=net,web3,eth,debug,trace")
-            .arg(format!("--http.port={}", port))
+            .arg(format!("--http.port={port}"))
             .arg(format!("--log-level={log_level}"))
             .arg(if let Some(port) = sequencer_port {
                 format!("--execution.forwarding-target=http://localhost:{port}")
@@ -271,12 +271,12 @@ pub async fn launch_nitro_node(
             }),
     )?;
 
-    let url = format!("http://localhost:{}", port);
+    let url = format!("http://localhost:{port}");
 
     let appchain = ProviderBuilder::default().connect(&url).await?;
     wait_until!(
         if let Some(status) = nitro.try_wait()? {
-            panic!("nitro node exited with {}", status);
+            panic!("nitro node exited with {status}");
         };
         appchain.get_chain_id().await.is_ok(),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
@@ -303,7 +303,7 @@ pub async fn start_valkey() -> Result<(Docker, String)> {
     let valkey_client = redis::Client::open(valkey_url.as_str()).unwrap();
     wait_until!(
         if let Some(status) = valkey.try_wait()? {
-            panic!("cache exited with {}", status);
+            panic!("cache exited with {status}");
         };
         valkey_client.get_multiplexed_async_connection().await.is_ok(),
         Duration::from_secs(5 * 60) // give it time to download the image if necessary

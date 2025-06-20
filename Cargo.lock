@@ -4963,7 +4963,6 @@ dependencies = [
  "common",
  "contract-bindings",
  "eyre",
- "flate2",
  "hex",
  "serde",
  "serde_json",

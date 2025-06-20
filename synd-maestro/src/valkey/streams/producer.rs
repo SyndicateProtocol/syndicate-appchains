@@ -22,7 +22,7 @@ const TX_STREAM_KEY: &str = "maestro:transactions";
 /// # Returns
 /// A string in the format `synd-maestro:transactions:{chain_id}`
 pub fn tx_stream_key(chain_id: u64) -> String {
-    format!("{}:{}", TX_STREAM_KEY, chain_id)
+    format!("{TX_STREAM_KEY}:{chain_id}")
 }
 
 /// Valkey Stream producer for enqueueing transactions to a specific chain's stream

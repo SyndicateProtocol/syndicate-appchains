@@ -69,8 +69,8 @@ pub enum L1MessageType {
 impl TryFrom<u8> for L1MessageType {
     type Error = ();
 
-    // EndOfBlock is deliberately excluded since it is a dummy message that is not emitted by the
-    // nitro contracts
+    /// `EndOfBlock` is deliberately excluded since it is a dummy message that is not emitted by the
+    /// nitro contracts
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             3 => Ok(Self::L2Message),
@@ -86,13 +86,13 @@ impl TryFrom<u8> for L1MessageType {
 
 impl L1MessageType {
     fn from_u8_panic(value: u8) -> Self {
-        Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {}", value))
+        Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {value}"))
     }
 }
 
 impl std::fmt::Display for L1MessageType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -126,7 +126,7 @@ impl ArbitrumAdapter {
     ///
     /// # Arguments
     /// - `config`: The configuration for the block builder.
-    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
+    #[allow(clippy::unwrap_used)] // okay to unwrap here because we know the config is valid
     pub const fn new(config: &BlockBuilderConfig) -> Self {
         Self {
             transaction_parser: SequencingTransactionParser::new(
@@ -218,7 +218,7 @@ impl ArbitrumAdapter {
                     }
                     Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(e)) => {
                         // replace ignored messages with a dummy message to burn the nonce
-                        error!("Replacing ignored delayed message with an empty block: {}", e);
+                        error!("Replacing ignored delayed message with an empty block: {e}");
                         Some(DelayedMessage {
                             kind: L1MessageType::EndOfBlock as u8,
                             sender: Address::ZERO,
@@ -227,7 +227,7 @@ impl ArbitrumAdapter {
                         })
                     }
                     Err(e) => {
-                        panic!("Fatal error: {}", e)
+                        panic!("Fatal error: {e}")
                     }
                 }
             })
@@ -261,7 +261,7 @@ impl ArbitrumAdapter {
         let kind = L1MessageType::from_u8_panic(msg.kind);
 
         if msg.kind == L1MessageType::Initialize as u8 && msg.messageIndex != U256::ZERO {
-            return Err(ArbitrumBlockBuilderError::UnexpectedInitializeMessage(msg.messageIndex))
+            return Err(ArbitrumBlockBuilderError::UnexpectedInitializeMessage(msg.messageIndex));
         }
 
         if Self::should_ignore_delayed_message(&kind) {
@@ -470,7 +470,7 @@ mod tests {
         let message_map = HashMap::new();
 
         // Call should panic
-        _ = builder.delayed_message_to_mchain_txn(&log, &message_map);
+        let _ = builder.delayed_message_to_mchain_txn(&log, &message_map);
     }
 
     #[test]

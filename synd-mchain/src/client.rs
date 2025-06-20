@@ -185,7 +185,7 @@ mod tests {
     use super::Provider;
     use crate::{
         client::{validate_block_add_timestamp, KnownState},
-        db::{tests::TestDB, ArbitrumDB, DelayedMessage, MBlock, Slot},
+        db::{tests::TestDB, ArbitrumBatch, ArbitrumDB, DelayedMessage, MBlock, Slot},
         methods::common::test_utils::TIME,
         metrics::MchainMetrics,
         server::start_mchain,
@@ -494,7 +494,7 @@ mod tests {
         assert_eq!(mchain.get_block_number().await, 2);
         mchain
             .add_batch(&MBlock {
-                payload: Some((Default::default(), vec![empty.clone()])),
+                payload: Some(ArbitrumBatch::new(Default::default(), vec![empty.clone()])),
                 slot: Slot { seq_block_number: 2, ..Default::default() },
                 timestamp: 0,
             })
@@ -503,7 +503,7 @@ mod tests {
         assert_eq!(mchain.get_block_number().await, 3);
         mchain
             .add_batch(&MBlock {
-                payload: Some((Default::default(), vec![empty; 2])),
+                payload: Some(ArbitrumBatch::new(Default::default(), vec![empty; 2])),
                 slot: Slot { seq_block_number: 3, ..Default::default() },
                 timestamp: 0,
             })

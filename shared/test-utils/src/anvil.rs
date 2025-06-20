@@ -29,12 +29,13 @@ pub async fn start_anvil_with_args(
     cmd.extend_from_slice(args);
     let anvil = Anvil::new().port(port).chain_id(chain_id).args(cmd).try_spawn()?;
 
-    let provider = ProviderBuilder::new()
-        .wallet(PrivateKeySigner::from_str(PRIVATE_KEY).unwrap_or_else(|err| {
-            panic!("Failed to parse default private key for signer: {}", err)
-        }))
-        .connect(&anvil.ws_endpoint())
-        .await?;
+    let provider =
+        ProviderBuilder::new()
+            .wallet(PrivateKeySigner::from_str(PRIVATE_KEY).unwrap_or_else(|err| {
+                panic!("Failed to parse default private key for signer: {err}")
+            }))
+            .connect(&anvil.ws_endpoint())
+            .await?;
     Ok((port, anvil, provider))
 }
 

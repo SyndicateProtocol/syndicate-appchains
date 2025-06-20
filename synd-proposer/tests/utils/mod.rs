@@ -34,5 +34,5 @@ pub(crate) async fn start_anvil(
 /// Parse default string into a `PrivateKeySigner`.
 fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
     PrivateKeySigner::from_str(DEFAULT_PRIVATE_KEY_SIGNER)
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err))
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"))
 }

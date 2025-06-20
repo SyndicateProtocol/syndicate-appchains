@@ -8,7 +8,7 @@ use crate::{
 };
 use alloy::{
     consensus::{proofs::calculate_receipt_root, Header, Receipt as AlloyReceipt},
-    primitives::{Bytes, FixedBytes},
+    primitives::FixedBytes,
     rpc::types::Block,
 };
 use eyre::Result;
@@ -17,7 +17,7 @@ use synd_block_builder::appchains::{
     arbitrum::arbitrum_adapter::ArbitrumAdapter,
     shared::sequencing_transaction_parser::SequencingTransactionParser,
 };
-use synd_mchain::db::{DelayedMessage, MBlock, Slot};
+use synd_mchain::db::{ArbitrumBatch, MBlock, Slot};
 
 /// The `Verifier` struct is responsible for verifying a batch of blocks and creating a new mchain
 /// block.
@@ -193,8 +193,8 @@ impl Verifier {
         last_seq_block: &Block,
         last_seq_receipts: &[Receipt],
         settlement_delay: u64,
-    ) -> Result<(Option<(Bytes, Vec<DelayedMessage>)>, Slot), VerifierError> {
-        let mut payload: (Bytes, Vec<DelayedMessage>) = Default::default();
+    ) -> Result<(Option<ArbitrumBatch>, Slot), VerifierError> {
+        let mut payload = ArbitrumBatch::default();
 
         let mut i = 1;
         while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <=
@@ -214,7 +214,7 @@ impl Verifier {
             );
             let mut delayed_messages =
                 self.arbitrum_adapter.process_delayed_messages(&partial_block)?;
-            payload.1.append(&mut delayed_messages);
+            payload.delayed_messages.append(&mut delayed_messages);
             i += 1;
         }
 
@@ -229,11 +229,11 @@ impl Verifier {
         let (seq_tx_count, seq_batch) = self.arbitrum_adapter.build_batch(&seq_partial_block)?;
         // If there are no sequencing transactions or settlement transactions (delayed messages)
         // add batch to the payload
-        if seq_tx_count == 0 || payload.1.is_empty() {
+        if seq_tx_count == 0 || payload.delayed_messages.is_empty() {
             return Ok((None, slot));
         }
 
-        payload.0 = seq_batch;
+        payload.batch_data = seq_batch;
 
         Ok((Some(payload), slot))
     }
@@ -268,7 +268,7 @@ mod tests {
     use super::*;
     use alloy::{
         consensus::Eip658Value,
-        primitives::{address, b256, Bloom, U256},
+        primitives::{address, b256, Bloom, Bytes, U256},
         rpc::types::{Block, BlockTransactions},
     };
     use shared::types::Receipt;

@@ -249,8 +249,7 @@ mod tests {
             let error_message = error.to_string();
             assert_eq!(
                 error_message, "invalid input: transaction too large: limit 127 KB - got 200 KB",
-                "Unexpected error message: {}",
-                error_message
+                "Unexpected error message: {error_message}"
             );
         }
     }
@@ -277,8 +276,7 @@ mod tests {
             let error_message = error.to_string();
             assert_eq!(
                 error_message, "invalid input: transaction too large: limit 125 KiB - got 200 KB",
-                "Unexpected error message: {}",
-                error_message
+                "Unexpected error message: {error_message}",
             );
         }
     }
