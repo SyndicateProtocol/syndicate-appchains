@@ -1,7 +1,7 @@
 //! Docker components for the integration tests
 
 use crate::{
-    chain_info::{default_signer, ChainInfo, ProcessInstance},
+    chain_info::{test_account1, ChainInfo, ProcessInstance},
     nitro_chain::{nitro_chain_info_json, NitroChainInfoArgs, NitroDeployment},
     port_manager::PortManager,
     utils::test_path,
@@ -223,7 +223,7 @@ pub enum NitroSequencerMode {
     // Sequencer mode - used for base chains when E2E's Nitro mode is enabled, these chains will
     // post batch data to L1
     Sequencer,
-    // TODO add EigenDA mode
+    // TODO SEQ-1032: add EigenDA mode
 }
 
 pub struct NitroNodeArgs {
@@ -321,7 +321,8 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
     let http_url = format!("http://localhost:{}", port);
     let ws_url = format!("ws://localhost:{}", port);
 
-    let provider = ProviderBuilder::new().wallet(default_signer()).connect(&http_url).await?;
+    let provider =
+        ProviderBuilder::new().wallet(test_account1().signer.clone()).connect(&http_url).await?;
     wait_until!(
         if let Some(status) = nitro.try_wait()? {
             panic!("nitro node exited with {}", status);

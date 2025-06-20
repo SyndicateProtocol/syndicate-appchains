@@ -4,7 +4,7 @@ use alloy::{
     network::TransactionBuilder,
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::{anvil::MineOptions, Block, TransactionRequest},
+    rpc::types::{Block, TransactionRequest},
     sol,
 };
 use contract_bindings::synd::{iinbox::IInbox, rollup::Rollup};
@@ -16,12 +16,7 @@ use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     test_components::TestComponents,
 };
-use test_utils::{
-    chain_info::default_signer,
-    nitro_chain::{execute_withdrawal, init_withdrawal_tx},
-    preloaded_config::ContractVersion,
-    wait_until,
-};
+use test_utils::{chain_info::test_account1, preloaded_config::ContractVersion, wait_until};
 
 // an arbitrary eoa address used for testing
 const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380");
@@ -301,94 +296,6 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 }
 
 #[tokio::test]
-async fn e2e_fast_withdrawal_300() -> Result<()> {
-    e2e_fast_withdrawal_base(ContractVersion::V300).await
-}
-
-#[tokio::test]
-async fn e2e_fast_withdrawal_213() -> Result<()> {
-    e2e_fast_withdrawal_base(ContractVersion::V213).await
-}
-
-async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
-    TestComponents::run(
-        &ConfigurationOptions {
-            base_chains_type: BaseChainsType::PreLoaded(version),
-            ..Default::default()
-        },
-        |components| async move {
-            let block: Block = components
-                .settlement_provider
-                .raw_request("eth_getBlockByNumber".into(), ("latest", true))
-                .await?;
-            components
-                .sequencing_provider
-                .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
-                .await?;
-
-            let wallet_address = components.settlement_provider.default_signer_address();
-            let value = parse_ether("1")?;
-            let inbox =
-                IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
-            let _ = inbox.depositEth().value(value).send().await?;
-            components.mine_set_block(0).await?;
-            components.mine_set_block(1).await?;
-
-            // Wait for deposit to be processed
-            wait_until!(
-                components.appchain_provider.get_balance(wallet_address).await? >= value,
-                Duration::from_secs(10)
-            );
-            assert_eq!(components.appchain_provider.get_block_number().await?, 9);
-
-            // 2. Send withdrawal transaction on the Appchain
-            let withdrawal_value = parse_ether("0.1")?;
-            let to_address = address!("0x0000000000000000000000000000000000000001");
-            let tx =
-                init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
-                    .await?;
-            _ = components
-                .sequencing_contract
-                .processTransactionUncompressed(tx.encoded_2718().into())
-                .send()
-                .await?;
-            components.mine_seq_block(0).await?;
-
-            // Wait for the withdrawal transaction to be processed
-            wait_until!(
-                components.appchain_provider.get_block_number().await? == 10,
-                Duration::from_secs(10)
-            );
-
-            // 2. Proposer service proposes
-            let client = reqwest::Client::new();
-            let response =
-                client.post(format!("{}/propose", components.proposer_url)).send().await?;
-            assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
-
-            // 3. Execute transaction (usually done by end-user)
-            execute_withdrawal(
-                to_address,
-                withdrawal_value,
-                components.appchain_deployment.bridge,
-                &components.settlement_provider,
-                &components.appchain_provider,
-            )
-            .await?;
-
-            components.mine_set_block(0).await?;
-
-            // Assert new balance is equal to withdrawal amount
-            let balance_after = components.settlement_provider.get_balance(to_address).await?;
-            assert_eq!(balance_after, withdrawal_value);
-
-            Ok(())
-        },
-    )
-    .await
-}
-
-#[tokio::test]
 async fn e2e_settlement_reorg() -> Result<()> {
     TestComponents::run(
         &ConfigurationOptions {
@@ -541,7 +448,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
         |components| async move {
             // deposit some funds to the appchain
 
-            let signer = default_signer();
+            let signer = test_account1().signer.clone();
             let wallet_address = components.settlement_provider.default_signer_address();
             let inbox =
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
@@ -565,7 +472,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
 
             // deploy a storate contract on the appchain
             let initial_value = U256::from(42);
-            let deploy_storage_tx =
+            let deploy_storage_tx: Vec<u8> =
                 Storage::deploy_builder(&components.appchain_provider, initial_value)
                     .nonce(0)
                     .chain_id(components.appchain_chain_id)
@@ -585,7 +492,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             assert_eq!(current_value, initial_value);
 
             // update the stored value (this will be reorged later)
-            let update_storage_tx = storage
+            let update_storage_tx: Vec<u8> = storage
                 .set(U256::from(43))
                 .nonce(1)
                 .chain_id(components.appchain_chain_id)

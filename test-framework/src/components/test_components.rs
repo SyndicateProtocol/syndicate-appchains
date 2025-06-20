@@ -6,7 +6,6 @@ use crate::components::{
     chain_ingestor::ChainIngestorConfig,
     configuration::{setup_config_manager, BaseChainsType, ConfigurationOptions},
     maestro::MaestroConfig,
-    proposer::ProposerConfig,
     timer::TestTimer,
     translator::TranslatorConfig,
 };
@@ -43,12 +42,12 @@ use synd_mchain::{
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args},
     chain_info::{
-        default_signer, default_signer2, default_signer3, ChainInfo, ProcessInstance, PRIVATE_KEY,
+        test_account1, test_account2, test_account3, ChainInfo, ProcessInstance, PRIVATE_KEY,
         PRIVATE_KEY2, PRIVATE_KEY3,
     },
     docker::{
-        launch_enclave_server, launch_nitro_node, start_component, start_mchain, start_valkey,
-        E2EProcess, NitroNodeArgs, NitroSequencerMode,
+        launch_nitro_node, start_component, start_mchain, start_valkey, E2EProcess, NitroNodeArgs,
+        NitroSequencerMode,
     },
     nitro_chain::{deploy_nitro_rollup, NitroDeployment},
     port_manager::PortManager,
@@ -68,8 +67,6 @@ struct ComponentHandles {
     appchain_chain: ProcessInstance,
     mchain: E2EProcess,
     translator: E2EProcess,
-    proposer: Option<E2EProcess>,
-    enclave_server: Option<E2EProcess>,
     sequencing_chain_ingestor: E2EProcess,
     settlement_chain_ingestor: E2EProcess,
 
@@ -87,6 +84,7 @@ pub struct TestComponents {
     _timer: TestTimer,
 
     pub l1_provider: Option<FilledProvider>,
+    pub l1_ws_rpc_url: String,
 
     /// Sequencing
     pub sequencing_provider: FilledProvider,
@@ -100,6 +98,7 @@ pub struct TestComponents {
 
     /// Appchain
     pub appchain_provider: FilledProvider,
+    pub appchain_ws_rpc_url: String,
     pub appchain_chain_id: u64,
 
     pub settlement_deployment: Option<NitroDeployment>,
@@ -108,15 +107,12 @@ pub struct TestComponents {
 
     /// Mchain
     pub mchain_provider: MProvider,
-    pub proposer_url: String,
 
     pub maestro_url: String,
     pub valkey_url: String,
 
     #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
-
-    pub tee_signer_address: Address,
 }
 
 impl TestComponents {
@@ -126,8 +122,6 @@ impl TestComponents {
         test: impl FnOnce(Self) -> Fut + Send,
     ) -> Result<()> {
         let (components, mut handles) = Self::new(options).await?;
-        let proposer = handles.proposer.take();
-        let enclave_server = handles.enclave_server.take();
         let maestro = handles.maestro.take();
         let batch_sequencer = handles.batch_sequencer.take();
         let valkey = handles.valkey.take();
@@ -141,8 +135,6 @@ impl TestComponents {
             e = handles.set_chain.wait() => panic!("settlement chain died: {:#?}", e),
             e = handles.appchain_chain.wait() => panic!("nitro died: {:#?}", e),
             e = handles.translator.wait() => panic!("synd-translator died: {:#?}", e),
-            e = async {proposer.unwrap().wait().await}, if proposer.is_some() => panic!("synd-proposer died: {:#?}", e),
-            e = async {enclave_server.unwrap().wait().await}, if enclave_server.is_some() => panic!("enclave server died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("synd-maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
             e = async {valkey.unwrap().wait().await}, if valkey.is_some() => panic!("valkey died: {:#?}", e),
@@ -183,7 +175,7 @@ impl TestComponents {
                 let l1_info = l1_info.as_ref().unwrap();
 
                 // NOTE: use a different address to post batches to avoid nonce conflicts
-                let owner_address = default_signer2().address();
+                let owner_address = test_account2().address;
 
                 let seq_deployment =
                     deploy_nitro_rollup(&l1_info.http_url, chain_id, owner_address).await?;
@@ -207,7 +199,7 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    seq_chain_info.provider.get_balance(default_signer().address()).await? >=
+                    seq_chain_info.provider.get_balance(test_account1().address).await? >=
                         parse_ether("10")?,
                     Duration::from_secs(10)
                 );
@@ -259,7 +251,7 @@ impl TestComponents {
                     &chain_info.provider,
                     U256::from(options.appchain_chain_id),
                     "null".to_string(),
-                    default_signer().address(),
+                    test_account1().address,
                 )
                 .nonce(0)
                 .send()
@@ -273,7 +265,7 @@ impl TestComponents {
                 let l1_info = l1_info.as_ref().unwrap();
 
                 // NOTE: use a different address to post batches to avoid nonce conflicts
-                let owner_address = default_signer3().address();
+                let owner_address = test_account3().address;
 
                 let set_deployment =
                     deploy_nitro_rollup(&l1_info.http_url, chain_id, owner_address).await?;
@@ -297,7 +289,7 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    set_chain_info.provider.get_balance(default_signer().address()).await? >=
+                    set_chain_info.provider.get_balance(test_account1().address).await? >=
                         parse_ether("10")?,
                     Duration::from_secs(10)
                 );
@@ -307,7 +299,7 @@ impl TestComponents {
                     &set_chain_info.provider,
                     U256::from(options.appchain_chain_id),
                     "null".to_string(),
-                    default_signer().address(),
+                    test_account1().address,
                 )
                 .nonce(0)
                 .send()
@@ -363,9 +355,6 @@ impl TestComponents {
                     options.rollup_owner,
                 )
                 .await?
-
-                // TODO it's probably necessary to set the assertion poster as the whitelisted
-                // address to submit assertions
             }
         };
 
@@ -461,7 +450,7 @@ impl TestComponents {
         let ChainInfo {
             instance: appchain_instance,
             provider: appchain_provider,
-            ws_url: appchain_rpc_url,
+            ws_url: appchain_ws_rpc_url,
             http_url: _,
         } = launch_nitro_node(NitroNodeArgs {
             chain_id: options.appchain_chain_id,
@@ -479,7 +468,7 @@ impl TestComponents {
             sequencer_private_key: None,
         })
         .await?;
-        info!("Nitro URL: {}", appchain_rpc_url);
+        info!("Nitro URL: {}", appchain_ws_rpc_url);
 
         let assertion_poster_contract_address = match options.base_chains_type {
             BaseChainsType::Anvil => Address::ZERO,
@@ -513,52 +502,6 @@ impl TestComponents {
             }
         };
 
-        let (proposer_instance, proposer_url, enclave_server_instance, tee_signer_address) =
-            match options.base_chains_type {
-                BaseChainsType::Anvil => (None, String::new(), None, Address::ZERO),
-                BaseChainsType::PreLoaded(_) | BaseChainsType::Nitro => {
-                    // TODO do not launch enclave if not in Nitro mode. It takes a long time
-                    let (enclave_server_instance, enclave_rpc_url, tee_public_key) =
-                        launch_enclave_server().await?;
-
-                    info!("Starting proposer...");
-                    let proposer_config = ProposerConfig {
-                        ethereum_rpc_url: l1_info
-                            .as_ref()
-                            .map_or(set_rpc_ws_url.clone(), |info| info.ws_url.clone()),
-                        tee_module_contract_address: Default::default(), // TODO fill this in
-                        arbitrum_bridge_address: appchain_deployment.bridge,
-                        inbox_address: appchain_deployment.inbox,
-                        sequencer_inbox_address: appchain_deployment.sequencer_inbox,
-                        settlement_rpc_url: set_rpc_ws_url.clone(),
-                        metrics_port: PortManager::instance().next_port().await,
-                        metrics_port: PortManager::instance().next_port().await,
-                        appchain_rpc_url: appchain_rpc_url.clone(),
-                        sequencing_rpc_url: sequencing_rpc_url.clone(),
-                        enclave_rpc_url,
-                        polling_interval: "1m".to_string(),
-                        close_challenge_interval: format!(
-                            "{}s",
-                            options.close_challenge_interval.as_secs().to_string()
-                        ),
-                    };
-
-                    let proposer_instance = start_component(
-                        "synd-proposer",
-                        proposer_config.metrics_port,
-                        proposer_config.cli_args(),
-                        Default::default(),
-                    )
-                    .await?;
-                    (
-                        Some(proposer_instance),
-                        format!("http://localhost:{}", proposer_config.port),
-                        Some(enclave_server_instance),
-                        tee_public_key,
-                    )
-                }
-            };
-
         let (mut valkey, mut maestro, mut batch_sequencer) = (None, None, None);
         let mut valkey_url_init = String::new();
         let mut maestro_url = Default::default();
@@ -574,7 +517,7 @@ impl TestComponents {
                 valkey_url: valkey_url.clone(),
                 chain_rpc_urls: format!(
                     "{{\"{}\":\"{}\"}}",
-                    options.appchain_chain_id, appchain_rpc_url
+                    options.appchain_chain_id, appchain_ws_rpc_url
                 ),
                 metrics_port: PortManager::instance().next_port().await,
                 finalization_duration: options.maestro_finalization_duration,
@@ -610,6 +553,7 @@ impl TestComponents {
         }
 
         let l1_provider = l1_info.as_ref().map(|info| info.provider.clone());
+        let l1_ws_rpc_url = l1_info.as_ref().map(|info| info.ws_url.clone()).unwrap_or_default();
         let l1_instance = l1_info.map(|info| info.instance);
 
         Ok((
@@ -617,6 +561,7 @@ impl TestComponents {
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 l1_provider,
+                l1_ws_rpc_url,
 
                 sequencing_provider: seq_provider,
                 sequencing_rpc_url,
@@ -624,12 +569,14 @@ impl TestComponents {
 
                 settlement_provider: set_provider,
                 settlement_rpc_url,
+
                 appchain_provider,
                 appchain_chain_id: options.appchain_chain_id,
+                appchain_ws_rpc_url,
+
                 assertion_poster_address: assertion_poster_contract_address,
 
                 mchain_provider,
-                proposer_url,
                 maestro_url,
                 valkey_url: valkey_url_init,
                 appchain_block_explorer_url,
@@ -637,8 +584,6 @@ impl TestComponents {
                 sequencing_deployment,
                 settlement_deployment,
                 appchain_deployment,
-
-                tee_signer_address,
             },
             ComponentHandles {
                 l1_chain: l1_instance,
@@ -649,8 +594,6 @@ impl TestComponents {
                 mchain,
                 appchain_chain: appchain_instance,
                 translator,
-                proposer: proposer_instance,
-                enclave_server: enclave_server_instance,
                 batch_sequencer,
                 valkey,
                 maestro,

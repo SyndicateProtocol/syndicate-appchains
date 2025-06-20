@@ -23,14 +23,11 @@ ctor = { workspace = true }
 eyre = { workspace = true }
 redis = { workspace = true }
 reqwest = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 shared = { workspace = true }
-synd-appchain-verifier = { workspace = true }
 synd-maestro = { workspace = true }
 synd-mchain = { workspace = true }
-synd-seqchain-verifier = { workspace = true }
-synd-tee-attestation-zk-proofs-aws-nitro = { workspace = true }
-synd-tee-attestation-zk-proofs-submitter = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }

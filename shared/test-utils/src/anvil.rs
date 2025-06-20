@@ -1,7 +1,7 @@
 //! Anvil components for the integration tests
 
 use crate::{
-    chain_info::{default_signer, ChainInfo, ProcessInstance},
+    chain_info::{test_account1, ChainInfo, ProcessInstance},
     port_manager::PortManager,
 };
 use alloy::{
@@ -24,8 +24,10 @@ pub async fn start_anvil_with_args(chain_id: u64, args: &[&str]) -> Result<Chain
     cmd.extend_from_slice(args);
     let anvil = Anvil::new().port(port).chain_id(chain_id).args(cmd).try_spawn()?;
 
-    let provider =
-        ProviderBuilder::new().wallet(default_signer()).connect(&anvil.ws_endpoint()).await?;
+    let provider = ProviderBuilder::new()
+        .wallet(test_account1().signer.clone())
+        .connect(&anvil.ws_endpoint())
+        .await?;
     Ok(ChainInfo {
         ws_url: format!("ws://localhost:{}", port),
         http_url: format!("http://localhost:{}", port),

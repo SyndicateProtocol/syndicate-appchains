@@ -41,7 +41,8 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -97,7 +98,8 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -165,7 +167,8 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.1")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_both(0).await?;
             components.mine_both(1).await?; // Close slot
@@ -337,7 +340,6 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
 // Test that distinct wallet txns are processed in parallel. Anecdotal upper limit is between
 // 100-150 simultaneous txns on Daniil's machine
 #[tokio::test]
-#[ignore] // TODO remove
 async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
     TestComponents::run(
         &ConfigurationOptions { use_write_loop: true, ..Default::default() },
@@ -347,7 +349,8 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.1")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_both(0).await?;
             components.mine_both(1).await?; // Close slot
@@ -554,7 +557,8 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -628,7 +632,8 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
