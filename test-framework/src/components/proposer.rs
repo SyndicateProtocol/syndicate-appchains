@@ -10,6 +10,7 @@ pub(super) const PROPOSER_SEQUENCER_PRIVATE_KEY: &str =
 pub(super) struct ProposerConfig {
     pub(crate) ethereum_rpc_url: String,
     pub(crate) settlement_rpc_url: String,
+    pub(crate) settlement_chain_id: u64,
     pub(crate) sequencing_rpc_url: String,
     pub(crate) appchain_rpc_url: String,
     pub(crate) enclave_rpc_url: String,
@@ -51,6 +52,8 @@ impl ProposerConfig {
             self.close_challenge_interval.to_string(),
             "--metrics-port".to_string(),
             self.metrics_port.to_string(),
+            "--settlement-chain-id".to_string(),
+            self.settlement_chain_id.to_string(),
         ]
     }
 }

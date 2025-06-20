@@ -331,6 +331,7 @@ impl TestComponents {
                 inbox_address: Default::default(),
                 sequencer_inbox_address: Default::default(),
                 settlement_rpc_url: settlement_anvil_url.clone(),
+                settlement_chain_id: 84532,
                 metrics_port: PortManager::instance().next_port().await,
                 appchain_rpc_url: nitro_url.clone(),
                 sequencing_rpc_url: sequencing_anvil_url.clone(),
