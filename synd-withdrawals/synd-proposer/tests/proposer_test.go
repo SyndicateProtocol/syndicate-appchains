@@ -27,10 +27,11 @@ func TestInitProposerWithConfig(t *testing.T) {
 		ArbitrumBridgeAddress:    "0x456",
 		InboxAddress:             "0x789",
 		SequencerInboxAddress:    "0xabc",
-		PrivateKey:               "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		PrivateKey:               "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		PollingInterval:          10 * time.Second,
 		CloseChallengeInterval:   5 * time.Second,
 		MetricsPort:              9292,
+		SettlementChainID:        9999,
 	}
 	proposer := pkg.NewProposer(dummyCfg)
 	if proposer.Config != dummyCfg {
