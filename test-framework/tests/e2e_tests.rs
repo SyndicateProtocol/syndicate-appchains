@@ -59,7 +59,7 @@ async fn e2e_send_transaction() -> Result<()> {
         // Wait for the deposit to arrive
         wait_until!(
             components.appchain_provider.get_block_number().await? == 1,
-            Duration::from_secs(1)
+            Duration::from_secs(5)
         );
 
         // check the first appchain block

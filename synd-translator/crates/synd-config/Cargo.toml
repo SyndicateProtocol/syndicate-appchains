@@ -1,9 +1,9 @@
 [package]
-description            = "Common utilities for synd-translator, including types."
+description            = "Config for synd-translator, including sub-crates"
 edition.workspace      = true
 homepage.workspace     = true
 license.workspace      = true
-name                   = "common"
+name                   = "synd-config"
 repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
@@ -11,8 +11,12 @@ version.workspace      = true
 [dependencies]
 alloy        = { workspace = true, features = ["provider-engine-api"] }
 shared       = { workspace = true }
+common       = { workspace = true }
+metrics       = { workspace = true }
 strum_macros = { workspace = true }
 synd-mchain  = { workspace = true }
+synd-block-builder  = { workspace = true }
+synd-chain-ingestor  = { workspace = true }
 tracing = {workspace = true}
 clap                = { workspace = true }
 contract-bindings   = { workspace = true }

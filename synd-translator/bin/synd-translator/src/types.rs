@@ -1,6 +1,6 @@
-use crate::config::IngestorConfigError;
 use eyre::Report;
 use synd_block_builder::config::ConfigError;
+use synd_config::config::IngestorConfigError;
 use thiserror::Error;
 use tracing::error;
 
@@ -28,7 +28,7 @@ pub enum RuntimeError {
     IngestorConfig(#[from] IngestorConfigError),
 
     #[error(transparent)]
-    TranslatorConfig(#[from] crate::config::ConfigError),
+    TranslatorConfig(#[from] synd_config::config::ConfigError),
 
     #[error(transparent)]
     Other(#[from] Report),

@@ -8,7 +8,6 @@ use crate::components::{
     maestro::MaestroConfig,
     proposer::ProposerConfig,
     timer::TestTimer,
-    translator::TranslatorConfig,
 };
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
@@ -24,6 +23,7 @@ use contract_bindings::synd::{
     syndicatesequencingchain::SyndicateSequencingChain::{self, SyndicateSequencingChainInstance},
 };
 use eyre::Result;
+use metrics::config::MetricsConfig;
 use serde_json::{json, Value};
 use shared::types::FilledProvider;
 use std::{
@@ -31,6 +31,11 @@ use std::{
     future::Future,
     str::FromStr,
     time::{Duration, SystemTime},
+};
+use synd_block_builder::config::BlockBuilderConfig;
+use synd_config::{
+    config::{SequencingChainConfig, SettlementChainConfig, TranslatorConfig},
+    config_manager::with_onchain_config,
 };
 use synd_maestro::server::HEADER_CHAIN_ID;
 use synd_mchain::client::MProvider;
@@ -283,26 +288,52 @@ impl TestComponents {
         info!("Starting translator...");
         // only set the settlement ws URL, config_manager address and appchain_chain_id - the
         // translator will use the on-chain configuration
+
+        // let translator_config = TranslatorConfig {
+        //     // settlement_ws_url: settlement_ws_url.clone(),
+        //     // config_manager_address: Some(config_manager_address),
+        //     // appchain_chain_id: Some(options.appchain_chain_id),
+        //     // mchain_ws_url: mchain_ws_url.clone(),
+        //     // metrics_port: PortManager::instance().next_port().await,
+        //     arbitrum_bridge_address: None,
+        //     arbitrum_inbox_address: None,
+        //     sequencing_contract_address: None,
+        //     // sequencing_ws_url: Some(sequencing_ws_url.clone()),
+        //     appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
+        //     // sequencing_start_block: None,
+        //     // settlement_start_block: None,
+        //     settlement_delay: None,
+        // };
+
         let translator_config = TranslatorConfig {
-            settlement_ws_url: settlement_ws_url.clone(),
-            config_manager_address: Some(config_manager_address),
-            appchain_chain_id: Some(options.appchain_chain_id),
-            mchain_ws_url: mchain_ws_url.clone(),
-            metrics_port: PortManager::instance().next_port().await,
-            arbitrum_bridge_address: None,
-            arbitrum_inbox_address: None,
-            sequencing_contract_address: None,
-            sequencing_ws_url: Some(sequencing_ws_url.clone()),
-            appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
-            sequencing_start_block: None,
-            settlement_start_block: None,
+            block_builder: BlockBuilderConfig {
+                mchain_ws_url: mchain_ws_url.clone(),
+                ..Default::default()
+            },
+            sequencing: SequencingChainConfig {
+                sequencing_ws_url: Some(sequencing_ws_url.clone()),
+                sequencing_start_block: None,
+            },
+            settlement: SettlementChainConfig {
+                settlement_ws_url: settlement_ws_url.clone(),
+                settlement_start_block: None,
+            },
+            metrics: MetricsConfig { metrics_port: PortManager::instance().next_port().await },
             settlement_delay: None,
+            appchain_chain_id: options.appchain_chain_id,
+            // config_manager_address: Some(config_manager_address),
+            config_manager_address: None,
+            appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
+            ws_request_timeout: Default::default(),
+            get_logs_timeout: Default::default(),
         };
+
+        let translator_config_with_manager = with_onchain_config(&translator_config).await;
 
         let translator = start_component(
             "synd-translator",
-            translator_config.metrics_port,
-            translator_config.cli_args(),
+            translator_config_with_manager.metrics.metrics_port,
+            translator_config_with_manager.cli_args(),
             Default::default(),
         )
         .await?;

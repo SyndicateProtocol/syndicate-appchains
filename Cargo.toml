@@ -11,6 +11,7 @@ members = [
   "synd-proposer",
   "synd-translator/bin/synd-translator",
   "synd-translator/crates/common",
+  "synd-translator/crates/synd-config",
   "synd-translator/crates/metrics",
   "synd-translator/crates/synd-block-builder",
   "synd-translator/crates/synd-slotter",
@@ -85,6 +86,7 @@ synd-chain-ingestor                = { path = "synd-chain-ingestor" }
 synd-maestro                       = { path = "synd-maestro" }
 synd-mchain                        = { path = "synd-mchain" }
 synd-slotter                       = { path = "synd-translator/crates/synd-slotter" }
+synd-config                       = { path = "synd-translator/crates/synd-config" }
 synd-translator                    = { path = "synd-translator/bin/synd-translator" }
 tc-client                          = { path = "synd-batch-sequencer/crates/tc-client" }
 test-utils                         = { path = "shared/test-utils" }

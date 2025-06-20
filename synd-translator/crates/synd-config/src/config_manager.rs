@@ -9,6 +9,7 @@ use eyre::Result;
 use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
 use tracing::{error, info, warn};
 
+#[allow(clippy::unwrap_used)]
 /// Fetches chain config if it exists
 pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig {
     let mut config = config.clone();
@@ -24,9 +25,11 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
         IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
             .await;
 
+
+
     let provider = ProviderBuilder::new().on_client(
         ClientBuilder::default()
-            .connect(ingestor_provider.get_url().await.unwrap().as_ref())
+            .connect(&config.settlement.settlement_ws_url)
             .await
             .unwrap(),
     );

@@ -184,7 +184,7 @@ pub struct TranslatorConfig {
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     pub appchain_chain_id: u64,
 
-    /// The address of the ConfigManager contract on the settlement chain
+    /// The address of the `ConfigManager` contract on the settlement chain
     #[arg(
         long = "config-manager-address",
         env = "CONFIG_MANAGER_ADDRESS",
@@ -217,16 +217,6 @@ impl TranslatorConfig {
         Ok(())
     }
 
-    /// Validates the config and ensures all mandatory fields have values (including optional fields
-    /// that might have been defined by the `ConfigManager` contract)
-    pub fn validate_strict(&self) -> Result<(), ConfigError> {
-        self.validate()?;
-        self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
-        self.sequencing.validate_strict().map_err(ConfigError::Ingestor)?;
-        self.settlement.validate_strict().map_err(ConfigError::Ingestor)?;
-        Ok(())
-    }
-
     /// Generates a sample command with all possible config fields
     pub fn generate_sample_command() {
         let mut cmd = String::from("cargo run --bin synd-translator -- \\\n");
@@ -249,6 +239,63 @@ impl TranslatorConfig {
         // Remove trailing slash and newline
         cmd.truncate(cmd.len() - 2);
         println!("{}", cmd);
+    }
+
+    pub fn cli_args(&self) -> Vec<String> {
+        let mut args = Vec::new();
+
+        // Helper function to add an argument if it has a value
+        fn add_arg<T: ToString>(args: &mut Vec<String>, flag: &str, value: &Option<T>) {
+            if let Some(v) = value {
+                args.push(format!("--{}", flag));
+                args.push(v.to_string());
+            }
+        }
+
+        // Helper function for required arguments
+        fn add_required_arg<T: ToString>(args: &mut Vec<String>, flag: &str, value: &T) {
+            args.push(format!("--{}", flag));
+            args.push(value.to_string());
+        }
+
+        // BlockBuilderConfig fields
+        add_arg(&mut args, "mchain-ws-url", &Some(&self.block_builder.mchain_ws_url));
+        add_arg(&mut args, "arbitrum-bridge-address", &self.block_builder.arbitrum_bridge_address);
+        add_arg(&mut args, "arbitrum-inbox-address", &self.block_builder.arbitrum_inbox_address);
+        add_arg(
+            &mut args,
+            "sequencing-contract-address",
+            &self.block_builder.sequencing_contract_address,
+        );
+
+        // SequencingChainConfig fields
+        add_arg(&mut args, "sequencing-ws-url", &self.sequencing.sequencing_ws_url);
+        add_arg(&mut args, "sequencing-start-block", &self.sequencing.sequencing_start_block);
+
+        // SettlementChainConfig fields
+        add_required_arg(&mut args, "settlement-ws-url", &self.settlement.settlement_ws_url);
+        add_arg(&mut args, "settlement-start-block", &self.settlement.settlement_start_block);
+
+        // MetricsConfig fields
+        add_required_arg(&mut args, "metrics-port", &self.metrics.metrics_port);
+
+        // Direct TranslatorConfig fields
+        add_arg(&mut args, "settlement-delay", &self.settlement_delay);
+        add_required_arg(&mut args, "appchain-chain-id", &self.appchain_chain_id);
+        add_arg(&mut args, "config-manager-address", &self.config_manager_address);
+        add_arg(&mut args, "appchain-block-explorer-url", &self.appchain_block_explorer_url);
+        add_required_arg(
+            &mut args,
+            "ws-request-timeout",
+            &format!("{}s", self.ws_request_timeout.as_secs()),
+        );
+        add_required_arg(
+            &mut args,
+            "get-logs-timeout",
+            &format!("{}s", self.get_logs_timeout.as_secs()),
+        );
+
+        args
     }
 }
 

@@ -19,6 +19,7 @@ humantime           = { workspace = true }
 metrics             = { workspace = true }
 shared              = { workspace = true }
 synd-block-builder  = { workspace = true }
+synd-config  = { workspace = true }
 synd-chain-ingestor = { workspace = true }
 synd-mchain         = { workspace = true }
 synd-slotter        = { workspace = true }

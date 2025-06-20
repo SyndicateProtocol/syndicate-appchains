@@ -1,7 +1,4 @@
-use crate::{
-    config::{ChainIngestorConfig, TranslatorConfig},
-    types::RuntimeError,
-};
+use crate::types::RuntimeError;
 use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
 use shared::service_start_utils::{start_metrics_and_health, MetricsState};
@@ -11,6 +8,7 @@ use synd_chain_ingestor::{
     client::{IngestorProvider, Provider as IProvider},
     eth_client::EthClient,
 };
+use synd_config::config::{ChainIngestorConfig, TranslatorConfig};
 use synd_mchain::client::{MProvider, Provider};
 use tracing::{error, log::info};
 
