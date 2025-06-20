@@ -3,25 +3,25 @@ use alloy::primitives::Address;
 // needs to be different from the regular private key to prevent nonce collisions
 // needs to match the owner of the proposer contract
 // anvil account 0
-pub(super) const PROPOSER_SEQUENCER_PRIVATE_KEY: &str =
+pub const PROPOSER_SEQUENCER_PRIVATE_KEY: &str =
     "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 #[derive(Debug)]
-pub(super) struct ProposerConfig {
-    pub(crate) ethereum_rpc_url: String,
-    pub(crate) settlement_rpc_url: String,
-    pub(crate) settlement_chain_id: u64,
-    pub(crate) sequencing_rpc_url: String,
-    pub(crate) appchain_rpc_url: String,
-    pub(crate) enclave_rpc_url: String,
-    pub(crate) tee_module_contract_address: Address,
-    pub(crate) arbitrum_bridge_address: Address,
-    pub(crate) inbox_address: Address,
-    pub(crate) sequencer_inbox_address: Address,
-    pub(crate) polling_interval: String,
-    pub(crate) close_challenge_interval: String,
-    pub(crate) metrics_port: u16,
-
+pub struct ProposerConfig {
+    pub ethereum_rpc_url: String,
+    pub settlement_rpc_url: String,
+    pub settlement_chain_id: u64,
+    pub sequencing_rpc_url: String,
+    pub appchain_rpc_url: String,
+    pub enclave_rpc_url: String,
+    pub tee_module_contract_address: Address,
+    pub arbitrum_bridge_address: Address,
+    pub inbox_address: Address,
+    pub sequencer_inbox_address: Address,
+    pub polling_interval: String,
+    pub close_challenge_interval: String,
+    pub metrics_port: u16,
+}
 
 impl ProposerConfig {
     pub fn cli_args(&self) -> Vec<String> {

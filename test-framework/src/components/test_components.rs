@@ -469,35 +469,6 @@ impl TestComponents {
         })
         .await?;
 
-        // TODO write tests that actually use the RPCs below
-        let enclave_rpc_url = nitro_url.clone();
-        let ethereum_rpc_url = nitro_url.clone();
-
-        let (proposer, proposer_url) = if options.pre_loaded.is_some() {
-            info!("Starting proposer...");
-            let proposer_config = ProposerConfig {
-                ethereum_rpc_url,
-                tee_module_contract_address: Default::default(),
-                arbitrum_bridge_address,
-                inbox_address: Default::default(),
-                sequencer_inbox_address: Default::default(),
-                settlement_rpc_url: settlement_anvil_url.clone(),
-                settlement_chain_id: 84532,
-                metrics_port: PortManager::instance().next_port().await,
-                appchain_rpc_url: nitro_url.clone(),
-                sequencing_rpc_url: sequencing_anvil_url.clone(),
-                enclave_rpc_url,
-                polling_interval: "1m".to_string(),
-                close_challenge_interval: "1m".to_string(),
-            };
-            (
-                Some(
-                    start_component(
-                        "synd-proposer",
-                        proposer_config.metrics_port,
-                        proposer_config.cli_args(),
-                        Default::default(),
-
         info!("Nitro URL: {}", appchain_ws_rpc_url);
 
         let assertion_poster_contract_address = match options.base_chains_type {
