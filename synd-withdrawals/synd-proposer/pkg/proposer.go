@@ -112,7 +112,9 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			log.Println("Close challenge loop tick...")
-			p.TeeModule.CloseChallengeWindow(p.SettlementAuth)
+			if _, err := p.TeeModule.CloseChallengeWindow(p.SettlementAuth); err != nil {
+				log.Printf("Failed to close challenge window: %v", err)
+			}
 		}
 	}
 }
