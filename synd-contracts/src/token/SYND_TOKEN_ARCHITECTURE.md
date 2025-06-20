@@ -73,7 +73,7 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 - Integration with official Arbitrum and Optimism bridge contracts
 - Rate limiting (daily and per-transaction limits)
 - Automated ETH gas fee management (Arbitrum)
-- Configurable bridge parameters (recipients, gas limits)
+- Configurable bridge parameters (recipients, gas limits, submission costs)
 - Comprehensive pause/resume functionality
 
 **Bridge Targets**:
@@ -201,7 +201,14 @@ bridgeProxy.setMaxSingleTransfer(maxPerTransaction);
 bridgeProxy.setDailyLimit(maxPerDay);
 
 // REQUIRED: Ensure bridge proxy has ETH for gas (Arbitrum only)
-// ETH needed = maxGas * gasPriceBid per transaction
+// ETH needed = (maxGas * gasPriceBid) + maxSubmissionCost per transaction
+
+// OPTIONAL: Configure Arbitrum-specific parameters
+arbitrumBridgeProxy.setArbitrumConfig(l2Recipient, maxGas, gasPriceBid);
+arbitrumBridgeProxy.setMaxSubmissionCost(maxSubmissionCost); // Default: 0.001 ETH
+
+// OPTIONAL: Configure Optimism-specific parameters
+optimismBridgeProxy.setOptimismConfig(l2Recipient, gasLimit);
 ```
 
 ## Security Considerations
@@ -220,7 +227,7 @@ bridgeProxy.setDailyLimit(maxPerDay);
 1. **Admin Key Security**: `DEFAULT_ADMIN_ROLE` holders must be secure (recommend multisig)
 2. **Role Assignment Correctness**: All required roles must be properly assigned before operations
 3. **Bridge Target Validation**: Bridge proxy targets must be verified official bridge contracts
-4. **ETH Funding**: Arbitrum bridge proxy must maintain sufficient ETH for gas fees
+4. **ETH Funding**: Arbitrum bridge proxy must maintain sufficient ETH for gas fees and submission costs
 5. **L2 Token Registration**: L2 tokens must be properly deployed and registered with bridges
 
 ### Operational Security
@@ -229,31 +236,6 @@ bridgeProxy.setDailyLimit(maxPerDay);
 2. **Bridge Configuration**: Bridge parameters can be updated by `BRIDGE_MANAGER_ROLE`
 3. **Emergency Pause**: Multiple actors can pause but only admin can unpause
 4. **Rate Limiting**: Protects against excessive token transfers
-
-## Pre-Deployment Checklist
-
-### For Auditors: Verify These Configurations
-
-- [ ] **Token Contract**: Admin roles assigned to secure addresses (multisig recommended)
-- [ ] **Emission Scheduler**: All required roles assigned to appropriate entities
-- [ ] **Bridge Proxies**: Caller role granted to emission scheduler
-- [ ] **Bridge Targets**: Verified official Arbitrum/Optimism bridge addresses
-- [ ] **Rate Limits**: Configured according to operational requirements
-- [ ] **ETH Funding**: Arbitrum bridge proxy funded for gas fees
-- [ ] **L2 Integration**: L2 tokens deployed and registered with respective bridges
-- [ ] **Emergency Procedures**: Pause roles assigned to security response team
-
-## Testing and Validation
-
-The system includes comprehensive test suites:
-
-- **Unit Tests**: Individual contract functionality
-- **Integration Tests**: Complete emission-to-bridge flow
-- **Mainnet Fork Tests**: Validation against real bridge contracts
-- **Access Control Tests**: Role-based permission validation
-- **Failure Scenario Tests**: Bridge failures, insufficient funds, rate limits
-
-For testing purposes, the system provides mock contracts and detailed integration test examples in the `test/` directory.
 
 ## Governance Integration
 
