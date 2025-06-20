@@ -468,6 +468,7 @@ impl TestComponents {
             sequencer_private_key: None,
         })
         .await?;
+
         info!("Nitro URL: {}", appchain_ws_rpc_url);
 
         let assertion_poster_contract_address = match options.base_chains_type {

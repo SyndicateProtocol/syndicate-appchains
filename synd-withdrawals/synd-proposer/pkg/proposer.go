@@ -3,17 +3,82 @@ package pkg
 import (
 	"context"
 	"log"
+	"math/big"
 	"sync"
 	"time"
+
+	"github.com/SyndicateProtocol/synd-proposer/teemodule"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 type Proposer struct {
-	Config *Config
+	Config           *Config
+	AppchainClient   *ethclient.Client
+	SequencingClient *ethclient.Client
+	EthereumClient   *ethclient.Client
+	SettlementClient *ethclient.Client
+	SettlementAuth   *bind.TransactOpts
+	EnclaveClient    *rpc.Client
+	TeeModule        *teemodule.Teemodule
 }
 
 func NewProposer(cfg *Config) *Proposer {
+	appchainClient, err := ethclient.Dial(cfg.AppchainRPCURL)
+	if err != nil {
+		log.Fatalf("Failed to create appchain provider: %v", err)
+		return nil
+	}
+	sequencingClient, err := ethclient.Dial(cfg.SequencingRPCURL)
+	if err != nil {
+		log.Fatalf("Failed to create sequencing provider: %v", err)
+		return nil
+	}
+
+	ethereumClient, err := ethclient.Dial(cfg.EthereumRPCURL)
+	if err != nil {
+		log.Fatalf("Failed to create ethereum provider: %v", err)
+		return nil
+	}
+	enclaveClient, err := rpc.Dial(cfg.EnclaveRPCURL)
+	if err != nil {
+		log.Fatalf("Failed to create enclave provider: %v", err)
+		return nil
+	}
+	settlementClient, err := ethclient.Dial(cfg.SettlementRPCURL)
+	if err != nil {
+		log.Fatalf("Failed to create settlement provider: %v", err)
+		return nil
+	}
+	pk, err := crypto.HexToECDSA(cfg.PrivateKey)
+	if err != nil {
+		log.Fatalf("Failed to create private key: %v", err)
+		return nil
+	}
+	settlementAuth, err := bind.NewKeyedTransactorWithChainID(pk, big.NewInt(int64(cfg.SettlementChainID)))
+	if err != nil {
+		log.Fatalf("Failed to create transactor: %v", err)
+		return nil
+	}
+	teeAddress := common.HexToAddress(cfg.TeeModuleContractAddress)
+	teeModule, err := teemodule.NewTeemodule(teeAddress, settlementClient)
+	if err != nil {
+		log.Fatalf("Failed to create tee module: %v", err)
+		return nil
+	}
+
 	return &Proposer{
-		Config: cfg,
+		Config:           cfg,
+		AppchainClient:   appchainClient,
+		SequencingClient: sequencingClient,
+		EthereumClient:   ethereumClient,
+		EnclaveClient:    enclaveClient,
+		SettlementClient: settlementClient,
+		SettlementAuth:   settlementAuth,
+		TeeModule:        teeModule,
 	}
 }
 
@@ -47,7 +112,9 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			log.Println("Close challenge loop tick...")
-			// TODO: Implement close challenge logic
+			if _, err := p.TeeModule.CloseChallengeWindow(p.SettlementAuth); err != nil {
+				log.Printf("Failed to close challenge window: %v", err)
+			}
 		}
 	}
 }

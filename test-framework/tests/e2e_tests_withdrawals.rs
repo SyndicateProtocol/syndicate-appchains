@@ -157,6 +157,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 enclave_rpc_url,
                 polling_interval: "1m".to_string(),
                 close_challenge_interval: format!("{}s", close_challenge_interval.as_secs()),
+                settlement_chain_id: 84532,
             };
 
             let mut proposer_instance = start_component(

@@ -12,6 +12,7 @@ import (
 type Config struct {
 	EthereumRPCURL           string
 	SettlementRPCURL         string
+	SettlementChainID        uint64
 	SequencingRPCURL         string
 	AppchainRPCURL           string
 	EnclaveRPCURL            string
@@ -32,6 +33,7 @@ var ConfigKeys = map[string]struct {
 }{
 	"ethereum-rpc-url":            {"Ethereum RPC URL", "", true},
 	"settlement-rpc-url":          {"Settlement RPC URL", "", true},
+	"settlement-chain-id":         {"Settlement Chain ID", "", true},
 	"sequencing-rpc-url":          {"Sequencing RPC URL", "", true},
 	"appchain-rpc-url":            {"Appchain RPC URL", "", true},
 	"enclave-rpc-url":             {"Enclave RPC URL", "", true},
@@ -81,6 +83,7 @@ func LoadConfig() (*Config, error) {
 	return &Config{
 		EthereumRPCURL:           viper.GetString("ethereum-rpc-url"),
 		SettlementRPCURL:         viper.GetString("settlement-rpc-url"),
+		SettlementChainID:        viper.GetUint64("settlement-chain-id"),
 		SequencingRPCURL:         viper.GetString("sequencing-rpc-url"),
 		AppchainRPCURL:           viper.GetString("appchain-rpc-url"),
 		EnclaveRPCURL:            viper.GetString("enclave-rpc-url"),
