@@ -12,7 +12,7 @@ cargo run -p synd-batch-sequencer -- \
   --private-key <hex-private-key> \
   --wallet-pool-address 0x1111... \
   --sequencing-contract-address 0x2222... \
-  --sequencing-rpc-url http://localhost:8545
+  --sequencing-ws-url http://localhost:8545
 ```
 
 ## Notes:

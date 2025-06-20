@@ -10,7 +10,7 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 contract ArbChainConfig is Initializable {
     // Events
     //#olympix-ignore-missing-events-assertion
-    event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
+    event DefaultSequencingChainWsRpcUrlUpdated(string newWsRpcUrl);
     //#olympix-ignore-missing-events-assertion
     event AppchainBlockExplorerUrlUpdated(string newUrl);
     //#olympix-ignore-missing-events-assertion
@@ -32,7 +32,7 @@ contract ArbChainConfig is Initializable {
 
     // ======== MUTABLE CONFIGURATION PARAMETERS ========
     // These parameters can be updated by the contract owner
-    string public DEFAULT_SEQUENCING_CHAIN_RPC_URL;
+    string public DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
 
     /**
@@ -56,7 +56,7 @@ contract ArbChainConfig is Initializable {
      * @param sequencingContractAddress Address of the sequencing contract
      * @param sequencingStartBlock Starting block for sequencing
      * @param initialAppchainOwner Initial appchain owner
-     * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
+     * @param sequencingChainWsRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
      */
     function initialize(
@@ -70,7 +70,7 @@ contract ArbChainConfig is Initializable {
         address sequencingContractAddress,
         uint256 sequencingStartBlock,
         address initialAppchainOwner,
-        string memory sequencingChainRpcUrl,
+        string memory sequencingChainWsRpcUrl,
         string memory appchainBlockExplorerUrl
     ) external initializer {
         // Set the configuration parameters
@@ -94,7 +94,7 @@ contract ArbChainConfig is Initializable {
 
         // Set mutable configuration parameters
         INITIAL_APPCHAIN_OWNER = initialAppchainOwner;
-        DEFAULT_SEQUENCING_CHAIN_RPC_URL = sequencingChainRpcUrl;
+        DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL = sequencingChainWsRpcUrl;
         APPCHAIN_BLOCK_EXPLORER_URL = appchainBlockExplorerUrl;
 
         // Initialize the Ownable contract
@@ -110,13 +110,13 @@ contract ArbChainConfig is Initializable {
     }
 
     /**
-     * @dev Update DEFAULT_SEQUENCING_CHAIN_RPC_URL
-     * @param newRpcUrl The new RPC URL for sequencing chain
+     * @dev Update DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL
+     * @param newWsRpcUrl The new RPC URL for sequencing chain
      */
     //#olympix-ignore-owner-single-point-of-failure
-    function updateDefaultSequencingChainRpcUrl(string calldata newRpcUrl) external onlyOwner {
-        DEFAULT_SEQUENCING_CHAIN_RPC_URL = newRpcUrl;
-        emit DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
+    function updateDefaultSequencingChainWsRpcUrl(string calldata newWsRpcUrl) external onlyOwner {
+        DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL = newWsRpcUrl;
+        emit DefaultSequencingChainWsRpcUrlUpdated(newWsRpcUrl);
     }
 
     /**

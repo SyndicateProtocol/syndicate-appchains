@@ -73,12 +73,12 @@ pub struct TestComponents {
 
     /// Sequencing
     pub sequencing_provider: FilledProvider,
-    pub sequencing_rpc_url: String,
+    pub sequencing_ws_url: String,
     pub sequencing_contract: SyndicateSequencingChainInstance<(), FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
-    pub settlement_rpc_url: String,
+    pub settlement_ws_url: String,
     pub bridge_address: Address,
     pub inbox_address: Address,
 
@@ -218,8 +218,8 @@ impl TestComponents {
         let sequencing_anvil_url = format!("ws://localhost:{}", seq_port);
         let settlement_anvil_url = format!("ws://localhost:{}", set_port);
 
-        info!("sequencing_rpc_url: {}", sequencing_anvil_url);
-        info!("settlement_rpc_url: {}", settlement_anvil_url);
+        info!("sequencing_ws_url: {}", sequencing_anvil_url);
+        info!("settlement_ws_url: {}", settlement_anvil_url);
 
         // overwrite the rollup owner in case it's not set (cannot be empty in config manager)
         if options.rollup_owner == Address::ZERO {
@@ -228,7 +228,7 @@ impl TestComponents {
 
         info!("Starting components...");
         info!("Starting synd-mchain...");
-        let (mchain_rpc_url, mchain, mchain_provider) =
+        let (mchain_ws_url, mchain, mchain_provider) =
             start_mchain(options.appchain_chain_id, options.finality_delay).await?;
 
         // Setup config manager and get chain config address
@@ -247,7 +247,7 @@ impl TestComponents {
         info!("Starting chain ingestors...");
         let temp = test_path("chain_ingestor");
         let seq_chain_ingestor_cfg = ChainIngestorConfig {
-            rpc_url: sequencing_anvil_url.clone(),
+            ws_url: sequencing_anvil_url.clone(),
             db_file: temp.clone() + "/sequencing_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -262,7 +262,7 @@ impl TestComponents {
         .await?;
 
         let set_chain_ingestor_cfg = ChainIngestorConfig {
-            rpc_url: settlement_anvil_url.clone(),
+            ws_url: settlement_anvil_url.clone(),
             db_file: temp + "/settlement_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -277,26 +277,26 @@ impl TestComponents {
         )
         .await?;
 
-        let sequencing_rpc_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
-        let settlement_rpc_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
+        let sequencing_ws_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
+        let settlement_ws_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
 
         info!("Starting translator...");
-        // only set the settlement rpc URL, config_manager address and appchain_chain_id - the
+        // only set the settlement ws URL, config_manager address and appchain_chain_id - the
         // translator will use the on-chain configuration
         let translator_config = TranslatorConfig {
-            settlement_rpc_url: settlement_rpc_url.clone(),
+            settlement_ws_url: settlement_ws_url.clone(),
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
-            mchain_rpc_url: mchain_rpc_url.clone(),
+            mchain_ws_url: mchain_ws_url.clone(),
             metrics_port: PortManager::instance().next_port().await,
-            arbitrum_bridge_address: None,
-            arbitrum_inbox_address: None,
-            sequencing_contract_address: None,
-            sequencing_rpc_url: Some(sequencing_rpc_url.clone()),
+            sequencing_ws_url: Some(sequencing_ws_url.clone()),
             appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
             settlement_start_block: None,
             settlement_delay: None,
+            arbitrum_bridge_address: Some(arbitrum_bridge_address),
+            arbitrum_inbox_address: Some(arbitrum_inbox_address),
+            sequencing_contract_address: Some(sequencing_contract_address),
         };
 
         let translator = start_component(
@@ -312,7 +312,7 @@ impl TestComponents {
         let (nitro_docker, appchain_provider, nitro_url) = launch_nitro_node(
             options.appchain_chain_id,
             options.rollup_owner,
-            &mchain_rpc_url,
+            &mchain_ws_url,
             None,
         )
         .await?;
@@ -401,11 +401,11 @@ impl TestComponents {
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 sequencing_provider: seq_provider,
-                sequencing_rpc_url,
+                sequencing_ws_url,
                 sequencing_contract,
 
                 settlement_provider: set_provider,
-                settlement_rpc_url,
+                settlement_ws_url,
                 appchain_provider,
                 appchain_chain_id: options.appchain_chain_id,
                 bridge_address: arbitrum_bridge_address,

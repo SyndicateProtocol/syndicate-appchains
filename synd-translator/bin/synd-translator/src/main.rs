@@ -1,6 +1,5 @@
 use eyre::Result;
 use shared::tracing::setup_global_logging;
-use synd_block_builder::config::TargetAppchainType::{ARBITRUM, OPTIMISM};
 use synd_translator::{config::TranslatorConfig, config_manager::with_onchain_config, spawn::run};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{error, info};
@@ -40,14 +39,7 @@ async fn main() -> Result<()> {
     config.validate_strict()?;
 
     // Run the async process
-    match config.block_builder.target_appchain_type {
-        OPTIMISM => {
-            panic!("Optimism is currently unsupported")
-        }
-        ARBITRUM => {
-            run(&config).await?;
-        }
-    }
+    run(&config).await?;
 
     Ok(())
 }

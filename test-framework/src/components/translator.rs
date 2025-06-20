@@ -8,10 +8,10 @@ pub(super) struct TranslatorConfig {
     pub(crate) sequencing_contract_address: Option<Address>,
     pub(crate) config_manager_address: Option<Address>,
     pub(crate) appchain_chain_id: Option<u64>,
-    pub(crate) mchain_rpc_url: String,
-    pub(crate) sequencing_rpc_url: Option<String>,
+    pub(crate) mchain_ws_url: String,
+    pub(crate) sequencing_ws_url: Option<String>,
     pub(crate) appchain_block_explorer_url: Option<String>,
-    pub(crate) settlement_rpc_url: String,
+    pub(crate) settlement_ws_url: String,
     pub(crate) metrics_port: u16,
     pub(crate) sequencing_start_block: Option<u64>,
     pub(crate) settlement_start_block: Option<u64>,
@@ -21,16 +21,16 @@ pub(super) struct TranslatorConfig {
 impl TranslatorConfig {
     pub(crate) fn cli_args(&self) -> Vec<String> {
         let mut args = vec![
-            "--mchain-rpc-url".to_string(),
-            self.mchain_rpc_url.to_string(),
-            "--settlement-rpc-url".to_string(),
-            self.settlement_rpc_url.to_string(),
+            "--mchain-ws-url".to_string(),
+            self.mchain_ws_url.to_string(),
+            "--settlement-ws-url".to_string(),
+            self.settlement_ws_url.to_string(),
             "--metrics-port".to_string(),
             self.metrics_port.to_string(),
         ];
 
-        if let Some(url) = &self.sequencing_rpc_url {
-            args.extend(vec!["--sequencing-rpc-url".to_string(), url.to_string()]);
+        if let Some(url) = &self.sequencing_ws_url {
+            args.extend(vec!["--sequencing-ws-url".to_string(), url.to_string()]);
         }
 
         if let Some(url) = &self.appchain_block_explorer_url {

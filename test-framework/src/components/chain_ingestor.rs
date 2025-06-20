@@ -2,7 +2,7 @@
 
 #[derive(Debug, Default)]
 pub(super) struct ChainIngestorConfig {
-    pub(crate) rpc_url: String,
+    pub(crate) ws_url: String,
     pub(crate) db_file: String,
     pub(crate) start_block: u64,
     pub(crate) port: u16,
@@ -12,8 +12,8 @@ pub(super) struct ChainIngestorConfig {
 impl ChainIngestorConfig {
     pub(crate) fn cli_args(&self) -> Vec<String> {
         vec![
-            "--rpc-url".to_string(),
-            self.rpc_url.to_string(),
+            "--ws-url".to_string(),
+            self.ws_url.to_string(),
             "--db-file".to_string(),
             self.db_file.to_string(),
             "--start-block".to_string(),

@@ -20,9 +20,8 @@ use tracing::{error, info};
 #[command(version, about)]
 #[allow(missing_docs)]
 struct Config {
-    // time delay until a block is considered finalized
-    #[arg(long, env = "RPC_URL")]
-    rpc_url: String,
+    #[arg(long, env = "WS_URL")]
+    ws_url: String,
     #[arg(long, env = "DB_FILE")]
     db_file: String,
     #[arg(long, env = "START_BLOCK", default_value_t = 0)]
@@ -45,7 +44,7 @@ struct Config {
 }
 
 async fn new_provider(cfg: &Config) -> EthClient {
-    EthClient::new(&cfg.rpc_url, cfg.request_timeout, Duration::from_secs(300), cfg.channel_size)
+    EthClient::new(&cfg.ws_url, cfg.request_timeout, Duration::from_secs(300), cfg.channel_size)
         .await
 }
 
@@ -64,7 +63,7 @@ async fn main() {
 
     let (module, ctx) = server::start(
         &provider,
-        &cfg.rpc_url,
+        &cfg.ws_url,
         &cfg.db_file,
         cfg.start_block,
         cfg.parallel_sync_requests,
