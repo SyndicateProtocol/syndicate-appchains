@@ -64,7 +64,7 @@ async fn build_partial_blocks(
 
     let end_block = start_block + count - 1;
 
-    let mut safe_block = client.get_block_header(BlockNumberOrTag::Safe).await.number;
+    let mut safe_block = client.get_block_header(BlockNumberOrTag::Latest).await.number;
     if safe_block < start_block {
         safe_block = start_block - 1;
     }

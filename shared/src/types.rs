@@ -127,7 +127,8 @@ impl Display for BlockRef {
     }
 }
 
-fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
+/// Deserialize an address from a hex string
+pub fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
 where
     D: Deserializer<'de>,
 {

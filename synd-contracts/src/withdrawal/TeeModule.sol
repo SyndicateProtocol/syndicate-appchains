@@ -93,13 +93,18 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
     receive() external payable {}
 
     /**
-     * @notice Constructs the AssertionPoster contract
+     * @notice Constructs the TeeModule contract
      * @param poster_ Address of the assertion poster contract
      * @param bridge_ Settlement chain address of the appchain `Bridge` contract
      * @param appchainConfigHash_ Hash of the appchain configuration data passed to the TEE
+     * @param appchainStartBlockHash_ The starting block hash of the appchain
      * @param seqConfigHash_ Hash of the sequencing chain configuration data passed to the TEE - currently unused
+     * @param seqStartBlockHash_ The starting block hash of the sequencing chain
+     * @param l1StartBlockHash_ The L1 block at which this chain was deployed. Zero for ethereum itself
      * @param l1block_ Address of the l1 block contract - 0x4200000000000000000000000000000000000015 for bedrock rollups
      * and zero for ethereum itself
+     * @param challengeWindowDuration_ The duration of the challenge window in seconds
+     * @param teeKeyManager_ The address of the TEE key manager contract
      * Note that the AssertionPoster must be owned by the TeeModule for closing the challenge window to work properly
      */
     constructor(
