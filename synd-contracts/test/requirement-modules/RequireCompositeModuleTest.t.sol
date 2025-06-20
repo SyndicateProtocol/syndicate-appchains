@@ -60,7 +60,7 @@ contract RequireCompositeModuleTest is Test {
     }
 
     // Constructor Tests
-    function testConstructor() public {
+    function testConstructor() public view {
         assertEq(compositeModule.owner(), admin);
     }
 
@@ -250,7 +250,7 @@ contract RequireCompositeModuleTest is Test {
     }
 
     // isAllowed Tests
-    function testIsAllowedNoChecks() public {
+    function testIsAllowedNoChecks() public view {
         // With no checks, isAllowed should return true
         bool result = compositeModule.isAllowed(user1, user2, bytes(""));
         assertTrue(result);
