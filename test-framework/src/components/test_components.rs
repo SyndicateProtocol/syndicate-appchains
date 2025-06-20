@@ -289,14 +289,14 @@ impl TestComponents {
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_ws_url: mchain_ws_url.clone(),
             metrics_port: PortManager::instance().next_port().await,
-            arbitrum_bridge_address: None,
-            arbitrum_inbox_address: None,
-            sequencing_contract_address: None,
             sequencing_ws_url: Some(sequencing_ws_url.clone()),
             appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
             settlement_start_block: None,
             settlement_delay: None,
+            arbitrum_bridge_address: Some(arbitrum_bridge_address),
+            arbitrum_inbox_address: Some(arbitrum_inbox_address),
+            sequencing_contract_address: Some(sequencing_contract_address),
         };
 
         let translator = start_component(

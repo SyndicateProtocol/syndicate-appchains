@@ -20,7 +20,7 @@ impl BatchSequencerConfig {
             self.private_key.to_string(),
             "--sequencing-address".to_string(),
             self.sequencing_address.to_string(),
-            "--sequencing-ws-url".to_string(),
+            "--sequencing-rpc-url".to_string(),
             self.sequencing_rpc_url.to_string(),
             "--metrics-port".to_string(),
             self.metrics_port.to_string(),
