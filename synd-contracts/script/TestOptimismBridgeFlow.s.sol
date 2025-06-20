@@ -69,6 +69,7 @@ contract TestOptimismBridgeFlow is Script {
         // Deploy SyndicateToken
         // Actually, this should have already been deployed because OP_L2_TOKEN requires knowing the paired token it is serving.
         token = new SyndicateToken(admin, syndFoundation);
+        // token = SyndicateToken(0x08AA107A167485B3f302BC596F0bc6a41e3d8E0c); // Use existing deployed token on Sepolia
         console2.log("SyndicateToken deployed at:", address(token));
 
         // Deploy EmissionScheduler
@@ -106,7 +107,7 @@ contract TestOptimismBridgeFlow is Script {
         // Check if we can mint an emission (need to be past first epoch)
         uint256 currentTime = block.timestamp;
         uint256 emissionStartTime = emissionScheduler.emissionsStartTime();
-        uint256 timeUntilFirstEpoch = emissionStartTime + 30 days - currentTime;
+        uint256 timeUntilFirstEpoch = 0; // emissionStartTime + 30 days - currentTime;
 
         if (timeUntilFirstEpoch > 0) {
             console2.log("Need to wait", timeUntilFirstEpoch, "seconds until first epoch");
