@@ -46,7 +46,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
         &ConfigurationOptions {
             base_chains_type: BaseChainsType::Nitro,
             rollup_owner: test_account1().address,
-            settlement_delay: 0,
+            settlement_delay: 2,
             close_challenge_interval,
             ..Default::default()
         },
@@ -118,7 +118,8 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                     appchain_start_block_hash,
                     seq_config.hash_verifier_config_sha256(),
                     seq_start_block_hash,
-                    // TODO try to set this to not 0
+                    // TODO try to set this to not 0 (after the test passes with the proposer in
+                    // place)
                     B256::ZERO,
                     Address::ZERO,
                     1, // challenge_window_duration - 1 second
@@ -194,16 +195,11 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             let tx_hash = inbox.depositEth().value(parse_ether("1")?).send().await?.watch().await?;
             let receipt =
                 components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
-            println!("receipt: {:?}", receipt);
             assert!(receipt.status());
 
-            // TODO: this deposit is a bit flaky, need to figure out why
-            // make sure the timstamps move enough
-            time::sleep(Duration::from_millis(1100)).await;
-            // send some dummy txs so that the sequencing chain progresses and the deposit is
+            // send a dummy tx so that the sequencing chain progresses and the deposit is
             // slotted in
             components.sequence_tx(b"dummy_tx", 0, false).await?;
-            components.sequence_tx(b"dummy_tx_2", 0, false).await?;
 
             wait_until!(
                 components.appchain_provider.get_balance(test_account1().address).await? >=
@@ -309,7 +305,7 @@ where
 
 // MockZkVerifier is a mock implementation of the IAttestationDocVerifier interface for testing
 sol! {
-    #[sol(rpc, bytecode = "6080604052348015600e575f5ffd5b506102578061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610029575f3560e01c8063c22a96941461002d575b5f5ffd5b610047600480360381019061004291906100e5565b61005d565b60405161005491906101a2565b60405180910390f35b5f5f858581019061006e91906101f6565b905080915050949350505050565b5f5ffd5b5f5ffd5b5f5ffd5b5f5ffd5b5f5ffd5b5f5f83601f8401126100a5576100a4610084565b5b8235905067ffffffffffffffff8111156100c2576100c1610088565b5b6020830191508360018202830111156100de576100dd61008c565b5b9250929050565b5f5f5f5f604085870312156100fd576100fc61007c565b5b5f85013567ffffffffffffffff81111561011a57610119610080565b5b61012687828801610090565b9450945050602085013567ffffffffffffffff81111561014957610148610080565b5b61015587828801610090565b925092505092959194509250565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f61018c82610163565b9050919050565b61019c81610182565b82525050565b5f6020820190506101b55f830184610193565b92915050565b5f6101c582610163565b9050919050565b6101d5816101bb565b81146101df575f5ffd5b50565b5f813590506101f0816101cc565b92915050565b5f6020828403121561020b5761020a61007c565b5b5f610218848285016101e2565b9150509291505056fea2646970667358221220b1c06a0ba5fc1213a39916c7bdb363a0d04daeb334eda966e59fd82ee313512c64736f6c634300081e0033")] // TODO
+    #[sol(rpc, bytecode = "6080604052348015600e575f5ffd5b506102578061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610029575f3560e01c8063c22a96941461002d575b5f5ffd5b610047600480360381019061004291906100e5565b61005d565b60405161005491906101a2565b60405180910390f35b5f5f858581019061006e91906101f6565b905080915050949350505050565b5f5ffd5b5f5ffd5b5f5ffd5b5f5ffd5b5f5ffd5b5f5f83601f8401126100a5576100a4610084565b5b8235905067ffffffffffffffff8111156100c2576100c1610088565b5b6020830191508360018202830111156100de576100dd61008c565b5b9250929050565b5f5f5f5f604085870312156100fd576100fc61007c565b5b5f85013567ffffffffffffffff81111561011a57610119610080565b5b61012687828801610090565b9450945050602085013567ffffffffffffffff81111561014957610148610080565b5b61015587828801610090565b925092505092959194509250565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f61018c82610163565b9050919050565b61019c81610182565b82525050565b5f6020820190506101b55f830184610193565b92915050565b5f6101c582610163565b9050919050565b6101d5816101bb565b81146101df575f5ffd5b50565b5f813590506101f0816101cc565b92915050565b5f6020828403121561020b5761020a61007c565b5b5f610218848285016101e2565b9150509291505056fea2646970667358221220b1c06a0ba5fc1213a39916c7bdb363a0d04daeb334eda966e59fd82ee313512c64736f6c634300081e0033")]
     contract MockZkVerifier {
     function verifyAttestationDocProof(bytes calldata _publicValues, bytes calldata _proofBytes)
     external
