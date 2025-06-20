@@ -12,10 +12,6 @@ import (
 	"github.com/SyndicateProtocol/synd-proposer/pkg"
 )
 
-func TestDummy(t *testing.T) {
-	t.Log("Dummy test running.")
-}
-
 func TestInitProposerWithConfig(t *testing.T) {
 	dummyCfg := &pkg.Config{
 		EthereumRPCURL:           "http://localhost:8545",
