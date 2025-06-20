@@ -4,7 +4,7 @@ use alloy::primitives::Address;
 // needs to match the owner of the proposer contract
 // anvil account 0
 pub(super) const PROPOSER_SEQUENCER_PRIVATE_KEY: &str =
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 #[derive(Debug)]
 pub(super) struct ProposerConfig {
