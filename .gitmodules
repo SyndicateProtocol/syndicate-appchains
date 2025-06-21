@@ -16,3 +16,6 @@ url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "synd-contracts/lib/upgrade-executor"]
 	path = synd-contracts/lib/upgrade-executor
 	url = https://github.com/OffchainLabs/upgrade-executor
+[submodule "synd-contracts/lib/crosschainERC20"]
+	path = synd-contracts/lib/crosschainERC20
+	url = https://github.com/defi-wonderland/crosschainERC20
