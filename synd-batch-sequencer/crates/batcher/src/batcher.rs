@@ -20,7 +20,7 @@ use axum::{
 use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::{aio::MultiplexedConnection, AsyncCommands, Client as RedisClient};
+use redis::{aio::MultiplexedConnection, AsyncCommands, Client as ValkeyClient};
 use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
     tracing::SpanKind,
@@ -39,9 +39,9 @@ use tracing::{debug, error, info, instrument};
 #[derive(Derivative)]
 #[derivative(Debug)]
 struct Batcher {
-    /// Whether compression is enabled
+    /// Whether compression is enabled (default: true)
     compression_enabled: bool,
-    /// The max batch size for the batcher
+    /// The max batch size for the batcher (default: 90KB)
     max_batch_size: usize,
     /// The Stream consumer for the batcher
     stream_consumer: StreamConsumer,
@@ -49,7 +49,7 @@ struct Batcher {
     sequencing_contract_provider: SyndicateSequencingChainInstance<(), FilledProvider>,
     /// The chain ID for the batcher
     chain_id: u64,
-    /// The timeout for the batcher
+    /// The timeout for the batcher (default: 200ms)
     timeout: Duration,
     /// Metrics
     metrics: BatcherMetrics,
@@ -75,7 +75,7 @@ pub async fn run_batcher(
     sequencing_contract_address: Address,
     metrics_port: u16,
 ) -> Result<JoinHandle<()>> {
-    let client = RedisClient::open(config.valkey_url.as_str()).map_err(|e| {
+    let client = ValkeyClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
     let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
@@ -173,6 +173,35 @@ impl Batcher {
             chain_id = %self.chain_id
         )
     )]
+    async fn process_transactions(&mut self) -> Result<(), BatchError> {
+        let start = Instant::now();
+
+        let batch = self.read_and_batch_transactions().await?;
+        if batch.is_empty() {
+            debug!(%self.chain_id, "No transactions available to batch.");
+            return Ok(());
+        }
+
+        let submission_start = Instant::now();
+        if let Err(e) = self.send_batch(batch).await {
+            // Don't reset the compressor here, because we want to retry the same batch
+            error!(%self.chain_id, "Failed to send batch: {:?}", e);
+            return Err(e);
+        }
+        self.metrics.record_submission_latency(submission_start.elapsed());
+        self.metrics.record_processing_time(start.elapsed());
+
+        Ok(())
+    }
+
+    #[instrument(
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Consumer,
+            chain_id = %self.chain_id
+        )
+    )]
     async fn read_and_batch_transactions(&mut self) -> Result<SequencingBatch> {
         let start = Instant::now();
         let mut txs = vec![];
@@ -236,35 +265,6 @@ impl Batcher {
     }
 
     #[instrument(
-        skip(self),
-        err,
-        fields(
-            otel.kind = ?SpanKind::Consumer,
-            chain_id = %self.chain_id
-        )
-    )]
-    async fn process_transactions(&mut self) -> Result<(), BatchError> {
-        let start = Instant::now();
-
-        let batch = self.read_and_batch_transactions().await?;
-        if batch.is_empty() {
-            debug!(%self.chain_id, "No transactions available to batch.");
-            return Ok(());
-        }
-
-        let submission_start = Instant::now();
-        if let Err(e) = self.send_batch(batch).await {
-            // Don't reset the compressor here, because we want to retry the same batch
-            error!(%self.chain_id, "Failed to send batch: {:?}", e);
-            return Err(e);
-        }
-        self.metrics.record_submission_latency(submission_start.elapsed());
-        self.metrics.record_processing_time(start.elapsed());
-
-        Ok(())
-    }
-
-    #[instrument(
         skip_all,
         err,
         fields(
@@ -296,6 +296,8 @@ impl Batcher {
             }
         }
         .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
+
+        // Record the wallet balance in the background
         self.record_wallet_balance();
 
         Ok(())
