@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// VERSION must be bumped whenever a breaking change is made
-const VERSION: u64 = 2;
+const VERSION: u64 = 3;
 
 /// Each delayed message is used to derive an appchain block
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]

@@ -39,7 +39,7 @@ nitro:
 configmap:
   data:
     parent-chain:
-      id: 84532
+      id: 510
       connection:
         url: {{ LOCAL_MCHAIN_WS_RPC_URL }}
     chain:

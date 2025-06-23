@@ -10,7 +10,7 @@ see the provided `documentation/local/docker-compose.yml` file for more informat
 
 ## Mockchain configuration
 
-The mockchain has chain id 84532 and a genesis timestamp of 0.
+The mockchain has chain id 510 and a genesis timestamp of 0.
 
 The rollup precompile is installed at 0x5FbDB2315678afecb367f032d93F642f64180aa3 with the following on-chain configuration:
 {
