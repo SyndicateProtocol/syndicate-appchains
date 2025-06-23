@@ -592,13 +592,13 @@ contract ArbitrumBridgeProxyTest is Test {
 
     function test_WithdrawEth_EmitsCorrectEvent() public {
         uint256 withdrawAmount = 0.5 ether;
-        address recipient = address(0x1234);
+        address recipient_ = address(0x1234);
 
         vm.expectEmit(true, false, false, true);
-        emit EthWithdrawn(recipient, withdrawAmount);
+        emit EthWithdrawn(recipient_, withdrawAmount);
 
         vm.prank(admin);
-        bridgeProxy.withdrawEth(payable(recipient), withdrawAmount);
+        bridgeProxy.withdrawEth(payable(recipient_), withdrawAmount);
     }
 
     function test_WithdrawEth_MultipleWithdrawals() public {
@@ -633,19 +633,19 @@ contract ArbitrumBridgeProxyTest is Test {
         assertEq(user.balance, initialUserBalance + withdrawAmount);
     }
 
-    function testFuzz_WithdrawEth_DifferentRecipients(address recipient) public {
-        vm.assume(recipient != address(0));
-        vm.assume(recipient.code.length == 0); // Not a contract
+    function testFuzz_WithdrawEth_DifferentRecipients(address recipient_) public {
+        vm.assume(recipient_ != address(0));
+        vm.assume(recipient_.code.length == 0); // Not a contract
 
         uint256 withdrawAmount = 1 ether;
         uint256 initialBridgeBalance = address(bridgeProxy).balance;
-        uint256 initialRecipientBalance = recipient.balance;
+        uint256 initialRecipientBalance = recipient_.balance;
 
         vm.prank(admin);
-        bridgeProxy.withdrawEth(payable(recipient), withdrawAmount);
+        bridgeProxy.withdrawEth(payable(recipient_), withdrawAmount);
 
         assertEq(address(bridgeProxy).balance, initialBridgeBalance - withdrawAmount);
-        assertEq(recipient.balance, initialRecipientBalance + withdrawAmount);
+        assertEq(recipient_.balance, initialRecipientBalance + withdrawAmount);
     }
 }
 

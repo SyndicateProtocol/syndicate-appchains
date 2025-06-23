@@ -16,7 +16,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 // address constant SYND_ADDRESS = 0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23;
 
 // Sepolia SYND address Testnet RISA
-address constant SYND_ADDRESS = 0xb80c82702791664f59dF773e8b50dE921fC026fE;
+address constant SYND_ADDRESS = 0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C;
 
 contract GrantMinterRole is Script {
     AccessControl public synd;

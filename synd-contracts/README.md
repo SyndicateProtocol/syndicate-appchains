@@ -194,5 +194,6 @@ $ make deploy-syndicate-factory
 
 | Contract Name      | Address                                                                                                                       |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| TestnetSyndToken   | [0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C](https://sepolia.etherscan.io/address/0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C) |
 | SyndicateToken New | [0xb80c82702791664f59dF773e8b50dE921fC026fE](https://sepolia.etherscan.io/address/0xb80c82702791664f59dF773e8b50dE921fC026fE) |
 | SyndicateToken Old | [0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23](https://sepolia.etherscan.io/address/0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23) |

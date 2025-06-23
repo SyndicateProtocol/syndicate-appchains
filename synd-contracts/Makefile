@@ -58,3 +58,20 @@ test-optimism-bridge-flow :; forge script script/TestOptimismBridgeFlow.s.sol:Te
 simulate-arbitrum-bridge-flow :; forge script script/TestArbitrumBridgeFlow.s.sol:TestArbitrumBridgeFlow --rpc-url sepolia --sender ${DEV_PUB_ADDRESS} -vv
 
 simulate-optimism-bridge-flow :; forge script script/TestOptimismBridgeFlow.s.sol:TestOptimismBridgeFlow --rpc-url sepolia --sender ${DEV_PUB_ADDRESS} -vv
+
+## Crosschain Token Direct Deployment Commands
+
+# Deploy SyndicateTokenCrosschain directly (mainnet)
+deploy-syndicate-crosschain-token :; forge script script/DeployCrosschainTokenDirect.s.sol:DeploySyndicateTokenCrosschainDirect --rpc-url mainnet --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
+
+# Deploy TestnetSyndTokenCrosschain directly (testnet)
+deploy-testnet-crosschain-token :; forge script script/DeployCrosschainTokenDirect.s.sol:DeployTestnetSyndTokenCrosschainDirect --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
+
+# Verify crosschain address consistency (simulation only)
+verify-crosschain-consistency :; forge script script/DeployCrosschainTokenDirect.s.sol:VerifyCrosschainAddressConsistency --sender ${DEV_PUB_ADDRESS} -vv
+
+# verify contract on etherscan example
+verify-contract-direct :; forge verify-contract --rpc-url sepolia --watch --etherscan-api-key ${ETHERSCAN_API_KEY} ${contractAddress} ${contractPath}:${contractName} --constructor-args ${constructorArgsABIEncoded}
+
+# Example of how to ABI encode constructor args
+# cast abi-encode "constructor(address,address)" 0x45d6450fC59A6F8D9c753126cE1EFF6fa4D7e0fb 0x45d6450fC59A6F8D9c753126cE1EFF6fa4D7e0fb
