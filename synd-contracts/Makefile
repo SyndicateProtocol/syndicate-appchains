@@ -59,23 +59,19 @@ simulate-arbitrum-bridge-flow :; forge script script/TestArbitrumBridgeFlow.s.so
 
 simulate-optimism-bridge-flow :; forge script script/TestOptimismBridgeFlow.s.sol:TestOptimismBridgeFlow --rpc-url sepolia --sender ${DEV_PUB_ADDRESS} -vv
 
-## Crosschain Token Factory Commands
+## Crosschain Token Direct Deployment Commands
 
-# Deploy SyndicateTokenCrosschain factory (mainnet)
-deploy-syndicate-crosschain-factory :; forge script script/DeployCrosschainTokenFactories.s.sol:DeploySyndicateTokenCrosschainFactory --rpc-url mainnet --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
+# Deploy SyndicateTokenCrosschain directly (mainnet)
+deploy-syndicate-crosschain-token :; forge script script/DeployCrosschainTokenDirect.s.sol:DeploySyndicateTokenCrosschainDirect --rpc-url mainnet --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
 
-# Deploy SyndicateTokenCrosschain via factory (deterministic addressing)
-deploy-syndicate-crosschain-token :; forge script script/DeployCrosschainTokenFactories.s.sol:DeploySyndicateTokenCrosschainViaFactory --rpc-url mainnet --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
-
-
-# Deploy TestnetSyndTokenCrosschain factory (testnet)
-deploy-testnet-crosschain-factory :; forge script script/DeployCrosschainTokenFactories.s.sol:DeployTestnetSyndTokenCrosschainFactory --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
-
-# Deploy TestnetSyndTokenCrosschain via factory (deterministic addressing)
-deploy-testnet-crosschain-token :; forge script script/DeployCrosschainTokenFactories.s.sol:DeployTestnetSyndTokenCrosschainViaFactory --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
-
-# Configure bridges for crosschain token
-configure-crosschain-bridges :; forge script script/DeployCrosschainTokenFactories.s.sol:ConfigureCrosschainTokenBridges --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+# Deploy TestnetSyndTokenCrosschain directly (testnet)
+deploy-testnet-crosschain-token :; forge script script/DeployCrosschainTokenDirect.s.sol:DeployTestnetSyndTokenCrosschainDirect --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
 
 # Verify crosschain address consistency (simulation only)
-verify-crosschain-consistency :; forge script script/DeployCrosschainTokenFactories.s.sol:VerifyCrosschainAddressConsistency --sender ${DEV_PUB_ADDRESS} -vv
+verify-crosschain-consistency :; forge script script/DeployCrosschainTokenDirect.s.sol:VerifyCrosschainAddressConsistency --sender ${DEV_PUB_ADDRESS} -vv
+
+# verify contract on etherscan example
+verify-contract-direct :; forge verify-contract --rpc-url sepolia --watch --etherscan-api-key ${ETHERSCAN_API_KEY} ${contractAddress} ${contractPath}:${contractName} --constructor-args ${constructorArgsABIEncoded}
+
+# Example of how to ABI encode constructor args
+# cast abi-encode "constructor(address,address)" 0x45d6450fC59A6F8D9c753126cE1EFF6fa4D7e0fb 0x45d6450fC59A6F8D9c753126cE1EFF6fa4D7e0fb

@@ -97,35 +97,24 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 - Same crosschain capabilities as SyndicateTokenCrosschain
 - Flexible minting for testnet environments
 
-### 3. Crosschain Factory Contracts
+### 3. Crosschain Deployment Scripts
 
-#### SyndicateTokenCrosschainFactory Contract (`SyndicateTokenCrosschainFactory.sol`)
+**Note**: Factory contracts were removed due to Solidity contract size limits. Direct deployment scripts provide the same deterministic addressing benefits.
 
-**Purpose**: Deploys SyndicateTokenCrosschain with deterministic addresses using Solmate CREATE3.
+#### DeployCrosschainTokenDirect Script (`script/DeployCrosschainTokenDirect.s.sol`)
+
+**Purpose**: Deploys crosschain tokens directly using Solmate CREATE3 for deterministic addresses.
 
 **Key Features**:
 - CREATE3 deterministic deployment (same address on all chains)
-- Salt generation based on admin, treasury, and chain ID
+- Salt generation based on admin, treasury/minter, and chain ID
 - Address prediction before deployment
+- Automatic verification of deployed contracts
 
-**Deployment Functions**:
-```solidity
-function deploySyndicateTokenCrosschain(address admin, address treasury, bytes32 salt) 
-    external returns (address token);
-
-function predictTokenAddress(bytes32 salt) external view returns (address);
-
-function generateSalt(address admin, address treasury, uint256 chainId) 
-    external pure returns (bytes32);
-```
-
-#### TestnetSyndTokenCrosschainFactory Contract (`TestnetSyndTokenCrosschainFactory.sol`)
-
-**Purpose**: Deploys TestnetSyndTokenCrosschain with deterministic addresses.
-
-**Key Features**:
-- Same CREATE3 capabilities as mainnet factory
-- Tailored for testnet token deployment
+**Deployment Contracts**:
+- `DeploySyndicateTokenCrosschainDirect` - Mainnet crosschain token deployment
+- `DeployTestnetSyndTokenCrosschainDirect` - Testnet crosschain token deployment
+- `VerifyCrosschainAddressConsistency` - Address consistency verification
 
 ### 4. Crosschain Infrastructure
 
@@ -235,7 +224,7 @@ graph TD
     C --> D[Update daily usage]
     D --> E[Mint tokens to recipient]
     E --> F[Emit CrosschainMint event]
-    
+
     G[Bridge calls crosschainBurn] --> H[Check bridge authorization]
     H --> I[Validate rate limits]
     I --> J[Check allowance/balance]
@@ -461,11 +450,12 @@ src/token/
     ├── interfaces/
     │   ├── IERC7802.sol                 # SuperChain compatibility
     │   └── IBridgeRateLimiter.sol       # Rate limiting interface
-    ├── libraries/
-    │   ├── CREATE3.sol                  # Solmate CREATE3 implementation
-    │   └── Bytes32AddressLib.sol        # Address utilities
-    ├── SyndicateTokenCrosschainFactory.sol      # Production factory
-    └── TestnetSyndTokenCrosschainFactory.sol    # Testnet factory
+    └── libraries/
+        ├── CREATE3.sol                  # Solmate CREATE3 implementation
+        └── Bytes32AddressLib.sol        # Address utilities
+
+script/
+└── DeployCrosschainTokenDirect.s.sol    # Direct deployment scripts
 ```
 
 ---

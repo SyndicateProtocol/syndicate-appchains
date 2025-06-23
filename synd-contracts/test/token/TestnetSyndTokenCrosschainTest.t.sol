@@ -3,13 +3,11 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {TestnetSyndTokenCrosschain} from "src/token/TestnetSyndTokenCrosschain.sol";
-import {TestnetSyndTokenCrosschainFactory} from "src/token/crosschain/TestnetSyndTokenCrosschainFactory.sol";
 import {IERC7802} from "src/token/crosschain/interfaces/IERC7802.sol";
 import {IBridgeRateLimiter} from "src/token/crosschain/interfaces/IBridgeRateLimiter.sol";
 
 contract TestnetSyndTokenCrosschainTest is Test {
     TestnetSyndTokenCrosschain public token;
-    TestnetSyndTokenCrosschainFactory public factory;
 
     address public admin = address(0x1234);
     address public minter = address(0x5678);
@@ -24,9 +22,6 @@ contract TestnetSyndTokenCrosschainTest is Test {
     event BridgeLimitsSet(address indexed bridge, uint256 dailyMintLimit, uint256 dailyBurnLimit);
 
     function setUp() public {
-        // Deploy factory
-        factory = new TestnetSyndTokenCrosschainFactory();
-
         // Deploy token directly for testing
         token = new TestnetSyndTokenCrosschain(admin, minter);
 
@@ -234,122 +229,36 @@ contract TestnetSyndTokenCrosschainTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        FACTORY TESTS
+                        CREATE2 DEPLOYMENT TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function test_FactoryDeployment() public {
-        bytes32 salt = factory.generateSalt(admin, minter, block.chainid);
-
-        address deployed = factory.deployTestnetSyndTokenCrosschain(admin, minter, salt);
-
-        assertTrue(deployed != address(0));
-        assertTrue(factory.isTokenDeployed(salt));
-        assertFalse(factory.isTokenDeployed(keccak256("random")));
-
-        // Test basic functionality of deployed token
-        TestnetSyndTokenCrosschain deployedToken = TestnetSyndTokenCrosschain(deployed);
-        assertEq(deployedToken.totalSupply(), 0);
-        assertEq(deployedToken.name(), "Testnet Syndicate");
-        assertEq(deployedToken.symbol(), "TestnetSYND");
+    function test_CREATE2_DeterministicDeployment() public {
+        // Test CREATE2 deployment with deterministic salt
+        bytes32 salt = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, block.chainid));
+        
+        // Deploy a new token with the same salt  
+        TestnetSyndTokenCrosschain newToken = new TestnetSyndTokenCrosschain{salt: salt}(admin, minter);
+        
+        assertTrue(address(newToken) != address(0));
+        assertEq(newToken.totalSupply(), 0);
+        assertTrue(newToken.hasRole(newToken.DEFAULT_ADMIN_ROLE(), admin));
+        assertTrue(newToken.hasRole(newToken.MINTER_ROLE(), minter));
     }
 
-    function test_FactoryWithBridgeConfiguration() public {
-        bytes32 salt = keccak256("test_deployment");
+    function test_CREATE2_CrossChainConsistency() public view {
+        // Test that same parameters produce predictable salts for cross-chain deployment
+        bytes32 sepoliaSalt = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(11155111)));
+        bytes32 arbitrumSepoliaSalt = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(421614)));
+        bytes32 optimismSepoliaSalt = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(11155420)));
 
-        // Deploy token using basic factory function
-        address deployed = factory.deployTestnetSyndTokenCrosschain(admin, minter, salt);
-        TestnetSyndTokenCrosschain deployedToken = TestnetSyndTokenCrosschain(deployed);
-
-        // Manually configure bridges after deployment
-        vm.startPrank(admin);
-        deployedToken.setBridgeLimits(bridge1, DAILY_LIMIT, DAILY_LIMIT);
-        deployedToken.setBridgeLimits(bridge2, DAILY_LIMIT * 2, DAILY_LIMIT * 2);
-        vm.stopPrank();
-
-        // Verify bridge configuration
-        assertEq(deployedToken.getBridgeCount(), 2);
-        assertTrue(deployedToken.isBridgeAuthorized(bridge1));
-        assertTrue(deployedToken.isBridgeAuthorized(bridge2));
-        assertEq(deployedToken.getAvailableMintLimit(bridge1), DAILY_LIMIT);
-        assertEq(deployedToken.getAvailableMintLimit(bridge2), DAILY_LIMIT * 2);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        CREATE3 LIBRARY TESTS
-    //////////////////////////////////////////////////////////////*/
-    // Note: Using battle-tested Solmate CREATE3 implementation
-    // Reference: https://github.com/transmissions11/solmate/blob/main/src/utils/CREATE3.sol
-    // Key benefit: Same contract address across ALL chains for seamless bridging
-
-    function test_CREATE3_PredictDeterministicAddress() public {
-        // Test the Solmate CREATE3 library's prediction accuracy
-        // Deploy using factory and check if prediction works
-        bytes32 factorySalt = factory.generateSalt(admin, minter, block.chainid);
-        address predicted = factory.predictTokenAddress(factorySalt);
-        address deployed = factory.deployTestnetSyndTokenCrosschain(admin, minter, factorySalt);
-
-        // The addresses should match exactly
-        assertEq(predicted, deployed, "Solmate CREATE3 prediction should match deployment");
-    }
-
-    function test_CREATE3_SameAddressWithDifferentInitCode() public {
-        // This test demonstrates CREATE3's key benefit over CREATE2:
-        // Same salt = same address, regardless of constructor arguments
-        // This enables the same token address across all chains
-
-        bytes32 salt = keccak256("consistent_salt");
-
-        // Test with different admin/minter (different constructor args)
-        address admin1 = address(0x1111);
-        address minter1 = address(0x2222);
-        address admin2 = address(0x3333);
-        address minter2 = address(0x4444);
-
-        // With Solmate CREATE3, predicted addresses should be identical
-        address predicted1 = factory.predictTokenAddress(salt);
-        address predicted2 = factory.predictTokenAddress(salt);
-
-        assertEq(predicted1, predicted2, "Solmate CREATE3: same salt = same address");
-
-        // Deploy the first one
-        address deployed1 = factory.deployTestnetSyndTokenCrosschain(admin1, minter1, salt);
-        assertEq(deployed1, predicted1, "Deployed address matches prediction");
-
-        // Second deployment with same salt should fail (proxy already deployed)
-        vm.expectRevert("DEPLOYMENT_FAILED");
-        factory.deployTestnetSyndTokenCrosschain(admin2, minter2, salt);
-    }
-
-    function test_CREATE3_AddressPredictionConsistency() public view {
-        // Test that Solmate CREATE3 predictions are deterministic
-        bytes32 salt = keccak256("consistency_test");
-
-        address predicted1 = factory.predictTokenAddress(salt);
-        address predicted2 = factory.predictTokenAddress(salt);
-        address predicted3 = factory.predictTokenAddress(salt);
-
-        assertEq(predicted1, predicted2, "Solmate CREATE3 predictions are deterministic");
-        assertEq(predicted2, predicted3, "Solmate CREATE3 predictions are deterministic");
-    }
-
-    function test_CREATE3_CrossChainAddressConsistency() public view {
-        // This test demonstrates the key benefit for cross-chain deployment:
-        // Same salt + deployer = same address across ALL chains
-        // regardless of different constructor arguments per chain
-
-        bytes32 universalSalt = keccak256("UNIVERSAL_TESTNET_SYND_TOKEN");
-
-        // Get predicted addresses for "deployments" on different chains
-        address mainnetPredicted = factory.predictTokenAddress(universalSalt);
-        address arbitrumPredicted = factory.predictTokenAddress(universalSalt);
-        address optimismPredicted = factory.predictTokenAddress(universalSalt);
-
-        // With Solmate CREATE3: ALL addresses should be identical!
-        assertEq(mainnetPredicted, arbitrumPredicted, "Mainnet and Arbitrum addresses should match");
-        assertEq(arbitrumPredicted, optimismPredicted, "Arbitrum and Optimism addresses should match");
-        assertEq(mainnetPredicted, optimismPredicted, "Mainnet and Optimism addresses should match");
-
-        // This enables seamless cross-chain bridging without address confusion!
+        // Salts should be different per chain but deterministic
+        assertTrue(sepoliaSalt != arbitrumSepoliaSalt);
+        assertTrue(arbitrumSepoliaSalt != optimismSepoliaSalt);
+        assertTrue(sepoliaSalt != optimismSepoliaSalt);
+        
+        // But should be consistent for same inputs
+        bytes32 sepoliaSalt2 = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(11155111)));
+        assertEq(sepoliaSalt, sepoliaSalt2);
     }
 
     /*//////////////////////////////////////////////////////////////
