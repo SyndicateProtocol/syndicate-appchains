@@ -58,3 +58,24 @@ test-optimism-bridge-flow :; forge script script/TestOptimismBridgeFlow.s.sol:Te
 simulate-arbitrum-bridge-flow :; forge script script/TestArbitrumBridgeFlow.s.sol:TestArbitrumBridgeFlow --rpc-url sepolia --sender ${DEV_PUB_ADDRESS} -vv
 
 simulate-optimism-bridge-flow :; forge script script/TestOptimismBridgeFlow.s.sol:TestOptimismBridgeFlow --rpc-url sepolia --sender ${DEV_PUB_ADDRESS} -vv
+
+## Crosschain Token Factory Commands
+
+# Deploy SyndicateTokenCrosschain factory (mainnet)
+deploy-syndicate-crosschain-factory :; forge script script/DeployCrosschainTokenFactories.s.sol:DeploySyndicateTokenCrosschainFactory --rpc-url mainnet --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
+
+# Deploy SyndicateTokenCrosschain via factory (deterministic addressing)
+deploy-syndicate-crosschain-token :; forge script script/DeployCrosschainTokenFactories.s.sol:DeploySyndicateTokenCrosschainViaFactory --rpc-url mainnet --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+
+
+# Deploy TestnetSyndTokenCrosschain factory (testnet)
+deploy-testnet-crosschain-factory :; forge script script/DeployCrosschainTokenFactories.s.sol:DeployTestnetSyndTokenCrosschainFactory --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
+
+# Deploy TestnetSyndTokenCrosschain via factory (deterministic addressing)
+deploy-testnet-crosschain-token :; forge script script/DeployCrosschainTokenFactories.s.sol:DeployTestnetSyndTokenCrosschainViaFactory --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+
+# Configure bridges for crosschain token
+configure-crosschain-bridges :; forge script script/DeployCrosschainTokenFactories.s.sol:ConfigureCrosschainTokenBridges --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+
+# Verify crosschain address consistency (simulation only)
+verify-crosschain-consistency :; forge script script/DeployCrosschainTokenFactories.s.sol:VerifyCrosschainAddressConsistency --sender ${DEV_PUB_ADDRESS} -vv
