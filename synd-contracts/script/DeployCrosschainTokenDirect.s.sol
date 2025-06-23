@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 import {SyndicateTokenCrosschain} from "src/token/SyndicateTokenCrosschain.sol";
-import {TestnetSyndTokenCrosschain} from "src/token/TestnetSyndTokenCrosschain.sol";
+import {TestnetSyndTokenCrosschain} from "src/token/testnet-synd-token/TestnetSyndTokenCrosschain.sol";
 
 /**
  * @title Direct Crosschain Token Deployment

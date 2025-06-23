@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {TestnetSyndTokenCrosschain} from "src/token/TestnetSyndTokenCrosschain.sol";
+import {TestnetSyndTokenCrosschain} from "src/token/testnet-synd-token/TestnetSyndTokenCrosschain.sol";
 import {IERC7802} from "src/token/crosschain/interfaces/IERC7802.sol";
 import {IBridgeRateLimiter} from "src/token/crosschain/interfaces/IBridgeRateLimiter.sol";
 

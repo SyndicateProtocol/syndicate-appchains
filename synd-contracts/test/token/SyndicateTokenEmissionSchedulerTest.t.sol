@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {SyndicateToken} from "src/token/SyndicateToken.sol";
-import {SyndicateTokenEmissionScheduler} from "src/token/SyndicateTokenEmissionScheduler.sol";
+import {SyndicateTokenEmissionScheduler} from "src/token/emissions/SyndicateTokenEmissionScheduler.sol";
 import {OptimismBridgeProxy} from "src/token/bridges/OptimismBridgeProxy.sol";
 import {IBridgeProxy} from "src/token/interfaces/IBridgeProxy.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";

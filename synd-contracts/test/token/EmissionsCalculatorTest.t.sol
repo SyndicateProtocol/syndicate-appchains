@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {EmissionsCalculator} from "src/token/EmissionsCalculator.sol";
+import {EmissionsCalculator} from "src/token/emissions/EmissionsCalculator.sol";
 import {SyndicateToken} from "src/token/SyndicateToken.sol";
 
 contract EmissionsCalculatorTest is Test {

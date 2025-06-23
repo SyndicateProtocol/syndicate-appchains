@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 import {SyndicateToken} from "src/token/SyndicateToken.sol";
-import {EmissionsCalculator} from "src/token/EmissionsCalculator.sol";
-import {SyndicateTokenEmissionSchedulerV2} from "src/token/SyndicateTokenEmissionSchedulerV2.sol";
+import {EmissionsCalculator} from "src/token/emissions/EmissionsCalculator.sol";
+import {SyndicateTokenEmissionSchedulerV2} from "src/token/emissions/SyndicateTokenEmissionSchedulerV2.sol";
 
 /**
  * @title Deploy Emissions V2 System
@@ -31,26 +31,26 @@ contract DeployEmissionsV2 is Script {
         // 2. Deploy EmissionsCalculator
         EmissionsCalculator calculator = new EmissionsCalculator(
             address(token),
-            admin,      // admin
-            admin       // decay manager (same as admin for simplicity)
+            admin, // admin
+            admin // decay manager (same as admin for simplicity)
         );
         console.log("EmissionsCalculator deployed at:", address(calculator));
 
         // 3. Deploy EmissionSchedulerV2
         SyndicateTokenEmissionSchedulerV2 scheduler = new SyndicateTokenEmissionSchedulerV2(
             address(calculator),
-            admin,      // admin
-            admin,      // emissions manager
-            admin       // pauser
+            admin, // admin
+            admin, // emissions manager
+            admin // pauser
         );
         console.log("EmissionSchedulerV2 deployed at:", address(scheduler));
 
         // 4. Setup permissions
         console.log("Setting up permissions...");
-        
+
         // Grant emission minter role to calculator
         token.grantRole(token.EMISSION_MINTER_ROLE(), address(calculator));
-        
+
         // Grant emissions role to scheduler
         calculator.grantRole(calculator.EMISSIONS_ROLE(), address(scheduler));
 
@@ -116,7 +116,7 @@ contract DemoDecayUpdates is Script {
         console.log("=== Example Decay Factor Updates ===");
         console.log("To set epoch 10 to 90% decay:");
         console.log("calculator.setDecayFactor(10, 0.90e18)");
-        
+
         console.log("To set epochs 20-25 with varying decay:");
         console.log("uint256[] memory decays = [0.85e18, 0.80e18, 0.75e18, 0.70e18, 0.65e18, 0.60e18];");
         console.log("calculator.setDecayFactors(20, decays);");
@@ -148,13 +148,13 @@ contract SimulateEmissions is Script {
         for (uint256 i = currentEpoch; i < currentEpoch + 10 && i < 48; i++) {
             // Calculate what the emission would be for epoch i
             // Note: This is a simulation - we can't actually call calculateAndMintEmission in a view function
-            
+
             uint256 remainingSupply = calculator.getRemainingSupply();
             if (remainingSupply == 0) break;
 
             // Get decay factor for this epoch
             uint256 decayFactor = calculator.getDecayFactor(i);
-            
+
             console.log("Epoch", i, "- Decay factor:", decayFactor);
             console.log("  Remaining supply:", remainingSupply);
 
@@ -167,7 +167,7 @@ contract SimulateEmissions is Script {
                 // Calculate cumulative product from this epoch
                 uint256 cumulativeProduct = calculator.calculateCumulativeProduct(i);
                 uint256 estimatedEmission = (remainingSupply * (1e18 - decayFactor)) / (1e18 - cumulativeProduct);
-                
+
                 console.log("  Estimated emission:", estimatedEmission);
                 totalSimulated += estimatedEmission;
             }

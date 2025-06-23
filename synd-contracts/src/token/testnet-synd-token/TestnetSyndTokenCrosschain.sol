@@ -2,8 +2,8 @@
 pragma solidity 0.8.28;
 
 import {TestnetSyndToken} from "./TestnetSyndToken.sol";
-import {IERC7802} from "./crosschain/interfaces/IERC7802.sol";
-import {IBridgeRateLimiter} from "./crosschain/interfaces/IBridgeRateLimiter.sol";
+import {IERC7802} from "../crosschain/interfaces/IERC7802.sol";
+import {IBridgeRateLimiter} from "../crosschain/interfaces/IBridgeRateLimiter.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
