@@ -377,40 +377,40 @@ contract SyndicateTokenTest is Test {
         // First update
         vm.expectEmit(true, false, false, true);
         emit UnlockTimestampUpdated(0, firstTimestamp, defaultAdmin);
-        
+
         vm.prank(defaultAdmin);
         token.setUnlockTimestamp(firstTimestamp);
-        
+
         assertEq(token.unlockTimestamp(), firstTimestamp);
         assertTrue(token.transfersLocked());
 
         // Second update - extend the lock period
         vm.expectEmit(true, false, false, true);
         emit UnlockTimestampUpdated(firstTimestamp, secondTimestamp, defaultAdmin);
-        
+
         vm.prank(defaultAdmin);
         token.setUnlockTimestamp(secondTimestamp);
-        
+
         assertEq(token.unlockTimestamp(), secondTimestamp);
         assertTrue(token.transfersLocked());
 
         // Third update - extend further but still within MAX_LOCK_DURATION
         vm.expectEmit(true, false, false, true);
         emit UnlockTimestampUpdated(secondTimestamp, thirdTimestamp, defaultAdmin);
-        
+
         vm.prank(defaultAdmin);
         token.setUnlockTimestamp(thirdTimestamp);
-        
+
         assertEq(token.unlockTimestamp(), thirdTimestamp);
         assertTrue(token.transfersLocked());
 
         // Verify that even after multiple updates, MAX_LOCK_DURATION constraint is enforced
         uint256 tooLateTimestamp = block.timestamp + token.MAX_LOCK_DURATION() + 1;
-        
+
         vm.prank(defaultAdmin);
         vm.expectRevert(SyndicateToken.UnlockTimestampTooLate.selector);
         token.setUnlockTimestamp(tooLateTimestamp);
-        
+
         // Verify the timestamp wasn't changed after the failed update
         assertEq(token.unlockTimestamp(), thirdTimestamp);
     }
