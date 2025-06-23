@@ -14,16 +14,16 @@ interface ISyndicateTokenMintable {
  * @notice Calculates and manages token emissions using piece-wise geometric decay
  * @dev Implements a flexible emission system where decay factors can be updated by governance
  *      while maintaining the 100M cap and 48-epoch limit constraints.
- * 
+ *
  * Formula:
  * - For epoch t < 47: E_t = R_t * (1 - r_t) / (1 - P_t)
  * - For epoch 47: E_t = R_t (sweep remainder)
- * 
+ *
  * Where:
  * - R_t = remaining supply = CAP - M (M = total minted so far)
  * - r_t = decay factor for epoch t (0 < r < 1, scaled by 1e18)
  * - P_t = cumulative product of decay factors from epoch t to 47
- * 
+ *
  * @author Syndicate Protocol
  */
 contract EmissionsCalculator is AccessControl {
@@ -173,9 +173,9 @@ contract EmissionsCalculator is AccessControl {
      * @param startEpoch Starting epoch number
      * @param decayFactorArray Array of decay factors
      */
-    function setDecayFactors(uint256 startEpoch, uint256[] calldata decayFactorArray) 
-        external 
-        onlyRole(DECAY_MANAGER_ROLE) 
+    function setDecayFactors(uint256 startEpoch, uint256[] calldata decayFactorArray)
+        external
+        onlyRole(DECAY_MANAGER_ROLE)
     {
         for (uint256 i = 0; i < decayFactorArray.length; i++) {
             uint256 epoch = startEpoch + i;
@@ -206,9 +206,9 @@ contract EmissionsCalculator is AccessControl {
 
         // Calculate remaining supply (R_t)
         uint256 remainingSupply = getRemainingSupply();
-        
+
         uint256 emissionAmount;
-        
+
         if (currentEpoch == TOTAL_EPOCHS - 1) {
             // Final epoch: sweep all remaining tokens
             emissionAmount = remainingSupply;
@@ -216,26 +216,26 @@ contract EmissionsCalculator is AccessControl {
             // Calculate emission using geometric decay formula
             uint256 rt = decayFactors[currentEpoch];
             uint256 pt = calculateCumulativeProduct(currentEpoch);
-            
+
             // E_t = R_t * (1 - r_t) / (1 - P_t)
             // Note: We need to be careful with precision in fixed-point arithmetic
             uint256 numerator = remainingSupply * (SCALE - rt);
             uint256 denominator = SCALE - pt;
-            
+
             emissionAmount = numerator / denominator;
         }
 
         // Update state
         totalEmitted += emissionAmount;
-        
+
         // Mint tokens
         syndicateToken.mint(to, emissionAmount);
-        
+
         emit EmissionMinted(currentEpoch, emissionAmount, remainingSupply - emissionAmount, to);
-        
+
         // Advance to next epoch
         currentEpoch++;
-        
+
         return emissionAmount;
     }
 
@@ -252,9 +252,9 @@ contract EmissionsCalculator is AccessControl {
         uint256 totalSupply = syndicateToken.totalSupply();
         uint256 maxSupply = syndicateToken.TOTAL_SUPPLY();
         uint256 initialSupply = maxSupply - EMISSIONS_CAP;
-        
+
         uint256 emittedSoFar = totalSupply > initialSupply ? totalSupply - initialSupply : 0;
-        
+
         return EMISSIONS_CAP > emittedSoFar ? EMISSIONS_CAP - emittedSoFar : 0;
     }
 
@@ -265,13 +265,13 @@ contract EmissionsCalculator is AccessControl {
      */
     function calculateCumulativeProduct(uint256 fromEpoch) public view returns (uint256) {
         if (fromEpoch >= TOTAL_EPOCHS) return SCALE;
-        
+
         uint256 product = SCALE;
-        
+
         for (uint256 i = fromEpoch; i < TOTAL_EPOCHS; i++) {
             product = (product * decayFactors[i]) / SCALE;
         }
-        
+
         return product;
     }
 
@@ -281,19 +281,19 @@ contract EmissionsCalculator is AccessControl {
      */
     function previewCurrentEmission() external view returns (uint256) {
         if (!initialized || currentEpoch >= TOTAL_EPOCHS) return 0;
-        
+
         uint256 remainingSupply = getRemainingSupply();
-        
+
         if (currentEpoch == TOTAL_EPOCHS - 1) {
             return remainingSupply;
         }
-        
+
         uint256 rt = decayFactors[currentEpoch];
         uint256 pt = calculateCumulativeProduct(currentEpoch);
-        
+
         uint256 numerator = remainingSupply * (SCALE - rt);
         uint256 denominator = SCALE - pt;
-        
+
         return numerator / denominator;
     }
 
@@ -323,19 +323,11 @@ contract EmissionsCalculator is AccessControl {
      * @return remaining Remaining supply for emissions
      * @return completed Whether emissions are completed
      */
-    function getEmissionsInfo() external view returns (
-        uint256 current,
-        uint256 total,
-        uint256 emitted,
-        uint256 remaining,
-        bool completed
-    ) {
-        return (
-            currentEpoch,
-            TOTAL_EPOCHS,
-            totalEmitted,
-            getRemainingSupply(),
-            currentEpoch >= TOTAL_EPOCHS
-        );
+    function getEmissionsInfo()
+        external
+        view
+        returns (uint256 current, uint256 total, uint256 emitted, uint256 remaining, bool completed)
+    {
+        return (currentEpoch, TOTAL_EPOCHS, totalEmitted, getRemainingSupply(), currentEpoch >= TOTAL_EPOCHS);
     }
 }
