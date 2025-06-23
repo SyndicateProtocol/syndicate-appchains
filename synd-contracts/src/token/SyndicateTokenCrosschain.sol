@@ -23,8 +23,6 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
  * - Emergency controls for bridge management
  * - ERC165 interface detection for bridge compatibility
  *
- * @author Syndicate Protocol
- * @custom:security-contact security@syndicate.io
  */
 contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimiter {
     /*//////////////////////////////////////////////////////////////

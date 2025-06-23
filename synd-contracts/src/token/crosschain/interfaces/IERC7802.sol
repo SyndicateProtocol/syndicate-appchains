@@ -5,7 +5,8 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title ERC-7802 Crosschain Fungibility Extension for ERC-20
 /// @dev See https://eips.ethereum.org/EIPS/eip-7802
-/// @notice Interface for crosschain token minting and burning
+/// @notice Interface for crosschain token minting and burning.
+/// @dev Used in SuperchainERC20 contract
 interface IERC7802 is IERC165 {
     /*//////////////////////////////////////////////////////////////
                                  EVENTS

@@ -226,10 +226,10 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_CREATE2_DeterministicDeployment() public {
         // Test CREATE2 deployment with deterministic salt
         bytes32 salt = keccak256(abi.encodePacked("SYND_CROSSCHAIN", admin, treasury, block.chainid));
-        
+
         // Deploy a new token with the same salt
         SyndicateTokenCrosschain newToken = new SyndicateTokenCrosschain{salt: salt}(admin, treasury);
-        
+
         assertTrue(address(newToken) != address(0));
         assertEq(newToken.balanceOf(treasury), INITIAL_MINT_SUPPLY);
         assertTrue(newToken.hasRole(newToken.DEFAULT_ADMIN_ROLE(), admin));
@@ -245,7 +245,7 @@ contract SyndicateTokenCrosschainTest is Test {
         assertTrue(mainnetSalt != arbitrumSalt);
         assertTrue(arbitrumSalt != optimismSalt);
         assertTrue(mainnetSalt != optimismSalt);
-        
+
         // But should be consistent for same inputs
         bytes32 mainnetSalt2 = keccak256(abi.encodePacked("SYND_CROSSCHAIN", admin, treasury, uint256(1)));
         assertEq(mainnetSalt, mainnetSalt2);

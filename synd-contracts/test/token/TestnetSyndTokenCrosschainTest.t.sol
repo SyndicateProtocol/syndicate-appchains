@@ -235,10 +235,10 @@ contract TestnetSyndTokenCrosschainTest is Test {
     function test_CREATE2_DeterministicDeployment() public {
         // Test CREATE2 deployment with deterministic salt
         bytes32 salt = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, block.chainid));
-        
-        // Deploy a new token with the same salt  
+
+        // Deploy a new token with the same salt
         TestnetSyndTokenCrosschain newToken = new TestnetSyndTokenCrosschain{salt: salt}(admin, minter);
-        
+
         assertTrue(address(newToken) != address(0));
         assertEq(newToken.totalSupply(), 0);
         assertTrue(newToken.hasRole(newToken.DEFAULT_ADMIN_ROLE(), admin));
@@ -248,14 +248,16 @@ contract TestnetSyndTokenCrosschainTest is Test {
     function test_CREATE2_CrossChainConsistency() public view {
         // Test that same parameters produce predictable salts for cross-chain deployment
         bytes32 sepoliaSalt = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(11155111)));
-        bytes32 arbitrumSepoliaSalt = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(421614)));
-        bytes32 optimismSepoliaSalt = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(11155420)));
+        bytes32 arbitrumSepoliaSalt =
+            keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(421614)));
+        bytes32 optimismSepoliaSalt =
+            keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(11155420)));
 
         // Salts should be different per chain but deterministic
         assertTrue(sepoliaSalt != arbitrumSepoliaSalt);
         assertTrue(arbitrumSepoliaSalt != optimismSepoliaSalt);
         assertTrue(sepoliaSalt != optimismSepoliaSalt);
-        
+
         // But should be consistent for same inputs
         bytes32 sepoliaSalt2 = keccak256(abi.encodePacked("TESTNET_SYND_CROSSCHAIN", admin, minter, uint256(11155111)));
         assertEq(sepoliaSalt, sepoliaSalt2);
