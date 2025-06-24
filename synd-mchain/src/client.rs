@@ -60,8 +60,8 @@ pub trait Provider: Send + Sync {
     /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)
     ///
     /// This function is used during application startup and when handling reorgs to ensure
-    /// the [`MockChain`]'s state is consistent with the source chains. 
-    /// 
+    /// the [`MockChain`]'s state is consistent with the source chains.
+    ///
     /// It does the following:
     /// 1. Retrieves the latest valid state from the appchain contract that can be verified against
     ///    both source chains
