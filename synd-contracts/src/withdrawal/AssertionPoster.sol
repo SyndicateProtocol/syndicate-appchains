@@ -13,6 +13,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IOwnable} from "@arbitrum/nitro-contracts/src/bridge/IOwnable.sol";
 import {IUpgradeExecutor} from "@offchainlabs/upgrade-executor/src/IUpgradeExecutor.sol";
 import {IGasRefunder} from "@arbitrum/nitro-contracts/src/libraries/IGasRefunder.sol";
+import {IAssertionPoster} from "./IAssertionPoster.sol";
 import {GlobalState} from "@arbitrum/nitro-contracts/src/state/GlobalState.sol";
 
 // Grabbing these from the official v3 Arb contracts because they're missing in these v2 Eigen versions
@@ -129,7 +130,7 @@ struct Assertion {
  * @dev Facilitates posting assertions to an Arbitrum rollup chain
  * @notice Supports both legacy (v2) and new (v3) Nitro contracts
  */
-contract AssertionPoster is Ownable {
+contract AssertionPoster is Ownable, IAssertionPoster {
     // Immutable state variables
     address private immutable self;
     IRollup private immutable rollup;

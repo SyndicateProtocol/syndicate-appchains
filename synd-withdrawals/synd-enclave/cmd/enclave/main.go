@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"math"
 	"net/http"
 	"os"
 
@@ -17,6 +18,7 @@ func main() {
 	flag.Parse()
 
 	s := rpc.NewServer()
+	s.SetHTTPBodyLimit(math.MaxInt32)
 	serv, err := enclave.NewServer()
 	if err != nil {
 		log.Crit("Error creating API server", "error", err)

@@ -9,14 +9,16 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
 	"github.com/offchainlabs/nitro/arbutil"
 )
 
-type PreimageDb struct{}
+type PreimageDb struct {
+	wavm *wavmio.Wavm
+}
 
 func (db PreimageDb) Has(key []byte) (bool, error) {
 	if len(key) != 32 {
@@ -40,7 +42,7 @@ func (db PreimageDb) Get(key []byte) ([]byte, error) {
 	} else {
 		return nil, fmt.Errorf("preimage DB attempted to access non-hash key %v", hex.EncodeToString(key))
 	}
-	return wavmio.ResolveTypedPreimage(arbutil.Keccak256PreimageType, hash)
+	return db.wavm.ResolveTypedPreimage(arbutil.Keccak256PreimageType, hash)
 }
 
 func (db PreimageDb) Put(key []byte, value []byte) error {

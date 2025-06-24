@@ -204,12 +204,7 @@ RUN ./target/release/eif_build \
     --ramdisk user-ramdisk-initrd.img \
     --output eif.bin
 
-
-FROM busybox
-
-RUN mkdir /build
-WORKDIR /build
-
+FROM scratch
 COPY --from=eif /build/eif.bin .
 
 

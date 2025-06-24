@@ -60,7 +60,7 @@ services:
         condition: service_healthy
 
   nitro:
-    image: offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
+    image: nitro #offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
     command: "--parent-chain.connection.url=ws://mchain:8545 --http.port=8545 --http.addr=0.0.0.0 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/${CHAIN_INFO_FILE}"
     depends_on:
       healthcheck:
