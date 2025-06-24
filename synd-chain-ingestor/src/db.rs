@@ -25,8 +25,8 @@ pub struct DB {
 /// 4 bytes for the block timestamp + 32 bytes for the block hash
 ///
 /// The first item is the header - this contains the version byte followed by the start block number
-/// (`u64`) followed by the chain id (`u64`). The remaining 19 bytes are empty and reserved for custom
-/// metadata.
+/// (`u64`) followed by the chain id (`u64`). The remaining 19 bytes are empty and reserved for
+/// custom metadata.
 pub const ITEM_SIZE: u64 = 36;
 
 /// The effect of an `update_block()` call on the database

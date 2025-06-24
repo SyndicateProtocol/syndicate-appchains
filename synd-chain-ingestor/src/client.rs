@@ -185,7 +185,8 @@ impl<
     }
 }
 
-/// `BlockStream` is a stream of blocks that automatically updates stale/reorged blocks in the queue.
+/// `BlockStream` is a stream of blocks that automatically updates stale/reorged blocks in the
+/// queue.
 #[async_trait]
 pub trait BlockStreamT<Block> {
     /// Recv fetches the next block once a block with a timestamp greater than or equal to the
