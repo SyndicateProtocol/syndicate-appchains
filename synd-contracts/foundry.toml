@@ -1,20 +1,21 @@
 [profile.default]
-src = "src"
-out = "out"
-libs = ["lib"]
-via_ir = true
-evm_version = "cancun"
 bytecode_hash = "none"
 cbor_metadata = false
+evm_version   = "cancun"
+libs          = ["lib"]
+out           = "out"
+src           = "src"
+via_ir        = true
 
 [rpc_endpoints]
-localhost = "http://localhost:8545"
-mainnet = "${ETH_MAINNET_RPC_URL}"
-base_sepolia = "https://sepolia.base.org"
+base_sepolia    = "https://sepolia.base.org"
+exo             = "${EXO_RPC_URL}"
+holesky         = "https://ethereum-holesky-rpc.publicnode.com"
+localhost       = "http://localhost:8545"
+mainnet         = "${ETH_MAINNET_RPC_URL}"
+risa            = "https://risa-testnet.g.alchemy.com/v2/-0yNwLpWWs-Rcd9p5bbCN"
+risa_devnet     = "https://rpc.devnet.alchemy.com/63239a3f-77bf-4c60-b1af-cb1e5ee44769"
+sepolia         = "https://ethereum-sepolia-rpc.publicnode.com"
 syndicate_frame = "https://rpc-frame.syndicate.io"
-holesky = "https://ethereum-holesky-rpc.publicnode.com"
-sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
-exo = "${EXO_RPC_URL}"
-risa_devnet = "https://rpc.devnet.alchemy.com/63239a3f-77bf-4c60-b1af-cb1e5ee44769"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
