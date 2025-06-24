@@ -1,5 +1,5 @@
-//! The eth client is used by both the synd-chain-ingestor server and client crates for interacting
-//! with the ethereum chain.
+//! The `eth_client` is used by both the `synd-chain-ingestor` server and client crates for
+//! interacting with the Ethereum-like chain.
 
 use alloy::{
     eips::BlockNumberOrTag,
@@ -17,9 +17,9 @@ use tracing::{error, info};
 ///
 /// This client is designed to retrieve blockchain data such as blocks and receipts
 /// by interacting with an Ethereum JSON-RPC endpoint.
-#[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct EthClient {
+    /// The underlying client for the Ethereum-like chain.s
     pub client: RootProvider,
     timeout: Duration,
     log_timeout: Duration,
@@ -28,12 +28,14 @@ pub struct EthClient {
 fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
     error!("{}: {}", name, err);
     if let RpcError::Transport(err) = err {
+        // TODO(LBL): The docs for `.recoverable()` say it is "naive" and to "use it with caution."
+        // Want to double-check this
         assert!(err.recoverable(), "{}: {}: {}", name, "fatal transport error", err);
     }
 }
 
 impl EthClient {
-    /// Creates a new `EthClient` instance. Infinitely retries until it is able to connect.
+    /// Creates a new [`EthClient`] instance. Retries indefinitely until it is able to connect.
     pub async fn new(
         ws_url: &str,
         timeout: Duration,
@@ -67,21 +69,22 @@ impl EthClient {
 }
 
 impl EthClient {
-    /// Retrieves a block by its number with a timeout. Infinitely retries until the request
+    /// Retrieves a block by its number with a timeout. Retries indefinitely until the request
     /// succeeds.
     pub async fn get_block_header(&self, block_identifier: BlockNumberOrTag) -> Header {
         loop {
+            // TODO(LBL): should these error!'s be debug! since they may happen often?
             match timeout(self.timeout, self.client.get_block_by_number(block_identifier)).await {
                 Err(_) => {
-                    error!("eth_getBlockByNumber request timed out");
+                    error!(%block_identifier, "eth_getBlockByNumber request timed out");
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
-                    handle_rpc_error("failed to fetch block header", &err);
+                    handle_rpc_error("failed to fetch a block header", &err);
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Ok(None)) => {
-                    error!("fetched empty block header");
+                    error!(%block_identifier, "fetched an empty block header");
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Ok(Some(block))) => {
@@ -94,8 +97,8 @@ impl EthClient {
         }
     }
 
-    /// Retrieves the transaction receipts for a given block hash with a timeout. Infinitely retries
-    /// until the request succeeds.
+    /// Retrieves the transaction receipts for a given block hash with a timeout. Retries
+    /// indefinitely until the request succeeds.
     pub async fn get_block_receipts(&self, number: u64) -> Vec<Receipt> {
         loop {
             match timeout(
@@ -120,8 +123,8 @@ impl EthClient {
         }
     }
 
-    /// Subscribe to blocks over the websocket connection with a timeout. Infinitely retries until
-    /// the request succeeds.
+    /// Subscribes to blocks over the websocket connection with a timeout. Retries indefinitely
+    /// until the request succeeds.
     pub async fn subscribe_blocks(&self) -> Subscription<Header> {
         loop {
             match timeout(self.timeout, self.client.subscribe_blocks()).await {
@@ -138,7 +141,7 @@ impl EthClient {
         }
     }
 
-    /// Get the chain id. Infinitely retries until the request succeeds.
+    /// Gets the chain id. Retries indefinitely until the request succeeds.
     pub async fn get_chain_id(&self) -> u64 {
         loop {
             match timeout(self.timeout, self.client.get_chain_id()).await {
@@ -177,7 +180,7 @@ impl EthClient {
                     _ => (0, 0),
                 };
 
-                // If range is too small, return error
+                // Error if the range is too small
                 if to_block <= from_block {
                     error!("failed to get logs ({:?}): {}", filter, err);
                     return Err(RpcError::ErrorResp(err));
