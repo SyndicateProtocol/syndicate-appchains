@@ -338,18 +338,6 @@ contract SyndicateTokenTest is Test {
         assertEq(token.getRemainingLockTime(), 30 days);
     }
 
-    function test_RevertWhen_SetUnlockTimestamp_AlreadySet() public {
-        // First set a lock
-        uint256 futureTimestamp = block.timestamp + 30 days;
-        vm.prank(defaultAdmin);
-        token.setUnlockTimestamp(futureTimestamp);
-
-        // Try to set it again
-        vm.prank(defaultAdmin);
-        vm.expectRevert(SyndicateToken.UnlockTimestampAlreadySet.selector);
-        token.setUnlockTimestamp(block.timestamp + 60 days);
-    }
-
     function test_RevertWhen_SetUnlockTimestamp_NotAdmin() public {
         uint256 futureTimestamp = block.timestamp + 30 days;
 
@@ -378,6 +366,53 @@ contract SyndicateTokenTest is Test {
         vm.prank(defaultAdmin);
         vm.expectRevert(SyndicateToken.UnlockTimestampTooLate.selector);
         token.setUnlockTimestamp(tooLateTimestamp);
+    }
+
+    function test_SetUnlockTimestamp_MultipleUpdates() public {
+        // Test that admin can update unlock timestamp multiple times
+        uint256 firstTimestamp = block.timestamp + 10 days;
+        uint256 secondTimestamp = block.timestamp + 20 days;
+        uint256 thirdTimestamp = block.timestamp + 45 days; // Still within MAX_LOCK_DURATION (90 days)
+
+        // First update
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(0, firstTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(firstTimestamp);
+
+        assertEq(token.unlockTimestamp(), firstTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Second update - extend the lock period
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(firstTimestamp, secondTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(secondTimestamp);
+
+        assertEq(token.unlockTimestamp(), secondTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Third update - extend further but still within MAX_LOCK_DURATION
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(secondTimestamp, thirdTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(thirdTimestamp);
+
+        assertEq(token.unlockTimestamp(), thirdTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Verify that even after multiple updates, MAX_LOCK_DURATION constraint is enforced
+        uint256 tooLateTimestamp = block.timestamp + token.MAX_LOCK_DURATION() + 1;
+
+        vm.prank(defaultAdmin);
+        vm.expectRevert(SyndicateToken.UnlockTimestampTooLate.selector);
+        token.setUnlockTimestamp(tooLateTimestamp);
+
+        // Verify the timestamp wasn't changed after the failed update
+        assertEq(token.unlockTimestamp(), thirdTimestamp);
     }
 
     function test_TransferLocked_RegularUser() public {

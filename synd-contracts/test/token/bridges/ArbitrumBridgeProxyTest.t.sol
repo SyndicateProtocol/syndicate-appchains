@@ -636,6 +636,7 @@ contract ArbitrumBridgeProxyTest is Test {
     function testFuzz_WithdrawEth_DifferentRecipients(address recipient_) public {
         vm.assume(recipient_ != address(0));
         vm.assume(recipient_.code.length == 0); // Not a contract
+        vm.assume(uint160(recipient_) > 0x09); // Exclude precompiles (0x01-0x09)
 
         uint256 withdrawAmount = 1 ether;
         uint256 initialBridgeBalance = address(bridgeProxy).balance;
