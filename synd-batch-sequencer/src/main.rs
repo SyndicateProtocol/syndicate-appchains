@@ -1,4 +1,4 @@
-//! The Batch Sequencer is a service that pull transactions off the queue, processes and validates
+//! The Batch Sequencer is a service that pulls transactions off the queue, processes and validates
 //! them, and submits them to the Appchain in batches (can be compressed or not).
 
 use batcher::batcher::run_batcher;

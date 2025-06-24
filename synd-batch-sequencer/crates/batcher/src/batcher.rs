@@ -33,7 +33,7 @@ use std::{
 };
 use synd_maestro::valkey::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, instrument, trace};
 
 /// Batcher service
 #[derive(Derivative)]
@@ -178,7 +178,7 @@ impl Batcher {
 
         let batch = self.read_and_batch_transactions().await?;
         if batch.is_empty() {
-            debug!(%self.chain_id, "No transactions available to batch.");
+            trace!(%self.chain_id, "No transactions available to batch.");
             return Ok(());
         }
 
