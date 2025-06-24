@@ -19,3 +19,5 @@ cargo run -p synd-batch-sequencer -- \
 
 - `--private-key`: This is the private key of the wallet used to sign and submit batches. This wallet must be funded with enough native tokens (e.g., ETH) to cover gas costs.
   ⚠️ Important: Do not commit this key to version control. Use environment variables or secret managers to inject it at runtime securely.
+
+- Although we're using Valkey as our key-value store, we still use a Redis Rust client library, following recommendations for compatibility. (https://github.com/valkey-io/valkey-glide/issues/828)
