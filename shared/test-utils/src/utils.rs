@@ -65,7 +65,7 @@ macro_rules! wait_until {    // With setup code
                 eyre::Ok(())
             }
         ).await {
-            core::result::Result::Err(e) => panic!("Condition not satisfied within: {$timeout:?} ({e})"),
+            core::result::Result::Err(e) => panic!("Condition not satisfied within: {:?} ({})", $timeout, e),
             core::result::Result::Ok(inner) => match inner {
                 core::result::Result::Err(e) => panic!("Check function failed with error: {e:?}"),
                 core::result::Result::Ok(()) => (),
