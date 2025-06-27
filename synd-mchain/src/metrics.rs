@@ -28,9 +28,9 @@ pub struct ReorgMetrics {
 pub struct MchainMetrics {
     /// The latest sequencing block
     pub sequencing_block: BlockMetrics,
-    /// The latest synd-mchain block
+    /// The latest `synd-mchain` block
     pub last_block: BlockMetrics,
-    /// The finalized synd-mchain block
+    /// The finalized `synd-mchain` block
     pub finalized_block: BlockMetrics,
     /// The latest reorg
     pub last_reorg: ReorgMetrics,
@@ -43,7 +43,7 @@ pub struct MchainMetrics {
 }
 
 impl MchainMetrics {
-    /// Creates a new `MchainMetrics` instance and registers metrics in the provided registry.
+    /// Creates a new [`MchainMetrics`] instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
         let metrics = Self::default();
         registry.register(

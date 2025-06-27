@@ -30,14 +30,12 @@ struct Config {
 }
 
 #[tokio::main]
-#[allow(clippy::redundant_pub_crate)]
 async fn main() -> eyre::Result<()> {
     // Initialize logging
-    #[allow(clippy::unwrap_used)]
-    setup_global_logging().unwrap();
+    setup_global_logging()?;
 
     let cfg = Config::parse();
-    info!("loading rockdb db {}", cfg.datadir);
+    info!("loading rocksdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir)?;
 
     let mut metrics_state = MetricsState::default();

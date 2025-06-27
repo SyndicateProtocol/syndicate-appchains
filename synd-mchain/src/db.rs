@@ -38,7 +38,7 @@ pub struct Slot {
     pub set_block_hash: FixedBytes<32>,
 }
 
-/// The current state of the synd-mchain
+/// The current state of the `synd-mchain`
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct State {
     /// The latest number of batches
@@ -51,7 +51,7 @@ pub struct State {
     pub message_acc: FixedBytes<32>,
     /// The timestamp of the pending slot
     pub timestamp: u64,
-    /// The pending `Slot`
+    /// The pending [`Slot`]
     pub slot: Slot,
 }
 
@@ -82,7 +82,8 @@ pub struct MBlock {
     pub payload: Option<ArbitrumBatch>,
 }
 
-/// Block data stored in rocksdb
+/// Block data stored in `rocksdb`.
+///
 /// Note that the block hash does not affect derived block hashes and therefore
 /// this implementation should be fully compatible with existing reth `MockChains`.
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -93,13 +94,13 @@ pub struct Block {
     pub batch: Bytes,
     /// accumulator
     pub after_batch_acc: FixedBytes<32>,
-    /// delayed messages included in the batch & accumulator values
+    /// delayed messages included in the batch and accumulator values
     pub messages: Vec<(DelayedMessage, FixedBytes<32>)>,
     /// previous sequencer inbox accumulator
-    /// note that this is used to detect reorgs instead of block hash
+    /// note that this is used to detect reorgs instead of the block hash
     pub before_batch_acc: FixedBytes<32>,
     /// previous delayed message (inbox) accumulator
-    /// note that this is used to detect reorgs instead of block hash
+    /// note that this is used to detect reorgs instead of the block hash
     pub before_message_acc: FixedBytes<32>,
     /// previous delayed messages read
     pub before_message_count: u64,
@@ -118,7 +119,7 @@ impl Block {
     }
 }
 
-/// rocksdb implements the key-value trait
+/// `rocksdb` implements the key-value trait
 #[allow(clippy::unwrap_used)]
 impl<T: ThreadMode> ArbitrumDB for DBWithThreadMode<T> {
     fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
@@ -356,7 +357,7 @@ pub(crate) mod tests {
     fn invalid_batch() -> eyre::Result<()> {
         let db = TestDB::new();
 
-        // first batch must contain a payload
+        // the first batch must contain a payload
         assert!(db.add_batch(MBlock { payload: None, ..Default::default() }).is_err());
 
         for payload in [None, Some(Default::default())] {
