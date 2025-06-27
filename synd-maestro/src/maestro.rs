@@ -781,7 +781,6 @@ impl MaestroService {
         }
     }
 
-
     /// Shuts down the Maestro service and all its components gracefully.
     #[allow(clippy::cognitive_complexity)]
     pub async fn shutdown(&self) {

@@ -115,7 +115,10 @@ async fn build_mblock(
 
     let mut blocks_per_slot: u64 = 1;
     let slot_end_ts = if seq_block.block_ref.timestamp >= settlement_delay {
-        seq_block.block_ref.timestamp - settlement_delay + 1 } else { Default::default() };
+        seq_block.block_ref.timestamp - settlement_delay + 1
+    } else {
+        Default::default()
+    };
 
     while latest_settlement_block.block_ref.timestamp < slot_end_ts {
         blocks_per_slot += 1;
