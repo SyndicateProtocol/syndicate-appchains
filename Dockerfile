@@ -12,12 +12,23 @@ WORKDIR /app
 RUN --mount=type=cache,target=/var/cache/apt \
     --mount=type=cache,target=/var/lib/apt \
     apt-get update && \
-    apt-get install -y libclang-dev pkg-config build-essential libssl-dev && \
+    apt-get install -y libclang-dev pkg-config build-essential libssl-dev curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Stage 2: Build
 FROM builder AS build
 COPY . .
+
+# Install SP1 toolchain
+RUN curl -L https://sp1.succinct.xyz | bash
+ENV PATH="/root/.sp1/bin:${PATH}"
+RUN /root/.sp1/bin/sp1up && \
+    /root/.sp1/bin/cargo-prove prove --version
+
+# Build SP1 ELF program
+RUN cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program && \
+    /root/.sp1/bin/cargo-prove prove build && \
+    cd /app
 
 # Perform cargo build with cached Cargo and target directories
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
