@@ -388,7 +388,7 @@ impl TestComponents {
         info!("Starting chain ingestors...");
         let temp = test_path("chain_ingestor");
         let seq_chain_ingestor_cfg = ChainIngestorConfig {
-            rpc_url: seq_rpc_ws_url.to_string(),
+            ws_url: seq_rpc_ws_url.to_string(),
             db_file: temp.clone() + "/sequencing_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -403,7 +403,7 @@ impl TestComponents {
         .await?;
 
         let set_chain_ingestor_cfg = ChainIngestorConfig {
-            rpc_url: set_rpc_ws_url.clone(),
+            ws_url: set_rpc_ws_url.clone(),
             db_file: temp + "/settlement_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -423,15 +423,15 @@ impl TestComponents {
 
         info!("Starting translator...");
         let translator_config = TranslatorConfig {
-            settlement_rpc_url: settlement_rpc_url.clone(),
+            settlement_ws_url: settlement_rpc_url.clone(),
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
-            mchain_rpc_url: mchain_rpc_url.clone(),
+            mchain_ws_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port().await,
             arbitrum_bridge_address: Some(appchain_deployment.bridge),
             arbitrum_inbox_address: Some(appchain_deployment.inbox),
             sequencing_contract_address: Some(sequencing_contract_address),
-            sequencing_rpc_url: Some(sequencing_rpc_url.clone()),
+            sequencing_ws_url: Some(sequencing_rpc_url.clone()),
             appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: Some(options.sequencing_start_block),
             settlement_start_block: Some(options.settlement_start_block),

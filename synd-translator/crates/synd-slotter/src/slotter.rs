@@ -6,7 +6,7 @@ use shared::types::BlockRef;
 use synd_chain_ingestor::client::BlockStreamT;
 use synd_mchain::{
     client::{KnownState, Provider},
-    db::{MBlock, Slot},
+    db::{ArbitrumBatch, MBlock, Slot},
 };
 use thiserror::Error;
 use tracing::{error, info, trace};
@@ -99,7 +99,7 @@ pub async fn run(
         }
 
         if seq_block.tx_count > 0 || !messages.is_empty() {
-            mblock.payload = Some((seq_block.batch, messages));
+            mblock.payload = Some(ArbitrumBatch::new(seq_block.batch, messages));
         }
         mblock.slot.set_block_hash = set_block.block_ref.hash;
         mblock.slot.set_block_number = set_block.block_ref.number;
@@ -115,7 +115,7 @@ pub async fn run(
                 "Sent slot {} ({} seq, {} set) with timestamp {} in {:?}",
                 mblock.slot.seq_block_number,
                 seq_block.tx_count,
-                payload.1.len(),
+                payload.delayed_messages.len(),
                 mblock.timestamp,
                 time.elapsed()
             );

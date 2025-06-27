@@ -37,18 +37,19 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
 }
 
 async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -> Result<()> {
-    let mchain = MProvider::new(&config.block_builder.mchain_rpc_url)
+    let mchain = MProvider::new(&config.block_builder.mchain_ws_url)
         .await
         .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {e}")))?;
 
     let sequencing_client = IngestorProvider::new(
-        config.sequencing.sequencing_rpc_url.as_ref().unwrap(),
-        config.rpc_timeout,
+        config.sequencing.sequencing_ws_url.as_ref().unwrap(),
+        config.ws_request_timeout,
     )
     .await;
 
     let settlement_client =
-        IngestorProvider::new(&config.settlement.settlement_rpc_url, config.rpc_timeout).await;
+        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
+            .await;
 
     let safe_state =
         mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
@@ -70,7 +71,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 
     let seq_client = EthClient::new(
         &sequencing_client.get_url().await?,
-        config.rpc_timeout,
+        config.ws_request_timeout,
         config.get_logs_timeout,
         1024,
     )
@@ -87,7 +88,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 
     let set_client = EthClient::new(
         &settlement_client.get_url().await?,
-        config.rpc_timeout,
+        config.ws_request_timeout,
         config.get_logs_timeout,
         1024,
     )
