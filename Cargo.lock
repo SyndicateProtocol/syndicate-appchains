@@ -6966,7 +6966,6 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
- "test-utils",
  "tokio",
  "tracing",
 ]
