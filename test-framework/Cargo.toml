@@ -11,6 +11,7 @@ version.workspace      = true
 [dependencies]
 alloy = { workspace = true, features = [
   "node-bindings",
+  "provider-debug-api",
   "provider-engine-api",
   "provider-ipc",
   "providers",
@@ -30,6 +31,7 @@ synd-mchain = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }
+
 
 [dev-dependencies]
 synd-chain-ingestor = { workspace = true }

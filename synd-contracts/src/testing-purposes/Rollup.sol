@@ -19,6 +19,8 @@ contract Rollup {
     uint64 public setBlockNumber = 0;
     uint256 public setBlockHash = 0;
 
+    address public owner;
+
     // IBridge.sol
     bytes32[] public delayedInboxAccs;
 
@@ -26,7 +28,7 @@ contract Rollup {
     bytes32[] public sequencerInboxAccs;
 
     // ISequencerInbox.sol
-    uint256 public totalDelayedMessagesRead; //#olympix-ignore-uninitialized-state-variable
+    uint256 public totalDelayedMessagesRead; //#olympix-ignore
 
     /// @dev Provided data was too large
     /// @param dataLength The length of the data that is too large
@@ -37,8 +39,9 @@ contract Rollup {
     uint8 public constant INITIALIZATION_MSG_TYPE = 11;
     uint8 public constant L1MessageType_ethDeposit = 12;
 
-    //#olympix-ignore-no-parameter-validation-in-constructor
-    constructor(uint256 chainId, string memory chainConfig) {
+    //#olympix-ignore
+    constructor(uint256 chainId, string memory chainConfig, address owner_) {
+        owner = owner_;
         require(bytes(chainConfig).length > 0, "EMPTY_CHAIN_CONFIG");
         deliverMessage(
             INITIALIZATION_MSG_TYPE,

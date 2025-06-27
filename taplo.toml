@@ -1,5 +1,10 @@
 # https://taplo.tamasfe.dev/configuration/formatter-options.html
 
+exclude = [
+  "synd-contracts/**/Cargo.toml",
+  "synd-withdrawals/synd-enclave/nitro/**/Cargo.toml",
+]
+
 [formatting]
 align_entries        = true
 array_trailing_comma = true

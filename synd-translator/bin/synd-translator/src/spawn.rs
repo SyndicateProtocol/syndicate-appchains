@@ -30,19 +30,16 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
                 error!("restarting the translator components: {e}");
                 // Sleep for 1 second to avoid spamming the logs on unrecoverable errors
                 // TODO [SEQ-985]: Review errors thrown by slotter and handle them appropriately
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                std::thread::sleep(std::time::Duration::from_secs(1));
             }
         };
     }
 }
 
 async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -> Result<()> {
-    let mchain = MProvider::new(&config.block_builder.mchain_ws_url).await.map_err(|e| {
-        RuntimeError::InvalidConfig(format!(
-            "Invalid synd-mchain ws url: {} error: {}",
-            config.block_builder.mchain_ws_url, e
-        ))
-    })?;
+    let mchain = MProvider::new(&config.block_builder.mchain_ws_url)
+        .await
+        .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {e}")))?;
 
     let sequencing_client = IngestorProvider::new(
         config.sequencing.sequencing_ws_url.as_ref().unwrap(),
@@ -50,13 +47,12 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     )
     .await;
 
-    let settlement_ingestor_client =
+    let settlement_client =
         IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
             .await;
 
-    let safe_state = mchain
-        .reconcile_mchain_with_source_chains(&sequencing_client, &settlement_ingestor_client)
-        .await?;
+    let safe_state =
+        mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
 
     let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
     let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();
@@ -90,28 +86,26 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         )
         .await?;
 
-    let settlement_client = EthClient::new(
-        &settlement_ingestor_client.get_url().await?,
+    let set_client = EthClient::new(
+        &settlement_client.get_url().await?,
         config.ws_request_timeout,
         config.get_logs_timeout,
         1024,
     )
     .await;
-    let settlement = settlement_ingestor_client
+    let settlement = settlement_client
         .get_blocks(
             settlement_config.start_block,
             arbitrum_adapter.settlement_addresses(),
             arbitrum_adapter,
-            settlement_client,
+            set_client,
         )
         .await?;
 
-    let settlement_delay = config
-        .settlement_delay
-        .ok_or_else(|| RuntimeError::InvalidConfig("settlement_delay unset".into()))?;
+    let settlement_delay = config.settlement_delay;
 
     Ok(synd_slotter::slotter::run(
-        settlement_delay,
+        settlement_delay.unwrap(),
         safe_state,
         sequencing,
         settlement,

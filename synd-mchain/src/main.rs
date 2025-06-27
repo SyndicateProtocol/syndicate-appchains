@@ -1,14 +1,20 @@
 //! The `MockChain` is used for appchain block derivation.
 
 use clap::Parser;
+#[cfg(feature = "rocksdb")]
 use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
+#[cfg(feature = "rocksdb")]
 use rocksdb::DB;
+#[cfg(feature = "rocksdb")]
 use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
     tracing::setup_global_logging,
 };
+#[cfg(feature = "rocksdb")]
 use synd_mchain::{metrics::MchainMetrics, server::start_mchain};
+#[cfg(feature = "rocksdb")]
 use tokio::signal::unix::{signal, SignalKind};
+#[cfg(feature = "rocksdb")]
 use tracing::info;
 
 /// CLI args for the `synd-mchain` executable
@@ -30,12 +36,15 @@ struct Config {
 }
 
 #[tokio::main]
+#[allow(clippy::redundant_pub_crate)]
+#[cfg(feature = "rocksdb")]
 async fn main() -> eyre::Result<()> {
     // Initialize logging
-    setup_global_logging()?;
+    #[allow(clippy::unwrap_used)]
+    setup_global_logging().unwrap();
 
     let cfg = Config::parse();
-    info!("loading rocksdb db {}", cfg.datadir);
+    info!("loading rockdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir)?;
 
     let mut metrics_state = MetricsState::default();
@@ -69,5 +78,11 @@ async fn main() -> eyre::Result<()> {
 
     _ = handle.stop();
     handle.stopped().await;
+    Ok(())
+}
+
+#[tokio::main]
+#[cfg(not(feature = "rocksdb"))]
+async fn main() -> eyre::Result<()> {
     Ok(())
 }

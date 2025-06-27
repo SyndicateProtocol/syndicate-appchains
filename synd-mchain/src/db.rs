@@ -5,6 +5,7 @@ use alloy::{
     sol_types::SolValue as _,
 };
 use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
+#[cfg(feature = "rocksdb")]
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -114,13 +115,14 @@ impl Block {
         self.messages.last().map_or(self.before_message_acc, |x| x.1)
     }
     /// The delayed message count
-    pub fn after_message_count(&self) -> u64 {
+    pub const fn after_message_count(&self) -> u64 {
         self.before_message_count + self.messages.len() as u64
     }
 }
 
 /// `rocksdb` implements the key-value trait
 #[allow(clippy::unwrap_used)]
+#[cfg(feature = "rocksdb")]
 impl<T: ThreadMode> ArbitrumDB for DBWithThreadMode<T> {
     fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
         self.get(key).unwrap().map(|x| x.into())

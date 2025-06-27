@@ -821,7 +821,7 @@ mod tests {
     use serde_json::json;
     use std::time::Duration;
     use test_utils::{
-        docker::{start_valkey, Docker},
+        docker::{start_valkey, E2EProcess},
         transaction::create_legacy_transaction,
         wait_until,
     };
@@ -837,7 +837,7 @@ mod tests {
     }
 
     // Helper to create a test service with real Valkey and mock RPC
-    async fn create_test_service() -> (MaestroService, MockServer, MockServer, Docker) {
+    async fn create_test_service() -> (MaestroService, MockServer, MockServer, E2EProcess) {
         // Start cache
         let (valkey_container, valkey_url) = start_valkey().await.unwrap();
 

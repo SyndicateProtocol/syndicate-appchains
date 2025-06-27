@@ -32,7 +32,8 @@ use tracing::{error, info};
 
 // Uses the eth client to fetch log data for blocks in a range & combines them with raw (timestamp,
 // block hash) data from the db to build partial blocks
-#[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::cognitive_complexity)]
 async fn build_partial_blocks(
     start_block: u64,
     data: &Bytes,
@@ -64,7 +65,7 @@ async fn build_partial_blocks(
 
     let end_block = start_block + count - 1;
 
-    let mut safe_block = client.get_block_header(BlockNumberOrTag::Safe).await.number;
+    let mut safe_block = client.get_block_header(BlockNumberOrTag::Latest).await.number;
     if safe_block < start_block {
         safe_block = start_block - 1;
     }
@@ -185,8 +186,8 @@ impl<
 /// BlockStream is a stream of blocks that automatically updates stale/reorged blocks in the queue.
 #[async_trait]
 pub trait BlockStreamT<Block> {
-    /// Recv fetches the next block once a block with a timestamp greater than or equal to the
-    /// provided one has arrived. Using a `timestamp` of `0` returns the next block to arrive.
+    /// recv fetches the next block once a block with timestamp greater than or equal to the
+    /// provided one has arrived.
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block>;
 }
 

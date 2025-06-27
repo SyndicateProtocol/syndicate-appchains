@@ -1,0 +1,39 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-tee-attestation-zk-proofs-submitter"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "proof-submitter"
+path = "src/main.rs"
+
+
+[dependencies]
+alloy                                     = { workspace = true, features = ["contract", "signer-local", "signers"] }
+clap                                      = { workspace = true, features = ["derive"] }
+contract-bindings                         = { workspace = true }
+jsonrpsee                                 = { workspace = true, features = ["http-client"] }
+shared                                    = { workspace = true }
+sp1-sdk                                   = { workspace = true }
+synd-tee-attestation-zk-proofs-aws-nitro  = { workspace = true }
+synd-tee-attestation-zk-proofs-sp1-script = { workspace = true }
+thiserror                                 = { workspace = true }
+tokio                                     = { workspace = true, features = ["macros", "rt-multi-thread"] }
+x509-cert                                 = { workspace = true }
+
+[dev-dependencies]
+mockito    = { workspace = true }
+serde      = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+test-utils = { workspace = true }
+
+[lints]
+workspace = true

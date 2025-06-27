@@ -63,6 +63,7 @@ impl<'a> BlockIngestor<'a> {
 
 #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 #[allow(missing_docs)]
+#[allow(clippy::cognitive_complexity)]
 pub async fn start(
     provider: &EthClient,
     ws_url: &str,
