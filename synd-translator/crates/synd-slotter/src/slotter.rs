@@ -6,100 +6,70 @@ use shared::types::BlockRef;
 use synd_chain_ingestor::client::BlockStreamT;
 use synd_mchain::{
     client::{KnownState, Provider},
-    db::{MBlock, Slot},
+    db::{ArbitrumBatch, MBlock, Slot},
 };
 use thiserror::Error;
 use tracing::{error, info, trace};
 
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
 /// slots to the slot processor to generate `synd-mchain` blocks.
-#[allow(clippy::expect_used)]
+#[allow(clippy::expect_used, clippy::cognitive_complexity)]
 pub async fn run(
     settlement_delay: u64,
     known_state: Option<KnownState>,
-    mut sequencing: impl BlockStreamT<SequencingBlock> + Send,
-    mut settlement: impl BlockStreamT<SettlementBlock> + Send,
+    mut sequencing_stream: impl BlockStreamT<SequencingBlock> + Send,
+    mut settlement_stream: impl BlockStreamT<SettlementBlock> + Send,
     provider: &impl Provider,
     metrics: &SlotterMetrics,
 ) -> Result<(), SlotterError> {
-    let (mut latest_sequencing_block, mut latest_settlement_block) = match known_state {
-        Some(known_state) => {
-            (Some(known_state.sequencing_block), Some(known_state.settlement_block))
-        }
-        None => (None, None),
-    };
-
     info!("Starting Slotter");
 
     trace!("Waiting for settlement block");
-    let mut set_block = settlement
+    let mut latest_set_block = settlement_stream
         .recv(0)
         .await
         .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
 
-    if let Some(latest) = latest_settlement_block {
-        if set_block.block_ref.hash != latest.hash {
-            return Err(SlotterError::ReorgDetected {
-                chain: Chain::Settlement,
-                current_block: latest,
-                received_block: set_block.block_ref,
-                received_parent_hash: set_block.parent_hash,
-            });
+    let mut latest_settlement_block_ref = Some(latest_set_block.block_ref.clone());
+    let mut latest_sequencing_block_ref = match known_state {
+        Some(known_state) => {
+            if latest_set_block.block_ref.hash != known_state.settlement_block.hash {
+                return Err(SlotterError::ReorgDetected {
+                    chain: Chain::Settlement,
+                    current_block: known_state.settlement_block,
+                    received_block: latest_set_block.block_ref,
+                    received_parent_hash: latest_set_block.parent_hash,
+                });
+            }
+            Some(known_state.sequencing_block)
         }
-    }
-    latest_settlement_block = Some(set_block.block_ref.clone());
+        None => None,
+    };
 
     loop {
         trace!("Waiting for sequencing block");
-        let seq_block = sequencing
+        let seq_block = sequencing_stream
             .recv(0)
             .await
             .map_err(|e| SlotterError::IngestorError(Chain::Sequencing, e.to_string()))?;
+
         validate_block(
-            &mut latest_sequencing_block,
+            &mut latest_sequencing_block_ref,
             &seq_block.block_ref,
             seq_block.parent_hash,
             Chain::Sequencing,
             metrics,
         )?;
-        let mut mblock = MBlock {
-            timestamp: seq_block.block_ref.timestamp,
-            slot: Slot {
-                seq_block_number: seq_block.block_ref.number,
-                seq_block_hash: seq_block.block_ref.hash,
-                set_block_hash: FixedBytes::ZERO,
-                set_block_number: 0,
-            },
-            payload: None,
-        };
 
-        let mut messages = vec![];
-
-        let mut blocks_per_slot: u64 = 1;
-        let slot_end_ts = (seq_block.block_ref.timestamp >= settlement_delay)
-            .then(|| seq_block.block_ref.timestamp - settlement_delay + 1)
-            .unwrap_or_default();
-        while set_block.block_ref.timestamp < slot_end_ts {
-            blocks_per_slot += 1;
-            messages.append(&mut set_block.messages);
-            set_block = settlement
-                .recv(slot_end_ts)
-                .await
-                .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
-            validate_block(
-                &mut latest_settlement_block,
-                &set_block.block_ref,
-                set_block.parent_hash,
-                Chain::Settlement,
-                metrics,
-            )?;
-        }
-
-        if seq_block.tx_count > 0 || !messages.is_empty() {
-            mblock.payload = Some((seq_block.batch, messages));
-        }
-        mblock.slot.set_block_hash = set_block.block_ref.hash;
-        mblock.slot.set_block_number = set_block.block_ref.number;
+        let (mblock, blocks_per_slot) = build_mblock(
+            settlement_delay,
+            &mut settlement_stream,
+            &mut latest_set_block,
+            &mut latest_settlement_block_ref,
+            &seq_block,
+            metrics,
+        )
+        .await?;
 
         trace!("Processing slot {:?}", mblock.slot);
         let time = std::time::Instant::now();
@@ -112,7 +82,7 @@ pub async fn run(
                 "Sent slot {} ({} seq, {} set) with timestamp {} in {:?}",
                 mblock.slot.seq_block_number,
                 seq_block.tx_count,
-                payload.1.len(),
+                payload.delayed_messages.len(),
                 mblock.timestamp,
                 time.elapsed()
             );
@@ -122,7 +92,62 @@ pub async fn run(
     }
 }
 
-// TODO(SEQ-847): move this reorg checking logic to the ingestors instead.
+async fn build_mblock(
+    settlement_delay: u64,
+    settlement_stream: &mut (impl BlockStreamT<SettlementBlock> + Send + Sized),
+    latest_settlement_block: &mut SettlementBlock,
+    latest_settlement_block_ref: &mut Option<BlockRef>,
+    seq_block: &SequencingBlock,
+    metrics: &SlotterMetrics,
+) -> Result<(MBlock, u64), SlotterError> {
+    let mut mblock = MBlock {
+        timestamp: seq_block.block_ref.timestamp,
+        slot: Slot {
+            seq_block_number: seq_block.block_ref.number,
+            seq_block_hash: seq_block.block_ref.hash,
+            set_block_hash: FixedBytes::ZERO,
+            set_block_number: 0,
+        },
+        payload: None,
+    };
+
+    let mut messages = vec![];
+
+    let mut blocks_per_slot: u64 = 1;
+    let slot_end_ts = if seq_block.block_ref.timestamp >= settlement_delay {
+        seq_block.block_ref.timestamp - settlement_delay + 1
+    } else {
+        Default::default()
+    };
+
+    while latest_settlement_block.block_ref.timestamp < slot_end_ts {
+        blocks_per_slot += 1;
+        messages.append(&mut latest_settlement_block.messages);
+
+        let new_settlement_block = settlement_stream
+            .recv(slot_end_ts)
+            .await
+            .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
+
+        validate_block(
+            latest_settlement_block_ref,
+            &new_settlement_block.block_ref,
+            new_settlement_block.parent_hash,
+            Chain::Settlement,
+            metrics,
+        )?;
+
+        *latest_settlement_block = new_settlement_block;
+    }
+
+    if seq_block.tx_count > 0 || !messages.is_empty() {
+        mblock.payload = Some(ArbitrumBatch::new(seq_block.batch.clone(), messages));
+    }
+    mblock.slot.set_block_hash = latest_settlement_block.block_ref.hash;
+    mblock.slot.set_block_number = latest_settlement_block.block_ref.number;
+    Ok((mblock, blocks_per_slot))
+}
+
 #[allow(clippy::result_large_err)]
 fn validate_block(
     latest: &mut Option<BlockRef>,

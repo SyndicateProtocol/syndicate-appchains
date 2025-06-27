@@ -55,6 +55,22 @@ pub struct State {
     pub slot: Slot,
 }
 
+/// `ArbitrumBatch` represents batch data and associated delayed messages
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
+pub struct ArbitrumBatch {
+    /// The batch data
+    pub batch_data: Bytes,
+    /// The delayed messages included in this batch
+    pub delayed_messages: Vec<DelayedMessage>,
+}
+
+impl ArbitrumBatch {
+    /// Creates a new [`ArbitrumBatch`]
+    pub const fn new(batch_data: Bytes, delayed_messages: Vec<DelayedMessage>) -> Self {
+        Self { batch_data, delayed_messages }
+    }
+}
+
 /// `MBlock` contains all information necessary to build a `Block`
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MBlock {
@@ -63,7 +79,7 @@ pub struct MBlock {
     /// The slot of the block
     pub slot: Slot,
     /// The payload of the block
-    pub payload: Option<(Bytes, Vec<DelayedMessage>)>,
+    pub payload: Option<ArbitrumBatch>,
 }
 
 /// Block data stored in rocksdb
@@ -154,7 +170,7 @@ pub trait ArbitrumDB {
         let state = self.get_state();
         if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
             .map_or_else(
-                || Err(to_err(format!("could not find block {}", key))),
+                || Err(to_err(format!("could not find block {key}"))),
                 |x| Ok(bincode::deserialize(&x).unwrap()),
             )
     }
@@ -171,7 +187,7 @@ pub trait ArbitrumDB {
         let state = self.get_state();
         if key < state.message_count { self.get(DBKey::MessageAcc(key).to_string()) } else { None }
             .map_or_else(
-                || Err(to_err(format!("could not find message acc {}", key))),
+                || Err(to_err(format!("could not find message acc {key}"))),
                 |x| Ok(bincode::deserialize(&x).unwrap()),
             )
     }
@@ -201,7 +217,7 @@ pub trait ArbitrumDB {
             }
             None => {
                 // version 0 uses the "n" key to store the current block number
-                assert_eq!(self.get("n"), None, "version mismatch: found 0 expected {}", VERSION);
+                assert_eq!(self.get("n"), None, "version mismatch: found 0 expected {VERSION}");
                 self.put(DBKey::Version.to_string(), bincode::serialize(&VERSION).unwrap());
             }
         }
@@ -231,13 +247,16 @@ pub trait ArbitrumDB {
             )));
         }
         // if the payload is empty, update the state with pending slot / timestamp info and return
-        let (batch, messages) = match mblock.payload {
-            Some(payload) => payload,
+        let arbitrum_batch = match mblock.payload {
+            Some(batch) => batch,
             None => {
                 self.put_state(&State { timestamp: mblock.timestamp, slot: mblock.slot, ..state });
                 return Ok(None);
             }
         };
+        let batch = arbitrum_batch.batch_data;
+        let messages = arbitrum_batch.delayed_messages;
+
         let mut block = Block {
             timestamp: mblock.timestamp,
             batch,

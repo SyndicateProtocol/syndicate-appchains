@@ -274,7 +274,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 // Wait for the task to complete and get the result
                 match handle.await {
                     Ok(result) => results.push(result?),
-                    Err(e) => println!("Task panicked: {:?}", e),
+                    Err(e) => println!("Task panicked: {e:?}"),
                 }
             }
 
@@ -324,8 +324,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 assert_eq!(
                     current_nonce,
                     nonce + 1,
-                    "Only one transaction should have been processed for address {}",
-                    address
+                    "Only one transaction should have been processed for address {address}"
                 );
             }
             Ok(())
@@ -464,7 +463,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
                 // Wait for the task to complete and get the result
                 match handle.await {
                     Ok(result) => results.push(result?),
-                    Err(e) => println!("Task panicked: {:?}", e),
+                    Err(e) => println!("Task panicked: {e:?}"),
                 }
             }
 

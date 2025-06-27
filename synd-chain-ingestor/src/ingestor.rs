@@ -99,7 +99,7 @@ pub async fn run(
                     }))
                     .unwrap(),
                 )
-                .inspect_err(|err| error!("try_send failed: {}", err))
+                .inspect_err(|err| error!("try_send failed: {err}"))
                 .is_ok()
         });
     }

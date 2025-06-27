@@ -93,6 +93,7 @@ impl SequencingTransactionParser {
         }
         Ok(transactions)
     }
+
     /// Decodes the event data into a vector of transactions
     pub fn get_event_transactions(
         &self,
@@ -171,7 +172,7 @@ mod tests {
         );
         let result = parser.decode_event_data(input);
 
-        println!("Decoded result: {:?}", result);
+        println!("Decoded result: {result:?}");
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), vec![Bytes::from(uncompressed_data)])

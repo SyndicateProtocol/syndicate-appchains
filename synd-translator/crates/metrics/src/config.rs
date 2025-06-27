@@ -22,7 +22,7 @@ impl MetricsConfig {
     /// Creates a new [`MetricsConfig`] instance.
     pub fn new(metrics_port: u16) -> Result<Self, ConfigError> {
         let config = Self { metrics_port };
-        debug!("Created metrics builder config: {:?}", config);
+        debug!("Created translator metrics config: {:?}", config);
         config.validate()?;
         Ok(config)
     }

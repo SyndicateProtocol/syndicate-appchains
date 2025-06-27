@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
 
     info!("Base configuration {:?}", base_config);
     if let Err(e) = base_config.validate() {
-        error!("Failed to initialize TranslatorConfig: {}", e);
+        error!("Failed to initialize TranslatorConfig: {e}");
         std::process::exit(1);
     };
 

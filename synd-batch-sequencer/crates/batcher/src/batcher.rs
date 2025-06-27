@@ -138,7 +138,7 @@ async fn create_sequencing_contract_provider(
     sequencing_contract_address: Address,
 ) -> Result<SyndicateSequencingChainInstance<(), FilledProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
     let sequencing_provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer))
         .connect(config.sequencing_rpc_url.as_str())
@@ -344,7 +344,7 @@ mod tests {
         let signer = PrivateKeySigner::from_str(
             "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890",
         )
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
 
         let mock_provider = if let Some(anvil) = anvil {
             let signer_address =
@@ -612,7 +612,7 @@ mod tests {
         let _handle =
             run_batcher(&config, sequencing_contract_address, metrics_port).await.unwrap();
 
-        let url = format!("http://0.0.0.0:{}/health", metrics_port);
+        let url = format!("http://0.0.0.0:{metrics_port}/health");
 
         let client = reqwest::Client::new();
 

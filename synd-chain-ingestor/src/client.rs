@@ -32,7 +32,7 @@ use tracing::{error, info};
 
 // Uses the eth client to fetch log data for blocks in a range & combines them with raw (timestamp,
 // block hash) data from the db to build partial blocks
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 async fn build_partial_blocks(
     start_block: u64,
     data: &Bytes,
@@ -185,8 +185,8 @@ impl<
 /// BlockStream is a stream of blocks that automatically updates stale/reorged blocks in the queue.
 #[async_trait]
 pub trait BlockStreamT<Block> {
-    /// recv fetches the next block once a block with timestamp greater than or equal to the
-    /// provided one has arrived.
+    /// Recv fetches the next block once a block with a timestamp greater than or equal to the
+    /// provided one has arrived. Using a `timestamp` of `0` returns the next block to arrive.
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block>;
 }
 
@@ -259,13 +259,13 @@ impl Message {
     fn init(self) -> Bytes {
         match self {
             Self::Init(x) => x,
-            x => panic!("expected init message, found {:?}", x),
+            x => panic!("expected init message, found {x:?}"),
         }
     }
     fn block(self) -> PartialBlock {
         match self {
             Self::Block(x) => x,
-            x => panic!("expected block message, found {:?}", x),
+            x => panic!("expected block message, found {x:?}"),
         }
     }
 }
@@ -346,7 +346,7 @@ impl IngestorProvider {
                     error!("timed out connecting to websocket");
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
-                Ok(Err(err)) => panic!("failed to connect to websocket: {}, url={}", err, url),
+                Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
                 Ok(Ok(client)) => return Self(Arc::new(client)),
             }
         }
