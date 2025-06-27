@@ -8,12 +8,10 @@ use jsonrpsee::{
 use std::collections::VecDeque;
 
 /// The chain id of the mockchain. This is the same for all appchains.
-/// TODO [SEQ-942]: Possibly change this to a custom value
-pub const MCHAIN_ID: u64 = 84532;
+pub const MCHAIN_ID: u64 = 510;
 
 /// The address of the Appchain contract
-/// TODO [SEQ-942]: Possibly change this to a custom value
-pub const APPCHAIN_CONTRACT: Address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+pub const APPCHAIN_CONTRACT: Address = address!("0x0000000000000000000000000000000000000510");
 
 /// Helper function to create an error object
 pub fn err(message: &'static str) -> ErrorObjectOwned {
@@ -60,7 +58,7 @@ pub fn create_header(
     }
 }
 
-/// Return the on-chain config for an appchain with a given chain id
+/// Return the on-chain config for an appchain with a given `chain_id`
 pub fn appchain_config(chain_id: u64) -> String {
     let mut cfg = format!(
         r#"{{

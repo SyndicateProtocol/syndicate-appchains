@@ -32,3 +32,6 @@
 [submodule "test-framework/external/nitro-contracts"]
 	path = test-framework/external/nitro-contracts
 	url = https://github.com/OffchainLabs/nitro-contracts.git
+[submodule "synd-contracts/lib/crosschainERC20"]
+	path = synd-contracts/lib/crosschainERC20
+	url = https://github.com/defi-wonderland/crosschainERC20

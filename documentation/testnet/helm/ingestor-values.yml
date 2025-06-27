@@ -1,7 +1,7 @@
 autoscaling:
   enabled: false
 image:
-  tag: "v0.10.1-dev.3"
+  tag: "{{ image_tag }}"
   pullPolicy: IfNotPresent
 resources:
   requests:
@@ -15,5 +15,7 @@ env:
     value: "warn"
   - name: START_BLOCK
     value: {{ START_BLOCK_DEFAULTS_TO_ZERO }}
-  - name: RPC_URL
-    value: {{ RPC_URL }}
+  - name: WS_URL
+    value: {{ WS_URL }}
+  - name: DB_FILE
+    value: /datadir/ingestor.db

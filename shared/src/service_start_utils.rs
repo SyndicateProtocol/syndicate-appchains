@@ -24,7 +24,7 @@ pub async fn start_metrics_and_health(
     port: u16,
     health_handler: Option<MethodRouter<Arc<MetricsState>>>,
 ) -> tokio::task::JoinHandle<()> {
-    info!("starting metrics on port {}", port);
+    info!("starting metrics on port {port}");
     let state = Arc::new(metrics_state);
     let health_route =
         health_handler.map_or_else(|| get(default_health_handler), |handler| handler);

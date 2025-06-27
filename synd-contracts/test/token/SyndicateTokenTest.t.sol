@@ -8,216 +8,606 @@ import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 contract SyndicateTokenTest is Test {
     SyndicateToken public token;
 
-    address public defaultAdmin;
-    address public minter;
-    address public user;
-
-    // Events from the contract that we'll test
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
-    event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
+    address public defaultAdmin = address(0x1234);
+    address public syndTreasuryAddress = address(0x5678);
+    address public emissionMinter = address(0x9ABC); // Emission scheduler contract
+    address public airdropManager = address(0xDEF0); // Airdrop manager
+    address public user = address(0x1111);
+    address public user2 = address(0x2222);
 
     function setUp() public {
-        defaultAdmin = address(0x1);
-        minter = address(0x2);
-        user = address(0x3);
+        vm.startPrank(defaultAdmin);
 
-        token = new SyndicateToken(defaultAdmin, minter);
+        // Deploy token
+        token = new SyndicateToken(defaultAdmin, syndTreasuryAddress);
+
+        // Grant emission minter role to simulate emission scheduler
+        token.grantRole(token.EMISSION_MINTER_ROLE(), emissionMinter);
+
+        // Grant airdrop manager role
+        token.grantRole(token.AIRDROP_MANAGER_ROLE(), airdropManager);
+
+        vm.stopPrank();
     }
 
-    // test that constructor cannot be called with zero addresses
-    function test_ConstructorWithZeroAddresseForAdmin() public {
-        vm.expectRevert("Minter cannot be zero address");
+    // ============ CONSTRUCTOR TESTS ============
+
+    function test_Constructor_InitialSetup() public view {
+        assertEq(token.name(), "Syndicate");
+        assertEq(token.symbol(), "SYND");
+        assertEq(token.decimals(), 18);
+        assertEq(token.TOTAL_SUPPLY(), 1_000_000_000 * 10 ** 18);
+        assertEq(token.INITIAL_MINT_SUPPLY(), 900_000_000 * 10 ** 18);
+    }
+
+    function test_Constructor_RoleAssignment() public view {
+        assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), defaultAdmin));
+        assertTrue(token.hasRole(token.EMISSION_MINTER_ROLE(), emissionMinter));
+    }
+
+    function test_Constructor_InitialMint() public view {
+        assertEq(token.balanceOf(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY());
+        assertEq(token.totalSupply(), token.INITIAL_MINT_SUPPLY());
+    }
+
+    function test_RevertWhen_Constructor_ZeroAdmin() public {
+        vm.expectRevert(SyndicateToken.ZeroAddress.selector);
+        new SyndicateToken(address(0), syndTreasuryAddress);
+    }
+
+    function test_RevertWhen_Constructor_ZeroFoundation() public {
+        vm.expectRevert(SyndicateToken.ZeroAddress.selector);
         new SyndicateToken(defaultAdmin, address(0));
     }
 
-    function test_ConstructorWithZeroAddresseForMinter() public {
-        vm.expectRevert("Default admin cannot be zero address");
-        new SyndicateToken(address(0), minter);
+    // ============ EMISSION MINTING TESTS ============
+
+    function test_Mint_Success() public {
+        uint256 amount = 1_000_000 * 10 ** 18;
+        uint256 initialSupply = token.totalSupply();
+
+        vm.prank(emissionMinter);
+        token.mint(user, amount);
+
+        assertEq(token.balanceOf(user), amount);
+        assertEq(token.totalSupply(), initialSupply + amount);
     }
 
-    // Test initial setup
-    function test_InitialSetup() public view {
-        assertEq(token.name(), "Syndicate");
-        assertEq(token.symbol(), "SYND");
-        assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), defaultAdmin));
-        assertTrue(token.hasRole(token.MINTER_ROLE(), minter));
-    }
+    function test_Mint_MultipleTransactions() public {
+        uint256 amount1 = 500_000 * 10 ** 18;
+        uint256 amount2 = 300_000 * 10 ** 18;
 
-    // Test minting
-    function test_MintingWithMinterRole() public {
-        vm.prank(minter);
-        token.mint(user, 1000);
-        assertEq(token.balanceOf(user), 1000);
-    }
-
-    function test_MintingEmitsTransferEvent() public {
-        vm.prank(minter);
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(0), user, 1000);
-        token.mint(user, 1000);
-    }
-
-    function test_RevertWhenMintingWithoutMinterRole() public {
-        vm.startPrank(user);
-        bytes memory errorMessage =
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.MINTER_ROLE());
-        vm.expectRevert(errorMessage);
-        token.mint(user, 1000);
-
+        vm.startPrank(emissionMinter);
+        token.mint(user, amount1);
+        token.mint(syndTreasuryAddress, amount2);
         vm.stopPrank();
+
+        assertEq(token.balanceOf(user), amount1);
+        assertEq(token.balanceOf(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY() + amount2);
     }
 
-    function test_MintingRevertMessage() public {
-        bytes32 minterRole = token.MINTER_ROLE();
-        vm.prank(user);
+    function test_Mint_ToTotalSupply() public {
+        uint256 remainingSupply = token.getRemainingEmissions();
+
+        vm.prank(emissionMinter);
+        token.mint(user, remainingSupply);
+
+        assertEq(token.balanceOf(user), remainingSupply);
+        assertEq(token.totalSupply(), token.TOTAL_SUPPLY());
+        assertEq(token.getRemainingEmissions(), 0);
+    }
+
+    function test_RevertWhen_Mint_NotMinter() public {
+        vm.startPrank(user);
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, minterRole)
-        );
-        token.mint(user, 1000);
-    }
-
-    // Test role management
-    function test_AdminCanGrantMinterRole() public {
-        vm.startPrank(defaultAdmin);
-        vm.expectEmit(true, true, true, true);
-        emit RoleGranted(token.MINTER_ROLE(), user, defaultAdmin);
-        token.grantRole(token.MINTER_ROLE(), user);
-        assertTrue(token.hasRole(token.MINTER_ROLE(), user));
-        vm.stopPrank();
-    }
-
-    function test_AdminCanRevokeMinterRole() public {
-        vm.startPrank(defaultAdmin);
-        vm.expectEmit(true, true, true, true);
-        emit RoleRevoked(token.MINTER_ROLE(), minter, defaultAdmin);
-        token.revokeRole(token.MINTER_ROLE(), minter);
-        assertFalse(token.hasRole(token.MINTER_ROLE(), minter));
-        vm.stopPrank();
-    }
-
-    function test_RevertIfNonAdminGrantsRole() public {
-        bytes32 minterRole = token.MINTER_ROLE();
-
-        vm.startPrank(user);
-
-        bytes memory errorMessage = abi.encodeWithSelector(
-            IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.DEFAULT_ADMIN_ROLE()
-        );
-        vm.expectRevert(errorMessage);
-        token.grantRole(minterRole, user);
-
-        assertFalse(token.hasRole(minterRole, user), "User should not have the minter role");
-
-        vm.stopPrank();
-    }
-
-    // Test permit functionality
-    function test_Permit() public {
-        uint256 privateKey = 0xA11CE;
-        address owner = vm.addr(privateKey);
-        address spender = address(0x4);
-        uint256 value = 1000;
-        uint256 deadline = block.timestamp + 1 hours;
-
-        // Get the current nonce
-        uint256 nonce = token.nonces(owner);
-
-        // Get the chain ID
-        uint256 chainId;
-        assembly {
-            chainId := chainid()
-        }
-
-        // Prepare permit signature
-        bytes32 structHash = keccak256(
-            abi.encode(
-                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
-                owner,
-                spender,
-                value,
-                nonce,
-                deadline
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.EMISSION_MINTER_ROLE()
             )
         );
-
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(token.name())),
-                keccak256(bytes("1")),
-                chainId,
-                address(token)
-            )
-        );
-
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
-
-        // Execute permit
-        token.permit(owner, spender, value, deadline, v, r, s);
-
-        // Verify allowance
-        assertEq(token.allowance(owner, spender), value);
+        token.mint(user, 1000 * 10 ** 18);
+        vm.stopPrank();
     }
 
-    // Test transfer functionality
-    function test_Transfer() public {
-        // First mint some tokens to the sender
-        vm.prank(minter);
-        token.mint(user, 1000);
+    function test_RevertWhen_Mint_ZeroAddress() public {
+        vm.prank(emissionMinter);
+        vm.expectRevert(SyndicateToken.ZeroAddress.selector);
+        token.mint(address(0), 1000 * 10 ** 18);
+    }
 
-        // Then test transfer
+    function test_RevertWhen_Mint_ZeroAmount() public {
+        vm.prank(emissionMinter);
+        vm.expectRevert(SyndicateToken.ZeroAmount.selector);
+        token.mint(user, 0);
+    }
+
+    function test_RevertWhen_Mint_ExceedsTotalSupply() public {
+        uint256 exceedingAmount = token.getRemainingEmissions() + 1;
+
+        vm.prank(emissionMinter);
+        vm.expectRevert(SyndicateToken.ExceedsTotalSupply.selector);
+        token.mint(user, exceedingAmount);
+    }
+
+    // ============ VIEW FUNCTION TESTS ============
+
+    function test_GetRemainingEmissions_Initial() public view {
+        assertEq(token.getRemainingEmissions(), token.TOTAL_SUPPLY() - token.INITIAL_MINT_SUPPLY());
+    }
+
+    function test_GetRemainingEmissions_AfterMinting() public {
+        uint256 mintedAmount = 10_000_000 * 10 ** 18;
+        uint256 initialRemaining = token.getRemainingEmissions();
+
+        vm.prank(emissionMinter);
+        token.mint(user, mintedAmount);
+
+        assertEq(token.getRemainingEmissions(), initialRemaining - mintedAmount);
+    }
+
+    // ============ GOVERNANCE FUNCTIONALITY TESTS ============
+
+    function test_GetVotingPower_WithTokens() public {
+        vm.prank(syndTreasuryAddress);
+        token.delegate(syndTreasuryAddress);
+
+        assertEq(token.getVotingPower(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY());
+    }
+
+    function test_GetVotingPower_WithoutTokens() public view {
+        assertEq(token.getVotingPower(user), 0);
+    }
+
+    function test_Delegate_Success() public {
+        vm.prank(syndTreasuryAddress);
+        token.delegate(user);
+
+        assertEq(token.getVotes(user), token.INITIAL_MINT_SUPPLY());
+        assertEq(token.delegates(syndTreasuryAddress), user);
+    }
+
+    function test_GetPastVotingPower() public {
+        vm.prank(syndTreasuryAddress);
+        token.delegate(user);
+
+        vm.roll(block.number + 1);
+
+        assertEq(token.getPastVotingPower(user, block.number - 1), token.INITIAL_MINT_SUPPLY());
+    }
+
+    function test_GetCurrentTotalSupply() public view {
+        assertEq(token.getCurrentTotalSupply(), token.INITIAL_MINT_SUPPLY());
+    }
+
+    function test_Delegate_WithMintedTokens() public {
+        uint256 mintedAmount = 1_000_000 * 10 ** 18;
+
+        // Mint some tokens to user
+        vm.prank(emissionMinter);
+        token.mint(user, mintedAmount);
+
+        // User delegates to themselves
         vm.prank(user);
-        token.transfer(address(0x4), 500);
+        token.delegate(user);
 
-        assertEq(token.balanceOf(user), 500);
-        assertEq(token.balanceOf(address(0x4)), 500);
+        assertEq(token.getVotingPower(user), mintedAmount);
     }
 
-    // Test approve and transferFrom
-    function test_ApproveAndTransferFrom() public {
-        // Mint tokens to the owner
-        vm.prank(minter);
-        token.mint(user, 1000);
+    // ============ ERC20 FUNCTIONALITY TESTS ============
 
-        // Approve spending
+    function test_Transfer_Success() public {
+        uint256 transferAmount = 1000 * 10 ** 18;
+
+        vm.prank(syndTreasuryAddress);
+        token.transfer(user, transferAmount);
+
+        assertEq(token.balanceOf(user), transferAmount);
+        assertEq(token.balanceOf(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY() - transferAmount);
+    }
+
+    function test_Approve_Success() public {
+        uint256 amount = 500 * 10 ** 18;
+
+        vm.prank(syndTreasuryAddress);
+        token.approve(user, amount);
+
+        assertEq(token.allowance(syndTreasuryAddress, user), amount);
+    }
+
+    function test_TransferFrom_Success() public {
+        uint256 amount = 300 * 10 ** 18;
+
+        vm.prank(syndTreasuryAddress);
+        token.approve(user, amount);
+
         vm.prank(user);
-        token.approve(address(0x4), 500);
+        token.transferFrom(syndTreasuryAddress, user, amount);
 
-        // Transfer using transferFrom
-        vm.prank(address(0x4));
-        token.transferFrom(user, address(0x4), 500);
-
-        assertEq(token.balanceOf(user), 500);
-        assertEq(token.balanceOf(address(0x4)), 500);
+        assertEq(token.balanceOf(user), amount);
+        assertEq(token.allowance(syndTreasuryAddress, user), 0);
     }
 
-    // Fuzz testing for minting
-    function testFuzz_Mint(address to, uint256 amount) public {
-        vm.assume(to != address(0));
-        vm.assume(amount > 0 && amount < type(uint256).max);
+    // ============ ROLE MANAGEMENT TESTS ============
 
-        vm.prank(minter);
-        token.mint(to, amount);
+    function test_GrantEmissionMinterRole_Success() public {
+        address newMinter = address(0x7777);
 
-        assertEq(token.balanceOf(to), amount);
-    }
-
-    // Invariant test helper - total supply should always equal sum of balances
-    function test_SupplyMatchesBalances() public {
-        // Mint to multiple addresses
-        vm.startPrank(minter);
-        token.mint(address(0xA), 1000);
-        token.mint(address(0xB), 2000);
-        token.mint(address(0xC), 3000);
+        vm.startPrank(defaultAdmin);
+        token.grantRole(token.EMISSION_MINTER_ROLE(), newMinter);
         vm.stopPrank();
 
-        uint256 totalSupply = token.totalSupply();
-        uint256 sumOfBalances =
-            token.balanceOf(address(0xA)) + token.balanceOf(address(0xB)) + token.balanceOf(address(0xC));
+        assertTrue(token.hasRole(token.EMISSION_MINTER_ROLE(), newMinter));
 
-        assertEq(totalSupply, sumOfBalances);
+        // Test that new minter can mint
+        vm.prank(newMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        assertEq(token.balanceOf(user), 1000 * 10 ** 18);
     }
+
+    function test_RevokeEmissionMinterRole_Success() public {
+        vm.startPrank(defaultAdmin);
+        token.revokeRole(token.EMISSION_MINTER_ROLE(), emissionMinter);
+        vm.stopPrank();
+
+        assertFalse(token.hasRole(token.EMISSION_MINTER_ROLE(), emissionMinter));
+
+        // Test that revoked minter cannot mint
+        vm.prank(emissionMinter);
+        vm.expectRevert();
+        token.mint(user, 1000 * 10 ** 18);
+    }
+
+    // ============ FUZZ TESTS ============
+
+    function testFuzz_Mint_ValidAmounts(uint256 amount) public {
+        amount = bound(amount, 1, token.getRemainingEmissions());
+
+        vm.prank(emissionMinter);
+        token.mint(user, amount);
+
+        assertEq(token.balanceOf(user), amount);
+    }
+
+    function testFuzz_Transfer_ValidAmounts(uint256 amount) public {
+        amount = bound(amount, 1, token.INITIAL_MINT_SUPPLY());
+
+        vm.prank(syndTreasuryAddress);
+        token.transfer(user, amount);
+
+        assertEq(token.balanceOf(user), amount);
+        assertEq(token.balanceOf(syndTreasuryAddress), token.INITIAL_MINT_SUPPLY() - amount);
+    }
+
+    // ============ INVARIANT TESTS ============
+
+    function test_Invariant_TotalSupplyConsistency() public {
+        uint256 mintedAmount = 10_000_000 * 10 ** 18;
+
+        vm.prank(emissionMinter);
+        token.mint(user, mintedAmount);
+
+        uint256 expectedTotalSupply = token.INITIAL_MINT_SUPPLY() + mintedAmount;
+        assertEq(token.totalSupply(), expectedTotalSupply);
+        assertEq(token.totalSupply(), token.balanceOf(syndTreasuryAddress) + token.balanceOf(user));
+    }
+
+    function test_Invariant_RemainingEmissionsConsistency() public {
+        uint256 mint1 = 5_000_000 * 10 ** 18;
+        uint256 mint2 = 3_000_000 * 10 ** 18;
+        uint256 initialRemaining = token.getRemainingEmissions();
+
+        vm.startPrank(emissionMinter);
+        token.mint(user, mint1);
+        token.mint(syndTreasuryAddress, mint2);
+        vm.stopPrank();
+
+        assertEq(token.getRemainingEmissions(), initialRemaining - (mint1 + mint2));
+    }
+
+    function test_Invariant_CannotExceedSupplyLimits() public {
+        uint256 maxMint = token.getRemainingEmissions();
+
+        vm.prank(emissionMinter);
+        token.mint(user, maxMint);
+
+        // Should not be able to mint any more
+        vm.prank(emissionMinter);
+        vm.expectRevert(SyndicateToken.ExceedsTotalSupply.selector);
+        token.mint(user, 1);
+    }
+
+    // ============ AIRDROP LOCK FUNCTIONALITY TESTS ============
+
+    function test_Constructor_NoInitialLock() public view {
+        assertEq(token.unlockTimestamp(), 0);
+        assertFalse(token.transfersLocked());
+        assertEq(token.getRemainingLockTime(), 0);
+    }
+
+    function test_SetUnlockTimestamp_Success() public {
+        uint256 futureTimestamp = block.timestamp + 30 days;
+
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(0, futureTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(futureTimestamp);
+
+        assertEq(token.unlockTimestamp(), futureTimestamp);
+        assertTrue(token.transfersLocked());
+        assertEq(token.getRemainingLockTime(), 30 days);
+    }
+
+    function test_RevertWhen_SetUnlockTimestamp_NotAdmin() public {
+        uint256 futureTimestamp = block.timestamp + 30 days;
+
+        vm.prank(user);
+        vm.expectRevert(); // Simplified expectRevert
+        token.setUnlockTimestamp(futureTimestamp);
+    }
+
+    function test_RevertWhen_SetUnlockTimestamp_InPast() public {
+        uint256 pastTimestamp = block.timestamp;
+
+        vm.prank(defaultAdmin);
+        vm.expectRevert(SyndicateToken.UnlockTimestampInPast.selector);
+        token.setUnlockTimestamp(pastTimestamp);
+    }
+
+    function test_RevertWhen_SetUnlockTimestamp_Zero() public {
+        vm.prank(defaultAdmin);
+        vm.expectRevert(SyndicateToken.UnlockTimestampInPast.selector);
+        token.setUnlockTimestamp(0);
+    }
+
+    function test_RevertWhen_SetUnlockTimestamp_TooLate() public {
+        uint256 tooLateTimestamp = block.timestamp + token.MAX_LOCK_DURATION() + 1;
+
+        vm.prank(defaultAdmin);
+        vm.expectRevert(SyndicateToken.UnlockTimestampTooLate.selector);
+        token.setUnlockTimestamp(tooLateTimestamp);
+    }
+
+    function test_SetUnlockTimestamp_MultipleUpdates() public {
+        // Test that admin can update unlock timestamp multiple times
+        uint256 firstTimestamp = block.timestamp + 10 days;
+        uint256 secondTimestamp = block.timestamp + 20 days;
+        uint256 thirdTimestamp = block.timestamp + 45 days; // Still within MAX_LOCK_DURATION (90 days)
+
+        // First update
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(0, firstTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(firstTimestamp);
+
+        assertEq(token.unlockTimestamp(), firstTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Second update - extend the lock period
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(firstTimestamp, secondTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(secondTimestamp);
+
+        assertEq(token.unlockTimestamp(), secondTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Third update - extend further but still within MAX_LOCK_DURATION
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(secondTimestamp, thirdTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(thirdTimestamp);
+
+        assertEq(token.unlockTimestamp(), thirdTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Verify that even after multiple updates, MAX_LOCK_DURATION constraint is enforced
+        uint256 tooLateTimestamp = block.timestamp + token.MAX_LOCK_DURATION() + 1;
+
+        vm.prank(defaultAdmin);
+        vm.expectRevert(SyndicateToken.UnlockTimestampTooLate.selector);
+        token.setUnlockTimestamp(tooLateTimestamp);
+
+        // Verify the timestamp wasn't changed after the failed update
+        assertEq(token.unlockTimestamp(), thirdTimestamp);
+    }
+
+    function test_TransferLocked_RegularUser() public {
+        // Set lock
+        uint256 futureTimestamp = block.timestamp + 30 days;
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(futureTimestamp);
+
+        // Mint some tokens to user
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        // Regular transfer should fail
+        vm.prank(user);
+        vm.expectRevert(SyndicateToken.TransfersLocked.selector);
+        token.transfer(user2, 100 * 10 ** 18);
+    }
+
+    function test_TransferAllowed_AirdropManager() public {
+        // Set lock
+        uint256 futureTimestamp = block.timestamp + 30 days;
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(futureTimestamp);
+
+        // Mint some tokens to airdrop manager
+        vm.prank(emissionMinter);
+        token.mint(airdropManager, 1000 * 10 ** 18);
+
+        // Airdrop manager can transfer despite lock
+        vm.prank(airdropManager);
+        token.transfer(user, 100 * 10 ** 18);
+
+        assertEq(token.balanceOf(user), 100 * 10 ** 18);
+        assertEq(token.balanceOf(airdropManager), 900 * 10 ** 18);
+    }
+
+    function test_TransferAfterUnlock() public {
+        // Set lock for 1 second
+        uint256 shortLockTimestamp = block.timestamp + 1;
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(shortLockTimestamp);
+
+        // Mint tokens to user
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        // Fast forward past unlock time
+        vm.warp(block.timestamp + 2);
+
+        // Now transfer should work
+        vm.prank(user);
+        token.transfer(user2, 100 * 10 ** 18);
+
+        assertEq(token.balanceOf(user), 900 * 10 ** 18);
+        assertEq(token.balanceOf(user2), 100 * 10 ** 18);
+    }
+
+    function test_BurnFrom_Success() public {
+        // Set lock first
+        uint256 futureTimestamp = block.timestamp + 30 days;
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(futureTimestamp);
+
+        // Mint tokens to user
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        uint256 burnAmount = 100 * 10 ** 18;
+        uint256 initialSupply = token.totalSupply();
+
+        vm.expectEmit(true, false, false, true);
+        emit TokensBurnedByManager(user, burnAmount, airdropManager);
+
+        vm.prank(airdropManager);
+        token.burnFrom(user, burnAmount);
+
+        assertEq(token.balanceOf(user), 900 * 10 ** 18);
+        assertEq(token.totalSupply(), initialSupply - burnAmount);
+    }
+
+    function test_RevertWhen_BurnFrom_NotDuringLock() public {
+        // Mint tokens to user
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        // No lock is set, so burnFrom should fail
+        vm.prank(airdropManager);
+        vm.expectRevert(SyndicateToken.BurnOnlyDuringLockPeriod.selector);
+        token.burnFrom(user, 100 * 10 ** 18);
+    }
+
+    function test_BurnFrom_OnlyDuringLock() public {
+        // Set lock first
+        uint256 futureTimestamp = block.timestamp + 30 days;
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(futureTimestamp);
+
+        // Mint tokens to user
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        // Now burnFrom should work
+        vm.prank(airdropManager);
+        token.burnFrom(user, 100 * 10 ** 18);
+
+        assertEq(token.balanceOf(user), 900 * 10 ** 18);
+    }
+
+    function test_RevertWhen_BurnFrom_AfterUnlock() public {
+        // Set lock for 1 second
+        uint256 shortLockTimestamp = block.timestamp + 1;
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(shortLockTimestamp);
+
+        // Mint tokens to user
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        // Fast forward past unlock time
+        vm.warp(block.timestamp + 2);
+
+        // burnFrom should fail after unlock
+        vm.prank(airdropManager);
+        vm.expectRevert(SyndicateToken.BurnOnlyDuringLockPeriod.selector);
+        token.burnFrom(user, 100 * 10 ** 18);
+    }
+
+    function test_RevertWhen_BurnFrom_NotManager() public {
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        vm.prank(user);
+        vm.expectRevert(); // Simplified expectRevert
+        token.burnFrom(user, 100 * 10 ** 18);
+    }
+
+    function test_RevertWhen_BurnFrom_ZeroAddress() public {
+        vm.prank(airdropManager);
+        vm.expectRevert(SyndicateToken.ZeroAddress.selector);
+        token.burnFrom(address(0), 100 * 10 ** 18);
+    }
+
+    function test_RevertWhen_BurnFrom_ZeroAmount() public {
+        vm.prank(airdropManager);
+        vm.expectRevert(SyndicateToken.ZeroAmount.selector);
+        token.burnFrom(user, 0);
+    }
+
+    function test_MintingAllowedDuringLock() public {
+        // Set lock
+        uint256 futureTimestamp = block.timestamp + 30 days;
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(futureTimestamp);
+
+        // Minting should still work during lock
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        assertEq(token.balanceOf(user), 1000 * 10 ** 18);
+    }
+
+    function test_Integration_AirdropWorkflow() public {
+        // Step 1: Set lock for airdrop
+        uint256 lockTimestamp = block.timestamp + 30 days;
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(lockTimestamp);
+
+        // Step 2: Mint tokens for airdrop recipients
+        vm.startPrank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+        token.mint(user2, 1000 * 10 ** 18);
+        vm.stopPrank();
+
+        // Step 3: Verify transfers are locked
+        vm.prank(user);
+        vm.expectRevert(SyndicateToken.TransfersLocked.selector);
+        token.transfer(user2, 100 * 10 ** 18);
+
+        // Step 4: Manager can fix mistakes (burn from wrong recipient)
+        vm.prank(airdropManager);
+        token.burnFrom(user2, 500 * 10 ** 18);
+
+        assertEq(token.balanceOf(user), 1000 * 10 ** 18);
+        assertEq(token.balanceOf(user2), 500 * 10 ** 18);
+
+        // Step 5: After unlock, normal transfers work
+        vm.warp(lockTimestamp + 1);
+        vm.prank(user);
+        token.transfer(user2, 100 * 10 ** 18);
+
+        assertEq(token.balanceOf(user), 900 * 10 ** 18);
+        assertEq(token.balanceOf(user2), 600 * 10 ** 18);
+    }
+
+    // Events that need to be declared for testing
+    event UnlockTimestampUpdated(uint256 oldTimestamp, uint256 newTimestamp, address indexed updatedBy);
+    event TokensBurnedByManager(address indexed from, uint256 amount, address indexed burner);
 }

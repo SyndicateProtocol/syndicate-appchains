@@ -3,16 +3,20 @@ pragma solidity 0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {SyndicateToken, AccessControl} from "src/token/SyndicateToken.sol";
+import {TestnetSyndToken} from "src/token/TestnetSyndToken.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-// Holesky SYND address Testnet
-address constant SYND_ADDRESS = 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba;
+// Holesky SYND address Testnet EXO
+// address constant SYND_ADDRESS = 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba;
 
 // // Holesky SYND address Devnet
 // address constant SYND_ADDRESS = 0x19aaf160dA8985c54bb97adAF9304B5aC7890421;
 
-// // Sepolia SYND address Testnet
+// // Sepolia SYND address Testnet Old
 // address constant SYND_ADDRESS = 0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23;
+
+// Sepolia SYND address Testnet RISA
+address constant SYND_ADDRESS = 0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C;
 
 contract GrantMinterRole is Script {
     AccessControl public synd;
@@ -44,7 +48,7 @@ contract GrantMinterRole is Script {
 }
 
 contract MintSYNDToAddresses is Script {
-    SyndicateToken public synd;
+    TestnetSyndToken public synd;
 
     function run() public {
         vm.startBroadcast();
@@ -58,12 +62,12 @@ contract MintSYNDToAddresses is Script {
 
         uint256[] memory amounts = new uint256[](4);
         // 10K SYND
-        amounts[0] = 10_000e18;
-        amounts[1] = 10_000e18;
-        amounts[2] = 10_000e18;
-        amounts[3] = 10_000e18;
+        amounts[0] = 200e18;
+        amounts[1] = 200e18;
+        amounts[2] = 200e18;
+        amounts[3] = 200e18;
 
-        synd = SyndicateToken(SYND_ADDRESS);
+        synd = TestnetSyndToken(SYND_ADDRESS);
 
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid address");

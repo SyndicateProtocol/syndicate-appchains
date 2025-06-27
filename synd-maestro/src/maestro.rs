@@ -2210,8 +2210,9 @@ mod tests {
             // Format as 0x-prefixed lowercase hex, which is standard for RPC calls.
             let actual_signer_hex = format!("{actual_signer:#x}");
 
-            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
-                                                                                   // Use the dynamically derived signer address for the mock setup.
+            // Receipt is null
+            // Use the dynamically derived signer address for the mock setup.
+            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await;
             set_up_mock_transaction_count(&mock_server, &actual_signer_hex, tx_nonce).await;
 
             let result =

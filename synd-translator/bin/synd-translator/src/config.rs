@@ -18,39 +18,38 @@ use tracing::{debug, error};
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct ChainIngestorConfig {
-    pub rpc_url: String,
+    pub ws_url: String,
     pub start_block: u64,
 }
 
 #[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum IngestorConfigError {
-    #[error("Empty rpc url")]
-    EmptyRpcUrl(),
+    #[error("Empty websocket url")]
+    EmptyWSUrl,
     #[error("Invalid start block: {0}")]
     InvalidStartBlock(String),
 }
 
 impl Default for ChainIngestorConfig {
     fn default() -> Self {
-        Self { rpc_url: "http://localhost:8545".to_string(), start_block: 1 }
+        Self { ws_url: "wss://localhost:8545".to_string(), start_block: 1 }
     }
 }
 
 impl ChainIngestorConfig {
     /// Creates a new [`ChainIngestorConfig`] instance
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(rpc_url: String, start_block: u64) -> Result<Self, IngestorConfigError> {
-        let config = Self { rpc_url, start_block };
+    pub fn new(ws_url: String, start_block: u64) -> Self {
+        let config = Self { ws_url, start_block };
         debug!("Created chain ingestor config: {:?}", config);
-        Ok(config)
+        config
     }
 
     /// Validates the configuration
     pub fn validate(&self, chain: Chain) -> Result<(), IngestorConfigError> {
-        if chain == Chain::Settlement && self.rpc_url.is_empty() {
-            // only the settlement rpc url is mandatory
-            return Err(IngestorConfigError::EmptyRpcUrl());
+        if chain == Chain::Settlement && self.ws_url.is_empty() {
+            // only the settlement ws url is mandatory
+            return Err(IngestorConfigError::EmptyWSUrl);
         }
 
         Ok(())
@@ -59,8 +58,8 @@ impl ChainIngestorConfig {
     /// Validates the config and ensures all mandatory fields have values (including optional fields
     /// that might have been defined by the `ConfigManager` contract)
     pub fn validate_strict(&self) -> Result<(), IngestorConfigError> {
-        if self.rpc_url.is_empty() {
-            return Err(IngestorConfigError::EmptyRpcUrl());
+        if self.ws_url.is_empty() {
+            return Err(IngestorConfigError::EmptyWSUrl);
         }
 
         if self.start_block == 0 {
@@ -91,9 +90,9 @@ pub enum ConfigError {
 /// Configuration for the sequencing chain
 #[derive(Parser, Debug, Clone, Default)]
 pub struct SequencingChainConfig {
-    /// The RPC URL of the sequencing chain ingestor
-    #[arg(long = "sequencing-rpc-url", env = "SEQUENCING_RPC_URL")]
-    pub sequencing_rpc_url: Option<String>,
+    /// The WS URL of the sequencing chain ingestor
+    #[arg(long = "sequencing-ws-url", env = "SEQUENCING_WS_URL")]
+    pub sequencing_ws_url: Option<String>,
 
     /// The block number to start polling from on the sequencing chain
     #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK")]
@@ -103,9 +102,9 @@ pub struct SequencingChainConfig {
 /// Configuration for the settlement chain
 #[derive(Parser, Debug, Clone, Default)]
 pub struct SettlementChainConfig {
-    /// The RPC URL of the settlement chain ingestor
-    #[arg(long = "settlement-rpc-url", env = "SETTLEMENT_RPC_URL")]
-    pub settlement_rpc_url: String,
+    /// The WS URL of the settlement chain ingestor
+    #[arg(long = "settlement-ws-url", env = "SETTLEMENT_WS_URL")]
+    pub settlement_ws_url: String,
 
     /// The block number to start polling from on the settlement chain
     #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK")]
@@ -115,7 +114,7 @@ pub struct SettlementChainConfig {
 impl From<SequencingChainConfig> for ChainIngestorConfig {
     fn from(config: SequencingChainConfig) -> Self {
         Self {
-            rpc_url: config.sequencing_rpc_url.unwrap_or_default(),
+            ws_url: config.sequencing_ws_url.unwrap_or_default(),
             start_block: config.sequencing_start_block.unwrap_or(0),
         }
     }
@@ -124,14 +123,14 @@ impl From<SequencingChainConfig> for ChainIngestorConfig {
 impl From<SettlementChainConfig> for ChainIngestorConfig {
     fn from(config: SettlementChainConfig) -> Self {
         Self {
-            rpc_url: config.settlement_rpc_url,
+            ws_url: config.settlement_ws_url,
             start_block: config.settlement_start_block.unwrap_or(0),
         }
     }
 }
 
 impl SequencingChainConfig {
-    #[allow(missing_docs)]
+    /// Validates the configuration
     pub fn validate(&self) -> Result<(), IngestorConfigError> {
         let generic_config: ChainIngestorConfig = self.clone().into();
         generic_config.validate(Chain::Sequencing)
@@ -146,7 +145,7 @@ impl SequencingChainConfig {
 }
 
 impl SettlementChainConfig {
-    #[allow(missing_docs)]
+    /// Validates the configuration
     pub fn validate(&self) -> Result<(), IngestorConfigError> {
         let generic_config: ChainIngestorConfig = self.clone().into();
         generic_config.validate(Chain::Settlement)
@@ -160,7 +159,7 @@ impl SettlementChainConfig {
     }
 }
 
-/// Common config stuct for the `synd-translator`. This contains all possible config options
+/// Common config struct for the `synd-translator`. This contains all possible config options
 /// which other crates can use
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
@@ -196,8 +195,8 @@ pub struct TranslatorConfig {
     #[arg(long, env = "APPCHAIN_BLOCK_EXPLORER_URL")]
     pub appchain_block_explorer_url: Option<String>,
 
-    #[arg(long, env = "RPC_TIMEOUT", value_parser=humantime::parse_duration, default_value="10s")]
-    pub rpc_timeout: Duration,
+    #[arg(long, env = "WS_REQUEST_TIMEOUT", value_parser=humantime::parse_duration, default_value="10s")]
+    pub ws_request_timeout: Duration,
 
     #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
     pub get_logs_timeout: Duration,
@@ -222,12 +221,13 @@ impl TranslatorConfig {
     /// that might have been defined by the `ConfigManager` contract)
     pub fn validate_strict(&self) -> Result<(), ConfigError> {
         self.validate()?;
-        self.block_builder.validate_strict().map_err(ConfigError::BlockBuilder)?;
+        self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
         self.sequencing.validate_strict().map_err(ConfigError::Ingestor)?;
         self.settlement.validate_strict().map_err(ConfigError::Ingestor)?;
         Ok(())
     }
 
+    /// Generates a sample command with all possible config fields
     pub fn generate_sample_command() {
         let mut cmd = String::from("cargo run --bin synd-translator -- \\\n");
 
@@ -246,7 +246,7 @@ impl TranslatorConfig {
         add_fields::<SettlementChainConfig>(&mut cmd);
         add_fields::<MetricsConfig>(&mut cmd);
 
-        // Remove trailing slash and newline
+        // Remove the trailing slash and newline
         cmd.truncate(cmd.len() - 2);
         println!("{cmd}");
     }
@@ -264,7 +264,7 @@ impl Default for TranslatorConfig {
             appchain_chain_id: 0,
             appchain_block_explorer_url: None,
             get_logs_timeout: Duration::from_secs(60),
-            rpc_timeout: Duration::from_secs(10),
+            ws_request_timeout: Duration::from_secs(10),
         }
     }
 }
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_chain_ingestor_config_validation() {
         // Valid config
-        let config = ChainIngestorConfig::new("http://localhost:8545".to_string(), 100).unwrap();
+        let config = ChainIngestorConfig::new("http://localhost:8545".to_string(), 100);
         assert!(config.validate(Chain::Settlement).is_ok());
     }
 }

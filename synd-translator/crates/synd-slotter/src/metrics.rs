@@ -85,7 +85,7 @@ impl SlotterMetrics {
         let now = match SystemTime::now().duration_since(UNIX_EPOCH) {
             Ok(duration) => duration.as_millis() as u64,
             Err(_) => {
-                error!("System time went backwards.");
+                error!("System time before Unix epoch");
                 return;
             }
         };

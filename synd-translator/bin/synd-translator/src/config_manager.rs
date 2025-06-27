@@ -9,17 +9,20 @@ use eyre::Result;
 use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
 use tracing::{error, info, warn};
 
+/// Fetches chain config if it exists
 pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig {
+    let mut config = config.clone();
     let address = match config.config_manager_address {
         Some(addr) => addr,
         None => {
-            warn!("No config_manager_address provided, skipping on-chain config fetch");
-            return config.clone();
+            warn!("No config_manager_address provided, skipping onchain config fetch");
+            return config;
         }
     };
 
     let ingestor_provider =
-        IngestorProvider::new(&config.settlement.settlement_rpc_url, config.rpc_timeout).await;
+        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
+            .await;
 
     let provider = ProviderBuilder::new().on_client(
         ClientBuilder::default()
@@ -31,12 +34,10 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
     let onchain = match get_config(address, U256::from(config.appchain_chain_id), provider).await {
         Ok(c) => c,
         Err(error) => {
-            error!(%error, "error obtaining on-chain config");
-            return config.clone();
+            error!(%error, "error obtaining onchain config");
+            return config;
         }
     };
-
-    let mut config = config.clone();
 
     // Update config with onchain values
     if config.block_builder.arbitrum_bridge_address.is_none() {
@@ -87,12 +88,12 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
             Some(onchain.sequencing_contract_address);
     }
 
-    if config.sequencing.sequencing_rpc_url.is_none() {
+    if config.sequencing.sequencing_ws_url.is_none() {
         info!(
-            "Using the sequencing_rpc_url from on-chain config: {}",
-            onchain.default_sequencing_chain_rpc_url
+            "Using the sequencing_ws_rpc_url from on-chain config: {}",
+            onchain.default_sequencing_chain_ws_rpc_url
         );
-        config.sequencing.sequencing_rpc_url = Some(onchain.default_sequencing_chain_rpc_url)
+        config.sequencing.sequencing_ws_url = Some(onchain.default_sequencing_chain_ws_rpc_url)
     }
 
     config
@@ -114,8 +115,8 @@ async fn get_config<T: Provider + Clone>(
     let settlement_start_block_call = arb_chain_config_contract.SETTLEMENT_START_BLOCK();
     let sequencing_start_block_call = arb_chain_config_contract.SEQUENCING_START_BLOCK();
     let sequencing_contract_address_call = arb_chain_config_contract.SEQUENCING_CONTRACT_ADDRESS();
-    let default_sequencing_chain_rpc_url_call =
-        arb_chain_config_contract.DEFAULT_SEQUENCING_CHAIN_RPC_URL();
+    let default_sequencing_chain_ws_rpc_url_call =
+        arb_chain_config_contract.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL();
 
     let (
         arbitrum_bridge_address,
@@ -124,7 +125,7 @@ async fn get_config<T: Provider + Clone>(
         settlement_start_block,
         sequencing_start_block,
         sequencing_contract_address,
-        default_sequencing_chain_rpc_url,
+        default_sequencing_chain_ws_rpc_url,
     ) = tokio::try_join!(
         arbitrum_bridge_address_call.call(),
         arbitrum_inbox_address_call.call(),
@@ -132,7 +133,7 @@ async fn get_config<T: Provider + Clone>(
         settlement_start_block_call.call(),
         sequencing_start_block_call.call(),
         sequencing_contract_address_call.call(),
-        default_sequencing_chain_rpc_url_call.call(),
+        default_sequencing_chain_ws_rpc_url_call.call(),
     )?;
 
     Ok(ChainConfig {
@@ -142,7 +143,7 @@ async fn get_config<T: Provider + Clone>(
         settlement_start_block: settlement_start_block._0,
         sequencing_start_block: sequencing_start_block._0,
         sequencing_contract_address: sequencing_contract_address._0,
-        default_sequencing_chain_rpc_url: default_sequencing_chain_rpc_url._0,
+        default_sequencing_chain_ws_rpc_url: default_sequencing_chain_ws_rpc_url._0,
     })
 }
 
@@ -155,5 +156,5 @@ struct ChainConfig {
     settlement_start_block: U256,
     sequencing_start_block: U256,
     sequencing_contract_address: Address,
-    default_sequencing_chain_rpc_url: String,
+    default_sequencing_chain_ws_rpc_url: String,
 }

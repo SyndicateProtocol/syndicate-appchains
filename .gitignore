@@ -71,4 +71,8 @@ broadcast/
 documentation/local/heaptrack_output/
 documentation/local/chains/
 
+
+# Claude
+synd-contracts/.claude/settings.local.json
+
 bin/

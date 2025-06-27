@@ -4,7 +4,7 @@
 #[cfg(test)]
 use crate::methods::common::test_utils::SystemTime;
 use crate::{
-    db::{ArbitrumDB, DelayedMessage, MBlock},
+    db::{ArbitrumBatch, ArbitrumDB, DelayedMessage, MBlock},
     methods::{
         common::{appchain_config, Context},
         eth_methods::{
@@ -53,8 +53,8 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     let mut pending_ts: VecDeque<u64> = Default::default();
     let mut finalized_block = 1u64;
     if db.get_state().batch_count == 0 {
-        db.add_batch(MBlock { payload: Some((EMPTY_BATCH, vec![init_msg])), ..Default::default() })
-            .unwrap();
+        let batch = ArbitrumBatch::new(EMPTY_BATCH, vec![init_msg]);
+        db.add_batch(MBlock { payload: Some(batch), ..Default::default() }).unwrap();
     } else {
         let db_init = &db.get_block(1).unwrap().messages[0].0;
         if db_init != &init_msg {

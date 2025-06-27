@@ -1,5 +1,6 @@
 use crate::config::IngestorConfigError;
 use eyre::Report;
+use synd_block_builder::config::ConfigError;
 use thiserror::Error;
 use tracing::error;
 
@@ -21,7 +22,7 @@ pub enum RuntimeError {
     InvalidConfig(String),
 
     #[error(transparent)]
-    BlockBuilderConfig(#[from] synd_block_builder::config::ConfigError),
+    BlockBuilderConfig(#[from] ConfigError),
 
     #[error(transparent)]
     IngestorConfig(#[from] IngestorConfigError),

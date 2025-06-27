@@ -93,6 +93,7 @@ impl SequencingTransactionParser {
         }
         Ok(transactions)
     }
+
     /// Decodes the event data into a vector of transactions
     pub fn get_event_transactions(
         &self,

@@ -47,7 +47,7 @@ jobs:
             "AtomicSequencer",
             "AtomicSequencerImplementation",
             "AssertionPoster",
-            "SyndicateToken",
+            "TestnetSyndToken",
             "RequireAndModule",
             "RequireOrModule",
             "WalletPoolWrapperModule",

@@ -273,7 +273,7 @@ pub fn eth_call(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{DelayedMessage, MBlock, Slot};
+    use crate::db::{ArbitrumBatch, MBlock, Slot};
     use alloy::{primitives::Bytes, rpc::types::TransactionInput};
     use shared::service_start_utils::MetricsState;
     use std::{
@@ -317,7 +317,7 @@ mod tests {
 
     fn get_test_mblock() -> MBlock {
         MBlock {
-            payload: Some((Bytes::default(), vec![DelayedMessage::default()])),
+            payload: Some(ArbitrumBatch::default()),
             timestamp: 1000,
             slot: Slot { seq_block_number: 1, ..Default::default() },
         }

@@ -43,7 +43,7 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
                     ))
                     .unwrap(),
                 )
-                .inspect_err(|err| error!("try_send failed: {}", err))
+                .inspect_err(|err| error!("try_send failed: {err}"))
                 .is_ok()
         });
         drop(data);
@@ -66,7 +66,7 @@ pub fn rollback_to_block(
         return Err(err("cannot set head before the first block"));
     }
 
-    // Get the block to rollback to
+    // Get the block to roll back to
     let block = db.get_block(block_number).unwrap();
     let l1_block_number = block.slot.seq_block_number;
     let block_message_count = block.after_message_count();
@@ -124,7 +124,7 @@ pub fn rollback_to_block(
                 ))
                 .unwrap(),
             )
-            .inspect_err(|err| error!("try_send failed: {}", err))
+            .inspect_err(|err| error!("try_send failed: {err}"))
             .is_ok()
     });
     drop(data);
@@ -154,7 +154,7 @@ pub fn get_source_chains_processed_blocks(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DelayedMessage;
+    use crate::db::ArbitrumBatch;
     use alloy::primitives::Bytes;
     use shared::service_start_utils::MetricsState;
     use std::{
@@ -197,7 +197,7 @@ mod tests {
 
     fn get_test_mblock() -> MBlock {
         MBlock {
-            payload: Some((Bytes::default(), vec![DelayedMessage::default()])),
+            payload: Some(ArbitrumBatch::default()),
             timestamp: 1000,
             slot: Slot { seq_block_number: 1, ..Default::default() },
         }
