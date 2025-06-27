@@ -123,7 +123,7 @@ impl TestComponents {
         }
     }
 
-    #[allow(clippy::unwrap_used)]
+    #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
     async fn new(options: &ConfigurationOptions) -> Result<(Self, ComponentHandles)> {
         let mut options = options.clone();
         let start_time = SystemTime::now();
