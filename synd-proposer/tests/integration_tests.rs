@@ -32,7 +32,7 @@ async fn e2e_proposer_test() -> Result<()> {
 
     let (_set_anvil, set_provider) = utils::start_anvil(1, set_port).await?;
 
-    let appchain_url = format!("0.0.0.0:{}", app_port);
+    let appchain_url = format!("0.0.0.0:{app_port}");
     let server = jsonrpsee::server::Server::builder().build(appchain_url).await?;
     let mut module = jsonrpsee::RpcModule::new(());
     let nitro_block = NitroBlock {
@@ -51,8 +51,8 @@ async fn e2e_proposer_test() -> Result<()> {
 
     let assertion_poster_contract_address = address!("0x32a725c440Ab3e855048C4620862754B7c51828C");
     let config = Config {
-        settlement_rpc_url: Url::from_str(&format!("http://localhost:{}", set_port))?,
-        appchain_rpc_url: Url::from_str(&format!("http://localhost:{}", app_port))?,
+        settlement_rpc_url: Url::from_str(&format!("http://localhost:{set_port}"))?,
+        appchain_rpc_url: Url::from_str(&format!("http://localhost:{app_port}"))?,
         assertion_poster_contract_address,
         private_key: utils::DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
         polling_interval: Duration::from_secs(60),
@@ -87,14 +87,14 @@ async fn e2e_proposer_test() -> Result<()> {
     // Trigger the /propose endpoint
     let client = reqwest::Client::new();
     let response = client
-        .post(format!("http://localhost:{}/propose", proposer_port))
+        .post(format!("http://localhost:{proposer_port}/propose"))
         .send()
         .await
         .expect("Failed to send POST to /propose");
 
     assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
     let body = response.text().await?;
-    assert!(body.contains("Assertion posted successfully"), "Unexpected response body: {}", body);
+    assert!(body.contains("Assertion posted successfully"), "Unexpected response body: {body}");
 
     wait_until!(
         {

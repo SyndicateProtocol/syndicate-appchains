@@ -938,7 +938,7 @@ mod tests {
         let producer1 = service.producers.get(&chain_id).unwrap();
 
         // Verify stream key is correct
-        assert_eq!(producer1.stream_key, format!("maestro:transactions:{}", chain_id));
+        assert_eq!(producer1.stream_key, format!("maestro:transactions:{chain_id}"));
 
         // Get producer again
         let producer2 = service.producers.get(&chain_id).unwrap();
@@ -957,7 +957,7 @@ mod tests {
         );
 
         // Verify correct stream key
-        assert_eq!(producer3.stream_key, format!("maestro:transactions:{}", different_chain_id));
+        assert_eq!(producer3.stream_key, format!("maestro:transactions:{different_chain_id}"));
     }
 
     #[tokio::test]
@@ -1496,7 +1496,7 @@ mod tests {
         // Verify transactions were enqueued (stream length increased)
         let final_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
 
-        println!("{} {}", initial_len, final_len);
+        println!("{initial_len} {final_len}");
 
         // Should have processed three total transactions
         assert_eq!(final_len, initial_len + 3, "Should have enqueued 3 transactions");
@@ -2208,10 +2208,11 @@ mod tests {
             let actual_signer = check_signature(&tx_for_signer_derivation)
                 .expect("Test setup: Failed to derive signer from transaction");
             // Format as 0x-prefixed lowercase hex, which is standard for RPC calls.
-            let actual_signer_hex = format!("{:#x}", actual_signer);
+            let actual_signer_hex = format!("{actual_signer:#x}");
 
-            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await; // Receipt is null
-                                                                                   // Use the dynamically derived signer address for the mock setup.
+            // Receipt is null
+            // Use the dynamically derived signer address for the mock setup.
+            setup_mock_receipt_response(&mock_server, tx_hash, None, false).await;
             set_up_mock_transaction_count(&mock_server, &actual_signer_hex, tx_nonce).await;
 
             let result =

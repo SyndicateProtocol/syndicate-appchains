@@ -88,7 +88,7 @@ mod tests {
         let client = Client::new();
         wait_until!(
             client
-                .get(format!("{}/health", base_url))
+                .get(format!("{base_url}/health"))
                 .send()
                 .await
                 .is_ok_and(|x| x.status().is_success()),
@@ -224,7 +224,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_check() -> Result<()> {
         with_test_server(None, None, |client, base_url| async move {
-            let health_response = client.get(format!("{}/health", base_url)).send().await?;
+            let health_response = client.get(format!("{base_url}/health")).send().await?;
 
             assert!(health_response.status().is_success(), "Health check failed");
             let health_json: Value = health_response.json().await?;
@@ -456,8 +456,7 @@ mod tests {
             let error_message = json["error"]["message"].as_str().unwrap_or("");
             assert!(
                 error_message.contains("chain ID mismatch"),
-                "Error message should mention 'chain ID mismatch', but got: '{}'",
-                error_message
+                "Error message should mention 'chain ID mismatch', but got: '{error_message}'"
             );
             Ok(())
         })
@@ -534,8 +533,7 @@ mod tests {
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
                     tx_json.get("result").is_some(),
-                    "Transaction response should succeed: {}",
-                    tx_json
+                    "Transaction response should succeed: {tx_json}"
                 );
 
                 Ok(())
@@ -598,8 +596,7 @@ mod tests {
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
                     tx_json.get("result").is_none(),
-                    "Transaction response should not succeed: {}",
-                    tx_json
+                    "Transaction response should not succeed: {tx_json}"
                 );
                 assert_eq!(
                     tx_json.get("error"),
@@ -681,8 +678,7 @@ mod tests {
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
                     tx_json.get("result").is_some(),
-                    "Transaction response should succeed: {}",
-                    tx_json
+                    "Transaction response should succeed: {tx_json}"
                 );
                 Ok(())
             },

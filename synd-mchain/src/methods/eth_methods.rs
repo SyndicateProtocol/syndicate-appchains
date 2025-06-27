@@ -326,7 +326,7 @@ mod tests {
     #[test]
     fn test_eth_chain_id() {
         let result = eth_chain_id(Params::new(None), &get_test_context(), &Extensions::default());
-        assert_eq!(result, format!("{:#x}", MCHAIN_ID));
+        assert_eq!(result, format!("{MCHAIN_ID:#x}"));
     }
 
     #[test]

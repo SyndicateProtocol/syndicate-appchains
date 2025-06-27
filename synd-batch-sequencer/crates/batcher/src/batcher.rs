@@ -612,7 +612,7 @@ mod tests {
         let _handle =
             run_batcher(&config, sequencing_contract_address, metrics_port).await.unwrap();
 
-        let url = format!("http://0.0.0.0:{}/health", metrics_port);
+        let url = format!("http://0.0.0.0:{metrics_port}/health");
 
         let client = reqwest::Client::new();
 

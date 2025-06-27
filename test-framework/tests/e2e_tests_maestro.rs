@@ -324,8 +324,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 assert_eq!(
                     current_nonce,
                     nonce + 1,
-                    "Only one transaction should have been processed for address {}",
-                    address
+                    "Only one transaction should have been processed for address {address}"
                 );
             }
             Ok(())
