@@ -87,13 +87,13 @@ impl TryFrom<u8> for L1MessageType {
 impl L1MessageType {
     /// Convert a u8 to a `L1MessageType`
     pub fn from_u8_panic(value: u8) -> Self {
-        Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {}", value))
+        Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {value}"))
     }
 }
 
 impl std::fmt::Display for L1MessageType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -228,7 +228,7 @@ impl ArbitrumAdapter {
                         })
                     }
                     Err(e) => {
-                        panic!("Fatal error: {}", e)
+                        panic!("Fatal error: {e}")
                     }
                 }
             })

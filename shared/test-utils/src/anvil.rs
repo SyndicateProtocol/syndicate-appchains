@@ -29,8 +29,8 @@ pub async fn start_anvil_with_args(chain_id: u64, args: &[&str]) -> Result<Chain
         .connect(&anvil.ws_endpoint())
         .await?;
     Ok(ChainInfo {
-        ws_url: format!("ws://localhost:{}", port),
-        http_url: format!("http://localhost:{}", port),
+        ws_url: format!("ws://localhost:{port}"),
+        http_url: format!("http://localhost:{port}"),
         instance: ProcessInstance::Anvil(anvil),
         provider,
     })

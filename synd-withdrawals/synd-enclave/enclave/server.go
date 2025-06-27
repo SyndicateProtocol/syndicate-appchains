@@ -10,25 +10,29 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/binary"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/hf/nitrite"
 	"github.com/hf/nsm"
 	"github.com/hf/nsm/request"
+	"github.com/holiman/uint256"
+	"github.com/offchainlabs/nitro/arbos/arbostypes"
+	"github.com/offchainlabs/nitro/execution"
 )
 
 const (
@@ -42,8 +46,6 @@ const (
 var (
 	defaultRoot = createAWSNitroRoot()
 )
-
-var isLocal = flag.Bool("local", false, "Run in local mode")
 
 func createAWSNitroRoot() *x509.CertPool {
 	roots, err := base64.StdEncoding.DecodeString(DefaultCARoots)
@@ -232,324 +234,427 @@ func (s *Server) SetSignerKey(ctx context.Context, encrypted hexutil.Bytes) erro
 	return nil
 }
 
-// used to generate the signature
-type SeqTrustedInput struct {
-	SeqConfigHash     common.Hash
-	L1StartBlockHash  common.Hash
-	L1EndBlockHash    common.Hash
-	SeqStartBlockHash common.Hash
+// Storage slot of the batch accumulator
+// <https://github.com/SyndicateProtocol/nitro-contracts/blob/9a100a86242176b633a1d907e5efd41296922144/src/bridge/AbsBridge.sol#L51>
+// Since the batch accumulator is a dynamic array, this slot contains the length of the array
+var BATCH_ACCUMULATOR_STORAGE_SLOT = common.BigToHash(big.NewInt(7))
+
+// Storage slot of the first element in the batch accumulator array
+// Dynamic types are stored starting at the keccak256 of the original storage slot plus an offset
+// This value is Keccak256("0x7")
+var BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT = crypto.Keccak256Hash(BATCH_ACCUMULATOR_STORAGE_SLOT[:]).Big()
+var BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE = new(big.Int).Sub(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, common.Big1)
+
+// field offsets into the serialized arbostypes.L1IncomingMessage struct
+const DelayedMessageSenderOffset = 13
+const DelayedMessageTimestampOffset = 41
+const DelayedMessageRequestIdOffset = 49
+const DelayedMessageDataOffset = 113
+
+type KVDB map[common.Hash][]byte
+
+func (k KVDB) Has(key []byte) (bool, error) {
+	_, ok := k[common.BytesToHash(key)]
+	return ok, nil
 }
 
-func (input *SeqTrustedInput) hash() common.Hash {
-	return crypto.Keccak256Hash(input.SeqConfigHash[:], input.L1StartBlockHash[:], input.L1EndBlockHash[:], input.SeqStartBlockHash[:])
+func (k KVDB) Get(key []byte) ([]byte, error) {
+	val, ok := k[common.BytesToHash(key)]
+	if !ok {
+		return nil, errors.New("could not find key")
+	}
+	return val, nil
 }
 
-type SeqVerifyInput struct {
-	TrustedInput SeqTrustedInput
+func verify(root common.Hash, key []byte, value []byte, proof []hexutil.Bytes) error {
+	db := make(KVDB, len(proof))
+	for _, v := range proof {
+		db[crypto.Keccak256Hash(v)] = v
+	}
 
-	// trustless preimage data
-	PreimageData [][]byte
-
-	// the output of the verifier - should be replaced with verifier inputs instead
-	Batches []wavmio.Batch
+	res, err := trie.VerifyProof(root, crypto.Keccak256(key), db)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(value, res) {
+		return fmt.Errorf("verification failed: value mismatch: %s != %s", common.Bytes2Hex(value), common.Bytes2Hex(res))
+	}
+	return nil
 }
 
-func (output *VerifySequencingChainOutput) sign(input common.Hash, key *ecdsa.PrivateKey) (err error) {
-	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.SequencingBlockHash[:]))
-	output.Signature, err = crypto.Sign(payload, key)
-	return
-}
-
-func (output *VerifySequencingChainOutput) validate(input common.Hash, key *ecdsa.PublicKey) bool {
-	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.SequencingBlockHash[:]))
-	return crypto.VerifySignature(crypto.FromECDSAPub(key), payload, output.Signature)
-}
-
-type AppVerifyExtraInput struct {
-	// trustless old output
-	Output VerifyAppchainOutput
-	// trusted new inputs which replace the old ones
-	L1EndBlockHash       common.Hash
-	SetDelayedMessageAcc common.Hash
-	// trustless message hashes to derive the new accumulator from the old one
-	DelayedMessageHashes []common.Hash
-}
-
-// used to generate the signature
-type AppTrustedInput struct {
-	SeqTrustedInput      SeqTrustedInput
-	AppConfigHash        common.Hash
-	AppStartBlockHash    common.Hash
-	SetDelayedMessageAcc common.Hash
-}
-
-func (input *AppTrustedInput) hash() common.Hash {
-	return crypto.Keccak256Hash(input.AppConfigHash[:], input.AppStartBlockHash[:], input.SeqTrustedInput.SeqConfigHash[:], input.SeqTrustedInput.SeqStartBlockHash[:], input.SetDelayedMessageAcc[:], input.SeqTrustedInput.L1StartBlockHash[:], input.SeqTrustedInput.L1EndBlockHash[:])
-}
-
-type AppVerifyInput struct {
-	// appchain trusted input
-	TrustedInput AppTrustedInput
-
-	// optional extra input data to concat results with a previous AppVerifyOutput
-	ExtraInput *AppVerifyExtraInput
-
-	// seq trustless output for either TrustedInput or ExtraInput
-	SeqOutput VerifySequencingChainOutput
-
-	// trustless preimage data
-	PreimageData [][]byte
-
-	// the output of the verifier - should be replaced with verifier inputs instead
-	Batches []wavmio.Batch
-}
-
-func (output *VerifyAppchainOutput) sign(input common.Hash, priv *ecdsa.PrivateKey) (err error) {
-	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.AppchainBlockHash[:], output.AppchainSendRoot[:], output.SequencingBlockHash[:]))
-	output.Signature, err = crypto.Sign(payload, priv)
-	return
-}
-
-func (output *VerifyAppchainOutput) validate(input common.Hash, key *ecdsa.PublicKey) bool {
-	payload := crypto.Keccak256(input[:], crypto.Keccak256(output.AppchainBlockHash[:], output.AppchainSendRoot[:], output.SequencingBlockHash[:]))
-	return crypto.VerifySignature(crypto.FromECDSAPub(key), payload, output.Signature)
-}
-
-// skips all rust code
-func (s *Server) TestVerifySequencingChain(ctx context.Context, input SeqVerifyInput) (*VerifySequencingChainOutput, error) {
-	// todo: add verifier code here before calling the block verifier Verify function
-
-	result, err := Verify(wavmio.ValidationInput{
-		BlockHash:    input.TrustedInput.SeqStartBlockHash,
-		PreimageData: input.PreimageData,
-		Batches:      input.Batches,
+func verifyProof(proof *AccountResult, stateRoot common.Hash) error {
+	// verify account proof
+	value, err := rlp.EncodeToBytes(&types.StateAccount{
+		Nonce:    uint64(proof.Nonce),
+		Balance:  (*uint256.Int)(&proof.Balance),
+		Root:     proof.StorageHash,
+		CodeHash: proof.CodeHash[:],
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
+	if err := verify(stateRoot, proof.Address.Bytes(), value, proof.AccountProof); err != nil {
+		return fmt.Errorf("account proof verification failed: %w", err)
+	}
+	// verify storage proofs
+	for _, p := range proof.StorageProof {
+		value, err := rlp.EncodeToBytes(p.Value.ToInt())
+		if err != nil {
+			return err
+		}
+		if err := verify(proof.StorageHash, p.Key[:], value, p.Proof); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func verifyBatchAccProof(proof *AccountResult, stateRoot common.Hash, sequencingBridgeAddress common.Address, acc common.Hash) error {
+	if proof == nil {
+		return errors.New("missing end batch accumulator proof")
+	}
+	if proof.Address != sequencingBridgeAddress {
+		return errors.New("merkle proof address is not the bridge contract")
+	}
+	if len(proof.StorageProof) != 2 {
+		return fmt.Errorf("invalid number of proofs: got %d, expected 2", len(proof.StorageProof))
+	}
+	if proof.StorageProof[0].Value.ToInt().Sign() == 0 {
+		return errors.New("batch count at end block is zero")
+	}
+	if acc.Big().Cmp(proof.StorageProof[1].Value.ToInt()) != 0 {
+		return fmt.Errorf("batch acc does not match merkle proof value: %s != %s", acc.Big(), proof.StorageProof[1].Value.ToInt())
+	}
+	storageSlot := new(big.Int).Add(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE, proof.StorageProof[0].Value.ToInt())
+	if proof.StorageProof[0].Key != BATCH_ACCUMULATOR_STORAGE_SLOT || proof.StorageProof[1].Key.Big().Cmp(storageSlot) != 0 {
+		return fmt.Errorf("invalid storage proof keys: %s != %s or %s != %s", proof.StorageProof[0].Key, BATCH_ACCUMULATOR_STORAGE_SLOT, proof.StorageProof[1].Key.Big(), storageSlot)
+	}
+	if err := verifyProof(proof, stateRoot); err != nil {
+		return fmt.Errorf("failed to verify merkle proof: %w", err)
+	}
+	return nil
+}
+
+func delayedMessageAccumulate(acc common.Hash, msg []byte) common.Hash {
+	return crypto.Keccak256Hash(acc[:], crypto.Keccak256(msg[:1], msg[DelayedMessageSenderOffset:DelayedMessageDataOffset], crypto.Keccak256(msg[DelayedMessageDataOffset:])))
+}
+
+func validateDelayedMessages(msgs [][]byte) (uint64, error) {
+	var start uint64
+	for i, msg := range msgs {
+		if len(msg) < DelayedMessageDataOffset {
+			return 0, fmt.Errorf("delayed message %d too short: len=%d", i, len(msg))
+		}
+		requestId := common.Hash(msg[DelayedMessageRequestIdOffset : DelayedMessageRequestIdOffset+32]).Big()
+		if !requestId.IsUint64() {
+			return 0, fmt.Errorf("delayed message %d request id overflow: got %d", i, requestId)
+		}
+		// request id must increment by 1 each message
+		if i == 0 {
+			start = requestId.Uint64()
+		} else if requestId.Uint64() != start+uint64(i) {
+			return 0, fmt.Errorf("delayed message %d invalid request id: got %d, expected %d", i, requestId.Uint64(), start+uint64(i))
+		}
+		// the first 12 bytes of the 32-byte word used to hold the 20-byte address should be zero
+		for _, b := range msg[1:DelayedMessageSenderOffset] {
+			if b != 0 {
+				return 0, fmt.Errorf("delayed message %d request id %d invalid address: got %s", i, requestId.Uint64(), common.Bytes2Hex(msg[1:1+32]))
+			}
+		}
+	}
+	return start, nil
+}
+
+func parseSeqBatches(input VerifySequencingChainInput) (SyndicateAccumulator, common.Hash, error) {
+	// make sure config matches the hash
+	if input.Config.Hash() != input.TrustedInput.ConfigHash {
+		return SyndicateAccumulator{}, common.Hash{}, errors.New("config hash mismatch")
+	}
+
+	acc := input.TrustedInput.L1StartBatchAcc
+	delayedAcc := input.StartDelayedMessagesAccumulator
+
+	// verify delayed messages
+	startIndex, err := validateDelayedMessages(input.DelayedMessages)
+	if err != nil {
+		return SyndicateAccumulator{}, common.Hash{}, err
+	}
+
+	// prepare batches & calculate the batch accumulator
+	msgCount := uint64(len(input.DelayedMessages))
+	var i uint64
+	for j, batch := range input.Batches {
+		if len(batch) < 40 {
+			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch %d too short", j)
+		}
+		afterDelayedMessagesRead := binary.BigEndian.Uint64(batch[32:40])
+		if afterDelayedMessagesRead > msgCount+startIndex {
+			return SyndicateAccumulator{}, common.Hash{}, errors.New("missing delayed messages")
+		}
+		for i+startIndex < afterDelayedMessagesRead {
+			delayedAcc = delayedMessageAccumulate(delayedAcc, input.DelayedMessages[i])
+			i++
+		}
+		acc = crypto.Keccak256Hash(acc[:], crypto.Keccak256(batch), delayedAcc[:])
+	}
+
+	if i != msgCount {
+		return SyndicateAccumulator{}, common.Hash{}, errors.New("extra delayed messages included in input")
+	}
+
+	// make sure the end batch accumulator matches the trusted input end hash
+	if input.IsL1Chain {
+		if acc != input.TrustedInput.L1EndHash {
+			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch accumulator mismatch: got %s, expected %s", acc, input.TrustedInput.L1EndHash)
+		}
+	} else {
+		if input.L1EndBlockHeader == nil {
+			return SyndicateAccumulator{}, common.Hash{}, errors.New("missing end block header")
+		}
+		if input.L1EndBlockHeader.Hash() != input.TrustedInput.L1EndHash {
+			return SyndicateAccumulator{}, common.Hash{}, errors.New("block header does not match end block hash")
+		}
+		if err := verifyBatchAccProof(input.EndBatchAccumulatorMerkleProof, input.L1EndBlockHeader.Root, input.Config.SequencingBridgeAddress, acc); err != nil {
+			return SyndicateAccumulator{}, common.Hash{}, err
+		}
+	}
+
+	return SyndicateAccumulator{
+		Address: common.Address(input.Config.SequencingContractAddress),
+	}, acc, nil
+}
+
+func (s *Server) VerifySequencingChain(ctx context.Context, input VerifySequencingChainInput) (*VerifySequencingChainOutput, error) {
+	acc, l1BatchAcc, err := parseSeqBatches(input)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to verify sequencing input data: %w", err)
+	}
+
+	data := &execution.MessageResult{
+		BlockHash: input.TrustedInput.SeqStartBlockHash,
+	}
+
+	if len(input.Batches) > 0 {
+		blockVerifierInput := wavmio.ValidationInput{
+			BlockHash:    input.TrustedInput.SeqStartBlockHash,
+			PreimageData: input.PreimageData,
+			Batches:      input.Batches,
+			Messages:     input.DelayedMessages,
+		}
+
+		data, err = Verify(blockVerifierInput, &acc)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to verify sequencing chain: %w", err)
+		}
+	}
+
 	output := VerifySequencingChainOutput{
-		SequencingBlockHash: result.BlockHash,
-		Signature:           []byte{},
+		L1BatchAcc:            l1BatchAcc,
+		SequencingBlockHash:   data.BlockHash,
+		SequencingBlockNumber: acc.BlockNum,
+		Batches:               acc.Batches,
+		Signature:             []byte{},
 	}
-	if err := output.sign(input.TrustedInput.hash(), s.signerKey); err != nil {
+	if err := output.sign(&input.TrustedInput, s.signerKey); err != nil {
 		return nil, err
 	}
 	return &output, nil
 }
 
-// skips all rust code
-func (s *Server) TestVerifyAppchain(ctx context.Context, input AppVerifyInput) (*VerifyAppchainOutput, error) {
-	// backup old start values
-	l1StartBlockHash := input.TrustedInput.SeqTrustedInput.L1StartBlockHash
-	appStartBlockHash := input.TrustedInput.AppStartBlockHash
-	seqStartBlockHash := input.TrustedInput.SeqTrustedInput.SeqStartBlockHash
+var allowedMsgs = map[byte]struct{}{
+	arbostypes.L1MessageType_L2Message:          {},
+	arbostypes.L1MessageType_L2FundedByL1:       {},
+	arbostypes.L1MessageType_SubmitRetryable:    {},
+	arbostypes.L1MessageType_Initialize:         {},
+	arbostypes.L1MessageType_EthDeposit:         {},
+	arbostypes.L1MessageType_BatchPostingReport: {},
+}
 
-	if input.ExtraInput != nil {
-		// verify old start values
-		if !input.ExtraInput.Output.validate(input.TrustedInput.hash(), &s.signerKey.PublicKey) {
-			return nil, errors.New("output validation failed")
-		}
-
-		// verify the new delayed message acc contains the old one
-		acc := input.TrustedInput.SetDelayedMessageAcc
-		for _, hash := range input.ExtraInput.DelayedMessageHashes {
-			acc = crypto.Keccak256Hash(acc[:], hash[:])
-		}
-		if acc != input.ExtraInput.SetDelayedMessageAcc {
-			return nil, errors.New("set delayed message acc validation failed")
-		}
-
-		// temporarily update to new start values
-		input.TrustedInput.SeqTrustedInput.L1StartBlockHash = input.TrustedInput.SeqTrustedInput.L1EndBlockHash
-		input.TrustedInput.AppStartBlockHash = input.ExtraInput.Output.AppchainBlockHash
-		input.TrustedInput.SeqTrustedInput.SeqStartBlockHash = input.ExtraInput.Output.SequencingBlockHash
-
-		// permanently update end values
-		input.TrustedInput.SeqTrustedInput.L1EndBlockHash = input.ExtraInput.L1EndBlockHash
-		input.TrustedInput.SetDelayedMessageAcc = input.ExtraInput.SetDelayedMessageAcc
+func processMessage(msg []byte, blockNum uint64, ts uint64) ([]byte, error) {
+	if _, ok := allowedMsgs[msg[0]]; !ok {
+		return nil, fmt.Errorf("unexpected message: type %d", msg[0])
 	}
-	if !input.SeqOutput.validate(input.TrustedInput.SeqTrustedInput.hash(), &s.signerKey.PublicKey) {
-		return nil, errors.New("seq output validation failed")
+	if msg[0] == arbostypes.L1MessageType_BatchPostingReport {
+		requestId := msg[DelayedMessageRequestIdOffset : DelayedMessageRequestIdOffset+32]
+		msg = make([]byte, DelayedMessageDataOffset)
+		copy(msg[DelayedMessageRequestIdOffset:DelayedMessageRequestIdOffset+32], requestId)
+		msg[0] = arbostypes.L1MessageType_EndOfBlock
+	}
+	binary.BigEndian.PutUint64(msg[33:41], blockNum)
+	binary.BigEndian.PutUint64(msg[41:49], ts)
+	return msg, nil
+}
+
+func buildArbBatch(afterDelayedMessagesRead uint64, data []byte) []byte {
+	var msg []byte
+
+	// Set header values
+	for _, value := range []uint64{
+		0, math.MaxUint64, 0, math.MaxUint64, afterDelayedMessagesRead} {
+		var buffer [8]byte
+		binary.BigEndian.PutUint64(buffer[:], value)
+		msg = append(msg, buffer[:]...)
 	}
 
-	// todo: add verifier code here before calling the block verifier Verify function
+	// Append the batch data
+	msg = append(msg, data...)
 
-	result, err := Verify(wavmio.ValidationInput{
-		BlockHash:    input.TrustedInput.AppStartBlockHash,
-		PreimageData: input.PreimageData,
-		Batches:      input.Batches,
-	})
+	return msg
+}
+
+// returns batches, modifies delayed messages in place
+func parseAppBatches(input *VerifyAppchainInput) ([][]byte, error) {
+	// make sure config matches the hash
+	if input.Config.Hash() != input.TrustedInput.ConfigHash {
+		return nil, errors.New("config hash mismatch")
+	}
+
+	if input.AppStartBlockHeader.Hash() != input.TrustedInput.AppStartBlockHash {
+		return nil, errors.New("appchain start block header mismatch")
+	}
+
+	if len(input.DelayedMessages) == 0 {
+		return nil, errors.New("must include at least one delayed message")
+	}
+
+	// verify delayed messages
+	startIndex, err := validateDelayedMessages(input.DelayedMessages)
 	if err != nil {
 		return nil, err
 	}
 
-	// restore old start values
-	input.TrustedInput.SeqTrustedInput.L1StartBlockHash = l1StartBlockHash
-	input.TrustedInput.AppStartBlockHash = appStartBlockHash
-	input.TrustedInput.SeqTrustedInput.SeqStartBlockHash = seqStartBlockHash
+	// verify delayed message accumulator
+	acc := input.StartDelayedMessagesAccumulator
+	for _, msg := range input.DelayedMessages {
+		acc = delayedMessageAccumulate(acc, msg)
+	}
+	if acc != input.TrustedInput.SetDelayedMessageAcc {
+		return nil, fmt.Errorf("delayed message accumulator mismatch: got %s, expected %s", common.Bytes2Hex(acc.Bytes()), common.Bytes2Hex(input.TrustedInput.SetDelayedMessageAcc.Bytes()))
+	}
 
+	// remove dummy delayed message used to verify the count of the accumulator
+	if len(input.DelayedMessages) == 1 && input.AppStartBlockHeader.Nonce.Uint64() == startIndex+1 {
+		input.DelayedMessages = nil
+		startIndex++
+	}
+
+	// build batches & update delayed messages
+	msgCount := uint64(len(input.DelayedMessages))
+	var i uint64
+	var batches [][]byte
+	blockNum := input.VerifySequencingChainOutput.SequencingBlockNumber - uint64(len(input.VerifySequencingChainOutput.Batches))
+	for _, batch := range input.VerifySequencingChainOutput.Batches {
+		blockNum++
+		var hasDelayedMessage bool
+		for i < msgCount {
+			timestamp := binary.BigEndian.Uint64(input.DelayedMessages[i][DelayedMessageTimestampOffset : DelayedMessageTimestampOffset+8])
+			if timestamp+input.Config.SettlementDelay > batch.Timestamp {
+				break
+			}
+			var err error
+			input.DelayedMessages[i], err = processMessage(input.DelayedMessages[i], blockNum, batch.Timestamp)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to process delayed message: %w", err)
+			}
+			i++
+			hasDelayedMessage = true
+		}
+		if hasDelayedMessage || len(batch.Data) > 0 {
+			batches = append(batches, buildArbBatch(startIndex+i, batch.Data))
+		}
+		batch.Data = nil
+	}
+
+	// remove unused delayed messages
+	input.DelayedMessages = input.DelayedMessages[:i]
+
+	return batches, nil
+}
+
+func (s *Server) VerifyAppchain(ctx context.Context, input VerifyAppchainInput) (*VerifyAppchainOutput, error) {
+	if err := input.VerifySequencingChainOutput.validate(&input.TrustedInput, &s.signerKey.PublicKey); err != nil {
+		return nil, fmt.Errorf("seq output validation failed: %w", err)
+	}
+	batches, err := parseAppBatches(&input)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to verify appchain input data: %w", err)
+	}
+	info := types.DeserializeHeaderExtraInformation(&input.AppStartBlockHeader)
+	result := &execution.MessageResult{
+		BlockHash: input.TrustedInput.AppStartBlockHash,
+		SendRoot:  info.SendRoot,
+	}
+	if len(batches) > 0 {
+		blockVerifierInput := wavmio.ValidationInput{
+			BlockHash:    input.TrustedInput.AppStartBlockHash,
+			PreimageData: input.PreimageData,
+			Batches:      batches,
+			Messages:     input.DelayedMessages,
+		}
+		result, err = Verify(blockVerifierInput, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
 	output := VerifyAppchainOutput{
+		L1BatchAcc:          input.VerifySequencingChainOutput.L1BatchAcc,
+		SequencingBlockHash: input.VerifySequencingChainOutput.SequencingBlockHash,
 		AppchainBlockHash:   result.BlockHash,
 		AppchainSendRoot:    result.SendRoot,
-		SequencingBlockHash: input.SeqOutput.SequencingBlockHash,
-		Signature:           []byte{},
 	}
-	if err := output.sign(input.TrustedInput.hash(), s.signerKey); err != nil {
+	if err := output.sign(&input.TrustedInput, s.signerKey); err != nil {
 		return nil, err
 	}
 	return &output, nil
 }
 
-func (s *Server) VerifySequencingChain(ctx context.Context, verifyInput VerifySequencingChainInput) (VerifySequencingChainOutput, error) {
-	// Sanitize to ensure non-nil slices for correct JSON serialization
-	SanitizeVerifySequencingChainInput(&verifyInput)
-
-	// Execute Sequencing Chain Verifier Rust Binary
-	config, err := json.Marshal(verifyInput.VerifySequencingChainConfig)
-	if err != nil {
-		return VerifySequencingChainOutput{}, fmt.Errorf("failed to marshal verify sequencing chain config: %w", err)
+// combines two partial appchain proofs together
+func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppchainOutput, error) {
+	if err := input.Outputs[0].validate(&input.Inputs[0], &s.signerKey.PublicKey); err != nil {
+		return nil, fmt.Errorf("first output validation failed: %w", err)
 	}
-	sequencingChainInput, err := json.Marshal(verifyInput.L1ChainInput)
-	if err != nil {
-		return VerifySequencingChainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
+	if err := input.Outputs[1].validate(&input.Inputs[1], &s.signerKey.PublicKey); err != nil {
+		return nil, fmt.Errorf("second output validation failed: %w", err)
 	}
 
-	args := []string{
-		"--config", string(config),
-		"--l1-chain-input", string(sequencingChainInput),
-		"--seq-config-hash", verifyInput.SeqConfigHash.Hex(),
+	if input.Inputs[0].ConfigHash != input.Inputs[1].ConfigHash || input.Config.Hash() != input.Inputs[0].ConfigHash {
+		return nil, errors.New("config hash mismatch")
+	}
+	if input.Outputs[0].SequencingBlockHash != input.Inputs[1].SeqStartBlockHash ||
+		input.Outputs[0].AppchainBlockHash != input.Inputs[1].AppStartBlockHash ||
+		input.Outputs[0].L1BatchAcc != input.Inputs[1].L1StartBatchAcc {
+		return nil, errors.New("input output mismatch")
 	}
 
-	out, err := RunVerifier("synd-seqchain-verifier", args...)
-	if err != nil {
-		return VerifySequencingChainOutput{}, fmt.Errorf("failed to run synd-seqchain-verifier: %w. Output: %s", err, string(out))
-	}
-
-	log.Debug("VerifySequencingChain Output", "output", string(out))
-
-	lines := strings.Split(string(out), "\n")
-	var outputLine string
-	for i := len(lines) - 1; i >= 0; i-- {
-		trimmed := strings.TrimSpace(lines[i])
-		if trimmed != "" {
-			outputLine = trimmed
-			break
+	if input.Inputs[0].SetDelayedMessageAcc != input.Inputs[1].SetDelayedMessageAcc {
+		if _, err := validateDelayedMessages([][]byte{input.SetFirstDelayedMessage}); err != nil {
+			return nil, err
+		}
+		hash := crypto.Keccak256(input.SetFirstDelayedMessage[:DelayedMessageDataOffset], crypto.Keccak256(input.SetFirstDelayedMessage[DelayedMessageDataOffset:]))
+		acc := crypto.Keccak256Hash(input.Inputs[0].SetDelayedMessageAcc[:], hash)
+		for _, hash := range input.SetRemainingDelayedMessageHashes {
+			acc = crypto.Keccak256Hash(acc[:], hash[:])
+		}
+		if acc != input.Inputs[1].SetDelayedMessageAcc {
+			return nil, errors.New("set delayed message acc derivation failure")
+		}
+		timestamp := binary.BigEndian.Uint64(input.SetFirstDelayedMessage[DelayedMessageTimestampOffset : DelayedMessageTimestampOffset+8])
+		if input.SeqFirstEndBlockHeader == nil {
+			return nil, errors.New("missing seq first end block header")
+		}
+		if input.SeqFirstEndBlockHeader.Hash() != input.Outputs[0].SequencingBlockHash {
+			return nil, errors.New("seq first end block header hash mismatch")
+		}
+		if timestamp+input.Config.SettlementDelay <= input.SeqFirstEndBlockHeader.Time {
+			return nil, errors.New("first proof is missing settlement blocks")
 		}
 	}
 
-	var batches []wavmio.Batch
-	log.Debug("VerifySequencingChain Output Line", "outputLine", outputLine)
-	if err := json.Unmarshal([]byte(outputLine), &batches); err != nil {
-		return VerifySequencingChainOutput{}, fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
-	}
-
-	var blockVerifierInput = wavmio.ValidationInput{
-		BlockHash:    verifyInput.SequencingStartBlockHash,
-		PreimageData: verifyInput.SequencingPreImageData,
-		Batches:      batches,
-	}
-
-	log.Debug("Sequencing Chain BlockVerifierInput Input", "input", blockVerifierInput)
-	data, err := Verify(blockVerifierInput)
-	if err != nil {
-		return VerifySequencingChainOutput{}, fmt.Errorf("Failed to verify sequencing chain: %w", err)
-	}
-
-	output := VerifySequencingChainOutput{
-		SequencingBlockHash: data.BlockHash,
-		Signature:           []byte{},
-	}
-	output.sign(verifyInput.hash(), s.signerKey)
-	log.Debug("Sequencing Chain BlockVerifierOutput Output", "output", output)
-	return output, nil
-
-}
-
-func (s *Server) VerifyAppchain(ctx context.Context, verifyInput VerifyAppchainInput) (VerifyAppchainOutput, error) {
-	// Sanitize to ensure non-nil slices for correct JSON serialization
-	SanitizeVerifyAppchainInput(&verifyInput)
-
-	// Execute Appchain Verifier Rust Binary
-	config, err := json.Marshal(verifyInput.VerifyAppchainConfig)
-	if err != nil {
-		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal verify appchain config: %w", err)
-	}
-	sequencingChainInput, err := json.Marshal(verifyInput.SequencingChainInput)
-	if err != nil {
-		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal sequencing chain input: %w", err)
-	}
-	settlementChainInput, err := json.Marshal(verifyInput.SettlementChainInput)
-	if err != nil {
-		return VerifyAppchainOutput{}, fmt.Errorf("failed to marshal settlement chain input: %w", err)
-	}
-	args := []string{
-		"--config", string(config),
-		"--sequencing-chain-input", string(sequencingChainInput),
-		"--settlement-chain-input", string(settlementChainInput),
-		"--appchain-config-hash", verifyInput.AppchainConfigHash.Hex(),
-	}
-
-	out, err := RunVerifier("synd-appchain-verifier", args...)
-	if err != nil {
-		return VerifyAppchainOutput{}, fmt.Errorf("failed to run synd-appchain-verifier: %w. Output: %s", err, string(out))
-	}
-
-	log.Debug("VerifyAppchain Output", "output", string(out))
-
-	lines := strings.Split(string(out), "\n")
-	var outputLine string
-	for i := len(lines) - 1; i >= 0; i-- {
-		trimmed := strings.TrimSpace(lines[i])
-		if trimmed != "" {
-			outputLine = trimmed
-			break
-		}
-	}
-
-	var batches []wavmio.Batch
-	log.Debug("VerifyAppchain Output Line", "outputLine", outputLine)
-	if err := json.Unmarshal([]byte(outputLine), &batches); err != nil {
-		return VerifyAppchainOutput{}, fmt.Errorf("failed to unmarshal batches: %w. Raw: %s", err, outputLine)
-	}
-
-	var blockVerifierInput = wavmio.ValidationInput{
-		BlockHash:    verifyInput.AppchainStartBlockHash,
-		PreimageData: verifyInput.AppchainPreImageData,
-		Batches:      batches,
-	}
-
-	log.Debug("Appchain BlockVerifierInput Input", "input", blockVerifierInput)
-	data, err := Verify(blockVerifierInput)
-	if err != nil {
-		return VerifyAppchainOutput{}, fmt.Errorf("Failed to verify appchain: %w", err)
-	}
-
-	// Sign & return
-	output := VerifyAppchainOutput{
-		AppchainBlockHash:   data.BlockHash,
-		AppchainSendRoot:    data.SendRoot,
-		SequencingBlockHash: verifyInput.SequencingChainInput.EndBlockHash,
-		Signature:           []byte{},
-	}
-	output.sign(verifyInput.hash(), s.signerKey)
-	log.Debug("Appchain BlockVerifierOutput Output", "output", output)
-	return output, nil
-}
-
-func isLocalhost() bool {
-	return *isLocal
-}
-
-func RunVerifier(verifierName string, args ...string) ([]byte, error) {
-	var cmd *exec.Cmd
-	if isLocalhost() {
-		log.Debug("Running verifier locally", "verifierName", verifierName)
-		fullArgs := append([]string{"run", "--release", "--bin", verifierName, "--"}, args...)
-		cmd = exec.Command("cargo", fullArgs...)
-	} else {
-		log.Debug("Running verifier in enclave", "verifierName", verifierName)
-		binaryPath := filepath.Join("./bin", verifierName)
-		cmd = exec.Command(binaryPath, args...)
-	}
-	return cmd.CombinedOutput()
+	input.Inputs[0].SetDelayedMessageAcc = input.Inputs[1].SetDelayedMessageAcc
+	input.Inputs[0].L1EndHash = input.Inputs[1].L1EndHash
+	input.Outputs[1].sign(&input.Inputs[0], s.signerKey)
+	return &CombineAppchainOutput{
+		Input:  input.Inputs[0],
+		Output: input.Outputs[1],
+	}, nil
 }

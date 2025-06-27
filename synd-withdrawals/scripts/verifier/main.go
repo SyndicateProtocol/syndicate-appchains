@@ -23,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	result, err := enclave.Verify(data)
+	result, err := enclave.Verify(data, nil)
 	if err != nil {
 		panic(err)
 	}

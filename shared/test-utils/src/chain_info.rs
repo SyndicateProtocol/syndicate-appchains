@@ -51,7 +51,7 @@ pub struct AccountInfo {
 
 fn account_info_from_private_key(private_key: &'static str) -> AccountInfo {
     let signer = PrivateKeySigner::from_str(private_key)
-        .unwrap_or_else(|err| panic!("Invalid private key: {}", err));
+        .unwrap_or_else(|err| panic!("Invalid private key: {err}"));
     AccountInfo { address: signer.address(), private_key, signer }
 }
 

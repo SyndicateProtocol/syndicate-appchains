@@ -1,43 +1,37 @@
-# Archives
-*.zip
+# Rust build artifacts - catching all target directories
+target/
+**/target/
+**/*.rs.bk
+
+# Git directory
+.git/
+.gitignore
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Any other build directories or large files
+node_modules/
+**/node_modules/
+dist/
+build/
+
+# Temp files
+*.tmp
+*.temp
+
+# Log files
+*.log
+logs/
+
+# Any other large artifacts you might have
 *.tar
 *.gz
-
-# Build artifacts
-**/target/
-**/build/
-**/buildfiles/build-local/
-**/*.o
-**/*.a
-**/*.wasm
-
-# Dependencies
-**/node_modules/
-
-# IDE and tools
-**/.vscode/
-**/.github/
-**/.make/
-
-# Git
-**/.git/
-**/.gitignore
-**/.gitmodules
-**/.dockerignore
-**/Dockerfile
-
-# Test and cache files
-**/*.yml
-**/cache/
-**/test-cases/
-
-# Nitro specific
-nitro/go-ethereum/tests/
-nitro/contracts/build/
-nitro/contracts/cache/
-nitro/safe-smart-account/build/
-nitro/solgen/go/
-nitro/nitro-testnode/
-nitro/arbitrator/tools/{module_roots,pricer,pricers,wasm-tools,stylus_benchmark}/
-nitro/arbitrator/{stylus,wasm-testsuite,wasm-libraries}/**/target/
-nitro/arbitrator/langs/{rust,bf}/target/
+*.zip

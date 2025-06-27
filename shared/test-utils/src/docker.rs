@@ -43,7 +43,7 @@ impl E2EProcess {
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout).lines();
             while let Some(line) = reader.next_line().await.unwrap() {
-                println!("{}: {}", command_name_clone, line);
+                println!("{command_name_clone}: {line}");
             }
         });
         // force tests to capture output from stderr
@@ -52,7 +52,7 @@ impl E2EProcess {
         tokio::spawn(async move {
             let mut reader = BufReader::new(stderr).lines();
             while let Some(line) = reader.next_line().await.unwrap() {
-                eprintln!("{}: {}", command_name_clone, line);
+                eprintln!("{command_name_clone}: {line}");
             }
         });
         Ok(Self(child))
@@ -173,7 +173,7 @@ pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2E
     let client = Client::new();
     wait_until!(
         if let Some(status) = docker.try_wait()? {
-            panic!("{} exited with {}", executable_name, status);
+            panic!("{executable_name} exited with {status}");
         };
         client
             .get(format!("http://localhost:{api_port}/health"))
@@ -308,9 +308,9 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             ))
             .arg("--http.addr=0.0.0.0")
             .arg("--http.api=net,web3,eth,debug,trace")
-            .arg(format!("--http.port={}", port))
+            .arg(format!("--http.port={port}"))
             .arg("--ws.expose-all")
-            .arg(format!("--ws.port={}", port))
+            .arg(format!("--ws.port={port}"))
             .arg("--ws.addr=0.0.0.0")
             .arg("--ws.origins=\\*")
             .arg(format!("--log-level={log_level}"))
@@ -318,14 +318,14 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
         format!("nitro-{}", args.chain_name).as_str(),
     )?;
 
-    let http_url = format!("http://localhost:{}", port);
-    let ws_url = format!("ws://localhost:{}", port);
+    let http_url = format!("http://localhost:{port}");
+    let ws_url = format!("ws://localhost:{port}");
 
     let provider =
         ProviderBuilder::new().wallet(test_account1().signer.clone()).connect(&http_url).await?;
     wait_until!(
         if let Some(status) = nitro.try_wait()? {
-            panic!("nitro node exited with {}", status);
+            panic!("nitro node exited with {status}");
         };
         provider.get_chain_id().await.is_ok(),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
@@ -353,7 +353,7 @@ pub async fn start_valkey() -> Result<(E2EProcess, String)> {
     let valkey_client = redis::Client::open(valkey_url.as_str()).unwrap();
     wait_until!(
         if let Some(status) = valkey.try_wait()? {
-            panic!("cache exited with {}", status);
+            panic!("cache exited with {status}");
         };
         valkey_client.get_multiplexed_async_connection().await.is_ok(),
         Duration::from_secs(5 * 60) // give it time to download the image if necessary

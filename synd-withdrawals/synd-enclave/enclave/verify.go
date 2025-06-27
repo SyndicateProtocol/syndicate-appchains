@@ -40,6 +40,7 @@ import (
 
 type WavmChainContext struct {
 	chainConfig *params.ChainConfig
+	wavm        *wavmio.Wavm
 }
 
 func (c WavmChainContext) Config() *params.ChainConfig {
@@ -51,7 +52,7 @@ func (c WavmChainContext) Engine() consensus.Engine {
 }
 
 func (c WavmChainContext) GetHeader(hash common.Hash, num uint64) *types.Header {
-	header, err := wavmio.GetBlockHeaderByHash(hash)
+	header, err := c.wavm.GetBlockHeaderByHash(hash)
 	if err != nil {
 		panic(fmt.Sprintf("Missing preimage data for block header hash %v", hash))
 	}
@@ -61,11 +62,13 @@ func (c WavmChainContext) GetHeader(hash common.Hash, num uint64) *types.Header 
 	return header
 }
 
-type WavmInbox struct{}
+type WavmInbox struct {
+	wavm *wavmio.Wavm
+}
 
 func (i WavmInbox) PeekSequencerInbox() ([]byte, common.Hash, error) {
-	pos := wavmio.GetInboxPosition()
-	res, err := wavmio.ReadInboxMessage(pos)
+	pos := i.wavm.GetInboxPosition()
+	res, err := i.wavm.ReadInboxMessage(pos)
 	if err != nil {
 		return nil, common.Hash{}, err
 	}
@@ -75,30 +78,30 @@ func (i WavmInbox) PeekSequencerInbox() ([]byte, common.Hash, error) {
 }
 
 func (i WavmInbox) GetSequencerInboxPosition() uint64 {
-	pos := wavmio.GetInboxPosition()
+	pos := i.wavm.GetInboxPosition()
 	log.Info("GetSequencerInboxPosition", "pos", pos)
 	return pos
 }
 
 func (i WavmInbox) AdvanceSequencerInbox() {
 	log.Info("AdvanceSequencerInbox")
-	wavmio.AdvanceInboxMessage()
+	i.wavm.AdvanceInboxMessage()
 }
 
 func (i WavmInbox) GetPositionWithinMessage() uint64 {
-	pos := wavmio.GetPositionWithinMessage()
+	pos := i.wavm.GetPositionWithinMessage()
 	log.Info("GetPositionWithinMessage", "pos", pos)
 	return pos
 }
 
 func (i WavmInbox) SetPositionWithinMessage(pos uint64) {
 	log.Info("SetPositionWithinMessage", "pos", pos)
-	wavmio.SetPositionWithinMessage(pos)
+	i.wavm.SetPositionWithinMessage(pos)
 }
 
 func (i WavmInbox) ReadDelayedInbox(seqNum uint64) (*arbostypes.L1IncomingMessage, error) {
 	log.Info("ReadDelayedMsg", "seqNum", seqNum)
-	data, err := wavmio.ReadDelayedInboxMessage(seqNum)
+	data, err := i.wavm.ReadDelayedInboxMessage(seqNum)
 	if err != nil {
 		return nil, err
 	}
@@ -106,11 +109,12 @@ func (i WavmInbox) ReadDelayedInbox(seqNum uint64) (*arbostypes.L1IncomingMessag
 }
 
 type PreimageDASReader struct {
+	wavm *wavmio.Wavm
 }
 
 func (dasReader *PreimageDASReader) GetByHash(ctx context.Context, hash common.Hash) ([]byte, error) {
 	oracle := func(hash common.Hash) ([]byte, error) {
-		return wavmio.ResolveTypedPreimage(arbutil.Keccak256PreimageType, hash)
+		return dasReader.wavm.ResolveTypedPreimage(arbutil.Keccak256PreimageType, hash)
 	}
 	return dastree.Content(hash, oracle)
 }
@@ -128,6 +132,7 @@ func (dasReader *PreimageDASReader) ExpirationPolicy(ctx context.Context) (dapro
 }
 
 type BlobPreimageReader struct {
+	wavm *wavmio.Wavm
 }
 
 func (r *BlobPreimageReader) GetBlobs(
@@ -138,7 +143,7 @@ func (r *BlobPreimageReader) GetBlobs(
 	var blobs []kzg4844.Blob
 	for _, h := range versionedHashes {
 		var blob kzg4844.Blob
-		preimage, err := wavmio.ResolveTypedPreimage(arbutil.EthVersionedHashPreimageType, h)
+		preimage, err := r.wavm.ResolveTypedPreimage(arbutil.EthVersionedHashPreimageType, h)
 		if err != nil {
 			return nil, err
 		}
@@ -176,7 +181,7 @@ func populateEcdsaCaches() {
 	}
 }
 
-func fillInBatchGasCost(msg *arbostypes.L1IncomingMessage) error {
+func fillInBatchGasCost(wavm *wavmio.Wavm, msg *arbostypes.L1IncomingMessage) error {
 	if msg.Header.Kind != arbostypes.L1MessageType_BatchPostingReport || msg.BatchGasCost != nil {
 		return nil
 	}
@@ -184,7 +189,7 @@ func fillInBatchGasCost(msg *arbostypes.L1IncomingMessage) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse batch posting report: %w", err)
 	}
-	batchData, err := wavmio.ResolveTypedPreimage(arbutil.Keccak256PreimageType, batchHash)
+	batchData, err := wavm.ResolveTypedPreimage(arbutil.Keccak256PreimageType, batchHash)
 	if err != nil {
 		return fmt.Errorf("failed to fetch batch mentioned by batch posting report: %w", err)
 	}
@@ -193,14 +198,21 @@ func fillInBatchGasCost(msg *arbostypes.L1IncomingMessage) error {
 	return nil
 }
 
-func Verify(data wavmio.ValidationInput) (_ *execution.MessageResult, err error) {
+func Verify(data wavmio.ValidationInput, processor interface {
+	ProcessBlock(*types.Block, types.Receipts) error
+}) (_ *execution.MessageResult, err error) {
+	if data.BlockHash == (common.Hash{}) {
+		return nil, errors.New("genesis block verification unsupported")
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic with error: %v", r)
 		}
 	}()
 
-	if err := wavmio.StubInit(data); err != nil {
+	wavm, err := wavmio.Init(data)
+	if err != nil {
 		return nil, err
 	}
 	gethhook.RequireHookedGeth()
@@ -212,23 +224,16 @@ func Verify(data wavmio.ValidationInput) (_ *execution.MessageResult, err error)
 
 	populateEcdsaCaches()
 
-	lastBlockHash := wavmio.GetLastBlockHash()
 	batchCount := uint64(len(data.Batches))
 
-	if lastBlockHash == (common.Hash{}) {
-		return nil, errors.New("genesis block verification unsupported")
-	}
-
-	header, err := wavmio.GetBlockHeaderByHash(lastBlockHash)
+	header, err := wavm.GetBlockHeaderByHash(data.BlockHash)
 	if err != nil {
 		return nil, err
 	}
 	block := types.NewBlockWithHeader(header)
 
-	log.Info("Initial State", "lastBlockHash", lastBlockHash, "lastBlockStateRoot", block.Root())
-
-	for wavmio.GetInboxPosition() < batchCount {
-		raw := rawdb.NewDatabase(PreimageDb{})
+	for wavm.GetInboxPosition() < batchCount {
+		raw := rawdb.NewDatabase(PreimageDb{wavm})
 		db := state.NewDatabase(triedb.NewDatabase(raw, nil), nil)
 		statedb, err := state.NewDeterministic(block.Root(), db)
 		if err != nil {
@@ -242,10 +247,10 @@ func Verify(data wavmio.ValidationInput) (_ *execution.MessageResult, err error)
 			var dasKeysetFetcher daprovider.DASKeysetFetcher
 			if dasEnabled {
 				// DAS batch and keysets are all together in the same preimage binary.
-				dasReader = &PreimageDASReader{}
-				dasKeysetFetcher = &PreimageDASReader{}
+				dasReader = &PreimageDASReader{wavm}
+				dasKeysetFetcher = &PreimageDASReader{wavm}
 			}
-			backend := WavmInbox{}
+			backend := WavmInbox{wavm}
 			var keysetValidationMode = daprovider.KeysetPanicIfInvalid
 			if backend.GetPositionWithinMessage() > 0 {
 				keysetValidationMode = daprovider.KeysetDontValidate
@@ -254,7 +259,7 @@ func Verify(data wavmio.ValidationInput) (_ *execution.MessageResult, err error)
 			if dasReader != nil {
 				dapReaders = append(dapReaders, daprovider.NewReaderForDAS(dasReader, dasKeysetFetcher))
 			}
-			dapReaders = append(dapReaders, daprovider.NewReaderForBlobReader(&BlobPreimageReader{}))
+			dapReaders = append(dapReaders, daprovider.NewReaderForBlobReader(&BlobPreimageReader{wavm}))
 			inboxMultiplexer := arbstate.NewInboxMultiplexer(backend, delayedMessagesRead, dapReaders, keysetValidationMode)
 			ctx := context.Background()
 			message, err := inboxMultiplexer.Pop(ctx)
@@ -262,7 +267,7 @@ func Verify(data wavmio.ValidationInput) (_ *execution.MessageResult, err error)
 				return nil, fmt.Errorf("Error reading from inbox multiplexer: %v", err.Error())
 			}
 
-			if err := fillInBatchGasCost(message.Message); err != nil {
+			if err := fillInBatchGasCost(wavm, message.Message); err != nil {
 				return nil, err
 			}
 			return message, nil
@@ -312,26 +317,29 @@ func Verify(data wavmio.ValidationInput) (_ *execution.MessageResult, err error)
 			return nil, err
 		}
 
-		chainContext := WavmChainContext{chainConfig: chainConfig}
+		chainContext := WavmChainContext{chainConfig: chainConfig, wavm: wavm}
 
-		block, _, err = arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, block.Header(), statedb, chainContext, false, core.MessageReplayMode)
+		var receipts types.Receipts
+		block, receipts, err = arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, block.Header(), statedb, chainContext, false, core.MessageReplayMode)
 		if err != nil {
 			return nil, err
 		}
 
-		extraInfo := types.DeserializeHeaderExtraInformation(block.Header())
-		if extraInfo.ArbOSFormatVersion == 0 {
-			return nil, fmt.Errorf("Error deserializing header extra info: %+v", block.Header())
+		if processor != nil {
+			if err := processor.ProcessBlock(block, receipts); err != nil {
+				return nil, err
+			}
 		}
-		wavmio.SetLastBlockHash(block.Hash())
-		wavmio.SetSendRoot(extraInfo.SendRoot)
 	}
 
-	wavmio.StubFinal()
-
-	if wavmio.GetInboxPosition() != batchCount || wavmio.GetPositionWithinMessage() != 0 {
-		return nil, fmt.Errorf("invalid end state: batch count %d != %d or message position %d != 0", wavmio.GetInboxPosition(), batchCount, wavmio.GetPositionWithinMessage())
+	if wavm.GetInboxPosition() != batchCount || wavm.GetPositionWithinMessage() != 0 {
+		return nil, fmt.Errorf("invalid end state: batch count %d != %d or message position %d != 0", wavm.GetInboxPosition(), batchCount, wavm.GetPositionWithinMessage())
 	}
 
-	return &execution.MessageResult{BlockHash: block.Hash(), SendRoot: types.DeserializeHeaderExtraInformation(block.Header()).SendRoot}, nil
+	extraInfo := types.DeserializeHeaderExtraInformation(block.Header())
+	if extraInfo.ArbOSFormatVersion == 0 {
+		return nil, fmt.Errorf("Error deserializing header extra info: %+v", block.Header())
+	}
+
+	return &execution.MessageResult{BlockHash: block.Hash(), SendRoot: extraInfo.SendRoot}, nil
 }

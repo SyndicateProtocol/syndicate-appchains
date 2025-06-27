@@ -28,12 +28,14 @@ jobs:
 
       - name: Pull submodules
         run: |
-          cd synd-withdrawals && \
+          cd synd-withdrawals/synd-enclave && \
           git submodule update --init --recursive
 
       - name: Build enclave image
         run: |
-          docker build -f synd-withdrawals/synd-enclave/Dockerfile .
+          cd synd-withdrawals/synd-enclave
+          docker build --target eif-bin .
+          docker build --target local-dev .
 
   proposer-test:
     name: test synd-proposer

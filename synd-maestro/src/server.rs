@@ -278,7 +278,7 @@ mod tests {
         let client = reqwest::Client::new();
 
         // Test health endpoint
-        let response = client.get(format!("http://{}/health", addr)).send().await.unwrap();
+        let response = client.get(format!("http://{addr}/health")).send().await.unwrap();
         assert_eq!(response.status(), 200);
         assert_eq!(
             response.json::<JsonValue>().await.unwrap(),
@@ -290,7 +290,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         // Test unhealthy health endpoint
-        let response = client.get(format!("http://{}/health", addr)).send().await.unwrap();
+        let response = client.get(format!("http://{addr}/health")).send().await.unwrap();
         assert_eq!(response.status(), 500);
         // Cleanup
         shutdown_fn().await.unwrap();

@@ -41,7 +41,7 @@ pub async fn eth_subscribe(
 ) -> Result<(), StringError> {
     let (param,): (&str,) = p.parse()?;
     if param != "newHeads" {
-        return Err(format!("unknown subscription event: {}", param).into());
+        return Err(format!("unknown subscription event: {param}").into());
     }
     let sink = pending.accept().await.map_err(to_err)?;
     ctx.2.lock().unwrap().subs.push(sink.clone());
@@ -56,7 +56,7 @@ pub fn eth_chain_id(
     _: &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
     _: &Extensions,
 ) -> String {
-    format!("{:#x}", MCHAIN_ID)
+    format!("{MCHAIN_ID:#x}")
 }
 
 /// `eth_getCode`
@@ -225,7 +225,7 @@ pub fn eth_get_block_by_number(
 
             data.finalized_block
         }
-        _ => return Err(format!("invalid tag: {}", tag)).map_err(to_err),
+        _ => return Err(format!("invalid tag: {tag}")).map_err(to_err),
     };
     let block = db.get_block(number).unwrap();
     Ok(alloy::rpc::types::Block {
@@ -326,7 +326,7 @@ mod tests {
     #[test]
     fn test_eth_chain_id() {
         let result = eth_chain_id(Params::new(None), &get_test_context(), &Extensions::default());
-        assert_eq!(result, format!("{:#x}", MCHAIN_ID));
+        assert_eq!(result, format!("{MCHAIN_ID:#x}"));
     }
 
     #[test]

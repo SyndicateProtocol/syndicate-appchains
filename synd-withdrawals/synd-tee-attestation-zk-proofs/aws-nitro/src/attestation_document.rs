@@ -203,8 +203,7 @@ impl AwsNitroAttestationDocument<'_> {
 
         if validity_start >= validity_end {
             return Err(VerificationError::ValidityError(format!(
-                "Validity window is invalid: validity_start: {}, validity_end: {}",
-                validity_start, validity_end
+                "Validity window is invalid: validity_start: {validity_start}, validity_end: {validity_end}"
             )));
         }
 
@@ -227,23 +226,20 @@ pub fn verify_x509_parent(
     let parent_spki_der =
         parent_cert.tbs_certificate.subject_public_key_info.to_der().map_err(|e| {
             VerificationError::CertificateParseError(format!(
-                "Failed to DER-encode parent's SubjectPublicKeyInfo: {}",
-                e
+                "Failed to DER-encode parent's SubjectPublicKeyInfo: {e}"
             ))
         })?;
 
     let parent_verifying_key = p384::ecdsa::VerifyingKey::from_public_key_der(&parent_spki_der)
         .map_err(|e| {
             VerificationError::CertificateParseError(format!(
-                "Failed to parse parent's public key from SubjectPublicKeyInfo: {}",
-                e
+                "Failed to parse parent's public key from SubjectPublicKeyInfo: {e}"
             ))
         })?;
 
     let msg_to_verify = cert.tbs_certificate.to_der().map_err(|e| {
         VerificationError::CertificateParseError(format!(
-            "Failed to DER-encode TBS certificate: {}",
-            e
+            "Failed to DER-encode TBS certificate: {e}"
         ))
     })?;
 
@@ -252,11 +248,11 @@ pub fn verify_x509_parent(
     })?;
 
     let signature = P384Signature::from_der(signature_bytes).map_err(|e| {
-        VerificationError::CertificateParseError(format!("Failed to parse signature: {}", e))
+        VerificationError::CertificateParseError(format!("Failed to parse signature: {e}"))
     })?;
 
     parent_verifying_key.verify(&msg_to_verify, &signature).map_err(|e| {
-        VerificationError::CertificateParseError(format!("Signature verification failed: {}", e))
+        VerificationError::CertificateParseError(format!("Signature verification failed: {e}"))
     })?;
 
     Ok(())
@@ -296,15 +292,13 @@ pub fn verify_aws_nitro_attestation(
 
     let spki_der = cert.tbs_certificate.subject_public_key_info.to_der().map_err(|e| {
         VerificationError::CertificateParseError(format!(
-            "Failed to DER-encode SubjectPublicKeyInfo: {}",
-            e
+            "Failed to DER-encode SubjectPublicKeyInfo: {e}"
         ))
     })?;
 
     let pub_key = p384::ecdsa::VerifyingKey::from_public_key_der(&spki_der).map_err(|e| {
         VerificationError::CertificateParseError(format!(
-            "Failed to parse public key from SubjectPublicKeyInfo: {}",
-            e
+            "Failed to parse public key from SubjectPublicKeyInfo: {e}"
         ))
     })?;
 

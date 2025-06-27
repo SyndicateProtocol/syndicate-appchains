@@ -68,10 +68,10 @@ fn main() {
             pcr_2,
             pcr_8,
         } = PublicValuesStruct::abi_decode(output.as_slice(), true).unwrap();
-        println!("root_cert_hash: {}", root_cert_hash);
-        println!("validity_window_start: {}", validity_window_start);
-        println!("validity_window_end: {}", validity_window_end);
-        println!("tee_signing_key: {}", tee_signing_key);
+        println!("root_cert_hash: {root_cert_hash}");
+        println!("validity_window_start: {validity_window_start}");
+        println!("validity_window_end: {validity_window_end}");
+        println!("tee_signing_key: {tee_signing_key}");
         println!("root_cert_hash: {}", hex::encode(keccak256(&der_encoded_root_cert)));
         println!("pcr_0: {}", hex::encode(pcr_0));
         println!("pcr_1: {}", hex::encode(pcr_1));

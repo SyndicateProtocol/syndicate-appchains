@@ -147,7 +147,7 @@ pub fn get_source_chains_processed_blocks(
             let block = db.get_block(block_num)?;
             Ok((block.slot, block_num))
         }
-        _ => Err(to_err(format!("unexpected block tag: {}", tag))),
+        _ => Err(to_err(format!("unexpected block tag: {tag}"))),
     }
 }
 

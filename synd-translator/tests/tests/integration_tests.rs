@@ -39,7 +39,7 @@ fn init() {
 
 fn get_signer() -> PrivateKeySigner {
     PrivateKeySigner::from_str(TEST_PRIVATE_KEY)
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err))
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"))
 }
 
 fn deposit_eth(src: Address, dest: Address, value: U256) -> DelayedMessage {

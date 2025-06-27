@@ -72,7 +72,7 @@ async fn main() {
     match run(args, generate_proof).await {
         Ok(_) => (),
         Err(e) => {
-            eprintln!("Error: {}", e);
+            eprintln!("Error: {e}");
             std::process::exit(1);
         }
     };
@@ -88,7 +88,7 @@ async fn run(
 ) -> Result<(), ProofSubmitterError> {
     // get attestation doc CBOR
     let attestation_doc_hex = get_attestation_doc(args.enclave_rpc_url).await?;
-    println!("Attestation doc: {}", attestation_doc_hex);
+    println!("Attestation doc: {attestation_doc_hex}");
     let cbor_attestation_doc = hex::decode(attestation_doc_hex)?;
 
     // get root certificate DER
@@ -144,7 +144,7 @@ async fn submit_proof_to_chain(
         .await
         .map_err(ProofSubmitterError::WaitForPendingTransaction)?;
 
-    println!("Successfully submitted proof to chain. Receipt: {:?}", receipt);
+    println!("Successfully submitted proof to chain. Receipt: {receipt:?}");
 
     Ok(())
 }
