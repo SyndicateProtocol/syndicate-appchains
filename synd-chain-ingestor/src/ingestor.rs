@@ -1,5 +1,6 @@
-//! The ingestor crate contains a function used to ingest new blocks from the chain. A websocket
-//! connection is used instead of polling. Logs are fetched via a call to `eth_getBlockReceipts`.
+//! The `synd-chain-ingestor` crate contains a function used to ingest new blocks from the chain. A
+//! websocket connection is used instead of polling. Logs are fetched via a call to
+//! `eth_getBlockReceipts`.
 
 use crate::{
     db::BlockUpdateResult,
@@ -14,17 +15,21 @@ use std::{cmp::Ordering, sync::Mutex};
 use tracing::{error, warn};
 
 #[allow(missing_docs)]
-#[allow(clippy::unwrap_used)]
 pub async fn run(
     ctx: &Mutex<Context>,
     provider: &EthClient,
     metrics: &ChainIngestorMetrics,
 ) -> eyre::Result<()> {
     let mut sub = provider.subscribe_blocks().await;
-    let mut block_count = ctx.lock().unwrap().db.next_block();
+    let mut block_count =
+        ctx.lock().map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?.db.next_block();
 
     loop {
-        let next_block = ctx.lock().unwrap().db.next_block();
+        let next_block = ctx
+            .lock()
+            .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
+            .db
+            .next_block();
 
         // fetch next block
         let mut block = match next_block.cmp(&block_count) {
@@ -43,25 +48,37 @@ pub async fn run(
         };
 
         // if the block is not added, continue
-        if ctx.lock().unwrap().db.update_block(&block, metrics) != BlockUpdateResult::Added {
+        if ctx
+            .lock()
+            .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
+            .db
+            .update_block(&block, metrics) !=
+            BlockUpdateResult::Added
+        {
             continue;
         }
 
         // fetch receipts
         let mut receipts = provider.get_block_receipts(block.number).await;
 
-        // refetch block & receipts until the block hash matches
+        // refetch block and receipts until the block hash matches
         while match receipts.first() {
             Some(receipt) => receipt.block_hash != block.hash,
             None => block.receipts_root != EMPTY_RECEIPTS,
         } {
-            warn!("mismatching block & receipt data - refetching both");
+            warn!("mismatched block and receipt data - refetching both");
             block = provider.get_block_header(BlockNumberOrTag::Number(block.number)).await;
             receipts = provider.get_block_receipts(block.number).await;
         }
 
         // if the block reorgs the db to an earlier block number, continue
-        if ctx.lock().unwrap().db.update_block(&block, metrics) == BlockUpdateResult::Reorged {
+        if ctx
+            .lock()
+            .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
+            .db
+            .update_block(&block, metrics) ==
+            BlockUpdateResult::Reorged
+        {
             continue;
         }
 
@@ -84,23 +101,27 @@ pub async fn run(
                 .collect(),
         };
 
-        ctx.lock().unwrap().subs.retain_mut(|(sink, addrs)| {
-            !sink.is_closed() &&
-                sink.try_send(
-                    SubscriptionMessage::from_json(&Message::Block(PartialBlock {
-                        logs: partial_block
-                            .logs
-                            .clone()
-                            .into_iter()
-                            .filter(|log| addrs.contains(&log.address))
-                            .collect(),
-                        block_ref: partial_block.block_ref.clone(),
-                        parent_hash: partial_block.parent_hash,
-                    }))
-                    .unwrap(),
-                )
-                .inspect_err(|err| error!("try_send failed: {err}"))
-                .is_ok()
-        });
+        #[allow(clippy::unwrap_used)]
+        ctx.lock()
+            .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
+            .subs
+            .retain_mut(|(sink, addrs)| {
+                !sink.is_closed() &&
+                    sink.try_send(
+                        SubscriptionMessage::from_json(&Message::Block(PartialBlock {
+                            logs: partial_block
+                                .logs
+                                .clone()
+                                .into_iter()
+                                .filter(|log| addrs.contains(&log.address))
+                                .collect(),
+                            block_ref: partial_block.block_ref.clone(),
+                            parent_hash: partial_block.parent_hash,
+                        }))
+                        .unwrap(),
+                    )
+                    .inspect_err(|err| error!("try_send failed: {err}"))
+                    .is_ok()
+            });
     }
 }
