@@ -64,7 +64,7 @@ async fn build_partial_blocks(
 
     let end_block = start_block + count - 1;
 
-    let mut safe_block = client.get_block_header(BlockNumberOrTag::Safe).await.number;
+    let mut safe_block = client.get_block_header(BlockNumberOrTag::Latest).await.number;
     if safe_block < start_block {
         safe_block = start_block - 1;
     }
@@ -188,8 +188,8 @@ impl<
 /// queue.
 #[async_trait]
 pub trait BlockStreamT<Block> {
-    /// Recv fetches the next block once a block with a timestamp greater than or equal to the
-    /// provided one has arrived. Using a `timestamp` of `0` returns the next block to arrive.
+    /// recv fetches the next block once a block with timestamp greater than or equal to the
+    /// provided one has arrived.
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block>;
 }
 

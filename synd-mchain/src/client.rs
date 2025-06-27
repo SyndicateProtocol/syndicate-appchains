@@ -11,7 +11,7 @@ pub use serde::de::DeserializeOwned;
 use shared::types::BlockRef;
 use tracing::info;
 
-/// Known state of the synd-mchain
+/// Known state of the `synd-mchain`
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct KnownState {
     /// The latest block from the sequencing chain that has been processed
@@ -60,7 +60,9 @@ pub trait Provider: Send + Sync {
     /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)
     ///
     /// This function is used during application startup and when handling reorgs to ensure
-    /// the [`MockChain`]'s state is consistent with the source chains. It:
+    /// the [`MockChain`]'s state is consistent with the source chains.
+    ///
+    /// It does the following:
     /// 1. Retrieves the latest valid state from the appchain contract that can be verified against
     ///    both source chains
     /// 2. Rolls back the [`MockChain`] to this validated state if necessary
@@ -86,16 +88,16 @@ pub trait Provider: Send + Sync {
             self.rollback_to_block(mchain_block_number).await?;
             let mchain_block_after = self.get_block_number().await;
             info!(
-                "reconciliation done: mchain_block_before: {}, safe_state: {:?}, mchain_block_after: {}",
+                "reconciliation complete: mchain_block_before: {}, safe_state: {:?}, mchain_block_after: {}",
                 mchain_block_before, safe_state, mchain_block_after
             );
         }
         Ok(safe_state)
     }
 
-    /// `get_safe_state` obtains the processed blocks from the appchain contract and validates them
+    /// `get_safe_state` gets the processed blocks from the appchain contract and validates them
     /// against the source chain clients.
-    /// The safe synd-mchain block number is returned if the chain requires a reorg.
+    /// The safe `synd-mchain` block number is returned if the chain requires a reorg.
     async fn get_safe_state(
         &self,
         sequencing_client: &impl synd_chain_ingestor::client::Provider,

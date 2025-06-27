@@ -27,7 +27,7 @@ impl SequencingBatch {
     }
 
     /// Returns true if the batch is empty.
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         match self {
             Self::Compressed(batch) => batch.is_empty(),
             Self::Uncompressed(batch) => batch.is_empty(),

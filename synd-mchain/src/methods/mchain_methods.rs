@@ -66,7 +66,7 @@ pub fn rollback_to_block(
         return Err(err("cannot set head before the first block"));
     }
 
-    // Get the block to rollback to
+    // Get the block to roll back to
     let block = db.get_block(block_number).unwrap();
     let l1_block_number = block.slot.seq_block_number;
     let block_message_count = block.after_message_count();
