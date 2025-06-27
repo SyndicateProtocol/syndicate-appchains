@@ -63,6 +63,7 @@ impl<'a> BlockIngestor<'a> {
 
 #[allow(clippy::unwrap_used)]
 #[allow(missing_docs)]
+#[allow(clippy::cognitive_complexity)]
 pub async fn start(
     provider: &EthClient,
     rpc_url: &str,

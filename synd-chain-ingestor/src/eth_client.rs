@@ -156,6 +156,7 @@ impl EthClient {
     }
 
     /// Get logs, binary search version.
+    #[allow(clippy::cognitive_complexity)]
     pub async fn get_logs(
         &self,
         filter: &Filter,

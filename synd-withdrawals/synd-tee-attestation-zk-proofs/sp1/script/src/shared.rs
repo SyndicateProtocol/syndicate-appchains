@@ -24,8 +24,8 @@ pub fn read_and_decode_attestation_docs(
     att_doc_path: &str,
     root_cert_path: &str,
 ) -> (Vec<u8>, Vec<u8>) {
-    println!("reading attestation document from: {}", att_doc_path);
-    println!("reading root certificate from: {}", root_cert_path);
+    println!("reading attestation document from: {att_doc_path}");
+    println!("reading root certificate from: {root_cert_path}");
 
     let hex_doc = fs::read(att_doc_path).expect("Failed to read attestation document");
     let pem_root_cert = fs::read(root_cert_path).expect("Failed to read root certificate");

@@ -80,8 +80,7 @@ mod tests {
         assert_eq!(
             key,
             format!(
-                "{}:{}_0x4242424242424242424242424242424242424242",
-                WALLET_NONCE_KEY_PREFIX, chain_id
+                "{WALLET_NONCE_KEY_PREFIX}:{chain_id}_0x4242424242424242424242424242424242424242"
             )
         );
     }
@@ -90,7 +89,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache() -> Result<(), eyre::Error> {
         let (conn, valkey_url, _valkey) = init_valkey_and_get_connection().await;
-        println!("valkey url is {}", valkey_url);
+        println!("valkey url is {valkey_url}");
 
         test_set_get_wallet_nonce(conn.clone()).await;
         test_nonce_expiration(conn.clone()).await;
@@ -236,7 +235,7 @@ mod tests {
 
             // Get nonce
             let get_result = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();
-            assert_eq!(get_result, Some(nonce.to_string()), "Nonce mismatch at iteration {}", i);
+            assert_eq!(get_result, Some(nonce.to_string()), "Nonce mismatch at iteration {i}");
         }
     }
 
@@ -272,8 +271,7 @@ mod tests {
             assert_eq!(
                 result,
                 Some(expected_nonce.to_string()),
-                "Parallel operation failed for address {}",
-                address
+                "Parallel operation failed for address {address}"
             );
         }
     }

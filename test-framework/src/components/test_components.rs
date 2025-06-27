@@ -143,6 +143,7 @@ impl TestComponents {
     }
 
     #[allow(clippy::unwrap_used)]
+    #[allow(clippy::cognitive_complexity)]
     async fn new(options: &ConfigurationOptions) -> Result<(Self, ComponentHandles)> {
         let mut options = options.clone();
         let start_time = SystemTime::now();
@@ -630,8 +631,7 @@ impl TestComponents {
 
         assert!(
             json_resp.get("result").is_some(),
-            "Transaction response missing 'result' field: {}",
-            json_resp
+            "Transaction response missing 'result' field: {json_resp}"
         );
         let result = json_resp.get("result").unwrap().as_str().unwrap();
         let tx_hash = TxHash::from_str(result).unwrap();

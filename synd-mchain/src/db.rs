@@ -156,7 +156,7 @@ pub trait ArbitrumDB {
         let state = self.get_state();
         if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
             .map_or_else(
-                || Err(to_err(format!("could not find block {}", key))),
+                || Err(to_err(format!("could not find block {key}"))),
                 |x| Ok(bincode::deserialize(&x).unwrap()),
             )
     }
@@ -173,7 +173,7 @@ pub trait ArbitrumDB {
         let state = self.get_state();
         if key < state.message_count { self.get(DBKey::MessageAcc(key).to_string()) } else { None }
             .map_or_else(
-                || Err(to_err(format!("could not find message acc {}", key))),
+                || Err(to_err(format!("could not find message acc {key}"))),
                 |x| Ok(bincode::deserialize(&x).unwrap()),
             )
     }
@@ -203,7 +203,7 @@ pub trait ArbitrumDB {
             }
             None => {
                 // version 0 uses the "n" key to store the current block number
-                assert_eq!(self.get("n"), None, "version mismatch: found 0 expected {}", VERSION);
+                assert_eq!(self.get("n"), None, "version mismatch: found 0 expected {VERSION}");
                 self.put(DBKey::Version.to_string(), bincode::serialize(&VERSION).unwrap());
             }
         }

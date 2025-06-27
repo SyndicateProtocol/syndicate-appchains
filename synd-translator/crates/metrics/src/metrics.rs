@@ -35,11 +35,11 @@ mod tests {
 
         sleep(Duration::from_secs(1)).await;
         let client = Client::new();
-        let response = client.get(format!("http://localhost:{}/metrics", port)).send().await;
+        let response = client.get(format!("http://localhost:{port}/metrics")).send().await;
 
         assert!(response.is_ok());
         let status = response.unwrap().status();
-        assert_eq!(status, StatusCode::OK, "Unexpected status code: {:?}", status);
+        assert_eq!(status, StatusCode::OK, "Unexpected status code: {status:?}");
 
         handle.abort();
     }

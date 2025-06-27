@@ -293,13 +293,13 @@ where
 
     let receipt = components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
     if !receipt.status() {
-        println!("receipt: {:?}", receipt);
+        println!("receipt: {receipt:?}");
         let trace = components
             .settlement_provider
             .debug_trace_transaction(tx_hash, GethDebugTracingOptions::default())
             .await
             .unwrap();
-        println!("trace: {:?}", trace);
+        println!("trace: {trace:?}");
     }
     assert!(receipt.status());
     Ok(receipt.contract_address.unwrap())

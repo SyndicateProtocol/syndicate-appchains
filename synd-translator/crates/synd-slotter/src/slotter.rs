@@ -14,6 +14,7 @@ use tracing::{error, info, trace};
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
 /// slots to the slot processor to generate `synd-mchain` blocks.
 #[allow(clippy::expect_used)]
+#[allow(clippy::cognitive_complexity)]
 pub async fn run(
     settlement_delay: u64,
     known_state: Option<KnownState>,
@@ -76,9 +77,11 @@ pub async fn run(
         let mut messages = vec![];
 
         let mut blocks_per_slot: u64 = 1;
-        let slot_end_ts = (seq_block.block_ref.timestamp >= settlement_delay)
-            .then(|| seq_block.block_ref.timestamp - settlement_delay + 1)
-            .unwrap_or_default();
+        let slot_end_ts = if seq_block.block_ref.timestamp >= settlement_delay {
+            seq_block.block_ref.timestamp - settlement_delay + 1
+        } else {
+            Default::default()
+        };
         while set_block.block_ref.timestamp < slot_end_ts {
             blocks_per_slot += 1;
             messages.append(&mut set_block.messages);

@@ -125,7 +125,7 @@ mod tests {
 
         let expected_attestation_doc = "test_attestation_doc_hex";
         let mock_response =
-            format!(r#"{{"jsonrpc":"2.0","id":0,"result":"{}"}}"#, expected_attestation_doc);
+            format!(r#"{{"jsonrpc":"2.0","id":0,"result":"{expected_attestation_doc}"}}"#);
 
         server.mock("POST", "/")
             .with_status(200)

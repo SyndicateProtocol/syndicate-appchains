@@ -125,6 +125,7 @@ impl Config {
     }
 
     /// Checks that all RPC URLs are accessible by making a test connection. Return usable providers
+    #[allow(clippy::cognitive_complexity)]
     async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
         // Validate RPC URLs by trying to connect to each one
         let mut provider_map: HashMap<ChainId, RpcProvider> = HashMap::new();

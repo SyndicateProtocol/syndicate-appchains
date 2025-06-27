@@ -248,7 +248,7 @@ impl TranslatorConfig {
 
         // Remove trailing slash and newline
         cmd.truncate(cmd.len() - 2);
-        println!("{}", cmd);
+        println!("{cmd}");
     }
 }
 
