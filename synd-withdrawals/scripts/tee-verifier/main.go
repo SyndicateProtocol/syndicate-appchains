@@ -325,7 +325,6 @@ func findBlock(ctx context.Context, c *ethclient.Client, start uint64, l1Number 
 			return nil, err
 		}
 		extraInfo = types.DeserializeHeaderExtraInformation(header)
-		//fmt.Println("bin search: start %d end %d mid %d l1Number %d target %d", start, end, mid, extraInfo.L1BlockNumber, l1Number)
 		if extraInfo.L1BlockNumber <= l1Number {
 			start = mid
 		} else {
@@ -339,7 +338,7 @@ func findBlock(ctx context.Context, c *ethclient.Client, start uint64, l1Number 
 	}
 	extraInfo = types.DeserializeHeaderExtraInformation(header)
 	if extraInfo.L1BlockNumber > l1Number {
-		return nil, errors.New("start block l1 number is too high")
+		return nil, errors.New("block not found")
 	}
 	return &execution.MessageResult{BlockHash: header.Hash(), SendRoot: extraInfo.SendRoot}, nil
 }
@@ -383,8 +382,8 @@ func Verify(ctx context.Context, appClient *ethclient.Client, seqClient *ethclie
 		return nil, err
 	}
 
-	// binary search to find the end block
-	result, err := findBlock(ctx, appClient, header.Number.Uint64(), uint64(metadata.MessageCount-1))
+	// binary search to find the appchain end block
+	appEndBlock, err := findBlock(ctx, appClient, header.Number.Uint64(), uint64(metadata.MessageCount-1))
 	if err != nil {
 		return nil, err
 	}
@@ -392,8 +391,8 @@ func Verify(ctx context.Context, appClient *ethclient.Client, seqClient *ethclie
 	return &enclave.VerifyAppchainOutput{
 		L1BatchAcc:          metadata.Accumulator,
 		SequencingBlockHash: sequencingBlockHash,
-		AppchainBlockHash:   result.BlockHash,
-		AppchainSendRoot:    result.SendRoot,
+		AppchainBlockHash:   appEndBlock.BlockHash,
+		AppchainSendRoot:    appEndBlock.SendRoot,
 	}, nil
 }
 
@@ -555,7 +554,7 @@ func main() {
 	seqUrl := flag.String("seq-url", "http://localhost:8545", "sequencing chain rpc url")
 	seqContractFlag := flag.String("seq-contract", "0xb89D1d2E9bc9A14855e6C8509dd5435422CcDd8f", "sequencing contract address for appchain")
 	seqBridgeFlag := flag.String("seq-bridge", "0x765E6EC7f3A8c8A2712EA230754E5968E45E124b", "sequencing chain bridge contract address")
-	setDelay := flag.Uint64("set-delay", 60, "settlement chain delay")
+	setDelay := flag.Uint64("set-delay", 60, "settlement chain delay, in seconds")
 	enclaveUrl := flag.String("enclave-url", "http://localhost:1234", "enclave rpc url")
 	appUrl := flag.String("app-url", "http://localhost:8546", "appchain rpc url")
 	appBridgeFlag := flag.String("app-bridge", "0xC5432874Fe53da9185a34eCdf48A3a2a2A8Bd241", "appchain bridge address")

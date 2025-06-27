@@ -99,29 +99,30 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             //     .header
             //     .hash;
 
-            let appchain_config = AppchainVerifierConfig {
+            let config_hash = VerifierConfig {
                 sequencing_contract_address: *components.sequencing_contract.address(),
+                sequencing_bridge_address: components
+                    .sequencing_deployment
+                    .as_ref()
+                    .unwrap()
+                    .bridge,
                 settlement_delay: ConfigurationOptions::default().settlement_delay,
-            };
-
-            let seq_config = SeqchainVerifierConfig {
-                arbitrum_bridge_address: components.appchain_deployment.bridge,
-            };
-
+            }
+            .hash();
             let tee_module_addr = deploy_on_settlement_chain(
                 &components,
                 TeeModule::deploy_builder(
                     &components.settlement_provider,
                     components.assertion_poster_address,
                     components.appchain_deployment.bridge,
-                    appchain_config.hash_verifier_config_sha256(),
+                    config_hash,
                     appchain_start_block_hash,
-                    seq_config.hash_verifier_config_sha256(),
                     seq_start_block_hash,
                     // TODO try to set this to not 0 (after the test passes with the proposer in
                     // place)
                     B256::ZERO,
                     Address::ZERO,
+                    true,
                     1, // challenge_window_duration - 1 second
                     key_mgr_addr,
                 ),
@@ -321,36 +322,28 @@ sol! {
 /// Configuration for the verifier
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
-pub struct AppchainVerifierConfig {
+pub struct VerifierConfig {
     /// Sequencing contract address on the sequencing chain
     pub sequencing_contract_address: Address,
+
+    /// Sequencing bridge address on the l1 chain
+    pub sequencing_bridge_address: Address,
 
     /// Settlement delay in seconds
     pub settlement_delay: u64,
 }
 
-impl AppchainVerifierConfig {
+impl VerifierConfig {
     /// Hash the verifier config
     #[allow(clippy::unwrap_used)]
-    pub fn hash_verifier_config_sha256(&self) -> B256 {
-        let encoded = serde_json::to_string(self).unwrap();
-        keccak256(encoded)
-    }
-}
-
-/// Configuration for the verifier
-#[derive(Clone, Debug, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct SeqchainVerifierConfig {
-    /// Bridge address on the L1
-    pub arbitrum_bridge_address: Address,
-}
-
-impl SeqchainVerifierConfig {
-    /// Hash the verifier config
-    #[allow(clippy::unwrap_used)]
-    pub fn hash_verifier_config_sha256(&self) -> B256 {
-        let encoded = serde_json::to_string(self).unwrap();
-        keccak256(encoded)
+    pub fn hash(&self) -> B256 {
+        keccak256(
+            (
+                self.sequencing_contract_address,
+                self.sequencing_bridge_address,
+                self.settlement_delay,
+            )
+                .abi_encode_packed(),
+        )
     }
 }

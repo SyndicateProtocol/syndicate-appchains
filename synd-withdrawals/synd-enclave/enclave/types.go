@@ -130,12 +130,12 @@ func (output *VerifySequencingChainOutput) sign(input *TrustedInput, key *ecdsa.
 }
 
 func (output *VerifySequencingChainOutput) validate(input *TrustedInput, key *ecdsa.PublicKey) error {
-	pkey, err := crypto.SigToPub(output.hash(input), output.Signature)
+	pubkey, err := crypto.SigToPub(output.hash(input), output.Signature)
 	if err != nil {
 		return err
 	}
-	if !pkey.Equal(key) {
-		return fmt.Errorf("recovered public key does not match expected value: got %s, expected %s", pkey, key)
+	if !pubkey.Equal(key) {
+		return fmt.Errorf("recovered public key does not match expected value: got %s, expected %s", pubkey, key)
 	}
 	return nil
 }
@@ -159,12 +159,12 @@ func (output *VerifyAppchainOutput) sign(input *TrustedInput, priv *ecdsa.Privat
 }
 
 func (output *VerifyAppchainOutput) validate(input *TrustedInput, key *ecdsa.PublicKey) error {
-	pkey, err := crypto.SigToPub(output.hash(input), output.Signature)
+	pubkey, err := crypto.SigToPub(output.hash(input), output.Signature)
 	if err != nil {
 		return err
 	}
-	if !pkey.Equal(key) {
-		return fmt.Errorf("recovered public key does not match expected value: got %s, expected %s", pkey, key)
+	if !pubkey.Equal(key) {
+		return fmt.Errorf("recovered public key does not match expected value: got %s, expected %s", pubkey, key)
 	}
 	return nil
 }
@@ -198,7 +198,7 @@ func processEvent(data []byte) [][]byte {
 	return txs
 }
 
-func buildBatch(txes [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
+func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 	var data []byte
 
 	if ts != 0 {
@@ -226,13 +226,13 @@ func buildBatch(txes [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 	}
 
 	var l2Message []byte
-	if len(txes) == 1 {
+	if len(txs) == 1 {
 		l2Message = append(l2Message, arbos.L2MessageKind_SignedTx)
-		l2Message = append(l2Message, txes[0]...)
+		l2Message = append(l2Message, txs[0]...)
 	} else {
 		l2Message = append(l2Message, arbos.L2MessageKind_Batch)
 		var sizeBuf [8]byte
-		for _, tx := range txes {
+		for _, tx := range txs {
 			binary.BigEndian.PutUint64(sizeBuf[:], uint64(len(tx)+1))
 			l2Message = append(l2Message, sizeBuf[:]...)
 			l2Message = append(l2Message, arbos.L2MessageKind_SignedTx)
@@ -290,7 +290,7 @@ func (s *SyndicateAccumulator) ProcessBlock(block *types.Block, receipts types.R
 			if log.Address == s.Address && log.Topics[0] == TransactionProcessedEvent.ID {
 				args, err := TransactionProcessedEvent.Inputs.Unpack(log.Data)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to decode event: %w", err)
 				}
 				if len(args) != 1 {
 					return errors.New("failed to decode event: unexpected number of args")

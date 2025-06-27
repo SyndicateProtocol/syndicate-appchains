@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {TeeModule} from "src/withdrawal/TeeModule.sol";
-import {DummyKeyManager} from "src/withdrawal/DummyKeyManager.sol";
-import {DummyPoster} from "src/withdrawal/DummyPoster.sol";
+import {DummyKeyManager} from "src/testing-purposes/DummyKeyManager.sol";
+import {DummyPoster} from "src/testing-purposes/DummyPoster.sol";
 import {IBridge} from "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
 
 address constant L1_BLOCK = address(0x4200000000000000000000000000000000000015);
@@ -18,7 +18,6 @@ contract DeployTestTeeModule is Script {
         address seqContract = vm.envAddress("SEQ_CONTRACT");
         address seqBridge = vm.envAddress("SEQ_BRIDGE");
         uint64 setDelay = uint64(vm.envUint("SET_DELAY"));
-        bytes32 configHash = vm.envBytes32("CONFIG_HASH");
         bytes32 appBlockHash = vm.envBytes32("APP_BLOCK_HASH");
         bytes32 seqBlockHash = vm.envBytes32("SEQ_BLOCK_HASH");
         bytes32 l1BatchAcc = vm.envBytes32("L1_BATCH_ACC");

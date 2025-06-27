@@ -245,8 +245,10 @@ var BATCH_ACCUMULATOR_STORAGE_SLOT = common.BigToHash(big.NewInt(7))
 var BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT = crypto.Keccak256Hash(BATCH_ACCUMULATOR_STORAGE_SLOT[:]).Big()
 var BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE = new(big.Int).Sub(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, common.Big1)
 
-const TimestampOffset = 41
-const RequestIdOffset = 49
+// field offsets into the serialized arbostypes.L1IncomingMessage struct
+const DelayedMessageSenderOffset = 13
+const DelayedMessageTimestampOffset = 41
+const DelayedMessageRequestIdOffset = 49
 const DelayedMessageDataOffset = 113
 
 type KVDB map[common.Hash][]byte
@@ -292,7 +294,7 @@ func verifyProof(proof *AccountResult, stateRoot common.Hash) error {
 		return err
 	}
 	if err := verify(stateRoot, proof.Address.Bytes(), value, proof.AccountProof); err != nil {
-		return err
+		return fmt.Errorf("account proof verification failed: %w", err)
 	}
 	// verify storage proofs
 	for _, p := range proof.StorageProof {
@@ -320,8 +322,8 @@ func verifyBatchAccProof(proof *AccountResult, stateRoot common.Hash, sequencing
 	if proof.StorageProof[0].Value.ToInt().Sign() == 0 {
 		return errors.New("batch count at end block is zero")
 	}
-	if proof.StorageProof[1].Value.ToInt().Cmp(acc.Big()) != 0 {
-		return fmt.Errorf("batch acc does not match merkle proof value: %s != %s", proof.StorageProof[1].Value.ToInt(), acc.Big())
+	if acc.Big().Cmp(proof.StorageProof[1].Value.ToInt()) != 0 {
+		return fmt.Errorf("batch acc does not match merkle proof value: %s != %s", acc.Big(), proof.StorageProof[1].Value.ToInt())
 	}
 	storageSlot := new(big.Int).Add(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE, proof.StorageProof[0].Value.ToInt())
 	if proof.StorageProof[0].Key != BATCH_ACCUMULATOR_STORAGE_SLOT || proof.StorageProof[1].Key.Big().Cmp(storageSlot) != 0 {
@@ -334,7 +336,33 @@ func verifyBatchAccProof(proof *AccountResult, stateRoot common.Hash, sequencing
 }
 
 func delayedMessageAccumulate(acc common.Hash, msg []byte) common.Hash {
-	return crypto.Keccak256Hash(acc[:], crypto.Keccak256(msg[:1], msg[13:DelayedMessageDataOffset], crypto.Keccak256(msg[DelayedMessageDataOffset:])))
+	return crypto.Keccak256Hash(acc[:], crypto.Keccak256(msg[:1], msg[DelayedMessageSenderOffset:DelayedMessageDataOffset], crypto.Keccak256(msg[DelayedMessageDataOffset:])))
+}
+
+func validateDelayedMessages(msgs [][]byte) (uint64, error) {
+	var start uint64
+	for i, msg := range msgs {
+		if len(msg) < DelayedMessageDataOffset {
+			return 0, fmt.Errorf("delayed message %d too short: len=%d", i, len(msg))
+		}
+		requestId := common.Hash(msg[DelayedMessageRequestIdOffset : DelayedMessageRequestIdOffset+32]).Big()
+		if !requestId.IsUint64() {
+			return 0, fmt.Errorf("delayed message %d request id overflow: got %d", i, requestId)
+		}
+		// request id must increment by 1 each message
+		if i == 0 {
+			start = requestId.Uint64()
+		} else if requestId.Uint64() != start+uint64(i) {
+			return 0, fmt.Errorf("delayed message %d invalid request id: got %d, expected %d", i, requestId.Uint64(), start+uint64(i))
+		}
+		// the first 12 bytes of the 32-byte word used to hold the 20-byte address should be zero
+		for _, b := range msg[1:DelayedMessageSenderOffset] {
+			if b != 0 {
+				return 0, fmt.Errorf("delayed message %d request id %d invalid address: got %s", i, requestId.Uint64(), common.Bytes2Hex(msg[1:1+32]))
+			}
+		}
+	}
+	return start, nil
 }
 
 func parseSeqBatches(input VerifySequencingChainInput) (SyndicateAccumulator, common.Hash, error) {
@@ -346,23 +374,18 @@ func parseSeqBatches(input VerifySequencingChainInput) (SyndicateAccumulator, co
 	acc := input.TrustedInput.L1StartBatchAcc
 	delayedAcc := input.StartDelayedMessagesAccumulator
 
-	for _, msg := range input.DelayedMessages {
-		if len(msg) < DelayedMessageDataOffset {
-			return SyndicateAccumulator{}, common.Hash{}, errors.New("delayed message too short")
-		}
+	// verify delayed messages
+	startIndex, err := validateDelayedMessages(input.DelayedMessages)
+	if err != nil {
+		return SyndicateAccumulator{}, common.Hash{}, err
 	}
 
 	// prepare batches & calculate the batch accumulator
-	var startIndex uint64
 	msgCount := uint64(len(input.DelayedMessages))
-	if msgCount > 0 {
-		startIndex = common.Hash(input.DelayedMessages[0][RequestIdOffset : RequestIdOffset+32]).Big().Uint64()
-	}
-
 	var i uint64
-	for _, batch := range input.Batches {
+	for j, batch := range input.Batches {
 		if len(batch) < 40 {
-			return SyndicateAccumulator{}, common.Hash{}, errors.New("batch too short")
+			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch %d too short", j)
 		}
 		afterDelayedMessagesRead := binary.BigEndian.Uint64(batch[32:40])
 		if afterDelayedMessagesRead > msgCount+startIndex {
@@ -419,8 +442,6 @@ func (s *Server) VerifySequencingChain(ctx context.Context, input VerifySequenci
 			Messages:     input.DelayedMessages,
 		}
 
-		//log.Debug("Sequencing Chain BlockVerifierInput Input", "input", blockVerifierInput)
-
 		data, err = Verify(blockVerifierInput, &acc)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to verify sequencing chain: %w", err)
@@ -437,27 +458,26 @@ func (s *Server) VerifySequencingChain(ctx context.Context, input VerifySequenci
 	if err := output.sign(&input.TrustedInput, s.signerKey); err != nil {
 		return nil, err
 	}
-	//log.Debug("Sequencing Chain BlockVerifierOutput Output", "output", output)
 	return &output, nil
 }
 
-var allowedMsgs = map[byte]bool{
-	arbostypes.L1MessageType_L2Message:          true,
-	arbostypes.L1MessageType_L2FundedByL1:       true,
-	arbostypes.L1MessageType_SubmitRetryable:    true,
-	arbostypes.L1MessageType_Initialize:         true,
-	arbostypes.L1MessageType_EthDeposit:         true,
-	arbostypes.L1MessageType_BatchPostingReport: true,
+var allowedMsgs = map[byte]struct{}{
+	arbostypes.L1MessageType_L2Message:          {},
+	arbostypes.L1MessageType_L2FundedByL1:       {},
+	arbostypes.L1MessageType_SubmitRetryable:    {},
+	arbostypes.L1MessageType_Initialize:         {},
+	arbostypes.L1MessageType_EthDeposit:         {},
+	arbostypes.L1MessageType_BatchPostingReport: {},
 }
 
 func processMessage(msg []byte, blockNum uint64, ts uint64) ([]byte, error) {
-	if allowedMsgs[msg[0]] == false {
+	if _, ok := allowedMsgs[msg[0]]; !ok {
 		return nil, fmt.Errorf("unexpected message: type %d", msg[0])
 	}
 	if msg[0] == arbostypes.L1MessageType_BatchPostingReport {
-		requestId := msg[RequestIdOffset : RequestIdOffset+32]
+		requestId := msg[DelayedMessageRequestIdOffset : DelayedMessageRequestIdOffset+32]
 		msg = make([]byte, DelayedMessageDataOffset)
-		copy(msg[RequestIdOffset:RequestIdOffset+32], requestId)
+		copy(msg[DelayedMessageRequestIdOffset:DelayedMessageRequestIdOffset+32], requestId)
 		msg[0] = arbostypes.L1MessageType_EndOfBlock
 	}
 	binary.BigEndian.PutUint64(msg[33:41], blockNum)
@@ -498,19 +518,21 @@ func parseAppBatches(input *VerifyAppchainInput) ([][]byte, error) {
 	}
 
 	// verify delayed messages
+	startIndex, err := validateDelayedMessages(input.DelayedMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	// verify delayed message accumulator
 	acc := input.StartDelayedMessagesAccumulator
 	for _, msg := range input.DelayedMessages {
-		if len(msg) < DelayedMessageDataOffset {
-			return nil, errors.New("delayed message too short")
-		}
 		acc = delayedMessageAccumulate(acc, msg)
 	}
 	if acc != input.TrustedInput.SetDelayedMessageAcc {
-		return nil, errors.New("delayed message acc mismatch")
+		return nil, fmt.Errorf("delayed message accumulator mismatch: got %s, expected %s", common.Bytes2Hex(acc.Bytes()), common.Bytes2Hex(input.TrustedInput.SetDelayedMessageAcc.Bytes()))
 	}
 
 	// remove dummy delayed message used to verify the count of the accumulator
-	startIndex := common.Hash(input.DelayedMessages[0][RequestIdOffset : RequestIdOffset+32]).Big().Uint64()
 	if len(input.DelayedMessages) == 1 && input.AppStartBlockHeader.Nonce.Uint64() == startIndex+1 {
 		input.DelayedMessages = nil
 		startIndex++
@@ -525,12 +547,9 @@ func parseAppBatches(input *VerifyAppchainInput) ([][]byte, error) {
 		blockNum++
 		var hasDelayedMessage bool
 		for i < msgCount {
-			timestamp := binary.BigEndian.Uint64(input.DelayedMessages[i][TimestampOffset : TimestampOffset+8])
+			timestamp := binary.BigEndian.Uint64(input.DelayedMessages[i][DelayedMessageTimestampOffset : DelayedMessageTimestampOffset+8])
 			if timestamp+input.Config.SettlementDelay > batch.Timestamp {
 				break
-			}
-			if i+startIndex != common.Hash(input.DelayedMessages[i][RequestIdOffset:RequestIdOffset+32]).Big().Uint64() {
-				return nil, errors.New("unexpected delayed message request id")
 			}
 			var err error
 			input.DelayedMessages[i], err = processMessage(input.DelayedMessages[i], blockNum, batch.Timestamp)
@@ -572,7 +591,6 @@ func (s *Server) VerifyAppchain(ctx context.Context, input VerifyAppchainInput) 
 			Batches:      batches,
 			Messages:     input.DelayedMessages,
 		}
-		//log.Debug("Appchain BlockVerifierInput Input", "input", blockVerifierInput)
 		result, err = Verify(blockVerifierInput, nil)
 		if err != nil {
 			return nil, err
@@ -587,7 +605,6 @@ func (s *Server) VerifyAppchain(ctx context.Context, input VerifyAppchainInput) 
 	if err := output.sign(&input.TrustedInput, s.signerKey); err != nil {
 		return nil, err
 	}
-	//log.Debug("Appchain BlockVerifierOutput Output", "output", output)
 	return &output, nil
 }
 
@@ -610,8 +627,8 @@ func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppc
 	}
 
 	if input.Inputs[0].SetDelayedMessageAcc != input.Inputs[1].SetDelayedMessageAcc {
-		if len(input.SetFirstDelayedMessage) < DelayedMessageDataOffset {
-			return nil, errors.New("first delayed message too short")
+		if _, err := validateDelayedMessages([][]byte{input.SetFirstDelayedMessage}); err != nil {
+			return nil, err
 		}
 		hash := crypto.Keccak256(input.SetFirstDelayedMessage[:DelayedMessageDataOffset], crypto.Keccak256(input.SetFirstDelayedMessage[DelayedMessageDataOffset:]))
 		acc := crypto.Keccak256Hash(input.Inputs[0].SetDelayedMessageAcc[:], hash)
@@ -621,7 +638,7 @@ func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppc
 		if acc != input.Inputs[1].SetDelayedMessageAcc {
 			return nil, errors.New("set delayed message acc derivation failure")
 		}
-		timestamp := binary.BigEndian.Uint64(input.SetFirstDelayedMessage[TimestampOffset : TimestampOffset+8])
+		timestamp := binary.BigEndian.Uint64(input.SetFirstDelayedMessage[DelayedMessageTimestampOffset : DelayedMessageTimestampOffset+8])
 		if input.SeqFirstEndBlockHeader == nil {
 			return nil, errors.New("missing seq first end block header")
 		}

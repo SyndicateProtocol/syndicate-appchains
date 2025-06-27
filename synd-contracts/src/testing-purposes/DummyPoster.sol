@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {IAssertionPoster} from "./IAssertionPoster.sol";
+import {IAssertionPoster} from "src/withdrawal/IAssertionPoster.sol";
 
 contract DummyPoster is IAssertionPoster {
     bytes32 public blockHash;

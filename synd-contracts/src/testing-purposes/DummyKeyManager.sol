@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {ITeeKeyManager} from "./ITeeKeyManager.sol";
+import {ITeeKeyManager} from "src/withdrawal/ITeeKeyManager.sol";
 
 contract DummyKeyManager is ITeeKeyManager {
     using EnumerableSet for EnumerableSet.AddressSet;
