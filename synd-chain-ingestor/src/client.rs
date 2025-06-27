@@ -30,7 +30,6 @@ use std::{
 };
 use tracing::{error, info};
 
-//TODO(LBL) - this could be refactored to be multiple functions + test
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
 /// (timestamp, block hash) data from the db to build partial blocks
 #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]

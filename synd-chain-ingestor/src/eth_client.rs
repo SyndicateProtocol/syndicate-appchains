@@ -11,7 +11,7 @@ use alloy::{
 use shared::types::Receipt;
 use std::time::Duration;
 use tokio::time::timeout;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
@@ -28,8 +28,7 @@ pub struct EthClient {
 fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
     error!("{}: {}", name, err);
     if let RpcError::Transport(err) = err {
-        // TODO(LBL): The docs for `.recoverable()` say it is "naive" and to "use it with caution."
-        // Want to double-check this
+        // TODO(SEQ-1055): Revisit `recoverable()` usage if necessary
         assert!(err.recoverable(), "{}: {}: {}", name, "fatal transport error", err);
     }
 }
@@ -73,10 +72,9 @@ impl EthClient {
     /// succeeds.
     pub async fn get_block_header(&self, block_identifier: BlockNumberOrTag) -> Header {
         loop {
-            // TODO(LBL): should these error!'s be debug! since they may happen often?
             match timeout(self.timeout, self.client.get_block_by_number(block_identifier)).await {
                 Err(_) => {
-                    error!(%block_identifier, "eth_getBlockByNumber request timed out");
+                    warn!(%block_identifier, "eth_getBlockByNumber request timed out");
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
@@ -84,7 +82,7 @@ impl EthClient {
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Ok(None)) => {
-                    error!(%block_identifier, "fetched an empty block header");
+                    warn!(%block_identifier, "fetched an empty block header");
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Ok(Some(block))) => {

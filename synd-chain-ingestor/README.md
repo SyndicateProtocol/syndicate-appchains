@@ -1,4 +1,3 @@
-
 # synd-chain-ingestor
 
 A high-performance blockchain data ingestion service that subscribes to Ethereum-compatible blockchains via WebSocket connections and provides real-time block and log data to connected appchains.
@@ -46,7 +45,7 @@ See `config.rs` for details.
 
 ```bash
 cargo run -p synd-chain-ingestor -- \
-  --ws-url ws://localhost:8546 \
+  --ws-url ws://my-chains-websocket.com:4321 \
   --db-file ./chain-data.db \
   --start-block 1000000 \
   --port 8545 \
