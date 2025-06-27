@@ -4,7 +4,7 @@ The Syndicate Proposer is responsible for extracting the appchain root state and
 
 ## Getting Started
 
-1. Install Go 1.22 or later
+1. Install Go 1.23 or later
 2. Run `go mod tidy` to install dependencies
 3. Build and run the service:
    ```sh

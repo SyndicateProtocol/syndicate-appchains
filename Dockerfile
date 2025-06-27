@@ -38,7 +38,7 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
     cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
 # --- Go build stage for synd-proposer ---
-FROM golang:1.22-bookworm AS go-synd-proposer-build
+FROM golang:1.23-bookworm AS go-synd-proposer-build
 WORKDIR /go/src/synd-proposer
 COPY ./synd-withdrawals/synd-proposer .
 # Download Go dependencies for better build caching
