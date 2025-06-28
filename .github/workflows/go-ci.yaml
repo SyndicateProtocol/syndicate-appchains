@@ -13,7 +13,7 @@ concurrency:
 jobs:
   enclave-build:
     name: build enclave
-    runs-on: vip-large-01
+    runs-on: shared-medium-01
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

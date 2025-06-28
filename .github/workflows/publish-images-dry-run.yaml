@@ -17,6 +17,6 @@ jobs:
     uses: ./.github/workflows/publish-images.yaml
     with:
       dry_run: true
-      runner_label: vip-large-01 # TODO - remove me
+      runner_label: shared-medium-01
       service: "" # all services
     secrets: inherit
