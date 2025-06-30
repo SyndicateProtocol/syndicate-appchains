@@ -74,6 +74,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         config.ws_request_timeout,
         config.get_logs_timeout,
         1024,
+        config.rpc_retry_interval,
     )
     .await;
 
@@ -91,6 +92,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         config.ws_request_timeout,
         config.get_logs_timeout,
         1024,
+        config.rpc_retry_interval,
     )
     .await;
     let settlement = settlement_client
