@@ -62,7 +62,7 @@ pub struct BatcherConfig {
     pub sequencing_rpc_url: Url,
 
     /// The maximum number of retries for rate limit errors
-    #[arg(long, env = "RPC_MAX_RETRIES", default_value = "10")]
+    #[arg(long, env = "RPC_MAX_RETRIES", default_value = "16")]
     pub rpc_max_retries: u32,
 
     /// The initial backoff in milliseconds

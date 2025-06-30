@@ -28,7 +28,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tracing::{error, info};
+use tracing::info;
 
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
 /// (timestamp, block hash) data from the db to build partial blocks
@@ -333,25 +333,22 @@ pub struct IngestorProvider(Arc<WsClient>);
 #[allow(missing_docs)]
 impl IngestorProvider {
     pub async fn new(url: &str, timeout: Duration) -> Self {
-        loop {
-            match tokio::time::timeout(
-                timeout,
-                WsClientBuilder::new()
-                    .max_response_size(u32::MAX)
-                    .max_buffer_capacity_per_subscription(1024)
-                    .request_timeout(timeout)
-                    .enable_ws_ping(PingConfig::default())
-                    .build(url),
-            )
-            .await
-            {
-                Err(_) => {
-                    error!("timed out connecting to websocket");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
-                Ok(Ok(client)) => return Self(Arc::new(client)),
+        match tokio::time::timeout(
+            timeout,
+            WsClientBuilder::new()
+                .max_response_size(u32::MAX)
+                .max_buffer_capacity_per_subscription(1024)
+                .request_timeout(timeout)
+                .enable_ws_ping(PingConfig::default())
+                .build(url),
+        )
+        .await
+        {
+            Err(_) => {
+                panic!("timed out connecting to websocket: timeout={timeout:?}, url={url}");
             }
+            Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
+            Ok(Ok(client)) => Self(Arc::new(client)),
         }
     }
 }

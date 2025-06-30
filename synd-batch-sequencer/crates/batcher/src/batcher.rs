@@ -100,8 +100,7 @@ pub async fn run_batcher(
             loop {
                 debug!("Batcher reading and batching transactions at time {:?}", Instant::now());
                 if let Err(e) = batcher.process_transactions().await {
-                    error!("Batcher error: {:?}", e);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    panic!("Batcher error: {:?}", e);
                 }
             }
         }
