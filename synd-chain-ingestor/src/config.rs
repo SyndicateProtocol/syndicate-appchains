@@ -31,6 +31,13 @@ pub struct Config {
         value_parser = parse_duration
     )]
     pub request_timeout: Duration,
+    #[arg(
+        long,
+        env = "RPC_RETRY_INTERVAL",
+        default_value = "1s",
+        value_parser = parse_duration
+    )]
+    pub rpc_retry_interval: Duration,
 }
 
 impl Config {
@@ -41,6 +48,7 @@ impl Config {
             self.request_timeout,
             Duration::from_secs(300),
             self.channel_size,
+            self.rpc_retry_interval,
         )
         .await
     }

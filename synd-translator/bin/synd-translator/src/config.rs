@@ -200,6 +200,14 @@ pub struct TranslatorConfig {
 
     #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
     pub get_logs_timeout: Duration,
+
+    #[arg(
+        long,
+        env = "RPC_RETRY_INTERVAL",
+        default_value = "1s",
+        value_parser = humantime::parse_duration
+    )]
+    pub rpc_retry_interval: Duration,
 }
 
 impl TranslatorConfig {
@@ -265,6 +273,7 @@ impl Default for TranslatorConfig {
             appchain_block_explorer_url: None,
             get_logs_timeout: Duration::from_secs(60),
             ws_request_timeout: Duration::from_secs(10),
+            rpc_retry_interval: Duration::from_secs(1),
         }
     }
 }
