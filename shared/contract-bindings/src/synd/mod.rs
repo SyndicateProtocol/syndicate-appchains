@@ -164,8 +164,6 @@ pub mod r#signedmath;
 pub mod r#stackframelib;
 pub mod r#storageslot;
 pub mod r#strings;
-pub mod r#syndicateaccumulator;
-pub mod r#mockarbsys;
 pub mod r#syndicatefactory;
 pub mod r#syndicatefactorywrapper;
 pub mod r#syndicatesequencingchain;
