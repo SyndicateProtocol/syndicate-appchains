@@ -35,14 +35,14 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
         assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block);
         data.subs.retain_mut(|sink| {
             !sink.is_closed() &&
-                sink.try_send(
-                    SubscriptionMessage::from_json(&create_header(
+                sink.try_send(SubscriptionMessage::from(
+                    serde_json::value::to_raw_value(&create_header(
                         block,
                         seq_block_number,
                         timestamp,
                     ))
                     .unwrap(),
-                )
+                ))
                 .inspect_err(|err| error!("try_send failed: {err}"))
                 .is_ok()
         });
@@ -116,14 +116,14 @@ pub fn rollback_to_block(
 
     data.subs.retain_mut(|sink| {
         !sink.is_closed() &&
-            sink.try_send(
-                SubscriptionMessage::from_json(&create_header(
+            sink.try_send(SubscriptionMessage::from(
+                serde_json::value::to_raw_value(&create_header(
                     block_number,
                     l1_block_number,
                     timestamp,
                 ))
                 .unwrap(),
-            )
+            ))
             .inspect_err(|err| error!("try_send failed: {err}"))
             .is_ok()
     });

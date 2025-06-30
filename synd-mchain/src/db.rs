@@ -174,12 +174,19 @@ pub trait ArbitrumDB {
         if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
             .map_or_else(
                 || Err(to_err(format!("could not find block {key}"))),
-                |x| Ok(bincode::deserialize(&x).unwrap()),
+                |x| {
+                    Ok(bincode::serde::decode_from_slice(&x, bincode::config::standard())
+                        .unwrap()
+                        .0)
+                },
             )
     }
     /// Puts the block associated with the given key
     fn put_block(&self, key: u64, value: &Block) {
-        self.put(DBKey::Block(key).to_string(), bincode::serialize(value).unwrap())
+        self.put(
+            DBKey::Block(key).to_string(),
+            bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
+        );
     }
     /// Deletes the block associated with the given key
     fn delete_block(&self, key: u64) {
@@ -191,12 +198,19 @@ pub trait ArbitrumDB {
         if key < state.message_count { self.get(DBKey::MessageAcc(key).to_string()) } else { None }
             .map_or_else(
                 || Err(to_err(format!("could not find message acc {key}"))),
-                |x| Ok(bincode::deserialize(&x).unwrap()),
+                |x| {
+                    Ok(bincode::serde::decode_from_slice(&x, bincode::config::standard())
+                        .unwrap()
+                        .0)
+                },
             )
     }
     /// Puts the message accumulator associated with the given key
     fn put_message_acc(&self, key: u64, value: &FixedBytes<32>) {
-        self.put(DBKey::MessageAcc(key).to_string(), bincode::serialize(value).unwrap())
+        self.put(
+            DBKey::MessageAcc(key).to_string(),
+            bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
+        );
     }
     /// Deletes the message accumulator associated with the given key
     fn delete_message_acc(&self, key: u64) {
@@ -205,23 +219,37 @@ pub trait ArbitrumDB {
     /// Gets the state of the chain
     fn get_state(&self) -> State {
         self.get(DBKey::State.to_string())
-            .map(|x| bincode::deserialize(&x).unwrap())
+            .map(|x| bincode::serde::decode_from_slice(&x, bincode::config::standard()).unwrap().0)
             .unwrap_or_default()
     }
     /// Puts the state of the chain
     fn put_state(&self, value: &State) {
-        self.put(DBKey::State.to_string(), bincode::serialize(value).unwrap())
+        self.put(
+            DBKey::State.to_string(),
+            bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
+        );
     }
     /// Checks the version of the chain
     fn check_version(&self) {
         match self.get(DBKey::Version.to_string()) {
             Some(version) => {
-                assert_eq!(bincode::deserialize::<u64>(&version).unwrap(), VERSION);
+                assert_eq!(
+                    bincode::serde::decode_from_slice::<u64, _>(
+                        &version,
+                        bincode::config::standard()
+                    )
+                    .unwrap()
+                    .0,
+                    VERSION
+                );
             }
             None => {
                 // version 0 uses the "n" key to store the current block number
                 assert_eq!(self.get("n"), None, "version mismatch: found 0 expected {VERSION}");
-                self.put(DBKey::Version.to_string(), bincode::serialize(&VERSION).unwrap());
+                self.put(
+                    DBKey::Version.to_string(),
+                    bincode::serde::encode_to_vec(VERSION, bincode::config::standard()).unwrap(),
+                );
             }
         }
     }

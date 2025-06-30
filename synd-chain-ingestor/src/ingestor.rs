@@ -107,8 +107,8 @@ pub async fn run(
             .subs
             .retain_mut(|(sink, addrs)| {
                 !sink.is_closed() &&
-                    sink.try_send(
-                        SubscriptionMessage::from_json(&Message::Block(PartialBlock {
+                    sink.try_send(SubscriptionMessage::from(
+                        serde_json::value::to_raw_value(&Message::Block(PartialBlock {
                             logs: partial_block
                                 .logs
                                 .clone()
@@ -119,7 +119,7 @@ pub async fn run(
                             parent_hash: partial_block.parent_hash,
                         }))
                         .unwrap(),
-                    )
+                    ))
                     .inspect_err(|err| error!("try_send failed: {err}"))
                     .is_ok()
             });
