@@ -60,6 +60,18 @@ pub struct BatcherConfig {
     /// URL of the sequencing chain RPC node
     #[arg(short = 'u', long, env = "SEQUENCING_RPC_URL", value_parser = parse_url)]
     pub sequencing_rpc_url: Url,
+
+    /// The maximum number of retries for rate limit errors
+    #[arg(long, env = "RPC_MAX_RETRIES", default_value = "10")]
+    pub rpc_max_retries: u32,
+
+    /// The initial backoff in milliseconds
+    #[arg(long, env = "RPC_INITIAL_BACKOFF_MS", default_value = "100")]
+    pub rpc_initial_backoff_ms: u64,
+
+    /// The number of compute units per second for this provider
+    #[arg(long, env = "RPC_COMPUTE_UNITS_PER_SECOND", default_value = "1000")]
+    pub rpc_compute_units_per_second: u64,
 }
 
 impl BatcherConfig {
@@ -95,6 +107,9 @@ impl Default for BatcherConfig {
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap_or_else(|_| {
                 panic!("Failed to parse default sequencing RPC URL");
             }),
+            rpc_max_retries: 10,
+            rpc_initial_backoff_ms: 100,
+            rpc_compute_units_per_second: 1000,
         }
     }
 }
