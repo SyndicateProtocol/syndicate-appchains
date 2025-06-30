@@ -65,17 +65,17 @@ test-utils                                = { path = "shared/test-utils" }
 # dependencies
 alloy                              = { version = "0.13.0", default-features = false }
 alloy-rlp                          = "0.3.11"
-alloy-trie                         = { version = "0.7.9" }
+alloy-trie                         = { version = "0.9.0" }
 assert_matches                     = "1.5.0"
 async-trait                        = { version = "0.1" }
 axum                               = "0.8.1"
 base64                             = "0.22.1"
 bincode                            = "1.3"
-brotli                             = "7.0.0"
+brotli                             = "8.0.1"
 byte-unit                          = "5.1.6"
 bytes                              = "1.9.0"
 clap                               = { version = "4.5.26" }
-const-oid                          = "0.9.6"                                                     # needs to be this version - newer ones are not compatible with the latest sha2 dep
+const-oid                          = "0.9.6"                                                     # needs to be this version - newer ones are not compatible with the latest x509-cert dependency
 derivative                         = "2.2"
 dotenv                             = "0.15.0"
 eyre                               = { version = "0.6.12" }
