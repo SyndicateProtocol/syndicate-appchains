@@ -246,9 +246,9 @@ impl TranslatorConfig {
         add_fields::<SettlementChainConfig>(&mut cmd);
         add_fields::<MetricsConfig>(&mut cmd);
 
-        // Remove trailing slash and newline
+        // Remove the trailing slash and newline
         cmd.truncate(cmd.len() - 2);
-        println!("{}", cmd);
+        println!("{cmd}");
     }
 }
 

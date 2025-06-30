@@ -30,6 +30,6 @@ After running that Docker Compose file, the container logs will track the ingest
 Now that your ingestors are running, use the following config values for your Syndicate Appchain RPC Node(s):
 
 ```yaml
-SETTLEMENT_RPC_URL: "wss://your-settlement-ingestor"
-SEQUENCING_RPC_URL: "wss://your-sequencing-ingestor"
+SETTLEMENT_WS_URL: "wss://your-settlement-ingestor"
+SEQUENCING_WS_URL: "wss://your-sequencing-ingestor"
 ```

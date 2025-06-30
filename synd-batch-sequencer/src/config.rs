@@ -16,11 +16,11 @@ pub enum ConfigError {
     Batcher(#[from] BatcherConfigError),
 }
 
-/// Common config stuct for the TC Sequencer.
+/// Config struct for the Batch Sequencer.
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
 pub struct BatchSequencerConfig {
-    /// Mapping of chain IDs to their corresponding sequencing addresses
+    /// The contract address that the sequencer will use to submit batches
     #[arg(short = 's', long, env = "SEQUENCING_ADDRESS", value_parser = parse_address)]
     pub sequencing_address: Address,
 

@@ -93,7 +93,7 @@ impl From<MaestroRpcError> for ErrorObjectOwned {
         match error {
             MaestroRpcError::InternalError(e) => ErrorObjectOwned::owned(
                 ErrorCode::InternalError.code(),
-                format!("internal error: {}", e),
+                format!("internal error: {e}"),
                 None::<()>,
             ),
             MaestroRpcError::JsonRpcError(rpc_err) => rpc_err.into(),

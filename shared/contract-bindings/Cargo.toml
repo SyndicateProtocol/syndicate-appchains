@@ -1,7 +1,6 @@
 [package]
-edition = "2021"
-name    = "contract-bindings"
-version = "0.1.0"
+edition.workspace = true
+name              = "contract-bindings"
 
 [dependencies]
 alloy = { workspace = true }

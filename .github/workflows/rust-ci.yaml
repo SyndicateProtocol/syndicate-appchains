@@ -37,6 +37,17 @@ jobs:
           # Cache entire workspace
           workspaces: "."
 
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          $HOME/.sp1/bin/sp1up 
+          $HOME/.sp1/bin/cargo-prove prove --version
+
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+          $HOME/.sp1/bin/cargo-prove prove build
+
       # Run Clippy checks on entire workspace
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets --all-features
@@ -77,6 +88,17 @@ jobs:
         uses: clechasseur/rs-cargo@v2
         with:
           command: machete
+          # args are specified one by one to avoid issues with git submodules (particularly inside synd-withdrawals)
+          args: |
+            "Cargo.toml"
+            "shared"
+            "synd-batch-sequencer"
+            "synd-maestro"
+            "synd-mchain"
+            "synd-translator"
+            "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro"
+            "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program"
+            "test-framework"
 
   taplo:
     name: Cargo.toml format validation
@@ -108,7 +130,7 @@ jobs:
 
   test:
     name: Tests
-    runs-on: ubuntu-latest
+    runs-on: vip-large-01
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -131,11 +153,17 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
-      
-      - name: Verify Foundry Installation
+
+      - name: Install SP1 toolchain
         run: |
-          which anvil
-          anvil --version
+          curl -L https://sp1.succinct.xyz | bash
+          $HOME/.sp1/bin/sp1up 
+          $HOME/.sp1/bin/cargo-prove prove --version
+
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+          $HOME/.sp1/bin/cargo-prove prove build
 
       - name: Verify Foundry Installation
         run: |

@@ -7,8 +7,8 @@ services:
       - RUST_LOG=warn
       - PORT=8080
       - DB_FILE=/datadir/ingestor.db
-      - START_BLOCK={{ settlement_start_block }}
-      - RPC_URL={{ settlement_chain_wss }}
+      - START_BLOCK={{ settlement_start_block_defaults_to_zero }}
+      - WS_URL={{ settlement_chain_wss }}
     ports:
       - "8080"
     volumes:
@@ -21,8 +21,8 @@ services:
       - RUST_LOG=warn
       - PORT=8080
       - DB_FILE=/datadir/ingestor.db
-      - START_BLOCK={{ sequencing_start_block }}
-      - RPC_URL={{ sequencing_chain_wss }}
+      - START_BLOCK={{ sequencing_start_block_defaults_to_zero }}
+      - WS_URL={{ sequencing_chain_wss }}
     ports:
       - "8080"
     volumes:

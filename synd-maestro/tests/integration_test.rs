@@ -18,7 +18,7 @@ mod tests {
         server::{ShutdownFn, HEADER_CHAIN_ID},
     };
     use test_utils::{
-        docker::{start_valkey, Docker},
+        docker::{start_valkey, E2EProcess},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
     };
     use wiremock::{
@@ -35,7 +35,7 @@ mod tests {
     async fn setup_server(
         mock_rpc_server_4: Option<MockServer>,
         mock_rpc_server_5: Option<MockServer>,
-    ) -> (SocketAddr, ShutdownFn, String, Docker, MockServer, MockServer) {
+    ) -> (SocketAddr, ShutdownFn, String, E2EProcess, MockServer, MockServer) {
         // Create new mock servers if not provided, otherwise use the ones passed in
         let mock_rpc_server_4 = match mock_rpc_server_4 {
             Some(server) => server,
@@ -82,13 +82,13 @@ mod tests {
         // Start the actual Maestro server with our mocked config
         let (addr, shutdown_fn) =
             server::run(config, metrics).await.expect("Failed to start server");
-        let base_url = format!("http://{}", addr);
+        let base_url = format!("http://{addr}");
 
         // Wait for server to be ready by checking health endpoint
         let client = Client::new();
         wait_until!(
             client
-                .get(format!("{}/health", base_url))
+                .get(format!("{base_url}/health"))
                 .send()
                 .await
                 .is_ok_and(|x| x.status().is_success()),
@@ -224,7 +224,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_check() -> Result<()> {
         with_test_server(None, None, |client, base_url| async move {
-            let health_response = client.get(format!("{}/health", base_url)).send().await?;
+            let health_response = client.get(format!("{base_url}/health")).send().await?;
 
             assert!(health_response.status().is_success(), "Health check failed");
             let health_json: Value = health_response.json().await?;
@@ -260,8 +260,7 @@ mod tests {
             let tx_json: Value = tx_response.json().await?;
             assert!(
                 tx_json.get("result").is_some(),
-                "Transaction response missing 'result' field: {}",
-                tx_json
+                "Transaction response missing 'result' field: {tx_json}"
             );
             Ok(())
         })
@@ -319,8 +318,7 @@ mod tests {
             let json_resp: Value = response.json().await?;
             assert!(
                 json_resp.get("result").is_some(),
-                "Transaction response missing 'result' field: {}",
-                json_resp
+                "Transaction response missing 'result' field: {json_resp}"
             );
 
             Ok(())
@@ -458,8 +456,7 @@ mod tests {
             let error_message = json["error"]["message"].as_str().unwrap_or("");
             assert!(
                 error_message.contains("chain ID mismatch"),
-                "Error message should mention 'chain ID mismatch', but got: '{}'",
-                error_message
+                "Error message should mention 'chain ID mismatch', but got: '{error_message}'"
             );
             Ok(())
         })
@@ -536,8 +533,7 @@ mod tests {
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
                     tx_json.get("result").is_some(),
-                    "Transaction response should succeed: {}",
-                    tx_json
+                    "Transaction response should succeed: {tx_json}"
                 );
 
                 Ok(())
@@ -600,8 +596,7 @@ mod tests {
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
                     tx_json.get("result").is_none(),
-                    "Transaction response should not succeed: {}",
-                    tx_json
+                    "Transaction response should not succeed: {tx_json}"
                 );
                 assert_eq!(
                     tx_json.get("error"),
@@ -683,8 +678,7 @@ mod tests {
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
                     tx_json.get("result").is_some(),
-                    "Transaction response should succeed: {}",
-                    tx_json
+                    "Transaction response should succeed: {tx_json}"
                 );
                 Ok(())
             },

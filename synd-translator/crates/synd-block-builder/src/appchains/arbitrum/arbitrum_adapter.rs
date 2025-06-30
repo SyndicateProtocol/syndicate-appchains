@@ -85,14 +85,15 @@ impl TryFrom<u8> for L1MessageType {
 }
 
 impl L1MessageType {
-    fn from_u8_panic(value: u8) -> Self {
-        Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {}", value))
+    /// Convert a u8 to a `L1MessageType`
+    pub fn from_u8_panic(value: u8) -> Self {
+        Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {value}"))
     }
 }
 
 impl std::fmt::Display for L1MessageType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -227,7 +228,7 @@ impl ArbitrumAdapter {
                         })
                     }
                     Err(e) => {
-                        panic!("Fatal error: {}", e)
+                        panic!("Fatal error: {e}")
                     }
                 }
             })
@@ -306,7 +307,8 @@ impl ArbitrumAdapter {
         Ok(encoded_batch)
     }
 
-    fn should_ignore_delayed_message(kind: &L1MessageType) -> bool {
+    /// Should ignore delayed message. Ignores `Initialize` & `BatchPostingReport` message types.
+    pub fn should_ignore_delayed_message(kind: &L1MessageType) -> bool {
         // Always ignore Initialize & BatchPostingReport message types.
         // Except for the initial initialization message, these should not occur in practice.
         if matches!(kind, L1MessageType::Initialize | L1MessageType::BatchPostingReport) {

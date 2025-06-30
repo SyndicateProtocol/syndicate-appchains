@@ -61,8 +61,9 @@ impl<'a> BlockIngestor<'a> {
     }
 }
 
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 #[allow(missing_docs)]
+#[allow(clippy::cognitive_complexity)]
 pub async fn start(
     provider: &EthClient,
     ws_url: &str,
@@ -93,7 +94,7 @@ pub async fn start(
         while let Some(block) = ingestor.next().await {
             match db.update_block(&block, metrics) {
                 BlockUpdateResult::Reorged => {
-                    error!("reorged during initial sync on block {:?}", block);
+                    error!("reorged during initial sync on block {block:?}");
                     break;
                 }
                 BlockUpdateResult::Added => {

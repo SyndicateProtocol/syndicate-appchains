@@ -20,7 +20,7 @@ use axum::{
 use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::{aio::MultiplexedConnection, AsyncCommands, Client as RedisClient};
+use redis::{aio::MultiplexedConnection, AsyncCommands, Client as ValkeyClient};
 use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
     tracing::SpanKind,
@@ -33,15 +33,15 @@ use std::{
 };
 use synd_maestro::valkey::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, instrument, trace};
 
 /// Batcher service
 #[derive(Derivative)]
 #[derivative(Debug)]
 struct Batcher {
-    /// Whether compression is enabled
+    /// Whether compression is enabled (default: true)
     compression_enabled: bool,
-    /// The max batch size for the batcher
+    /// The max batch size for the batcher (default: 90KB)
     max_batch_size: usize,
     /// The Stream consumer for the batcher
     stream_consumer: StreamConsumer,
@@ -49,7 +49,7 @@ struct Batcher {
     sequencing_contract_provider: SyndicateSequencingChainInstance<(), FilledProvider>,
     /// The chain ID for the batcher
     chain_id: u64,
-    /// The timeout for the batcher
+    /// The timeout for the batcher (default: 200ms)
     timeout: Duration,
     /// Metrics
     metrics: BatcherMetrics,
@@ -75,7 +75,7 @@ pub async fn run_batcher(
     sequencing_contract_address: Address,
     metrics_port: u16,
 ) -> Result<JoinHandle<()>> {
-    let client = RedisClient::open(config.valkey_url.as_str()).map_err(|e| {
+    let client = ValkeyClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
     let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
@@ -138,7 +138,7 @@ async fn create_sequencing_contract_provider(
     sequencing_contract_address: Address,
 ) -> Result<SyndicateSequencingChainInstance<(), FilledProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
     let sequencing_provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer))
         .connect(config.sequencing_rpc_url.as_str())
@@ -163,6 +163,35 @@ impl Batcher {
             metrics,
             outstanding_txs: Vec::new(),
         }
+    }
+
+    #[instrument(
+        skip(self),
+        err,
+        fields(
+            otel.kind = ?SpanKind::Consumer,
+            chain_id = %self.chain_id
+        )
+    )]
+    async fn process_transactions(&mut self) -> Result<(), BatchError> {
+        let start = Instant::now();
+
+        let batch = self.read_and_batch_transactions().await?;
+        if batch.is_empty() {
+            trace!(%self.chain_id, "No transactions available to batch.");
+            return Ok(());
+        }
+
+        let submission_start = Instant::now();
+        if let Err(e) = self.send_batch(batch).await {
+            // Don't reset the compressor here, because we want to retry the same batch
+            error!(%self.chain_id, "Failed to send batch: {:?}", e);
+            return Err(e);
+        }
+        self.metrics.record_submission_latency(submission_start.elapsed());
+        self.metrics.record_processing_time(start.elapsed());
+
+        Ok(())
     }
 
     #[instrument(
@@ -236,35 +265,6 @@ impl Batcher {
     }
 
     #[instrument(
-        skip(self),
-        err,
-        fields(
-            otel.kind = ?SpanKind::Consumer,
-            chain_id = %self.chain_id
-        )
-    )]
-    async fn process_transactions(&mut self) -> Result<(), BatchError> {
-        let start = Instant::now();
-
-        let batch = self.read_and_batch_transactions().await?;
-        if batch.is_empty() {
-            debug!(%self.chain_id, "No transactions available to batch.");
-            return Ok(());
-        }
-
-        let submission_start = Instant::now();
-        if let Err(e) = self.send_batch(batch).await {
-            // Don't reset the compressor here, because we want to retry the same batch
-            error!(%self.chain_id, "Failed to send batch: {:?}", e);
-            return Err(e);
-        }
-        self.metrics.record_submission_latency(submission_start.elapsed());
-        self.metrics.record_processing_time(start.elapsed());
-
-        Ok(())
-    }
-
-    #[instrument(
         skip_all,
         err,
         fields(
@@ -296,6 +296,8 @@ impl Batcher {
             }
         }
         .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
+
+        // Record the wallet balance in the background
         self.record_wallet_balance();
 
         Ok(())
@@ -342,7 +344,7 @@ mod tests {
         let signer = PrivateKeySigner::from_str(
             "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890",
         )
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
 
         let mock_provider = if let Some(anvil) = anvil {
             let signer_address =
@@ -610,7 +612,7 @@ mod tests {
         let _handle =
             run_batcher(&config, sequencing_contract_address, metrics_port).await.unwrap();
 
-        let url = format!("http://0.0.0.0:{}/health", metrics_port);
+        let url = format!("http://0.0.0.0:{metrics_port}/health");
 
         let client = reqwest::Client::new();
 

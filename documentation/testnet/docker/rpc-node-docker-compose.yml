@@ -6,7 +6,6 @@ services:
     environment:
       - RUST_LOG=warn
       - APPCHAIN_CHAIN_ID={{ chain_id }}
-      - APPCHAIN_OWNER={{ owner_addr }}
       - DATADIR=/datadir
       - PORT=8050
       - METRICS_PORT=8051
@@ -24,14 +23,15 @@ services:
     platform: linux/amd64
     environment:
       - RUST_LOG=warn
-      - SETTLEMENT_RPC_URL={{ settlement_rpc_ws_url }}
-      - SEQUENCING_RPC_URL={{ sequencing_rpc_ws_url }}
-      - SEQUENCING_CONTRACT_ADDRESS={{ sequencing_contract }}
-      - ARBITRUM_BRIDGE_ADDRESS={{ bridge_addr }}
-      - ARBITRUM_INBOX_ADDRESS={{ inbox_addr }}
+      - APPCHAIN_CHAIN_ID={{ chain_id }}
+      - SETTLEMENT_WS_URL={{ settlement_rpc_ws_url }}
+      - SEQUENCING_WS_URL={{ sequencing_rpc_ws_url }}
       - SEQUENCING_START_BLOCK={{ sequencing_start_block }}
       - SETTLEMENT_START_BLOCK={{ settlement_start_block }}
-      - MCHAIN_RPC_URL=ws://mchain:8050
+      - SEQUENCING_CONTRACT_ADDRESS={{ sequencing_contract_address }}
+      - ARBITRUM_BRIDGE_ADDRESS={{ bridge_address }}
+      - ARBITRUM_INBOX_ADDRESS={{ inbox_address }}
+      - MCHAIN_WS_URL=ws://mchain:8050
       - SETTLEMENT_DELAY=60
       - METRICS_PORT=9090
     ports:
@@ -42,14 +42,13 @@ services:
       - mchain
 
   nitro:
-    image: offchainlabs/nitro-node:v3.6.2-5b41a2d
+    image: offchainlabs/nitro-node:v3.6.7-a7c9f1e
     container_name: nitro
     init: true
     restart: always
     command:
       - "--parent-chain.connection.url=ws://mchain:8050" # mchain is the "parent chain"
       - "--execution.parent-chain-reader.poll-interval=100ms"
-      - "--execution.tx-pre-checker.strictness=20" # optimistic validation
       - "--node.dangerous.disable-blob-reader"
       - "--execution.caching.archive"
       - "--execution.parent-chain-reader.old-header-timeout=1000h"
