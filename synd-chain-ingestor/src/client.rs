@@ -386,6 +386,7 @@ mod tests {
         MethodsError, RpcModule,
     };
     use serde::de::DeserializeOwned;
+    use serde_json::value::RawValue;
     use std::{marker::PhantomData, pin::Pin, task::Poll};
     use tokio::sync::mpsc;
 
@@ -402,7 +403,7 @@ mod tests {
         }
     }
 
-    struct SubscriptionStream<Notif>(mpsc::Receiver<String>, PhantomData<Notif>);
+    struct SubscriptionStream<Notif>(mpsc::Receiver<Box<RawValue>>, PhantomData<Notif>);
 
     impl<Notif: DeserializeOwned + Unpin> Stream for SubscriptionStream<Notif> {
         type Item = Result<Notif, serde_json::Error>;
@@ -413,7 +414,7 @@ mod tests {
         ) -> Poll<Option<Self::Item>> {
             self.0.poll_recv(cx).map(|x| {
                 x.map(|x| {
-                    serde_json::from_str::<SubscriptionResponse<'_, Notif>>(&x)
+                    serde_json::from_str::<SubscriptionResponse<'_, Notif>>(x.get())
                         .map(|x| x.params.result)
                 })
             })
@@ -443,8 +444,8 @@ mod tests {
             ClientError,
         > {
             let params = params.to_rpc_params()?;
-            let req = serde_json::to_string(&Request::new(
-                method.into(),
+            let req = serde_json::to_string(&Request::borrowed(
+                method,
                 params.as_ref().map(|p| p.as_ref()),
                 Id::Number(0),
             ))?;
