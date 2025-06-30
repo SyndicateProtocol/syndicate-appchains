@@ -29,7 +29,9 @@ use std::{
     str::FromStr,
     time::{Duration, Instant},
 };
-use synd_maestro::valkey::streams::consumer::StreamConsumer;
+use synd_maestro::{
+    valkey::streams::consumer::StreamConsumer,
+};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, instrument, trace, warn};
 
@@ -204,7 +206,10 @@ impl Batcher {
             // TODO (SEQ-842): Configurable max msg count
             // NOTE: If msg count is >1 we need to handle edge cases where not all transactions fit
             // in the batch
-            let incoming_txs = self.stream_consumer.recv(1, Duration::from_millis(100)).await?;
+            let incoming_txs = self
+                .stream_consumer
+                .recv(1, Duration::from_millis(100), &self.metrics.valkey)
+                .await?;
 
             // Combine outstanding transactions with incoming transactions
             let mut pending_txs: VecDeque<Bytes> = std::mem::take(&mut self.outstanding_txs)
@@ -222,7 +227,7 @@ impl Batcher {
                 if proposed_batch.len() > self.max_batch_size {
                     // If the current txs vector is empty, that means the transaction we are trying
                     // to add is too large to fit in a single batch by itself.
-                    // We need to discard it or this loop will get stuck trying
+                    // We need to discard it, or this loop will get stuck trying
                     // to add the same transaction over and over.
                     if txs.is_empty() {
                         let bad_tx = pending_txs.pop_front().unwrap_or_default();

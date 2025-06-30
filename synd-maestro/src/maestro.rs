@@ -21,6 +21,8 @@ use crate::{
         },
         streams::producer::{CheckFinalizationResult, StreamProducer},
     },
+    valkey_metrics::{CacheType, Operation},
+    with_cache_metrics,
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope},
@@ -202,8 +204,8 @@ impl MaestroService {
     /// Processes a transaction based on its nonce compared to the wallet's expected nonce
     ///
     /// This method handles the transaction dispatch logic based on nonce comparison:
-    /// - If the nonce matches the expected value, the transaction is enqueued immediately and the
-    ///   system checks the cache for waiting transactions with subsequent nonces
+    /// - If the nonce matches the expected value, the transaction is enqueued immediately, and the
+    ///   system checks the cache for waiting transactions with later nonces
     /// - If the nonce is lower than expected, the transaction is rejected as it would be a
     ///   resubmission
     /// - If the nonce is higher than expected, this "waiting" transaction is stored in a cache
@@ -309,7 +311,7 @@ impl MaestroService {
 
     /// Enqueues a raw transaction to the Valkey Stream for a specific chain
     ///
-    /// This method use Valkey stream producers to forward the transaction data.
+    /// This method uses Valkey stream producers to forward the transaction data.
     /// It creates a new producer if one doesn't exist for the specified chain.
     ///
     /// # Arguments
@@ -318,7 +320,7 @@ impl MaestroService {
     ///
     /// # Returns
     /// * `Ok(())` - If the transaction was successfully enqueued
-    /// * `Err(ErrorObjectOwned)` - If the Valkey operation fails
+    /// * `Err(MaestroRpcError)` - If the Valkey operation fails
     ///
     /// # Errors
     /// Returns an error if:
@@ -336,7 +338,13 @@ impl MaestroService {
             InternalError(RpcMissing(chain_id))
         })?;
 
-        producer.enqueue_transaction(raw_tx).await.map_err(|e| {
+        with_cache_metrics!(
+            &self.metrics.valkey,
+            Operation::StreamWrite,
+            CacheType::ValkeyStream,
+            producer.enqueue_transaction(raw_tx)
+        )
+        .map_err(|e| {
             error!(%chain_id, %tx_hash, %e, "failed to enqueue transaction to Valkey Stream");
             InternalError(TransactionSubmissionFailed(tx_hash.to_string()))
         })?;
@@ -380,7 +388,10 @@ impl MaestroService {
         let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
         let mut conn = self.valkey_conn.clone();
 
-        let nonce = match conn.get_wallet_nonce(chain_id, signer).await {
+        let nonce = match with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.get_wallet_nonce(chain_id, signer)
+        ) {
             // Cache hit - we have a valid value
             Ok(Some(nonce_str)) => {
                 // Parse the nonce string to u64
@@ -402,10 +413,10 @@ impl MaestroService {
         Ok(nonce)
     }
 
-    /// Fetches a wallet's nonce from RPC provider and updates the cache
+    /// Fetches a wallet's nonce from the RPC provider and updates the cache
     ///
     /// This method is called when there is a cache miss or parsing error
-    /// when getting a nonce from the cache. It queries the RPC provider
+    /// when getting nonce from the cache. It queries the RPC provider
     /// for the current nonce and updates the Valkey cache with the result.
     ///
     /// # Arguments
@@ -417,7 +428,7 @@ impl MaestroService {
     /// * `Err(MaestroRpcError)` - If retrieving the nonce fails
     ///
     /// # Errors
-    /// Returns an error if:
+    /// Return an error if:
     /// * RPC provider is missing for the specified chain
     /// * RPC request to fetch the nonce fails
     async fn get_nonce_from_rpc_and_update_cache(
@@ -438,10 +449,15 @@ impl MaestroService {
             }
         };
 
-        // Update cache
         let mut conn = self.valkey_conn.clone();
-        match conn.set_wallet_nonce(chain_id, signer, rpc_nonce, self.config.wallet_nonce_ttl).await
-        {
+        let cache_result = with_cache_metrics!(
+            &self.metrics.valkey,
+            Operation::Write,
+            CacheType::ValkeyCache,
+            conn.set_wallet_nonce(chain_id, signer, rpc_nonce, self.config.wallet_nonce_ttl)
+        );
+
+        match cache_result {
             Ok(_) => {}
             Err(e) => {
                 error!(%chain_wallet_nonce_key, %chain_id, %rpc_nonce, %e, "unable to cache nonce");
@@ -475,7 +491,11 @@ impl MaestroService {
     ) -> Result<u64, MaestroError> {
         let mut conn = self.valkey_conn.clone();
 
-        let cached_nonce = conn.get_wallet_nonce(chain_id, wallet_address).await?;
+        let cached_nonce = with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.get_wallet_nonce(chain_id, wallet_address)
+        )?;
+
         if let Some(cached_nonce) = cached_nonce {
             let cached_nonce_parsed = cached_nonce.parse::<u64>().map_err(|_e| {
                 error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
@@ -490,10 +510,16 @@ impl MaestroService {
         }
 
         // actual increment
-        let old_nonce = conn
-            .set_wallet_nonce(chain_id, wallet_address, desired_nonce, self.config.wallet_nonce_ttl)
-            .await
-            .map_err(MaestroError::Valkey)?;
+        let old_nonce = with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.set_wallet_nonce(
+                chain_id,
+                wallet_address,
+                desired_nonce,
+                self.config.wallet_nonce_ttl
+            )
+        )
+        .map_err(MaestroError::Valkey)?;
 
         match old_nonce {
             None => {
@@ -613,7 +639,7 @@ impl MaestroService {
         Ok(())
     }
 
-    /// Checks if contiguous transactions exists in the cache for the given wallet address and nonce
+    /// Checks if contiguous transactions exist in the cache for the given wallet address and nonce
     ///
     /// This method attempts to retrieve a transaction from the waiting gap cache
     /// for a specific wallet, chain, and nonce combination. By "contiguous", we mean transactions
@@ -656,10 +682,11 @@ impl MaestroService {
         let mut txns: Vec<Bytes> = Vec::new();
         let mut current_nonce = starting_nonce;
         loop {
-            match conn
-                .get_waiting_txn(chain_id, wallet_address, current_nonce)
-                .await
-                .map_err(MaestroError::Valkey)?
+            match with_cache_metrics!(
+                &self.metrics.valkey,
+                conn.get_waiting_txn(chain_id, wallet_address, current_nonce)
+            )
+            .map_err(MaestroError::Valkey)?
             {
                 None => {
                     //
@@ -711,9 +738,17 @@ impl MaestroService {
         tx_hash: &B256,
     ) -> Result<String, MaestroRpcError> {
         let mut conn = self.valkey_conn.clone();
-        conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_tx, self.config.waiting_txn_ttl)
-            .await
-            .map_err(|_| InternalError(TransactionSubmissionFailed(tx_hash.to_string())))
+        with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.set_waiting_txn(
+                chain_id,
+                wallet_address,
+                nonce,
+                raw_tx,
+                self.config.waiting_txn_ttl
+            )
+        )
+        .map_err(|_| InternalError(TransactionSubmissionFailed(tx_hash.to_string())))
     }
 
     /// Removes an array of waiting transactions from the cache
@@ -749,12 +784,13 @@ impl MaestroService {
 
         let mut conn = self.valkey_conn.clone();
         let txn_ids = waiting_txns;
-        let result = conn.del_waiting_txn_keys(txn_ids).await.map_err(|_| InternalError(Other))?;
+        let result = with_cache_metrics!(&self.metrics.valkey, conn.del_waiting_txn_keys(txn_ids))
+            .map_err(|_| InternalError(Other))?;
 
         let chain_id = waiting_txns[0].chain_id;
         let wallet_address = waiting_txns[0].wallet_address;
 
-        // Log if incorrect number of keys was removed - likely a bug
+        // Log if an incorrect number of keys was removed - likely a bug
         if result != (txn_ids.len() as u64) {
             error!(
             %chain_id, %wallet_address, num_txns_requested = %txn_ids.len(), num_txns_requested = %result,

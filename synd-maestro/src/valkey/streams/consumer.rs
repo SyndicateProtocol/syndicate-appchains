@@ -2,7 +2,9 @@
 //! This module provides the consumer implementation for Valkey Streams used to queue
 //! and process transactions across different chains.
 
-use crate::valkey::streams::producer::tx_stream_key;
+use crate::{
+    valkey::streams::producer::tx_stream_key, valkey_metrics::ValkeyMetrics, with_cache_metrics,
+};
 use alloy::primitives::ChainId;
 use derivative::Derivative;
 use redis::{
@@ -78,6 +80,7 @@ impl StreamConsumer {
     /// * Currently reads one message at a time for simplicity. For high-throughput scenarios,
     ///   consider implementing batch reading with an internal buffer.
     /// * Blocks for `block_duration` waiting for a new message to arrive
+    /// * For automatic cache metrics, wrap calls to this method with `with_cache_metrics!` macro
     #[instrument(
         name = "redis_receive",
         skip(self),
@@ -90,25 +93,25 @@ impl StreamConsumer {
         &mut self,
         max_msg_count: usize,
         block_duration: Duration,
-    ) -> eyre::Result<Vec<(Vec<u8>, String)>> {
+        valkey_metrics: &ValkeyMetrics,
+    ) -> eyre::Result<Vec<(Vec<u8>, String)>, StreamError> {
         let opts = StreamReadOptions::default()
             .block(block_duration.as_millis() as usize)
             .count(max_msg_count);
 
-        let reply: Option<StreamReadReply> = self
-            .conn
-            .xread_options(&[self.stream_key.as_str()], &[self.last_id.as_str()], &opts)
-            .await?;
+        let reply: Option<StreamReadReply> = with_cache_metrics!(
+            &valkey_metrics,
+            self.conn.xread_options(&[self.stream_key.as_str()], &[self.last_id.as_str()], &opts)
+        )?;
 
         let reply = match reply {
             Some(r) => r,
             None => return Ok(vec![]),
         };
 
-        let key_data = reply
-            .keys
-            .first()
-            .ok_or_else(|| eyre::eyre!("Expected at least one stream key in reply"))?;
+        let key_data = reply.keys.first().ok_or_else(|| {
+            StreamError::Parse("Expected at least one stream key in reply".into())
+        })?;
 
         if key_data.ids.is_empty() {
             return Ok(vec![]);
@@ -120,7 +123,7 @@ impl StreamConsumer {
             let traceparent = id
                 .map
                 .get("traceparent")
-                .ok_or_else(|| eyre::eyre!("No traceparent found in message"))?;
+                .ok_or_else(|| StreamError::Parse("No traceparent found in message".into()))?;
             let producer_context = match traceparent {
                 redis::Value::BulkString(data) => {
                     let carrier: HashMap<String, String> =
@@ -128,7 +131,11 @@ impl StreamConsumer {
                             .into();
                     otel_global::get_text_map_propagator(|propagator| propagator.extract(&carrier))
                 }
-                _ => return Err(eyre::eyre!("Expected binary data, got different type")),
+                _ => {
+                    return Err(StreamError::Parse(
+                        "Expected binary data, got different type".into(),
+                    ))
+                }
             };
             let producer_span = producer_context.span();
             let span = info_span!(
@@ -139,14 +146,17 @@ impl StreamConsumer {
             span.add_link(producer_span.span_context().clone());
             let _guard = span.enter();
 
-            let raw_tx =
-                id.map.get("data").ok_or_else(|| eyre::eyre!("No data found in message"))?;
+            let raw_tx = id.map.get("data").ok_or(StreamError::NoData)?;
 
             match raw_tx {
                 redis::Value::BulkString(data) => {
                     results.push((data.clone(), id.id.clone()));
                 }
-                _ => return Err(eyre::eyre!("Expected binary data, got different type")),
+                _ => {
+                    return Err(StreamError::Parse(
+                        "Expected binary data, got different type".into(),
+                    ))
+                }
             }
         }
 
@@ -158,10 +168,25 @@ impl StreamConsumer {
     }
 }
 
+/// Errors that can occur when reading from the cache stream.
+#[derive(Debug, thiserror::Error)]
+pub enum StreamError {
+    /// Cache error
+    #[error("Cache error: {0}")]
+    Cache(#[from] redis::RedisError),
+    /// Stream parsing error
+    #[error("Stream parsing error: {0}")]
+    Parse(String),
+    /// No data found in the message
+    #[error("No data found in message")]
+    NoData,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
+    use prometheus_client::registry::Registry;
     use std::time::Duration;
     use test_utils::docker::start_valkey;
 
@@ -169,6 +194,9 @@ mod tests {
     async fn test_produce_consume_transaction() {
         // Start Valkey container
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
+
+        let mut registry = Registry::default();
+        let metrics = ValkeyMetrics::new(&mut registry);
 
         // Connect to Valkey
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
@@ -195,7 +223,7 @@ mod tests {
         producer.enqueue_transaction(&test_data).await.unwrap();
 
         // Receive and verify
-        let received = consumer.recv(1, Duration::from_secs(1)).await.unwrap();
+        let received = consumer.recv(1, Duration::from_secs(1), &metrics).await.unwrap();
         assert_eq!(received.len(), 1);
         assert_eq!(received[0].0, test_data);
         assert!(!received[0].1.is_empty());
@@ -206,6 +234,9 @@ mod tests {
     async fn test_produce_consume_multiple_transactions() {
         // Start Valkey container
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
+
+        let mut registry = Registry::default();
+        let metrics = ValkeyMetrics::new(&mut registry);
 
         // Connect to Valkey
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
@@ -234,7 +265,7 @@ mod tests {
         producer.enqueue_transaction(&test_data2).await.unwrap();
 
         // Receive and verify
-        let received = consumer.recv(2, Duration::from_secs(1)).await.unwrap();
+        let received = consumer.recv(2, Duration::from_secs(1), &metrics).await.unwrap();
         assert_eq!(received.len(), 2);
         assert_eq!(received[0].0, test_data1);
         assert_eq!(received[1].0, test_data2);

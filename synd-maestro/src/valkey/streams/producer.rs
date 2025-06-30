@@ -189,6 +189,7 @@ impl StreamProducer {
 
         // Collect IDs for deletion and call XDEL on all of them
         let ids: Vec<String> = entries.iter().map(|(id, _)| id.clone()).collect();
+        // TODO with metrics
         if let Err(e) = conn.xdel::<_, _, usize>(&stream_key, &ids).await {
             error!(%stream_key, %max_id, %e, "Failed to delete finalized transaction entries");
             return Err(e);
@@ -589,7 +590,7 @@ mod tests {
         // Wait for the first finalization cycle
         sleep(Duration::from_millis(150)).await; // interval (100) + duration (50)
 
-        // Assertions after 1st cycle
+        // Assertions after the 1st cycle
         assert_eq!(
             callback_invocations.load(Ordering::SeqCst),
             1,
