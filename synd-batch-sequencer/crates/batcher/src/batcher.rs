@@ -140,14 +140,17 @@ async fn create_sequencing_contract_provider(
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
 
-    let rpc_client = RpcClient::builder()
-        .layer(RetryBackoffLayer::new(
+    let rpc_client = {
+        RetryBackoffLayer::new(
             config.rpc_max_retries,
             config.rpc_initial_backoff_ms,
             config.rpc_compute_units_per_second,
-        ))
-        .connect(config.sequencing_rpc_url.as_str())
-        .await?;
+        )
+        .with_avg_unit_cost(config.rpc_compute_units_avg_request_cost);
+        RpcClient::builder().layer(())
+    }
+    .connect(config.sequencing_rpc_url.as_str())
+    .await?;
 
     let sequencing_provider =
         ProviderBuilder::new().wallet(EthereumWallet::from(signer)).on_client(rpc_client);

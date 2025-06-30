@@ -69,9 +69,14 @@ pub struct BatcherConfig {
     #[arg(long, env = "RPC_INITIAL_BACKOFF_MS", default_value = "100")]
     pub rpc_initial_backoff_ms: u64,
 
-    /// The number of compute units per second for this provider
+    /// The number of compute units per second for this provider (CU values are usually specified
+    /// in the provider's documentation)
     #[arg(long, env = "RPC_COMPUTE_UNITS_PER_SECOND", default_value = "1000")]
     pub rpc_compute_units_per_second: u64,
+
+    /// The average cost of a request in compute units
+    #[arg(long, env = "RPC_COMPUTE_UNITS_AVG_REQUEST_COST", default_value = "17")]
+    pub rpc_compute_units_avg_request_cost: u64,
 }
 
 impl BatcherConfig {
@@ -110,6 +115,7 @@ impl Default for BatcherConfig {
             rpc_max_retries: 10,
             rpc_initial_backoff_ms: 100,
             rpc_compute_units_per_second: 1000,
+            rpc_compute_units_avg_request_cost: 17,
         }
     }
 }
