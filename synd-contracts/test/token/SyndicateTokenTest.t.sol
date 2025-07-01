@@ -23,7 +23,6 @@ contract SyndicateTokenTest is Test {
         // Grant emission minter role to simulate emission scheduler
         token.grantRole(token.EMISSION_MINTER_ROLE(), emissionMinter);
 
-
         vm.stopPrank();
     }
 
@@ -341,5 +340,4 @@ contract SyndicateTokenTest is Test {
         vm.expectRevert();
         token.burn(1000 * 10 ** 18); // User has no tokens
     }
-
 }

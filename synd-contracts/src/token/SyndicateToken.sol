@@ -41,14 +41,12 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Thrown when trying to mint more than the total supply allows
     error ExceedsTotalSupply();
 
-
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Role for minting emission tokens (typically the emission scheduler)
     bytes32 public constant EMISSION_MINTER_ROLE = keccak256("EMISSION_MINTER_ROLE");
-
 
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -60,16 +58,13 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Initial mint to foundation: 900 million tokens (90%)
     uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
 
-
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
-
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -88,7 +83,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
         // Input validation
         if (defaultAdmin == address(0)) revert ZeroAddress();
         if (syndTreasuryAddress == address(0)) revert ZeroAddress();
-
 
         // Grant roles
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
@@ -134,7 +128,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
         _burn(msg.sender, amount);
     }
 
-
     /*//////////////////////////////////////////////////////////////
                               VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -146,7 +139,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     function getRemainingEmissions() external view returns (uint256) {
         return TOTAL_SUPPLY - totalSupply();
     }
-
 
     /*//////////////////////////////////////////////////////////////
                           GOVERNANCE HELPER FUNCTIONS

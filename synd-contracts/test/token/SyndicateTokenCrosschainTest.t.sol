@@ -294,7 +294,7 @@ contract SyndicateTokenCrosschainTest is Test {
         assertEq(token.balanceOf(emissionUser), 100_000 * 10 ** 18);
 
         vm.stopPrank();
-        
+
         // Test that existing functionality works
         assertEq(token.balanceOf(emissionUser), 100_000 * 10 ** 18);
     }
