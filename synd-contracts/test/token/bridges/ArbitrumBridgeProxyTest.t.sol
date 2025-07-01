@@ -641,7 +641,6 @@ contract ArbitrumBridgeProxyTest is Test {
         uint256 withdrawAmount = 1 ether;
         uint256 initialBridgeBalance = address(bridgeProxy).balance;
         uint256 initialRecipientBalance = recipient_.balance;
-
         vm.prank(admin);
         bridgeProxy.withdrawEth(payable(recipient_), withdrawAmount);
 
