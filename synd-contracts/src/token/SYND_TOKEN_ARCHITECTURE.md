@@ -19,7 +19,7 @@ This document outlines the architecture and interaction patterns of the Syndicat
 - ERC20Votes for governance participation
 - ERC20Permit for gasless approvals
 - Controlled emission minting (only by authorized scheduler)
-- Transfer restrictions with unlock mechanism (for airdrop management)
+- Self-service token burning for holders
 
 **Supply Distribution**:
 - **Initial Supply**: 900M tokens (90%) - minted to foundation at deployment
@@ -30,10 +30,13 @@ This document outlines the architecture and interaction patterns of the Syndicat
 // Role for minting emission tokens (granted to EmissionScheduler)
 bytes32 public constant EMISSION_MINTER_ROLE = keccak256("EMISSION_MINTER_ROLE");
 
-// Role for airdrop management (transfer restrictions, emergency burns)
-bytes32 public constant AIRDROP_MANAGER_ROLE = keccak256("AIRDROP_MANAGER_ROLE");
-
 // OpenZeppelin DEFAULT_ADMIN_ROLE - full administrative control
+```
+
+**Token Holder Functions**:
+```solidity
+// Self-service burning for token holders
+function burn(uint256 amount) external;
 ```
 
 #### TestnetSyndToken Contract (`TestnetSyndToken.sol`)
@@ -271,9 +274,6 @@ graph TD
 ```solidity
 // REQUIRED: Grant emission minting capability to scheduler
 syndicateToken.grantRole(EMISSION_MINTER_ROLE, address(emissionScheduler));
-
-// OPTIONAL: Grant airdrop management (if using transfer restrictions)
-syndicateToken.grantRole(AIRDROP_MANAGER_ROLE, airdropManagerAddress);
 
 // REQUIRED: Set admin role (typically governance/multisig)
 syndicateToken.grantRole(DEFAULT_ADMIN_ROLE, adminAddress);
