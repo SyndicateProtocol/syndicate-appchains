@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/pflag"
@@ -16,7 +17,6 @@ type Config struct {
 	EthereumRPCURL    string
 	SettlementRPCURL  string
 	SettlementChainID uint64
-	SettlementDelay   uint64
 
 	SequencingRPCURL string
 	AppchainRPCURL   string
@@ -31,11 +31,11 @@ type Config struct {
 	L1EndBatch          uint64
 	SettlementMsgsCount uint64
 
-	SequencerInboxAddress     common.Address
-	SequencingContractAddress common.Address
-	SequencingBridgeAddress   common.Address
-	TeeModuleContractAddress  common.Address
-	ArbitrumBridgeAddress     common.Address
+	TeeModuleContractAddress common.Address
+	ArbitrumBridgeAddress    common.Address
+	SequencerInboxAddress    common.Address
+
+	EnclaveConfig enclave.Config
 }
 
 var ConfigKeys = map[string]struct {
@@ -103,25 +103,27 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		EthereumRPCURL:            viper.GetString("ethereum-rpc-url"),
-		SettlementRPCURL:          viper.GetString("settlement-rpc-url"),
-		SettlementChainID:         viper.GetUint64("settlement-chain-id"),
-		SequencingRPCURL:          viper.GetString("sequencing-rpc-url"),
-		AppchainRPCURL:            viper.GetString("appchain-rpc-url"),
-		EnclaveRPCURL:             viper.GetString("enclave-rpc-url"),
-		TeeModuleContractAddress:  common.HexToAddress(viper.GetString("tee-module-contract-address")),
-		ArbitrumBridgeAddress:     common.HexToAddress(viper.GetString("arbitrum-bridge-address")),
-		SequencerInboxAddress:     common.HexToAddress(viper.GetString("sequencer-inbox-address")),
-		PrivateKey:                privateKey,
-		PollingInterval:           pollingInterval,
-		CloseChallengeInterval:    closeChallengeInterval,
-		MetricsPort:               metricsPort,
-		SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
-		SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
-		SettlementDelay:           viper.GetUint64("settlement-delay"),
-		L1StartBatch:              viper.GetUint64("l1-start-batch"),
-		L1EndBatch:                viper.GetUint64("l1-end-batch"),
-		SettlementMsgsCount:       viper.GetUint64("settlement-msgs-count"),
+		EthereumRPCURL:           viper.GetString("ethereum-rpc-url"),
+		SettlementRPCURL:         viper.GetString("settlement-rpc-url"),
+		SettlementChainID:        viper.GetUint64("settlement-chain-id"),
+		SequencingRPCURL:         viper.GetString("sequencing-rpc-url"),
+		AppchainRPCURL:           viper.GetString("appchain-rpc-url"),
+		EnclaveRPCURL:            viper.GetString("enclave-rpc-url"),
+		TeeModuleContractAddress: common.HexToAddress(viper.GetString("tee-module-contract-address")),
+		ArbitrumBridgeAddress:    common.HexToAddress(viper.GetString("arbitrum-bridge-address")),
+		SequencerInboxAddress:    common.HexToAddress(viper.GetString("sequencer-inbox-address")),
+		PrivateKey:               privateKey,
+		PollingInterval:          pollingInterval,
+		CloseChallengeInterval:   closeChallengeInterval,
+		MetricsPort:              metricsPort,
+		EnclaveConfig: enclave.Config{
+			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
+			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
+			SettlementDelay:           viper.GetUint64("settlement-delay"),
+		},
+		L1StartBatch:        viper.GetUint64("l1-start-batch"),
+		L1EndBatch:          viper.GetUint64("l1-end-batch"),
+		SettlementMsgsCount: viper.GetUint64("settlement-msgs-count"),
 	}, nil
 }
 

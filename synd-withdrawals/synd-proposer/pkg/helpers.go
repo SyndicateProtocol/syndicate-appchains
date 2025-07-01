@@ -36,6 +36,19 @@ type ValidationData struct {
 var messageDeliveredID common.Hash
 var inboxMessageDeliveredID common.Hash
 
+func init() {
+	parsedIBridgeABI, err := bridgegen.IBridgeMetaData.GetAbi()
+	if err != nil {
+		panic(err)
+	}
+	messageDeliveredID = parsedIBridgeABI.Events["MessageDelivered"].ID
+	parsedIMessageProviderABI, err := bridgegen.IDelayedMessageProviderMetaData.GetAbi()
+	if err != nil {
+		panic(err)
+	}
+	inboxMessageDeliveredID = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
+}
+
 func getLogs(ctx context.Context, c *ethclient.Client, startBlock uint64, endBlock uint64, addresses []common.Address, topics [][]common.Hash, maxQty uint64) ([]types.Log, error) {
 	if startBlock > endBlock {
 		return nil, errors.New("start block > end block")

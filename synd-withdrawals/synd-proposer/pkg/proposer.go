@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/offchainlabs/nitro/arbnode"
 )
 
 type Proposer struct {
@@ -128,6 +127,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			log.Println("Polling loop shutting down...")
 			return
 		case <-ticker.C:
+			// TODO (SEQ-1060): Optimize this to only prove if the last assertion is not the same as the current one. Use `Verify` to check if the last assertion is the same as the current one.
 			log.Println("Polling loop tick...")
 			appOutput, err := p.Prove(ctx)
 			if err != nil {
@@ -148,62 +148,28 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 	}
 }
 
+// TODO (SEQ-1061): Replace enclave types with auto-generated types from the bindings
 func (p *Proposer) Prove(ctx context.Context) (enclave.VerifyAppchainOutput, error) {
 	var appOutput enclave.VerifyAppchainOutput
 
-	enclaveConfig := enclave.Config{
-		SequencingContractAddress: p.Config.SequencingContractAddress,
-		SequencingBridgeAddress:   p.Config.SequencingBridgeAddress,
-		SettlementDelay:           p.Config.SettlementDelay,
-	}
-
-	// normally this comes from the tee contract instead
-	var startMetadata arbnode.BatchMetadata
-	if err := p.SequencingClient.Client().CallContext(ctx, &startMetadata, "synd_batchMetadata", p.Config.L1StartBatch); err != nil {
-		return appOutput, err
-	}
-	var endMetadata arbnode.BatchMetadata
-	if err := p.SequencingClient.Client().CallContext(ctx, &endMetadata, "synd_batchMetadata", p.Config.L1EndBatch); err != nil {
-		return appOutput, err
-	}
-	startSeqNum := uint64(startMetadata.MessageCount) - 1
-
-	header, err := p.SequencingClient.HeaderByNumber(ctx, big.NewInt(int64(startSeqNum)))
-	if err != nil {
-		return appOutput, err
-	}
-
-	startSeqBlock := header.Hash()
-
-	// binary search to find the start block
-	result, err := findBlock(ctx, p.AppchainClient, 0, startSeqNum)
-	if err != nil {
-		return appOutput, err
-	}
-
-	if header, err = p.EthereumClient.HeaderByNumber(ctx, big.NewInt(int64(endMetadata.ParentChainBlock))); err != nil {
-		return appOutput, err
-	}
-
-	setDelayedAcc, _, err := getMessageAcc(ctx, p.SettlementClient, p.Config.SequencingBridgeAddress, p.Config.SettlementMsgsCount)
+	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(nil)
 	if err != nil {
 		return appOutput, err
 	}
 
 	trustedInput := enclave.TrustedInput{
-		ConfigHash:           enclaveConfig.Hash(),
-		AppStartBlockHash:    result.BlockHash,
-		SeqStartBlockHash:    startSeqBlock,
-		SetDelayedMessageAcc: common.Hash(setDelayedAcc),
-		L1StartBatchAcc:      startMetadata.Accumulator,
-		L1EndHash:            header.Hash(),
+		ConfigHash:           contractTrustedInput.ConfigHash,
+		AppStartBlockHash:    contractTrustedInput.AppStartBlockHash,
+		SeqStartBlockHash:    contractTrustedInput.SeqStartBlockHash,
+		SetDelayedMessageAcc: contractTrustedInput.SetDelayedMessageAcc,
+		L1StartBatchAcc:      contractTrustedInput.L1StartBatchAcc,
+		L1EndHash:            contractTrustedInput.L1EndHash,
 	}
 
 	fmt.Println("Trusted input: ", trustedInput)
 
 	// Prove method
-	// Assume isL1Chain is false
-	count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, trustedInput.L1StartBatchAcc)
+	count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, trustedInput.L1StartBatchAcc)
 	if err != nil {
 		return appOutput, err
 	}
@@ -215,7 +181,7 @@ func (p *Proposer) Prove(ctx context.Context) (enclave.VerifyAppchainOutput, err
 	}
 
 	// get the start block
-	header, err = p.SequencingClient.HeaderByHash(ctx, trustedInput.SeqStartBlockHash)
+	header, err := p.SequencingClient.HeaderByHash(ctx, trustedInput.SeqStartBlockHash)
 	if err != nil {
 		return appOutput, err
 	}
@@ -248,7 +214,7 @@ func (p *Proposer) Prove(ctx context.Context) (enclave.VerifyAppchainOutput, err
 		}
 		// update preimages
 		for _, batch := range batches {
-			// TODO: add dapReaders to this function call
+			// TODO (SEQ-1062): add dapReaders to this function call
 			if err := getBatchPreimageData(ctx, batch, nil, preimages); err != nil {
 				return appOutput, err
 			}
@@ -264,7 +230,7 @@ func (p *Proposer) Prove(ctx context.Context) (enclave.VerifyAppchainOutput, err
 
 	// get merkle proof
 	accSlot := common.BigToHash(new(big.Int).Add(enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE, big.NewInt(int64(endBatchCount))))
-	if err := p.EthereumClient.Client().CallContext(ctx, &proof, "eth_getProof", p.Config.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
+	if err := p.EthereumClient.Client().CallContext(ctx, &proof, "eth_getProof", p.Config.EnclaveConfig.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
 		return appOutput, err
 	}
 
@@ -274,7 +240,7 @@ func (p *Proposer) Prove(ctx context.Context) (enclave.VerifyAppchainOutput, err
 	var seqOutput enclave.VerifySequencingChainOutput
 	if err := p.EnclaveClient.Call(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
 		TrustedInput:                    trustedInput,
-		Config:                          enclaveConfig,
+		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 valData.DelayedMessages,
 		StartDelayedMessagesAccumulator: valData.StartDelayedAcc,
 		Batches:                         batches,
@@ -294,7 +260,7 @@ func (p *Proposer) Prove(ctx context.Context) (enclave.VerifyAppchainOutput, err
 	}
 
 	// get delayed messages
-	startAcc, msgs, isDummy, err := getDelayedMessages(ctx, p.SettlementClient, p.Config.SequencingBridgeAddress, p.Config.SequencerInboxAddress, header.Nonce.Uint64(), trustedInput.SetDelayedMessageAcc)
+	startAcc, msgs, isDummy, err := getDelayedMessages(ctx, p.SettlementClient, p.Config.EnclaveConfig.SequencingBridgeAddress, p.Config.SequencerInboxAddress, header.Nonce.Uint64(), trustedInput.SetDelayedMessageAcc)
 	if err != nil {
 		return appOutput, err
 	}
@@ -305,7 +271,7 @@ func (p *Proposer) Prove(ctx context.Context) (enclave.VerifyAppchainOutput, err
 	if !isDummy {
 		realMsgs = msgs
 	}
-	numBatches := getNumBatches(seqOutput.Batches, realMsgs, p.Config.SettlementDelay)
+	numBatches := getNumBatches(seqOutput.Batches, realMsgs, p.Config.EnclaveConfig.SettlementDelay)
 
 	// get preimage data
 	var preimageData [][]byte
@@ -316,7 +282,7 @@ func (p *Proposer) Prove(ctx context.Context) (enclave.VerifyAppchainOutput, err
 	// derive appchain
 	if err := p.EnclaveClient.Call(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
 		TrustedInput:                    trustedInput,
-		Config:                          enclaveConfig,
+		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 msgs,
 		StartDelayedMessagesAccumulator: startAcc,
 		VerifySequencingChainOutput:     seqOutput,
