@@ -72,9 +72,6 @@ impl BlockBuilderConfig {
 /// Possible errors that can occur when initializing the block builder configuration
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("Unsupported appchain type: {0}")]
-    UnsupportedAppchainType(String),
-
     #[error("Sequencing contract address is missing")]
     SequencingContractAddressMissing,
 

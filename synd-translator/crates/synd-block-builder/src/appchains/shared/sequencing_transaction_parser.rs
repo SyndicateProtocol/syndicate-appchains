@@ -68,7 +68,7 @@ impl SequencingTransactionParser {
     }
 
     /// Decodes the event data into a vector of transactions
-    pub fn decode_event_data(&self, data: Bytes) -> Result<Vec<Bytes>, SequencingParserError> {
+    pub fn decode_event_data(data: &Bytes) -> Result<Vec<Bytes>, SequencingParserError> {
         if data.is_empty() {
             return Err(SequencingParserError::NoDataProvided);
         }
@@ -83,7 +83,7 @@ impl SequencingTransactionParser {
                 transactions.push(compressed_data);
             }
             CompressionType::Zlib => {
-                let mut decompressed_data = decompress_transactions(&data)
+                let mut decompressed_data = decompress_transactions(data)
                     .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))?;
                 transactions.append(&mut decompressed_data);
             }
@@ -93,6 +93,7 @@ impl SequencingTransactionParser {
         }
         Ok(transactions)
     }
+
     /// Decodes the event data into a vector of transactions
     pub fn get_event_transactions(
         &self,
@@ -105,7 +106,7 @@ impl SequencingTransactionParser {
             .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Decode the transactions
-        self.decode_event_data(decoded_event.data).map_err(|e| {
+        Self::decode_event_data(&decoded_event.data).map_err(|e| {
             error!("Error decoding event data: {:?}", e);
             e
         })
@@ -166,12 +167,9 @@ mod tests {
         let uncompressed_data = b"mock_data".to_vec();
         let input = Bytes::from([vec![0x0], uncompressed_data.clone()].concat());
 
-        let parser = SequencingTransactionParser::new(
-            "0x000000000000000000000000000000000000abcd".parse().unwrap(),
-        );
-        let result = parser.decode_event_data(input);
+        let result = SequencingTransactionParser::decode_event_data(&input);
 
-        println!("Decoded result: {:?}", result);
+        println!("Decoded result: {result:?}");
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), vec![Bytes::from(uncompressed_data)])

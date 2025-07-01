@@ -113,8 +113,7 @@ mod tests {
         assert_eq!(
             key,
             format!(
-                "{}:{}_0x4242424242424242424242424242424242424242_5",
-                WAITING_GAP_KEY_PREFIX, chain_id
+                "{WAITING_GAP_KEY_PREFIX}:{chain_id}_0x4242424242424242424242424242424242424242_5"
             )
         );
     }

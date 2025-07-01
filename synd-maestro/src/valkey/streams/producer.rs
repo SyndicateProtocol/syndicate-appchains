@@ -22,7 +22,7 @@ const TX_STREAM_KEY: &str = "maestro:transactions";
 /// # Returns
 /// A string in the format `synd-maestro:transactions:{chain_id}`
 pub fn tx_stream_key(chain_id: u64) -> String {
-    format!("{}:{}", TX_STREAM_KEY, chain_id)
+    format!("{TX_STREAM_KEY}:{chain_id}")
 }
 
 /// Valkey Stream producer for enqueueing transactions to a specific chain's stream
@@ -474,7 +474,7 @@ mod tests {
                 .xadd(
                     &producer_stream_key,
                     "*",
-                    &[("data", format!("test-{}", i).as_bytes()), ("retries", b"0" as &[u8])],
+                    &[("data", format!("test-{i}").as_bytes()), ("retries", b"0" as &[u8])],
                 )
                 .await
                 .unwrap();
@@ -503,8 +503,8 @@ mod tests {
         let data_guard = assert_callback_data.lock().await;
         assert_eq!(data_guard.len(), 5, "Callback should have collected 5 data items");
         for i in 0..5 {
-            let expected_data = format!("test-{}", i).into_bytes();
-            assert_eq!(data_guard[i], expected_data, "Mismatch in collected data for item {}", i);
+            let expected_data = format!("test-{i}").into_bytes();
+            assert_eq!(data_guard[i], expected_data, "Mismatch in collected data for item {i}");
         }
         drop(data_guard);
 

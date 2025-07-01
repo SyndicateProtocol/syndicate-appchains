@@ -58,7 +58,7 @@ pub fn create_header(
     }
 }
 
-/// Return the on-chain config for an appchain with a given chain id
+/// Return the on-chain config for an appchain with a given `chain_id`
 pub fn appchain_config(chain_id: u64) -> String {
     let mut cfg = format!(
         r#"{{
