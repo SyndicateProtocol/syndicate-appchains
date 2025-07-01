@@ -642,7 +642,6 @@ contract ArbitrumBridgeProxyTest is Test {
         // Exclude precompiles (0x01-0x0a) - https://www.evm.codes/precompiled
         vm.assume(uint160(recipient_) > 0x0a);
 
-
         uint256 withdrawAmount = 1 ether;
         uint256 initialBridgeBalance = address(bridgeProxy).balance;
         uint256 initialRecipientBalance = recipient_.balance;
