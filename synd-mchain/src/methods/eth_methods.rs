@@ -20,7 +20,7 @@ use contract_bindings::synd::{
     isequencerinbox::{self, ISequencerInbox},
 };
 use jsonrpsee::{
-    core::error::StringError,
+    core::SubscriptionError,
     types::{ErrorObjectOwned, Params},
     Extensions, PendingSubscriptionSink,
 };
@@ -38,7 +38,7 @@ pub async fn eth_subscribe(
     pending: PendingSubscriptionSink,
     ctx: Arc<(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>)>,
     _: Extensions,
-) -> Result<(), StringError> {
+) -> Result<(), SubscriptionError> {
     let (param,): (&str,) = p.parse()?;
     if param != "newHeads" {
         return Err(format!("unknown subscription event: {param}").into());
