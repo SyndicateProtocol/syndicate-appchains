@@ -45,6 +45,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
+
+      - name: Pull submodules
+        run: |
+          cd synd-withdrawals/synd-proposer && \
+          git submodule update --init --recursive
       - name: Run Go tests
         run: |
           cd synd-withdrawals/synd-proposer
