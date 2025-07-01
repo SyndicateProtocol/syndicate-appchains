@@ -28,7 +28,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tracing::{error, info};
+use tracing::info;
 
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
 /// (timestamp, block hash) data from the db to build partial blocks
@@ -333,25 +333,22 @@ pub struct IngestorProvider(Arc<WsClient>);
 #[allow(missing_docs)]
 impl IngestorProvider {
     pub async fn new(url: &str, timeout: Duration) -> Self {
-        loop {
-            match tokio::time::timeout(
-                timeout,
-                WsClientBuilder::new()
-                    .max_response_size(u32::MAX)
-                    .max_buffer_capacity_per_subscription(1024)
-                    .request_timeout(timeout)
-                    .enable_ws_ping(PingConfig::default())
-                    .build(url),
-            )
-            .await
-            {
-                Err(_) => {
-                    error!("timed out connecting to websocket");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
-                Ok(Ok(client)) => return Self(Arc::new(client)),
+        match tokio::time::timeout(
+            timeout,
+            WsClientBuilder::new()
+                .max_response_size(u32::MAX)
+                .max_buffer_capacity_per_subscription(1024)
+                .request_timeout(timeout)
+                .enable_ws_ping(PingConfig::default())
+                .build(url),
+        )
+        .await
+        {
+            Err(_) => {
+                panic!("timed out connecting to websocket: timeout={timeout:?}, url={url}");
             }
+            Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
+            Ok(Ok(client)) => Self(Arc::new(client)),
         }
     }
 }
@@ -386,6 +383,7 @@ mod tests {
         MethodsError, RpcModule,
     };
     use serde::de::DeserializeOwned;
+    use serde_json::value::RawValue;
     use std::{marker::PhantomData, pin::Pin, task::Poll};
     use tokio::sync::mpsc;
 
@@ -402,7 +400,7 @@ mod tests {
         }
     }
 
-    struct SubscriptionStream<Notif>(mpsc::Receiver<String>, PhantomData<Notif>);
+    struct SubscriptionStream<Notif>(mpsc::Receiver<Box<RawValue>>, PhantomData<Notif>);
 
     impl<Notif: DeserializeOwned + Unpin> Stream for SubscriptionStream<Notif> {
         type Item = Result<Notif, serde_json::Error>;
@@ -413,7 +411,7 @@ mod tests {
         ) -> Poll<Option<Self::Item>> {
             self.0.poll_recv(cx).map(|x| {
                 x.map(|x| {
-                    serde_json::from_str::<SubscriptionResponse<'_, Notif>>(&x)
+                    serde_json::from_str::<SubscriptionResponse<'_, Notif>>(x.get())
                         .map(|x| x.params.result)
                 })
             })
@@ -443,8 +441,8 @@ mod tests {
             ClientError,
         > {
             let params = params.to_rpc_params()?;
-            let req = serde_json::to_string(&Request::new(
-                method.into(),
+            let req = serde_json::to_string(&Request::borrowed(
+                method,
                 params.as_ref().map(|p| p.as_ref()),
                 Id::Number(0),
             ))?;

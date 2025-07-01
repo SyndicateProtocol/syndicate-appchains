@@ -2,7 +2,7 @@
 
 use clap::Parser;
 #[cfg(feature = "rocksdb")]
-use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
+use jsonrpsee::server::{RandomStringIdProvider, Server};
 #[cfg(feature = "rocksdb")]
 use rocksdb::DB;
 #[cfg(feature = "rocksdb")]
@@ -40,6 +40,11 @@ struct Config {
 #[cfg(feature = "rocksdb")]
 async fn main() -> eyre::Result<()> {
     // Initialize logging
+
+    use jsonrpsee::{
+        server::{PingConfig, ServerConfigBuilder},
+        ws_client::RpcServiceBuilder,
+    };
     #[allow(clippy::unwrap_used)]
     setup_global_logging().unwrap();
 
@@ -53,9 +58,14 @@ async fn main() -> eyre::Result<()> {
     info!("starting synd-mchain server on port {}", cfg.port);
     let module = start_mchain(cfg.appchain_chain_id, cfg.finality_delay, db, metrics);
 
-    let handle = Server::builder()
+    let jsonrpsee_cfg = ServerConfigBuilder::new()
         .ws_only()
+        .enable_ws_ping(PingConfig::default())
         .set_id_provider(RandomStringIdProvider::new(64))
+        .build();
+
+    let handle = Server::builder()
+        .set_config(jsonrpsee_cfg)
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
@@ -80,7 +90,6 @@ async fn main() -> eyre::Result<()> {
     handle.stopped().await;
     Ok(())
 }
-
 #[tokio::main]
 #[cfg(not(feature = "rocksdb"))]
 async fn main() -> eyre::Result<()> {

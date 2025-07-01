@@ -9,8 +9,9 @@ use alloy::{
     network::EthereumWallet,
     primitives::{keccak256, Address, Bytes},
     providers::{Provider, ProviderBuilder, WalletProvider},
+    rpc::client::RpcClient,
     signers::local::PrivateKeySigner,
-    transports::TransportError,
+    transports::{layers::RetryBackoffLayer, TransportError},
 };
 use axum::{
     http::StatusCode,
@@ -99,8 +100,7 @@ pub async fn run_batcher(
             loop {
                 debug!("Batcher reading and batching transactions at time {:?}", Instant::now());
                 if let Err(e) = batcher.process_transactions().await {
-                    error!("Batcher error: {:?}", e);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    panic!("Batcher error: {e:?}");
                 }
             }
         }
@@ -139,10 +139,21 @@ async fn create_sequencing_contract_provider(
 ) -> Result<SyndicateSequencingChainInstance<(), FilledProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
-    let sequencing_provider = ProviderBuilder::new()
-        .wallet(EthereumWallet::from(signer))
-        .connect(config.sequencing_rpc_url.as_str())
-        .await?;
+
+    let rpc_client = {
+        RetryBackoffLayer::new(
+            config.rpc_max_retries,
+            config.rpc_initial_backoff_ms,
+            config.rpc_compute_units_per_second,
+        )
+        .with_avg_unit_cost(config.rpc_compute_units_avg_request_cost);
+        RpcClient::builder().layer(())
+    }
+    .connect(config.sequencing_rpc_url.as_str())
+    .await?;
+
+    let sequencing_provider =
+        ProviderBuilder::new().wallet(EthereumWallet::from(signer)).on_client(rpc_client);
     Ok(SyndicateSequencingChainInstance::new(sequencing_contract_address, sequencing_provider))
 }
 
@@ -376,6 +387,7 @@ mod tests {
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            ..Default::default()
         }
     }
 
@@ -605,6 +617,8 @@ mod tests {
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            rpc_max_retries: 10,
+            ..Default::default()
         };
         let metrics_port = PortManager::instance().next_port().await;
         let sequencing_contract_address = Address::ZERO;

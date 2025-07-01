@@ -1,7 +1,7 @@
 //! The `synd-chain-ingestor` serves blocks from a chain to all appchains that use the chain.
 
 use clap::Parser;
-use jsonrpsee::server::{PingConfig, Server};
+use jsonrpsee::server::{PingConfig, Server, ServerConfigBuilder};
 use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
     tracing::setup_global_logging,
@@ -36,9 +36,10 @@ async fn main() -> eyre::Result<()> {
     .await?;
 
     info!("starting synd-chain-ingestor server on {}", cfg.port);
+    let jsonrpsee_cfg =
+        ServerConfigBuilder::new().ws_only().enable_ws_ping(PingConfig::default()).build();
     let _handle = Server::builder()
-        .ws_only()
-        .enable_ws_ping(PingConfig::default())
+        .set_config(jsonrpsee_cfg)
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
         .start(module);

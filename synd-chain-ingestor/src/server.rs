@@ -10,9 +10,11 @@ use alloy::{
 };
 use eyre::eyre;
 use jsonrpsee::{
-    core::StringError, types::ErrorObjectOwned, RpcModule, SubscriptionMessage, SubscriptionSink,
+    core::SubscriptionError, types::ErrorObjectOwned, RpcModule, SubscriptionMessage,
+    SubscriptionSink,
 };
 use serde::{Deserialize, Serialize};
+use serde_json;
 use shared::types::PartialBlock;
 use std::{
     collections::{HashSet, VecDeque},
@@ -124,7 +126,7 @@ fn handle_subscription(
     ctx: &Mutex<Context>,
     start_block: u64,
     addresses: Vec<Address>,
-) -> Result<(), StringError> {
+) -> Result<(), SubscriptionError> {
     let mut lock = ctx.lock().unwrap();
     if start_block <= lock.db.start_block {
         return Err(eyre!(
@@ -143,10 +145,8 @@ fn handle_subscription(
         addrs.insert(addr);
     }
 
-    sink.try_send(
-        SubscriptionMessage::from_json(&Message::Init(lock.db.get_block_bytes(start_block - 1)))
-            .unwrap(),
-    )?;
+    let message = Message::Init(lock.db.get_block_bytes(start_block - 1));
+    sink.try_send(SubscriptionMessage::from(serde_json::value::to_raw_value(&message).unwrap()))?;
 
     lock.subs.push((sink, addrs));
     drop(lock);

@@ -44,7 +44,7 @@ pub async fn run(
         vec![HEADER_CHAIN_ID.to_string(), "traceparent".to_string(), "tracestate".to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
-        .layer(ProxyGetRequestLayer::new("/health", "health")?);
+        .layer(ProxyGetRequestLayer::new([("/health", "health")])?);
 
     let server = Server::builder()
         .set_http_middleware(http_middleware)
