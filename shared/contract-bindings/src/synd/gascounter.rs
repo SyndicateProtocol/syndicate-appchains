@@ -18,6 +18,7 @@ interface GasCounter {
     function TRACKING_OVERHEAD() external view returns (uint256);
     function currentPeriodIndex() external view returns (uint256);
     function gasPriceInSynd() external view returns (uint256);
+    function gasTrackingEnabled() external view returns (bool);
     function gasTrackingInitialized() external view returns (bool);
     function getCurrentPeriod() external view returns (GasPeriod memory period);
     function getCurrentPeriodGasUsed() external view returns (uint256 totalGas);
@@ -81,6 +82,19 @@ interface GasCounter {
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "gasTrackingEnabled",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -1592,6 +1606,129 @@ function gasPriceInSynd() external view returns (uint256);
             }
         }
     };
+    /**Function with signature `gasTrackingEnabled()` and selector `0x84fab62b`.
+```solidity
+function gasTrackingEnabled() external view returns (bool);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct gasTrackingEnabledCall {}
+    ///Container type for the return parameters of the [`gasTrackingEnabled()`](gasTrackingEnabledCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct gasTrackingEnabledReturn {
+        #[allow(missing_docs)]
+        pub _0: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<gasTrackingEnabledCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: gasTrackingEnabledCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for gasTrackingEnabledCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (bool,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<gasTrackingEnabledReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: gasTrackingEnabledReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for gasTrackingEnabledReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for gasTrackingEnabledCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = gasTrackingEnabledReturn;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "gasTrackingEnabled()";
+            const SELECTOR: [u8; 4] = [132u8, 250u8, 182u8, 43u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_returns(
+                data: &[u8],
+                validate: bool,
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
+            }
+        }
+    };
     /**Function with signature `gasTrackingInitialized()` and selector `0x3b6ab2a9`.
 ```solidity
 function gasTrackingInitialized() external view returns (bool);
@@ -2759,6 +2896,8 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
         #[allow(missing_docs)]
         gasPriceInSynd(gasPriceInSyndCall),
         #[allow(missing_docs)]
+        gasTrackingEnabled(gasTrackingEnabledCall),
+        #[allow(missing_docs)]
         gasTrackingInitialized(gasTrackingInitializedCall),
         #[allow(missing_docs)]
         getCurrentPeriod(getCurrentPeriodCall),
@@ -2794,6 +2933,7 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
             [101u8, 88u8, 149u8, 79u8],
             [112u8, 60u8, 252u8, 187u8],
             [130u8, 244u8, 74u8, 222u8],
+            [132u8, 250u8, 182u8, 43u8],
             [141u8, 90u8, 35u8, 155u8],
             [175u8, 247u8, 76u8, 109u8],
             [198u8, 96u8, 211u8, 243u8],
@@ -2805,7 +2945,7 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
     impl alloy_sol_types::SolInterface for GasCounterCalls {
         const NAME: &'static str = "GasCounterCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 13usize;
+        const COUNT: usize = 14usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -2820,6 +2960,9 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 }
                 Self::gasPriceInSynd(_) => {
                     <gasPriceInSyndCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::gasTrackingEnabled(_) => {
+                    <gasTrackingEnabledCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::gasTrackingInitialized(_) => {
                     <gasTrackingInitializedCall as alloy_sol_types::SolCall>::SELECTOR
@@ -2972,6 +3115,19 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                     getCurrentPeriodTimeRemaining
                 },
                 {
+                    fn gasTrackingEnabled(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<GasCounterCalls> {
+                        <gasTrackingEnabledCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
+                            .map(GasCounterCalls::gasTrackingEnabled)
+                    }
+                    gasTrackingEnabled
+                },
+                {
                     fn getTotalGasFees(
                         data: &[u8],
                         validate: bool,
@@ -3070,6 +3226,11 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                         inner,
                     )
                 }
+                Self::gasTrackingEnabled(inner) => {
+                    <gasTrackingEnabledCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::gasTrackingInitialized(inner) => {
                     <gasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -3136,6 +3297,12 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 }
                 Self::gasPriceInSynd(inner) => {
                     <gasPriceInSyndCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::gasTrackingEnabled(inner) => {
+                    <gasTrackingEnabledCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -3580,6 +3747,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<T, &P, gasPriceInSyndCall, N> {
             self.call_builder(&gasPriceInSyndCall {})
+        }
+        ///Creates a new call builder for the [`gasTrackingEnabled`] function.
+        pub fn gasTrackingEnabled(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<T, &P, gasTrackingEnabledCall, N> {
+            self.call_builder(&gasTrackingEnabledCall {})
         }
         ///Creates a new call builder for the [`gasTrackingInitialized`] function.
         pub fn gasTrackingInitialized(
