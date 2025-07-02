@@ -41,8 +41,11 @@ jobs:
     name: test synd-proposer
     runs-on: ubuntu-latest
     env:
+      CARGO_HOME: "${RUNNER_TEMP}/cargo"
+      RUSTUP_HOME: "${RUNNER_TEMP}/rustup"
       CARGOFLAGS: ""
       RUSTFLAGS: "-C target-cpu=native"
+
     steps:
       - uses: actions/checkout@v4
         with:
