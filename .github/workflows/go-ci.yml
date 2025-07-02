@@ -57,9 +57,15 @@ jobs:
       - name: Install Ubuntu dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y \
-            build-essential cmake lld-14 libudev-dev
-          sudo ln -s /usr/bin/wasm-ld-14 /usr/local/bin/wasm-ld 
-          sudo apt-get install -y wabt
+            build-essential cmake lld-14 libudev-dev wabt
+          sudo ln -s /usr/bin/wasm-ld-14 /usr/local/bin/wasm-ld
+
+      - name: Install Rust toolchain & WASM targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.84.1"
+          targets: "wasm32-wasip1, wasm32-unknown-unknown"
+          components: "llvm-tools-preview, rustfmt, clippy"
 
       - name: Build all lint dependencies
         run: |
