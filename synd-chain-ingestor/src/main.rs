@@ -27,7 +27,7 @@ async fn main() -> eyre::Result<()> {
 
     let (module, ctx) = server::start(
         &provider,
-        &cfg.ws_url,
+        cfg.ws_urls.clone(),
         &cfg.db_file,
         cfg.start_block,
         cfg.parallel_sync_requests,
