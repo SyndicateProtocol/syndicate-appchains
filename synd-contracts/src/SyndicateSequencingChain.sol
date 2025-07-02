@@ -34,7 +34,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker, GasCounter {
     /// @notice Processes a compressed transaction.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) trackGasUsage {
+    function processTransaction(bytes calldata data)
+        external
+        onlyWhenAllowed(msg.sender, tx.origin, data)
+        trackGasUsage
+    {
         emit TransactionProcessed(msg.sender, data);
     }
 
