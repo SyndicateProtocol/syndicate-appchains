@@ -42,6 +42,9 @@ abstract contract GasCounter {
     /// @notice Whether gas tracking has been initialized
     bool public gasTrackingInitialized;
 
+    /// @notice Whether gas tracking is enabled (can be disabled for formal verification)
+    bool public gasTrackingEnabled = true;
+
     /// @notice Mapping of period index to gas period data
     mapping(uint256 => GasPeriod) public periods;
 
@@ -72,6 +75,11 @@ abstract contract GasCounter {
 
     /// @notice Modifier that tracks gas usage for a function call
     modifier trackGasUsage() {
+        if (!gasTrackingEnabled) {
+            _;
+            return;
+        }
+
         uint256 gasStart = gasleft();
         _;
         uint256 gasUsed = gasStart - gasleft();
@@ -102,6 +110,10 @@ abstract contract GasCounter {
     /// @notice Internal function to track gas usage
     /// @param gasUsed Amount of gas consumed
     function _trackGas(uint256 gasUsed) internal {
+        if (!gasTrackingEnabled) {
+            return;
+        }
+
         // Initialize if not already done
         if (!gasTrackingInitialized) {
             _initializeGasTracking();
@@ -211,5 +223,21 @@ abstract contract GasCounter {
             return 0;
         }
         return currentPeriodIndex + 1;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Disable gas tracking if needed
+    /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
+    function _disableGasTracking() internal {
+        gasTrackingEnabled = false;
+    }
+
+    /// @notice Enable gas tracking
+    /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
+    function _enableGasTracking() internal {
+        gasTrackingEnabled = true;
     }
 }

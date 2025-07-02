@@ -78,4 +78,20 @@ contract SyndicateSequencingChain is SequencingModuleChecker, GasCounter {
     function prependZeroByte(bytes calldata _data) public pure returns (bytes memory) {
         return abi.encodePacked(bytes1(0x00), _data);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                         GAS TRACKING ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Disable gas tracking if needed
+    /// @dev Only callable by the contract owner
+    function disableGasTracking() external onlyOwner {
+        _disableGasTracking();
+    }
+
+    /// @notice Enable gas tracking
+    /// @dev Only callable by the contract owner
+    function enableGasTracking() external onlyOwner {
+        _enableGasTracking();
+    }
 }

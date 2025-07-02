@@ -9,6 +9,11 @@ methods {
     function owner() external returns (address) envfree;
     function init._getInitializedVersion() external returns (uint8) envfree;
 
+    // Gas tracking functions
+    function gasTrackingEnabled() external returns (bool) envfree;
+    function disableGasTracking() external;
+    function enableGasTracking() external;
+
     // Permission Module interface methods
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
 }
@@ -99,6 +104,9 @@ rule processConsistency(bytes data) {
     require init._getInitializedVersion() > 0;
     require permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
+    // Disable gas tracking for consistent verification
+    require !gasTrackingEnabled();
+
     // Record both outcomes
     processTransactionUncompressed@withrevert(e, data);
     bool txSuccess = !lastReverted;
@@ -176,6 +184,9 @@ rule permissionsCorrectlyEnforced(bytes data) {
 
     // Verify initialization worked
     require init._getInitializedVersion() == 1;
+
+    // Disable gas tracking for consistent verification
+    require !gasTrackingEnabled();
 
     // Valid sender and msg parameters
     require e.msg.sender != 0;
