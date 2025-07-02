@@ -388,7 +388,7 @@ impl TestComponents {
         info!("Starting chain ingestors...");
         let temp = test_path("chain_ingestor");
         let seq_chain_ingestor_cfg = ChainIngestorConfig {
-            ws_url: seq_rpc_ws_url.to_string(),
+            ws_urls: vec![seq_rpc_ws_url.clone()],
             db_file: temp.clone() + "/sequencing_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -403,7 +403,7 @@ impl TestComponents {
         .await?;
 
         let set_chain_ingestor_cfg = ChainIngestorConfig {
-            ws_url: set_rpc_ws_url.clone(),
+            ws_urls: vec![set_rpc_ws_url.clone()],
             db_file: temp + "/settlement_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,

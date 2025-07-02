@@ -45,7 +45,7 @@ See `config.rs` for details.
 
 ```bash
 cargo run -p synd-chain-ingestor -- \
-  --ws-url ws://my-chains-websocket.com:4321 \
+  --ws-urls ws://my-chains-websocket.com:4321 \
   --db-file ./chain-data.db \
   --start-block 1000000 \
   --port 8545 \

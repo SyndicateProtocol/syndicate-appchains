@@ -37,30 +37,33 @@ fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
 impl EthClient {
     /// Creates a new [`EthClient`] instance. Retries indefinitely until it is able to connect.
     pub async fn new(
-        ws_url: &str,
+        ws_urls: Vec<String>,
         timeout: Duration,
         log_timeout: Duration,
         channel_size: usize,
         retry_interval: Duration,
     ) -> Self {
         loop {
-            match tokio::time::timeout(
-                timeout,
-                ProviderBuilder::default().on_ws(WsConnect::new(ws_url).with_config(
-                    WebSocketConfig::default().max_message_size(None).max_frame_size(None),
-                )),
-            )
-            .await
-            {
-                Err(_) => {
-                    error!("timed out connecting to websocket");
-                }
-                Ok(Err(err)) => {
-                    handle_rpc_error("failed to connect to websocket", &err);
-                }
-                Ok(Ok(client)) => {
-                    client.client().expect_pubsub_frontend().set_channel_size(channel_size);
-                    return Self { client, timeout, log_timeout, retry_interval };
+            // fallback to next ws url if the current one fails
+            for ws_url in ws_urls.clone() {
+                match tokio::time::timeout(
+                    timeout,
+                    ProviderBuilder::default().on_ws(WsConnect::new(ws_url).with_config(
+                        WebSocketConfig::default().max_message_size(None).max_frame_size(None),
+                    )),
+                )
+                .await
+                {
+                    Err(_) => {
+                        error!("timed out connecting to websocket");
+                    }
+                    Ok(Err(err)) => {
+                        handle_rpc_error("failed to connect to websocket", &err);
+                    }
+                    Ok(Ok(client)) => {
+                        client.client().expect_pubsub_frontend().set_channel_size(channel_size);
+                        return Self { client, timeout, log_timeout, retry_interval };
+                    }
                 }
             }
             tokio::time::sleep(retry_interval).await;

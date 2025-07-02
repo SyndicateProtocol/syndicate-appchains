@@ -2,12 +2,26 @@ use crate::config::TranslatorConfig;
 use alloy::{
     primitives::{Address, U256},
     providers::{Provider, ProviderBuilder},
-    rpc::client::ClientBuilder,
+    rpc::client::{ClientBuilder, RpcClient},
 };
 use contract_bindings::synd::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
 use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
 use tracing::{error, info, warn};
+
+async fn rpc_client_from_urls(urls: &[String]) -> RpcClient {
+    for url in urls {
+        match ClientBuilder::default().connect(url.as_str()).await {
+            Ok(client) => {
+                return client;
+            }
+            Err(e) => {
+                warn!("Failed to connect to {}: {}", url, e);
+            }
+        }
+    }
+    panic!("Failed to connect to any of the provided URLs");
+}
 
 /// Fetches chain config if it exists
 pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig {
@@ -24,12 +38,9 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
         IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
             .await;
 
-    let provider = ProviderBuilder::new().on_client(
-        ClientBuilder::default()
-            .connect(ingestor_provider.get_url().await.unwrap().as_ref())
-            .await
-            .unwrap(),
-    );
+    let urls = ingestor_provider.get_urls().await.unwrap();
+    let client = rpc_client_from_urls(&urls).await;
+    let provider = ProviderBuilder::new().on_client(client);
 
     let onchain = match get_config(address, U256::from(config.appchain_chain_id), provider).await {
         Ok(c) => c,
