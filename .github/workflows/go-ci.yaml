@@ -54,6 +54,12 @@ jobs:
         with:
           node-version: "18.x"
 
+      - name: Install Ubuntu dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential cmake lld-14 libudev-dev
+          sudo ln -s /usr/bin/wasm-ld-14 /usr/local/bin/wasm-ld
+
       - name: Build all lint dependencies
         run: |
           cd synd-withdrawals/synd-enclave/nitro
