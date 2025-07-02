@@ -59,7 +59,7 @@ func getLogs(ctx context.Context, c *ethclient.Client, startBlock uint64, endBlo
 		Addresses: addresses,
 		Topics:    topics,
 	})
-	// TODO: check if a valid error response object is received before retrying
+	// TODO (SEQ-1064): check if a valid error response object is received before retrying
 	if err == nil {
 		return logs, nil
 	}
@@ -87,7 +87,7 @@ func getBatches(ctx context.Context, c *ethclient.Client, sequencerInbox common.
 	if err != nil {
 		return nil, err
 	}
-	// TODO: use custom client that auto bisects the log range
+	// TODO (SEQ-1064): use custom client that auto bisects the log range
 	batches, err := inbox.LookupBatchesInRange(ctx, big.NewInt(int64(startBlock)), big.NewInt(int64(endBlock)))
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func getBatches(ctx context.Context, c *ethclient.Client, sequencerInbox common.
 	var data [][]byte
 	for _, batch := range batches {
 		if batch.SequenceNumber >= start && batch.SequenceNumber <= end {
-			// TODO: can this be sped up? probably not since the tx receipt needs to be fetched in general
+			// TODO (SEQ-1064): can this be sped up? probably not since the tx receipt needs to be fetched in general
 			raw, err := batch.Serialize(ctx, c)
 			if err != nil {
 				return nil, err
@@ -112,7 +112,7 @@ func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprov
 				preimageRecorder := func(key common.Hash, value []byte, _ arbutil.PreimageType) {
 					preimages[key] = value
 				}
-				// TODO: try to speed this up - can disable validation as well if it is slow.
+				// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
 				_, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, preimageRecorder, true)
 				if err != nil {
 					// Matches the way keyset validation was done inside DAS readers i.e logging the error
@@ -204,7 +204,7 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 		return common.Hash{}, nil, false, fmt.Errorf("unexpected number of logs found: got %d, expected %d", len(logs), len(indexes))
 	}
 
-	logs, err = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
+	logs, _ = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
 		[]common.Address{bridge, inbox},
 		[][]common.Hash{
 			[]common.Hash{messageDeliveredID, inboxMessageDeliveredID},

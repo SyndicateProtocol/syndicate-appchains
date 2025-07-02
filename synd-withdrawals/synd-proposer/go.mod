@@ -13,7 +13,7 @@ replace github.com/SyndicateProtocol/synd-appchains/synd-enclave => ../synd-encl
 require (
 	github.com/SyndicateProtocol/synd-appchains/synd-enclave v0.0.0-00010101000000-000000000000
 	github.com/ethereum/go-ethereum v1.15.11
-	github.com/offchainlabs/nitro v0.0.0-20250701053459-ee759d0cfa3f
+	github.com/offchainlabs/nitro v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1

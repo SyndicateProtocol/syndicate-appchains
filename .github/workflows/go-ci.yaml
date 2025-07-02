@@ -55,7 +55,7 @@ jobs:
           cd synd-withdrawals/synd-proposer
           git submodule update --init --recursive
 
-      - name: Tidy & verify modules
+      - name: Tidy modules
         run: |
           cd synd-withdrawals/synd-proposer
           go mod tidy
