@@ -115,6 +115,9 @@ pub struct TestComponents {
     pub appchain_block_explorer_url: String,
 }
 
+pub const SEQUENCING_CHAIN_ID: u64 = 15;
+pub const SETTLEMENT_CHAIN_ID: u64 = 20;
+
 impl TestComponents {
     #[allow(clippy::unwrap_used)]
     pub async fn run<Fut: Future<Output = Result<()>> + Send>(
@@ -170,9 +173,11 @@ impl TestComponents {
             provider: seq_provider,
             http_url: _,
         } = match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => start_anvil(15).await?,
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+                start_anvil(SEQUENCING_CHAIN_ID).await?
+            }
             BaseChainsType::Nitro => {
-                let chain_id = 15;
+                let chain_id = SEQUENCING_CHAIN_ID;
                 let l1_info = l1_info.as_ref().unwrap();
 
                 // NOTE: use a different address to post batches to avoid nonce conflicts
@@ -245,7 +250,7 @@ impl TestComponents {
             http_url: set_rpc_http_url,
         } = match options.base_chains_type {
             BaseChainsType::Anvil => {
-                let chain_info = start_anvil(20).await?;
+                let chain_info = start_anvil(SETTLEMENT_CHAIN_ID).await?;
                 // Use the mock rollup contract for the test instead of deploying all the nitro
                 // rollup contracts
                 let _ = Rollup::deploy_builder(
@@ -262,7 +267,7 @@ impl TestComponents {
                 chain_info
             }
             BaseChainsType::Nitro => {
-                let chain_id = 20;
+                let chain_id = SETTLEMENT_CHAIN_ID;
                 let l1_info = l1_info.as_ref().unwrap();
 
                 // NOTE: use a different address to post batches to avoid nonce conflicts
@@ -428,14 +433,11 @@ impl TestComponents {
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_ws_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port().await,
-            arbitrum_bridge_address: Some(appchain_deployment.bridge),
-            arbitrum_inbox_address: Some(appchain_deployment.inbox),
-            sequencing_contract_address: Some(sequencing_contract_address),
+            // Needs to be provided as it needs to be the ingestor's URL
             sequencing_ws_url: Some(sequencing_rpc_url.clone()),
-            appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
-            sequencing_start_block: Some(options.sequencing_start_block),
-            settlement_start_block: Some(options.settlement_start_block),
-            settlement_delay: Some(options.settlement_delay),
+            // NOTE: do not fill the values that are meant to be filled by the config manager
+            // contract
+            ..Default::default()
         };
 
         let translator = start_component(
@@ -660,7 +662,7 @@ impl TestComponents {
             }))
             .send()
             .await?;
-        // assert!(response.status().is_success(), "EIP-1559 transaction request failed");
+        assert!(response.status().is_success(), "EIP-1559 transaction request failed");
         let json_resp: Value = response.json().await?;
         Ok(json_resp)
     }

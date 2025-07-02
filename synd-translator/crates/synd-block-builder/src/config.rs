@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use thiserror::Error;
 
 /// Configuration for the block builder service
-#[derive(Parser, Clone)]
+#[derive(Parser, Clone, Default)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
     #[arg(long, env = "MCHAIN_WS_URL")]
@@ -37,17 +37,6 @@ impl Debug for BlockBuilderConfig {
             .field("arbitrum_inbox_address", &self.arbitrum_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
             .finish()
-    }
-}
-
-impl Default for BlockBuilderConfig {
-    fn default() -> Self {
-        Self {
-            mchain_ws_url: String::new(),
-            sequencing_contract_address: Some(Address::ZERO),
-            arbitrum_bridge_address: Some(Address::ZERO),
-            arbitrum_inbox_address: Some(Address::ZERO),
-        }
     }
 }
 
