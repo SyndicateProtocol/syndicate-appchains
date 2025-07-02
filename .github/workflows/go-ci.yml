@@ -65,7 +65,7 @@ jobs:
         with:
           toolchain: "1.84.1"
           targets: "wasm32-wasip1, wasm32-unknown-unknown"
-          components: "llvm-tools-preview, rustfmt, clippy"
+          components: "cargo, rustc"
 
       - name: Build all lint dependencies
         run: |
