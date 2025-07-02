@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
+import {GasCounter} from "./GasCounter.sol";
 
 /// @title SyndicateSequencingChain
 /// @notice The core contract for sequencing transactions using a modular permission architecture
@@ -12,7 +13,7 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 /// 4. If allowed, a TransactionProcessed event is emitted with the sender and data
 /// 5. External systems observe these events to process the transactions on the application chain
 /// This design uses events rather than state changes for scalability and gas efficiency
-contract SyndicateSequencingChain is SequencingModuleChecker {
+contract SyndicateSequencingChain is SequencingModuleChecker, GasCounter {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
 
@@ -33,7 +34,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @notice Processes a compressed transaction.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
+    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) trackGasUsage {
         emit TransactionProcessed(msg.sender, data);
     }
 
@@ -43,6 +44,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     function processTransactionUncompressed(bytes calldata data)
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
+        trackGasUsage
     {
         emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
@@ -51,7 +53,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data An array of transaction data.
     //#olympix-ignore
-    function processTransactionsBulk(bytes[] calldata data) external {
+    function processTransactionsBulk(bytes[] calldata data) external trackGasUsage {
         uint256 dataCount = data.length;
 
         // Process all transactions
