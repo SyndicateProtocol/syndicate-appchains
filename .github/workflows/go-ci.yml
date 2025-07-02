@@ -85,6 +85,17 @@ jobs:
         run: |
           cargo install --force cbindgen
 
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          cache: false
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v12
+        with:
+          version: 3.1.6
+          no-cache: true
+
       - name: Build all lint dependencies
         run: |
           cd synd-withdrawals/synd-enclave/nitro
