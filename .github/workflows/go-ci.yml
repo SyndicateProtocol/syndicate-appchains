@@ -81,6 +81,10 @@ jobs:
           targets: "wasm32-wasip1, wasm32-unknown-unknown"
           components: "cargo, rustc, clippy"
 
+      - name: Install cbindgen
+        run: |
+          cargo install --force cbindgen
+
       - name: Build all lint dependencies
         run: |
           cd synd-withdrawals/synd-enclave/nitro
