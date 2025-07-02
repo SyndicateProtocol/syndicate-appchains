@@ -23,6 +23,11 @@ func main() {
 		},
 	}
 
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusOK)
@@ -63,7 +68,9 @@ func main() {
 		_, _ = w.Write(raw)
 	}
 
-	err := http.ListenAndServe(":7333", http.HandlerFunc(handler))
+	http.HandleFunc("/", handler)
+
+	err := http.ListenAndServe(":7333", nil)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
