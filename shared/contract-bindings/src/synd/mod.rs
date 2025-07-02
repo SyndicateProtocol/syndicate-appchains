@@ -64,6 +64,7 @@ pub mod r#erc20permit;
 pub mod r#erc20votes;
 pub mod r#enumerableset;
 pub mod r#errors;
+pub mod r#gascounter;
 pub mod r#globalstatelib;
 pub mod r#groth16verifier;
 pub mod r#iaccesscontrol;
