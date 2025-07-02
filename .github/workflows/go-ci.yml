@@ -104,7 +104,12 @@ jobs:
           cd synd-withdrawals/synd-proposer
           go mod tidy
 
+      - name: Ensure TMPDIR exists
+        run: mkdir -p "$RUNNER_TEMP"
+
       - name: Run Synd-Proposer tests
+        env:
+          TMPDIR: $RUNNER_TEMP
         run: |
           cd synd-withdrawals/synd-proposer
           go test ./...
