@@ -45,6 +45,7 @@ jobs:
       RUSTUP_HOME: "${RUNNER_TEMP}/rustup"
       CARGOFLAGS: ""
       RUSTFLAGS: "-C target-cpu=native"
+      PATH: "${RUNNER_TEMP}/cargo/bin:${RUNNER_TEMP}/rustup/bin:${PATH}"
 
     steps:
       - uses: actions/checkout@v4
