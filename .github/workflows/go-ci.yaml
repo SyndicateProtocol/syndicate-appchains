@@ -42,14 +42,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.24"
 
-      - name: Pull submodules
+      - name: Pull all submodules
         run: |
-          cd synd-withdrawals/synd-proposer && \
           git submodule update --init --recursive
+
+      - name: Tidy & verify modules
+        run: |
+          cd synd-withdrawals/synd-proposer
+          go mod tidy
+          go mod verify
+
       - name: Run Go tests
         run: |
           cd synd-withdrawals/synd-proposer
