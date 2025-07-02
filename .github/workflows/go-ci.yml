@@ -66,37 +66,20 @@ jobs:
           which wat2wasm
           which wasm-ld
 
-      - name: Install Rust toolchain & WASM targets
+      - name: Install rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        id: install-rust-nightly
+        with:
+          toolchain: "nightly-2025-02-14"
+          targets: "wasm32-wasip1, wasm32-unknown-unknown"
+          components: "rust-src, rustfmt, clippy"
+
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.84.1"
           targets: "wasm32-wasip1, wasm32-unknown-unknown"
           components: "cargo, rustc, clippy"
-
-      - name: Verify Rust installation
-        run: |
-          rustc --version
-          cargo --version
-          rustup component list | grep clippy
-
-      - name: Clean up corrupted Rust downloads (if any)
-        run: |
-          # Clean up any corrupted downloads
-          rm -rf ~/.rustup/downloads/*.partial || true
-          # Ensure clippy is properly installed
-          rustup component add clippy --toolchain 1.84.1 || true
-
-      - name: Install nightly Rust toolchain
-        run: |
-          rustup toolchain install nightly
-          rustup component add rust-src --toolchain nightly
-
-      - name: Clear cargo cache if needed
-        run: |
-          # Clear cargo cache if it's corrupted
-          cargo clean || true
-          # Clear rustup downloads if corrupted
-          rm -rf ~/.rustup/downloads/*.partial ~/.rustup/downloads/*.tmp || true
 
       - name: Build all lint dependencies
         run: |
@@ -114,7 +97,7 @@ jobs:
           cd synd-withdrawals/synd-proposer
           go mod tidy
 
-      - name: Run Go tests
+      - name: Run Synd-Proposer tests
         run: |
           cd synd-withdrawals/synd-proposer
           go test ./...
