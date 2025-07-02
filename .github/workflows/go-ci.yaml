@@ -49,6 +49,11 @@ jobs:
         with:
           go-version: "1.24"
 
+      - name: Build all lint dependencies
+        run: |
+          cd synd-withdrawals/synd-enclave/nitro
+          make -j build-node-deps
+
       - name: Pull all submodules
         run: |
           git submodule update --init --recursive
