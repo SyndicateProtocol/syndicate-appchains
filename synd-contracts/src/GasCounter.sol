@@ -26,6 +26,7 @@ abstract contract GasCounter {
 
     /// @notice Duration of each tracking period (30 days)
     uint256 public constant PERIOD_DURATION = 30 days;
+    uint256 public constant TRACKING_OVERHEAD = 5000; // Approximate gas overhead for tracking operations
 
     /// @notice Approximate gas price in SYND tokens (18 decimals)
     /// @dev hardcoded as 1 gwei
@@ -76,7 +77,7 @@ abstract contract GasCounter {
         uint256 gasUsed = gasStart - gasleft();
 
         // Add some gas for the tracking operations themselves
-        gasUsed += 5000; // Approximate gas for tracking operations
+        gasUsed += TRACKING_OVERHEAD; // Approximate gas for tracking operations
 
         _trackGas(gasUsed);
     }
