@@ -1,6 +1,10 @@
 #![allow(missing_docs)]
 
-use alloy::{primitives::Address, providers::WalletProvider};
+use crate::components::test_components::SEQUENCING_CHAIN_ID;
+use alloy::{
+    primitives::{Address, U256},
+    providers::WalletProvider,
+};
 use contract_bindings::synd::arbconfigmanager::ArbConfigManager;
 use eyre::Result;
 use shared::types::FilledProvider;
@@ -84,7 +88,7 @@ pub(super) async fn setup_config_manager(
         .createArbChainConfig(
             config_manager_owner,
             options_clone.appchain_chain_id.try_into().unwrap(),
-            options_clone.appchain_chain_id.try_into().unwrap(),
+            U256::from(SEQUENCING_CHAIN_ID),
             arbitrum_bridge_address,
             arbitrum_inbox_address,
             options_clone.settlement_delay.try_into().unwrap(),
