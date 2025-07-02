@@ -40,11 +40,6 @@ jobs:
   proposer-test:
     name: test synd-proposer
     runs-on: ubuntu-latest
-    env:
-      CARGO_HOME: "${RUNNER_TEMP}/cargo"
-      RUSTUP_HOME: "${RUNNER_TEMP}/rustup"
-      CARGOFLAGS: ""
-      RUSTFLAGS: "-C target-cpu=native"
 
     steps:
       - uses: actions/checkout@v4
@@ -103,12 +98,6 @@ jobs:
         run: |
           cd synd-withdrawals/synd-enclave/nitro
           make build-node-deps
-
-      - name: Pull all submodules
-        run: |
-          git submodule update --init --recursive
-          cd synd-withdrawals/synd-proposer
-          git submodule update --init --recursive
 
       - name: Tidy modules
         run: |
