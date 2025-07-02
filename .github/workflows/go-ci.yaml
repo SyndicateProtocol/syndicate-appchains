@@ -58,7 +58,8 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y \
             build-essential cmake lld-14 libudev-dev
-          sudo ln -s /usr/bin/wasm-ld-14 /usr/local/bin/wasm-ld
+          sudo ln -s /usr/bin/wasm-ld-14 /usr/local/bin/wasm-ld 
+          sudo apt-get install -y wabt
 
       - name: Build all lint dependencies
         run: |
