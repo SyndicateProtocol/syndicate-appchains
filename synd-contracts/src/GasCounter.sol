@@ -18,7 +18,6 @@ abstract contract GasCounter {
         uint256 endTimestamp; // When the period ended (0 if current)
         uint256 totalGasUsed; // Total gas consumed in this period
         uint256 totalGasCost; // Total gas cost in SYND wei for this period
-        bool finalized; // Whether period is closed
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -102,8 +101,7 @@ abstract contract GasCounter {
             startTimestamp: block.timestamp,
             endTimestamp: 0,
             totalGasUsed: 0,
-            totalGasCost: 0,
-            finalized: false
+            totalGasCost: 0
         });
 
             emit NewPeriodStarted(0, block.timestamp);
@@ -143,7 +141,6 @@ abstract contract GasCounter {
         if (block.timestamp >= currentPeriod.startTimestamp + PERIOD_DURATION) {
             // Finalize current period
             currentPeriod.endTimestamp = currentPeriod.startTimestamp + PERIOD_DURATION;
-            currentPeriod.finalized = true;
 
             emit PeriodFinalized(
                 currentPeriodIndex,
@@ -157,8 +154,7 @@ abstract contract GasCounter {
                 startTimestamp: block.timestamp,
                 endTimestamp: 0,
                 totalGasUsed: 0,
-                totalGasCost: 0,
-                finalized: false
+                totalGasCost: 0
             });
 
             emit NewPeriodStarted(currentPeriodIndex, block.timestamp);
@@ -173,7 +169,7 @@ abstract contract GasCounter {
     /// @return period The current gas period data
     function getCurrentPeriod() external view returns (GasPeriod memory period) {
         if (!gasTrackingInitialized) {
-            return GasPeriod(0, 0, 0, 0, false);
+            return GasPeriod(0, 0, 0, 0);
         }
         return periods[currentPeriodIndex];
     }

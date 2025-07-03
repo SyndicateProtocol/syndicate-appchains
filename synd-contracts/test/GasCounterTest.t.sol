@@ -60,7 +60,7 @@ contract GasCounterTest is Test {
         assertEq(period.startTimestamp, block.timestamp);
         assertEq(period.endTimestamp, 0);
         assertEq(period.totalGasUsed, 0);
-        assertFalse(period.finalized);
+        assertEq(period.endTimestamp, 0); // Not finalized yet
     }
 
     function test_CannotInitializeTwice() public {
@@ -139,7 +139,7 @@ contract GasCounterTest is Test {
 
         // Check previous period was finalized
         GasCounter.GasPeriod memory previousPeriod = gasCounter.getPeriod(0);
-        assertTrue(previousPeriod.finalized);
+        assertGt(previousPeriod.endTimestamp, 0); // Finalized
         assertEq(previousPeriod.totalGasUsed, 1000);
         assertGt(previousPeriod.endTimestamp, 0);
     }
@@ -167,9 +167,9 @@ contract GasCounterTest is Test {
         assertEq(gasCounter.getPeriod(1).totalGasUsed, 2000);
         assertEq(gasCounter.getPeriod(2).totalGasUsed, 3000);
 
-        assertTrue(gasCounter.getPeriod(0).finalized);
-        assertTrue(gasCounter.getPeriod(1).finalized);
-        assertFalse(gasCounter.getPeriod(2).finalized);
+        assertGt(gasCounter.getPeriod(0).endTimestamp, 0); // Finalized
+        assertGt(gasCounter.getPeriod(1).endTimestamp, 0); // Finalized
+        assertEq(gasCounter.getPeriod(2).endTimestamp, 0); // Not finalized
     }
 
     // ============ VIEW FUNCTIONS TESTS ============
@@ -223,7 +223,7 @@ contract GasCounterTest is Test {
         assertEq(period.startTimestamp, 0);
         assertEq(period.endTimestamp, 0);
         assertEq(period.totalGasUsed, 0);
-        assertFalse(period.finalized);
+        assertEq(period.endTimestamp, 0); // Not finalized
     }
 
     // ============ GAS PRICE MANAGEMENT TESTS ============
@@ -330,12 +330,12 @@ contract GasCounterTest is Test {
 
         // Check previous period was finalized correctly
         GasCounter.GasPeriod memory previousPeriod = gasCounter.getPeriod(0);
-        assertTrue(previousPeriod.finalized);
+        assertGt(previousPeriod.endTimestamp, 0); // Finalized
         assertEq(previousPeriod.totalGasUsed, 3000);
 
         // Check current period is active
         GasCounter.GasPeriod memory currentPeriod = gasCounter.getCurrentPeriod();
-        assertFalse(currentPeriod.finalized);
+        assertEq(currentPeriod.endTimestamp, 0); // Not finalized
         assertEq(currentPeriod.totalGasUsed, 5000);
     }
 

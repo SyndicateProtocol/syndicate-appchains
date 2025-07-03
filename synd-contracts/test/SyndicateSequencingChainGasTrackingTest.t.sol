@@ -128,7 +128,7 @@ contract SyndicateSequencingChainGasTrackingTest is Test {
 
         // Check previous period was finalized
         GasCounter.GasPeriod memory previousPeriod = chain.getPeriod(0);
-        assertTrue(previousPeriod.finalized);
+        assertGt(previousPeriod.endTimestamp, 0); // Finalized
         assertEq(previousPeriod.totalGasUsed, firstPeriodGas);
     }
 
