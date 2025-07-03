@@ -28,7 +28,8 @@ use alloy::{
     primitives::{keccak256, utils::format_ether, Address, Bytes, ChainId, B256, U256},
     providers::Provider,
 };
-use redis::{aio::MultiplexedConnection, AsyncCommands};
+use derivative::Derivative;
+use redis::{aio::ConnectionManager, AsyncCommands};
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
     tracing::SpanKind,
@@ -39,9 +40,11 @@ use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument, trace, warn, Instrument};
 
 /// The service for filtering and directing transactions
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct MaestroService {
-    valkey_conn: MultiplexedConnection,
+    #[derivative(Debug = "ignore")]
+    valkey_conn: ConnectionManager,
     // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
@@ -53,7 +56,7 @@ pub struct MaestroService {
 impl MaestroService {
     /// Create a new instance of the Maestro service
     pub async fn new(
-        valkey_conn: MultiplexedConnection,
+        valkey_conn: ConnectionManager,
         config: Config,
         metrics: MaestroMetrics,
     ) -> Result<Self, MaestroError> {
@@ -854,7 +857,7 @@ mod tests {
 
         // Create cache connection
         let client = redis::Client::open(valkey_url.as_str()).unwrap();
-        let valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Create test config
         let config = Config {
@@ -979,7 +982,7 @@ mod tests {
         // Verify transaction was actually stored
         // Connect to Valkey directly to check
         let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
-        let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut conn = ConnectionManager::new(client).await.unwrap();
 
         // Check stream exists and has entries
         let stream_key = tx_stream_key(chain_id);
@@ -1185,7 +1188,7 @@ mod tests {
 
         // Create a fresh connection after the sleep
         let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
-        let mut fresh_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut fresh_conn = ConnectionManager::new(client).await.unwrap();
 
         // Verify nonce has expired using the fresh connection
         let expired_nonce = fresh_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
@@ -1470,7 +1473,7 @@ mod tests {
         // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Get initial count of stream entries
         let initial_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
@@ -1589,7 +1592,7 @@ mod tests {
         // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set cache nonce to be the first one
         valkey_conn
@@ -1717,7 +1720,7 @@ mod tests {
         // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -1782,7 +1785,7 @@ mod tests {
 
         // Set up Valkey
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -1844,7 +1847,7 @@ mod tests {
 
         // Set up Valkey
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -1927,7 +1930,7 @@ mod tests {
         // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -2035,7 +2038,7 @@ mod tests {
         // Set up Valkey stream
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn

@@ -21,7 +21,7 @@ use axum::{
 use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::{aio::MultiplexedConnection, AsyncCommands, Client as ValkeyClient};
+use redis::{aio::ConnectionManager, AsyncCommands, Client as ValkeyClient};
 use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
     tracing::SpanKind,
@@ -79,7 +79,7 @@ pub async fn run_batcher(
     let client = ValkeyClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
-    let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
+    let conn = ConnectionManager::new(client).await.map_err(|e| {
         eyre!("Failed to get Valkey connection: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
     let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
@@ -100,7 +100,8 @@ pub async fn run_batcher(
             loop {
                 debug!("Batcher reading and batching transactions at time {:?}", Instant::now());
                 if let Err(e) = batcher.process_transactions().await {
-                    panic!("Batcher error: {e:?}");
+                    error!("Batcher error: {e:?}");
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             }
         }
@@ -111,21 +112,31 @@ pub async fn run_batcher(
 
 /// Checks if the cache connection is healthy
 /// This method attempts to ping the cache connection to check if it is healthy.
-fn health_handler(
-    valkey_conn: MultiplexedConnection,
-) -> MethodRouter<std::sync::Arc<MetricsState>> {
+fn health_handler(valkey_conn: ConnectionManager) -> MethodRouter<std::sync::Arc<MetricsState>> {
     let mut conn = valkey_conn;
     get(move || async move {
-        let health: Result<String, _> = conn.ping().await;
+        // Add timeout to prevent hanging when valkey is down
+        let health = tokio::time::timeout(Duration::from_secs(2), conn.ping::<String>()).await;
+
         match health {
-            Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
-            Err(e) => {
+            Ok(Ok(_)) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
+            Ok(Err(e)) => {
                 error!("Cache connection is not healthy: {:?}", e);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({
                         "health": false,
                         "message": "Cache connection is not healthy"
+                    })),
+                )
+            }
+            Err(_) => {
+                error!("Cache connection ping timed out");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "health": false,
+                        "message": "Cache connection ping timed out"
                     })),
                 )
             }
@@ -397,9 +408,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let chain_id = 1;
@@ -434,9 +443,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let chain_id = 1;
@@ -460,7 +467,7 @@ mod tests {
             Batcher::new(&config, stream_consumer, create_mock_contract(None).await, metrics);
 
         let result = batcher.read_and_batch_transactions().await;
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "result: {result:?}");
         assert!(result.unwrap().is_empty());
     }
 
@@ -470,9 +477,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
@@ -494,9 +499,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
@@ -554,9 +557,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
@@ -630,17 +631,18 @@ mod tests {
 
         let client = reqwest::Client::new();
 
-        tokio::time::sleep(Duration::from_secs(2)).await;
-
         // Should succeed
-        let response = client.get(&url).send().await.unwrap();
-        assert_eq!(response.status(), 200);
+        wait_until!(
+            client.get(&url).send().await.is_ok_and(|resp| resp.status() == 200),
+            Duration::from_secs(2)
+        );
 
         // Close Valkey container and test failure
         drop(valkey);
-        tokio::time::sleep(Duration::from_secs(2)).await;
 
-        let response = client.get(&url).send().await.unwrap();
-        assert_eq!(response.status(), 500);
+        wait_until!(
+            client.get(&url).send().await.is_ok_and(|resp| resp.status() == 500),
+            Duration::from_secs(2)
+        );
     }
 }
