@@ -45,7 +45,7 @@ COPY ./synd-withdrawals/synd-proposer ./synd-proposer
 
 WORKDIR /go/src/synd-enclave
 RUN git submodule update --init --recursive
-
+RUN make build-node-deps
 
 WORKDIR /go/src/synd-proposer
 # Download Go dependencies for better build caching
@@ -82,6 +82,7 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
 LABEL service=synd-translator
+
 FROM runtime-base AS synd-proposer
 COPY --from=go-synd-proposer-build /go/bin/synd-proposer /usr/local/bin/synd-proposer
 ENTRYPOINT ["/usr/local/bin/synd-proposer"]
