@@ -322,7 +322,7 @@ contract SyndicateTokenTest is Test {
 
     // ============ AIRDROP LOCK FUNCTIONALITY TESTS ============
 
-    function test_Constructor_NoInitialLock() public view {
+    function test_InitialUnlockState() public view {
         assertEq(token.unlockTimestamp(), 0);
         assertFalse(token.transfersLocked());
         assertEq(token.getRemainingLockTime(), 0);

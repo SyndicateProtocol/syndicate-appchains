@@ -300,6 +300,6 @@ contract SyndicateTokenCrosschainTest is Test {
 
         vm.stopPrank();
 
-        assertTrue(token.transfersLocked());
+        assertTrue(token.transfersLocked(), "Transfers should be locked after setting unlock timestamp");
     }
 }

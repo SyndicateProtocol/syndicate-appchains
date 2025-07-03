@@ -75,7 +75,7 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Initial mint to foundation: 900 million tokens (90%)
     uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
 
-    /// @notice Maximum lock duration: 90 days (1 year)
+    /// @notice Maximum lock duration: 90 days
     uint256 public constant MAX_LOCK_DURATION = 90 days;
 
     /*//////////////////////////////////////////////////////////////
