@@ -43,8 +43,8 @@ WORKDIR /go/src
 COPY ./synd-withdrawals/synd-enclave ./synd-enclave
 COPY ./synd-withdrawals/synd-proposer ./synd-proposer
 
-WORKDIR /go/src/synd-proposer
-RUN git submodule update --init --recursive
+WORKDIR /go/src/synd-proposer/synd-enclave
+RUN git clone https://github.com/OffchainLabs/nitro.git
 
 WORKDIR /go/src/synd-enclave/nitro
 RUN make build-node-deps
