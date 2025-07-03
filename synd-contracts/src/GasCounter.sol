@@ -165,13 +165,39 @@ abstract contract GasCounter {
                            VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Get the current period's gas usage data
-    /// @return period The current gas period data
-    function getCurrentPeriod() external view returns (GasPeriod memory period) {
+    /// @notice Internal helper to get the conceptual current period
+    /// @dev Handles case where stored current period has expired due to inactivity
+    /// @return period The conceptual current period
+    function _getConceptualCurrentPeriod() private view returns (GasPeriod memory period) {
         if (!gasTrackingInitialized) {
             return GasPeriod(0, 0, 0, 0);
         }
-        return periods[currentPeriodIndex];
+        
+        GasPeriod memory storedPeriod = periods[currentPeriodIndex];
+        
+        // Check if the stored current period has expired
+        if (block.timestamp >= storedPeriod.startTimestamp + PERIOD_DURATION) {
+            // The stored period has expired, return a conceptual current period
+            // Calculate when the actual current period would start
+            uint256 periodsElapsed = (block.timestamp - storedPeriod.startTimestamp) / PERIOD_DURATION;
+            uint256 currentPeriodStart = storedPeriod.startTimestamp + (periodsElapsed * PERIOD_DURATION);
+            
+            return GasPeriod({
+                startTimestamp: currentPeriodStart,
+                endTimestamp: 0, // Not finalized
+                totalGasUsed: 0, // No activity yet
+                totalGasCost: 0  // No cost yet
+            });
+        }
+        
+        return storedPeriod;
+    }
+
+    /// @notice Get the current period's gas usage data
+    /// @dev If the stored current period has expired due to inactivity, returns a conceptual current period
+    /// @return period The current gas period data
+    function getCurrentPeriod() external view returns (GasPeriod memory period) {
+        return _getConceptualCurrentPeriod();
     }
 
     /// @notice Get a specific period's gas usage data
@@ -184,30 +210,24 @@ abstract contract GasCounter {
     /// @notice Get the total gas used in the current period
     /// @return totalGas Total gas consumed in current period
     function getCurrentPeriodGasUsed() external view returns (uint256 totalGas) {
-        if (!gasTrackingInitialized) {
-            return 0;
-        }
-        return periods[currentPeriodIndex].totalGasUsed;
+        return _getConceptualCurrentPeriod().totalGasUsed;
     }
 
     /// @notice Get total gas cost in SYND wei for current period
     /// @return totalCost Total cost in SYND wei for current period's gas usage
     function getTotalGasFees() external view returns (uint256 totalCost) {
-        if (!gasTrackingInitialized) {
-            return 0;
-        }
-
-        return periods[currentPeriodIndex].totalGasCost;
+        return _getConceptualCurrentPeriod().totalGasCost;
     }
 
     /// @notice Get the time remaining in the current period
     /// @return timeRemaining Seconds remaining in current period (0 if expired)
     function getCurrentPeriodTimeRemaining() external view returns (uint256 timeRemaining) {
-        if (!gasTrackingInitialized) {
-            return 0;
+        GasPeriod memory currentPeriod = _getConceptualCurrentPeriod();
+        
+        if (currentPeriod.startTimestamp == 0) {
+            return 0; // Not initialized
         }
-
-        GasPeriod memory currentPeriod = periods[currentPeriodIndex];
+        
         uint256 periodEnd = currentPeriod.startTimestamp + PERIOD_DURATION;
 
         if (block.timestamp >= periodEnd) {
