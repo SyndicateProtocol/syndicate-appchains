@@ -13,7 +13,7 @@ concurrency:
 jobs:
   enclave-build:
     name: build enclave
-    runs-on: shared-medium-01
+    runs-on: vip-large-01
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -104,12 +104,7 @@ jobs:
           cd synd-withdrawals/synd-proposer
           go mod tidy
 
-      - name: Ensure TMPDIR exists
-        run: mkdir -p "$RUNNER_TEMP"
-
       - name: Run Synd-Proposer tests
-        env:
-          TMPDIR: $RUNNER_TEMP
         run: |
           cd synd-withdrawals/synd-proposer
           go test ./...
