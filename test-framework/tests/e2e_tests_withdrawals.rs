@@ -3,7 +3,7 @@ use alloy::{
     contract::CallBuilder,
     eips::{BlockNumberOrTag, Encodable2718},
     network::Ethereum,
-    primitives::{address, keccak256, utils::parse_ether, Address, B256},
+    primitives::{address, keccak256, utils::parse_ether, Address, B256, U256},
     providers::{ext::DebugApi, Provider},
     rpc::types::trace::geth::GethDebugTracingOptions,
     signers::local::PrivateKeySigner,
@@ -11,7 +11,7 @@ use alloy::{
     sol_types::SolValue,
 };
 use contract_bindings::synd::{
-    assertion_poster::AssertionPoster, i_inbox::IInbox, i_rollup::IRollup,
+    assertion_poster::AssertionPoster, i_bridge::IBridge, i_inbox::IInbox, i_rollup::IRollup,
     tee_key_manager::TeeKeyManager, tee_module::TeeModule,
 };
 use eyre::Result;
@@ -29,7 +29,7 @@ use test_utils::{
     port_manager::PortManager,
     wait_until,
 };
-use tokio::time;
+use tokio::{task::JoinHandle, time};
 
 #[ctor::ctor]
 fn init() {
@@ -90,25 +90,23 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 .header
                 .hash;
 
-            // let l1_start_block_hash = components
-            //     .l1_provider
-            //     .unwrap()
-            //     .get_block_by_number(BlockNumberOrTag::Number(0))
-            //     .await?
-            //     .unwrap()
-            //     .header
-            //     .hash;
-
+            let sequencing_bridge_address =
+                components.sequencing_deployment.as_ref().unwrap().bridge;
             let config_hash = VerifierConfig {
                 sequencing_contract_address: *components.sequencing_contract.address(),
-                sequencing_bridge_address: components
-                    .sequencing_deployment
-                    .as_ref()
-                    .unwrap()
-                    .bridge,
+                sequencing_bridge_address,
                 settlement_delay: ConfigurationOptions::default().settlement_delay,
             }
             .hash();
+
+            let l1_provider = components.l1_provider.as_ref().unwrap();
+            let sequencing_bridge = IBridge::new(sequencing_bridge_address, l1_provider);
+            let l1_start_batch_acc =
+                sequencing_bridge.sequencerInboxAccs(U256::ZERO).call().await?._0;
+
+            let (_l1_oracle_handle, l1_oracle_address) =
+                setup_l1_oracle(l1_provider.clone(), components.settlement_provider.clone()).await;
+
             let tee_module_addr = deploy_on_settlement_chain(
                 &components,
                 TeeModule::deploy_builder(
@@ -118,11 +116,9 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                     config_hash,
                     appchain_start_block_hash,
                     seq_start_block_hash,
-                    // TODO try to set this to not 0 (after the test passes with the proposer in
-                    // place)
-                    B256::ZERO,
-                    Address::ZERO,
-                    true,
+                    l1_start_batch_acc,
+                    l1_oracle_address,
+                    false,
                     1, // challenge_window_duration - 1 second
                     key_mgr_addr,
                 ),
@@ -135,10 +131,12 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 components.assertion_poster_address,
                 &components.settlement_provider,
             );
-            let tx_hash =
-                assertion_poster.transferOwnership(tee_module_addr).send().await?.watch().await?;
-            let receipt =
-                components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+            let receipt = assertion_poster
+                .transferOwnership(tee_module_addr)
+                .send()
+                .await?
+                .get_receipt()
+                .await?;
             assert!(receipt.status());
 
             // start enclave and proposer, obtain the tee public key
@@ -181,22 +179,19 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             let key_mgr = TeeKeyManager::new(key_mgr_addr, &components.settlement_provider);
             let public_values = tee_public_key.abi_encode();
             let proof_bytes = vec![];
-            let tx_hash = key_mgr
+            let receipt = key_mgr
                 .addKey(public_values.into(), proof_bytes.into())
                 .send()
                 .await?
-                .watch()
+                .get_receipt()
                 .await?;
-            let receipt =
-                components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
             assert!(receipt.status());
 
             // deposit funds to the appchain
             let inbox =
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
-            let tx_hash = inbox.depositEth().value(parse_ether("1")?).send().await?.watch().await?;
             let receipt =
-                components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+                inbox.depositEth().value(parse_ether("1")?).send().await?.get_receipt().await?;
             assert!(receipt.status());
 
             // send a dummy tx so that the sequencing chain progresses and the deposit is
@@ -225,9 +220,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             // call `closeChallengeWindow` on the TEEmodule - to force the assertion to be posted
             time::sleep(Duration::from_secs(1)).await; // wait 1s (challenge window duration) to elapse
             let tee_module = TeeModule::new(tee_module_addr, &components.settlement_provider);
-            let tx_hash = tee_module.closeChallengeWindow().send().await?.watch().await?;
-            let receipt =
-                components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
+            let receipt = tee_module.closeChallengeWindow().send().await?.get_receipt().await?;
             assert!(receipt.status());
 
             // look for `AssertionConfirmed` event on the `RollupCore` contract
@@ -281,22 +274,21 @@ where
     let chain_id = components.settlement_provider.get_chain_id().await?;
     let nonce = components.settlement_provider.get_transaction_count(signer.address()).await?;
 
-    let tx_hash = call_builder
+    let receipt = call_builder
         .nonce(nonce)
         .chain_id(chain_id)
         .gas(100_000_000)
         .max_priority_fee_per_gas(0)
         .send()
         .await?
-        .watch()
+        .get_receipt()
         .await?;
 
-    let receipt = components.settlement_provider.get_transaction_receipt(tx_hash).await?.unwrap();
     if !receipt.status() {
         println!("receipt: {receipt:?}");
         let trace = components
             .settlement_provider
-            .debug_trace_transaction(tx_hash, GethDebugTracingOptions::default())
+            .debug_trace_transaction(receipt.transaction_hash, GethDebugTracingOptions::default())
             .await
             .unwrap();
         println!("trace: {trace:?}");
@@ -346,4 +338,60 @@ impl VerifierConfig {
                 .abi_encode_packed(),
         )
     }
+}
+
+// simple oracle implementation to push L1 data onto the settlementchain - it implements the
+// IL1Block interface
+
+sol! {
+    #[sol(rpc,bytecode="6080604052348015600e575f5ffd5b506102298061001c5f395ff3fe608060405234801561000f575f5ffd5b506004361061003f575f3560e01c806309bd5a60146100435780630abc584214610061578063b80777ea1461007d575b5f5ffd5b61004b61009b565b6040516100589190610109565b60405180910390f35b61007b6004803603810190610076919061018d565b6100a4565b005b6100856100d6565b60405161009291906101da565b60405180910390f35b5f600154905090565b815f5f6101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550806001819055505050565b5f5f5f9054906101000a900467ffffffffffffffff16905090565b5f819050919050565b610103816100f1565b82525050565b5f60208201905061011c5f8301846100fa565b92915050565b5f5ffd5b5f67ffffffffffffffff82169050919050565b61014281610126565b811461014c575f5ffd5b50565b5f8135905061015d81610139565b92915050565b61016c816100f1565b8114610176575f5ffd5b50565b5f8135905061018781610163565b92915050565b5f5f604083850312156101a3576101a2610122565b5b5f6101b08582860161014f565b92505060206101c185828601610179565b9150509250929050565b6101d481610126565b82525050565b5f6020820190506101ed5f8301846101cb565b9291505056fea26469706673582212207dfc106a5b282ab6edfdf15ae2ce7a3bd07aaf732188f1110f35115fbc35639e64736f6c634300081e0033")]
+    contract L1BlockOracle {
+        uint64 private _timestamp;
+        bytes32 private _hash;
+
+        // Single setter for both timestamp and hash
+        function setL1Block(uint64 newTimestamp, bytes32 newHash) external {
+            _timestamp = newTimestamp;
+            _hash = newHash;
+        }
+
+        // Getter for timestamp (implements IL1Block)
+        function timestamp() external view override returns (uint64) {
+            return _timestamp;
+        }
+
+        // Getter for hash (implements IL1Block)
+        function hash() external view override returns (bytes32) {
+            return _hash;
+        }
+    }
+}
+
+#[allow(clippy::unwrap_used)]
+async fn setup_l1_oracle<T: Provider<Ethereum> + Send + Sync + 'static>(
+    l1_provider: T,
+    target_chain_provider: T,
+) -> (JoinHandle<()>, Address) {
+    let oracle_contract = L1BlockOracle::deploy(target_chain_provider).await.unwrap();
+    let oracle_contract_address = *oracle_contract.address();
+    let handle = tokio::spawn(async move {
+        let mut l1_block_sub = l1_provider.subscribe_blocks().await.unwrap();
+        loop {
+            // push the l1 block to the oracle contract on every new L1 block
+            let l1_block = l1_block_sub.recv().await.unwrap();
+            println!("l1 block: {l1_block:?}");
+            let l1_hash = l1_block.hash;
+            let l1_timestamp = l1_block.timestamp;
+            let receipt = oracle_contract
+                .setL1Block(l1_timestamp, l1_hash)
+                .send()
+                .await
+                .unwrap()
+                .get_receipt()
+                .await
+                .unwrap();
+            assert!(receipt.status());
+        }
+    });
+    (handle, oracle_contract_address)
 }
