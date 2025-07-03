@@ -17,6 +17,7 @@ abstract contract GasCounter {
         uint256 startTimestamp; // When the period started
         uint256 endTimestamp; // When the period ended (0 if current)
         uint256 totalGasUsed; // Total gas consumed in this period
+        uint256 totalGasCost; // Total gas cost in SYND wei for this period
         bool finalized; // Whether period is closed
     }
 
@@ -28,9 +29,6 @@ abstract contract GasCounter {
     uint256 public constant PERIOD_DURATION = 30 days;
     uint256 public constant TRACKING_OVERHEAD = 5000; // Approximate gas overhead for tracking operations
 
-    /// @notice Approximate gas price in SYND tokens (18 decimals)
-    /// @dev hardcoded as 1 gwei
-    uint256 public gasPriceInSynd = 1e9; // 1 gwei in SYND
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -100,8 +98,13 @@ abstract contract GasCounter {
             gasTrackingInitialized = true;
             currentPeriodIndex = 0;
 
-            periods[0] =
-                GasPeriod({startTimestamp: block.timestamp, endTimestamp: 0, totalGasUsed: 0, finalized: false});
+            periods[0] = GasPeriod({
+            startTimestamp: block.timestamp,
+            endTimestamp: 0,
+            totalGasUsed: 0,
+            totalGasCost: 0,
+            finalized: false
+        });
 
             emit NewPeriodStarted(0, block.timestamp);
         }
@@ -122,8 +125,12 @@ abstract contract GasCounter {
         // Check if current period has expired and advance if needed
         _advancePeriodIfNeeded();
 
-        // Add gas to current period
+        // Calculate gas cost using current transaction gas price
+        uint256 gasCost = gasUsed * tx.gasprice;
+        
+        // Add gas and cost to current period
         periods[currentPeriodIndex].totalGasUsed += gasUsed;
+        periods[currentPeriodIndex].totalGasCost += gasCost;
 
         emit GasTracked(currentPeriodIndex, gasUsed, tx.gasprice);
     }
@@ -146,8 +153,13 @@ abstract contract GasCounter {
 
             // Start new period
             currentPeriodIndex++;
-            periods[currentPeriodIndex] =
-                GasPeriod({startTimestamp: block.timestamp, endTimestamp: 0, totalGasUsed: 0, finalized: false});
+            periods[currentPeriodIndex] = GasPeriod({
+                startTimestamp: block.timestamp,
+                endTimestamp: 0,
+                totalGasUsed: 0,
+                totalGasCost: 0,
+                finalized: false
+            });
 
             emit NewPeriodStarted(currentPeriodIndex, block.timestamp);
         }
@@ -161,7 +173,7 @@ abstract contract GasCounter {
     /// @return period The current gas period data
     function getCurrentPeriod() external view returns (GasPeriod memory period) {
         if (!gasTrackingInitialized) {
-            return GasPeriod(0, 0, 0, false);
+            return GasPeriod(0, 0, 0, 0, false);
         }
         return periods[currentPeriodIndex];
     }
@@ -182,15 +194,14 @@ abstract contract GasCounter {
         return periods[currentPeriodIndex].totalGasUsed;
     }
 
-    /// @notice Calculate total SYND token cost for gas in current period
+    /// @notice Get total gas cost in SYND wei for current period
     /// @return totalCost Total cost in SYND wei for current period's gas usage
     function getTotalGasFees() external view returns (uint256 totalCost) {
         if (!gasTrackingInitialized) {
             return 0;
         }
 
-        uint256 totalGasUsed = periods[currentPeriodIndex].totalGasUsed;
-        return totalGasUsed * gasPriceInSynd;
+        return periods[currentPeriodIndex].totalGasCost;
     }
 
     /// @notice Get the time remaining in the current period

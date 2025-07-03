@@ -13,9 +13,7 @@ contract TestGasCounter is GasCounter {
         _initializeGasTracking();
     }
 
-    function updateGasPricePublic(uint256 newPrice) external {
-        gasPriceInSynd = newPrice;
-    }
+    // Note: Gas price is now dynamic based on tx.gasprice, no longer configurable
 
     function useTrackGasUsageModifier() external trackGasUsage {
         // Simple function to test the modifier
@@ -45,7 +43,7 @@ contract GasCounterTest is Test {
         assertEq(gasCounter.getTotalPeriods(), 0);
         assertEq(gasCounter.getCurrentPeriodGasUsed(), 0);
         assertEq(gasCounter.getTotalGasFees(), 0);
-        assertEq(gasCounter.gasPriceInSynd(), 1e9); // Default gas price
+        // Gas price is now dynamic based on tx.gasprice
     }
 
     function test_InitializeGasTracking() public {
@@ -200,25 +198,23 @@ contract GasCounterTest is Test {
         // Track some gas
         gasCounter.trackGasPublic(1000);
 
-        uint256 expectedFees = 1000 * gasCounter.gasPriceInSynd();
+        uint256 expectedFees = 1000 * tx.gasprice;
         assertEq(gasCounter.getTotalGasFees(), expectedFees);
 
         // Track more gas
         gasCounter.trackGasPublic(500);
-        expectedFees = 1500 * gasCounter.gasPriceInSynd();
+        expectedFees = 1500 * tx.gasprice;
         assertEq(gasCounter.getTotalGasFees(), expectedFees);
     }
 
     function test_GetTotalGasFees_WithCustomGasPrice() public {
         gasCounter.initializeGasTrackingPublic();
 
-        // Update gas price
-        uint256 newGasPrice = 2e12; // Double the default
-        gasCounter.updateGasPricePublic(newGasPrice);
-
+        // Set custom gas price for this transaction
+        vm.txGasPrice(2e12); // 2000 gwei
         gasCounter.trackGasPublic(1000);
 
-        uint256 expectedFees = 1000 * newGasPrice;
+        uint256 expectedFees = 1000 * 2e12;
         assertEq(gasCounter.getTotalGasFees(), expectedFees);
     }
 
@@ -232,12 +228,15 @@ contract GasCounterTest is Test {
 
     // ============ GAS PRICE MANAGEMENT TESTS ============
 
-    function test_UpdateGasPrice() public {
-        uint256 newPrice = 5e12;
-
-        gasCounter.updateGasPricePublic(newPrice);
-
-        assertEq(gasCounter.gasPriceInSynd(), newPrice);
+    function test_DynamicGasPrice() public {
+        gasCounter.initializeGasTrackingPublic();
+        
+        // Set a specific gas price
+        vm.txGasPrice(5e12);
+        gasCounter.trackGasPublic(1000);
+        
+        uint256 expectedFees = 1000 * 5e12;
+        assertEq(gasCounter.getTotalGasFees(), expectedFees);
     }
 
     function test_UpdateGasPrice_AffectsFutureCalculations() public {
@@ -246,11 +245,13 @@ contract GasCounterTest is Test {
 
         uint256 feesWithOldPrice = gasCounter.getTotalGasFees();
 
-        // Update gas price
-        gasCounter.updateGasPricePublic(2e9); // 2 gwei
+        // Track more gas with different gas price
+        vm.txGasPrice(tx.gasprice * 2); // Double the gas price
+        gasCounter.trackGasPublic(1000);
 
-        // Same gas usage should now cost more
-        assertEq(gasCounter.getTotalGasFees(), feesWithOldPrice * 2);
+        // Total should be old fees + new fees at higher price
+        uint256 expectedNewFees = feesWithOldPrice + (1000 * tx.gasprice);
+        assertEq(gasCounter.getTotalGasFees(), expectedNewFees);
     }
 
     // ============ EDGE CASES AND FUZZ TESTS ============
@@ -273,7 +274,7 @@ contract GasCounterTest is Test {
 
         assertEq(gasCounter.getCurrentPeriodGasUsed(), gasAmount);
 
-        uint256 expectedFees = gasAmount * gasCounter.gasPriceInSynd();
+        uint256 expectedFees = gasAmount * tx.gasprice;
         assertEq(gasCounter.getTotalGasFees(), expectedFees);
     }
 
@@ -293,17 +294,18 @@ contract GasCounterTest is Test {
         assertEq(gasCounter.getCurrentPeriodGasUsed(), totalExpected);
     }
 
-    function testFuzz_GasPriceUpdate(uint256 newPrice) public {
+    function testFuzz_GasPriceUpdate(uint256 gasPrice) public {
         // Bound to reasonable gas price values
-        newPrice = bound(newPrice, 1, 1e18);
+        gasPrice = bound(gasPrice, 1, 1e18);
 
         gasCounter.initializeGasTrackingPublic();
+        
+        // Set custom gas price
+        vm.txGasPrice(gasPrice);
         gasCounter.trackGasPublic(1000);
 
-        gasCounter.updateGasPricePublic(newPrice);
-
-        assertEq(gasCounter.gasPriceInSynd(), newPrice);
-        assertEq(gasCounter.getTotalGasFees(), 1000 * newPrice);
+        uint256 expectedFees = 1000 * gasPrice;
+        assertEq(gasCounter.getTotalGasFees(), expectedFees);
     }
 
     // ============ INTEGRATION TESTS ============
@@ -339,6 +341,6 @@ contract GasCounterTest is Test {
 
     function test_PeriodConstants() public view {
         assertEq(gasCounter.PERIOD_DURATION(), 30 days);
-        assertEq(gasCounter.gasPriceInSynd(), 1e9);
+        // Gas price is now dynamic based on tx.gasprice
     }
 }
