@@ -7,7 +7,7 @@ interface GasCounter {
         uint256 startTimestamp;
         uint256 endTimestamp;
         uint256 totalGasUsed;
-        bool finalized;
+        uint256 totalGasCost;
     }
 
     event GasTracked(uint256 indexed periodIndex, uint256 gasUsed, uint256 gasPrice);
@@ -17,7 +17,6 @@ interface GasCounter {
     function PERIOD_DURATION() external view returns (uint256);
     function TRACKING_OVERHEAD() external view returns (uint256);
     function currentPeriodIndex() external view returns (uint256);
-    function gasPriceInSynd() external view returns (uint256);
     function gasTrackingEnabled() external view returns (bool);
     function gasTrackingInitialized() external view returns (bool);
     function getCurrentPeriod() external view returns (GasPeriod memory period);
@@ -27,7 +26,7 @@ interface GasCounter {
     function getTotalGasFees() external view returns (uint256 totalCost);
     function getTotalPeriods() external view returns (uint256 totalPeriods);
     function isGasTrackingInitialized() external view returns (bool initialized);
-    function periods(uint256) external view returns (uint256 startTimestamp, uint256 endTimestamp, uint256 totalGasUsed, bool finalized);
+    function periods(uint256) external view returns (uint256 startTimestamp, uint256 endTimestamp, uint256 totalGasUsed, uint256 totalGasCost);
 }
 ```
 
@@ -63,19 +62,6 @@ interface GasCounter {
   {
     "type": "function",
     "name": "currentPeriodIndex",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "gasPriceInSynd",
     "inputs": [],
     "outputs": [
       {
@@ -138,9 +124,9 @@ interface GasCounter {
             "internalType": "uint256"
           },
           {
-            "name": "finalized",
-            "type": "bool",
-            "internalType": "bool"
+            "name": "totalGasCost",
+            "type": "uint256",
+            "internalType": "uint256"
           }
         ]
       }
@@ -205,9 +191,9 @@ interface GasCounter {
             "internalType": "uint256"
           },
           {
-            "name": "finalized",
-            "type": "bool",
-            "internalType": "bool"
+            "name": "totalGasCost",
+            "type": "uint256",
+            "internalType": "uint256"
           }
         ]
       }
@@ -280,9 +266,9 @@ interface GasCounter {
         "internalType": "uint256"
       },
       {
-        "name": "finalized",
-        "type": "bool",
-        "internalType": "bool"
+        "name": "totalGasCost",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -389,7 +375,7 @@ pub mod GasCounter {
         b"",
     );
     /**```solidity
-struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGasUsed; bool finalized; }
+struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGasUsed; uint256 totalGasCost; }
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -401,7 +387,7 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
         #[allow(missing_docs)]
         pub totalGasUsed: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
-        pub finalized: bool,
+        pub totalGasCost: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
         non_camel_case_types,
@@ -416,14 +402,14 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Bool,
+            alloy::sol_types::sol_data::Uint<256>,
         );
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (
             alloy::sol_types::private::primitives::aliases::U256,
             alloy::sol_types::private::primitives::aliases::U256,
             alloy::sol_types::private::primitives::aliases::U256,
-            bool,
+            alloy::sol_types::private::primitives::aliases::U256,
         );
         #[cfg(test)]
         #[allow(dead_code, unreachable_patterns)]
@@ -444,7 +430,7 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
                     value.startTimestamp,
                     value.endTimestamp,
                     value.totalGasUsed,
-                    value.finalized,
+                    value.totalGasCost,
                 )
             }
         }
@@ -456,7 +442,7 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
                     startTimestamp: tuple.0,
                     endTimestamp: tuple.1,
                     totalGasUsed: tuple.2,
-                    finalized: tuple.3,
+                    totalGasCost: tuple.3,
                 }
             }
         }
@@ -478,9 +464,9 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.totalGasUsed),
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        &self.finalized,
-                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.totalGasCost),
                 )
             }
             #[inline]
@@ -555,7 +541,7 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
             #[inline]
             fn eip712_root_type() -> alloy_sol_types::private::Cow<'static, str> {
                 alloy_sol_types::private::Cow::Borrowed(
-                    "GasPeriod(uint256 startTimestamp,uint256 endTimestamp,uint256 totalGasUsed,bool finalized)",
+                    "GasPeriod(uint256 startTimestamp,uint256 endTimestamp,uint256 totalGasUsed,uint256 totalGasCost)",
                 )
             }
             #[inline]
@@ -585,9 +571,9 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
                         256,
                     > as alloy_sol_types::SolType>::eip712_data_word(&self.totalGasUsed)
                         .0,
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::eip712_data_word(
-                            &self.finalized,
-                        )
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::eip712_data_word(&self.totalGasCost)
                         .0,
                 ]
                     .concat()
@@ -613,8 +599,10 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
                     > as alloy_sol_types::EventTopic>::topic_preimage_length(
                         &rust.totalGasUsed,
                     )
-                    + <alloy::sol_types::sol_data::Bool as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.finalized,
+                    + <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.totalGasCost,
                     )
             }
             #[inline]
@@ -643,8 +631,10 @@ struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGa
                     &rust.totalGasUsed,
                     out,
                 );
-                <alloy::sol_types::sol_data::Bool as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.finalized,
+                <alloy::sol_types::sol_data::Uint<
+                    256,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.totalGasCost,
                     out,
                 );
             }
@@ -1461,129 +1451,6 @@ function currentPeriodIndex() external view returns (uint256);
             > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "currentPeriodIndex()";
             const SELECTOR: [u8; 4] = [97u8, 84u8, 56u8, 1u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn abi_decode_returns(
-                data: &[u8],
-                validate: bool,
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
-            }
-        }
-    };
-    /**Function with signature `gasPriceInSynd()` and selector `0x703cfcbb`.
-```solidity
-function gasPriceInSynd() external view returns (uint256);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct gasPriceInSyndCall {}
-    ///Container type for the return parameters of the [`gasPriceInSynd()`](gasPriceInSyndCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct gasPriceInSyndReturn {
-        #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<gasPriceInSyndCall> for UnderlyingRustTuple<'_> {
-                fn from(value: gasPriceInSyndCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for gasPriceInSyndCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<gasPriceInSyndReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: gasPriceInSyndReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for gasPriceInSyndReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for gasPriceInSyndCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = gasPriceInSyndReturn;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "gasPriceInSynd()";
-            const SELECTOR: [u8; 4] = [112u8, 60u8, 252u8, 187u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -2728,7 +2595,7 @@ function isGasTrackingInitialized() external view returns (bool initialized);
     };
     /**Function with signature `periods(uint256)` and selector `0xea4a1104`.
 ```solidity
-function periods(uint256) external view returns (uint256 startTimestamp, uint256 endTimestamp, uint256 totalGasUsed, bool finalized);
+function periods(uint256) external view returns (uint256 startTimestamp, uint256 endTimestamp, uint256 totalGasUsed, uint256 totalGasCost);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2747,7 +2614,7 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
         #[allow(missing_docs)]
         pub totalGasUsed: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
-        pub finalized: bool,
+        pub totalGasCost: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
         non_camel_case_types,
@@ -2796,14 +2663,14 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Bool,
+                alloy::sol_types::sol_data::Uint<256>,
             );
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
                 alloy::sol_types::private::primitives::aliases::U256,
                 alloy::sol_types::private::primitives::aliases::U256,
                 alloy::sol_types::private::primitives::aliases::U256,
-                bool,
+                alloy::sol_types::private::primitives::aliases::U256,
             );
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
@@ -2824,7 +2691,7 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                         value.startTimestamp,
                         value.endTimestamp,
                         value.totalGasUsed,
-                        value.finalized,
+                        value.totalGasCost,
                     )
                 }
             }
@@ -2836,7 +2703,7 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                         startTimestamp: tuple.0,
                         endTimestamp: tuple.1,
                         totalGasUsed: tuple.2,
-                        finalized: tuple.3,
+                        totalGasCost: tuple.3,
                     }
                 }
             }
@@ -2852,7 +2719,7 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Bool,
+                alloy::sol_types::sol_data::Uint<256>,
             );
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -2894,8 +2761,6 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
         #[allow(missing_docs)]
         currentPeriodIndex(currentPeriodIndexCall),
         #[allow(missing_docs)]
-        gasPriceInSynd(gasPriceInSyndCall),
-        #[allow(missing_docs)]
         gasTrackingEnabled(gasTrackingEnabledCall),
         #[allow(missing_docs)]
         gasTrackingInitialized(gasTrackingInitializedCall),
@@ -2931,7 +2796,6 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
             [75u8, 44u8, 7u8, 6u8],
             [97u8, 84u8, 56u8, 1u8],
             [101u8, 88u8, 149u8, 79u8],
-            [112u8, 60u8, 252u8, 187u8],
             [130u8, 244u8, 74u8, 222u8],
             [132u8, 250u8, 182u8, 43u8],
             [141u8, 90u8, 35u8, 155u8],
@@ -2945,7 +2809,7 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
     impl alloy_sol_types::SolInterface for GasCounterCalls {
         const NAME: &'static str = "GasCounterCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 14usize;
+        const COUNT: usize = 13usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -2957,9 +2821,6 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 }
                 Self::currentPeriodIndex(_) => {
                     <currentPeriodIndexCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::gasPriceInSynd(_) => {
-                    <gasPriceInSyndCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::gasTrackingEnabled(_) => {
                     <gasTrackingEnabledCall as alloy_sol_types::SolCall>::SELECTOR
@@ -3089,19 +2950,6 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                     PERIOD_DURATION
                 },
                 {
-                    fn gasPriceInSynd(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<GasCounterCalls> {
-                        <gasPriceInSyndCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
-                            .map(GasCounterCalls::gasPriceInSynd)
-                    }
-                    gasPriceInSynd
-                },
-                {
                     fn getCurrentPeriodTimeRemaining(
                         data: &[u8],
                         validate: bool,
@@ -3221,11 +3069,6 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                         inner,
                     )
                 }
-                Self::gasPriceInSynd(inner) => {
-                    <gasPriceInSyndCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
                 Self::gasTrackingEnabled(inner) => {
                     <gasTrackingEnabledCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -3291,12 +3134,6 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 }
                 Self::currentPeriodIndex(inner) => {
                     <currentPeriodIndexCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::gasPriceInSynd(inner) => {
-                    <gasPriceInSyndCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -3741,12 +3578,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<T, &P, currentPeriodIndexCall, N> {
             self.call_builder(&currentPeriodIndexCall {})
-        }
-        ///Creates a new call builder for the [`gasPriceInSynd`] function.
-        pub fn gasPriceInSynd(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, gasPriceInSyndCall, N> {
-            self.call_builder(&gasPriceInSyndCall {})
         }
         ///Creates a new call builder for the [`gasTrackingEnabled`] function.
         pub fn gasTrackingEnabled(
