@@ -48,7 +48,7 @@ impl EthClient {
             for ws_url in ws_urls.clone() {
                 match tokio::time::timeout(
                     timeout,
-                    ProviderBuilder::default().on_ws(WsConnect::new(ws_url).with_config(
+                    ProviderBuilder::default().connect_ws(WsConnect::new(ws_url).with_config(
                         WebSocketConfig::default().max_message_size(None).max_frame_size(None),
                     )),
                 )

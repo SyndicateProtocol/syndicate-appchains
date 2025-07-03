@@ -26,11 +26,6 @@ env:
 
 jobs:
   contracts-check:
-    strategy:
-      # Enable fail-fast to stop the job immediately if any step fails
-      # This helps catch issues early and prevents wasting CI resources
-      fail-fast: true
-
     name: synd-contracts Check
     runs-on: ubuntu-latest
     defaults:
@@ -44,7 +39,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: v1.0.0
+          version: nightly
 
       - name: Show Forge version
         run: |

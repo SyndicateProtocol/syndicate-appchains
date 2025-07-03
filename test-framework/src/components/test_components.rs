@@ -18,12 +18,14 @@ use alloy::{
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
-    alwaysallowedmodule::AlwaysAllowedModule,
-    assertionposter::AssertionPoster,
-    iinbox::IInbox,
-    iupgradeexecutor::IUpgradeExecutor,
+    always_allowed_module::AlwaysAllowedModule,
+    assertion_poster::AssertionPoster,
+    i_inbox::IInbox,
+    i_upgrade_executor::IUpgradeExecutor,
     rollup::Rollup,
-    syndicatesequencingchain::SyndicateSequencingChain::{self, SyndicateSequencingChainInstance},
+    syndicate_sequencing_chain::SyndicateSequencingChain::{
+        self, SyndicateSequencingChainInstance,
+    },
 };
 use eyre::Result;
 use serde_json::{json, Value};
@@ -89,7 +91,7 @@ pub struct TestComponents {
     /// Sequencing
     pub sequencing_provider: FilledProvider,
     pub sequencing_rpc_url: String,
-    pub sequencing_contract: SyndicateSequencingChainInstance<(), FilledProvider>,
+    pub sequencing_contract: SyndicateSequencingChainInstance<FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
@@ -116,7 +118,7 @@ pub struct TestComponents {
 }
 
 pub const SEQUENCING_CHAIN_ID: u64 = 15;
-pub const SETTLEMENT_CHAIN_ID: u64 = 20;
+pub const SETTLEMENT_CHAIN_ID: u64 = 31337;
 
 impl TestComponents {
     #[allow(clippy::unwrap_used)]
@@ -321,9 +323,11 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                let chain_info =
-                    start_anvil_with_args(31337, &["--load-state", state_file.to_str().unwrap()])
-                        .await?;
+                let chain_info = start_anvil_with_args(
+                    SETTLEMENT_CHAIN_ID,
+                    &["--load-state", state_file.to_str().unwrap()],
+                )
+                .await?;
 
                 // Sync the tips of the sequencing and settlement chains
                 let block = chain_info
@@ -689,8 +693,24 @@ impl TestComponents {
     ) -> Result<Option<TransactionReceipt>> {
         let tx_hash = keccak256(tx);
         let tx_bytes = Bytes::from(tx.to_vec());
-        let seq_tx =
-            self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;
+
+        // NOTE: build the tx manually, instead of using the much simpler
+        // `self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;`
+        // this is because the contract_instance gets confused after a reorg and fails the tests...
+        // re-creating the contract instance after reorg did not help.
+        // (this is a bug in alloy.)
+        let raw_tx = self
+            .sequencing_contract
+            .processTransactionUncompressed(tx_bytes)
+            .nonce(self.sequencing_provider.get_transaction_count(test_account1().address).await?)
+            .gas(10_000_000)
+            .max_fee_per_gas(10_000_000)
+            .max_priority_fee_per_gas(0)
+            .chain_id(SEQUENCING_CHAIN_ID)
+            .build_raw_transaction(test_account1().signer.clone())
+            .await?;
+        let seq_tx = self.sequencing_provider.send_raw_transaction(&raw_tx).await?;
+
         if self.sequencing_deployment.is_none() {
             // skip mining step when in nitro mode
             self.mine_seq_block(seq_delay).await?;
