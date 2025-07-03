@@ -15,25 +15,34 @@ This document outlines the architecture and interaction patterns of the Syndicat
 **Purpose**: The core ERC20 SYND token with governance and controlled minting capabilities.
 
 **Key Features**:
+
 - Standard ERC20 with 1 billion total supply
 - ERC20Votes for governance participation
 - ERC20Permit for gasless approvals
 - Controlled emission minting (only by authorized scheduler)
+- Transfer restrictions with unlock mechanism (for airdrop management)
 - Self-service token burning for holders
 
 **Supply Distribution**:
+
 - **Initial Supply**: 900M tokens (90%) - minted to foundation at deployment
 - **Emission Supply**: 100M tokens (10%) - minted over 4 years via emission scheduler
 
 **Access Control Roles**:
+
 ```solidity
 // Role for minting emission tokens (granted to EmissionScheduler)
 bytes32 public constant EMISSION_MINTER_ROLE = keccak256("EMISSION_MINTER_ROLE");
+
+
+// Role for airdrop management (transfer restrictions, emergency burns)
+bytes32 public constant AIRDROP_MANAGER_ROLE = keccak256("AIRDROP_MANAGER_ROLE");
 
 // OpenZeppelin DEFAULT_ADMIN_ROLE - full administrative control
 ```
 
 **Token Holder Functions**:
+
 ```solidity
 // Self-service burning for token holders
 function burn(uint256 amount) external;
@@ -44,6 +53,7 @@ function burn(uint256 amount) external;
 **Purpose**: Testnet version of the SYND token with simplified minting for development and testing.
 
 **Key Features**:
+
 - All features of SyndicateToken
 - Additional MINTER_ROLE for flexible testnet minting
 - No initial supply restrictions for testing flexibility
@@ -55,6 +65,7 @@ function burn(uint256 amount) external;
 **Purpose**: Production crosschain token extending SyndicateToken with ERC7802 compatibility.
 
 **Key Features**:
+
 - All features of SyndicateToken
 - ERC7802 SuperChain compatibility (crosschainMint/crosschainBurn)
 - Bridge rate limiting per authorized bridge
@@ -62,6 +73,7 @@ function burn(uint256 amount) external;
 - ERC165 interface detection
 
 **Crosschain Capabilities**:
+
 ```solidity
 // ERC7802 interface for SuperChain compatibility
 interface IERC7802 {
@@ -84,6 +96,7 @@ interface IBridgeRateLimiter {
 ```
 
 **Access Control Roles**:
+
 ```solidity
 // Role for managing bridge configurations
 bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
@@ -96,6 +109,7 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 **Purpose**: Testnet crosschain token extending TestnetSyndToken with crosschain capabilities.
 
 **Key Features**:
+
 - All features of TestnetSyndToken
 - Same crosschain capabilities as SyndicateTokenCrosschain
 - Flexible minting for testnet environments
@@ -109,12 +123,14 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 **Purpose**: Deploys crosschain tokens directly using Solmate CREATE3 for deterministic addresses.
 
 **Key Features**:
+
 - CREATE3 deterministic deployment (same address on all chains)
 - Salt generation based on admin, treasury/minter, and chain ID
 - Address prediction before deployment
 - Automatic verification of deployed contracts
 
 **Deployment Contracts**:
+
 - `DeploySyndicateTokenCrosschainDirect` - Mainnet crosschain token deployment
 - `DeployTestnetSyndTokenCrosschainDirect` - Testnet crosschain token deployment
 - `VerifyCrosschainAddressConsistency` - Address consistency verification
@@ -136,6 +152,7 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 **Purpose**: Manages automated token emissions over a 4-year schedule with integrated L2 bridging.
 
 **Key Features**:
+
 - 48 epochs of 30 days each (~4 years total emission period)
 - Decreasing emission amounts following a predetermined decay schedule
 - Automated L2 bridging via configurable bridge proxies
@@ -143,12 +160,14 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 - Bridge failure handling with atomic operations
 
 **Emission Schedule**:
+
 - **Total Epochs**: 48 epochs × 30 days = ~4 years
 - **Total Emissions**: 100M tokens distributed across 8 periods of 6 epochs each
 - **Decay Pattern**: Each period emits decreasing amounts
 - **Bridge Integration**: All emissions automatically bridged to configured L2
 
 **Access Control Roles**:
+
 ```solidity
 // Role for starting/stopping emissions (typically governance)
 bytes32 public constant EMISSIONS_MANAGER_ROLE = keccak256("EMISSIONS_MANAGER_ROLE");
@@ -167,6 +186,7 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 **Purpose**: Secure, rate-limited interfaces to official L1-L2 bridge contracts.
 
 **Key Features**:
+
 - Integration with official Arbitrum and Optimism bridge contracts
 - Rate limiting (daily and per-transaction limits)
 - Automated ETH gas fee management (Arbitrum)
@@ -175,10 +195,12 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 - Configurable maxSubmissionCost for Arbitrum bridging
 
 **Bridge Targets**:
+
 - **Arbitrum**: L1GatewayRouter (`0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef`)
 - **Optimism**: L1StandardBridge (`0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1`)
 
 **Access Control Roles**:
+
 ```solidity
 // Role for bridge administration (configuration, pause/unpause)
 bytes32 public constant BRIDGE_ADMIN_ROLE = keccak256("BRIDGE_ADMIN_ROLE");
@@ -238,6 +260,7 @@ graph TD
 ### Detailed Component Interactions
 
 #### Emission Flow
+
 1. **Emission Trigger**: `EmissionScheduler.mintEmission()` called by `EMISSIONS_MANAGER_ROLE`
 2. **Token Minting**: Scheduler mints tokens from SyndicateToken using `EMISSION_MINTER_ROLE`
 3. **Bridge Approval**: Scheduler approves bridge proxy for token amount
@@ -248,6 +271,7 @@ graph TD
 8. **L2 Delivery**: Official bridge handles L2 token delivery
 
 #### Crosschain Flow
+
 1. **Bridge Authorization**: Bridge must have active configuration with rate limits
 2. **Rate Limit Check**: Daily mint/burn limits validated and updated
 3. **Token Operations**: Mint/burn executed with proper access controls
@@ -256,6 +280,7 @@ graph TD
 ### Error Handling & Atomicity
 
 **Atomic Operations**: If any step fails, the entire transaction reverts:
+
 - No tokens are minted if bridging fails
 - No partial state changes occur
 - Emission epoch counter doesn't advance on failure
@@ -274,6 +299,9 @@ graph TD
 ```solidity
 // REQUIRED: Grant emission minting capability to scheduler
 syndicateToken.grantRole(EMISSION_MINTER_ROLE, address(emissionScheduler));
+
+// OPTIONAL: Grant airdrop management (if using transfer restrictions)
+syndicateToken.grantRole(AIRDROP_MANAGER_ROLE, airdropManagerAddress);
 
 // REQUIRED: Set admin role (typically governance/multisig)
 syndicateToken.grantRole(DEFAULT_ADMIN_ROLE, adminAddress);
@@ -417,6 +445,7 @@ optimismBridgeProxy.setOptimismConfig(l2Recipient, gasLimit);
 ## Governance Integration
 
 Both core and crosschain SyndicateToken variants implement ERC20Votes, enabling:
+
 - Governance participation through token voting power
 - Delegation of voting power
 - Historical vote tracking via checkpoints
