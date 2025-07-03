@@ -29,9 +29,7 @@ use std::{
     str::FromStr,
     time::{Duration, Instant},
 };
-use synd_maestro::{
-    valkey::streams::consumer::StreamConsumer,
-};
+use synd_maestro::valkey::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, instrument, trace, warn};
 
