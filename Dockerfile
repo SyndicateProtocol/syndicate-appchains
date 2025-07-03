@@ -40,6 +40,7 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
 # --- Go build stage for synd-proposer ---
 FROM golang:1.23-bookworm AS go-synd-proposer-build
 WORKDIR /go/src/synd-proposer
+COPY ./synd-withdrawals/synd-enclave .
 COPY ./synd-withdrawals/synd-proposer .
 # Download Go dependencies for better build caching
 RUN go mod download
