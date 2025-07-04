@@ -27,9 +27,10 @@ use shared::{
 use std::{
     collections::VecDeque,
     str::FromStr,
+    sync::Arc,
     time::{Duration, Instant},
 };
-use synd_maestro::valkey::streams::consumer::StreamConsumer;
+use synd_maestro::{valkey::streams::consumer::StreamConsumer, valkey_metrics::ValkeyMetrics};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, instrument, trace, warn};
 
@@ -77,7 +78,6 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let conn = ConnectionManager::new(client).await.map_err(|e| {
         eyre!("Failed to get Valkey connection: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
-    let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
 
     // Start metrics and health endpoints
     let mut metrics_state = MetricsState::default();
@@ -92,6 +92,8 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
 
     let sequencing_contract_instance = create_sequencing_contract_instance(config).await?;
 
+    let stream_consumer =
+        StreamConsumer::new(conn, config.chain_id, "0-0".to_string(), Arc::new(valkey_metrics));
     let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics);
 
     let handle = tokio::spawn({
@@ -204,10 +206,7 @@ impl Batcher {
             // TODO (SEQ-842): Configurable max msg count
             // NOTE: If msg count is >1 we need to handle edge cases where not all transactions fit
             // in the batch
-            let incoming_txs = self
-                .stream_consumer
-                .recv(1, Duration::from_millis(100), &self.metrics.valkey)
-                .await?;
+            let incoming_txs = self.stream_consumer.recv(1, Duration::from_millis(100)).await?;
 
             // Combine outstanding transactions with incoming transactions
             let mut pending_txs: VecDeque<Bytes> = std::mem::take(&mut self.outstanding_txs)
@@ -336,9 +335,14 @@ mod tests {
     };
     use prometheus_client::registry::Registry;
     use reqwest;
-    use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
+    use std::sync::Arc;
+    use synd_maestro::{
+        valkey::streams::producer::{CheckFinalizationResult, StreamProducer},
+        valkey_metrics::ValkeyMetrics,
+    };
     use test_utils::{docker::start_valkey, port_manager::PortManager, wait_until};
     use url::Url;
+
     // Create a mock provider that always succeeds
     async fn create_mock_contract(
         anvil: Option<&AnvilInstance>,
@@ -396,7 +400,9 @@ mod tests {
             .await
             .unwrap();
         let chain_id = 1;
-        let stream_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
+        let stream_consumer =
+            StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string(), valkey_metrics);
         let producer = StreamProducer::new(
             conn,
             chain_id,
@@ -404,6 +410,7 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 
@@ -427,12 +434,14 @@ mod tests {
         config.compression_enabled = false;
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
 
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let chain_id = 1;
-        let stream_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
+        let stream_consumer =
+            StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string(), valkey_metrics);
         let producer = StreamProducer::new(
             conn,
             chain_id,
@@ -440,6 +449,7 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 
@@ -462,11 +472,13 @@ mod tests {
         let mut config = test_config();
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
 
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
-        let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+        let stream_consumer =
+            StreamConsumer::new(conn, config.chain_id, "0-0".to_string(), valkey_metrics);
 
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
@@ -485,11 +497,13 @@ mod tests {
         let mut config = test_config();
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
 
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
-        let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
+        let stream_consumer =
+            StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string(), valkey_metrics);
         let producer = StreamProducer::new(
             conn,
             config.chain_id,
@@ -497,6 +511,7 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 
@@ -540,11 +555,13 @@ mod tests {
 
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
 
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
-        let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
+        let stream_consumer =
+            StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string(), valkey_metrics);
         let producer = StreamProducer::new(
             conn,
             config.chain_id,
@@ -552,6 +569,7 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 

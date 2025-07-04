@@ -1,4 +1,3 @@
-//!
 //! This module provides the consumer implementation for Valkey Streams used to queue
 //! and process transactions across different chains.
 
@@ -13,7 +12,7 @@ use redis::{
     AsyncCommands,
 };
 use shared::tracing::{otel_global, OpenTelemetrySpanExt, SpanKind, TraceContextExt};
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tracing::{info_span, instrument, Span};
 
 /// A consumer for Valkey Streams that reads transaction data.
@@ -44,6 +43,7 @@ pub struct StreamConsumer {
     conn: ConnectionManager,
     stream_key: String,
     last_id: String,
+    valkey_metrics: Arc<ValkeyMetrics>,
 }
 
 impl StreamConsumer {
@@ -56,10 +56,15 @@ impl StreamConsumer {
     ///   beginning)
     /// # Returns
     /// A new `StreamConsumer` instance configured to read from the stream for the given chain.
-    pub fn new(conn: ConnectionManager, chain_id: ChainId, start_from_id: String) -> Self {
+    pub fn new(
+        conn: ConnectionManager,
+        chain_id: ChainId,
+        start_from_id: String,
+        valkey_metrics: Arc<ValkeyMetrics>,
+    ) -> Self {
         // NOTE maybe we don't need ConnectionManager here (unless we want to have multiple
         // consumers per service)
-        Self { conn, stream_key: tx_stream_key(chain_id), last_id: start_from_id }
+        Self { conn, stream_key: tx_stream_key(chain_id), last_id: start_from_id, valkey_metrics }
     }
 
     /// Receives the next transaction from the stream.
@@ -93,14 +98,13 @@ impl StreamConsumer {
         &mut self,
         max_msg_count: usize,
         block_duration: Duration,
-        valkey_metrics: &ValkeyMetrics,
     ) -> eyre::Result<Vec<(Vec<u8>, String)>, StreamError> {
         let opts = StreamReadOptions::default()
             .block(block_duration.as_millis() as usize)
             .count(max_msg_count);
 
         let reply: Option<StreamReadReply> = with_cache_metrics!(
-            &valkey_metrics,
+            self.valkey_metrics,
             self.conn.xread_options(&[self.stream_key.as_str()], &[self.last_id.as_str()], &opts)
         )?;
 
@@ -187,7 +191,7 @@ mod tests {
     use super::*;
     use crate::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
     use prometheus_client::registry::Registry;
-    use std::time::Duration;
+    use std::{sync::Arc, time::Duration};
     use test_utils::docker::start_valkey;
 
     #[tokio::test]
@@ -196,7 +200,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
         let mut registry = Registry::default();
-        let metrics = ValkeyMetrics::new(&mut registry);
+        let valkey_metrics = Arc::new(ValkeyMetrics::new(&mut registry));
 
         // Connect to Valkey
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
@@ -215,15 +219,17 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            valkey_metrics.clone(),
         )
         .await;
-        let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
+        let mut consumer =
+            StreamConsumer::new(conn, chain_id, "0-0".to_string(), valkey_metrics.clone());
 
         // Send transaction
         producer.enqueue_transaction(&test_data).await.unwrap();
 
         // Receive and verify
-        let received = consumer.recv(1, Duration::from_secs(1), &metrics).await.unwrap();
+        let received = consumer.recv(1, Duration::from_secs(1)).await.unwrap();
         assert_eq!(received.len(), 1);
         assert_eq!(received[0].0, test_data);
         assert!(!received[0].1.is_empty());
@@ -236,7 +242,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
         let mut registry = Registry::default();
-        let metrics = ValkeyMetrics::new(&mut registry);
+        let valkey_metrics = Arc::new(ValkeyMetrics::new(&mut registry));
 
         // Connect to Valkey
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
@@ -256,16 +262,18 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            valkey_metrics.clone(),
         )
         .await;
-        let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
+        let mut consumer =
+            StreamConsumer::new(conn, chain_id, "0-0".to_string(), valkey_metrics.clone());
 
         // Send transactions
         producer.enqueue_transaction(&test_data1).await.unwrap();
         producer.enqueue_transaction(&test_data2).await.unwrap();
 
         // Receive and verify
-        let received = consumer.recv(2, Duration::from_secs(1), &metrics).await.unwrap();
+        let received = consumer.recv(2, Duration::from_secs(1)).await.unwrap();
         assert_eq!(received.len(), 2);
         assert_eq!(received[0].0, test_data1);
         assert_eq!(received[1].0, test_data2);

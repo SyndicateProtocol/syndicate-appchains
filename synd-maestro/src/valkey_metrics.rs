@@ -31,11 +31,10 @@
 //! // Record operations manually
 //! metrics.record_hit();
 //! metrics.record_miss();
-//! metrics.update_connections(5, 2);
 //!
 //! // Or use automatic recording with error handling
 //! let result = metrics
-//!     .record_operation(Operation::Read, CacheType::ValkeyCache, || async {
+//!     .record_operation(Operation::Read, CacheType::ValkeyCache, "conn.myFunc".into(), || async {
 //!         Ok::<String, std::io::Error>("data".to_string())
 //!     })
 //!     .await;
@@ -114,10 +113,6 @@ pub struct ValkeyMetrics {
     cache_requests_total: Family<RequestLabels, Counter>,
     /// Detailed error tracking
     cache_errors_total: Family<ErrorLabels, Counter>,
-    /// Active connections
-    valkey_connections_active: Gauge,
-    /// Idle connections
-    valkey_connections_idle: Gauge,
 }
 
 impl Default for ValkeyMetrics {
@@ -279,6 +274,8 @@ pub struct OperationLabels {
     pub operation: Operation,
     /// The status/outcome of the operation
     pub status: OperationStatus,
+    /// The function name that was called
+    pub func_name: String,
 }
 
 /// Labels for cache operation duration metrics.
@@ -288,6 +285,8 @@ pub struct DurationLabels {
     pub operation: Operation,
     /// The type of cache being accessed
     pub cache_type: CacheType,
+    /// The function name that was called
+    pub func_name: String,
 }
 
 /// Labels for cache request results (hit/miss tracking).
@@ -306,6 +305,8 @@ pub struct ErrorLabels {
     pub operation: Operation,
     /// The type of cache being accessed when the error occurred
     pub cache_type: CacheType,
+    /// The function name that was called
+    pub func_name: String,
 }
 
 impl ValkeyMetrics {
@@ -337,8 +338,6 @@ impl ValkeyMetrics {
             cache_operation_duration_us: Family::<DurationLabels, Gauge>::default(),
             cache_requests_total: Family::<RequestLabels, Counter>::default(),
             cache_errors_total: Family::<ErrorLabels, Counter>::default(),
-            valkey_connections_active: Default::default(),
-            valkey_connections_idle: Default::default(),
         };
 
         registry.register(
@@ -363,18 +362,6 @@ impl ValkeyMetrics {
             "cache_errors_total",
             "Total cache errors by type, operation, and cache type",
             metrics.cache_errors_total.clone(),
-        );
-
-        registry.register(
-            "valkey_connections_active",
-            "Number of active Valkey connections",
-            metrics.valkey_connections_active.clone(),
-        );
-
-        registry.register(
-            "valkey_connections_idle",
-            "Number of idle Valkey connections",
-            metrics.valkey_connections_idle.clone(),
         );
 
         metrics
@@ -410,7 +397,7 @@ impl ValkeyMetrics {
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let metrics = ValkeyMetrics::default();
     /// let result = metrics
-    ///     .record_operation(Operation::Read, CacheType::ValkeyCache, || async {
+    ///     .record_operation(Operation::Read, CacheType::ValkeyCache, "conn.myFunc".into(), || async {
     ///         Ok::<String, std::io::Error>("data".to_string())
     ///     })
     ///     .await;
@@ -421,6 +408,7 @@ impl ValkeyMetrics {
         &self,
         operation: Operation,
         cache_type: CacheType,
+        func_name: String,
         f: F,
     ) -> Result<R, E>
     where
@@ -438,6 +426,7 @@ impl ValkeyMetrics {
             .get_or_create(&DurationLabels {
                 operation: operation.clone(),
                 cache_type: cache_type.clone(),
+                func_name: func_name.clone(),
             })
             .set(duration.as_micros() as i64);
 
@@ -447,6 +436,7 @@ impl ValkeyMetrics {
                     .get_or_create(&OperationLabels {
                         operation: operation.clone(),
                         status: OperationStatus::Success,
+                        func_name,
                     })
                     .inc();
                 Ok(value)
@@ -456,7 +446,11 @@ impl ValkeyMetrics {
                 let error_type = classify_error_type(&error);
 
                 self.cache_operations_total
-                    .get_or_create(&OperationLabels { operation: operation.clone(), status })
+                    .get_or_create(&OperationLabels {
+                        operation: operation.clone(),
+                        status,
+                        func_name: func_name.clone(),
+                    })
                     .inc();
 
                 self.cache_errors_total
@@ -464,6 +458,7 @@ impl ValkeyMetrics {
                         error_type,
                         operation: operation.clone(),
                         cache_type: cache_type.clone(),
+                        func_name,
                     })
                     .inc();
 
@@ -488,20 +483,6 @@ impl ValkeyMetrics {
         self.cache_requests_total.get_or_create(&RequestLabels { result: CacheResult::Miss }).inc();
     }
 
-    /// Update connection pool metrics.
-    ///
-    /// Sets the current number of active and idle connections for monitoring
-    /// connection pool health and usage patterns.
-    ///
-    /// # Arguments
-    ///
-    /// * `active` - Number of currently active connections
-    /// * `idle` - Number of currently idle connections
-    pub fn update_connections(&self, active: i64, idle: i64) {
-        self.valkey_connections_active.set(active);
-        self.valkey_connections_idle.set(idle);
-    }
-
     /// Increment operation counter with specific labels.
     ///
     /// Low-level method for manually recording operation counts when automatic
@@ -511,8 +492,16 @@ impl ValkeyMetrics {
     ///
     /// * `operation` - The type of operation performed
     /// * `status` - The outcome of the operation
-    pub fn increment_operation(&self, operation: Operation, status: OperationStatus) {
-        self.cache_operations_total.get_or_create(&OperationLabels { operation, status }).inc();
+    /// * `func_name` - The name of the invoked cache function
+    pub fn increment_operation(
+        &self,
+        operation: Operation,
+        status: OperationStatus,
+        func_name: String,
+    ) {
+        self.cache_operations_total
+            .get_or_create(&OperationLabels { operation, status, func_name })
+            .inc();
     }
 
     /// Record operation duration manually.
@@ -525,9 +514,16 @@ impl ValkeyMetrics {
     /// * `operation` - The type of operation performed
     /// * `cache_type` - The type of cache accessed
     /// * `duration` - How long the operation took
-    pub fn record_duration(&self, operation: Operation, cache_type: CacheType, duration: Duration) {
+    /// * `func_name` - The name of the invoked cache function
+    pub fn record_duration(
+        &self,
+        operation: Operation,
+        cache_type: CacheType,
+        func_name: String,
+        duration: Duration,
+    ) {
         self.cache_operation_duration_us
-            .get_or_create(&DurationLabels { operation, cache_type })
+            .get_or_create(&DurationLabels { operation, cache_type, func_name })
             .set(duration.as_micros() as i64);
     }
 
@@ -541,9 +537,16 @@ impl ValkeyMetrics {
     /// * `error_type` - The specific type of error that occurred
     /// * `operation` - The operation that was being performed
     /// * `cache_type` - The type of cache being accessed
-    pub fn record_error(&self, error_type: ErrorType, operation: Operation, cache_type: CacheType) {
+    /// * `func_name` - The name of the invoked cache function
+    pub fn record_error(
+        &self,
+        error_type: ErrorType,
+        operation: Operation,
+        cache_type: CacheType,
+        func_name: String,
+    ) {
         self.cache_errors_total
-            .get_or_create(&ErrorLabels { error_type, operation, cache_type })
+            .get_or_create(&ErrorLabels { error_type, operation, cache_type, func_name })
             .inc();
     }
 }
@@ -572,7 +575,7 @@ pub fn classify_error_status(error: &dyn std::error::Error) -> OperationStatus {
     }
 }
 
-/// Classify error type for detailed error tracking based on error message content.
+/// Classify the error type for detailed error tracking based on error message content.
 ///
 /// This function examines the error message to determine the specific
 /// `ErrorType` for detailed metrics tracking and troubleshooting.
@@ -679,15 +682,16 @@ macro_rules! with_cache_metrics {
         use std::time::Instant;
 
         let start = Instant::now();
+        let func_name = $crate::valkey_metrics::extract_func_name(stringify!($operation_expr));
         let result = $operation_expr.await;
         let duration = start.elapsed();
 
         // Record duration
-        $metrics.record_duration($operation.clone(), $cache_type.clone(), duration);
+        $metrics.record_duration($operation.clone(), $cache_type.clone(), func_name.clone(), duration);
 
         match &result {
             Ok(value) => {
-                $metrics.increment_operation($operation.clone(), $crate::valkey_metrics::OperationStatus::Success);
+                $metrics.increment_operation($operation.clone(), $crate::valkey_metrics::OperationStatus::Success, func_name.clone());
 
                 // Track hit/miss for read operations if requested
                 if $track && matches!($operation, $crate::valkey_metrics::Operation::Read) {
@@ -703,8 +707,8 @@ macro_rules! with_cache_metrics {
                 let status = $crate::valkey_metrics::classify_error_status(error);
                 let error_type = $crate::valkey_metrics::classify_error_type(error);
 
-                $metrics.increment_operation($operation.clone(), status);
-                $metrics.record_error(error_type, $operation.clone(), $cache_type.clone());
+                $metrics.increment_operation($operation.clone(), status, func_name.clone());
+                $metrics.record_error(error_type, $operation.clone(), $cache_type.clone(), func_name.clone());
 
                 if $track && matches!($operation, $crate::valkey_metrics::Operation::Read) {
                     // Errors on reads are considered misses
@@ -732,6 +736,13 @@ macro_rules! with_cache_metrics {
         let (operation, cache_type) = $crate::valkey_metrics::detect_operation_and_cache_type(stringify!($operation_expr));
         $crate::with_cache_metrics!($metrics, operation, cache_type, $operation_expr, track_hit_miss: true)
     }};
+}
+
+/// Extract the function name from an expression string.
+/// For example, "`conn.set_wallet_nonce(chain_id, signer, rpc_nonce, ttl)`"
+/// returns "`conn.set_wallet_nonce`"
+pub fn extract_func_name(expr_str: &str) -> String {
+    expr_str.split('(').next().unwrap_or("unknown").trim().to_string()
 }
 
 /// Helper function to detect the operation type from the method name. This relies on method naming
@@ -787,39 +798,6 @@ where
         !debug_str.is_empty()
 }
 
-/// Extension trait to add automatic metrics recording to cache connections
-pub trait MetricsExt {
-    /// Execute a cache operation with automatic metrics recording
-    fn with_metrics<F, Fut, R, E>(
-        &mut self,
-        metrics: &ValkeyMetrics,
-        operation: Operation,
-        cache_type: CacheType,
-        f: F,
-    ) -> impl Future<Output = Result<R, E>> + Send
-    where
-        F: FnOnce() -> Fut + Send,
-        Fut: Future<Output = Result<R, E>> + Send,
-        E: std::error::Error;
-}
-
-impl MetricsExt for redis::aio::MultiplexedConnection {
-    fn with_metrics<F, Fut, R, E>(
-        &mut self,
-        metrics: &ValkeyMetrics,
-        operation: Operation,
-        cache_type: CacheType,
-        f: F,
-    ) -> impl Future<Output = Result<R, E>> + Send
-    where
-        F: FnOnce() -> Fut + Send,
-        Fut: Future<Output = Result<R, E>> + Send,
-        E: std::error::Error,
-    {
-        metrics.record_operation(operation, cache_type, f)
-    }
-}
-
 #[allow(clippy::cognitive_complexity)]
 #[cfg(test)]
 mod tests {
@@ -835,14 +813,23 @@ mod tests {
         // Test that we can record operations
         metrics.record_hit();
         metrics.record_miss();
-        metrics.update_connections(5, 2);
-        metrics.increment_operation(Operation::Read, OperationStatus::Success);
+        metrics.increment_operation(
+            Operation::Read,
+            OperationStatus::Success,
+            "conn.myFunc".into(),
+        );
         metrics.record_duration(
             Operation::Write,
             CacheType::ValkeyCache,
+            "conn.myFunc".into(),
             Duration::from_millis(100),
         );
-        metrics.record_error(ErrorType::Timeout, Operation::Read, CacheType::ValkeyStream);
+        metrics.record_error(
+            ErrorType::Timeout,
+            Operation::Read,
+            CacheType::ValkeyStream,
+            "conn.myFunc".into(),
+        );
     }
 
     #[test]
@@ -876,21 +863,29 @@ mod tests {
 
         // Test successful operation
         let result = metrics
-            .record_operation(Operation::Read, CacheType::ValkeyCache, || async {
-                Ok::<i32, std::io::Error>(42)
-            })
+            .record_operation(
+                Operation::Read,
+                CacheType::ValkeyCache,
+                "conn.myFunc".into(),
+                || async { Ok::<i32, std::io::Error>(42) },
+            )
             .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 42);
 
         // Test failed operation
         let result = metrics
-            .record_operation(Operation::Write, CacheType::ValkeyCache, || async {
-                Err::<i32, std::io::Error>(std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                ))
-            })
+            .record_operation(
+                Operation::Write,
+                CacheType::ValkeyCache,
+                "conn.myFunc".into(),
+                || async {
+                    Err::<i32, std::io::Error>(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        "timeout",
+                    ))
+                },
+            )
             .await;
         assert!(result.is_err());
     }
@@ -1129,19 +1124,28 @@ mod tests {
         let (operation, cache_type) = (Operation::Read, CacheType::ValkeyCache);
 
         // Record a successful cache operation
-        valkey_metrics.increment_operation(operation.clone(), OperationStatus::Success);
+        valkey_metrics.increment_operation(
+            operation.clone(),
+            OperationStatus::Success,
+            "conn.myFunc".into(),
+        );
         valkey_metrics.record_duration(
             operation.clone(),
             cache_type.clone(),
+            "conn.myFunc".into(),
             Duration::from_micros(150),
         );
         valkey_metrics.record_hit();
 
         // Verify metrics were recorded
-        let operation_labels =
-            OperationLabels { operation: operation.clone(), status: OperationStatus::Success };
+        let operation_labels = OperationLabels {
+            operation: operation.clone(),
+            status: OperationStatus::Success,
+            func_name: "conn.myFunc".into(),
+        };
 
-        let duration_labels = DurationLabels { operation, cache_type };
+        let duration_labels =
+            DurationLabels { operation, cache_type, func_name: "conn.myFunc".into() };
 
         let hit_labels = RequestLabels { result: CacheResult::Hit };
 
@@ -1172,17 +1176,30 @@ mod tests {
         let error_status = OperationStatus::Error;
         let error_type = ErrorType::ConnectionError;
 
-        valkey_metrics.increment_operation(error_operation.clone(), error_status.clone());
+        valkey_metrics.increment_operation(
+            error_operation.clone(),
+            error_status.clone(),
+            "conn.myFunc".into(),
+        );
         valkey_metrics.record_error(
             error_type.clone(),
             error_operation.clone(),
             cache_type.clone(),
+            "conn.myFunc".into(),
         );
 
-        let error_operation_labels =
-            OperationLabels { operation: error_operation.clone(), status: error_status };
+        let error_operation_labels = OperationLabels {
+            operation: error_operation.clone(),
+            status: error_status,
+            func_name: "conn.myFunc".into(),
+        };
 
-        let error_labels = ErrorLabels { error_type, operation: error_operation, cache_type };
+        let error_labels = ErrorLabels {
+            error_type,
+            operation: error_operation,
+            cache_type,
+            func_name: "conn.myFunc".into(),
+        };
 
         assert_eq!(
             valkey_metrics

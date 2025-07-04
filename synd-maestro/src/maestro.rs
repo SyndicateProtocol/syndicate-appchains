@@ -83,6 +83,8 @@ impl MaestroService {
         for (chain_id, provider) in &self.rpc_providers {
             let provider_clone = provider.clone();
             let metrics_clone = self.metrics.clone();
+            let valkey_metrics = Arc::new(self.metrics.valkey.clone());
+
             self.producers.insert(
                 *chain_id,
                 Arc::new(
@@ -101,6 +103,7 @@ impl MaestroService {
                                     .await
                             }
                         },
+                        valkey_metrics,
                     )
                     .await,
                 ),
