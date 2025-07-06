@@ -174,3 +174,26 @@ Key deployed contracts on various networks:
 4. TEE components require special build environments
 5. Contract deployment requires proper environment variables set
 6. Integration tests require GitHub package authentication
+
+## Pre-commit Hooks and Formatting
+
+The repository uses pre-commit hooks that run automatically before commits. Key points:
+
+1. **Nightly Rust Required**: The formatter uses nightly features, so ensure you have nightly installed:
+   ```bash
+   rustup toolchain install nightly
+   ```
+
+2. **Auto-formatting**: The pre-commit hook should automatically format Rust files. If commits fail due to formatting:
+   ```bash
+   cargo +nightly fmt --all -- --unstable-features
+   git add -u
+   git commit
+   ```
+
+3. **Bypassing Hooks**: For documentation-only changes, you can bypass hooks:
+   ```bash
+   git commit --no-verify -m "your message"
+   ```
+
+4. **Hook Location**: The actual hook is at `.git/hooks/pre-commit` (not the `.pre-commit-config.yaml`)
