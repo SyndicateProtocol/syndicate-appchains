@@ -78,13 +78,22 @@ COPY ./synd-withdrawals/synd-proposer ./synd-proposer
 
 WORKDIR /go/src/synd-enclave/nitro
 # force Nitro to rebuild the vendored brotli C library
-RUN rm -rf .make
+RUN ./scripts/build-brotli.sh -l
+RUN mkdir -p target/machines/latest \
+ && cargo run --manifest-path arbitrator/wasm-libraries/forward/Cargo.toml \
+      -- --path arbitrator/wasm-libraries/forward/forward.wat \
+ && wat2wasm arbitrator/wasm-libraries/forward/forward.wat \
+      -o target/machines/latest/forward.wasm \
+ && cargo run --manifest-path arbitrator/wasm-libraries/forward/Cargo.toml \
+      -- --path arbitrator/wasm-libraries/forward/forward_stub.wat --stub \
+ && wat2wasm arbitrator/wasm-libraries/forward/forward_stub.wat \
+      -o target/machines/latest/forward_stub.wasm
 RUN make build-node-deps
 
 # 6) Build the Go CLI
 WORKDIR /go/src/synd-proposer
 RUN go mod download && go mod tidy
-RUN CGO_ENABLED=0 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
+RUN CGO_ENABLED=1 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
     
 
 # Stage 3: Optional Foundry install
