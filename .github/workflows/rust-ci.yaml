@@ -18,67 +18,31 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  clippy:
-    name: Clippy
+
+  taplo:
+    name: Cargo.toml format validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Install Rust toolchain and clippy
-      - name: Install Rust toolchain
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup component add clippy
-
-      # Cache Cargo dependencies
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+      # Install taplo using cargo
+      - name: Install Taplo
+        uses: clechasseur/rs-cargo@v2
         with:
-          # Cache entire workspace
-          workspaces: "."
+          command: install
+          args: taplo-cli@0.9.0
 
-      - name: Install SP1 toolchain
-        run: |
-          curl -L https://sp1.succinct.xyz | bash
-          $HOME/.sp1/bin/sp1up 
-          $HOME/.sp1/bin/cargo-prove prove --version
+      # Run Taplo validation on all Cargo.toml files in the workspace
+      - name: Validate Cargo.toml files
+        run: taplo lint "**/Cargo.toml" --verbose
 
-      - name: Build SP1 ELF program
-        run: |
-          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-          $HOME/.sp1/bin/cargo-prove prove build
-
-      # Run Clippy checks on entire workspace
-      - name: Run Clippy
-        run: cargo clippy --workspace --all-targets --all-features
-
-  fmt:
-    name: Fmt
-    runs-on: ubuntu-latest
-    needs: clippy
-    steps:
-      - uses: actions/checkout@v4
-
-      # Install Rust toolchain and rustfmt
-      - name: Install Rust toolchain
-        run: |
-          rustup toolchain install nightly --profile minimal
-          rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          # Cache entire workspace
-          workspaces: "."
-
-      # Run fmt check on entire workspace
-      - name: Run Fmt
-        run: cargo +nightly fmt --all --check -- --unstable-features
-
+      # Check Cargo.toml formatting
+      - name: Check Cargo.toml formatting. Remove `--check` from command to apply changes
+        run: taplo fmt --check "**/Cargo.toml" --verbose
   machete:
     name: Machete
     runs-on: ubuntu-latest
-    needs: fmt
+    needs: taplo
     steps:
       - uses: actions/checkout@v4
       - name: Install cargo-machete
@@ -102,34 +66,56 @@ jobs:
             "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program"
             "test-framework"
 
-  taplo:
-    name: Cargo.toml format validation
+  fmt:
+    name: Fmt
     runs-on: ubuntu-latest
     needs: machete
     steps:
       - uses: actions/checkout@v4
 
-      # Install taplo using cargo
-      - name: Install Taplo
-        uses: clechasseur/rs-cargo@v2
-        with:
-          command: install
-          args: taplo-cli@0.9.0
+      # always manually select the rust toolchain before using the cache plugin (needs to be the same rustc version)
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup component add rustfmt
 
-      # Cache Cargo dependencies
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-        with:
-          # Cache entire workspace
-          workspaces: "."
 
-      # Run Taplo validation on all Cargo.toml files in the workspace
-      - name: Validate Cargo.toml files
-        run: taplo lint "**/Cargo.toml" --verbose
+      # Run fmt check on entire workspace
+      - name: Run Fmt
+        run: cargo +nightly fmt --all --check -- --unstable-features
+          
+      
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    needs: fmt
+    steps:
+      - uses: actions/checkout@v4
 
-      # Check Cargo.toml formatting
-      - name: Check Cargo.toml formatting. Remove `--check` from command to apply changes
-        run: taplo fmt --check "**/Cargo.toml" --verbose
+      # always manually select the rust toolchain before using the cache plugin (needs to be the same rustc version)
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup component add clippy
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          $HOME/.sp1/bin/sp1up 
+          $HOME/.sp1/bin/cargo-prove prove --version
+
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+          $HOME/.sp1/bin/cargo-prove prove build
+
+      # Run Clippy checks on entire workspace
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features
 
   test:
     name: Tests
@@ -139,16 +125,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install Rust toolchain
+      # always manually select the rust toolchain before using the cache plugin
       - name: Install Rust toolchain
         run: rustup toolchain install stable --profile minimal
-
-      # Cache Cargo dependencies
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-        with:
-          # Cache entire workspace
-          workspaces: "."
 
       # Install Foundry (required for Anvil, a local Ethereum node simulator)
       # Anvil is a critical dependency for tests, particularly
