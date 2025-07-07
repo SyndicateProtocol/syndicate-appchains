@@ -15,7 +15,7 @@ env:
 jobs:
   docker:
     name: Build and Push Nitro Node Builder
-    runs-on: ubuntu-latest
+    runs-on: shared-large-01
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
