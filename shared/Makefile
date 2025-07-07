@@ -11,7 +11,7 @@ create-contract-bindings-rust:
   
 	# remove this specific contract binding until this issue is resolved: https://github.com/foundry-rs/foundry/issues/10911
 	rm contract-bindings/src/synd/syndicate_token_emission_scheduler.rs
-	sed -i '' '/pub mod r#syndicate_token_emission_scheduler;/d' contract-bindings/src/synd/mod.rs
+	grep -v 'pub mod r#syndicate_token_emission_scheduler;' contract-bindings/src/synd/mod.rs > contract-bindings/src/synd/mod.rs.tmp && mv contract-bindings/src/synd/mod.rs.tmp contract-bindings/src/synd/mod.rs
 
 .PHONY: create-withdrawal-contract-bindings-go
 create-withdrawal-contract-bindings-go:
