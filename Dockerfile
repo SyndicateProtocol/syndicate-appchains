@@ -37,23 +37,55 @@ RUN cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program && \
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
     cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
-# --- Go build stage for synd-proposer ---
+# --- Go build stage for synd-proposer (fixed brotli-sys) ---
 FROM golang:1.23-bookworm AS go-synd-proposer-build
+
+# 1) Install system deps: build tools, Node 18, pkg-config, brotli-dev (just in case)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential cmake lld-14 libudev-dev wabt clang \
+        curl git ca-certificates gnupg2 \
+        pkg-config libbrotli-dev nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+
+# 2) Force brotli-sys to build its vendored C code
+ENV BROTLI_SYS_BUNDLED=1
+
+# 3) In case any other crate still tries pkg-config, make sure it can find brotli.pc
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+
+# 4) Install Rust toolchains, cbindgen & Foundry
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:${PATH}
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-toolchain none && \
+    rustup toolchain install nightly-2025-02-14 \
+        --component rust-src,rustfmt,clippy \
+        --target wasm32-wasip1 --target wasm32-unknown-unknown && \
+    rustup toolchain install 1.84.1 \
+        --component cargo,rustc,clippy \
+        --target wasm32-wasip1 --target wasm32-unknown-unknown && \
+    rustup default 1.84.1 && \
+    cargo install --force cbindgen && \
+    curl -L https://foundry.paradigm.xyz | bash && \
+    ~/.foundry/bin/foundryup
+
+# 5) Copy in your Go & Nitro code and build the Nitro deps
 WORKDIR /go/src
 COPY ./synd-withdrawals/synd-enclave ./synd-enclave
 COPY ./synd-withdrawals/synd-proposer ./synd-proposer
 
-WORKDIR /go/src/synd-enclave
-RUN git clone https://github.com/OffchainLabs/nitro.git
-
 WORKDIR /go/src/synd-enclave/nitro
+# force Nitro to rebuild the vendored brotli C library
+RUN rm -rf .make
 RUN make build-node-deps
 
+# 6) Build the Go CLI
 WORKDIR /go/src/synd-proposer
-# Download Go dependencies for better build caching
-RUN go mod download
-RUN go mod tidy
+RUN go mod download && go mod tidy
 RUN CGO_ENABLED=0 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
+    
 
 # Stage 3: Optional Foundry install
 FROM debian:bookworm-slim AS foundry
