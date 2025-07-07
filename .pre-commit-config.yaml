@@ -31,6 +31,19 @@ repos:
         language: system
         types: [rust]
         pass_filenames: false
+        # it's necessary to specify the arguments one by one to avoid issues with git submodules (particularly inside synd-withdrawals)
+        args:
+          [
+            "Cargo.toml",
+            "shared",
+            "synd-batch-sequencer",
+            "synd-maestro",
+            "synd-mchain",
+            "synd-translator",
+            "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
+            "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program",
+            "test-framework",
+          ]
       - id: forge-fmt
         name: forge fmt
         entry: forge fmt

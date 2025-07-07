@@ -22,7 +22,7 @@ pub struct SettlementBlock {
     pub messages: Vec<DelayedMessage>,
 }
 
-#[allow(missing_docs)] // self-explanatory
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 #[strum(serialize_all = "lowercase")]
 pub enum Chain {

@@ -1,11 +1,12 @@
 [profile.default]
-bytecode_hash = "none"
-cbor_metadata = false
-evm_version   = "cancun"
-libs          = ["lib"]
-out           = "out"
-src           = "src"
-via_ir        = true
+bytecode_hash  = "none"
+cbor_metadata  = false
+evm_version    = "cancun"
+fs_permissions = [{ access = "read", path = "./test/withdrawal/fixtures/" }]
+libs           = ["lib"]
+out            = "out"
+src            = "src"
+via_ir         = true
 
 [rpc_endpoints]
 base_sepolia    = "https://sepolia.base.org"

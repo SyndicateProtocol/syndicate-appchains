@@ -127,7 +127,8 @@ impl Display for BlockRef {
     }
 }
 
-fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
+/// Deserialize an address from a hex string
+pub fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -159,7 +160,7 @@ where
 {
     let hex_str: String = Deserialize::deserialize(deserializer)?;
     u64::from_str_radix(hex_str.trim_start_matches("0x"), 16)
-        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {}", err)))
+        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {err}")))
 }
 
 fn deserialize_hex_to_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
@@ -168,7 +169,7 @@ where
 {
     let hex_str: String = Deserialize::deserialize(deserializer)?;
     u8::from_str_radix(hex_str.trim_start_matches("0x"), 16)
-        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u8: {}", err)))
+        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u8: {err}")))
 }
 
 fn deserialize_b256<'de, D>(deserializer: D) -> Result<B256, D::Error>
@@ -212,14 +213,14 @@ fn serialize_hex_u64<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&format!("0x{:x}", num))
+    serializer.serialize_str(&format!("0x{num:x}"))
 }
 
 fn serialize_hex_u8<S>(num: &u8, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&format!("0x{:x}", num))
+    serializer.serialize_str(&format!("0x{num:x}"))
 }
 
 fn deserialize_status<'de, D>(deserializer: D) -> Result<Eip658Value, D::Error>
@@ -233,7 +234,7 @@ where
         _ => {
             // Try to decode to B256
             let decoded = hex::decode(hex_str.trim_start_matches("0x"))
-                .map_err(|err| de::Error::custom(format!("Invalid hex for PostState: {}", err)))?;
+                .map_err(|err| de::Error::custom(format!("Invalid hex for PostState: {err}")))?;
             let arr: [u8; 32] =
                 decoded.try_into().map_err(|_| de::Error::custom("PostState must be 32 bytes"))?;
             Ok(Eip658Value::PostState(B256::from(arr)))

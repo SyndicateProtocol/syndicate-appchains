@@ -83,13 +83,15 @@ pub mod Airdrop {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x01\xDBV[a\0\x1D_5a\0,V[c\x82\x94z\xBE\x03a\0\x0EWa\x01\xABV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\0T\x90a\0@V[\x90V[a\0`\x81a\0KV[\x03a\0gWV[_\x80\xFD[\x90P5\x90a\0x\x82a\0WV[V[_\x80\xFD[_\x80\xFD[_\x80\xFD[\x90\x91\x82`\x1F\x83\x01\x12\x15a\0\xC0W\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\0\xBBW` \x01\x92` \x83\x02\x84\x01\x11a\0\xB6WV[a\0\x82V[a\0~V[a\0zV[\x90\x91\x82`\x1F\x83\x01\x12\x15a\0\xFFW\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\0\xFAW` \x01\x92` \x83\x02\x84\x01\x11a\0\xF5WV[a\0\x82V[a\0~V[a\0zV[\x90V[a\x01\x10\x81a\x01\x04V[\x03a\x01\x17WV[_\x80\xFD[\x90P5\x90a\x01(\x82a\x01\x07V[V[\x91\x90`\x80\x83\x82\x03\x12a\x01\xA1Wa\x01B\x81_\x85\x01a\0kV[\x92` \x81\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\x9CW\x82a\x01c\x91\x83\x01a\0\x86V[\x92\x90\x93`@\x83\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\x97Wa\x01\x89\x83a\x01\x94\x92\x86\x01a\0\xC5V[\x93\x90\x94``\x01a\x01\x1BV[\x90V[a\0<V[a\0<V[a\08V[_\x01\x90V[a\x01\xC5a\x01\xB96`\x04a\x01*V[\x94\x93\x90\x93\x92\x91\x92a\x01\xDFV[a\x01\xCDa\x002V[\x80a\x01\xD7\x81a\x01\xA6V[\x03\x90\xF3[_\x80\xFD[\x91\x80\x93\x95\x91\x94\x03a\x02\x9FW\x7F#\xB8r\xDD\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R3`\x04R0`$R`DR_\x80`d\x81\x80\x85Z\xF1\x15a\x02\x9BW\x91\x90\x7F\xA9\x05\x9C\xBB\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x05\x1B\x81\x01\x92\x81\x03\x90[\x805`\x04R\x81\x81\x035`$R_\x80`d\x81\x80\x87Z\xF1\x15a\x02\x97W` \x01\x91\x83\x83\x10\x15a\x02\x91W`d_\x80\x80\x94\x93\x81\x94\x95P\x95\x93PPPPa\x02UV[PPPPV[_\x80\xFD[_\x80\xFD[_\x80\xFD",
     );
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ArrayLengthMismatch()` and selector `0xa24a13a6`.
 ```solidity
 error ArrayLengthMismatch();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct ArrayLengthMismatch {}
+    pub struct ArrayLengthMismatch;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -124,7 +126,7 @@ error ArrayLengthMismatch();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for ArrayLengthMismatch {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -145,15 +147,24 @@ error ArrayLengthMismatch();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `TransferFailed()` and selector `0x90b8ec18`.
 ```solidity
 error TransferFailed();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct TransferFailed {}
+    pub struct TransferFailed;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -188,7 +199,7 @@ error TransferFailed();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for TransferFailed {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -209,8 +220,17 @@ error TransferFailed();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `airdropERC20(address,address[],uint256[],uint256)` and selector `0x82947abe`.
 ```solidity
 function airdropERC20(address _token, address[] memory _addresses, uint256[] memory _amounts, uint256 _totalAmount) external payable;
@@ -322,6 +342,13 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
                 }
             }
         }
+        impl airdropERC20Return {
+            fn _tokenize(
+                &self,
+            ) -> <airdropERC20Call as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for airdropERC20Call {
             type Parameters<'a> = (
@@ -364,18 +391,30 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                airdropERC20Return::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
     ///Container for all the [`Airdrop`](self) function calls.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive()]
     pub enum AirdropCalls {
         #[allow(missing_docs)]
         airdropERC20(airdropERC20Call),
@@ -416,20 +455,14 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
-            static DECODE_SHIMS: &[fn(
-                &[u8],
-                bool,
-            ) -> alloy_sol_types::Result<AirdropCalls>] = &[
+            static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<AirdropCalls>] = &[
                 {
                     fn airdropERC20(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<AirdropCalls> {
                         <airdropERC20Call as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(AirdropCalls::airdropERC20)
                     }
@@ -444,7 +477,38 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<AirdropCalls>] = &[
+                {
+                    fn airdropERC20(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<AirdropCalls> {
+                        <airdropERC20Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(AirdropCalls::airdropERC20)
+                    }
+                    airdropERC20
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -469,6 +533,8 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
         }
     }
     ///Container for all the [`Airdrop`](self) custom errors.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum AirdropErrors {
         #[allow(missing_docs)]
         ArrayLengthMismatch(ArrayLengthMismatch),
@@ -517,20 +583,16 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<AirdropErrors>] = &[
                 {
                     fn TransferFailed(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<AirdropErrors> {
                         <TransferFailed as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(AirdropErrors::TransferFailed)
                     }
@@ -539,11 +601,9 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
                 {
                     fn ArrayLengthMismatch(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<AirdropErrors> {
                         <ArrayLengthMismatch as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(AirdropErrors::ArrayLengthMismatch)
                     }
@@ -558,7 +618,49 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<AirdropErrors>] = &[
+                {
+                    fn TransferFailed(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<AirdropErrors> {
+                        <TransferFailed as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(AirdropErrors::TransferFailed)
+                    }
+                    TransferFailed
+                },
+                {
+                    fn ArrayLengthMismatch(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<AirdropErrors> {
+                        <ArrayLengthMismatch as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(AirdropErrors::ArrayLengthMismatch)
+                    }
+                    ArrayLengthMismatch
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -599,14 +701,10 @@ function airdropERC20(address _token, address[] memory _addresses, uint256[] mem
 See the [wrapper's documentation](`AirdropInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(
-        address: alloy_sol_types::private::Address,
-        provider: P,
-    ) -> AirdropInstance<T, P, N> {
-        AirdropInstance::<T, P, N>::new(address, provider)
+    >(address: alloy_sol_types::private::Address, provider: P) -> AirdropInstance<P, N> {
+        AirdropInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -615,15 +713,14 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<AirdropInstance<T, P, N>>,
+        Output = alloy_contract::Result<AirdropInstance<P, N>>,
     > {
-        AirdropInstance::<T, P, N>::deploy(provider)
+        AirdropInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -632,11 +729,10 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
-        AirdropInstance::<T, P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        AirdropInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`Airdrop`](self) instance.
 
@@ -650,13 +746,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct AirdropInstance<T, P, N = alloy_contract::private::Ethereum> {
+    pub struct AirdropInstance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for AirdropInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for AirdropInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("AirdropInstance").field(&self.address).finish()
@@ -665,10 +761,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > AirdropInstance<T, P, N> {
+    > AirdropInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`Airdrop`](self) contract instance.
 
 See the [wrapper's documentation](`AirdropInstance`) for more details.*/
@@ -680,7 +775,7 @@ See the [wrapper's documentation](`AirdropInstance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -691,7 +786,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<AirdropInstance<T, P, N>> {
+        ) -> alloy_contract::Result<AirdropInstance<P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -702,7 +797,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -729,24 +824,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> AirdropInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> AirdropInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> AirdropInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> AirdropInstance<P, N> {
             AirdropInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > AirdropInstance<T, P, N> {
+    > AirdropInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -754,7 +848,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`airdropERC20`] function.
@@ -768,7 +862,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 alloy::sol_types::private::primitives::aliases::U256,
             >,
             _totalAmount: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<T, &P, airdropERC20Call, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, airdropERC20Call, N> {
             self.call_builder(
                 &airdropERC20Call {
                     _token,
@@ -782,17 +876,16 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > AirdropInstance<T, P, N> {
+    > AirdropInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
     }

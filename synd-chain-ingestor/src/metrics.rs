@@ -3,7 +3,7 @@
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-/// Structure holding metrics related to the `Ingestor`.
+/// Structure holding metrics related to the Ingestor.
 #[derive(Debug, Default, Clone)]
 pub struct ChainIngestorMetrics {
     block_number: Gauge,
@@ -18,7 +18,7 @@ impl ChainIngestorMetrics {
         let metrics = Self::default();
         registry.register(
             "block_number",
-            "Tracks the ingested latest block number",
+            "Tracks the latest block number ingested",
             metrics.block_number.clone(),
         );
 

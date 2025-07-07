@@ -1,0 +1,19 @@
+# Binaries
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build output
+*.test
+*.out
+
+# Dependency directories
+vendor/
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp 

@@ -17,7 +17,7 @@ const LOCK_FILE_NAME: &str = ".test_ports.lock";
 
 /// Check if a port is available by attempting to bind to it
 fn is_port_available(port: u16) -> bool {
-    let addr = format!("127.0.0.1:{}", port);
+    let addr = format!("127.0.0.1:{port}");
     TcpListener::bind(addr).is_ok()
 }
 
@@ -49,7 +49,7 @@ impl PortManager {
         while attempts < MAX_ATTEMPTS {
             let port = match self.get_next_port_from_file().await {
                 Ok(port) => port,
-                Err(e) => panic!("Failed to get next port: {}", e),
+                Err(e) => panic!("Failed to get next port: {e}"),
             };
 
             if port > MAX_PORTS {
@@ -63,7 +63,7 @@ impl PortManager {
             attempts += 1;
         }
 
-        panic!("Failed to acquire port after {} attempts", MAX_ATTEMPTS);
+        panic!("Failed to acquire port after {MAX_ATTEMPTS} attempts");
     }
 
     async fn get_next_port_from_file(&self) -> io::Result<u16> {

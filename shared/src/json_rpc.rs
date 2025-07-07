@@ -71,6 +71,12 @@ pub fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Byte
 #[derive(Debug)]
 pub struct ParamsWrapper(Params<'static>);
 
+impl From<alloy::consensus::crypto::RecoveryError> for RpcError {
+    fn from(_e: alloy::consensus::crypto::RecoveryError) -> Self {
+        Self::InvalidInput(InvalidInputError::InvalidTransactionSignature)
+    }
+}
+
 impl From<Params<'static>> for ParamsWrapper {
     fn from(params: Params<'static>) -> Self {
         Self(params)
@@ -104,17 +110,17 @@ impl From<RpcError> for ErrorObjectOwned {
             }
             RpcError::MethodNotFound(m) => ErrorObject::owned(
                 error::METHOD_NOT_FOUND_CODE,
-                format!("method not found: {}", m),
+                format!("method not found: {m}"),
                 None::<()>,
             ),
             InvalidParams(m) => ErrorObject::owned(
                 error::INVALID_PARAMS_CODE,
-                format!("invalid params: {}", m),
+                format!("invalid params: {m}"),
                 None::<()>,
             ),
             RpcError::Internal(m) => ErrorObject::owned(
                 error::INTERNAL_ERROR_CODE,
-                format!("internal error: {}", m),
+                format!("internal error: {m}"),
                 None::<()>,
             ),
             RpcError::Parse => {
@@ -122,7 +128,7 @@ impl From<RpcError> for ErrorObjectOwned {
             }
             RpcError::InvalidInput(m) => ErrorObject::owned(
                 error::CALL_EXECUTION_FAILED_CODE,
-                format!("invalid input: {}", m),
+                format!("invalid input: {m}"),
                 None::<()>,
             ),
             RpcError::ResourceNotFound => {
@@ -132,7 +138,7 @@ impl From<RpcError> for ErrorObjectOwned {
                 ErrorObject::owned(error::INVALID_REQUEST_CODE, "resource unavailable", None::<()>)
             }
             RpcError::TransactionRejected(m) => {
-                ErrorObject::owned(-32003, format!("transaction rejected: {}", m), None::<()>)
+                ErrorObject::owned(-32003, format!("transaction rejected: {m}"), None::<()>)
             }
             RpcError::MethodNotSupported => {
                 ErrorObject::owned(-32004, "method not supported", None::<()>)
@@ -140,7 +146,7 @@ impl From<RpcError> for ErrorObjectOwned {
             RpcError::LimitExceeded => ErrorObject::owned(-32005, "limit exceeded", None::<()>),
             RpcError::Server => ErrorObject::owned(-32099, "server error", None::<()>),
             RpcError::Contract(e) => {
-                ErrorObject::owned(-32099, format!("contract error: {}", e), None::<()>)
+                ErrorObject::owned(-32099, format!("contract error: {e}"), None::<()>)
             }
         }
     }

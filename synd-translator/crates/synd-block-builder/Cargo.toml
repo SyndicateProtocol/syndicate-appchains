@@ -9,7 +9,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy             = { workspace = true, features = ["rlp"] }
+alloy             = { workspace = true, features = ["rlp", "signer-local", "signers"] }
 async-trait       = { workspace = true }
 base64            = { workspace = true }
 brotli            = { workspace = true }
@@ -17,7 +17,6 @@ clap              = { workspace = true, features = ["derive", "env"] }
 common            = { workspace = true }
 contract-bindings = { workspace = true }
 eyre              = { workspace = true }
-flate2            = { workspace = true }
 hex               = { workspace = true }
 serde             = { workspace = true }
 serde_json        = { workspace = true }

@@ -3,7 +3,7 @@
 
 use crate::valkey::keys::wallet_nonce::chain_wallet_nonce_key;
 use alloy::primitives::{Address, ChainId};
-use redis::{aio::MultiplexedConnection, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
+use redis::{aio::ConnectionManager, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
 use std::{future::Future, time::Duration};
 
 /// Extension trait for Valkey connections to work with wallet nonces
@@ -27,7 +27,7 @@ pub trait WalletNonceExt {
 
 /// Public trait which is non-async and instead returns a [`Future`]. This provides greater
 /// flexibility to trait users
-impl WalletNonceExt for MultiplexedConnection {
+impl WalletNonceExt for ConnectionManager {
     fn get_wallet_nonce(
         &mut self,
         chain_id: ChainId,
@@ -80,8 +80,7 @@ mod tests {
         assert_eq!(
             key,
             format!(
-                "{}:{}_0x4242424242424242424242424242424242424242",
-                WALLET_NONCE_KEY_PREFIX, chain_id
+                "{WALLET_NONCE_KEY_PREFIX}:{chain_id}_0x4242424242424242424242424242424242424242"
             )
         );
     }
@@ -90,7 +89,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache() -> Result<(), eyre::Error> {
         let (conn, valkey_url, _valkey) = init_valkey_and_get_connection().await;
-        println!("valkey url is {}", valkey_url);
+        println!("valkey url is {valkey_url}");
 
         test_set_get_wallet_nonce(conn.clone()).await;
         test_nonce_expiration(conn.clone()).await;
@@ -104,7 +103,7 @@ mod tests {
         Ok(())
     }
 
-    async fn test_set_get_wallet_nonce(mut conn: MultiplexedConnection) {
+    async fn test_set_get_wallet_nonce(mut conn: ConnectionManager) {
         let chain_id = 4u64;
         let wallet_address = Address::from_slice(&[0x42; 20]);
         let nonce = 42u64;
@@ -119,7 +118,7 @@ mod tests {
         assert_eq!(get_result, Some(nonce.to_string()), "Retrieved nonce doesn't match set nonce");
     }
 
-    async fn test_nonce_expiration(mut conn: MultiplexedConnection) {
+    async fn test_nonce_expiration(mut conn: ConnectionManager) {
         let chain_id = 5u64;
         let wallet_address = Address::from_slice(&[0x24; 20]);
         let nonce = 123u64;
@@ -145,7 +144,7 @@ mod tests {
         assert_eq!(expired_result, None, "Nonce should have expired after TTL");
     }
 
-    async fn test_update_existing_nonce(mut conn: MultiplexedConnection) {
+    async fn test_update_existing_nonce(mut conn: ConnectionManager) {
         let chain_id = 6u64;
         let wallet_address = Address::from_slice(&[0x36; 20]);
         let initial_nonce = 10u64;
@@ -176,7 +175,7 @@ mod tests {
         assert_eq!(updated_get, Some(updated_nonce.to_string()), "Nonce not updated correctly");
     }
 
-    async fn test_non_existent_nonce(mut conn: MultiplexedConnection) {
+    async fn test_non_existent_nonce(mut conn: ConnectionManager) {
         let chain_id = 7u64;
         let wallet_address = Address::from_slice(&[0x48; 20]);
 
@@ -185,7 +184,7 @@ mod tests {
         assert_eq!(get_result, None, "Non-existent nonce should return None");
     }
 
-    async fn test_multiple_wallets_independence(mut conn: MultiplexedConnection) {
+    async fn test_multiple_wallets_independence(mut conn: ConnectionManager) {
         let chain_id = 8u64;
         let wallet_address1 = Address::from_slice(&[0x5A; 20]);
         let wallet_address2 = Address::from_slice(&[0x5B; 20]);
@@ -204,7 +203,7 @@ mod tests {
         assert_eq!(get2, Some(nonce2.to_string()), "Wallet 2 nonce incorrect");
     }
 
-    async fn test_multiple_chains_independence(mut conn: MultiplexedConnection) {
+    async fn test_multiple_chains_independence(mut conn: ConnectionManager) {
         let chain_id1 = 9u64;
         let chain_id2 = 10u64;
         let wallet_address = Address::from_slice(&[0x6C; 20]);
@@ -223,7 +222,7 @@ mod tests {
         assert_eq!(get2, Some(nonce2.to_string()), "Chain 2 nonce incorrect");
     }
 
-    async fn test_high_load_scenario(mut conn: MultiplexedConnection) {
+    async fn test_high_load_scenario(mut conn: ConnectionManager) {
         let chain_id = 11u64;
         let wallet_address = Address::from_slice(&[0x7D; 20]);
 
@@ -236,7 +235,7 @@ mod tests {
 
             // Get nonce
             let get_result = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();
-            assert_eq!(get_result, Some(nonce.to_string()), "Nonce mismatch at iteration {}", i);
+            assert_eq!(get_result, Some(nonce.to_string()), "Nonce mismatch at iteration {i}");
         }
     }
 
@@ -251,7 +250,7 @@ mod tests {
 
             let handle = tokio::spawn(async move {
                 let client = redis::Client::open(valkey_url_clone.as_str()).unwrap();
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = ConnectionManager::new(client).await.unwrap();
 
                 let wallet_address = Address::from_slice(&wallet_bytes);
                 let nonce = (i + 1) * 100;
@@ -272,8 +271,7 @@ mod tests {
             assert_eq!(
                 result,
                 Some(expected_nonce.to_string()),
-                "Parallel operation failed for address {}",
-                address
+                "Parallel operation failed for address {address}"
             );
         }
     }

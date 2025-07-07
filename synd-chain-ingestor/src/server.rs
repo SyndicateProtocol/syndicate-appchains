@@ -10,9 +10,11 @@ use alloy::{
 };
 use eyre::eyre;
 use jsonrpsee::{
-    core::StringError, types::ErrorObjectOwned, RpcModule, SubscriptionMessage, SubscriptionSink,
+    core::SubscriptionError, types::ErrorObjectOwned, RpcModule, SubscriptionMessage,
+    SubscriptionSink,
 };
 use serde::{Deserialize, Serialize};
+use serde_json;
 use shared::types::PartialBlock;
 use std::{
     collections::{HashSet, VecDeque},
@@ -61,11 +63,12 @@ impl<'a> BlockIngestor<'a> {
     }
 }
 
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 #[allow(missing_docs)]
+#[allow(clippy::cognitive_complexity)]
 pub async fn start(
     provider: &EthClient,
-    ws_url: &str,
+    ws_urls: Vec<String>,
     db_name: &str,
     start_block: u64,
     parallel_sync_requests: u64,
@@ -93,7 +96,7 @@ pub async fn start(
         while let Some(block) = ingestor.next().await {
             match db.update_block(&block, metrics) {
                 BlockUpdateResult::Reorged => {
-                    error!("reorged during initial sync on block {:?}", block);
+                    error!("reorged during initial sync on block {block:?}");
                     break;
                 }
                 BlockUpdateResult::Added => {
@@ -114,7 +117,7 @@ pub async fn start(
     info!("synced to latest block");
 
     let ctx = Arc::new(Mutex::new(Context { db, subs: Default::default() }));
-    Ok((create_module(ctx.clone(), ws_url.to_string()), ctx))
+    Ok((create_module(ctx.clone(), ws_urls), ctx))
 }
 
 #[allow(clippy::unwrap_used)]
@@ -123,7 +126,7 @@ fn handle_subscription(
     ctx: &Mutex<Context>,
     start_block: u64,
     addresses: Vec<Address>,
-) -> Result<(), StringError> {
+) -> Result<(), SubscriptionError> {
     let mut lock = ctx.lock().unwrap();
     if start_block <= lock.db.start_block {
         return Err(eyre!(
@@ -142,10 +145,8 @@ fn handle_subscription(
         addrs.insert(addr);
     }
 
-    sink.try_send(
-        SubscriptionMessage::from_json(&Message::Init(lock.db.get_block_bytes(start_block - 1)))
-            .unwrap(),
-    )?;
+    let message = Message::Init(lock.db.get_block_bytes(start_block - 1));
+    sink.try_send(SubscriptionMessage::from(serde_json::value::to_raw_value(&message).unwrap()))?;
 
     lock.subs.push((sink, addrs));
     drop(lock);
@@ -153,10 +154,10 @@ fn handle_subscription(
 }
 
 #[allow(clippy::unwrap_used)]
-fn create_module(ctx: Arc<Mutex<Context>>, ws_url: String) -> RpcModule<Mutex<Context>> {
+fn create_module(ctx: Arc<Mutex<Context>>, ws_urls: Vec<String>) -> RpcModule<Mutex<Context>> {
     let mut module = RpcModule::from_arc(ctx);
 
-    module.register_method("url", move |_, _, _| ws_url.clone()).unwrap();
+    module.register_method("urls", move |_, _, _| ws_urls.clone()).unwrap();
     module
         .register_method("eth_blockNumber", move |_, ctx, _| {
             ctx.lock().unwrap().db.next_block() - 1
