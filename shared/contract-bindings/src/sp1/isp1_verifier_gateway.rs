@@ -202,6 +202,8 @@ pub mod ISP1VerifierGateway {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `RouteAlreadyExists(address)` and selector `0x2b87e797`.
 ```solidity
 error RouteAlreadyExists(address verifier);
@@ -271,8 +273,17 @@ error RouteAlreadyExists(address verifier);
                     ),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `RouteIsFrozen(bytes4)` and selector `0xebf10823`.
 ```solidity
 error RouteIsFrozen(bytes4 selector);
@@ -342,8 +353,17 @@ error RouteIsFrozen(bytes4 selector);
                     > as alloy_sol_types::SolType>::tokenize(&self.selector),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `RouteNotFound(bytes4)` and selector `0xf208777e`.
 ```solidity
 error RouteNotFound(bytes4 selector);
@@ -413,15 +433,24 @@ error RouteNotFound(bytes4 selector);
                     > as alloy_sol_types::SolType>::tokenize(&self.selector),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `SelectorCannotBeZero()` and selector `0x20acd28b`.
 ```solidity
 error SelectorCannotBeZero();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct SelectorCannotBeZero {}
+    pub struct SelectorCannotBeZero;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -456,7 +485,7 @@ error SelectorCannotBeZero();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for SelectorCannotBeZero {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -477,8 +506,17 @@ error SelectorCannotBeZero();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RouteAdded(bytes4,address)` and selector `0xcb5cc54fa0fda41744197b286ab4135aec7c322cace32c4f55da723d2eb8eee6`.
 ```solidity
 event RouteAdded(bytes4 selector, address verifier);
@@ -516,38 +554,9 @@ event RouteAdded(bytes4 selector, address verifier);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "RouteAdded(bytes4,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                203u8,
-                92u8,
-                197u8,
-                79u8,
-                160u8,
-                253u8,
-                164u8,
-                23u8,
-                68u8,
-                25u8,
-                123u8,
-                40u8,
-                106u8,
-                180u8,
-                19u8,
-                90u8,
-                236u8,
-                124u8,
-                50u8,
-                44u8,
-                172u8,
-                227u8,
-                44u8,
-                79u8,
-                85u8,
-                218u8,
-                114u8,
-                61u8,
-                46u8,
-                184u8,
-                238u8,
-                230u8,
+                203u8, 92u8, 197u8, 79u8, 160u8, 253u8, 164u8, 23u8, 68u8, 25u8, 123u8,
+                40u8, 106u8, 180u8, 19u8, 90u8, 236u8, 124u8, 50u8, 44u8, 172u8, 227u8,
+                44u8, 79u8, 85u8, 218u8, 114u8, 61u8, 46u8, 184u8, 238u8, 230u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -622,6 +631,8 @@ event RouteAdded(bytes4 selector, address verifier);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RouteFrozen(bytes4,address)` and selector `0x63ad2363b183cb8bb562b9590c5b4428e2a566260df053db156576d3d171438d`.
 ```solidity
 event RouteFrozen(bytes4 selector, address verifier);
@@ -659,38 +670,9 @@ event RouteFrozen(bytes4 selector, address verifier);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "RouteFrozen(bytes4,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                99u8,
-                173u8,
-                35u8,
-                99u8,
-                177u8,
-                131u8,
-                203u8,
-                139u8,
-                181u8,
-                98u8,
-                185u8,
-                89u8,
-                12u8,
-                91u8,
-                68u8,
-                40u8,
-                226u8,
-                165u8,
-                102u8,
-                38u8,
-                13u8,
-                240u8,
-                83u8,
-                219u8,
-                21u8,
-                101u8,
-                118u8,
-                211u8,
-                209u8,
-                113u8,
-                67u8,
-                141u8,
+                99u8, 173u8, 35u8, 99u8, 177u8, 131u8, 203u8, 139u8, 181u8, 98u8, 185u8,
+                89u8, 12u8, 91u8, 68u8, 40u8, 226u8, 165u8, 102u8, 38u8, 13u8, 240u8,
+                83u8, 219u8, 21u8, 101u8, 118u8, 211u8, 209u8, 113u8, 67u8, 141u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -765,6 +747,8 @@ event RouteFrozen(bytes4 selector, address verifier);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `addRoute(address)` and selector `0x8c95ff1e`.
 ```solidity
 function addRoute(address verifier) external;
@@ -849,6 +833,13 @@ function addRoute(address verifier) external;
                 }
             }
         }
+        impl addRouteReturn {
+            fn _tokenize(
+                &self,
+            ) -> <addRouteCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for addRouteCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::Address,);
@@ -877,17 +868,29 @@ function addRoute(address verifier) external;
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                addRouteReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `freezeRoute(bytes4)` and selector `0x814856f4`.
 ```solidity
 function freezeRoute(bytes4 selector) external;
@@ -972,6 +975,13 @@ function freezeRoute(bytes4 selector) external;
                 }
             }
         }
+        impl freezeRouteReturn {
+            fn _tokenize(
+                &self,
+            ) -> <freezeRouteCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for freezeRouteCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
@@ -1000,17 +1010,29 @@ function freezeRoute(bytes4 selector) external;
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                freezeRouteReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `routes(bytes4)` and selector `0x51c7094f`.
 ```solidity
 function routes(bytes4 selector) external view returns (address verifier, bool frozen);
@@ -1021,6 +1043,8 @@ function routes(bytes4 selector) external view returns (address verifier, bool f
         #[allow(missing_docs)]
         pub selector: alloy::sol_types::private::FixedBytes<4>,
     }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`routes(bytes4)`](routesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1106,6 +1130,20 @@ function routes(bytes4 selector) external view returns (address verifier, bool f
                 }
             }
         }
+        impl routesReturn {
+            fn _tokenize(
+                &self,
+            ) -> <routesCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.verifier,
+                    ),
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        &self.frozen,
+                    ),
+                )
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for routesCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
@@ -1137,17 +1175,29 @@ function routes(bytes4 selector) external view returns (address verifier, bool f
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                routesReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `verifyProof(bytes32,bytes,bytes)` and selector `0x41493c60`.
 ```solidity
 function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memory proofBytes) external view;
@@ -1248,6 +1298,13 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 }
             }
         }
+        impl verifyProofReturn {
+            fn _tokenize(
+                &self,
+            ) -> <verifyProofCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for verifyProofCall {
             type Parameters<'a> = (
@@ -1286,18 +1343,30 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                verifyProofReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
     ///Container for all the [`ISP1VerifierGateway`](self) function calls.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive()]
     pub enum ISP1VerifierGatewayCalls {
         #[allow(missing_docs)]
         addRoute(addRouteCall),
@@ -1354,20 +1423,16 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls>] = &[
                 {
                     fn verifyProof(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls> {
                         <verifyProofCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(ISP1VerifierGatewayCalls::verifyProof)
                     }
@@ -1376,12 +1441,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn routes(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls> {
-                        <routesCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <routesCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(ISP1VerifierGatewayCalls::routes)
                     }
                     routes
@@ -1389,11 +1450,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn freezeRoute(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls> {
                         <freezeRouteCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(ISP1VerifierGatewayCalls::freezeRoute)
                     }
@@ -1402,11 +1461,71 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn addRoute(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls> {
-                        <addRouteCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <addRouteCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                            .map(ISP1VerifierGatewayCalls::addRoute)
+                    }
+                    addRoute
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls>] = &[
+                {
+                    fn verifyProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls> {
+                        <verifyProofCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
-                                validate,
+                            )
+                            .map(ISP1VerifierGatewayCalls::verifyProof)
+                    }
+                    verifyProof
+                },
+                {
+                    fn routes(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls> {
+                        <routesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISP1VerifierGatewayCalls::routes)
+                    }
+                    routes
+                },
+                {
+                    fn freezeRoute(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls> {
+                        <freezeRouteCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISP1VerifierGatewayCalls::freezeRoute)
+                    }
+                    freezeRoute
+                },
+                {
+                    fn addRoute(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISP1VerifierGatewayCalls> {
+                        <addRouteCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
                             )
                             .map(ISP1VerifierGatewayCalls::addRoute)
                     }
@@ -1421,7 +1540,7 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -1472,6 +1591,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
     }
     ///Container for all the [`ISP1VerifierGateway`](self) custom errors.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ISP1VerifierGatewayErrors {
         #[allow(missing_docs)]
         RouteAlreadyExists(RouteAlreadyExists),
@@ -1532,20 +1653,16 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors>] = &[
                 {
                     fn SelectorCannotBeZero(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors> {
                         <SelectorCannotBeZero as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(ISP1VerifierGatewayErrors::SelectorCannotBeZero)
                     }
@@ -1554,11 +1671,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn RouteAlreadyExists(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors> {
                         <RouteAlreadyExists as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(ISP1VerifierGatewayErrors::RouteAlreadyExists)
                     }
@@ -1567,11 +1682,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn RouteIsFrozen(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors> {
                         <RouteIsFrozen as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(ISP1VerifierGatewayErrors::RouteIsFrozen)
                     }
@@ -1580,11 +1693,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn RouteNotFound(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors> {
                         <RouteNotFound as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(ISP1VerifierGatewayErrors::RouteNotFound)
                     }
@@ -1599,7 +1710,71 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors>] = &[
+                {
+                    fn SelectorCannotBeZero(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors> {
+                        <SelectorCannotBeZero as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISP1VerifierGatewayErrors::SelectorCannotBeZero)
+                    }
+                    SelectorCannotBeZero
+                },
+                {
+                    fn RouteAlreadyExists(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors> {
+                        <RouteAlreadyExists as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISP1VerifierGatewayErrors::RouteAlreadyExists)
+                    }
+                    RouteAlreadyExists
+                },
+                {
+                    fn RouteIsFrozen(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors> {
+                        <RouteIsFrozen as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISP1VerifierGatewayErrors::RouteIsFrozen)
+                    }
+                    RouteIsFrozen
+                },
+                {
+                    fn RouteNotFound(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISP1VerifierGatewayErrors> {
+                        <RouteNotFound as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISP1VerifierGatewayErrors::RouteNotFound)
+                    }
+                    RouteNotFound
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -1653,6 +1828,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
     }
     ///Container for all the [`ISP1VerifierGateway`](self) events.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ISP1VerifierGatewayEvents {
         #[allow(missing_docs)]
         RouteAdded(RouteAdded),
@@ -1669,72 +1846,14 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                99u8,
-                173u8,
-                35u8,
-                99u8,
-                177u8,
-                131u8,
-                203u8,
-                139u8,
-                181u8,
-                98u8,
-                185u8,
-                89u8,
-                12u8,
-                91u8,
-                68u8,
-                40u8,
-                226u8,
-                165u8,
-                102u8,
-                38u8,
-                13u8,
-                240u8,
-                83u8,
-                219u8,
-                21u8,
-                101u8,
-                118u8,
-                211u8,
-                209u8,
-                113u8,
-                67u8,
-                141u8,
+                99u8, 173u8, 35u8, 99u8, 177u8, 131u8, 203u8, 139u8, 181u8, 98u8, 185u8,
+                89u8, 12u8, 91u8, 68u8, 40u8, 226u8, 165u8, 102u8, 38u8, 13u8, 240u8,
+                83u8, 219u8, 21u8, 101u8, 118u8, 211u8, 209u8, 113u8, 67u8, 141u8,
             ],
             [
-                203u8,
-                92u8,
-                197u8,
-                79u8,
-                160u8,
-                253u8,
-                164u8,
-                23u8,
-                68u8,
-                25u8,
-                123u8,
-                40u8,
-                106u8,
-                180u8,
-                19u8,
-                90u8,
-                236u8,
-                124u8,
-                50u8,
-                44u8,
-                172u8,
-                227u8,
-                44u8,
-                79u8,
-                85u8,
-                218u8,
-                114u8,
-                61u8,
-                46u8,
-                184u8,
-                238u8,
-                230u8,
+                203u8, 92u8, 197u8, 79u8, 160u8, 253u8, 164u8, 23u8, 68u8, 25u8, 123u8,
+                40u8, 106u8, 180u8, 19u8, 90u8, 236u8, 124u8, 50u8, 44u8, 172u8, 227u8,
+                44u8, 79u8, 85u8, 218u8, 114u8, 61u8, 46u8, 184u8, 238u8, 230u8,
             ],
         ];
     }
@@ -1745,14 +1864,12 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<RouteAdded as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <RouteAdded as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::RouteAdded)
                 }
@@ -1760,7 +1877,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     <RouteFrozen as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::RouteFrozen)
                 }
@@ -1807,14 +1923,13 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
 See the [wrapper's documentation](`ISP1VerifierGatewayInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> ISP1VerifierGatewayInstance<T, P, N> {
-        ISP1VerifierGatewayInstance::<T, P, N>::new(address, provider)
+    ) -> ISP1VerifierGatewayInstance<P, N> {
+        ISP1VerifierGatewayInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -1823,15 +1938,14 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<ISP1VerifierGatewayInstance<T, P, N>>,
+        Output = alloy_contract::Result<ISP1VerifierGatewayInstance<P, N>>,
     > {
-        ISP1VerifierGatewayInstance::<T, P, N>::deploy(provider)
+        ISP1VerifierGatewayInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -1840,11 +1954,10 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
-        ISP1VerifierGatewayInstance::<T, P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        ISP1VerifierGatewayInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`ISP1VerifierGateway`](self) instance.
 
@@ -1858,13 +1971,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct ISP1VerifierGatewayInstance<T, P, N = alloy_contract::private::Ethereum> {
+    pub struct ISP1VerifierGatewayInstance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for ISP1VerifierGatewayInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for ISP1VerifierGatewayInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("ISP1VerifierGatewayInstance").field(&self.address).finish()
@@ -1873,10 +1986,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > ISP1VerifierGatewayInstance<T, P, N> {
+    > ISP1VerifierGatewayInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`ISP1VerifierGateway`](self) contract instance.
 
 See the [wrapper's documentation](`ISP1VerifierGatewayInstance`) for more details.*/
@@ -1888,7 +2000,7 @@ See the [wrapper's documentation](`ISP1VerifierGatewayInstance`) for more detail
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -1899,7 +2011,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<ISP1VerifierGatewayInstance<T, P, N>> {
+        ) -> alloy_contract::Result<ISP1VerifierGatewayInstance<P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -1910,7 +2022,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -1937,24 +2049,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> ISP1VerifierGatewayInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> ISP1VerifierGatewayInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> ISP1VerifierGatewayInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> ISP1VerifierGatewayInstance<P, N> {
             ISP1VerifierGatewayInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > ISP1VerifierGatewayInstance<T, P, N> {
+    > ISP1VerifierGatewayInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -1962,28 +2073,28 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`addRoute`] function.
         pub fn addRoute(
             &self,
             verifier: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<T, &P, addRouteCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, addRouteCall, N> {
             self.call_builder(&addRouteCall { verifier })
         }
         ///Creates a new call builder for the [`freezeRoute`] function.
         pub fn freezeRoute(
             &self,
             selector: alloy::sol_types::private::FixedBytes<4>,
-        ) -> alloy_contract::SolCallBuilder<T, &P, freezeRouteCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, freezeRouteCall, N> {
             self.call_builder(&freezeRouteCall { selector })
         }
         ///Creates a new call builder for the [`routes`] function.
         pub fn routes(
             &self,
             selector: alloy::sol_types::private::FixedBytes<4>,
-        ) -> alloy_contract::SolCallBuilder<T, &P, routesCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, routesCall, N> {
             self.call_builder(&routesCall { selector })
         }
         ///Creates a new call builder for the [`verifyProof`] function.
@@ -1992,7 +2103,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             programVKey: alloy::sol_types::private::FixedBytes<32>,
             publicValues: alloy::sol_types::private::Bytes,
             proofBytes: alloy::sol_types::private::Bytes,
-        ) -> alloy_contract::SolCallBuilder<T, &P, verifyProofCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, verifyProofCall, N> {
             self.call_builder(
                 &verifyProofCall {
                     programVKey,
@@ -2005,27 +2116,24 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > ISP1VerifierGatewayInstance<T, P, N> {
+    > ISP1VerifierGatewayInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`RouteAdded`] event.
-        pub fn RouteAdded_filter(&self) -> alloy_contract::Event<T, &P, RouteAdded, N> {
+        pub fn RouteAdded_filter(&self) -> alloy_contract::Event<&P, RouteAdded, N> {
             self.event_filter::<RouteAdded>()
         }
         ///Creates a new event filter for the [`RouteFrozen`] event.
-        pub fn RouteFrozen_filter(
-            &self,
-        ) -> alloy_contract::Event<T, &P, RouteFrozen, N> {
+        pub fn RouteFrozen_filter(&self) -> alloy_contract::Event<&P, RouteFrozen, N> {
             self.event_filter::<RouteFrozen>()
         }
     }

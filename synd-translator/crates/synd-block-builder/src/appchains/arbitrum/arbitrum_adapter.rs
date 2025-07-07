@@ -17,8 +17,8 @@ use alloy::{
 };
 use common::types::{SequencingBlock, SettlementBlock};
 use contract_bindings::synd::{
-    ibridge::IBridge::MessageDelivered,
-    idelayedmessageprovider::IDelayedMessageProvider::{
+    i_bridge::IBridge::MessageDelivered,
+    i_delayed_message_provider::IDelayedMessageProvider::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
     },
 };
@@ -175,7 +175,7 @@ impl ArbitrumAdapter {
                     let message_num = log.topics()[1].into();
 
                     // Decode the event using the contract bindings
-                    match InboxMessageDelivered::abi_decode_data(&log.data.data, true) {
+                    match InboxMessageDelivered::abi_decode_data_validate(&log.data.data) {
                         Ok(decoded) => {
                             message_data.insert(message_num, decoded.0);
                         }
@@ -250,7 +250,7 @@ impl ArbitrumAdapter {
         log: &Log,
         message_data: &HashMap<U256, Bytes>,
     ) -> Result<DelayedMessage, ArbitrumBlockBuilderError> {
-        let msg = MessageDelivered::decode_raw_log(log.topics(), &log.data.data, true)
+        let msg = MessageDelivered::decode_raw_log_validate(log.topics(), &log.data.data)
             .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
 
         let kind = L1MessageType::from_u8_panic(msg.kind);

@@ -81,6 +81,8 @@ pub mod ISP1VerifierGatewayEvents {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RouteAdded(bytes4,address)` and selector `0xcb5cc54fa0fda41744197b286ab4135aec7c322cace32c4f55da723d2eb8eee6`.
 ```solidity
 event RouteAdded(bytes4 selector, address verifier);
@@ -118,38 +120,9 @@ event RouteAdded(bytes4 selector, address verifier);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "RouteAdded(bytes4,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                203u8,
-                92u8,
-                197u8,
-                79u8,
-                160u8,
-                253u8,
-                164u8,
-                23u8,
-                68u8,
-                25u8,
-                123u8,
-                40u8,
-                106u8,
-                180u8,
-                19u8,
-                90u8,
-                236u8,
-                124u8,
-                50u8,
-                44u8,
-                172u8,
-                227u8,
-                44u8,
-                79u8,
-                85u8,
-                218u8,
-                114u8,
-                61u8,
-                46u8,
-                184u8,
-                238u8,
-                230u8,
+                203u8, 92u8, 197u8, 79u8, 160u8, 253u8, 164u8, 23u8, 68u8, 25u8, 123u8,
+                40u8, 106u8, 180u8, 19u8, 90u8, 236u8, 124u8, 50u8, 44u8, 172u8, 227u8,
+                44u8, 79u8, 85u8, 218u8, 114u8, 61u8, 46u8, 184u8, 238u8, 230u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -224,6 +197,8 @@ event RouteAdded(bytes4 selector, address verifier);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RouteFrozen(bytes4,address)` and selector `0x63ad2363b183cb8bb562b9590c5b4428e2a566260df053db156576d3d171438d`.
 ```solidity
 event RouteFrozen(bytes4 selector, address verifier);
@@ -261,38 +236,9 @@ event RouteFrozen(bytes4 selector, address verifier);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "RouteFrozen(bytes4,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                99u8,
-                173u8,
-                35u8,
-                99u8,
-                177u8,
-                131u8,
-                203u8,
-                139u8,
-                181u8,
-                98u8,
-                185u8,
-                89u8,
-                12u8,
-                91u8,
-                68u8,
-                40u8,
-                226u8,
-                165u8,
-                102u8,
-                38u8,
-                13u8,
-                240u8,
-                83u8,
-                219u8,
-                21u8,
-                101u8,
-                118u8,
-                211u8,
-                209u8,
-                113u8,
-                67u8,
-                141u8,
+                99u8, 173u8, 35u8, 99u8, 177u8, 131u8, 203u8, 139u8, 181u8, 98u8, 185u8,
+                89u8, 12u8, 91u8, 68u8, 40u8, 226u8, 165u8, 102u8, 38u8, 13u8, 240u8,
+                83u8, 219u8, 21u8, 101u8, 118u8, 211u8, 209u8, 113u8, 67u8, 141u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -368,6 +314,8 @@ event RouteFrozen(bytes4 selector, address verifier);
         }
     };
     ///Container for all the [`ISP1VerifierGatewayEvents`](self) events.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ISP1VerifierGatewayEventsEvents {
         #[allow(missing_docs)]
         RouteAdded(RouteAdded),
@@ -384,72 +332,14 @@ event RouteFrozen(bytes4 selector, address verifier);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                99u8,
-                173u8,
-                35u8,
-                99u8,
-                177u8,
-                131u8,
-                203u8,
-                139u8,
-                181u8,
-                98u8,
-                185u8,
-                89u8,
-                12u8,
-                91u8,
-                68u8,
-                40u8,
-                226u8,
-                165u8,
-                102u8,
-                38u8,
-                13u8,
-                240u8,
-                83u8,
-                219u8,
-                21u8,
-                101u8,
-                118u8,
-                211u8,
-                209u8,
-                113u8,
-                67u8,
-                141u8,
+                99u8, 173u8, 35u8, 99u8, 177u8, 131u8, 203u8, 139u8, 181u8, 98u8, 185u8,
+                89u8, 12u8, 91u8, 68u8, 40u8, 226u8, 165u8, 102u8, 38u8, 13u8, 240u8,
+                83u8, 219u8, 21u8, 101u8, 118u8, 211u8, 209u8, 113u8, 67u8, 141u8,
             ],
             [
-                203u8,
-                92u8,
-                197u8,
-                79u8,
-                160u8,
-                253u8,
-                164u8,
-                23u8,
-                68u8,
-                25u8,
-                123u8,
-                40u8,
-                106u8,
-                180u8,
-                19u8,
-                90u8,
-                236u8,
-                124u8,
-                50u8,
-                44u8,
-                172u8,
-                227u8,
-                44u8,
-                79u8,
-                85u8,
-                218u8,
-                114u8,
-                61u8,
-                46u8,
-                184u8,
-                238u8,
-                230u8,
+                203u8, 92u8, 197u8, 79u8, 160u8, 253u8, 164u8, 23u8, 68u8, 25u8, 123u8,
+                40u8, 106u8, 180u8, 19u8, 90u8, 236u8, 124u8, 50u8, 44u8, 172u8, 227u8,
+                44u8, 79u8, 85u8, 218u8, 114u8, 61u8, 46u8, 184u8, 238u8, 230u8,
             ],
         ];
     }
@@ -460,14 +350,12 @@ event RouteFrozen(bytes4 selector, address verifier);
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<RouteAdded as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <RouteAdded as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::RouteAdded)
                 }
@@ -475,7 +363,6 @@ event RouteFrozen(bytes4 selector, address verifier);
                     <RouteFrozen as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::RouteFrozen)
                 }
@@ -522,14 +409,13 @@ event RouteFrozen(bytes4 selector, address verifier);
 See the [wrapper's documentation](`ISP1VerifierGatewayEventsInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> ISP1VerifierGatewayEventsInstance<T, P, N> {
-        ISP1VerifierGatewayEventsInstance::<T, P, N>::new(address, provider)
+    ) -> ISP1VerifierGatewayEventsInstance<P, N> {
+        ISP1VerifierGatewayEventsInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -538,15 +424,14 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<ISP1VerifierGatewayEventsInstance<T, P, N>>,
+        Output = alloy_contract::Result<ISP1VerifierGatewayEventsInstance<P, N>>,
     > {
-        ISP1VerifierGatewayEventsInstance::<T, P, N>::deploy(provider)
+        ISP1VerifierGatewayEventsInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -555,11 +440,10 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
-        ISP1VerifierGatewayEventsInstance::<T, P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        ISP1VerifierGatewayEventsInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`ISP1VerifierGatewayEvents`](self) instance.
 
@@ -574,16 +458,15 @@ be used to deploy a new instance of the contract.
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
     pub struct ISP1VerifierGatewayEventsInstance<
-        T,
         P,
         N = alloy_contract::private::Ethereum,
     > {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for ISP1VerifierGatewayEventsInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for ISP1VerifierGatewayEventsInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("ISP1VerifierGatewayEventsInstance")
@@ -594,10 +477,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > ISP1VerifierGatewayEventsInstance<T, P, N> {
+    > ISP1VerifierGatewayEventsInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`ISP1VerifierGatewayEvents`](self) contract instance.
 
 See the [wrapper's documentation](`ISP1VerifierGatewayEventsInstance`) for more details.*/
@@ -609,7 +491,7 @@ See the [wrapper's documentation](`ISP1VerifierGatewayEventsInstance`) for more 
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -620,7 +502,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<ISP1VerifierGatewayEventsInstance<T, P, N>> {
+        ) -> alloy_contract::Result<ISP1VerifierGatewayEventsInstance<P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -631,7 +513,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -658,24 +540,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> ISP1VerifierGatewayEventsInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> ISP1VerifierGatewayEventsInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> ISP1VerifierGatewayEventsInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> ISP1VerifierGatewayEventsInstance<P, N> {
             ISP1VerifierGatewayEventsInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > ISP1VerifierGatewayEventsInstance<T, P, N> {
+    > ISP1VerifierGatewayEventsInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -683,34 +564,31 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > ISP1VerifierGatewayEventsInstance<T, P, N> {
+    > ISP1VerifierGatewayEventsInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`RouteAdded`] event.
-        pub fn RouteAdded_filter(&self) -> alloy_contract::Event<T, &P, RouteAdded, N> {
+        pub fn RouteAdded_filter(&self) -> alloy_contract::Event<&P, RouteAdded, N> {
             self.event_filter::<RouteAdded>()
         }
         ///Creates a new event filter for the [`RouteFrozen`] event.
-        pub fn RouteFrozen_filter(
-            &self,
-        ) -> alloy_contract::Event<T, &P, RouteFrozen, N> {
+        pub fn RouteFrozen_filter(&self) -> alloy_contract::Event<&P, RouteFrozen, N> {
             self.event_filter::<RouteFrozen>()
         }
     }

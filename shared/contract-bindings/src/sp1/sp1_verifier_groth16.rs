@@ -207,13 +207,15 @@ pub mod SP1VerifierGroth16 {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0{W_5`\xE0\x1C\x80cka\xD8\xE7\x11a\0YW\x80cka\xD8\xE7\x14a\0\xE9W\x80c\xED\xDF$<\x14a\x01\x19W\x80c\xF1\x18\x17\xB2\x14a\x015W\x80c\xFF\xA1\xADt\x14a\x01QWa\0{V[\x80c*Q\x046\x14a\0\x7FW\x80cAI<`\x14a\0\x9DW\x80cD\xF66\x92\x14a\0\xB9W[_\x80\xFD[a\0\x87a\x01oV[`@Qa\0\x94\x91\x90a\"<V[`@Q\x80\x91\x03\x90\xF3[a\0\xB7`\x04\x806\x03\x81\x01\x90a\0\xB2\x91\x90a\"\xF1V[a\x01\x98V[\0[a\0\xD3`\x04\x806\x03\x81\x01\x90a\0\xCE\x91\x90a#\xA3V[a\x032V[`@Qa\0\xE0\x91\x90a$}V[`@Q\x80\x91\x03\x90\xF3[a\x01\x03`\x04\x806\x03\x81\x01\x90a\0\xFE\x91\x90a$\x96V[a\x04\x91V[`@Qa\x01\x10\x91\x90a\"<V[`@Q\x80\x91\x03\x90\xF3[a\x013`\x04\x806\x03\x81\x01\x90a\x01.\x91\x90a%\x02V[a\x05\x0EV[\0[a\x01O`\x04\x806\x03\x81\x01\x90a\x01J\x91\x90a%cV[a\x07\xA8V[\0[a\x01Ya\rcV[`@Qa\x01f\x91\x90a&+V[`@Q\x80\x91\x03\x90\xF3[_\x7F\xA4YLY\xBB\xC1B\xF3\xB8\x1C>\xCB\x7FP\xA7\xC3K\xC9\xAF|LDK]H\xB7\x95B~(Y\x13_\x1B\x90P\x90V[_\x82\x82_\x90`\x04\x92a\x01\xAC\x93\x92\x91\x90a&SV[\x90a\x01\xB7\x91\x90a&\xCEV[\x90P_a\x01\xC2a\x01oV[\x90P\x80{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x82{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x14a\x02HW\x81\x81`@Q\x7F\x98\x80f\xA1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\x02?\x92\x91\x90a';V[`@Q\x80\x91\x03\x90\xFD[_a\x02S\x87\x87a\x04\x91V[\x90Pa\x02]a!\x9BV[\x88_\x1C\x81_`\x02\x81\x10a\x02sWa\x02ra'bV[[` \x02\x01\x81\x81RPP\x81_\x1C\x81`\x01`\x02\x81\x10a\x02\x93Wa\x02\x92a'bV[[` \x02\x01\x81\x81RPP_\x86\x86`\x04\x90\x80\x92a\x02\xB0\x93\x92\x91\x90a&SV[\x81\x01\x90a\x02\xBD\x91\x90a(\xDFV[\x90P0s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16c\xED\xDF$<\x82\x84`@Q\x83c\xFF\xFF\xFF\xFF\x16`\xE0\x1B\x81R`\x04\x01a\x02\xFA\x92\x91\x90a*\tV[_`@Q\x80\x83\x03\x81\x86\x80;\x15\x80\x15a\x03\x10W_\x80\xFD[PZ\xFA\x15\x80\x15a\x03\"W=_\x80>=_\xFD[PPPPPPPPPPPPPPV[a\x03:a!\xBDV[a\x03s\x82_`\x08\x81\x10a\x03PWa\x03Oa'bV[[` \x02\x015\x83`\x01`\x08\x81\x10a\x03iWa\x03ha'bV[[` \x02\x015a\r\xA0V[\x81_`\x04\x81\x10a\x03\x86Wa\x03\x85a'bV[[` \x02\x01\x81\x81RPPa\x03\xFB\x82`\x03`\x08\x81\x10a\x03\xA6Wa\x03\xA5a'bV[[` \x02\x015\x83`\x02`\x08\x81\x10a\x03\xBFWa\x03\xBEa'bV[[` \x02\x015\x84`\x05`\x08\x81\x10a\x03\xD8Wa\x03\xD7a'bV[[` \x02\x015\x85`\x04`\x08\x81\x10a\x03\xF1Wa\x03\xF0a'bV[[` \x02\x015a\x0FNV[\x82`\x02`\x04\x81\x10a\x04\x0FWa\x04\x0Ea'bV[[` \x02\x01\x83`\x01`\x04\x81\x10a\x04'Wa\x04&a'bV[[` \x02\x01\x82\x81RP\x82\x81RPPPa\x04o\x82`\x06`\x08\x81\x10a\x04LWa\x04Ka'bV[[` \x02\x015\x83`\x07`\x08\x81\x10a\x04eWa\x04da'bV[[` \x02\x015a\r\xA0V[\x81`\x03`\x04\x81\x10a\x04\x83Wa\x04\x82a'bV[[` \x02\x01\x81\x81RPP\x91\x90PV[_\x7F\x1F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_\x1B`\x02\x84\x84`@Qa\x04\xC7\x92\x91\x90a*nV[` `@Q\x80\x83\x03\x81\x85Z\xFA\x15\x80\x15a\x04\xE2W=_\x80>=_\xFD[PPP`@Q=`\x1F\x19`\x1F\x82\x01\x16\x82\x01\x80`@RP\x81\x01\x90a\x05\x05\x91\x90a*\x9AV[\x16\x90P\x92\x91PPV[_\x80a\x05\x19\x83a\x15\x1AV[\x91P\x91P_`@Qa\x01\0\x86\x827\x7F\x1C\xC7\xCB\x8D\xE7\x15g_!\xF0\x1E\xCC\x9BF\xD26\xE0\x86^\x0C\xC0 \x02E!\x99\x82i\x84_t\xE6a\x01\0\x82\x01R\x7F\x03\xFFA\xF4\xBA\x0C7\xFE,\xAF'5M(\xE4\xB8\xF8=;vwzc\xB3'\xD76\xBF\xFB\x01\"\xEDa\x01 \x82\x01R\x7F\x01\x90\x9C\xD7\x82~\x02x\xE6\xB6\x08C\xA4\xAB\xC7\xB1\x11\xD7\xF8\xB2r\\\xD5\x90*k \xDAz)8\xFBa\x01@\x82\x01R\x7F\x19+\xD3'DAg\x02'\xB4\xF6\x9AD\0[\x87\x11&nGB'\xC6C\x9C\xA2\\\xA8\xE1\xEC\x1F\xC2a\x01`\x82\x01R\x7F-M\x9A\xA7\xE3\x02\xD9\xDFAt\x9DU\x07\x94\x9D\x05\xDB\xEA3\xFB\xB1ld;\"\xF5\x99\xA2\xBEm\xF2\xE2a\x01\x80\x82\x01R\x7F\x14\xBE\xDDP<7\xCE\xB0a\xD8\xEC` \x9F\xE3E\xCE\x89\x83\n\x19#\x03\x01\xF0v\xCA\xFF\0M\x19&a\x01\xA0\x82\x01R\x7F\tg\x03/\xCB\xF7v\xD1\xAF\xC9\x85\xF8\x88w\xF1\x82\xD3\x84\x80\xA6S\xF2\xDE\xCA\xA9yL\xBC;\xF3\x06\x0Ca\x01\xC0\x82\x01R\x7F\x0E\x18xG\xADLy\x83t\xD0\xD6s+\xF5\x01\x84}\xD6\x8B\xC0\xE0q$\x1E\x02\x13\xBC\x7F\xC1=\xB7\xABa\x01\xE0\x82\x01R~\x17R\xA1\0\xA7/\xDF\x1EZ]n\xA8A\xCC \xEC\x83\x8B\xCC\xFC\xF7\xBDU\x9Ey\xF1\xC9\xC7Y\xB6\xA0a\x02\0\x82\x01R\x7F\x19*\x8C\xC1<\xD9\xF7b\x87\x1F!\xE44Q\xC6\xCA\x9E\xEA\xB2\xCB)\x87\xC4\xE3f\xA1\x85\xC2]\xAC.\x7Fa\x02 \x82\x01R\x83a\x02@\x82\x01R\x82a\x02`\x82\x01R\x7F\x19\x8E\x93\x93\x92\rH:r`\xBF\xB71\xFB]%\xF1\xAAI35\xA9\xE7\x12\x97\xE4\x85\xB7\xAE\xF3\x12\xC2a\x02\x80\x82\x01R\x7F\x18\0\xDE\xEF\x12\x1F\x1EvBj\0f^\\DygC\"\xD4\xF7^\xDA\xDDF\xDE\xBD\\\xD9\x92\xF6\xEDa\x02\xA0\x82\x01R\x7F']\xC4\xA2\x88\xD1\xAF\xB3\xCB\xB1\xAC\t\x18u$\xC7\xDB69]\xF7\xBE;\x99\xE6s\xB1:\x07Ze\xECa\x02\xC0\x82\x01R\x7F\x1D\x9B\xEF\xCD\x05\xA52>m\xA4\xD45\xF3\xB6\x17\xCD\xB3\xAF\x83(\\-\xF7\x11\xEF9\xC0\x15q\x82\x7F\x9Da\x02\xE0\x82\x01R` \x81a\x03\0\x83`\x08Z\xFA\x91P\x80Q\x82\x16\x91PP\x80a\x07\xA1W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[PPPPPV[a\x07\xB0a!\xDFV[_\x80a\x07\xD2\x85_`\x04\x81\x10a\x07\xC8Wa\x07\xC7a'bV[[` \x02\x015a\x16\xEBV[\x91P\x91P_\x80_\x80a\x08\x14\x89`\x02`\x04\x81\x10a\x07\xF1Wa\x07\xF0a'bV[[` \x02\x015\x8A`\x01`\x04\x81\x10a\x08\nWa\x08\ta'bV[[` \x02\x015a\x18 V[\x93P\x93P\x93P\x93P_\x80a\x08?\x8B`\x03`\x04\x81\x10a\x085Wa\x084a'bV[[` \x02\x015a\x16\xEBV[\x91P\x91P_\x80a\x08N\x8Ca\x15\x1AV[\x91P\x91P\x89\x8B_`\x18\x81\x10a\x08fWa\x08ea'bV[[` \x02\x01\x81\x81RPP\x88\x8B`\x01`\x18\x81\x10a\x08\x84Wa\x08\x83a'bV[[` \x02\x01\x81\x81RPP\x86\x8B`\x02`\x18\x81\x10a\x08\xA2Wa\x08\xA1a'bV[[` \x02\x01\x81\x81RPP\x87\x8B`\x03`\x18\x81\x10a\x08\xC0Wa\x08\xBFa'bV[[` \x02\x01\x81\x81RPP\x84\x8B`\x04`\x18\x81\x10a\x08\xDEWa\x08\xDDa'bV[[` \x02\x01\x81\x81RPP\x85\x8B`\x05`\x18\x81\x10a\x08\xFCWa\x08\xFBa'bV[[` \x02\x01\x81\x81RPP\x83\x8B`\x06`\x18\x81\x10a\t\x1AWa\t\x19a'bV[[` \x02\x01\x81\x81RPP\x82\x8B`\x07`\x18\x81\x10a\t8Wa\t7a'bV[[` \x02\x01\x81\x81RPP\x7F\x1C\xC7\xCB\x8D\xE7\x15g_!\xF0\x1E\xCC\x9BF\xD26\xE0\x86^\x0C\xC0 \x02E!\x99\x82i\x84_t\xE6\x8B`\x08`\x18\x81\x10a\tvWa\tua'bV[[` \x02\x01\x81\x81RPP\x7F\x03\xFFA\xF4\xBA\x0C7\xFE,\xAF'5M(\xE4\xB8\xF8=;vwzc\xB3'\xD76\xBF\xFB\x01\"\xED\x8B`\t`\x18\x81\x10a\t\xB4Wa\t\xB3a'bV[[` \x02\x01\x81\x81RPP\x7F\x01\x90\x9C\xD7\x82~\x02x\xE6\xB6\x08C\xA4\xAB\xC7\xB1\x11\xD7\xF8\xB2r\\\xD5\x90*k \xDAz)8\xFB\x8B`\n`\x18\x81\x10a\t\xF2Wa\t\xF1a'bV[[` \x02\x01\x81\x81RPP\x7F\x19+\xD3'DAg\x02'\xB4\xF6\x9AD\0[\x87\x11&nGB'\xC6C\x9C\xA2\\\xA8\xE1\xEC\x1F\xC2\x8B`\x0B`\x18\x81\x10a\n0Wa\n/a'bV[[` \x02\x01\x81\x81RPP\x7F-M\x9A\xA7\xE3\x02\xD9\xDFAt\x9DU\x07\x94\x9D\x05\xDB\xEA3\xFB\xB1ld;\"\xF5\x99\xA2\xBEm\xF2\xE2\x8B`\x0C`\x18\x81\x10a\nnWa\nma'bV[[` \x02\x01\x81\x81RPP\x7F\x14\xBE\xDDP<7\xCE\xB0a\xD8\xEC` \x9F\xE3E\xCE\x89\x83\n\x19#\x03\x01\xF0v\xCA\xFF\0M\x19&\x8B`\r`\x18\x81\x10a\n\xACWa\n\xABa'bV[[` \x02\x01\x81\x81RPP\x7F\tg\x03/\xCB\xF7v\xD1\xAF\xC9\x85\xF8\x88w\xF1\x82\xD3\x84\x80\xA6S\xF2\xDE\xCA\xA9yL\xBC;\xF3\x06\x0C\x8B`\x0E`\x18\x81\x10a\n\xEAWa\n\xE9a'bV[[` \x02\x01\x81\x81RPP\x7F\x0E\x18xG\xADLy\x83t\xD0\xD6s+\xF5\x01\x84}\xD6\x8B\xC0\xE0q$\x1E\x02\x13\xBC\x7F\xC1=\xB7\xAB\x8B`\x0F`\x18\x81\x10a\x0B(Wa\x0B'a'bV[[` \x02\x01\x81\x81RPP~\x17R\xA1\0\xA7/\xDF\x1EZ]n\xA8A\xCC \xEC\x83\x8B\xCC\xFC\xF7\xBDU\x9Ey\xF1\xC9\xC7Y\xB6\xA0\x8B`\x10`\x18\x81\x10a\x0BeWa\x0Bda'bV[[` \x02\x01\x81\x81RPP\x7F\x19*\x8C\xC1<\xD9\xF7b\x87\x1F!\xE44Q\xC6\xCA\x9E\xEA\xB2\xCB)\x87\xC4\xE3f\xA1\x85\xC2]\xAC.\x7F\x8B`\x11`\x18\x81\x10a\x0B\xA3Wa\x0B\xA2a'bV[[` \x02\x01\x81\x81RPP\x81\x8B`\x12`\x18\x81\x10a\x0B\xC1Wa\x0B\xC0a'bV[[` \x02\x01\x81\x81RPP\x80\x8B`\x13`\x18\x81\x10a\x0B\xDFWa\x0B\xDEa'bV[[` \x02\x01\x81\x81RPP\x7F\x19\x8E\x93\x93\x92\rH:r`\xBF\xB71\xFB]%\xF1\xAAI35\xA9\xE7\x12\x97\xE4\x85\xB7\xAE\xF3\x12\xC2\x8B`\x14`\x18\x81\x10a\x0C\x1DWa\x0C\x1Ca'bV[[` \x02\x01\x81\x81RPP\x7F\x18\0\xDE\xEF\x12\x1F\x1EvBj\0f^\\DygC\"\xD4\xF7^\xDA\xDDF\xDE\xBD\\\xD9\x92\xF6\xED\x8B`\x15`\x18\x81\x10a\x0C[Wa\x0CZa'bV[[` \x02\x01\x81\x81RPP\x7F']\xC4\xA2\x88\xD1\xAF\xB3\xCB\xB1\xAC\t\x18u$\xC7\xDB69]\xF7\xBE;\x99\xE6s\xB1:\x07Ze\xEC\x8B`\x16`\x18\x81\x10a\x0C\x99Wa\x0C\x98a'bV[[` \x02\x01\x81\x81RPP\x7F\x1D\x9B\xEF\xCD\x05\xA52>m\xA4\xD45\xF3\xB6\x17\xCD\xB3\xAF\x83(\\-\xF7\x11\xEF9\xC0\x15q\x82\x7F\x9D\x8B`\x17`\x18\x81\x10a\x0C\xD7Wa\x0C\xD6a'bV[[` \x02\x01\x81\x81RPP_a\x0C\xE9a\"\x02V[` \x81a\x03\0\x8F`\x08Z\xFA\x91P\x81\x15\x80a\r\x1BWP`\x01\x81_`\x01\x81\x10a\r\x13Wa\r\x12a'bV[[` \x02\x01Q\x14\x15[\x15a\rRW`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[PPPPPPPPPPPPPPPV[```@Q\x80`@\x01`@R\x80`\x06\x81R` \x01\x7Fv5.0.0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81RP\x90P\x90V[_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x83\x10\x15\x80a\r\xF0WP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x82\x10\x15[\x15a\x0E'W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[_\x83\x14\x80\x15a\x0E5WP_\x82\x14[\x15a\x0EBW_\x90Pa\x0FHV[_a\x0E\xE0\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x0EuWa\x0Eta*\xC5V[[`\x03\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x0E\xA6Wa\x0E\xA5a*\xC5V[[\x87\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x0E\xD6Wa\x0E\xD5a*\xC5V[[\x89\x8A\t\t\x08a\x1B\xFBV[\x90P\x80\x83\x03a\x0E\xF8W_`\x01\x85\x90\x1B\x17\x91PPa\x0FHV[a\x0F\x01\x81a\x1C\x97V[\x83\x03a\x0F\x16W`\x01\x80\x85\x90\x1B\x17\x91PPa\x0FHV[`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[\x92\x91PPV[_\x80\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x86\x10\x15\x80a\x0F\x9FWP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x85\x10\x15[\x80a\x0F\xCAWP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x84\x10\x15[\x80a\x0F\xF5WP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x83\x10\x15[\x15a\x10,W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[_\x83\x85\x87\x89\x17\x17\x17\x03a\x10DW_\x80\x91P\x91Pa\x15\x11V[_\x80_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x10vWa\x10ua*\xC5V[[`\x03\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDGa\x10\xA3\x91\x90a+\x1FV[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x10\xD2Wa\x10\xD1a*\xC5V[[\x8A\x8C\t\t\x90P_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x11\x08Wa\x11\x07a*\xC5V[[\x8A\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x118Wa\x117a*\xC5V[[\x8C\x8D\t\t\x90P_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x11nWa\x11ma*\xC5V[[\x8A\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x11\x9EWa\x11\x9Da*\xC5V[[\x8C\x8D\t\t\x90P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x11\xD3Wa\x11\xD2a*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x12\x02Wa\x12\x01a*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x121Wa\x120a*\xC5V[[\x8C\x86\t\x84\x08\x7F+\x14\x9D@\xCE\xB8\xAA\xAE\x81\xBE\x18\x99\x1B\xE0j\xC3\xB5\xB4\xC5\xE5Y\xDB\xEF\xA32g\xE6\xDC$\xA18\xE5\x08\x94Pa\x13\x16\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x12\x8CWa\x12\x8Ba*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x12\xBBWa\x12\xBAa*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x12\xEAWa\x12\xE9a*\xC5V[[\x8E\x87\t\x84\x08\x7F/\xCD:\xC2\xA6@\xA1T\xEB#\x96\x08\x92\xA8Zh\xF01\xCA\x0C\x83D\xB2:W}\xCF\x10R\xB9\xE7u\x08a\x1C\x97V[\x93PPPP_\x80a\x13\xB9\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x13OWa\x13Na*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x13~Wa\x13}a*\xC5V[[\x85\x86\t\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x13\xB0Wa\x13\xAFa*\xC5V[[\x87\x88\t\x08a\x1B\xFBV[\x90Pa\x14F\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x13\xEDWa\x13\xECa*\xC5V[[\x7F\x182'9p\x98\xD0\x14\xDC(\"\xDB@\xC0\xAC.\xCB\xC0\xB5H\xB48\xE5F\x9E\x10F\x0Bl>~\xA4\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x14=Wa\x14<a*\xC5V[[\x84\x88\x08\ta\x1D\x02V[\x15\x91PPa\x14U\x83\x83\x83a\x1DlV[\x80\x93P\x81\x94PPP\x82\x87\x14\x80\x15a\x14kWP\x81\x86\x14[\x15a\x14\x93W_\x81a\x14|W_a\x14\x7FV[`\x02[`\xFF\x16`\x02\x8B\x90\x1B\x17\x17\x94P\x87\x93Pa\x15\rV[a\x14\x9C\x83a\x1C\x97V[\x87\x14\x80\x15a\x14\xB1WPa\x14\xAE\x82a\x1C\x97V[\x86\x14[\x15a\x14\xDAW`\x01\x81a\x14\xC3W_a\x14\xC6V[`\x02[`\xFF\x16`\x02\x8B\x90\x1B\x17\x17\x94P\x87\x93Pa\x15\x0CV[`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[[PPP[\x94P\x94\x92PPPV[_\x80_`\x01\x90P`@Q`@\x81\x01_\x7F&\t\x1E\x1C\xAF\xB0\xAD\x8AN\xA0\xA6\x94\xCD7C\xEB\xF5$w\x923\xDBsLE\x1D(\xB5\x8A\xA9u\x8E\x83R~\x9F\xF5\nk\x8B\x11\xC3\xCAo\xDB&\x90\xA1$\xF8\xCE%H\x9F\xEF\xA6Z>x.{\xA7\x0Bfi\x0E` \x84\x01R\x7F\x06\x1C?\xD0\xFD=\xA2]&\x07\xC2'\xD0\x90\xCC\xA7P\xED6\xC6\xEC\x87\x87U\xE57\xC1\xC4\x89Q\xFBL\x82R\x7F\x0F\xA1z\xE9\xC2\x033y\xDF{\\e\xEF\xF0\xE1\x07\x05^\x9A'>a\x19\xA2\x12\xDD\t\xEBQpr\x19` \x83\x01R\x865\x90P\x80`@\x83\x01R\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X](3\xE8Hy\xB9p\x91C\xE1\xF5\x93\xF0\0\0\x01\x81\x10\x84\x16\x93P`@\x82``\x84`\x07Z\xFA\x84\x16\x93P`@\x83`\x80\x85`\x06Z\xFA\x84\x16\x93P\x7F\x04\xEA\xB2A8\x8Ay\x81\x7F\xE0\xE0\xE2\xEA\xD0\xB2\xECO\xFD\xECQ\xA1`(\xDE\xE0 cO\xD1)\xE7\x1C\x82R\x7F\x07#bV\xD2\x1C`\xD0/\x0B\xDB\xF9\\\xFF\x83\xE0>\xA9\xE1o\xCAV\xB1\x8DUD\xB0\x88\x9Ae\xC1\xF5` \x83\x01R` \x87\x015\x90P\x80`@\x83\x01R\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X](3\xE8Hy\xB9p\x91C\xE1\xF5\x93\xF0\0\0\x01\x81\x10\x84\x16\x93P`@\x82``\x84`\x07Z\xFA\x84\x16\x93P`@\x83`\x80\x85`\x06Z\xFA\x84\x16\x93P\x82Q\x95P` \x83\x01Q\x94PPPP\x80a\x16\xE5W`@Q\x7F\xA5O\x8E'\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[P\x91P\x91V[_\x80_\x83\x03a\x16\xFFW_\x80\x91P\x91Pa\x18\x1BV[_`\x01\x80\x85\x16\x14\x90P`\x01\x84\x90\x1C\x92P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x83\x10a\x17hW`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[a\x18\x05\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x17\x9AWa\x17\x99a*\xC5V[[`\x03\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x17\xCBWa\x17\xCAa*\xC5V[[\x86\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x17\xFBWa\x17\xFAa*\xC5V[[\x88\x89\t\t\x08a\x1B\xFBV[\x91P\x80\x15a\x18\x19Wa\x18\x16\x82a\x1C\x97V[\x91P[P[\x91P\x91V[_\x80_\x80_\x86\x14\x80\x15a\x182WP_\x85\x14[\x15a\x18HW_\x80_\x80\x93P\x93P\x93P\x93Pa\x1B\xF2V[_`\x01\x80\x88\x16\x14\x90P_`\x02\x80\x89\x16\x14\x90P`\x02\x88\x90\x1C\x95P\x86\x94P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x86\x10\x15\x80a\x18\xB3WP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x85\x10\x15[\x15a\x18\xEAW`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x19\x1AWa\x19\x19a*\xC5V[[`\x03\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDGa\x19G\x91\x90a+\x1FV[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x19vWa\x19ua*\xC5V[[\x88\x8A\t\t\x90P_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x19\xACWa\x19\xABa*\xC5V[[\x88\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x19\xDCWa\x19\xDBa*\xC5V[[\x8A\x8B\t\t\x90P_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1A\x12Wa\x1A\x11a*\xC5V[[\x88\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1ABWa\x1AAa*\xC5V[[\x8A\x8B\t\t\x90P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1AwWa\x1Ava*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1A\xA6Wa\x1A\xA5a*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1A\xD5Wa\x1A\xD4a*\xC5V[[\x8A\x86\t\x84\x08\x7F+\x14\x9D@\xCE\xB8\xAA\xAE\x81\xBE\x18\x99\x1B\xE0j\xC3\xB5\xB4\xC5\xE5Y\xDB\xEF\xA32g\xE6\xDC$\xA18\xE5\x08\x96Pa\x1B\xBA\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1B0Wa\x1B/a*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1B_Wa\x1B^a*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1B\x8EWa\x1B\x8Da*\xC5V[[\x8C\x87\t\x84\x08\x7F/\xCD:\xC2\xA6@\xA1T\xEB#\x96\x08\x92\xA8Zh\xF01\xCA\x0C\x83D\xB2:W}\xCF\x10R\xB9\xE7u\x08a\x1C\x97V[\x95Pa\x1B\xC7\x87\x87\x86a\x1DlV[\x80\x97P\x81\x98PPP\x84\x15a\x1B\xECWa\x1B\xDE\x87a\x1C\x97V[\x96Pa\x1B\xE9\x86a\x1C\x97V[\x95P[PPPPP[\x92\x95\x91\x94P\x92PV[_a\x1C&\x82\x7F\x0C\x19\x13\x9C\xB8Lh\nn\x14\x11m\xA0`V\x17e\xE0Z\xA4Z\x1Cr\xA3O\x08#\x05\xB6\x1F?Ra gV[\x90P\x81\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1CXWa\x1CWa*\xC5V[[\x82\x83\t\x14a\x1C\x92W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[\x91\x90PV[_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80\x83\x81a\x1C\xC9Wa\x1C\xC8a*\xC5V[[\x06\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x03\x81a\x1C\xFAWa\x1C\xF9a*\xC5V[[\x06\x90P\x91\x90PV[_\x80a\x1D.\x83\x7F\x0C\x19\x13\x9C\xB8Lh\nn\x14\x11m\xA0`V\x17e\xE0Z\xA4Z\x1Cr\xA3O\x08#\x05\xB6\x1F?Ra gV[\x90P\x82\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1D`Wa\x1D_a*\xC5V[[\x82\x83\t\x14\x91PP\x91\x90PV[_\x80_a\x1E\x0B\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1D\xA1Wa\x1D\xA0a*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1D\xD0Wa\x1D\xCFa*\xC5V[[\x87\x88\t\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1E\x02Wa\x1E\x01a*\xC5V[[\x89\x8A\t\x08a\x1B\xFBV[\x90P\x83\x15a\x1E\x1FWa\x1E\x1C\x81a\x1C\x97V[\x90P[a\x1E\xAA\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1EQWa\x1EPa*\xC5V[[\x7F\x182'9p\x98\xD0\x14\xDC(\"\xDB@\xC0\xAC.\xCB\xC0\xB5H\xB48\xE5F\x9E\x10F\x0Bl>~\xA4\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1E\xA1Wa\x1E\xA0a*\xC5V[[\x84\x8A\x08\ta\x1B\xFBV[\x92P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1E\xDBWa\x1E\xDAa*\xC5V[[a\x1F\x16\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1F\rWa\x1F\x0Ca*\xC5V[[`\x02\x86\ta \xFEV[\x86\t\x91P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1FIWa\x1FHa*\xC5V[[a\x1F\x83\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1F{Wa\x1Fza*\xC5V[[\x84\x85\ta\x1C\x97V[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1F\xB2Wa\x1F\xB1a*\xC5V[[\x85\x86\t\x08\x86\x14\x15\x80a 'WP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1F\xEEWa\x1F\xEDa*\xC5V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a \x1DWa \x1Ca*\xC5V[[\x83\x85\t`\x02\t\x85\x14\x15[\x15a ^W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[P\x93P\x93\x91PPV[_\x80`@Q` \x81R` \x80\x82\x01R` `@\x82\x01R\x84``\x82\x01R\x83`\x80\x82\x01R\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG`\xA0\x82\x01R` \x81`\xC0\x83`\x05Z\xFA\x91P\x80Q\x92PP\x80a \xF7W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[P\x92\x91PPV[_a!)\x82\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDEa gV[\x90P`\x01\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a!\\Wa![a*\xC5V[[\x82\x84\t\x14a!\x96W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[\x91\x90PV[`@Q\x80`@\x01`@R\x80`\x02\x90` \x82\x02\x806\x837\x80\x82\x01\x91PP\x90PP\x90V[`@Q\x80`\x80\x01`@R\x80`\x04\x90` \x82\x02\x806\x837\x80\x82\x01\x91PP\x90PP\x90V[`@Q\x80a\x03\0\x01`@R\x80`\x18\x90` \x82\x02\x806\x837\x80\x82\x01\x91PP\x90PP\x90V[`@Q\x80` \x01`@R\x80`\x01\x90` \x82\x02\x806\x837\x80\x82\x01\x91PP\x90PP\x90V[_\x81\x90P\x91\x90PV[a\"6\x81a\"$V[\x82RPPV[_` \x82\x01\x90Pa\"O_\x83\x01\x84a\"-V[\x92\x91PPV[_`@Q\x90P\x90V[_\x80\xFD[_\x80\xFD[a\"o\x81a\"$V[\x81\x14a\"yW_\x80\xFD[PV[_\x815\x90Pa\"\x8A\x81a\"fV[\x92\x91PPV[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\x83`\x1F\x84\x01\x12a\"\xB1Wa\"\xB0a\"\x90V[[\x825\x90Pg\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a\"\xCEWa\"\xCDa\"\x94V[[` \x83\x01\x91P\x83`\x01\x82\x02\x83\x01\x11\x15a\"\xEAWa\"\xE9a\"\x98V[[\x92P\x92\x90PV[_\x80_\x80_``\x86\x88\x03\x12\x15a#\nWa#\ta\"^V[[_a#\x17\x88\x82\x89\x01a\"|V[\x95PP` \x86\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a#8Wa#7a\"bV[[a#D\x88\x82\x89\x01a\"\x9CV[\x94P\x94PP`@\x86\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a#gWa#fa\"bV[[a#s\x88\x82\x89\x01a\"\x9CV[\x92P\x92PP\x92\x95P\x92\x95\x90\x93PV[_\x81\x90P\x82` `\x08\x02\x82\x01\x11\x15a#\x9DWa#\x9Ca\"\x98V[[\x92\x91PPV[_a\x01\0\x82\x84\x03\x12\x15a#\xB9Wa#\xB8a\"^V[[_a#\xC6\x84\x82\x85\x01a#\x82V[\x91PP\x92\x91PPV[_`\x04\x90P\x91\x90PV[_\x81\x90P\x92\x91PPV[_\x81\x90P\x91\x90PV[_\x81\x90P\x91\x90PV[a#\xFE\x81a#\xECV[\x82RPPV[_a$\x0F\x83\x83a#\xF5V[` \x83\x01\x90P\x92\x91PPV[_` \x82\x01\x90P\x91\x90PV[a$0\x81a#\xCFV[a$:\x81\x84a#\xD9V[\x92Pa$E\x82a#\xE3V[\x80_[\x83\x81\x10\x15a$uW\x81Qa$\\\x87\x82a$\x04V[\x96Pa$g\x83a$\x1BV[\x92PP`\x01\x81\x01\x90Pa$HV[PPPPPPV[_`\x80\x82\x01\x90Pa$\x90_\x83\x01\x84a$'V[\x92\x91PPV[_\x80` \x83\x85\x03\x12\x15a$\xACWa$\xABa\"^V[[_\x83\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a$\xC9Wa$\xC8a\"bV[[a$\xD5\x85\x82\x86\x01a\"\x9CV[\x92P\x92PP\x92P\x92\x90PV[_\x81\x90P\x82` `\x02\x02\x82\x01\x11\x15a$\xFCWa$\xFBa\"\x98V[[\x92\x91PPV[_\x80a\x01@\x83\x85\x03\x12\x15a%\x19Wa%\x18a\"^V[[_a%&\x85\x82\x86\x01a#\x82V[\x92PPa\x01\0a%8\x85\x82\x86\x01a$\xE1V[\x91PP\x92P\x92\x90PV[_\x81\x90P\x82` `\x04\x02\x82\x01\x11\x15a%]Wa%\\a\"\x98V[[\x92\x91PPV[_\x80`\xC0\x83\x85\x03\x12\x15a%yWa%xa\"^V[[_a%\x86\x85\x82\x86\x01a%BV[\x92PP`\x80a%\x97\x85\x82\x86\x01a$\xE1V[\x91PP\x92P\x92\x90PV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_[\x83\x81\x10\x15a%\xD8W\x80\x82\x01Q\x81\x84\x01R` \x81\x01\x90Pa%\xBDV[_\x84\x84\x01RPPPPV[_`\x1F\x19`\x1F\x83\x01\x16\x90P\x91\x90PV[_a%\xFD\x82a%\xA1V[a&\x07\x81\x85a%\xABV[\x93Pa&\x17\x81\x85` \x86\x01a%\xBBV[a& \x81a%\xE3V[\x84\x01\x91PP\x92\x91PPV[_` \x82\x01\x90P\x81\x81\x03_\x83\x01Ra&C\x81\x84a%\xF3V[\x90P\x92\x91PPV[_\x80\xFD[_\x80\xFD[_\x80\x85\x85\x11\x15a&fWa&ea&KV[[\x83\x86\x11\x15a&wWa&va&OV[[`\x01\x85\x02\x83\x01\x91P\x84\x86\x03\x90P\x94P\x94\x92PPPV[_\x82\x90P\x92\x91PPV[_\x7F\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82\x16\x90P\x91\x90PV[_\x82\x82\x1B\x90P\x92\x91PPV[_a&\xD9\x83\x83a&\x8DV[\x82a&\xE4\x815a&\x97V[\x92P`\x04\x82\x10\x15a'$Wa'\x1F\x7F\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x83`\x04\x03`\x08\x02a&\xC2V[\x83\x16\x92P[PP\x92\x91PPV[a'5\x81a&\x97V[\x82RPPV[_`@\x82\x01\x90Pa'N_\x83\x01\x85a',V[a'[` \x83\x01\x84a',V[\x93\x92PPPV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[a'\xC5\x82a%\xE3V[\x81\x01\x81\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17\x15a'\xE4Wa'\xE3a'\x8FV[[\x80`@RPPPV[_a'\xF6a\"UV[\x90Pa(\x02\x82\x82a'\xBCV[\x91\x90PV[_g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x15a(!Wa( a'\x8FV[[` \x82\x02\x90P\x91\x90PV[a(5\x81a#\xECV[\x81\x14a(?W_\x80\xFD[PV[_\x815\x90Pa(P\x81a(,V[\x92\x91PPV[_a(ha(c\x84a(\x07V[a'\xEDV[\x90P\x80` \x84\x02\x83\x01\x85\x81\x11\x15a(\x82Wa(\x81a\"\x98V[[\x83[\x81\x81\x10\x15a(\xABW\x80a(\x97\x88\x82a(BV[\x84R` \x84\x01\x93PP` \x81\x01\x90Pa(\x84V[PPP\x93\x92PPPV[_\x82`\x1F\x83\x01\x12a(\xC9Wa(\xC8a\"\x90V[[`\x08a(\xD6\x84\x82\x85a(VV[\x91PP\x92\x91PPV[_a\x01\0\x82\x84\x03\x12\x15a(\xF5Wa(\xF4a\"^V[[_a)\x02\x84\x82\x85\x01a(\xB5V[\x91PP\x92\x91PPV[_`\x08\x90P\x91\x90PV[_\x81\x90P\x92\x91PPV[_\x81\x90P\x91\x90PV[_` \x82\x01\x90P\x91\x90PV[a)=\x81a)\x0BV[a)G\x81\x84a)\x15V[\x92Pa)R\x82a)\x1FV[\x80_[\x83\x81\x10\x15a)\x82W\x81Qa)i\x87\x82a$\x04V[\x96Pa)t\x83a)(V[\x92PP`\x01\x81\x01\x90Pa)UV[PPPPPPV[_`\x02\x90P\x91\x90PV[_\x81\x90P\x92\x91PPV[_\x81\x90P\x91\x90PV[_` \x82\x01\x90P\x91\x90PV[a)\xBC\x81a)\x8AV[a)\xC6\x81\x84a)\x94V[\x92Pa)\xD1\x82a)\x9EV[\x80_[\x83\x81\x10\x15a*\x01W\x81Qa)\xE8\x87\x82a$\x04V[\x96Pa)\xF3\x83a)\xA7V[\x92PP`\x01\x81\x01\x90Pa)\xD4V[PPPPPPV[_a\x01@\x82\x01\x90Pa*\x1D_\x83\x01\x85a)4V[a*+a\x01\0\x83\x01\x84a)\xB3V[\x93\x92PPPV[_\x81\x90P\x92\x91PPV[\x82\x81\x837_\x83\x83\x01RPPPV[_a*U\x83\x85a*2V[\x93Pa*b\x83\x85\x84a*<V[\x82\x84\x01\x90P\x93\x92PPPV[_a*z\x82\x84\x86a*JV[\x91P\x81\x90P\x93\x92PPPV[_\x81Q\x90Pa*\x94\x81a\"fV[\x92\x91PPV[_` \x82\x84\x03\x12\x15a*\xAFWa*\xAEa\"^V[[_a*\xBC\x84\x82\x85\x01a*\x86V[\x91PP\x92\x91PPV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x12`\x04R`$_\xFD[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[_a+)\x82a#\xECV[\x91Pa+4\x83a#\xECV[\x92P\x82\x82\x03\x90P\x81\x81\x11\x15a+LWa+Ka*\xF2V[[\x92\x91PPV\xFE\xA2dipfsX\"\x12 mG#\xCC\x86\xC5\x12\xA7\x957\xC6ff\x82\x1Am\x9E\xFC\x9A\x90z1\x96|]\n}\x030}\xB2\x93dsolcC\0\x08\x14\x003",
     );
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `InvalidProof()` and selector `0x09bde339`.
 ```solidity
 error InvalidProof();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct InvalidProof {}
+    pub struct InvalidProof;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -248,7 +250,7 @@ error InvalidProof();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for InvalidProof {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -269,15 +271,24 @@ error InvalidProof();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ProofInvalid()` and selector `0x7fcdd1f4`.
 ```solidity
 error ProofInvalid();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct ProofInvalid {}
+    pub struct ProofInvalid;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -312,7 +323,7 @@ error ProofInvalid();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for ProofInvalid {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -333,15 +344,24 @@ error ProofInvalid();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `PublicInputNotInField()` and selector `0xa54f8e27`.
 ```solidity
 error PublicInputNotInField();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct PublicInputNotInField {}
+    pub struct PublicInputNotInField;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -376,7 +396,7 @@ error PublicInputNotInField();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for PublicInputNotInField {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -397,8 +417,17 @@ error PublicInputNotInField();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `WrongVerifierSelector(bytes4,bytes4)` and selector `0x988066a1`.
 ```solidity
 error WrongVerifierSelector(bytes4 received, bytes4 expected);
@@ -482,15 +511,26 @@ error WrongVerifierSelector(bytes4 received, bytes4 expected);
                     > as alloy_sol_types::SolType>::tokenize(&self.expected),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `VERIFIER_HASH()` and selector `0x2a510436`.
 ```solidity
 function VERIFIER_HASH() external pure returns (bytes32);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct VERIFIER_HASHCall {}
+    pub struct VERIFIER_HASHCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`VERIFIER_HASH()`](VERIFIER_HASHCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -533,7 +573,7 @@ function VERIFIER_HASH() external pure returns (bytes32);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for VERIFIER_HASHCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -574,7 +614,7 @@ function VERIFIER_HASH() external pure returns (bytes32);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = VERIFIER_HASHReturn;
+            type Return = alloy::sol_types::private::FixedBytes<32>;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -592,24 +632,48 @@ function VERIFIER_HASH() external pure returns (bytes32);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: VERIFIER_HASHReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: VERIFIER_HASHReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `VERSION()` and selector `0xffa1ad74`.
 ```solidity
 function VERSION() external pure returns (string memory);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct VERSIONCall {}
+    pub struct VERSIONCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`VERSION()`](VERSIONCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -652,7 +716,7 @@ function VERSION() external pure returns (string memory);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for VERSIONCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -693,7 +757,7 @@ function VERSION() external pure returns (string memory);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = VERSIONReturn;
+            type Return = alloy::sol_types::private::String;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::String,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -711,17 +775,39 @@ function VERSION() external pure returns (string memory);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::String as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: VERSIONReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: VERSIONReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `Verify(uint256[8],uint256[2])` and selector `0xeddf243c`.
 ```solidity
 function Verify(uint256[8] memory proof, uint256[2] memory input) external view;
@@ -823,6 +909,13 @@ function Verify(uint256[8] memory proof, uint256[2] memory input) external view;
                 }
             }
         }
+        impl VerifyReturn {
+            fn _tokenize(
+                &self,
+            ) -> <VerifyCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for VerifyCall {
             type Parameters<'a> = (
@@ -865,17 +958,29 @@ function Verify(uint256[8] memory proof, uint256[2] memory input) external view;
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                VerifyReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `compressProof(uint256[8])` and selector `0x44f63692`.
 ```solidity
 function compressProof(uint256[8] memory proof) external view returns (uint256[4] memory compressed);
@@ -886,6 +991,8 @@ function compressProof(uint256[8] memory proof) external view returns (uint256[4
         #[allow(missing_docs)]
         pub proof: [alloy::sol_types::private::primitives::aliases::U256; 8usize],
     }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`compressProof(uint256[8])`](compressProofCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -988,7 +1095,7 @@ function compressProof(uint256[8] memory proof) external view returns (uint256[4
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = compressProofReturn;
+            type Return = [alloy::sol_types::private::primitives::aliases::U256; 4usize];
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::FixedArray<
                     alloy::sol_types::sol_data::Uint<256>,
@@ -1016,17 +1123,40 @@ function compressProof(uint256[8] memory proof) external view returns (uint256[4
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::FixedArray<
+                        alloy::sol_types::sol_data::Uint<256>,
+                        4usize,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: compressProofReturn = r.into();
+                        r.compressed
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: compressProofReturn = r.into();
+                        r.compressed
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `hashPublicValues(bytes)` and selector `0x6b61d8e7`.
 ```solidity
 function hashPublicValues(bytes memory publicValues) external pure returns (bytes32);
@@ -1037,6 +1167,8 @@ function hashPublicValues(bytes memory publicValues) external pure returns (byte
         #[allow(missing_docs)]
         pub publicValues: alloy::sol_types::private::Bytes,
     }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`hashPublicValues(bytes)`](hashPublicValuesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1124,7 +1256,7 @@ function hashPublicValues(bytes memory publicValues) external pure returns (byte
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = hashPublicValuesReturn;
+            type Return = alloy::sol_types::private::FixedBytes<32>;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1146,17 +1278,39 @@ function hashPublicValues(bytes memory publicValues) external pure returns (byte
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: hashPublicValuesReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: hashPublicValuesReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `verifyCompressedProof(uint256[4],uint256[2])` and selector `0xf11817b2`.
 ```solidity
 function verifyCompressedProof(uint256[4] memory compressedProof, uint256[2] memory input) external view;
@@ -1262,6 +1416,15 @@ function verifyCompressedProof(uint256[4] memory compressedProof, uint256[2] mem
                 }
             }
         }
+        impl verifyCompressedProofReturn {
+            fn _tokenize(
+                &self,
+            ) -> <verifyCompressedProofCall as alloy_sol_types::SolCall>::ReturnToken<
+                '_,
+            > {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for verifyCompressedProofCall {
             type Parameters<'a> = (
@@ -1304,17 +1467,29 @@ function verifyCompressedProof(uint256[4] memory compressedProof, uint256[2] mem
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                verifyCompressedProofReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `verifyProof(bytes32,bytes,bytes)` and selector `0x41493c60`.
 ```solidity
 function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memory proofBytes) external view;
@@ -1415,6 +1590,13 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 }
             }
         }
+        impl verifyProofReturn {
+            fn _tokenize(
+                &self,
+            ) -> <verifyProofCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for verifyProofCall {
             type Parameters<'a> = (
@@ -1453,18 +1635,30 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                verifyProofReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
     ///Container for all the [`SP1VerifierGroth16`](self) function calls.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive()]
     pub enum SP1VerifierGroth16Calls {
         #[allow(missing_docs)]
         VERIFIER_HASH(VERIFIER_HASHCall),
@@ -1539,20 +1733,16 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls>] = &[
                 {
                     fn VERIFIER_HASH(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
                         <VERIFIER_HASHCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16Calls::VERIFIER_HASH)
                     }
@@ -1561,11 +1751,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn verifyProof(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
                         <verifyProofCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16Calls::verifyProof)
                     }
@@ -1574,11 +1762,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn compressProof(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
                         <compressProofCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16Calls::compressProof)
                     }
@@ -1587,11 +1773,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn hashPublicValues(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
                         <hashPublicValuesCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16Calls::hashPublicValues)
                     }
@@ -1600,12 +1784,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn Verify(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
-                        <VerifyCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <VerifyCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(SP1VerifierGroth16Calls::Verify)
                     }
                     Verify
@@ -1613,11 +1793,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn verifyCompressedProof(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
                         <verifyCompressedProofCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16Calls::verifyCompressedProof)
                     }
@@ -1626,11 +1804,104 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn VERSION(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
-                        <VERSIONCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <VERSIONCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                            .map(SP1VerifierGroth16Calls::VERSION)
+                    }
+                    VERSION
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls>] = &[
+                {
+                    fn VERIFIER_HASH(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
+                        <VERIFIER_HASHCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
-                                validate,
+                            )
+                            .map(SP1VerifierGroth16Calls::VERIFIER_HASH)
+                    }
+                    VERIFIER_HASH
+                },
+                {
+                    fn verifyProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
+                        <verifyProofCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Calls::verifyProof)
+                    }
+                    verifyProof
+                },
+                {
+                    fn compressProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
+                        <compressProofCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Calls::compressProof)
+                    }
+                    compressProof
+                },
+                {
+                    fn hashPublicValues(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
+                        <hashPublicValuesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Calls::hashPublicValues)
+                    }
+                    hashPublicValues
+                },
+                {
+                    fn Verify(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
+                        <VerifyCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Calls::Verify)
+                    }
+                    Verify
+                },
+                {
+                    fn verifyCompressedProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
+                        <verifyCompressedProofCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Calls::verifyCompressedProof)
+                    }
+                    verifyCompressedProof
+                },
+                {
+                    fn VERSION(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Calls> {
+                        <VERSIONCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
                             )
                             .map(SP1VerifierGroth16Calls::VERSION)
                     }
@@ -1645,7 +1916,7 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -1726,6 +1997,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
     }
     ///Container for all the [`SP1VerifierGroth16`](self) custom errors.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SP1VerifierGroth16Errors {
         #[allow(missing_docs)]
         InvalidProof(InvalidProof),
@@ -1786,21 +2059,15 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors>] = &[
                 {
                     fn InvalidProof(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors> {
-                        <InvalidProof as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <InvalidProof as alloy_sol_types::SolError>::abi_decode_raw(data)
                             .map(SP1VerifierGroth16Errors::InvalidProof)
                     }
                     InvalidProof
@@ -1808,12 +2075,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn ProofInvalid(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors> {
-                        <ProofInvalid as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <ProofInvalid as alloy_sol_types::SolError>::abi_decode_raw(data)
                             .map(SP1VerifierGroth16Errors::ProofInvalid)
                     }
                     ProofInvalid
@@ -1821,11 +2084,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn WrongVerifierSelector(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors> {
                         <WrongVerifierSelector as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16Errors::WrongVerifierSelector)
                     }
@@ -1834,11 +2095,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn PublicInputNotInField(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors> {
                         <PublicInputNotInField as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16Errors::PublicInputNotInField)
                     }
@@ -1853,7 +2112,71 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors>] = &[
+                {
+                    fn InvalidProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors> {
+                        <InvalidProof as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Errors::InvalidProof)
+                    }
+                    InvalidProof
+                },
+                {
+                    fn ProofInvalid(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors> {
+                        <ProofInvalid as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Errors::ProofInvalid)
+                    }
+                    ProofInvalid
+                },
+                {
+                    fn WrongVerifierSelector(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors> {
+                        <WrongVerifierSelector as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Errors::WrongVerifierSelector)
+                    }
+                    WrongVerifierSelector
+                },
+                {
+                    fn PublicInputNotInField(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16Errors> {
+                        <PublicInputNotInField as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16Errors::PublicInputNotInField)
+                    }
+                    PublicInputNotInField
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -1912,14 +2235,13 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
 See the [wrapper's documentation](`SP1VerifierGroth16Instance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> SP1VerifierGroth16Instance<T, P, N> {
-        SP1VerifierGroth16Instance::<T, P, N>::new(address, provider)
+    ) -> SP1VerifierGroth16Instance<P, N> {
+        SP1VerifierGroth16Instance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -1928,15 +2250,14 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<SP1VerifierGroth16Instance<T, P, N>>,
+        Output = alloy_contract::Result<SP1VerifierGroth16Instance<P, N>>,
     > {
-        SP1VerifierGroth16Instance::<T, P, N>::deploy(provider)
+        SP1VerifierGroth16Instance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -1945,11 +2266,10 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
-        SP1VerifierGroth16Instance::<T, P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        SP1VerifierGroth16Instance::<P, N>::deploy_builder(provider)
     }
     /**A [`SP1VerifierGroth16`](self) instance.
 
@@ -1963,13 +2283,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct SP1VerifierGroth16Instance<T, P, N = alloy_contract::private::Ethereum> {
+    pub struct SP1VerifierGroth16Instance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for SP1VerifierGroth16Instance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for SP1VerifierGroth16Instance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("SP1VerifierGroth16Instance").field(&self.address).finish()
@@ -1978,10 +2298,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGroth16Instance<T, P, N> {
+    > SP1VerifierGroth16Instance<P, N> {
         /**Creates a new wrapper around an on-chain [`SP1VerifierGroth16`](self) contract instance.
 
 See the [wrapper's documentation](`SP1VerifierGroth16Instance`) for more details.*/
@@ -1993,7 +2312,7 @@ See the [wrapper's documentation](`SP1VerifierGroth16Instance`) for more details
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -2004,7 +2323,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<SP1VerifierGroth16Instance<T, P, N>> {
+        ) -> alloy_contract::Result<SP1VerifierGroth16Instance<P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -2015,7 +2334,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -2042,24 +2361,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> SP1VerifierGroth16Instance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> SP1VerifierGroth16Instance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> SP1VerifierGroth16Instance<T, P, N> {
+        pub fn with_cloned_provider(self) -> SP1VerifierGroth16Instance<P, N> {
             SP1VerifierGroth16Instance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGroth16Instance<T, P, N> {
+    > SP1VerifierGroth16Instance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -2067,39 +2385,39 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`VERIFIER_HASH`] function.
         pub fn VERIFIER_HASH(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, VERIFIER_HASHCall, N> {
-            self.call_builder(&VERIFIER_HASHCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, VERIFIER_HASHCall, N> {
+            self.call_builder(&VERIFIER_HASHCall)
         }
         ///Creates a new call builder for the [`VERSION`] function.
-        pub fn VERSION(&self) -> alloy_contract::SolCallBuilder<T, &P, VERSIONCall, N> {
-            self.call_builder(&VERSIONCall {})
+        pub fn VERSION(&self) -> alloy_contract::SolCallBuilder<&P, VERSIONCall, N> {
+            self.call_builder(&VERSIONCall)
         }
         ///Creates a new call builder for the [`Verify`] function.
         pub fn Verify(
             &self,
             proof: [alloy::sol_types::private::primitives::aliases::U256; 8usize],
             input: [alloy::sol_types::private::primitives::aliases::U256; 2usize],
-        ) -> alloy_contract::SolCallBuilder<T, &P, VerifyCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, VerifyCall, N> {
             self.call_builder(&VerifyCall { proof, input })
         }
         ///Creates a new call builder for the [`compressProof`] function.
         pub fn compressProof(
             &self,
             proof: [alloy::sol_types::private::primitives::aliases::U256; 8usize],
-        ) -> alloy_contract::SolCallBuilder<T, &P, compressProofCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, compressProofCall, N> {
             self.call_builder(&compressProofCall { proof })
         }
         ///Creates a new call builder for the [`hashPublicValues`] function.
         pub fn hashPublicValues(
             &self,
             publicValues: alloy::sol_types::private::Bytes,
-        ) -> alloy_contract::SolCallBuilder<T, &P, hashPublicValuesCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, hashPublicValuesCall, N> {
             self.call_builder(
                 &hashPublicValuesCall {
                     publicValues,
@@ -2111,7 +2429,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             compressedProof: [alloy::sol_types::private::primitives::aliases::U256; 4usize],
             input: [alloy::sol_types::private::primitives::aliases::U256; 2usize],
-        ) -> alloy_contract::SolCallBuilder<T, &P, verifyCompressedProofCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, verifyCompressedProofCall, N> {
             self.call_builder(
                 &verifyCompressedProofCall {
                     compressedProof,
@@ -2125,7 +2443,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             programVKey: alloy::sol_types::private::FixedBytes<32>,
             publicValues: alloy::sol_types::private::Bytes,
             proofBytes: alloy::sol_types::private::Bytes,
-        ) -> alloy_contract::SolCallBuilder<T, &P, verifyProofCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, verifyProofCall, N> {
             self.call_builder(
                 &verifyProofCall {
                     programVKey,
@@ -2138,17 +2456,16 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGroth16Instance<T, P, N> {
+    > SP1VerifierGroth16Instance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
     }

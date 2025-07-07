@@ -295,6 +295,8 @@ pub mod SP1VerifierGateway {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0{W_5`\xE0\x1C\x80c\x81HV\xF4\x11a\0YW\x80c\x81HV\xF4\x14a\0\xD6W\x80c\x8C\x95\xFF\x1E\x14a\0\xF2W\x80c\x8D\xA5\xCB[\x14a\x01\x0EW\x80c\xF2\xFD\xE3\x8B\x14a\x01,Wa\0{V[\x80cAI<`\x14a\0\x7FW\x80cQ\xC7\tO\x14a\0\x9BW\x80cqP\x18\xA6\x14a\0\xCCW[_\x80\xFD[a\0\x99`\x04\x806\x03\x81\x01\x90a\0\x94\x91\x90a\n\x8CV[a\x01HV[\0[a\0\xB5`\x04\x806\x03\x81\x01\x90a\0\xB0\x91\x90a\x0BrV[a\x03gV[`@Qa\0\xC3\x92\x91\x90a\x0B\xF6V[`@Q\x80\x91\x03\x90\xF3[a\0\xD4a\x03\xB2V[\0[a\0\xF0`\x04\x806\x03\x81\x01\x90a\0\xEB\x91\x90a\x0BrV[a\x03\xC5V[\0[a\x01\x0C`\x04\x806\x03\x81\x01\x90a\x01\x07\x91\x90a\x0CGV[a\x05\x7FV[\0[a\x01\x16a\x07\xF6V[`@Qa\x01#\x91\x90a\x0CrV[`@Q\x80\x91\x03\x90\xF3[a\x01F`\x04\x806\x03\x81\x01\x90a\x01A\x91\x90a\x0CGV[a\x08\x1DV[\0[_\x82\x82_\x90`\x04\x92a\x01\\\x93\x92\x91\x90a\x0C\x93V[\x90a\x01g\x91\x90a\x0C\xE3V[\x90P_`\x01_\x83{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x81R` \x01\x90\x81R` \x01_ `@Q\x80`@\x01`@R\x90\x81_\x82\x01_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81R` \x01_\x82\x01`\x14\x90T\x90a\x01\0\n\x90\x04`\xFF\x16\x15\x15\x15\x15\x81RPP\x90P_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81_\x01Qs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x03a\x02\xA7W\x81`@Q\x7F\xF2\x08w~\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\x02\x9E\x91\x90a\rPV[`@Q\x80\x91\x03\x90\xFD[\x80` \x01Q\x15a\x02\xEEW\x81`@Q\x7F\xEB\xF1\x08#\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\x02\xE5\x91\x90a\rPV[`@Q\x80\x91\x03\x90\xFD[\x80_\x01Qs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16cAI<`\x88\x88\x88\x88\x88`@Q\x86c\xFF\xFF\xFF\xFF\x16`\xE0\x1B\x81R`\x04\x01a\x032\x95\x94\x93\x92\x91\x90a\r\xD2V[_`@Q\x80\x83\x03\x81\x86\x80;\x15\x80\x15a\x03HW_\x80\xFD[PZ\xFA\x15\x80\x15a\x03ZW=_\x80>=_\xFD[PPPPPPPPPPPV[`\x01` R\x80_R`@_ _\x91P\x90P\x80_\x01_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x90\x80_\x01`\x14\x90T\x90a\x01\0\n\x90\x04`\xFF\x16\x90P\x82V[a\x03\xBAa\x08\xA1V[a\x03\xC3_a\t(V[V[a\x03\xCDa\x08\xA1V[_`\x01_\x83{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x81R` \x01\x90\x81R` \x01_ \x90P_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81_\x01_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x03a\x04\xB1W\x81`@Q\x7F\xF2\x08w~\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\x04\xA8\x91\x90a\rPV[`@Q\x80\x91\x03\x90\xFD[\x80_\x01`\x14\x90T\x90a\x01\0\n\x90\x04`\xFF\x16\x15a\x05\x04W\x81`@Q\x7F\xEB\xF1\x08#\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\x04\xFB\x91\x90a\rPV[`@Q\x80\x91\x03\x90\xFD[`\x01\x81_\x01`\x14a\x01\0\n\x81T\x81`\xFF\x02\x19\x16\x90\x83\x15\x15\x02\x17\x90UP\x7Fc\xAD#c\xB1\x83\xCB\x8B\xB5b\xB9Y\x0C[D(\xE2\xA5f&\r\xF0S\xDB\x15ev\xD3\xD1qC\x8D\x82\x82_\x01_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16`@Qa\x05s\x92\x91\x90a\x0E\x19V[`@Q\x80\x91\x03\x90\xA1PPV[a\x05\x87a\x08\xA1V[_\x81s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16c*Q\x046`@Q\x81c\xFF\xFF\xFF\xFF\x16`\xE0\x1B\x81R`\x04\x01` `@Q\x80\x83\x03\x81\x86Z\xFA\x15\x80\x15a\x05\xD1W=_\x80>=_\xFD[PPPP`@Q=`\x1F\x19`\x1F\x82\x01\x16\x82\x01\x80`@RP\x81\x01\x90a\x05\xF5\x91\x90a\x0ETV[\x90P_`\xE0\x1B{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x81{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x03a\x06qW`@Q\x7F \xAC\xD2\x8B\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[_`\x01_\x83{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x81R` \x01\x90\x81R` \x01_ \x90P_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81_\x01_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x14a\x07wW\x80_\x01_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16`@Q\x7F+\x87\xE7\x97\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\x07n\x91\x90a\x0CrV[`@Q\x80\x91\x03\x90\xFD[\x82\x81_\x01_a\x01\0\n\x81T\x81s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x02\x19\x16\x90\x83s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x02\x17\x90UP\x7F\xCB\\\xC5O\xA0\xFD\xA4\x17D\x19{(j\xB4\x13Z\xEC|2,\xAC\xE3,OU\xDAr=.\xB8\xEE\xE6\x82\x84`@Qa\x07\xE9\x92\x91\x90a\x0E\x19V[`@Q\x80\x91\x03\x90\xA1PPPV[_\x80_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x90P\x90V[a\x08%a\x08\xA1V[_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x03a\x08\x95W_`@Q\x7F\x1EO\xBD\xF7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\x08\x8C\x91\x90a\x0CrV[`@Q\x80\x91\x03\x90\xFD[a\x08\x9E\x81a\t(V[PV[a\x08\xA9a\t\xE9V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16a\x08\xC7a\x07\xF6V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x14a\t&Wa\x08\xEAa\t\xE9V[`@Q\x7F\x11\x8C\xDA\xA7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\t\x1D\x91\x90a\x0CrV[`@Q\x80\x91\x03\x90\xFD[V[_\x80_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x90P\x81_\x80a\x01\0\n\x81T\x81s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x02\x19\x16\x90\x83s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x02\x17\x90UP\x81s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0`@Q`@Q\x80\x91\x03\x90\xA3PPV[_3\x90P\x90V[_\x80\xFD[_\x80\xFD[_\x81\x90P\x91\x90PV[a\n\n\x81a\t\xF8V[\x81\x14a\n\x14W_\x80\xFD[PV[_\x815\x90Pa\n%\x81a\n\x01V[\x92\x91PPV[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\x83`\x1F\x84\x01\x12a\nLWa\nKa\n+V[[\x825\x90Pg\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a\niWa\nha\n/V[[` \x83\x01\x91P\x83`\x01\x82\x02\x83\x01\x11\x15a\n\x85Wa\n\x84a\n3V[[\x92P\x92\x90PV[_\x80_\x80_``\x86\x88\x03\x12\x15a\n\xA5Wa\n\xA4a\t\xF0V[[_a\n\xB2\x88\x82\x89\x01a\n\x17V[\x95PP` \x86\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a\n\xD3Wa\n\xD2a\t\xF4V[[a\n\xDF\x88\x82\x89\x01a\n7V[\x94P\x94PP`@\x86\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a\x0B\x02Wa\x0B\x01a\t\xF4V[[a\x0B\x0E\x88\x82\x89\x01a\n7V[\x92P\x92PP\x92\x95P\x92\x95\x90\x93PV[_\x7F\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82\x16\x90P\x91\x90PV[a\x0BQ\x81a\x0B\x1DV[\x81\x14a\x0B[W_\x80\xFD[PV[_\x815\x90Pa\x0Bl\x81a\x0BHV[\x92\x91PPV[_` \x82\x84\x03\x12\x15a\x0B\x87Wa\x0B\x86a\t\xF0V[[_a\x0B\x94\x84\x82\x85\x01a\x0B^V[\x91PP\x92\x91PPV[_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x90P\x91\x90PV[_a\x0B\xC6\x82a\x0B\x9DV[\x90P\x91\x90PV[a\x0B\xD6\x81a\x0B\xBCV[\x82RPPV[_\x81\x15\x15\x90P\x91\x90PV[a\x0B\xF0\x81a\x0B\xDCV[\x82RPPV[_`@\x82\x01\x90Pa\x0C\t_\x83\x01\x85a\x0B\xCDV[a\x0C\x16` \x83\x01\x84a\x0B\xE7V[\x93\x92PPPV[a\x0C&\x81a\x0B\xBCV[\x81\x14a\x0C0W_\x80\xFD[PV[_\x815\x90Pa\x0CA\x81a\x0C\x1DV[\x92\x91PPV[_` \x82\x84\x03\x12\x15a\x0C\\Wa\x0C[a\t\xF0V[[_a\x0Ci\x84\x82\x85\x01a\x0C3V[\x91PP\x92\x91PPV[_` \x82\x01\x90Pa\x0C\x85_\x83\x01\x84a\x0B\xCDV[\x92\x91PPV[_\x80\xFD[_\x80\xFD[_\x80\x85\x85\x11\x15a\x0C\xA6Wa\x0C\xA5a\x0C\x8BV[[\x83\x86\x11\x15a\x0C\xB7Wa\x0C\xB6a\x0C\x8FV[[`\x01\x85\x02\x83\x01\x91P\x84\x86\x03\x90P\x94P\x94\x92PPPV[_\x82\x90P\x92\x91PPV[_\x82\x82\x1B\x90P\x92\x91PPV[_a\x0C\xEE\x83\x83a\x0C\xCDV[\x82a\x0C\xF9\x815a\x0B\x1DV[\x92P`\x04\x82\x10\x15a\r9Wa\r4\x7F\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x83`\x04\x03`\x08\x02a\x0C\xD7V[\x83\x16\x92P[PP\x92\x91PPV[a\rJ\x81a\x0B\x1DV[\x82RPPV[_` \x82\x01\x90Pa\rc_\x83\x01\x84a\rAV[\x92\x91PPV[a\rr\x81a\t\xF8V[\x82RPPV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[\x82\x81\x837_\x83\x83\x01RPPPV[_`\x1F\x19`\x1F\x83\x01\x16\x90P\x91\x90PV[_a\r\xB1\x83\x85a\rxV[\x93Pa\r\xBE\x83\x85\x84a\r\x88V[a\r\xC7\x83a\r\x96V[\x84\x01\x90P\x93\x92PPPV[_``\x82\x01\x90Pa\r\xE5_\x83\x01\x88a\riV[\x81\x81\x03` \x83\x01Ra\r\xF8\x81\x86\x88a\r\xA6V[\x90P\x81\x81\x03`@\x83\x01Ra\x0E\r\x81\x84\x86a\r\xA6V[\x90P\x96\x95PPPPPPV[_`@\x82\x01\x90Pa\x0E,_\x83\x01\x85a\rAV[a\x0E9` \x83\x01\x84a\x0B\xCDV[\x93\x92PPPV[_\x81Q\x90Pa\x0EN\x81a\n\x01V[\x92\x91PPV[_` \x82\x84\x03\x12\x15a\x0EiWa\x0Eha\t\xF0V[[_a\x0Ev\x84\x82\x85\x01a\x0E@V[\x91PP\x92\x91PPV\xFE\xA2dipfsX\"\x12 \xC8}\x81\x90IPED\xE9A\x0B\x86h[\xCD\xEB\xF6\xCFY\xA04\xB6\x9E\xC6\xE0\xEB\x0Fd\xCB\x1B\x91KdsolcC\0\x08\x14\x003",
     );
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableInvalidOwner(address)` and selector `0x1e4fbdf7`.
 ```solidity
 error OwnableInvalidOwner(address owner);
@@ -364,8 +366,17 @@ error OwnableInvalidOwner(address owner);
                     ),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableUnauthorizedAccount(address)` and selector `0x118cdaa7`.
 ```solidity
 error OwnableUnauthorizedAccount(address account);
@@ -437,8 +448,17 @@ error OwnableUnauthorizedAccount(address account);
                     ),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `RouteAlreadyExists(address)` and selector `0x2b87e797`.
 ```solidity
 error RouteAlreadyExists(address verifier);
@@ -508,8 +528,17 @@ error RouteAlreadyExists(address verifier);
                     ),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `RouteIsFrozen(bytes4)` and selector `0xebf10823`.
 ```solidity
 error RouteIsFrozen(bytes4 selector);
@@ -579,8 +608,17 @@ error RouteIsFrozen(bytes4 selector);
                     > as alloy_sol_types::SolType>::tokenize(&self.selector),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `RouteNotFound(bytes4)` and selector `0xf208777e`.
 ```solidity
 error RouteNotFound(bytes4 selector);
@@ -650,15 +688,24 @@ error RouteNotFound(bytes4 selector);
                     > as alloy_sol_types::SolType>::tokenize(&self.selector),
                 )
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `SelectorCannotBeZero()` and selector `0x20acd28b`.
 ```solidity
 error SelectorCannotBeZero();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct SelectorCannotBeZero {}
+    pub struct SelectorCannotBeZero;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -693,7 +740,7 @@ error SelectorCannotBeZero();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for SelectorCannotBeZero {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -714,8 +761,17 @@ error SelectorCannotBeZero();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `OwnershipTransferred(address,address)` and selector `0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0`.
 ```solidity
 event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -754,38 +810,9 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
             );
             const SIGNATURE: &'static str = "OwnershipTransferred(address,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                139u8,
-                224u8,
-                7u8,
-                156u8,
-                83u8,
-                22u8,
-                89u8,
-                20u8,
-                19u8,
-                68u8,
-                205u8,
-                31u8,
-                208u8,
-                164u8,
-                242u8,
-                132u8,
-                25u8,
-                73u8,
-                127u8,
-                151u8,
-                34u8,
-                163u8,
-                218u8,
-                175u8,
-                227u8,
-                180u8,
-                24u8,
-                111u8,
-                107u8,
-                100u8,
-                87u8,
-                224u8,
+                139u8, 224u8, 7u8, 156u8, 83u8, 22u8, 89u8, 20u8, 19u8, 68u8, 205u8,
+                31u8, 208u8, 164u8, 242u8, 132u8, 25u8, 73u8, 127u8, 151u8, 34u8, 163u8,
+                218u8, 175u8, 227u8, 180u8, 24u8, 111u8, 107u8, 100u8, 87u8, 224u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -863,6 +890,8 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RouteAdded(bytes4,address)` and selector `0xcb5cc54fa0fda41744197b286ab4135aec7c322cace32c4f55da723d2eb8eee6`.
 ```solidity
 event RouteAdded(bytes4 selector, address verifier);
@@ -900,38 +929,9 @@ event RouteAdded(bytes4 selector, address verifier);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "RouteAdded(bytes4,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                203u8,
-                92u8,
-                197u8,
-                79u8,
-                160u8,
-                253u8,
-                164u8,
-                23u8,
-                68u8,
-                25u8,
-                123u8,
-                40u8,
-                106u8,
-                180u8,
-                19u8,
-                90u8,
-                236u8,
-                124u8,
-                50u8,
-                44u8,
-                172u8,
-                227u8,
-                44u8,
-                79u8,
-                85u8,
-                218u8,
-                114u8,
-                61u8,
-                46u8,
-                184u8,
-                238u8,
-                230u8,
+                203u8, 92u8, 197u8, 79u8, 160u8, 253u8, 164u8, 23u8, 68u8, 25u8, 123u8,
+                40u8, 106u8, 180u8, 19u8, 90u8, 236u8, 124u8, 50u8, 44u8, 172u8, 227u8,
+                44u8, 79u8, 85u8, 218u8, 114u8, 61u8, 46u8, 184u8, 238u8, 230u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1006,6 +1006,8 @@ event RouteAdded(bytes4 selector, address verifier);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RouteFrozen(bytes4,address)` and selector `0x63ad2363b183cb8bb562b9590c5b4428e2a566260df053db156576d3d171438d`.
 ```solidity
 event RouteFrozen(bytes4 selector, address verifier);
@@ -1043,38 +1045,9 @@ event RouteFrozen(bytes4 selector, address verifier);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "RouteFrozen(bytes4,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                99u8,
-                173u8,
-                35u8,
-                99u8,
-                177u8,
-                131u8,
-                203u8,
-                139u8,
-                181u8,
-                98u8,
-                185u8,
-                89u8,
-                12u8,
-                91u8,
-                68u8,
-                40u8,
-                226u8,
-                165u8,
-                102u8,
-                38u8,
-                13u8,
-                240u8,
-                83u8,
-                219u8,
-                21u8,
-                101u8,
-                118u8,
-                211u8,
-                209u8,
-                113u8,
-                67u8,
-                141u8,
+                99u8, 173u8, 35u8, 99u8, 177u8, 131u8, 203u8, 139u8, 181u8, 98u8, 185u8,
+                89u8, 12u8, 91u8, 68u8, 40u8, 226u8, 165u8, 102u8, 38u8, 13u8, 240u8,
+                83u8, 219u8, 21u8, 101u8, 118u8, 211u8, 209u8, 113u8, 67u8, 141u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1214,6 +1187,8 @@ constructor(address initialOwner);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `addRoute(address)` and selector `0x8c95ff1e`.
 ```solidity
 function addRoute(address verifier) external;
@@ -1298,6 +1273,13 @@ function addRoute(address verifier) external;
                 }
             }
         }
+        impl addRouteReturn {
+            fn _tokenize(
+                &self,
+            ) -> <addRouteCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for addRouteCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::Address,);
@@ -1326,17 +1308,29 @@ function addRoute(address verifier) external;
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                addRouteReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `freezeRoute(bytes4)` and selector `0x814856f4`.
 ```solidity
 function freezeRoute(bytes4 selector) external;
@@ -1421,6 +1415,13 @@ function freezeRoute(bytes4 selector) external;
                 }
             }
         }
+        impl freezeRouteReturn {
+            fn _tokenize(
+                &self,
+            ) -> <freezeRouteCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for freezeRouteCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
@@ -1449,24 +1450,38 @@ function freezeRoute(bytes4 selector) external;
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                freezeRouteReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `owner()` and selector `0x8da5cb5b`.
 ```solidity
 function owner() external view returns (address);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct ownerCall {}
+    pub struct ownerCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`owner()`](ownerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1509,7 +1524,7 @@ function owner() external view returns (address);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for ownerCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -1550,7 +1565,7 @@ function owner() external view returns (address);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = ownerReturn;
+            type Return = alloy::sol_types::private::Address;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1568,24 +1583,46 @@ function owner() external view returns (address);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: ownerReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: ownerReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `renounceOwnership()` and selector `0x715018a6`.
 ```solidity
 function renounceOwnership() external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct renounceOwnershipCall {}
+    pub struct renounceOwnershipCall;
     ///Container type for the return parameters of the [`renounceOwnership()`](renounceOwnershipCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1627,7 +1664,7 @@ function renounceOwnership() external;
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for renounceOwnershipCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -1664,6 +1701,13 @@ function renounceOwnership() external;
                 }
             }
         }
+        impl renounceOwnershipReturn {
+            fn _tokenize(
+                &self,
+            ) -> <renounceOwnershipCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for renounceOwnershipCall {
             type Parameters<'a> = ();
@@ -1688,27 +1732,38 @@ function renounceOwnership() external;
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                renounceOwnershipReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `routes(bytes4)` and selector `0x51c7094f`.
 ```solidity
 function routes(bytes4) external view returns (address verifier, bool frozen);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct routesCall {
-        #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::FixedBytes<4>,
-    }
+    pub struct routesCall(pub alloy::sol_types::private::FixedBytes<4>);
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`routes(bytes4)`](routesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1746,14 +1801,14 @@ function routes(bytes4) external view returns (address verifier, bool frozen);
             #[doc(hidden)]
             impl ::core::convert::From<routesCall> for UnderlyingRustTuple<'_> {
                 fn from(value: routesCall) -> Self {
-                    (value._0,)
+                    (value.0,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for routesCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
+                    Self(tuple.0)
                 }
             }
         }
@@ -1794,6 +1849,20 @@ function routes(bytes4) external view returns (address verifier, bool frozen);
                 }
             }
         }
+        impl routesReturn {
+            fn _tokenize(
+                &self,
+            ) -> <routesCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.verifier,
+                    ),
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        &self.frozen,
+                    ),
+                )
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for routesCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
@@ -1821,21 +1890,33 @@ function routes(bytes4) external view returns (address verifier, bool frozen);
                 (
                     <alloy::sol_types::sol_data::FixedBytes<
                         4,
-                    > as alloy_sol_types::SolType>::tokenize(&self._0),
+                    > as alloy_sol_types::SolType>::tokenize(&self.0),
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                routesReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `transferOwnership(address)` and selector `0xf2fde38b`.
 ```solidity
 function transferOwnership(address newOwner) external;
@@ -1924,6 +2005,13 @@ function transferOwnership(address newOwner) external;
                 }
             }
         }
+        impl transferOwnershipReturn {
+            fn _tokenize(
+                &self,
+            ) -> <transferOwnershipCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for transferOwnershipCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::Address,);
@@ -1952,17 +2040,29 @@ function transferOwnership(address newOwner) external;
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                transferOwnershipReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `verifyProof(bytes32,bytes,bytes)` and selector `0x41493c60`.
 ```solidity
 function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memory proofBytes) external view;
@@ -2063,6 +2163,13 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 }
             }
         }
+        impl verifyProofReturn {
+            fn _tokenize(
+                &self,
+            ) -> <verifyProofCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for verifyProofCall {
             type Parameters<'a> = (
@@ -2101,18 +2208,30 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                verifyProofReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
     ///Container for all the [`SP1VerifierGateway`](self) function calls.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive()]
     pub enum SP1VerifierGatewayCalls {
         #[allow(missing_docs)]
         addRoute(addRouteCall),
@@ -2185,20 +2304,16 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls>] = &[
                 {
                     fn verifyProof(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
                         <verifyProofCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayCalls::verifyProof)
                     }
@@ -2207,12 +2322,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn routes(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
-                        <routesCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <routesCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(SP1VerifierGatewayCalls::routes)
                     }
                     routes
@@ -2220,11 +2331,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn renounceOwnership(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
                         <renounceOwnershipCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayCalls::renounceOwnership)
                     }
@@ -2233,11 +2342,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn freezeRoute(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
                         <freezeRouteCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayCalls::freezeRoute)
                     }
@@ -2246,12 +2353,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn addRoute(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
-                        <addRouteCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <addRouteCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(SP1VerifierGatewayCalls::addRoute)
                     }
                     addRoute
@@ -2259,12 +2362,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn owner(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
-                        <ownerCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <ownerCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(SP1VerifierGatewayCalls::owner)
                     }
                     owner
@@ -2272,11 +2371,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn transferOwnership(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
                         <transferOwnershipCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayCalls::transferOwnership)
                     }
@@ -2291,7 +2388,104 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls>] = &[
+                {
+                    fn verifyProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
+                        <verifyProofCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayCalls::verifyProof)
+                    }
+                    verifyProof
+                },
+                {
+                    fn routes(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
+                        <routesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayCalls::routes)
+                    }
+                    routes
+                },
+                {
+                    fn renounceOwnership(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
+                        <renounceOwnershipCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayCalls::renounceOwnership)
+                    }
+                    renounceOwnership
+                },
+                {
+                    fn freezeRoute(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
+                        <freezeRouteCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayCalls::freezeRoute)
+                    }
+                    freezeRoute
+                },
+                {
+                    fn addRoute(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
+                        <addRouteCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayCalls::addRoute)
+                    }
+                    addRoute
+                },
+                {
+                    fn owner(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
+                        <ownerCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayCalls::owner)
+                    }
+                    owner
+                },
+                {
+                    fn transferOwnership(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayCalls> {
+                        <transferOwnershipCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayCalls::transferOwnership)
+                    }
+                    transferOwnership
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -2370,6 +2564,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
     }
     ///Container for all the [`SP1VerifierGateway`](self) custom errors.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SP1VerifierGatewayErrors {
         #[allow(missing_docs)]
         OwnableInvalidOwner(OwnableInvalidOwner),
@@ -2442,20 +2638,16 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors>] = &[
                 {
                     fn OwnableUnauthorizedAccount(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
                         <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayErrors::OwnableUnauthorizedAccount)
                     }
@@ -2464,11 +2656,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn OwnableInvalidOwner(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
                         <OwnableInvalidOwner as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayErrors::OwnableInvalidOwner)
                     }
@@ -2477,11 +2667,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn SelectorCannotBeZero(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
                         <SelectorCannotBeZero as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayErrors::SelectorCannotBeZero)
                     }
@@ -2490,11 +2678,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn RouteAlreadyExists(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
                         <RouteAlreadyExists as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayErrors::RouteAlreadyExists)
                     }
@@ -2503,11 +2689,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn RouteIsFrozen(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
                         <RouteIsFrozen as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayErrors::RouteIsFrozen)
                     }
@@ -2516,11 +2700,9 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 {
                     fn RouteNotFound(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
                         <RouteNotFound as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGatewayErrors::RouteNotFound)
                     }
@@ -2535,7 +2717,93 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors>] = &[
+                {
+                    fn OwnableUnauthorizedAccount(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
+                        <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayErrors::OwnableUnauthorizedAccount)
+                    }
+                    OwnableUnauthorizedAccount
+                },
+                {
+                    fn OwnableInvalidOwner(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
+                        <OwnableInvalidOwner as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayErrors::OwnableInvalidOwner)
+                    }
+                    OwnableInvalidOwner
+                },
+                {
+                    fn SelectorCannotBeZero(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
+                        <SelectorCannotBeZero as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayErrors::SelectorCannotBeZero)
+                    }
+                    SelectorCannotBeZero
+                },
+                {
+                    fn RouteAlreadyExists(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
+                        <RouteAlreadyExists as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayErrors::RouteAlreadyExists)
+                    }
+                    RouteAlreadyExists
+                },
+                {
+                    fn RouteIsFrozen(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
+                        <RouteIsFrozen as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayErrors::RouteIsFrozen)
+                    }
+                    RouteIsFrozen
+                },
+                {
+                    fn RouteNotFound(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGatewayErrors> {
+                        <RouteNotFound as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGatewayErrors::RouteNotFound)
+                    }
+                    RouteNotFound
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -2611,6 +2879,8 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
     }
     ///Container for all the [`SP1VerifierGateway`](self) events.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SP1VerifierGatewayEvents {
         #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
@@ -2629,106 +2899,19 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                99u8,
-                173u8,
-                35u8,
-                99u8,
-                177u8,
-                131u8,
-                203u8,
-                139u8,
-                181u8,
-                98u8,
-                185u8,
-                89u8,
-                12u8,
-                91u8,
-                68u8,
-                40u8,
-                226u8,
-                165u8,
-                102u8,
-                38u8,
-                13u8,
-                240u8,
-                83u8,
-                219u8,
-                21u8,
-                101u8,
-                118u8,
-                211u8,
-                209u8,
-                113u8,
-                67u8,
-                141u8,
+                99u8, 173u8, 35u8, 99u8, 177u8, 131u8, 203u8, 139u8, 181u8, 98u8, 185u8,
+                89u8, 12u8, 91u8, 68u8, 40u8, 226u8, 165u8, 102u8, 38u8, 13u8, 240u8,
+                83u8, 219u8, 21u8, 101u8, 118u8, 211u8, 209u8, 113u8, 67u8, 141u8,
             ],
             [
-                139u8,
-                224u8,
-                7u8,
-                156u8,
-                83u8,
-                22u8,
-                89u8,
-                20u8,
-                19u8,
-                68u8,
-                205u8,
-                31u8,
-                208u8,
-                164u8,
-                242u8,
-                132u8,
-                25u8,
-                73u8,
-                127u8,
-                151u8,
-                34u8,
-                163u8,
-                218u8,
-                175u8,
-                227u8,
-                180u8,
-                24u8,
-                111u8,
-                107u8,
-                100u8,
-                87u8,
-                224u8,
+                139u8, 224u8, 7u8, 156u8, 83u8, 22u8, 89u8, 20u8, 19u8, 68u8, 205u8,
+                31u8, 208u8, 164u8, 242u8, 132u8, 25u8, 73u8, 127u8, 151u8, 34u8, 163u8,
+                218u8, 175u8, 227u8, 180u8, 24u8, 111u8, 107u8, 100u8, 87u8, 224u8,
             ],
             [
-                203u8,
-                92u8,
-                197u8,
-                79u8,
-                160u8,
-                253u8,
-                164u8,
-                23u8,
-                68u8,
-                25u8,
-                123u8,
-                40u8,
-                106u8,
-                180u8,
-                19u8,
-                90u8,
-                236u8,
-                124u8,
-                50u8,
-                44u8,
-                172u8,
-                227u8,
-                44u8,
-                79u8,
-                85u8,
-                218u8,
-                114u8,
-                61u8,
-                46u8,
-                184u8,
-                238u8,
-                230u8,
+                203u8, 92u8, 197u8, 79u8, 160u8, 253u8, 164u8, 23u8, 68u8, 25u8, 123u8,
+                40u8, 106u8, 180u8, 19u8, 90u8, 236u8, 124u8, 50u8, 44u8, 172u8, 227u8,
+                44u8, 79u8, 85u8, 218u8, 114u8, 61u8, 46u8, 184u8, 238u8, 230u8,
             ],
         ];
     }
@@ -2739,7 +2922,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(
@@ -2748,7 +2930,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     <OwnershipTransferred as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::OwnershipTransferred)
                 }
@@ -2756,7 +2937,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     <RouteAdded as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::RouteAdded)
                 }
@@ -2764,7 +2944,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                     <RouteFrozen as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::RouteFrozen)
                 }
@@ -2817,14 +2996,13 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
 See the [wrapper's documentation](`SP1VerifierGatewayInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> SP1VerifierGatewayInstance<T, P, N> {
-        SP1VerifierGatewayInstance::<T, P, N>::new(address, provider)
+    ) -> SP1VerifierGatewayInstance<P, N> {
+        SP1VerifierGatewayInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -2833,16 +3011,15 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
         initialOwner: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<SP1VerifierGatewayInstance<T, P, N>>,
+        Output = alloy_contract::Result<SP1VerifierGatewayInstance<P, N>>,
     > {
-        SP1VerifierGatewayInstance::<T, P, N>::deploy(provider, initialOwner)
+        SP1VerifierGatewayInstance::<P, N>::deploy(provider, initialOwner)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -2851,14 +3028,13 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
         initialOwner: alloy::sol_types::private::Address,
-    ) -> alloy_contract::RawCallBuilder<T, P, N> {
-        SP1VerifierGatewayInstance::<T, P, N>::deploy_builder(provider, initialOwner)
+    ) -> alloy_contract::RawCallBuilder<P, N> {
+        SP1VerifierGatewayInstance::<P, N>::deploy_builder(provider, initialOwner)
     }
     /**A [`SP1VerifierGateway`](self) instance.
 
@@ -2872,13 +3048,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct SP1VerifierGatewayInstance<T, P, N = alloy_contract::private::Ethereum> {
+    pub struct SP1VerifierGatewayInstance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for SP1VerifierGatewayInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for SP1VerifierGatewayInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("SP1VerifierGatewayInstance").field(&self.address).finish()
@@ -2887,10 +3063,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGatewayInstance<T, P, N> {
+    > SP1VerifierGatewayInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`SP1VerifierGateway`](self) contract instance.
 
 See the [wrapper's documentation](`SP1VerifierGatewayInstance`) for more details.*/
@@ -2902,7 +3077,7 @@ See the [wrapper's documentation](`SP1VerifierGatewayInstance`) for more details
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -2914,7 +3089,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         pub async fn deploy(
             provider: P,
             initialOwner: alloy::sol_types::private::Address,
-        ) -> alloy_contract::Result<SP1VerifierGatewayInstance<T, P, N>> {
+        ) -> alloy_contract::Result<SP1VerifierGatewayInstance<P, N>> {
             let call_builder = Self::deploy_builder(provider, initialOwner);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -2928,7 +3103,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn deploy_builder(
             provider: P,
             initialOwner: alloy::sol_types::private::Address,
-        ) -> alloy_contract::RawCallBuilder<T, P, N> {
+        ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 [
@@ -2962,24 +3137,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> SP1VerifierGatewayInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> SP1VerifierGatewayInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> SP1VerifierGatewayInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> SP1VerifierGatewayInstance<P, N> {
             SP1VerifierGatewayInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGatewayInstance<T, P, N> {
+    > SP1VerifierGatewayInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -2987,45 +3161,45 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`addRoute`] function.
         pub fn addRoute(
             &self,
             verifier: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<T, &P, addRouteCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, addRouteCall, N> {
             self.call_builder(&addRouteCall { verifier })
         }
         ///Creates a new call builder for the [`freezeRoute`] function.
         pub fn freezeRoute(
             &self,
             selector: alloy::sol_types::private::FixedBytes<4>,
-        ) -> alloy_contract::SolCallBuilder<T, &P, freezeRouteCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, freezeRouteCall, N> {
             self.call_builder(&freezeRouteCall { selector })
         }
         ///Creates a new call builder for the [`owner`] function.
-        pub fn owner(&self) -> alloy_contract::SolCallBuilder<T, &P, ownerCall, N> {
-            self.call_builder(&ownerCall {})
+        pub fn owner(&self) -> alloy_contract::SolCallBuilder<&P, ownerCall, N> {
+            self.call_builder(&ownerCall)
         }
         ///Creates a new call builder for the [`renounceOwnership`] function.
         pub fn renounceOwnership(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, renounceOwnershipCall, N> {
-            self.call_builder(&renounceOwnershipCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, renounceOwnershipCall, N> {
+            self.call_builder(&renounceOwnershipCall)
         }
         ///Creates a new call builder for the [`routes`] function.
         pub fn routes(
             &self,
             _0: alloy::sol_types::private::FixedBytes<4>,
-        ) -> alloy_contract::SolCallBuilder<T, &P, routesCall, N> {
-            self.call_builder(&routesCall { _0 })
+        ) -> alloy_contract::SolCallBuilder<&P, routesCall, N> {
+            self.call_builder(&routesCall(_0))
         }
         ///Creates a new call builder for the [`transferOwnership`] function.
         pub fn transferOwnership(
             &self,
             newOwner: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<T, &P, transferOwnershipCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, transferOwnershipCall, N> {
             self.call_builder(&transferOwnershipCall { newOwner })
         }
         ///Creates a new call builder for the [`verifyProof`] function.
@@ -3034,7 +3208,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             programVKey: alloy::sol_types::private::FixedBytes<32>,
             publicValues: alloy::sol_types::private::Bytes,
             proofBytes: alloy::sol_types::private::Bytes,
-        ) -> alloy_contract::SolCallBuilder<T, &P, verifyProofCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, verifyProofCall, N> {
             self.call_builder(
                 &verifyProofCall {
                     programVKey,
@@ -3047,33 +3221,30 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGatewayInstance<T, P, N> {
+    > SP1VerifierGatewayInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`OwnershipTransferred`] event.
         pub fn OwnershipTransferred_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, OwnershipTransferred, N> {
+        ) -> alloy_contract::Event<&P, OwnershipTransferred, N> {
             self.event_filter::<OwnershipTransferred>()
         }
         ///Creates a new event filter for the [`RouteAdded`] event.
-        pub fn RouteAdded_filter(&self) -> alloy_contract::Event<T, &P, RouteAdded, N> {
+        pub fn RouteAdded_filter(&self) -> alloy_contract::Event<&P, RouteAdded, N> {
             self.event_filter::<RouteAdded>()
         }
         ///Creates a new event filter for the [`RouteFrozen`] event.
-        pub fn RouteFrozen_filter(
-            &self,
-        ) -> alloy_contract::Event<T, &P, RouteFrozen, N> {
+        pub fn RouteFrozen_filter(&self) -> alloy_contract::Event<&P, RouteFrozen, N> {
             self.event_filter::<RouteFrozen>()
         }
     }

@@ -18,6 +18,8 @@ library StdInvariant {
 pub mod StdInvariant {
     use super::*;
     use alloy::sol_types as alloy_sol_types;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**```solidity
 struct FuzzArtifactSelector { string artifact; bytes4[] selectors; }
 ```*/
@@ -242,6 +244,8 @@ struct FuzzArtifactSelector { string artifact; bytes4[] selectors; }
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**```solidity
 struct FuzzInterface { address addr; string[] artifacts; }
 ```*/
@@ -464,6 +468,8 @@ struct FuzzInterface { address addr; string[] artifacts; }
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**```solidity
 struct FuzzSelector { address addr; bytes4[] selectors; }
 ```*/
@@ -694,14 +700,13 @@ struct FuzzSelector { address addr; bytes4[] selectors; }
 See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> StdInvariantInstance<T, P, N> {
-        StdInvariantInstance::<T, P, N>::new(address, provider)
+    ) -> StdInvariantInstance<P, N> {
+        StdInvariantInstance::<P, N>::new(address, provider)
     }
     /**A [`StdInvariant`](self) instance.
 
@@ -715,13 +720,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct StdInvariantInstance<T, P, N = alloy_contract::private::Ethereum> {
+    pub struct StdInvariantInstance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for StdInvariantInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for StdInvariantInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("StdInvariantInstance").field(&self.address).finish()
@@ -730,10 +735,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > StdInvariantInstance<T, P, N> {
+    > StdInvariantInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`StdInvariant`](self) contract instance.
 
 See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
@@ -745,7 +749,7 @@ See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /// Returns a reference to the address.
@@ -769,24 +773,23 @@ See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> StdInvariantInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> StdInvariantInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> StdInvariantInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> StdInvariantInstance<P, N> {
             StdInvariantInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > StdInvariantInstance<T, P, N> {
+    > StdInvariantInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -794,24 +797,23 @@ See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > StdInvariantInstance<T, P, N> {
+    > StdInvariantInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
     }
@@ -1475,6 +1477,8 @@ pub mod SP1VerifierGroth16Test {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0\xE8W_5`\xE0\x1C\x80c\x85\"l\x81\x11a\0\x8AW\x80c\xB5P\x8A\xA9\x11a\0dW\x80c\xB5P\x8A\xA9\x14a\x01\xDCW\x80c\xBAAO\xA6\x14a\x01\xFAW\x80c\xE2\x0C\x9Fq\x14a\x02\x18W\x80c\xFAv&\xD4\x14a\x026Wa\0\xE8V[\x80c\x85\"l\x81\x14a\x01\x96W\x80c\x86$XJ\x14a\x01\xB4W\x80c\x91j\x17\xC6\x14a\x01\xBEWa\0\xE8V[\x80c,\x1D\xEF\xB9\x11a\0\xC6W\x80c,\x1D\xEF\xB9\x14a\x012W\x80c>^<#\x14a\x01<W\x80c?r\x86\xF4\x14a\x01ZW\x80cf\xD9\xA9\xA0\x14a\x01xWa\0\xE8V[\x80c\n\x92T\xE4\x14a\0\xECW\x80c\x1E\xD7\x83\x1C\x14a\0\xF6W\x80c*\xDE8\x80\x14a\x01\x14W[_\x80\xFD[a\0\xF4a\x02TV[\0[a\0\xFEa\x02\xBCV[`@Qa\x01\x0B\x91\x90a\x0E\xB9V[`@Q\x80\x91\x03\x90\xF3[a\x01\x1Ca\x03GV[`@Qa\x01)\x91\x90a\x11\x13V[`@Q\x80\x91\x03\x90\xF3[a\x01:a\x04\xCBV[\0[a\x01Da\x05\xACV[`@Qa\x01Q\x91\x90a\x0E\xB9V[`@Q\x80\x91\x03\x90\xF3[a\x01ba\x067V[`@Qa\x01o\x91\x90a\x0E\xB9V[`@Q\x80\x91\x03\x90\xF3[a\x01\x80a\x06\xC2V[`@Qa\x01\x8D\x91\x90a\x13\x11V[`@Q\x80\x91\x03\x90\xF3[a\x01\x9Ea\x08DV[`@Qa\x01\xAB\x91\x90a\x13\xB4V[`@Q\x80\x91\x03\x90\xF3[a\x01\xBCa\t\x18V[\0[a\x01\xC6a\t\xF9V[`@Qa\x01\xD3\x91\x90a\x14\xC9V[`@Q\x80\x91\x03\x90\xF3[a\x01\xE4a\x0B@V[`@Qa\x01\xF1\x91\x90a\x13\xB4V[`@Q\x80\x91\x03\x90\xF3[a\x02\x02a\x0C\x14V[`@Qa\x02\x0F\x91\x90a\x15\x03V[`@Q\x80\x91\x03\x90\xF3[a\x02 a\r(V[`@Qa\x02-\x91\x90a\x0E\xB9V[`@Q\x80\x91\x03\x90\xF3[a\x02>a\r\xB3V[`@Qa\x02K\x91\x90a\x15\x03V[`@Q\x80\x91\x03\x90\xF3[`@Qa\x02`\x90a\r\xC5V[`@Q\x80\x91\x03\x90_\xF0\x80\x15\x80\x15a\x02yW=_\x80>=_\xFD[P`\x1E`\x01a\x01\0\n\x81T\x81s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x02\x19\x16\x90\x83s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x02\x17\x90UPV[```\x16\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80T\x80\x15a\x03=W` \x02\x82\x01\x91\x90_R` _ \x90[\x81_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81R` \x01\x90`\x01\x01\x90\x80\x83\x11a\x02\xF4W[PPPPP\x90P\x90V[```\x1D\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01_\x90[\x82\x82\x10\x15a\x04\xC2W\x83\x82\x90_R` _ \x90`\x02\x02\x01`@Q\x80`@\x01`@R\x90\x81_\x82\x01_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81R` \x01`\x01\x82\x01\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01_\x90[\x82\x82\x10\x15a\x04\xABW\x83\x82\x90_R` _ \x01\x80Ta\x04 \x90a\x15IV[\x80`\x1F\x01` \x80\x91\x04\x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80Ta\x04L\x90a\x15IV[\x80\x15a\x04\x97W\x80`\x1F\x10a\x04nWa\x01\0\x80\x83T\x04\x02\x83R\x91` \x01\x91a\x04\x97V[\x82\x01\x91\x90_R` _ \x90[\x81T\x81R\x90`\x01\x01\x90` \x01\x80\x83\x11a\x04zW\x82\x90\x03`\x1F\x16\x82\x01\x91[PPPPP\x81R` \x01\x90`\x01\x01\x90a\x04\x03V[PPPP\x81RPP\x81R` \x01\x90`\x01\x01\x90a\x03jV[PPPP\x90P\x90V[`\x1E`\x01\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16cAI<`~V,\x19\xB1\x94\x8C\xE8\xF3`\xEE2\xDAk\x8E\x18\xB5\x04\xB7\xD1\x97\xD5\"\x08]>t\xC0r\xE0\xFF}_\x1B`@Q\x80`\x80\x01`@R\x80``\x81R` \x01aB\\``\x919`@Q\x80a\x01@\x01`@R\x80a\x01\x04\x81R` \x01aB\xBCa\x01\x04\x919`@Q\x84c\xFF\xFF\xFF\xFF\x16`\xE0\x1B\x81R`\x04\x01a\x05~\x93\x92\x91\x90a\x15\xE3V[_`@Q\x80\x83\x03\x81\x86\x80;\x15\x80\x15a\x05\x94W_\x80\xFD[PZ\xFA\x15\x80\x15a\x05\xA6W=_\x80>=_\xFD[PPPPV[```\x18\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80T\x80\x15a\x06-W` \x02\x82\x01\x91\x90_R` _ \x90[\x81_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81R` \x01\x90`\x01\x01\x90\x80\x83\x11a\x05\xE4W[PPPPP\x90P\x90V[```\x17\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80T\x80\x15a\x06\xB8W` \x02\x82\x01\x91\x90_R` _ \x90[\x81_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81R` \x01\x90`\x01\x01\x90\x80\x83\x11a\x06oW[PPPPP\x90P\x90V[```\x1B\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01_\x90[\x82\x82\x10\x15a\x08;W\x83\x82\x90_R` _ \x90`\x02\x02\x01`@Q\x80`@\x01`@R\x90\x81_\x82\x01\x80Ta\x07\x15\x90a\x15IV[\x80`\x1F\x01` \x80\x91\x04\x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80Ta\x07A\x90a\x15IV[\x80\x15a\x07\x8CW\x80`\x1F\x10a\x07cWa\x01\0\x80\x83T\x04\x02\x83R\x91` \x01\x91a\x07\x8CV[\x82\x01\x91\x90_R` _ \x90[\x81T\x81R\x90`\x01\x01\x90` \x01\x80\x83\x11a\x07oW\x82\x90\x03`\x1F\x16\x82\x01\x91[PPPPP\x81R` \x01`\x01\x82\x01\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80T\x80\x15a\x08#W` \x02\x82\x01\x91\x90_R` _ \x90_\x90[\x82\x82\x90T\x90a\x01\0\n\x90\x04`\xE0\x1B{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x81R` \x01\x90`\x04\x01\x90` \x82`\x03\x01\x04\x92\x83\x01\x92`\x01\x03\x82\x02\x91P\x80\x84\x11a\x07\xD0W\x90P[PPPPP\x81RPP\x81R` \x01\x90`\x01\x01\x90a\x06\xE5V[PPPP\x90P\x90V[```\x1A\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01_\x90[\x82\x82\x10\x15a\t\x0FW\x83\x82\x90_R` _ \x01\x80Ta\x08\x84\x90a\x15IV[\x80`\x1F\x01` \x80\x91\x04\x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80Ta\x08\xB0\x90a\x15IV[\x80\x15a\x08\xFBW\x80`\x1F\x10a\x08\xD2Wa\x01\0\x80\x83T\x04\x02\x83R\x91` \x01\x91a\x08\xFBV[\x82\x01\x91\x90_R` _ \x90[\x81T\x81R\x90`\x01\x01\x90` \x01\x80\x83\x11a\x08\xDEW\x82\x90\x03`\x1F\x16\x82\x01\x91[PPPPP\x81R` \x01\x90`\x01\x01\x90a\x08gV[PPPP\x90P\x90V[`\x1E`\x01\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16cAI<`~V,\x19\xB1\x94\x8C\xE8\xF3`\xEE2\xDAk\x8E\x18\xB5\x04\xB7\xD1\x97\xD5\"\x08]>t\xC0r\xE0\xFF}_\x1B`@Q\x80`\x80\x01`@R\x80``\x81R` \x01aB\\``\x919`@Q\x80a\x01@\x01`@R\x80a\x01\x04\x81R` \x01aB\xBCa\x01\x04\x919`@Q\x84c\xFF\xFF\xFF\xFF\x16`\xE0\x1B\x81R`\x04\x01a\t\xCB\x93\x92\x91\x90a\x15\xE3V[_`@Q\x80\x83\x03\x81\x86\x80;\x15\x80\x15a\t\xE1W_\x80\xFD[PZ\xFA\x15\x80\x15a\t\xF3W=_\x80>=_\xFD[PPPPV[```\x1C\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01_\x90[\x82\x82\x10\x15a\x0B7W\x83\x82\x90_R` _ \x90`\x02\x02\x01`@Q\x80`@\x01`@R\x90\x81_\x82\x01_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81R` \x01`\x01\x82\x01\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80T\x80\x15a\x0B\x1FW` \x02\x82\x01\x91\x90_R` _ \x90_\x90[\x82\x82\x90T\x90a\x01\0\n\x90\x04`\xE0\x1B{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x81R` \x01\x90`\x04\x01\x90` \x82`\x03\x01\x04\x92\x83\x01\x92`\x01\x03\x82\x02\x91P\x80\x84\x11a\n\xCCW\x90P[PPPPP\x81RPP\x81R` \x01\x90`\x01\x01\x90a\n\x1CV[PPPP\x90P\x90V[```\x19\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01_\x90[\x82\x82\x10\x15a\x0C\x0BW\x83\x82\x90_R` _ \x01\x80Ta\x0B\x80\x90a\x15IV[\x80`\x1F\x01` \x80\x91\x04\x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80Ta\x0B\xAC\x90a\x15IV[\x80\x15a\x0B\xF7W\x80`\x1F\x10a\x0B\xCEWa\x01\0\x80\x83T\x04\x02\x83R\x91` \x01\x91a\x0B\xF7V[\x82\x01\x91\x90_R` _ \x90[\x81T\x81R\x90`\x01\x01\x90` \x01\x80\x83\x11a\x0B\xDAW\x82\x90\x03`\x1F\x16\x82\x01\x91[PPPPP\x81R` \x01\x90`\x01\x01\x90a\x0BcV[PPPP\x90P\x90V[_`\x08_\x90T\x90a\x01\0\n\x90\x04`\xFF\x16\x15a\x0C?W`\x08_\x90T\x90a\x01\0\n\x90\x04`\xFF\x16\x90Pa\r%V[_\x80\x1B\x7F\x88\\\xB6\x92@\xA95\xD62\xD7\x9C1q\tp\x9E\xCF\xA9\x1A\x80bo\xF3\x98\x9Dh\xF6\x7F[\x1D\xD1-_\x1Cs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16cf\x7F\x9Dp\x7F\x88\\\xB6\x92@\xA95\xD62\xD7\x9C1q\tp\x9E\xCF\xA9\x1A\x80bo\xF3\x98\x9Dh\xF6\x7F[\x1D\xD1-_\x1C\x7Ffailed\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`@Q\x83c\xFF\xFF\xFF\xFF\x16`\xE0\x1B\x81R`\x04\x01a\x0C\xE1\x92\x91\x90a\x165V[` `@Q\x80\x83\x03\x81\x86Z\xFA\x15\x80\x15a\x0C\xFCW=_\x80>=_\xFD[PPPP`@Q=`\x1F\x19`\x1F\x82\x01\x16\x82\x01\x80`@RP\x81\x01\x90a\r \x91\x90a\x16\x8AV[\x14\x15\x90P[\x90V[```\x15\x80T\x80` \x02` \x01`@Q\x90\x81\x01`@R\x80\x92\x91\x90\x81\x81R` \x01\x82\x80T\x80\x15a\r\xA9W` \x02\x82\x01\x91\x90_R` _ \x90[\x81_\x90T\x90a\x01\0\n\x90\x04s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x81R` \x01\x90`\x01\x01\x90\x80\x83\x11a\r`W[PPPPP\x90P\x90V[`\x1E_\x90T\x90a\x01\0\n\x90\x04`\xFF\x16\x81V[a+\xA6\x80a\x16\xB6\x839\x01\x90V[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_\x81\x90P` \x82\x01\x90P\x91\x90PV[_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x90P\x91\x90PV[_a\x0E$\x82a\r\xFBV[\x90P\x91\x90PV[a\x0E4\x81a\x0E\x1AV[\x82RPPV[_a\x0EE\x83\x83a\x0E+V[` \x83\x01\x90P\x92\x91PPV[_` \x82\x01\x90P\x91\x90PV[_a\x0Eg\x82a\r\xD2V[a\x0Eq\x81\x85a\r\xDCV[\x93Pa\x0E|\x83a\r\xECV[\x80_[\x83\x81\x10\x15a\x0E\xACW\x81Qa\x0E\x93\x88\x82a\x0E:V[\x97Pa\x0E\x9E\x83a\x0EQV[\x92PP`\x01\x81\x01\x90Pa\x0E\x7FV[P\x85\x93PPPP\x92\x91PPV[_` \x82\x01\x90P\x81\x81\x03_\x83\x01Ra\x0E\xD1\x81\x84a\x0E]V[\x90P\x92\x91PPV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_\x81\x90P` \x82\x01\x90P\x91\x90PV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_\x81\x90P` \x82\x01\x90P\x91\x90PV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_[\x83\x81\x10\x15a\x0FbW\x80\x82\x01Q\x81\x84\x01R` \x81\x01\x90Pa\x0FGV[_\x84\x84\x01RPPPPV[_`\x1F\x19`\x1F\x83\x01\x16\x90P\x91\x90PV[_a\x0F\x87\x82a\x0F+V[a\x0F\x91\x81\x85a\x0F5V[\x93Pa\x0F\xA1\x81\x85` \x86\x01a\x0FEV[a\x0F\xAA\x81a\x0FmV[\x84\x01\x91PP\x92\x91PPV[_a\x0F\xC0\x83\x83a\x0F}V[\x90P\x92\x91PPV[_` \x82\x01\x90P\x91\x90PV[_a\x0F\xDE\x82a\x0F\x02V[a\x0F\xE8\x81\x85a\x0F\x0CV[\x93P\x83` \x82\x02\x85\x01a\x0F\xFA\x85a\x0F\x1CV[\x80_[\x85\x81\x10\x15a\x105W\x84\x84\x03\x89R\x81Qa\x10\x16\x85\x82a\x0F\xB5V[\x94Pa\x10!\x83a\x0F\xC8V[\x92P` \x8A\x01\x99PP`\x01\x81\x01\x90Pa\x0F\xFDV[P\x82\x97P\x87\x95PPPPPP\x92\x91PPV[_`@\x83\x01_\x83\x01Qa\x10\\_\x86\x01\x82a\x0E+V[P` \x83\x01Q\x84\x82\x03` \x86\x01Ra\x10t\x82\x82a\x0F\xD4V[\x91PP\x80\x91PP\x92\x91PPV[_a\x10\x8C\x83\x83a\x10GV[\x90P\x92\x91PPV[_` \x82\x01\x90P\x91\x90PV[_a\x10\xAA\x82a\x0E\xD9V[a\x10\xB4\x81\x85a\x0E\xE3V[\x93P\x83` \x82\x02\x85\x01a\x10\xC6\x85a\x0E\xF3V[\x80_[\x85\x81\x10\x15a\x11\x01W\x84\x84\x03\x89R\x81Qa\x10\xE2\x85\x82a\x10\x81V[\x94Pa\x10\xED\x83a\x10\x94V[\x92P` \x8A\x01\x99PP`\x01\x81\x01\x90Pa\x10\xC9V[P\x82\x97P\x87\x95PPPPPP\x92\x91PPV[_` \x82\x01\x90P\x81\x81\x03_\x83\x01Ra\x11+\x81\x84a\x10\xA0V[\x90P\x92\x91PPV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_\x81\x90P` \x82\x01\x90P\x91\x90PV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_\x81\x90P` \x82\x01\x90P\x91\x90PV[_\x7F\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82\x16\x90P\x91\x90PV[a\x11\xB9\x81a\x11\x85V[\x82RPPV[_a\x11\xCA\x83\x83a\x11\xB0V[` \x83\x01\x90P\x92\x91PPV[_` \x82\x01\x90P\x91\x90PV[_a\x11\xEC\x82a\x11\\V[a\x11\xF6\x81\x85a\x11fV[\x93Pa\x12\x01\x83a\x11vV[\x80_[\x83\x81\x10\x15a\x121W\x81Qa\x12\x18\x88\x82a\x11\xBFV[\x97Pa\x12#\x83a\x11\xD6V[\x92PP`\x01\x81\x01\x90Pa\x12\x04V[P\x85\x93PPPP\x92\x91PPV[_`@\x83\x01_\x83\x01Q\x84\x82\x03_\x86\x01Ra\x12X\x82\x82a\x0F}V[\x91PP` \x83\x01Q\x84\x82\x03` \x86\x01Ra\x12r\x82\x82a\x11\xE2V[\x91PP\x80\x91PP\x92\x91PPV[_a\x12\x8A\x83\x83a\x12>V[\x90P\x92\x91PPV[_` \x82\x01\x90P\x91\x90PV[_a\x12\xA8\x82a\x113V[a\x12\xB2\x81\x85a\x11=V[\x93P\x83` \x82\x02\x85\x01a\x12\xC4\x85a\x11MV[\x80_[\x85\x81\x10\x15a\x12\xFFW\x84\x84\x03\x89R\x81Qa\x12\xE0\x85\x82a\x12\x7FV[\x94Pa\x12\xEB\x83a\x12\x92V[\x92P` \x8A\x01\x99PP`\x01\x81\x01\x90Pa\x12\xC7V[P\x82\x97P\x87\x95PPPPPP\x92\x91PPV[_` \x82\x01\x90P\x81\x81\x03_\x83\x01Ra\x13)\x81\x84a\x12\x9EV[\x90P\x92\x91PPV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_a\x13K\x82a\x0F\x02V[a\x13U\x81\x85a\x131V[\x93P\x83` \x82\x02\x85\x01a\x13g\x85a\x0F\x1CV[\x80_[\x85\x81\x10\x15a\x13\xA2W\x84\x84\x03\x89R\x81Qa\x13\x83\x85\x82a\x0F\xB5V[\x94Pa\x13\x8E\x83a\x0F\xC8V[\x92P` \x8A\x01\x99PP`\x01\x81\x01\x90Pa\x13jV[P\x82\x97P\x87\x95PPPPPP\x92\x91PPV[_` \x82\x01\x90P\x81\x81\x03_\x83\x01Ra\x13\xCC\x81\x84a\x13AV[\x90P\x92\x91PPV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_\x81\x90P` \x82\x01\x90P\x91\x90PV[_`@\x83\x01_\x83\x01Qa\x14\x12_\x86\x01\x82a\x0E+V[P` \x83\x01Q\x84\x82\x03` \x86\x01Ra\x14*\x82\x82a\x11\xE2V[\x91PP\x80\x91PP\x92\x91PPV[_a\x14B\x83\x83a\x13\xFDV[\x90P\x92\x91PPV[_` \x82\x01\x90P\x91\x90PV[_a\x14`\x82a\x13\xD4V[a\x14j\x81\x85a\x13\xDEV[\x93P\x83` \x82\x02\x85\x01a\x14|\x85a\x13\xEEV[\x80_[\x85\x81\x10\x15a\x14\xB7W\x84\x84\x03\x89R\x81Qa\x14\x98\x85\x82a\x147V[\x94Pa\x14\xA3\x83a\x14JV[\x92P` \x8A\x01\x99PP`\x01\x81\x01\x90Pa\x14\x7FV[P\x82\x97P\x87\x95PPPPPP\x92\x91PPV[_` \x82\x01\x90P\x81\x81\x03_\x83\x01Ra\x14\xE1\x81\x84a\x14VV[\x90P\x92\x91PPV[_\x81\x15\x15\x90P\x91\x90PV[a\x14\xFD\x81a\x14\xE9V[\x82RPPV[_` \x82\x01\x90Pa\x15\x16_\x83\x01\x84a\x14\xF4V[\x92\x91PPV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\"`\x04R`$_\xFD[_`\x02\x82\x04\x90P`\x01\x82\x16\x80a\x15`W`\x7F\x82\x16\x91P[` \x82\x10\x81\x03a\x15sWa\x15ra\x15\x1CV[[P\x91\x90PV[_\x81\x90P\x91\x90PV[a\x15\x8B\x81a\x15yV[\x82RPPV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_a\x15\xB5\x82a\x15\x91V[a\x15\xBF\x81\x85a\x15\x9BV[\x93Pa\x15\xCF\x81\x85` \x86\x01a\x0FEV[a\x15\xD8\x81a\x0FmV[\x84\x01\x91PP\x92\x91PPV[_``\x82\x01\x90Pa\x15\xF6_\x83\x01\x86a\x15\x82V[\x81\x81\x03` \x83\x01Ra\x16\x08\x81\x85a\x15\xABV[\x90P\x81\x81\x03`@\x83\x01Ra\x16\x1C\x81\x84a\x15\xABV[\x90P\x94\x93PPPPV[a\x16/\x81a\x0E\x1AV[\x82RPPV[_`@\x82\x01\x90Pa\x16H_\x83\x01\x85a\x16&V[a\x16U` \x83\x01\x84a\x15\x82V[\x93\x92PPPV[_\x80\xFD[a\x16i\x81a\x15yV[\x81\x14a\x16sW_\x80\xFD[PV[_\x81Q\x90Pa\x16\x84\x81a\x16`V[\x92\x91PPV[_` \x82\x84\x03\x12\x15a\x16\x9FWa\x16\x9Ea\x16\\V[[_a\x16\xAC\x84\x82\x85\x01a\x16vV[\x91PP\x92\x91PPV\xFE`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[Pa+\x89\x80a\0\x1D_9_\xF3\xFE`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0{W_5`\xE0\x1C\x80cka\xD8\xE7\x11a\0YW\x80cka\xD8\xE7\x14a\0\xE9W\x80c\xED\xDF$<\x14a\x01\x19W\x80c\xF1\x18\x17\xB2\x14a\x015W\x80c\xFF\xA1\xADt\x14a\x01QWa\0{V[\x80c*Q\x046\x14a\0\x7FW\x80cAI<`\x14a\0\x9DW\x80cD\xF66\x92\x14a\0\xB9W[_\x80\xFD[a\0\x87a\x01oV[`@Qa\0\x94\x91\x90a\"=V[`@Q\x80\x91\x03\x90\xF3[a\0\xB7`\x04\x806\x03\x81\x01\x90a\0\xB2\x91\x90a\"\xF2V[a\x01\x98V[\0[a\0\xD3`\x04\x806\x03\x81\x01\x90a\0\xCE\x91\x90a#\xA4V[a\x032V[`@Qa\0\xE0\x91\x90a$~V[`@Q\x80\x91\x03\x90\xF3[a\x01\x03`\x04\x806\x03\x81\x01\x90a\0\xFE\x91\x90a$\x97V[a\x04\x91V[`@Qa\x01\x10\x91\x90a\"=V[`@Q\x80\x91\x03\x90\xF3[a\x013`\x04\x806\x03\x81\x01\x90a\x01.\x91\x90a%\x03V[a\x05\x0EV[\0[a\x01O`\x04\x806\x03\x81\x01\x90a\x01J\x91\x90a%dV[a\x07\xA8V[\0[a\x01Ya\rcV[`@Qa\x01f\x91\x90a&,V[`@Q\x80\x91\x03\x90\xF3[_\x7F\x11\xB6\xA0\x9Dc\xD2U\xADB^\xE3\xA7\xF6!\x1D^\xC6?\xBD\xE9\x80[@U\x1C16'[oN\xB4_\x1B\x90P\x90V[_\x82\x82_\x90`\x04\x92a\x01\xAC\x93\x92\x91\x90a&TV[\x90a\x01\xB7\x91\x90a&\xCFV[\x90P_a\x01\xC2a\x01oV[\x90P\x80{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x82{\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x19\x16\x14a\x02HW\x81\x81`@Q\x7F\x98\x80f\xA1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01a\x02?\x92\x91\x90a'<V[`@Q\x80\x91\x03\x90\xFD[_a\x02S\x87\x87a\x04\x91V[\x90Pa\x02]a!\x9CV[\x88_\x1C\x81_`\x02\x81\x10a\x02sWa\x02ra'cV[[` \x02\x01\x81\x81RPP\x81_\x1C\x81`\x01`\x02\x81\x10a\x02\x93Wa\x02\x92a'cV[[` \x02\x01\x81\x81RPP_\x86\x86`\x04\x90\x80\x92a\x02\xB0\x93\x92\x91\x90a&TV[\x81\x01\x90a\x02\xBD\x91\x90a(\xE0V[\x90P0s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16c\xED\xDF$<\x82\x84`@Q\x83c\xFF\xFF\xFF\xFF\x16`\xE0\x1B\x81R`\x04\x01a\x02\xFA\x92\x91\x90a*\nV[_`@Q\x80\x83\x03\x81\x86\x80;\x15\x80\x15a\x03\x10W_\x80\xFD[PZ\xFA\x15\x80\x15a\x03\"W=_\x80>=_\xFD[PPPPPPPPPPPPPPV[a\x03:a!\xBEV[a\x03s\x82_`\x08\x81\x10a\x03PWa\x03Oa'cV[[` \x02\x015\x83`\x01`\x08\x81\x10a\x03iWa\x03ha'cV[[` \x02\x015a\r\xA0V[\x81_`\x04\x81\x10a\x03\x86Wa\x03\x85a'cV[[` \x02\x01\x81\x81RPPa\x03\xFB\x82`\x03`\x08\x81\x10a\x03\xA6Wa\x03\xA5a'cV[[` \x02\x015\x83`\x02`\x08\x81\x10a\x03\xBFWa\x03\xBEa'cV[[` \x02\x015\x84`\x05`\x08\x81\x10a\x03\xD8Wa\x03\xD7a'cV[[` \x02\x015\x85`\x04`\x08\x81\x10a\x03\xF1Wa\x03\xF0a'cV[[` \x02\x015a\x0FNV[\x82`\x02`\x04\x81\x10a\x04\x0FWa\x04\x0Ea'cV[[` \x02\x01\x83`\x01`\x04\x81\x10a\x04'Wa\x04&a'cV[[` \x02\x01\x82\x81RP\x82\x81RPPPa\x04o\x82`\x06`\x08\x81\x10a\x04LWa\x04Ka'cV[[` \x02\x015\x83`\x07`\x08\x81\x10a\x04eWa\x04da'cV[[` \x02\x015a\r\xA0V[\x81`\x03`\x04\x81\x10a\x04\x83Wa\x04\x82a'cV[[` \x02\x01\x81\x81RPP\x91\x90PV[_\x7F\x1F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_\x1B`\x02\x84\x84`@Qa\x04\xC7\x92\x91\x90a*oV[` `@Q\x80\x83\x03\x81\x85Z\xFA\x15\x80\x15a\x04\xE2W=_\x80>=_\xFD[PPP`@Q=`\x1F\x19`\x1F\x82\x01\x16\x82\x01\x80`@RP\x81\x01\x90a\x05\x05\x91\x90a*\x9BV[\x16\x90P\x92\x91PPV[_\x80a\x05\x19\x83a\x15\x1AV[\x91P\x91P_`@Qa\x01\0\x86\x827\x7F&.\xAB\xE8\x15\x11\xAA\x8E04\xCB\xD7]B\xE7\x08\xAAN\xD8\x03\x03\xFB\x0EO\xB9\x0C\xD0\xFFn\x90\x92\x13a\x01\0\x82\x01R\x7F+e\xC9\xAE&\x05\xF3\xEFU@\xD3\xA6E\x03\xC8O\xE5\xE1\xD9\xECn\xB1\xBD:\x90k\xBC\x80\x83\x0E\x8ETa\x01 \x82\x01R\x7F\x1B\x02\x98QS\xA1\xB7y\xA4V\xC3\xC6[\xEES\xBDS\xEF\xCC\xEE\xC1\n\x7FS\xBE\x8F\xAA\x0B\xD6\xC8\x92\x0Ea\x01@\x82\x01R\x7F\x1F\x934\xFA%Va\x9B\x13\x0Ca\xD8>\xD5\\\x12\xE4P\xF8\xF5\xC5B\xA19\xC9rl\xD3\x10\xAE\x15Ga\x01`\x82\x01R\x7F-M\x9A\xA7\xE3\x02\xD9\xDFAt\x9DU\x07\x94\x9D\x05\xDB\xEA3\xFB\xB1ld;\"\xF5\x99\xA2\xBEm\xF2\xE2a\x01\x80\x82\x01R\x7F\x14\xBE\xDDP<7\xCE\xB0a\xD8\xEC` \x9F\xE3E\xCE\x89\x83\n\x19#\x03\x01\xF0v\xCA\xFF\0M\x19&a\x01\xA0\x82\x01R\x7F\tg\x03/\xCB\xF7v\xD1\xAF\xC9\x85\xF8\x88w\xF1\x82\xD3\x84\x80\xA6S\xF2\xDE\xCA\xA9yL\xBC;\xF3\x06\x0Ca\x01\xC0\x82\x01R\x7F\x0E\x18xG\xADLy\x83t\xD0\xD6s+\xF5\x01\x84}\xD6\x8B\xC0\xE0q$\x1E\x02\x13\xBC\x7F\xC1=\xB7\xABa\x01\xE0\x82\x01R~\x17R\xA1\0\xA7/\xDF\x1EZ]n\xA8A\xCC \xEC\x83\x8B\xCC\xFC\xF7\xBDU\x9Ey\xF1\xC9\xC7Y\xB6\xA0a\x02\0\x82\x01R\x7F\x19*\x8C\xC1<\xD9\xF7b\x87\x1F!\xE44Q\xC6\xCA\x9E\xEA\xB2\xCB)\x87\xC4\xE3f\xA1\x85\xC2]\xAC.\x7Fa\x02 \x82\x01R\x83a\x02@\x82\x01R\x82a\x02`\x82\x01R\x7F\x19\x8E\x93\x93\x92\rH:r`\xBF\xB71\xFB]%\xF1\xAAI35\xA9\xE7\x12\x97\xE4\x85\xB7\xAE\xF3\x12\xC2a\x02\x80\x82\x01R\x7F\x18\0\xDE\xEF\x12\x1F\x1EvBj\0f^\\DygC\"\xD4\xF7^\xDA\xDDF\xDE\xBD\\\xD9\x92\xF6\xEDa\x02\xA0\x82\x01R\x7F']\xC4\xA2\x88\xD1\xAF\xB3\xCB\xB1\xAC\t\x18u$\xC7\xDB69]\xF7\xBE;\x99\xE6s\xB1:\x07Ze\xECa\x02\xC0\x82\x01R\x7F\x1D\x9B\xEF\xCD\x05\xA52>m\xA4\xD45\xF3\xB6\x17\xCD\xB3\xAF\x83(\\-\xF7\x11\xEF9\xC0\x15q\x82\x7F\x9Da\x02\xE0\x82\x01R` \x81a\x03\0\x83`\x08Z\xFA\x91P\x80Q\x82\x16\x91PP\x80a\x07\xA1W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[PPPPPV[a\x07\xB0a!\xE0V[_\x80a\x07\xD2\x85_`\x04\x81\x10a\x07\xC8Wa\x07\xC7a'cV[[` \x02\x015a\x16\xECV[\x91P\x91P_\x80_\x80a\x08\x14\x89`\x02`\x04\x81\x10a\x07\xF1Wa\x07\xF0a'cV[[` \x02\x015\x8A`\x01`\x04\x81\x10a\x08\nWa\x08\ta'cV[[` \x02\x015a\x18!V[\x93P\x93P\x93P\x93P_\x80a\x08?\x8B`\x03`\x04\x81\x10a\x085Wa\x084a'cV[[` \x02\x015a\x16\xECV[\x91P\x91P_\x80a\x08N\x8Ca\x15\x1AV[\x91P\x91P\x89\x8B_`\x18\x81\x10a\x08fWa\x08ea'cV[[` \x02\x01\x81\x81RPP\x88\x8B`\x01`\x18\x81\x10a\x08\x84Wa\x08\x83a'cV[[` \x02\x01\x81\x81RPP\x86\x8B`\x02`\x18\x81\x10a\x08\xA2Wa\x08\xA1a'cV[[` \x02\x01\x81\x81RPP\x87\x8B`\x03`\x18\x81\x10a\x08\xC0Wa\x08\xBFa'cV[[` \x02\x01\x81\x81RPP\x84\x8B`\x04`\x18\x81\x10a\x08\xDEWa\x08\xDDa'cV[[` \x02\x01\x81\x81RPP\x85\x8B`\x05`\x18\x81\x10a\x08\xFCWa\x08\xFBa'cV[[` \x02\x01\x81\x81RPP\x83\x8B`\x06`\x18\x81\x10a\t\x1AWa\t\x19a'cV[[` \x02\x01\x81\x81RPP\x82\x8B`\x07`\x18\x81\x10a\t8Wa\t7a'cV[[` \x02\x01\x81\x81RPP\x7F&.\xAB\xE8\x15\x11\xAA\x8E04\xCB\xD7]B\xE7\x08\xAAN\xD8\x03\x03\xFB\x0EO\xB9\x0C\xD0\xFFn\x90\x92\x13\x8B`\x08`\x18\x81\x10a\tvWa\tua'cV[[` \x02\x01\x81\x81RPP\x7F+e\xC9\xAE&\x05\xF3\xEFU@\xD3\xA6E\x03\xC8O\xE5\xE1\xD9\xECn\xB1\xBD:\x90k\xBC\x80\x83\x0E\x8ET\x8B`\t`\x18\x81\x10a\t\xB4Wa\t\xB3a'cV[[` \x02\x01\x81\x81RPP\x7F\x1B\x02\x98QS\xA1\xB7y\xA4V\xC3\xC6[\xEES\xBDS\xEF\xCC\xEE\xC1\n\x7FS\xBE\x8F\xAA\x0B\xD6\xC8\x92\x0E\x8B`\n`\x18\x81\x10a\t\xF2Wa\t\xF1a'cV[[` \x02\x01\x81\x81RPP\x7F\x1F\x934\xFA%Va\x9B\x13\x0Ca\xD8>\xD5\\\x12\xE4P\xF8\xF5\xC5B\xA19\xC9rl\xD3\x10\xAE\x15G\x8B`\x0B`\x18\x81\x10a\n0Wa\n/a'cV[[` \x02\x01\x81\x81RPP\x7F-M\x9A\xA7\xE3\x02\xD9\xDFAt\x9DU\x07\x94\x9D\x05\xDB\xEA3\xFB\xB1ld;\"\xF5\x99\xA2\xBEm\xF2\xE2\x8B`\x0C`\x18\x81\x10a\nnWa\nma'cV[[` \x02\x01\x81\x81RPP\x7F\x14\xBE\xDDP<7\xCE\xB0a\xD8\xEC` \x9F\xE3E\xCE\x89\x83\n\x19#\x03\x01\xF0v\xCA\xFF\0M\x19&\x8B`\r`\x18\x81\x10a\n\xACWa\n\xABa'cV[[` \x02\x01\x81\x81RPP\x7F\tg\x03/\xCB\xF7v\xD1\xAF\xC9\x85\xF8\x88w\xF1\x82\xD3\x84\x80\xA6S\xF2\xDE\xCA\xA9yL\xBC;\xF3\x06\x0C\x8B`\x0E`\x18\x81\x10a\n\xEAWa\n\xE9a'cV[[` \x02\x01\x81\x81RPP\x7F\x0E\x18xG\xADLy\x83t\xD0\xD6s+\xF5\x01\x84}\xD6\x8B\xC0\xE0q$\x1E\x02\x13\xBC\x7F\xC1=\xB7\xAB\x8B`\x0F`\x18\x81\x10a\x0B(Wa\x0B'a'cV[[` \x02\x01\x81\x81RPP~\x17R\xA1\0\xA7/\xDF\x1EZ]n\xA8A\xCC \xEC\x83\x8B\xCC\xFC\xF7\xBDU\x9Ey\xF1\xC9\xC7Y\xB6\xA0\x8B`\x10`\x18\x81\x10a\x0BeWa\x0Bda'cV[[` \x02\x01\x81\x81RPP\x7F\x19*\x8C\xC1<\xD9\xF7b\x87\x1F!\xE44Q\xC6\xCA\x9E\xEA\xB2\xCB)\x87\xC4\xE3f\xA1\x85\xC2]\xAC.\x7F\x8B`\x11`\x18\x81\x10a\x0B\xA3Wa\x0B\xA2a'cV[[` \x02\x01\x81\x81RPP\x81\x8B`\x12`\x18\x81\x10a\x0B\xC1Wa\x0B\xC0a'cV[[` \x02\x01\x81\x81RPP\x80\x8B`\x13`\x18\x81\x10a\x0B\xDFWa\x0B\xDEa'cV[[` \x02\x01\x81\x81RPP\x7F\x19\x8E\x93\x93\x92\rH:r`\xBF\xB71\xFB]%\xF1\xAAI35\xA9\xE7\x12\x97\xE4\x85\xB7\xAE\xF3\x12\xC2\x8B`\x14`\x18\x81\x10a\x0C\x1DWa\x0C\x1Ca'cV[[` \x02\x01\x81\x81RPP\x7F\x18\0\xDE\xEF\x12\x1F\x1EvBj\0f^\\DygC\"\xD4\xF7^\xDA\xDDF\xDE\xBD\\\xD9\x92\xF6\xED\x8B`\x15`\x18\x81\x10a\x0C[Wa\x0CZa'cV[[` \x02\x01\x81\x81RPP\x7F']\xC4\xA2\x88\xD1\xAF\xB3\xCB\xB1\xAC\t\x18u$\xC7\xDB69]\xF7\xBE;\x99\xE6s\xB1:\x07Ze\xEC\x8B`\x16`\x18\x81\x10a\x0C\x99Wa\x0C\x98a'cV[[` \x02\x01\x81\x81RPP\x7F\x1D\x9B\xEF\xCD\x05\xA52>m\xA4\xD45\xF3\xB6\x17\xCD\xB3\xAF\x83(\\-\xF7\x11\xEF9\xC0\x15q\x82\x7F\x9D\x8B`\x17`\x18\x81\x10a\x0C\xD7Wa\x0C\xD6a'cV[[` \x02\x01\x81\x81RPP_a\x0C\xE9a\"\x03V[` \x81a\x03\0\x8F`\x08Z\xFA\x91P\x81\x15\x80a\r\x1BWP`\x01\x81_`\x01\x81\x10a\r\x13Wa\r\x12a'cV[[` \x02\x01Q\x14\x15[\x15a\rRW`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[PPPPPPPPPPPPPPPV[```@Q\x80`@\x01`@R\x80`\x0B\x81R` \x01\x7Fv4.0.0-rc.3\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81RP\x90P\x90V[_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x83\x10\x15\x80a\r\xF0WP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x82\x10\x15[\x15a\x0E'W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[_\x83\x14\x80\x15a\x0E5WP_\x82\x14[\x15a\x0EBW_\x90Pa\x0FHV[_a\x0E\xE0\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x0EuWa\x0Eta*\xC6V[[`\x03\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x0E\xA6Wa\x0E\xA5a*\xC6V[[\x87\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x0E\xD6Wa\x0E\xD5a*\xC6V[[\x89\x8A\t\t\x08a\x1B\xFCV[\x90P\x80\x83\x03a\x0E\xF8W_`\x01\x85\x90\x1B\x17\x91PPa\x0FHV[a\x0F\x01\x81a\x1C\x98V[\x83\x03a\x0F\x16W`\x01\x80\x85\x90\x1B\x17\x91PPa\x0FHV[`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[\x92\x91PPV[_\x80\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x86\x10\x15\x80a\x0F\x9FWP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x85\x10\x15[\x80a\x0F\xCAWP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x84\x10\x15[\x80a\x0F\xF5WP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x83\x10\x15[\x15a\x10,W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[_\x83\x85\x87\x89\x17\x17\x17\x03a\x10DW_\x80\x91P\x91Pa\x15\x11V[_\x80_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x10vWa\x10ua*\xC6V[[`\x03\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDGa\x10\xA3\x91\x90a+ V[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x10\xD2Wa\x10\xD1a*\xC6V[[\x8A\x8C\t\t\x90P_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x11\x08Wa\x11\x07a*\xC6V[[\x8A\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x118Wa\x117a*\xC6V[[\x8C\x8D\t\t\x90P_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x11nWa\x11ma*\xC6V[[\x8A\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x11\x9EWa\x11\x9Da*\xC6V[[\x8C\x8D\t\t\x90P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x11\xD3Wa\x11\xD2a*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x12\x02Wa\x12\x01a*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x121Wa\x120a*\xC6V[[\x8C\x86\t\x84\x08\x7F+\x14\x9D@\xCE\xB8\xAA\xAE\x81\xBE\x18\x99\x1B\xE0j\xC3\xB5\xB4\xC5\xE5Y\xDB\xEF\xA32g\xE6\xDC$\xA18\xE5\x08\x94Pa\x13\x16\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x12\x8CWa\x12\x8Ba*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x12\xBBWa\x12\xBAa*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x12\xEAWa\x12\xE9a*\xC6V[[\x8E\x87\t\x84\x08\x7F/\xCD:\xC2\xA6@\xA1T\xEB#\x96\x08\x92\xA8Zh\xF01\xCA\x0C\x83D\xB2:W}\xCF\x10R\xB9\xE7u\x08a\x1C\x98V[\x93PPPP_\x80a\x13\xB9\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x13OWa\x13Na*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x13~Wa\x13}a*\xC6V[[\x85\x86\t\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x13\xB0Wa\x13\xAFa*\xC6V[[\x87\x88\t\x08a\x1B\xFCV[\x90Pa\x14F\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x13\xEDWa\x13\xECa*\xC6V[[\x7F\x182'9p\x98\xD0\x14\xDC(\"\xDB@\xC0\xAC.\xCB\xC0\xB5H\xB48\xE5F\x9E\x10F\x0Bl>~\xA4\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x14=Wa\x14<a*\xC6V[[\x84\x88\x08\ta\x1D\x03V[\x15\x91PPa\x14U\x83\x83\x83a\x1DmV[\x80\x93P\x81\x94PPP\x82\x87\x14\x80\x15a\x14kWP\x81\x86\x14[\x15a\x14\x93W_\x81a\x14|W_a\x14\x7FV[`\x02[`\xFF\x16`\x02\x8B\x90\x1B\x17\x17\x94P\x87\x93Pa\x15\rV[a\x14\x9C\x83a\x1C\x98V[\x87\x14\x80\x15a\x14\xB1WPa\x14\xAE\x82a\x1C\x98V[\x86\x14[\x15a\x14\xDAW`\x01\x81a\x14\xC3W_a\x14\xC6V[`\x02[`\xFF\x16`\x02\x8B\x90\x1B\x17\x17\x94P\x87\x93Pa\x15\x0CV[`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[[PPP[\x94P\x94\x92PPPV[_\x80_`\x01\x90P`@Q`@\x81\x01_\x7F\x0E\xD6\xE0\xC1?52b\xAE-\xBB\xE4\x9C\xE6\xA0\xB6uv\xD3\x8A\xAFYXVK\xE7d\x83V\x83\x0E\xF7\x83R\x7F( \rT\x015e\xDC\xA1\x96\x84\x1D\n<\xD7\xA5\xF6u1\xF9t\x87r\xF5S\xE1\xE9\x84_l\tI` \x84\x01R\x7F\x1Ba\x1B\x8Fio(\xFF\xB6%\x0C\x7F\xFA\xC6n\xFB\xD68\xD9\x7F\rl\x84<#i\x1C:\xF52\xC9\xE3\x82R\x7F$\x8C\x103\xBDs\xC4\xFF\x82\rH\n7\xB3\x9C\xA6\xEF\x17\x85C\xC5\xC9\x19\x04Y\xE8\xCF\xE3lH\xE5\x1A` \x83\x01R\x865\x90P\x80`@\x83\x01R\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X](3\xE8Hy\xB9p\x91C\xE1\xF5\x93\xF0\0\0\x01\x81\x10\x84\x16\x93P`@\x82``\x84`\x07Z\xFA\x84\x16\x93P`@\x83`\x80\x85`\x06Z\xFA\x84\x16\x93P\x7F)t\x08k\xDEl\x91&{ \x117\xCF\xE6\xEE\x8C\xD5\x0F\xF0\xA3\xDA\x86\x1E\x80\x85\x03\xE7\xDFM\xA8{\x8D\x82R\x7F\x04\n\xDD\xD3Y\x13\xF1\x1E\xA6\x84o\rX1&\xBA\xB9\xE8\xF8\xAEiy}L,\x7F\x19[\xE0xTq` \x83\x01R` \x87\x015\x90P\x80`@\x83\x01R\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X](3\xE8Hy\xB9p\x91C\xE1\xF5\x93\xF0\0\0\x01\x81\x10\x84\x16\x93P`@\x82``\x84`\x07Z\xFA\x84\x16\x93P`@\x83`\x80\x85`\x06Z\xFA\x84\x16\x93P\x82Q\x95P` \x83\x01Q\x94PPPP\x80a\x16\xE6W`@Q\x7F\xA5O\x8E'\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[P\x91P\x91V[_\x80_\x83\x03a\x17\0W_\x80\x91P\x91Pa\x18\x1CV[_`\x01\x80\x85\x16\x14\x90P`\x01\x84\x90\x1C\x92P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x83\x10a\x17iW`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[a\x18\x06\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x17\x9BWa\x17\x9Aa*\xC6V[[`\x03\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x17\xCCWa\x17\xCBa*\xC6V[[\x86\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x17\xFCWa\x17\xFBa*\xC6V[[\x88\x89\t\t\x08a\x1B\xFCV[\x91P\x80\x15a\x18\x1AWa\x18\x17\x82a\x1C\x98V[\x91P[P[\x91P\x91V[_\x80_\x80_\x86\x14\x80\x15a\x183WP_\x85\x14[\x15a\x18IW_\x80_\x80\x93P\x93P\x93P\x93Pa\x1B\xF3V[_`\x01\x80\x88\x16\x14\x90P_`\x02\x80\x89\x16\x14\x90P`\x02\x88\x90\x1C\x95P\x86\x94P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x86\x10\x15\x80a\x18\xB4WP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x85\x10\x15[\x15a\x18\xEBW`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x19\x1BWa\x19\x1Aa*\xC6V[[`\x03\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDGa\x19H\x91\x90a+ V[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x19wWa\x19va*\xC6V[[\x88\x8A\t\t\x90P_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x19\xADWa\x19\xACa*\xC6V[[\x88\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x19\xDDWa\x19\xDCa*\xC6V[[\x8A\x8B\t\t\x90P_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1A\x13Wa\x1A\x12a*\xC6V[[\x88\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1ACWa\x1ABa*\xC6V[[\x8A\x8B\t\t\x90P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1AxWa\x1Awa*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1A\xA7Wa\x1A\xA6a*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1A\xD6Wa\x1A\xD5a*\xC6V[[\x8A\x86\t\x84\x08\x7F+\x14\x9D@\xCE\xB8\xAA\xAE\x81\xBE\x18\x99\x1B\xE0j\xC3\xB5\xB4\xC5\xE5Y\xDB\xEF\xA32g\xE6\xDC$\xA18\xE5\x08\x96Pa\x1B\xBB\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1B1Wa\x1B0a*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1B`Wa\x1B_a*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1B\x8FWa\x1B\x8Ea*\xC6V[[\x8C\x87\t\x84\x08\x7F/\xCD:\xC2\xA6@\xA1T\xEB#\x96\x08\x92\xA8Zh\xF01\xCA\x0C\x83D\xB2:W}\xCF\x10R\xB9\xE7u\x08a\x1C\x98V[\x95Pa\x1B\xC8\x87\x87\x86a\x1DmV[\x80\x97P\x81\x98PPP\x84\x15a\x1B\xEDWa\x1B\xDF\x87a\x1C\x98V[\x96Pa\x1B\xEA\x86a\x1C\x98V[\x95P[PPPPP[\x92\x95\x91\x94P\x92PV[_a\x1C'\x82\x7F\x0C\x19\x13\x9C\xB8Lh\nn\x14\x11m\xA0`V\x17e\xE0Z\xA4Z\x1Cr\xA3O\x08#\x05\xB6\x1F?Ra hV[\x90P\x81\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1CYWa\x1CXa*\xC6V[[\x82\x83\t\x14a\x1C\x93W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[\x91\x90PV[_\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80\x83\x81a\x1C\xCAWa\x1C\xC9a*\xC6V[[\x06\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x03\x81a\x1C\xFBWa\x1C\xFAa*\xC6V[[\x06\x90P\x91\x90PV[_\x80a\x1D/\x83\x7F\x0C\x19\x13\x9C\xB8Lh\nn\x14\x11m\xA0`V\x17e\xE0Z\xA4Z\x1Cr\xA3O\x08#\x05\xB6\x1F?Ra hV[\x90P\x82\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1DaWa\x1D`a*\xC6V[[\x82\x83\t\x14\x91PP\x91\x90PV[_\x80_a\x1E\x0C\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1D\xA2Wa\x1D\xA1a*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1D\xD1Wa\x1D\xD0a*\xC6V[[\x87\x88\t\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1E\x03Wa\x1E\x02a*\xC6V[[\x89\x8A\t\x08a\x1B\xFCV[\x90P\x83\x15a\x1E Wa\x1E\x1D\x81a\x1C\x98V[\x90P[a\x1E\xAB\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1ERWa\x1EQa*\xC6V[[\x7F\x182'9p\x98\xD0\x14\xDC(\"\xDB@\xC0\xAC.\xCB\xC0\xB5H\xB48\xE5F\x9E\x10F\x0Bl>~\xA4\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1E\xA2Wa\x1E\xA1a*\xC6V[[\x84\x8A\x08\ta\x1B\xFCV[\x92P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1E\xDCWa\x1E\xDBa*\xC6V[[a\x1F\x17\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1F\x0EWa\x1F\ra*\xC6V[[`\x02\x86\ta \xFFV[\x86\t\x91P\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1FJWa\x1FIa*\xC6V[[a\x1F\x84\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1F|Wa\x1F{a*\xC6V[[\x84\x85\ta\x1C\x98V[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1F\xB3Wa\x1F\xB2a*\xC6V[[\x85\x86\t\x08\x86\x14\x15\x80a (WP\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a\x1F\xEFWa\x1F\xEEa*\xC6V[[\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a \x1EWa \x1Da*\xC6V[[\x83\x85\t`\x02\t\x85\x14\x15[\x15a _W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[P\x93P\x93\x91PPV[_\x80`@Q` \x81R` \x80\x82\x01R` `@\x82\x01R\x84``\x82\x01R\x83`\x80\x82\x01R\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG`\xA0\x82\x01R` \x81`\xC0\x83`\x05Z\xFA\x91P\x80Q\x92PP\x80a \xF8W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[P\x92\x91PPV[_a!*\x82\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDEa hV[\x90P`\x01\x7F0dNr\xE11\xA0)\xB8PE\xB6\x81\x81X]\x97\x81j\x91hq\xCA\x8D< \x8C\x16\xD8|\xFDG\x80a!]Wa!\\a*\xC6V[[\x82\x84\t\x14a!\x97W`@Q\x7F\x7F\xCD\xD1\xF4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R`\x04\x01`@Q\x80\x91\x03\x90\xFD[\x91\x90PV[`@Q\x80`@\x01`@R\x80`\x02\x90` \x82\x02\x806\x837\x80\x82\x01\x91PP\x90PP\x90V[`@Q\x80`\x80\x01`@R\x80`\x04\x90` \x82\x02\x806\x837\x80\x82\x01\x91PP\x90PP\x90V[`@Q\x80a\x03\0\x01`@R\x80`\x18\x90` \x82\x02\x806\x837\x80\x82\x01\x91PP\x90PP\x90V[`@Q\x80` \x01`@R\x80`\x01\x90` \x82\x02\x806\x837\x80\x82\x01\x91PP\x90PP\x90V[_\x81\x90P\x91\x90PV[a\"7\x81a\"%V[\x82RPPV[_` \x82\x01\x90Pa\"P_\x83\x01\x84a\".V[\x92\x91PPV[_`@Q\x90P\x90V[_\x80\xFD[_\x80\xFD[a\"p\x81a\"%V[\x81\x14a\"zW_\x80\xFD[PV[_\x815\x90Pa\"\x8B\x81a\"gV[\x92\x91PPV[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\x83`\x1F\x84\x01\x12a\"\xB2Wa\"\xB1a\"\x91V[[\x825\x90Pg\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a\"\xCFWa\"\xCEa\"\x95V[[` \x83\x01\x91P\x83`\x01\x82\x02\x83\x01\x11\x15a\"\xEBWa\"\xEAa\"\x99V[[\x92P\x92\x90PV[_\x80_\x80_``\x86\x88\x03\x12\x15a#\x0BWa#\na\"_V[[_a#\x18\x88\x82\x89\x01a\"}V[\x95PP` \x86\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a#9Wa#8a\"cV[[a#E\x88\x82\x89\x01a\"\x9DV[\x94P\x94PP`@\x86\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a#hWa#ga\"cV[[a#t\x88\x82\x89\x01a\"\x9DV[\x92P\x92PP\x92\x95P\x92\x95\x90\x93PV[_\x81\x90P\x82` `\x08\x02\x82\x01\x11\x15a#\x9EWa#\x9Da\"\x99V[[\x92\x91PPV[_a\x01\0\x82\x84\x03\x12\x15a#\xBAWa#\xB9a\"_V[[_a#\xC7\x84\x82\x85\x01a#\x83V[\x91PP\x92\x91PPV[_`\x04\x90P\x91\x90PV[_\x81\x90P\x92\x91PPV[_\x81\x90P\x91\x90PV[_\x81\x90P\x91\x90PV[a#\xFF\x81a#\xEDV[\x82RPPV[_a$\x10\x83\x83a#\xF6V[` \x83\x01\x90P\x92\x91PPV[_` \x82\x01\x90P\x91\x90PV[a$1\x81a#\xD0V[a$;\x81\x84a#\xDAV[\x92Pa$F\x82a#\xE4V[\x80_[\x83\x81\x10\x15a$vW\x81Qa$]\x87\x82a$\x05V[\x96Pa$h\x83a$\x1CV[\x92PP`\x01\x81\x01\x90Pa$IV[PPPPPPV[_`\x80\x82\x01\x90Pa$\x91_\x83\x01\x84a$(V[\x92\x91PPV[_\x80` \x83\x85\x03\x12\x15a$\xADWa$\xACa\"_V[[_\x83\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11\x15a$\xCAWa$\xC9a\"cV[[a$\xD6\x85\x82\x86\x01a\"\x9DV[\x92P\x92PP\x92P\x92\x90PV[_\x81\x90P\x82` `\x02\x02\x82\x01\x11\x15a$\xFDWa$\xFCa\"\x99V[[\x92\x91PPV[_\x80a\x01@\x83\x85\x03\x12\x15a%\x1AWa%\x19a\"_V[[_a%'\x85\x82\x86\x01a#\x83V[\x92PPa\x01\0a%9\x85\x82\x86\x01a$\xE2V[\x91PP\x92P\x92\x90PV[_\x81\x90P\x82` `\x04\x02\x82\x01\x11\x15a%^Wa%]a\"\x99V[[\x92\x91PPV[_\x80`\xC0\x83\x85\x03\x12\x15a%zWa%ya\"_V[[_a%\x87\x85\x82\x86\x01a%CV[\x92PP`\x80a%\x98\x85\x82\x86\x01a$\xE2V[\x91PP\x92P\x92\x90PV[_\x81Q\x90P\x91\x90PV[_\x82\x82R` \x82\x01\x90P\x92\x91PPV[_[\x83\x81\x10\x15a%\xD9W\x80\x82\x01Q\x81\x84\x01R` \x81\x01\x90Pa%\xBEV[_\x84\x84\x01RPPPPV[_`\x1F\x19`\x1F\x83\x01\x16\x90P\x91\x90PV[_a%\xFE\x82a%\xA2V[a&\x08\x81\x85a%\xACV[\x93Pa&\x18\x81\x85` \x86\x01a%\xBCV[a&!\x81a%\xE4V[\x84\x01\x91PP\x92\x91PPV[_` \x82\x01\x90P\x81\x81\x03_\x83\x01Ra&D\x81\x84a%\xF4V[\x90P\x92\x91PPV[_\x80\xFD[_\x80\xFD[_\x80\x85\x85\x11\x15a&gWa&fa&LV[[\x83\x86\x11\x15a&xWa&wa&PV[[`\x01\x85\x02\x83\x01\x91P\x84\x86\x03\x90P\x94P\x94\x92PPPV[_\x82\x90P\x92\x91PPV[_\x7F\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82\x16\x90P\x91\x90PV[_\x82\x82\x1B\x90P\x92\x91PPV[_a&\xDA\x83\x83a&\x8EV[\x82a&\xE5\x815a&\x98V[\x92P`\x04\x82\x10\x15a'%Wa' \x7F\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x83`\x04\x03`\x08\x02a&\xC3V[\x83\x16\x92P[PP\x92\x91PPV[a'6\x81a&\x98V[\x82RPPV[_`@\x82\x01\x90Pa'O_\x83\x01\x85a'-V[a'\\` \x83\x01\x84a'-V[\x93\x92PPPV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[a'\xC6\x82a%\xE4V[\x81\x01\x81\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17\x15a'\xE5Wa'\xE4a'\x90V[[\x80`@RPPPV[_a'\xF7a\"VV[\x90Pa(\x03\x82\x82a'\xBDV[\x91\x90PV[_g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x15a(\"Wa(!a'\x90V[[` \x82\x02\x90P\x91\x90PV[a(6\x81a#\xEDV[\x81\x14a(@W_\x80\xFD[PV[_\x815\x90Pa(Q\x81a(-V[\x92\x91PPV[_a(ia(d\x84a(\x08V[a'\xEEV[\x90P\x80` \x84\x02\x83\x01\x85\x81\x11\x15a(\x83Wa(\x82a\"\x99V[[\x83[\x81\x81\x10\x15a(\xACW\x80a(\x98\x88\x82a(CV[\x84R` \x84\x01\x93PP` \x81\x01\x90Pa(\x85V[PPP\x93\x92PPPV[_\x82`\x1F\x83\x01\x12a(\xCAWa(\xC9a\"\x91V[[`\x08a(\xD7\x84\x82\x85a(WV[\x91PP\x92\x91PPV[_a\x01\0\x82\x84\x03\x12\x15a(\xF6Wa(\xF5a\"_V[[_a)\x03\x84\x82\x85\x01a(\xB6V[\x91PP\x92\x91PPV[_`\x08\x90P\x91\x90PV[_\x81\x90P\x92\x91PPV[_\x81\x90P\x91\x90PV[_` \x82\x01\x90P\x91\x90PV[a)>\x81a)\x0CV[a)H\x81\x84a)\x16V[\x92Pa)S\x82a) V[\x80_[\x83\x81\x10\x15a)\x83W\x81Qa)j\x87\x82a$\x05V[\x96Pa)u\x83a))V[\x92PP`\x01\x81\x01\x90Pa)VV[PPPPPPV[_`\x02\x90P\x91\x90PV[_\x81\x90P\x92\x91PPV[_\x81\x90P\x91\x90PV[_` \x82\x01\x90P\x91\x90PV[a)\xBD\x81a)\x8BV[a)\xC7\x81\x84a)\x95V[\x92Pa)\xD2\x82a)\x9FV[\x80_[\x83\x81\x10\x15a*\x02W\x81Qa)\xE9\x87\x82a$\x05V[\x96Pa)\xF4\x83a)\xA8V[\x92PP`\x01\x81\x01\x90Pa)\xD5V[PPPPPPV[_a\x01@\x82\x01\x90Pa*\x1E_\x83\x01\x85a)5V[a*,a\x01\0\x83\x01\x84a)\xB4V[\x93\x92PPPV[_\x81\x90P\x92\x91PPV[\x82\x81\x837_\x83\x83\x01RPPPV[_a*V\x83\x85a*3V[\x93Pa*c\x83\x85\x84a*=V[\x82\x84\x01\x90P\x93\x92PPPV[_a*{\x82\x84\x86a*KV[\x91P\x81\x90P\x93\x92PPPV[_\x81Q\x90Pa*\x95\x81a\"gV[\x92\x91PPV[_` \x82\x84\x03\x12\x15a*\xB0Wa*\xAFa\"_V[[_a*\xBD\x84\x82\x85\x01a*\x87V[\x91PP\x92\x91PPV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x12`\x04R`$_\xFD[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[_a+*\x82a#\xEDV[\x91Pa+5\x83a#\xEDV[\x92P\x82\x82\x03\x90P\x81\x81\x11\x15a+MWa+La*\xF3V[[\x92\x91PPV\xFE\xA2dipfsX\"\x12 !\x8A\xC2u\xED\xA6z\xCF\xEC}\x0B\xAD:\x8A@\x8B\xCE\x16U\xAB|\x87\xA6\x1Cc\xBBt\xDA,\x07\xAAodsolcC\0\x08\x14\x003\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x14\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x1Am\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0*\xC2\x11\xB6\xA0\x9D\x15\xC0\xA8\xF6\xB5o\x82&&.\xCC\xB0\xD7\x8A\xB7\x94`\x01v**\x91\x17\xB0\xCEf&\xEE\x0F\x153\x8A\x16C\x91\xB8\xE4\xAFp\xB9\xAD_\x80\xDFr\xA2\xFDB\x03\x8A\xFCf\x19\x0E\xDD\x82\xBF\x1F\ru,\xE2*\xB2\x08\xF5\xDEz\x1Cs\xD9\x7F\x82\xE9\x89\xAD\xD9\x97\xEC\xA2\xE9Z\xF1qj]\x9C\x03\xCB\xCE\xC2\xBBGz\xA0m\0\xB7\xDE\x11\xD8F_D\xFC\x10s\xD4\x9A(\t\xA5}1\xADT:6\x02\xBE5^\xA0Z\xED\xF8\x94\xAA\x089\xAD\x01\x13G\x8B\xF8J%\xFA\xFF%0j\x84\x18\\ \xD12\x07r\xE4v\x9D\x9982bo\x08\x1EC-`\xD8\xF4\xCBo\x82\xF8\x83Xr\xAA\x0C1\x83\xFF\xE0\x9Fg\xD3e\x95\x17\"\xC1\xA3\xDE\xBDj\xE9\x0C1\x023\x95\xFE\x16\xB2\x9C:\x01RDG\xDE\x9E\"\xAAg\x0Cj|\xD8\x80(\x1B\xA1Ld*`\x1B\x050pl\xAFJ\xF3dO\xF2\nxZ\xC0\xE4\x992\x1F\x08\xCF\xC9l\xEEH\xB6K\xFA\x08\x92^\xC2|\xA2dipfsX\"\x12 N\xA2g6\xB5A\xE8o\x85s\x82\xB8\x99U\xE9<\xFE\xBBx\xD1\x1F\xB2\xEF\x1D\xAEEq\x03\x03\x84\xB7\x02dsolcC\0\x08\x14\x003",
     );
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log(string)` and selector `0x41304facd9323d75b11bcdd609cb38effffdb05710f7caf0e9b16c6d9d709f50`.
 ```solidity
 event log(string);
@@ -1507,38 +1511,9 @@ event log(string);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log(string)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                65u8,
-                48u8,
-                79u8,
-                172u8,
-                217u8,
-                50u8,
-                61u8,
-                117u8,
-                177u8,
-                27u8,
-                205u8,
-                214u8,
-                9u8,
-                203u8,
-                56u8,
-                239u8,
-                255u8,
-                253u8,
-                176u8,
-                87u8,
-                16u8,
-                247u8,
-                202u8,
-                240u8,
-                233u8,
-                177u8,
-                108u8,
-                109u8,
-                157u8,
-                112u8,
-                159u8,
-                80u8,
+                65u8, 48u8, 79u8, 172u8, 217u8, 50u8, 61u8, 117u8, 177u8, 27u8, 205u8,
+                214u8, 9u8, 203u8, 56u8, 239u8, 255u8, 253u8, 176u8, 87u8, 16u8, 247u8,
+                202u8, 240u8, 233u8, 177u8, 108u8, 109u8, 157u8, 112u8, 159u8, 80u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1607,6 +1582,8 @@ event log(string);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_address(address)` and selector `0x7ae74c527414ae135fd97047b12921a5ec3911b804197855d67e25c7b75ee6f3`.
 ```solidity
 event log_address(address);
@@ -1639,38 +1616,9 @@ event log_address(address);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_address(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                122u8,
-                231u8,
-                76u8,
-                82u8,
-                116u8,
-                20u8,
-                174u8,
-                19u8,
-                95u8,
-                217u8,
-                112u8,
-                71u8,
-                177u8,
-                41u8,
-                33u8,
-                165u8,
-                236u8,
-                57u8,
-                17u8,
-                184u8,
-                4u8,
-                25u8,
-                120u8,
-                85u8,
-                214u8,
-                126u8,
-                37u8,
-                199u8,
-                183u8,
-                94u8,
-                230u8,
-                243u8,
+                122u8, 231u8, 76u8, 82u8, 116u8, 20u8, 174u8, 19u8, 95u8, 217u8, 112u8,
+                71u8, 177u8, 41u8, 33u8, 165u8, 236u8, 57u8, 17u8, 184u8, 4u8, 25u8,
+                120u8, 85u8, 214u8, 126u8, 37u8, 199u8, 183u8, 94u8, 230u8, 243u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1739,6 +1687,8 @@ event log_address(address);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_array(uint256[])` and selector `0xfb102865d50addddf69da9b5aa1bced66c80cf869a5c8d0471a467e18ce9cab1`.
 ```solidity
 event log_array(uint256[] val);
@@ -1775,38 +1725,9 @@ event log_array(uint256[] val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_array(uint256[])";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                251u8,
-                16u8,
-                40u8,
-                101u8,
-                213u8,
-                10u8,
-                221u8,
-                221u8,
-                246u8,
-                157u8,
-                169u8,
-                181u8,
-                170u8,
-                27u8,
-                206u8,
-                214u8,
-                108u8,
-                128u8,
-                207u8,
-                134u8,
-                154u8,
-                92u8,
-                141u8,
-                4u8,
-                113u8,
-                164u8,
-                103u8,
-                225u8,
-                140u8,
-                233u8,
-                202u8,
-                177u8,
+                251u8, 16u8, 40u8, 101u8, 213u8, 10u8, 221u8, 221u8, 246u8, 157u8, 169u8,
+                181u8, 170u8, 27u8, 206u8, 214u8, 108u8, 128u8, 207u8, 134u8, 154u8,
+                92u8, 141u8, 4u8, 113u8, 164u8, 103u8, 225u8, 140u8, 233u8, 202u8, 177u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1875,6 +1796,8 @@ event log_array(uint256[] val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_array(int256[])` and selector `0x890a82679b470f2bd82816ed9b161f97d8b967f37fa3647c21d5bf39749e2dd5`.
 ```solidity
 event log_array(int256[] val);
@@ -1911,38 +1834,9 @@ event log_array(int256[] val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_array(int256[])";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                137u8,
-                10u8,
-                130u8,
-                103u8,
-                155u8,
-                71u8,
-                15u8,
-                43u8,
-                216u8,
-                40u8,
-                22u8,
-                237u8,
-                155u8,
-                22u8,
-                31u8,
-                151u8,
-                216u8,
-                185u8,
-                103u8,
-                243u8,
-                127u8,
-                163u8,
-                100u8,
-                124u8,
-                33u8,
-                213u8,
-                191u8,
-                57u8,
-                116u8,
-                158u8,
-                45u8,
-                213u8,
+                137u8, 10u8, 130u8, 103u8, 155u8, 71u8, 15u8, 43u8, 216u8, 40u8, 22u8,
+                237u8, 155u8, 22u8, 31u8, 151u8, 216u8, 185u8, 103u8, 243u8, 127u8,
+                163u8, 100u8, 124u8, 33u8, 213u8, 191u8, 57u8, 116u8, 158u8, 45u8, 213u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2011,6 +1905,8 @@ event log_array(int256[] val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_array(address[])` and selector `0x40e1840f5769073d61bd01372d9b75baa9842d5629a0c99ff103be1178a8e9e2`.
 ```solidity
 event log_array(address[] val);
@@ -2045,38 +1941,9 @@ event log_array(address[] val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_array(address[])";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                64u8,
-                225u8,
-                132u8,
-                15u8,
-                87u8,
-                105u8,
-                7u8,
-                61u8,
-                97u8,
-                189u8,
-                1u8,
-                55u8,
-                45u8,
-                155u8,
-                117u8,
-                186u8,
-                169u8,
-                132u8,
-                45u8,
-                86u8,
-                41u8,
-                160u8,
-                201u8,
-                159u8,
-                241u8,
-                3u8,
-                190u8,
-                17u8,
-                120u8,
-                168u8,
-                233u8,
-                226u8,
+                64u8, 225u8, 132u8, 15u8, 87u8, 105u8, 7u8, 61u8, 97u8, 189u8, 1u8, 55u8,
+                45u8, 155u8, 117u8, 186u8, 169u8, 132u8, 45u8, 86u8, 41u8, 160u8, 201u8,
+                159u8, 241u8, 3u8, 190u8, 17u8, 120u8, 168u8, 233u8, 226u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2145,6 +2012,8 @@ event log_array(address[] val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_bytes(bytes)` and selector `0x23b62ad0584d24a75f0bf3560391ef5659ec6db1269c56e11aa241d637f19b20`.
 ```solidity
 event log_bytes(bytes);
@@ -2177,38 +2046,9 @@ event log_bytes(bytes);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_bytes(bytes)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                35u8,
-                182u8,
-                42u8,
-                208u8,
-                88u8,
-                77u8,
-                36u8,
-                167u8,
-                95u8,
-                11u8,
-                243u8,
-                86u8,
-                3u8,
-                145u8,
-                239u8,
-                86u8,
-                89u8,
-                236u8,
-                109u8,
-                177u8,
-                38u8,
-                156u8,
-                86u8,
-                225u8,
-                26u8,
-                162u8,
-                65u8,
-                214u8,
-                55u8,
-                241u8,
-                155u8,
-                32u8,
+                35u8, 182u8, 42u8, 208u8, 88u8, 77u8, 36u8, 167u8, 95u8, 11u8, 243u8,
+                86u8, 3u8, 145u8, 239u8, 86u8, 89u8, 236u8, 109u8, 177u8, 38u8, 156u8,
+                86u8, 225u8, 26u8, 162u8, 65u8, 214u8, 55u8, 241u8, 155u8, 32u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2277,6 +2117,8 @@ event log_bytes(bytes);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_bytes32(bytes32)` and selector `0xe81699b85113eea1c73e10588b2b035e55893369632173afd43feb192fac64e3`.
 ```solidity
 event log_bytes32(bytes32);
@@ -2309,38 +2151,9 @@ event log_bytes32(bytes32);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_bytes32(bytes32)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                232u8,
-                22u8,
-                153u8,
-                184u8,
-                81u8,
-                19u8,
-                238u8,
-                161u8,
-                199u8,
-                62u8,
-                16u8,
-                88u8,
-                139u8,
-                43u8,
-                3u8,
-                94u8,
-                85u8,
-                137u8,
-                51u8,
-                105u8,
-                99u8,
-                33u8,
-                115u8,
-                175u8,
-                212u8,
-                63u8,
-                235u8,
-                25u8,
-                47u8,
-                172u8,
-                100u8,
-                227u8,
+                232u8, 22u8, 153u8, 184u8, 81u8, 19u8, 238u8, 161u8, 199u8, 62u8, 16u8,
+                88u8, 139u8, 43u8, 3u8, 94u8, 85u8, 137u8, 51u8, 105u8, 99u8, 33u8,
+                115u8, 175u8, 212u8, 63u8, 235u8, 25u8, 47u8, 172u8, 100u8, 227u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2409,6 +2222,8 @@ event log_bytes32(bytes32);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_int(int256)` and selector `0x0eb5d52624c8d28ada9fc55a8c502ed5aa3fbe2fb6e91b71b5f376882b1d2fb8`.
 ```solidity
 event log_int(int256);
@@ -2441,38 +2256,9 @@ event log_int(int256);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_int(int256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                14u8,
-                181u8,
-                213u8,
-                38u8,
-                36u8,
-                200u8,
-                210u8,
-                138u8,
-                218u8,
-                159u8,
-                197u8,
-                90u8,
-                140u8,
-                80u8,
-                46u8,
-                213u8,
-                170u8,
-                63u8,
-                190u8,
-                47u8,
-                182u8,
-                233u8,
-                27u8,
-                113u8,
-                181u8,
-                243u8,
-                118u8,
-                136u8,
-                43u8,
-                29u8,
-                47u8,
-                184u8,
+                14u8, 181u8, 213u8, 38u8, 36u8, 200u8, 210u8, 138u8, 218u8, 159u8, 197u8,
+                90u8, 140u8, 80u8, 46u8, 213u8, 170u8, 63u8, 190u8, 47u8, 182u8, 233u8,
+                27u8, 113u8, 181u8, 243u8, 118u8, 136u8, 43u8, 29u8, 47u8, 184u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2541,6 +2327,8 @@ event log_int(int256);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_address(string,address)` and selector `0x9c4e8541ca8f0dc1c413f9108f66d82d3cecb1bddbce437a61caa3175c4cc96f`.
 ```solidity
 event log_named_address(string key, address val);
@@ -2578,38 +2366,9 @@ event log_named_address(string key, address val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_address(string,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                156u8,
-                78u8,
-                133u8,
-                65u8,
-                202u8,
-                143u8,
-                13u8,
-                193u8,
-                196u8,
-                19u8,
-                249u8,
-                16u8,
-                143u8,
-                102u8,
-                216u8,
-                45u8,
-                60u8,
-                236u8,
-                177u8,
-                189u8,
-                219u8,
-                206u8,
-                67u8,
-                122u8,
-                97u8,
-                202u8,
-                163u8,
-                23u8,
-                92u8,
-                76u8,
-                201u8,
-                111u8,
+                156u8, 78u8, 133u8, 65u8, 202u8, 143u8, 13u8, 193u8, 196u8, 19u8, 249u8,
+                16u8, 143u8, 102u8, 216u8, 45u8, 60u8, 236u8, 177u8, 189u8, 219u8, 206u8,
+                67u8, 122u8, 97u8, 202u8, 163u8, 23u8, 92u8, 76u8, 201u8, 111u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2681,6 +2440,8 @@ event log_named_address(string key, address val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_array(string,uint256[])` and selector `0x00aaa39c9ffb5f567a4534380c737075702e1f7f14107fc95328e3b56c0325fb`.
 ```solidity
 event log_named_array(string key, uint256[] val);
@@ -2720,38 +2481,9 @@ event log_named_array(string key, uint256[] val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_array(string,uint256[])";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                0u8,
-                170u8,
-                163u8,
-                156u8,
-                159u8,
-                251u8,
-                95u8,
-                86u8,
-                122u8,
-                69u8,
-                52u8,
-                56u8,
-                12u8,
-                115u8,
-                112u8,
-                117u8,
-                112u8,
-                46u8,
-                31u8,
-                127u8,
-                20u8,
-                16u8,
-                127u8,
-                201u8,
-                83u8,
-                40u8,
-                227u8,
-                181u8,
-                108u8,
-                3u8,
-                37u8,
-                251u8,
+                0u8, 170u8, 163u8, 156u8, 159u8, 251u8, 95u8, 86u8, 122u8, 69u8, 52u8,
+                56u8, 12u8, 115u8, 112u8, 117u8, 112u8, 46u8, 31u8, 127u8, 20u8, 16u8,
+                127u8, 201u8, 83u8, 40u8, 227u8, 181u8, 108u8, 3u8, 37u8, 251u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2823,6 +2555,8 @@ event log_named_array(string key, uint256[] val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_array(string,int256[])` and selector `0xa73eda09662f46dde729be4611385ff34fe6c44fbbc6f7e17b042b59a3445b57`.
 ```solidity
 event log_named_array(string key, int256[] val);
@@ -2862,38 +2596,9 @@ event log_named_array(string key, int256[] val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_array(string,int256[])";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                167u8,
-                62u8,
-                218u8,
-                9u8,
-                102u8,
-                47u8,
-                70u8,
-                221u8,
-                231u8,
-                41u8,
-                190u8,
-                70u8,
-                17u8,
-                56u8,
-                95u8,
-                243u8,
-                79u8,
-                230u8,
-                196u8,
-                79u8,
-                187u8,
-                198u8,
-                247u8,
-                225u8,
-                123u8,
-                4u8,
-                43u8,
-                89u8,
-                163u8,
-                68u8,
-                91u8,
-                87u8,
+                167u8, 62u8, 218u8, 9u8, 102u8, 47u8, 70u8, 221u8, 231u8, 41u8, 190u8,
+                70u8, 17u8, 56u8, 95u8, 243u8, 79u8, 230u8, 196u8, 79u8, 187u8, 198u8,
+                247u8, 225u8, 123u8, 4u8, 43u8, 89u8, 163u8, 68u8, 91u8, 87u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2965,6 +2670,8 @@ event log_named_array(string key, int256[] val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_array(string,address[])` and selector `0x3bcfb2ae2e8d132dd1fce7cf278a9a19756a9fceabe470df3bdabb4bc577d1bd`.
 ```solidity
 event log_named_array(string key, address[] val);
@@ -3002,38 +2709,9 @@ event log_named_array(string key, address[] val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_array(string,address[])";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                59u8,
-                207u8,
-                178u8,
-                174u8,
-                46u8,
-                141u8,
-                19u8,
-                45u8,
-                209u8,
-                252u8,
-                231u8,
-                207u8,
-                39u8,
-                138u8,
-                154u8,
-                25u8,
-                117u8,
-                106u8,
-                159u8,
-                206u8,
-                171u8,
-                228u8,
-                112u8,
-                223u8,
-                59u8,
-                218u8,
-                187u8,
-                75u8,
-                197u8,
-                119u8,
-                209u8,
-                189u8,
+                59u8, 207u8, 178u8, 174u8, 46u8, 141u8, 19u8, 45u8, 209u8, 252u8, 231u8,
+                207u8, 39u8, 138u8, 154u8, 25u8, 117u8, 106u8, 159u8, 206u8, 171u8,
+                228u8, 112u8, 223u8, 59u8, 218u8, 187u8, 75u8, 197u8, 119u8, 209u8, 189u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -3105,6 +2783,8 @@ event log_named_array(string key, address[] val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_bytes(string,bytes)` and selector `0xd26e16cad4548705e4c9e2d94f98ee91c289085ee425594fd5635fa2964ccf18`.
 ```solidity
 event log_named_bytes(string key, bytes val);
@@ -3142,38 +2822,9 @@ event log_named_bytes(string key, bytes val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_bytes(string,bytes)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                210u8,
-                110u8,
-                22u8,
-                202u8,
-                212u8,
-                84u8,
-                135u8,
-                5u8,
-                228u8,
-                201u8,
-                226u8,
-                217u8,
-                79u8,
-                152u8,
-                238u8,
-                145u8,
-                194u8,
-                137u8,
-                8u8,
-                94u8,
-                228u8,
-                37u8,
-                89u8,
-                79u8,
-                213u8,
-                99u8,
-                95u8,
-                162u8,
-                150u8,
-                76u8,
-                207u8,
-                24u8,
+                210u8, 110u8, 22u8, 202u8, 212u8, 84u8, 135u8, 5u8, 228u8, 201u8, 226u8,
+                217u8, 79u8, 152u8, 238u8, 145u8, 194u8, 137u8, 8u8, 94u8, 228u8, 37u8,
+                89u8, 79u8, 213u8, 99u8, 95u8, 162u8, 150u8, 76u8, 207u8, 24u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -3245,6 +2896,8 @@ event log_named_bytes(string key, bytes val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_bytes32(string,bytes32)` and selector `0xafb795c9c61e4fe7468c386f925d7a5429ecad9c0495ddb8d38d690614d32f99`.
 ```solidity
 event log_named_bytes32(string key, bytes32 val);
@@ -3282,38 +2935,9 @@ event log_named_bytes32(string key, bytes32 val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_bytes32(string,bytes32)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                175u8,
-                183u8,
-                149u8,
-                201u8,
-                198u8,
-                30u8,
-                79u8,
-                231u8,
-                70u8,
-                140u8,
-                56u8,
-                111u8,
-                146u8,
-                93u8,
-                122u8,
-                84u8,
-                41u8,
-                236u8,
-                173u8,
-                156u8,
-                4u8,
-                149u8,
-                221u8,
-                184u8,
-                211u8,
-                141u8,
-                105u8,
-                6u8,
-                20u8,
-                211u8,
-                47u8,
-                153u8,
+                175u8, 183u8, 149u8, 201u8, 198u8, 30u8, 79u8, 231u8, 70u8, 140u8, 56u8,
+                111u8, 146u8, 93u8, 122u8, 84u8, 41u8, 236u8, 173u8, 156u8, 4u8, 149u8,
+                221u8, 184u8, 211u8, 141u8, 105u8, 6u8, 20u8, 211u8, 47u8, 153u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -3385,6 +3009,8 @@ event log_named_bytes32(string key, bytes32 val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_decimal_int(string,int256,uint256)` and selector `0x5da6ce9d51151ba10c09a559ef24d520b9dac5c5b8810ae8434e4d0d86411a95`.
 ```solidity
 event log_named_decimal_int(string key, int256 val, uint256 decimals);
@@ -3425,38 +3051,9 @@ event log_named_decimal_int(string key, int256 val, uint256 decimals);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_decimal_int(string,int256,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                93u8,
-                166u8,
-                206u8,
-                157u8,
-                81u8,
-                21u8,
-                27u8,
-                161u8,
-                12u8,
-                9u8,
-                165u8,
-                89u8,
-                239u8,
-                36u8,
-                213u8,
-                32u8,
-                185u8,
-                218u8,
-                197u8,
-                197u8,
-                184u8,
-                129u8,
-                10u8,
-                232u8,
-                67u8,
-                78u8,
-                77u8,
-                13u8,
-                134u8,
-                65u8,
-                26u8,
-                149u8,
+                93u8, 166u8, 206u8, 157u8, 81u8, 21u8, 27u8, 161u8, 12u8, 9u8, 165u8,
+                89u8, 239u8, 36u8, 213u8, 32u8, 185u8, 218u8, 197u8, 197u8, 184u8, 129u8,
+                10u8, 232u8, 67u8, 78u8, 77u8, 13u8, 134u8, 65u8, 26u8, 149u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -3535,6 +3132,8 @@ event log_named_decimal_int(string key, int256 val, uint256 decimals);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_decimal_uint(string,uint256,uint256)` and selector `0xeb8ba43ced7537421946bd43e828b8b2b8428927aa8f801c13d934bf11aca57b`.
 ```solidity
 event log_named_decimal_uint(string key, uint256 val, uint256 decimals);
@@ -3575,38 +3174,9 @@ event log_named_decimal_uint(string key, uint256 val, uint256 decimals);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_decimal_uint(string,uint256,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                235u8,
-                139u8,
-                164u8,
-                60u8,
-                237u8,
-                117u8,
-                55u8,
-                66u8,
-                25u8,
-                70u8,
-                189u8,
-                67u8,
-                232u8,
-                40u8,
-                184u8,
-                178u8,
-                184u8,
-                66u8,
-                137u8,
-                39u8,
-                170u8,
-                143u8,
-                128u8,
-                28u8,
-                19u8,
-                217u8,
-                52u8,
-                191u8,
-                17u8,
-                172u8,
-                165u8,
-                123u8,
+                235u8, 139u8, 164u8, 60u8, 237u8, 117u8, 55u8, 66u8, 25u8, 70u8, 189u8,
+                67u8, 232u8, 40u8, 184u8, 178u8, 184u8, 66u8, 137u8, 39u8, 170u8, 143u8,
+                128u8, 28u8, 19u8, 217u8, 52u8, 191u8, 17u8, 172u8, 165u8, 123u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -3685,6 +3255,8 @@ event log_named_decimal_uint(string key, uint256 val, uint256 decimals);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_int(string,int256)` and selector `0x2fe632779174374378442a8e978bccfbdcc1d6b2b0d81f7e8eb776ab2286f168`.
 ```solidity
 event log_named_int(string key, int256 val);
@@ -3722,38 +3294,9 @@ event log_named_int(string key, int256 val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_int(string,int256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                47u8,
-                230u8,
-                50u8,
-                119u8,
-                145u8,
-                116u8,
-                55u8,
-                67u8,
-                120u8,
-                68u8,
-                42u8,
-                142u8,
-                151u8,
-                139u8,
-                204u8,
-                251u8,
-                220u8,
-                193u8,
-                214u8,
-                178u8,
-                176u8,
-                216u8,
-                31u8,
-                126u8,
-                142u8,
-                183u8,
-                118u8,
-                171u8,
-                34u8,
-                134u8,
-                241u8,
-                104u8,
+                47u8, 230u8, 50u8, 119u8, 145u8, 116u8, 55u8, 67u8, 120u8, 68u8, 42u8,
+                142u8, 151u8, 139u8, 204u8, 251u8, 220u8, 193u8, 214u8, 178u8, 176u8,
+                216u8, 31u8, 126u8, 142u8, 183u8, 118u8, 171u8, 34u8, 134u8, 241u8, 104u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -3825,6 +3368,8 @@ event log_named_int(string key, int256 val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_string(string,string)` and selector `0x280f4446b28a1372417dda658d30b95b2992b12ac9c7f378535f29a97acf3583`.
 ```solidity
 event log_named_string(string key, string val);
@@ -3862,38 +3407,9 @@ event log_named_string(string key, string val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_string(string,string)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                40u8,
-                15u8,
-                68u8,
-                70u8,
-                178u8,
-                138u8,
-                19u8,
-                114u8,
-                65u8,
-                125u8,
-                218u8,
-                101u8,
-                141u8,
-                48u8,
-                185u8,
-                91u8,
-                41u8,
-                146u8,
-                177u8,
-                42u8,
-                201u8,
-                199u8,
-                243u8,
-                120u8,
-                83u8,
-                95u8,
-                41u8,
-                169u8,
-                122u8,
-                207u8,
-                53u8,
-                131u8,
+                40u8, 15u8, 68u8, 70u8, 178u8, 138u8, 19u8, 114u8, 65u8, 125u8, 218u8,
+                101u8, 141u8, 48u8, 185u8, 91u8, 41u8, 146u8, 177u8, 42u8, 201u8, 199u8,
+                243u8, 120u8, 83u8, 95u8, 41u8, 169u8, 122u8, 207u8, 53u8, 131u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -3965,6 +3481,8 @@ event log_named_string(string key, string val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_named_uint(string,uint256)` and selector `0xb2de2fbe801a0df6c0cbddfd448ba3c41d48a040ca35c56c8196ef0fcae721a8`.
 ```solidity
 event log_named_uint(string key, uint256 val);
@@ -4002,38 +3520,9 @@ event log_named_uint(string key, uint256 val);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_named_uint(string,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                178u8,
-                222u8,
-                47u8,
-                190u8,
-                128u8,
-                26u8,
-                13u8,
-                246u8,
-                192u8,
-                203u8,
-                221u8,
-                253u8,
-                68u8,
-                139u8,
-                163u8,
-                196u8,
-                29u8,
-                72u8,
-                160u8,
-                64u8,
-                202u8,
-                53u8,
-                197u8,
-                108u8,
-                129u8,
-                150u8,
-                239u8,
-                15u8,
-                202u8,
-                231u8,
-                33u8,
-                168u8,
+                178u8, 222u8, 47u8, 190u8, 128u8, 26u8, 13u8, 246u8, 192u8, 203u8, 221u8,
+                253u8, 68u8, 139u8, 163u8, 196u8, 29u8, 72u8, 160u8, 64u8, 202u8, 53u8,
+                197u8, 108u8, 129u8, 150u8, 239u8, 15u8, 202u8, 231u8, 33u8, 168u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -4105,6 +3594,8 @@ event log_named_uint(string key, uint256 val);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_string(string)` and selector `0x0b2e13ff20ac7b474198655583edf70dedd2c1dc980e329c4fbb2fc0748b796b`.
 ```solidity
 event log_string(string);
@@ -4137,38 +3628,9 @@ event log_string(string);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_string(string)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                11u8,
-                46u8,
-                19u8,
-                255u8,
-                32u8,
-                172u8,
-                123u8,
-                71u8,
-                65u8,
-                152u8,
-                101u8,
-                85u8,
-                131u8,
-                237u8,
-                247u8,
-                13u8,
-                237u8,
-                210u8,
-                193u8,
-                220u8,
-                152u8,
-                14u8,
-                50u8,
-                156u8,
-                79u8,
-                187u8,
-                47u8,
-                192u8,
-                116u8,
-                139u8,
-                121u8,
-                107u8,
+                11u8, 46u8, 19u8, 255u8, 32u8, 172u8, 123u8, 71u8, 65u8, 152u8, 101u8,
+                85u8, 131u8, 237u8, 247u8, 13u8, 237u8, 210u8, 193u8, 220u8, 152u8, 14u8,
+                50u8, 156u8, 79u8, 187u8, 47u8, 192u8, 116u8, 139u8, 121u8, 107u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -4237,6 +3699,8 @@ event log_string(string);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `log_uint(uint256)` and selector `0x2cab9790510fd8bdfbd2115288db33fec66691d476efc5427cfd4c0969301755`.
 ```solidity
 event log_uint(uint256);
@@ -4269,38 +3733,9 @@ event log_uint(uint256);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "log_uint(uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                44u8,
-                171u8,
-                151u8,
-                144u8,
-                81u8,
-                15u8,
-                216u8,
-                189u8,
-                251u8,
-                210u8,
-                17u8,
-                82u8,
-                136u8,
-                219u8,
-                51u8,
-                254u8,
-                198u8,
-                102u8,
-                145u8,
-                212u8,
-                118u8,
-                239u8,
-                197u8,
-                66u8,
-                124u8,
-                253u8,
-                76u8,
-                9u8,
-                105u8,
-                48u8,
-                23u8,
-                85u8,
+                44u8, 171u8, 151u8, 144u8, 81u8, 15u8, 216u8, 189u8, 251u8, 210u8, 17u8,
+                82u8, 136u8, 219u8, 51u8, 254u8, 198u8, 102u8, 145u8, 212u8, 118u8,
+                239u8, 197u8, 66u8, 124u8, 253u8, 76u8, 9u8, 105u8, 48u8, 23u8, 85u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -4369,6 +3804,8 @@ event log_uint(uint256);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `logs(bytes)` and selector `0xe7950ede0394b9f2ce4a5a1bf5a7e1852411f7e6661b4308c913c4bfd11027e4`.
 ```solidity
 event logs(bytes);
@@ -4401,38 +3838,9 @@ event logs(bytes);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "logs(bytes)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                231u8,
-                149u8,
-                14u8,
-                222u8,
-                3u8,
-                148u8,
-                185u8,
-                242u8,
-                206u8,
-                74u8,
-                90u8,
-                27u8,
-                245u8,
-                167u8,
-                225u8,
-                133u8,
-                36u8,
-                17u8,
-                247u8,
-                230u8,
-                102u8,
-                27u8,
-                67u8,
-                8u8,
-                201u8,
-                19u8,
-                196u8,
-                191u8,
-                209u8,
-                16u8,
-                39u8,
-                228u8,
+                231u8, 149u8, 14u8, 222u8, 3u8, 148u8, 185u8, 242u8, 206u8, 74u8, 90u8,
+                27u8, 245u8, 167u8, 225u8, 133u8, 36u8, 17u8, 247u8, 230u8, 102u8, 27u8,
+                67u8, 8u8, 201u8, 19u8, 196u8, 191u8, 209u8, 16u8, 39u8, 228u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -4501,13 +3909,17 @@ event logs(bytes);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `IS_TEST()` and selector `0xfa7626d4`.
 ```solidity
 function IS_TEST() external view returns (bool);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct IS_TESTCall {}
+    pub struct IS_TESTCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`IS_TEST()`](IS_TESTCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -4550,7 +3962,7 @@ function IS_TEST() external view returns (bool);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for IS_TESTCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -4591,7 +4003,7 @@ function IS_TEST() external view returns (bool);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = IS_TESTReturn;
+            type Return = bool;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -4609,24 +4021,48 @@ function IS_TEST() external view returns (bool);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: IS_TESTReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: IS_TESTReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `excludeArtifacts()` and selector `0xb5508aa9`.
 ```solidity
 function excludeArtifacts() external view returns (string[] memory excludedArtifacts_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct excludeArtifactsCall {}
+    pub struct excludeArtifactsCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`excludeArtifacts()`](excludeArtifactsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -4673,7 +4109,7 @@ function excludeArtifacts() external view returns (string[] memory excludedArtif
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for excludeArtifactsCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -4722,7 +4158,9 @@ function excludeArtifacts() external view returns (string[] memory excludedArtif
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = excludeArtifactsReturn;
+            type Return = alloy::sol_types::private::Vec<
+                alloy::sol_types::private::String,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -4742,24 +4180,48 @@ function excludeArtifacts() external view returns (string[] memory excludedArtif
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::String,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: excludeArtifactsReturn = r.into();
+                        r.excludedArtifacts_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: excludeArtifactsReturn = r.into();
+                        r.excludedArtifacts_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `excludeContracts()` and selector `0xe20c9f71`.
 ```solidity
 function excludeContracts() external view returns (address[] memory excludedContracts_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct excludeContractsCall {}
+    pub struct excludeContractsCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`excludeContracts()`](excludeContractsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -4806,7 +4268,7 @@ function excludeContracts() external view returns (address[] memory excludedCont
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for excludeContractsCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -4855,7 +4317,9 @@ function excludeContracts() external view returns (address[] memory excludedCont
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = excludeContractsReturn;
+            type Return = alloy::sol_types::private::Vec<
+                alloy::sol_types::private::Address,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -4875,24 +4339,48 @@ function excludeContracts() external view returns (address[] memory excludedCont
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Address,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: excludeContractsReturn = r.into();
+                        r.excludedContracts_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: excludeContractsReturn = r.into();
+                        r.excludedContracts_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `excludeSenders()` and selector `0x1ed7831c`.
 ```solidity
 function excludeSenders() external view returns (address[] memory excludedSenders_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct excludeSendersCall {}
+    pub struct excludeSendersCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`excludeSenders()`](excludeSendersCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -4937,7 +4425,7 @@ function excludeSenders() external view returns (address[] memory excludedSender
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for excludeSendersCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -4984,7 +4472,9 @@ function excludeSenders() external view returns (address[] memory excludedSender
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = excludeSendersReturn;
+            type Return = alloy::sol_types::private::Vec<
+                alloy::sol_types::private::Address,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -5004,24 +4494,48 @@ function excludeSenders() external view returns (address[] memory excludedSender
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Address,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: excludeSendersReturn = r.into();
+                        r.excludedSenders_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: excludeSendersReturn = r.into();
+                        r.excludedSenders_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `failed()` and selector `0xba414fa6`.
 ```solidity
 function failed() external view returns (bool);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct failedCall {}
+    pub struct failedCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`failed()`](failedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5064,7 +4578,7 @@ function failed() external view returns (bool);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for failedCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -5105,7 +4619,7 @@ function failed() external view returns (bool);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = failedReturn;
+            type Return = bool;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -5123,24 +4637,46 @@ function failed() external view returns (bool);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: failedReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: failedReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `setUp()` and selector `0x0a9254e4`.
 ```solidity
 function setUp() external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct setUpCall {}
+    pub struct setUpCall;
     ///Container type for the return parameters of the [`setUp()`](setUpCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5180,7 +4716,7 @@ function setUp() external;
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for setUpCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -5215,6 +4751,13 @@ function setUp() external;
                 }
             }
         }
+        impl setUpReturn {
+            fn _tokenize(
+                &self,
+            ) -> <setUpCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for setUpCall {
             type Parameters<'a> = ();
@@ -5239,24 +4782,38 @@ function setUp() external;
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                setUpReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `targetArtifactSelectors()` and selector `0x66d9a9a0`.
 ```solidity
 function targetArtifactSelectors() external view returns (StdInvariant.FuzzArtifactSelector[] memory targetedArtifactSelectors_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct targetArtifactSelectorsCall {}
+    pub struct targetArtifactSelectorsCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`targetArtifactSelectors()`](targetArtifactSelectorsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5303,7 +4860,7 @@ function targetArtifactSelectors() external view returns (StdInvariant.FuzzArtif
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for targetArtifactSelectorsCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -5354,7 +4911,9 @@ function targetArtifactSelectors() external view returns (StdInvariant.FuzzArtif
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = targetArtifactSelectorsReturn;
+            type Return = alloy::sol_types::private::Vec<
+                <StdInvariant::FuzzArtifactSelector as alloy::sol_types::SolType>::RustType,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<StdInvariant::FuzzArtifactSelector>,
             );
@@ -5374,24 +4933,48 @@ function targetArtifactSelectors() external view returns (StdInvariant.FuzzArtif
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        StdInvariant::FuzzArtifactSelector,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: targetArtifactSelectorsReturn = r.into();
+                        r.targetedArtifactSelectors_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: targetArtifactSelectorsReturn = r.into();
+                        r.targetedArtifactSelectors_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `targetArtifacts()` and selector `0x85226c81`.
 ```solidity
 function targetArtifacts() external view returns (string[] memory targetedArtifacts_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct targetArtifactsCall {}
+    pub struct targetArtifactsCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`targetArtifacts()`](targetArtifactsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5436,7 +5019,7 @@ function targetArtifacts() external view returns (string[] memory targetedArtifa
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for targetArtifactsCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -5485,7 +5068,9 @@ function targetArtifacts() external view returns (string[] memory targetedArtifa
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = targetArtifactsReturn;
+            type Return = alloy::sol_types::private::Vec<
+                alloy::sol_types::private::String,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -5505,24 +5090,48 @@ function targetArtifacts() external view returns (string[] memory targetedArtifa
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::String,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: targetArtifactsReturn = r.into();
+                        r.targetedArtifacts_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: targetArtifactsReturn = r.into();
+                        r.targetedArtifacts_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `targetContracts()` and selector `0x3f7286f4`.
 ```solidity
 function targetContracts() external view returns (address[] memory targetedContracts_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct targetContractsCall {}
+    pub struct targetContractsCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`targetContracts()`](targetContractsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5567,7 +5176,7 @@ function targetContracts() external view returns (address[] memory targetedContr
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for targetContractsCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -5616,7 +5225,9 @@ function targetContracts() external view returns (address[] memory targetedContr
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = targetContractsReturn;
+            type Return = alloy::sol_types::private::Vec<
+                alloy::sol_types::private::Address,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -5636,24 +5247,48 @@ function targetContracts() external view returns (address[] memory targetedContr
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Address,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: targetContractsReturn = r.into();
+                        r.targetedContracts_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: targetContractsReturn = r.into();
+                        r.targetedContracts_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `targetInterfaces()` and selector `0x2ade3880`.
 ```solidity
 function targetInterfaces() external view returns (StdInvariant.FuzzInterface[] memory targetedInterfaces_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct targetInterfacesCall {}
+    pub struct targetInterfacesCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`targetInterfaces()`](targetInterfacesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5700,7 +5335,7 @@ function targetInterfaces() external view returns (StdInvariant.FuzzInterface[] 
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for targetInterfacesCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -5751,7 +5386,9 @@ function targetInterfaces() external view returns (StdInvariant.FuzzInterface[] 
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = targetInterfacesReturn;
+            type Return = alloy::sol_types::private::Vec<
+                <StdInvariant::FuzzInterface as alloy::sol_types::SolType>::RustType,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<StdInvariant::FuzzInterface>,
             );
@@ -5771,24 +5408,48 @@ function targetInterfaces() external view returns (StdInvariant.FuzzInterface[] 
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        StdInvariant::FuzzInterface,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: targetInterfacesReturn = r.into();
+                        r.targetedInterfaces_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: targetInterfacesReturn = r.into();
+                        r.targetedInterfaces_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `targetSelectors()` and selector `0x916a17c6`.
 ```solidity
 function targetSelectors() external view returns (StdInvariant.FuzzSelector[] memory targetedSelectors_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct targetSelectorsCall {}
+    pub struct targetSelectorsCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`targetSelectors()`](targetSelectorsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5833,7 +5494,7 @@ function targetSelectors() external view returns (StdInvariant.FuzzSelector[] me
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for targetSelectorsCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -5884,7 +5545,9 @@ function targetSelectors() external view returns (StdInvariant.FuzzSelector[] me
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = targetSelectorsReturn;
+            type Return = alloy::sol_types::private::Vec<
+                <StdInvariant::FuzzSelector as alloy::sol_types::SolType>::RustType,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<StdInvariant::FuzzSelector>,
             );
@@ -5904,24 +5567,48 @@ function targetSelectors() external view returns (StdInvariant.FuzzSelector[] me
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        StdInvariant::FuzzSelector,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: targetSelectorsReturn = r.into();
+                        r.targetedSelectors_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: targetSelectorsReturn = r.into();
+                        r.targetedSelectors_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `targetSenders()` and selector `0x3e5e3c23`.
 ```solidity
 function targetSenders() external view returns (address[] memory targetedSenders_);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct targetSendersCall {}
+    pub struct targetSendersCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`targetSenders()`](targetSendersCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -5966,7 +5653,7 @@ function targetSenders() external view returns (address[] memory targetedSenders
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for targetSendersCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -6011,7 +5698,9 @@ function targetSenders() external view returns (address[] memory targetedSenders
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = targetSendersReturn;
+            type Return = alloy::sol_types::private::Vec<
+                alloy::sol_types::private::Address,
+            >;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -6031,24 +5720,46 @@ function targetSenders() external view returns (address[] memory targetedSenders
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Address,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: targetSendersReturn = r.into();
+                        r.targetedSenders_
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: targetSendersReturn = r.into();
+                        r.targetedSenders_
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `test_RevertVerifyProof_WhenGroth16()` and selector `0x8624584a`.
 ```solidity
 function test_RevertVerifyProof_WhenGroth16() external view;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct test_RevertVerifyProof_WhenGroth16Call {}
+    pub struct test_RevertVerifyProof_WhenGroth16Call;
     ///Container type for the return parameters of the [`test_RevertVerifyProof_WhenGroth16()`](test_RevertVerifyProof_WhenGroth16Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -6090,7 +5801,7 @@ function test_RevertVerifyProof_WhenGroth16() external view;
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for test_RevertVerifyProof_WhenGroth16Call {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -6127,6 +5838,15 @@ function test_RevertVerifyProof_WhenGroth16() external view;
                 }
             }
         }
+        impl test_RevertVerifyProof_WhenGroth16Return {
+            fn _tokenize(
+                &self,
+            ) -> <test_RevertVerifyProof_WhenGroth16Call as alloy_sol_types::SolCall>::ReturnToken<
+                '_,
+            > {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for test_RevertVerifyProof_WhenGroth16Call {
             type Parameters<'a> = ();
@@ -6151,24 +5871,36 @@ function test_RevertVerifyProof_WhenGroth16() external view;
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                test_RevertVerifyProof_WhenGroth16Return::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `test_VerifyProof_WhenGroth16()` and selector `0x2c1defb9`.
 ```solidity
 function test_VerifyProof_WhenGroth16() external view;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct test_VerifyProof_WhenGroth16Call {}
+    pub struct test_VerifyProof_WhenGroth16Call;
     ///Container type for the return parameters of the [`test_VerifyProof_WhenGroth16()`](test_VerifyProof_WhenGroth16Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -6210,7 +5942,7 @@ function test_VerifyProof_WhenGroth16() external view;
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for test_VerifyProof_WhenGroth16Call {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -6247,6 +5979,15 @@ function test_VerifyProof_WhenGroth16() external view;
                 }
             }
         }
+        impl test_VerifyProof_WhenGroth16Return {
+            fn _tokenize(
+                &self,
+            ) -> <test_VerifyProof_WhenGroth16Call as alloy_sol_types::SolCall>::ReturnToken<
+                '_,
+            > {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for test_VerifyProof_WhenGroth16Call {
             type Parameters<'a> = ();
@@ -6271,18 +6012,30 @@ function test_VerifyProof_WhenGroth16() external view;
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                test_VerifyProof_WhenGroth16Return::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
     ///Container for all the [`SP1VerifierGroth16Test`](self) function calls.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive()]
     pub enum SP1VerifierGroth16TestCalls {
         #[allow(missing_docs)]
         IS_TEST(IS_TESTCall),
@@ -6397,21 +6150,15 @@ function test_VerifyProof_WhenGroth16() external view;
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls>] = &[
                 {
                     fn setUp(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
-                        <setUpCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <setUpCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(SP1VerifierGroth16TestCalls::setUp)
                     }
                     setUp
@@ -6419,11 +6166,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn excludeSenders(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <excludeSendersCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::excludeSenders)
                     }
@@ -6432,11 +6177,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn targetInterfaces(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <targetInterfacesCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::targetInterfaces)
                     }
@@ -6445,11 +6188,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn test_VerifyProof_WhenGroth16(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <test_VerifyProof_WhenGroth16Call as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(
                                 SP1VerifierGroth16TestCalls::test_VerifyProof_WhenGroth16,
@@ -6460,11 +6201,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn targetSenders(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <targetSendersCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::targetSenders)
                     }
@@ -6473,11 +6212,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn targetContracts(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <targetContractsCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::targetContracts)
                     }
@@ -6486,11 +6223,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn targetArtifactSelectors(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <targetArtifactSelectorsCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::targetArtifactSelectors)
                     }
@@ -6499,11 +6234,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn targetArtifacts(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <targetArtifactsCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::targetArtifacts)
                     }
@@ -6512,11 +6245,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn test_RevertVerifyProof_WhenGroth16(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <test_RevertVerifyProof_WhenGroth16Call as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(
                                 SP1VerifierGroth16TestCalls::test_RevertVerifyProof_WhenGroth16,
@@ -6527,11 +6258,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn targetSelectors(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <targetSelectorsCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::targetSelectors)
                     }
@@ -6540,11 +6269,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn excludeArtifacts(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <excludeArtifactsCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::excludeArtifacts)
                     }
@@ -6553,12 +6280,8 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn failed(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
-                        <failedCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <failedCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(SP1VerifierGroth16TestCalls::failed)
                     }
                     failed
@@ -6566,11 +6289,9 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn excludeContracts(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
                         <excludeContractsCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SP1VerifierGroth16TestCalls::excludeContracts)
                     }
@@ -6579,11 +6300,185 @@ function test_VerifyProof_WhenGroth16() external view;
                 {
                     fn IS_TEST(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
-                        <IS_TESTCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <IS_TESTCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                            .map(SP1VerifierGroth16TestCalls::IS_TEST)
+                    }
+                    IS_TEST
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls>] = &[
+                {
+                    fn setUp(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <setUpCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
-                                validate,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::setUp)
+                    }
+                    setUp
+                },
+                {
+                    fn excludeSenders(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <excludeSendersCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::excludeSenders)
+                    }
+                    excludeSenders
+                },
+                {
+                    fn targetInterfaces(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <targetInterfacesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::targetInterfaces)
+                    }
+                    targetInterfaces
+                },
+                {
+                    fn test_VerifyProof_WhenGroth16(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <test_VerifyProof_WhenGroth16Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(
+                                SP1VerifierGroth16TestCalls::test_VerifyProof_WhenGroth16,
+                            )
+                    }
+                    test_VerifyProof_WhenGroth16
+                },
+                {
+                    fn targetSenders(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <targetSendersCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::targetSenders)
+                    }
+                    targetSenders
+                },
+                {
+                    fn targetContracts(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <targetContractsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::targetContracts)
+                    }
+                    targetContracts
+                },
+                {
+                    fn targetArtifactSelectors(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <targetArtifactSelectorsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::targetArtifactSelectors)
+                    }
+                    targetArtifactSelectors
+                },
+                {
+                    fn targetArtifacts(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <targetArtifactsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::targetArtifacts)
+                    }
+                    targetArtifacts
+                },
+                {
+                    fn test_RevertVerifyProof_WhenGroth16(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <test_RevertVerifyProof_WhenGroth16Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(
+                                SP1VerifierGroth16TestCalls::test_RevertVerifyProof_WhenGroth16,
+                            )
+                    }
+                    test_RevertVerifyProof_WhenGroth16
+                },
+                {
+                    fn targetSelectors(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <targetSelectorsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::targetSelectors)
+                    }
+                    targetSelectors
+                },
+                {
+                    fn excludeArtifacts(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <excludeArtifactsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::excludeArtifacts)
+                    }
+                    excludeArtifacts
+                },
+                {
+                    fn failed(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <failedCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::failed)
+                    }
+                    failed
+                },
+                {
+                    fn excludeContracts(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <excludeContractsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SP1VerifierGroth16TestCalls::excludeContracts)
+                    }
+                    excludeContracts
+                },
+                {
+                    fn IS_TEST(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SP1VerifierGroth16TestCalls> {
+                        <IS_TESTCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
                             )
                             .map(SP1VerifierGroth16TestCalls::IS_TEST)
                     }
@@ -6598,7 +6493,7 @@ function test_VerifyProof_WhenGroth16() external view;
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -6751,6 +6646,8 @@ function test_VerifyProof_WhenGroth16() external view;
         }
     }
     ///Container for all the [`SP1VerifierGroth16Test`](self) events.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive()]
     pub enum SP1VerifierGroth16TestEvents {
         #[allow(missing_docs)]
         log(log),
@@ -6807,752 +6704,114 @@ function test_VerifyProof_WhenGroth16() external view;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                0u8,
-                170u8,
-                163u8,
-                156u8,
-                159u8,
-                251u8,
-                95u8,
-                86u8,
-                122u8,
-                69u8,
-                52u8,
-                56u8,
-                12u8,
-                115u8,
-                112u8,
-                117u8,
-                112u8,
-                46u8,
-                31u8,
-                127u8,
-                20u8,
-                16u8,
-                127u8,
-                201u8,
-                83u8,
-                40u8,
-                227u8,
-                181u8,
-                108u8,
-                3u8,
-                37u8,
-                251u8,
+                0u8, 170u8, 163u8, 156u8, 159u8, 251u8, 95u8, 86u8, 122u8, 69u8, 52u8,
+                56u8, 12u8, 115u8, 112u8, 117u8, 112u8, 46u8, 31u8, 127u8, 20u8, 16u8,
+                127u8, 201u8, 83u8, 40u8, 227u8, 181u8, 108u8, 3u8, 37u8, 251u8,
             ],
             [
-                11u8,
-                46u8,
-                19u8,
-                255u8,
-                32u8,
-                172u8,
-                123u8,
-                71u8,
-                65u8,
-                152u8,
-                101u8,
-                85u8,
-                131u8,
-                237u8,
-                247u8,
-                13u8,
-                237u8,
-                210u8,
-                193u8,
-                220u8,
-                152u8,
-                14u8,
-                50u8,
-                156u8,
-                79u8,
-                187u8,
-                47u8,
-                192u8,
-                116u8,
-                139u8,
-                121u8,
-                107u8,
+                11u8, 46u8, 19u8, 255u8, 32u8, 172u8, 123u8, 71u8, 65u8, 152u8, 101u8,
+                85u8, 131u8, 237u8, 247u8, 13u8, 237u8, 210u8, 193u8, 220u8, 152u8, 14u8,
+                50u8, 156u8, 79u8, 187u8, 47u8, 192u8, 116u8, 139u8, 121u8, 107u8,
             ],
             [
-                14u8,
-                181u8,
-                213u8,
-                38u8,
-                36u8,
-                200u8,
-                210u8,
-                138u8,
-                218u8,
-                159u8,
-                197u8,
-                90u8,
-                140u8,
-                80u8,
-                46u8,
-                213u8,
-                170u8,
-                63u8,
-                190u8,
-                47u8,
-                182u8,
-                233u8,
-                27u8,
-                113u8,
-                181u8,
-                243u8,
-                118u8,
-                136u8,
-                43u8,
-                29u8,
-                47u8,
-                184u8,
+                14u8, 181u8, 213u8, 38u8, 36u8, 200u8, 210u8, 138u8, 218u8, 159u8, 197u8,
+                90u8, 140u8, 80u8, 46u8, 213u8, 170u8, 63u8, 190u8, 47u8, 182u8, 233u8,
+                27u8, 113u8, 181u8, 243u8, 118u8, 136u8, 43u8, 29u8, 47u8, 184u8,
             ],
             [
-                35u8,
-                182u8,
-                42u8,
-                208u8,
-                88u8,
-                77u8,
-                36u8,
-                167u8,
-                95u8,
-                11u8,
-                243u8,
-                86u8,
-                3u8,
-                145u8,
-                239u8,
-                86u8,
-                89u8,
-                236u8,
-                109u8,
-                177u8,
-                38u8,
-                156u8,
-                86u8,
-                225u8,
-                26u8,
-                162u8,
-                65u8,
-                214u8,
-                55u8,
-                241u8,
-                155u8,
-                32u8,
+                35u8, 182u8, 42u8, 208u8, 88u8, 77u8, 36u8, 167u8, 95u8, 11u8, 243u8,
+                86u8, 3u8, 145u8, 239u8, 86u8, 89u8, 236u8, 109u8, 177u8, 38u8, 156u8,
+                86u8, 225u8, 26u8, 162u8, 65u8, 214u8, 55u8, 241u8, 155u8, 32u8,
             ],
             [
-                40u8,
-                15u8,
-                68u8,
-                70u8,
-                178u8,
-                138u8,
-                19u8,
-                114u8,
-                65u8,
-                125u8,
-                218u8,
-                101u8,
-                141u8,
-                48u8,
-                185u8,
-                91u8,
-                41u8,
-                146u8,
-                177u8,
-                42u8,
-                201u8,
-                199u8,
-                243u8,
-                120u8,
-                83u8,
-                95u8,
-                41u8,
-                169u8,
-                122u8,
-                207u8,
-                53u8,
-                131u8,
+                40u8, 15u8, 68u8, 70u8, 178u8, 138u8, 19u8, 114u8, 65u8, 125u8, 218u8,
+                101u8, 141u8, 48u8, 185u8, 91u8, 41u8, 146u8, 177u8, 42u8, 201u8, 199u8,
+                243u8, 120u8, 83u8, 95u8, 41u8, 169u8, 122u8, 207u8, 53u8, 131u8,
             ],
             [
-                44u8,
-                171u8,
-                151u8,
-                144u8,
-                81u8,
-                15u8,
-                216u8,
-                189u8,
-                251u8,
-                210u8,
-                17u8,
-                82u8,
-                136u8,
-                219u8,
-                51u8,
-                254u8,
-                198u8,
-                102u8,
-                145u8,
-                212u8,
-                118u8,
-                239u8,
-                197u8,
-                66u8,
-                124u8,
-                253u8,
-                76u8,
-                9u8,
-                105u8,
-                48u8,
-                23u8,
-                85u8,
+                44u8, 171u8, 151u8, 144u8, 81u8, 15u8, 216u8, 189u8, 251u8, 210u8, 17u8,
+                82u8, 136u8, 219u8, 51u8, 254u8, 198u8, 102u8, 145u8, 212u8, 118u8,
+                239u8, 197u8, 66u8, 124u8, 253u8, 76u8, 9u8, 105u8, 48u8, 23u8, 85u8,
             ],
             [
-                47u8,
-                230u8,
-                50u8,
-                119u8,
-                145u8,
-                116u8,
-                55u8,
-                67u8,
-                120u8,
-                68u8,
-                42u8,
-                142u8,
-                151u8,
-                139u8,
-                204u8,
-                251u8,
-                220u8,
-                193u8,
-                214u8,
-                178u8,
-                176u8,
-                216u8,
-                31u8,
-                126u8,
-                142u8,
-                183u8,
-                118u8,
-                171u8,
-                34u8,
-                134u8,
-                241u8,
-                104u8,
+                47u8, 230u8, 50u8, 119u8, 145u8, 116u8, 55u8, 67u8, 120u8, 68u8, 42u8,
+                142u8, 151u8, 139u8, 204u8, 251u8, 220u8, 193u8, 214u8, 178u8, 176u8,
+                216u8, 31u8, 126u8, 142u8, 183u8, 118u8, 171u8, 34u8, 134u8, 241u8, 104u8,
             ],
             [
-                59u8,
-                207u8,
-                178u8,
-                174u8,
-                46u8,
-                141u8,
-                19u8,
-                45u8,
-                209u8,
-                252u8,
-                231u8,
-                207u8,
-                39u8,
-                138u8,
-                154u8,
-                25u8,
-                117u8,
-                106u8,
-                159u8,
-                206u8,
-                171u8,
-                228u8,
-                112u8,
-                223u8,
-                59u8,
-                218u8,
-                187u8,
-                75u8,
-                197u8,
-                119u8,
-                209u8,
-                189u8,
+                59u8, 207u8, 178u8, 174u8, 46u8, 141u8, 19u8, 45u8, 209u8, 252u8, 231u8,
+                207u8, 39u8, 138u8, 154u8, 25u8, 117u8, 106u8, 159u8, 206u8, 171u8,
+                228u8, 112u8, 223u8, 59u8, 218u8, 187u8, 75u8, 197u8, 119u8, 209u8, 189u8,
             ],
             [
-                64u8,
-                225u8,
-                132u8,
-                15u8,
-                87u8,
-                105u8,
-                7u8,
-                61u8,
-                97u8,
-                189u8,
-                1u8,
-                55u8,
-                45u8,
-                155u8,
-                117u8,
-                186u8,
-                169u8,
-                132u8,
-                45u8,
-                86u8,
-                41u8,
-                160u8,
-                201u8,
-                159u8,
-                241u8,
-                3u8,
-                190u8,
-                17u8,
-                120u8,
-                168u8,
-                233u8,
-                226u8,
+                64u8, 225u8, 132u8, 15u8, 87u8, 105u8, 7u8, 61u8, 97u8, 189u8, 1u8, 55u8,
+                45u8, 155u8, 117u8, 186u8, 169u8, 132u8, 45u8, 86u8, 41u8, 160u8, 201u8,
+                159u8, 241u8, 3u8, 190u8, 17u8, 120u8, 168u8, 233u8, 226u8,
             ],
             [
-                65u8,
-                48u8,
-                79u8,
-                172u8,
-                217u8,
-                50u8,
-                61u8,
-                117u8,
-                177u8,
-                27u8,
-                205u8,
-                214u8,
-                9u8,
-                203u8,
-                56u8,
-                239u8,
-                255u8,
-                253u8,
-                176u8,
-                87u8,
-                16u8,
-                247u8,
-                202u8,
-                240u8,
-                233u8,
-                177u8,
-                108u8,
-                109u8,
-                157u8,
-                112u8,
-                159u8,
-                80u8,
+                65u8, 48u8, 79u8, 172u8, 217u8, 50u8, 61u8, 117u8, 177u8, 27u8, 205u8,
+                214u8, 9u8, 203u8, 56u8, 239u8, 255u8, 253u8, 176u8, 87u8, 16u8, 247u8,
+                202u8, 240u8, 233u8, 177u8, 108u8, 109u8, 157u8, 112u8, 159u8, 80u8,
             ],
             [
-                93u8,
-                166u8,
-                206u8,
-                157u8,
-                81u8,
-                21u8,
-                27u8,
-                161u8,
-                12u8,
-                9u8,
-                165u8,
-                89u8,
-                239u8,
-                36u8,
-                213u8,
-                32u8,
-                185u8,
-                218u8,
-                197u8,
-                197u8,
-                184u8,
-                129u8,
-                10u8,
-                232u8,
-                67u8,
-                78u8,
-                77u8,
-                13u8,
-                134u8,
-                65u8,
-                26u8,
-                149u8,
+                93u8, 166u8, 206u8, 157u8, 81u8, 21u8, 27u8, 161u8, 12u8, 9u8, 165u8,
+                89u8, 239u8, 36u8, 213u8, 32u8, 185u8, 218u8, 197u8, 197u8, 184u8, 129u8,
+                10u8, 232u8, 67u8, 78u8, 77u8, 13u8, 134u8, 65u8, 26u8, 149u8,
             ],
             [
-                122u8,
-                231u8,
-                76u8,
-                82u8,
-                116u8,
-                20u8,
-                174u8,
-                19u8,
-                95u8,
-                217u8,
-                112u8,
-                71u8,
-                177u8,
-                41u8,
-                33u8,
-                165u8,
-                236u8,
-                57u8,
-                17u8,
-                184u8,
-                4u8,
-                25u8,
-                120u8,
-                85u8,
-                214u8,
-                126u8,
-                37u8,
-                199u8,
-                183u8,
-                94u8,
-                230u8,
-                243u8,
+                122u8, 231u8, 76u8, 82u8, 116u8, 20u8, 174u8, 19u8, 95u8, 217u8, 112u8,
+                71u8, 177u8, 41u8, 33u8, 165u8, 236u8, 57u8, 17u8, 184u8, 4u8, 25u8,
+                120u8, 85u8, 214u8, 126u8, 37u8, 199u8, 183u8, 94u8, 230u8, 243u8,
             ],
             [
-                137u8,
-                10u8,
-                130u8,
-                103u8,
-                155u8,
-                71u8,
-                15u8,
-                43u8,
-                216u8,
-                40u8,
-                22u8,
-                237u8,
-                155u8,
-                22u8,
-                31u8,
-                151u8,
-                216u8,
-                185u8,
-                103u8,
-                243u8,
-                127u8,
-                163u8,
-                100u8,
-                124u8,
-                33u8,
-                213u8,
-                191u8,
-                57u8,
-                116u8,
-                158u8,
-                45u8,
-                213u8,
+                137u8, 10u8, 130u8, 103u8, 155u8, 71u8, 15u8, 43u8, 216u8, 40u8, 22u8,
+                237u8, 155u8, 22u8, 31u8, 151u8, 216u8, 185u8, 103u8, 243u8, 127u8,
+                163u8, 100u8, 124u8, 33u8, 213u8, 191u8, 57u8, 116u8, 158u8, 45u8, 213u8,
             ],
             [
-                156u8,
-                78u8,
-                133u8,
-                65u8,
-                202u8,
-                143u8,
-                13u8,
-                193u8,
-                196u8,
-                19u8,
-                249u8,
-                16u8,
-                143u8,
-                102u8,
-                216u8,
-                45u8,
-                60u8,
-                236u8,
-                177u8,
-                189u8,
-                219u8,
-                206u8,
-                67u8,
-                122u8,
-                97u8,
-                202u8,
-                163u8,
-                23u8,
-                92u8,
-                76u8,
-                201u8,
-                111u8,
+                156u8, 78u8, 133u8, 65u8, 202u8, 143u8, 13u8, 193u8, 196u8, 19u8, 249u8,
+                16u8, 143u8, 102u8, 216u8, 45u8, 60u8, 236u8, 177u8, 189u8, 219u8, 206u8,
+                67u8, 122u8, 97u8, 202u8, 163u8, 23u8, 92u8, 76u8, 201u8, 111u8,
             ],
             [
-                167u8,
-                62u8,
-                218u8,
-                9u8,
-                102u8,
-                47u8,
-                70u8,
-                221u8,
-                231u8,
-                41u8,
-                190u8,
-                70u8,
-                17u8,
-                56u8,
-                95u8,
-                243u8,
-                79u8,
-                230u8,
-                196u8,
-                79u8,
-                187u8,
-                198u8,
-                247u8,
-                225u8,
-                123u8,
-                4u8,
-                43u8,
-                89u8,
-                163u8,
-                68u8,
-                91u8,
-                87u8,
+                167u8, 62u8, 218u8, 9u8, 102u8, 47u8, 70u8, 221u8, 231u8, 41u8, 190u8,
+                70u8, 17u8, 56u8, 95u8, 243u8, 79u8, 230u8, 196u8, 79u8, 187u8, 198u8,
+                247u8, 225u8, 123u8, 4u8, 43u8, 89u8, 163u8, 68u8, 91u8, 87u8,
             ],
             [
-                175u8,
-                183u8,
-                149u8,
-                201u8,
-                198u8,
-                30u8,
-                79u8,
-                231u8,
-                70u8,
-                140u8,
-                56u8,
-                111u8,
-                146u8,
-                93u8,
-                122u8,
-                84u8,
-                41u8,
-                236u8,
-                173u8,
-                156u8,
-                4u8,
-                149u8,
-                221u8,
-                184u8,
-                211u8,
-                141u8,
-                105u8,
-                6u8,
-                20u8,
-                211u8,
-                47u8,
-                153u8,
+                175u8, 183u8, 149u8, 201u8, 198u8, 30u8, 79u8, 231u8, 70u8, 140u8, 56u8,
+                111u8, 146u8, 93u8, 122u8, 84u8, 41u8, 236u8, 173u8, 156u8, 4u8, 149u8,
+                221u8, 184u8, 211u8, 141u8, 105u8, 6u8, 20u8, 211u8, 47u8, 153u8,
             ],
             [
-                178u8,
-                222u8,
-                47u8,
-                190u8,
-                128u8,
-                26u8,
-                13u8,
-                246u8,
-                192u8,
-                203u8,
-                221u8,
-                253u8,
-                68u8,
-                139u8,
-                163u8,
-                196u8,
-                29u8,
-                72u8,
-                160u8,
-                64u8,
-                202u8,
-                53u8,
-                197u8,
-                108u8,
-                129u8,
-                150u8,
-                239u8,
-                15u8,
-                202u8,
-                231u8,
-                33u8,
-                168u8,
+                178u8, 222u8, 47u8, 190u8, 128u8, 26u8, 13u8, 246u8, 192u8, 203u8, 221u8,
+                253u8, 68u8, 139u8, 163u8, 196u8, 29u8, 72u8, 160u8, 64u8, 202u8, 53u8,
+                197u8, 108u8, 129u8, 150u8, 239u8, 15u8, 202u8, 231u8, 33u8, 168u8,
             ],
             [
-                210u8,
-                110u8,
-                22u8,
-                202u8,
-                212u8,
-                84u8,
-                135u8,
-                5u8,
-                228u8,
-                201u8,
-                226u8,
-                217u8,
-                79u8,
-                152u8,
-                238u8,
-                145u8,
-                194u8,
-                137u8,
-                8u8,
-                94u8,
-                228u8,
-                37u8,
-                89u8,
-                79u8,
-                213u8,
-                99u8,
-                95u8,
-                162u8,
-                150u8,
-                76u8,
-                207u8,
-                24u8,
+                210u8, 110u8, 22u8, 202u8, 212u8, 84u8, 135u8, 5u8, 228u8, 201u8, 226u8,
+                217u8, 79u8, 152u8, 238u8, 145u8, 194u8, 137u8, 8u8, 94u8, 228u8, 37u8,
+                89u8, 79u8, 213u8, 99u8, 95u8, 162u8, 150u8, 76u8, 207u8, 24u8,
             ],
             [
-                231u8,
-                149u8,
-                14u8,
-                222u8,
-                3u8,
-                148u8,
-                185u8,
-                242u8,
-                206u8,
-                74u8,
-                90u8,
-                27u8,
-                245u8,
-                167u8,
-                225u8,
-                133u8,
-                36u8,
-                17u8,
-                247u8,
-                230u8,
-                102u8,
-                27u8,
-                67u8,
-                8u8,
-                201u8,
-                19u8,
-                196u8,
-                191u8,
-                209u8,
-                16u8,
-                39u8,
-                228u8,
+                231u8, 149u8, 14u8, 222u8, 3u8, 148u8, 185u8, 242u8, 206u8, 74u8, 90u8,
+                27u8, 245u8, 167u8, 225u8, 133u8, 36u8, 17u8, 247u8, 230u8, 102u8, 27u8,
+                67u8, 8u8, 201u8, 19u8, 196u8, 191u8, 209u8, 16u8, 39u8, 228u8,
             ],
             [
-                232u8,
-                22u8,
-                153u8,
-                184u8,
-                81u8,
-                19u8,
-                238u8,
-                161u8,
-                199u8,
-                62u8,
-                16u8,
-                88u8,
-                139u8,
-                43u8,
-                3u8,
-                94u8,
-                85u8,
-                137u8,
-                51u8,
-                105u8,
-                99u8,
-                33u8,
-                115u8,
-                175u8,
-                212u8,
-                63u8,
-                235u8,
-                25u8,
-                47u8,
-                172u8,
-                100u8,
-                227u8,
+                232u8, 22u8, 153u8, 184u8, 81u8, 19u8, 238u8, 161u8, 199u8, 62u8, 16u8,
+                88u8, 139u8, 43u8, 3u8, 94u8, 85u8, 137u8, 51u8, 105u8, 99u8, 33u8,
+                115u8, 175u8, 212u8, 63u8, 235u8, 25u8, 47u8, 172u8, 100u8, 227u8,
             ],
             [
-                235u8,
-                139u8,
-                164u8,
-                60u8,
-                237u8,
-                117u8,
-                55u8,
-                66u8,
-                25u8,
-                70u8,
-                189u8,
-                67u8,
-                232u8,
-                40u8,
-                184u8,
-                178u8,
-                184u8,
-                66u8,
-                137u8,
-                39u8,
-                170u8,
-                143u8,
-                128u8,
-                28u8,
-                19u8,
-                217u8,
-                52u8,
-                191u8,
-                17u8,
-                172u8,
-                165u8,
-                123u8,
+                235u8, 139u8, 164u8, 60u8, 237u8, 117u8, 55u8, 66u8, 25u8, 70u8, 189u8,
+                67u8, 232u8, 40u8, 184u8, 178u8, 184u8, 66u8, 137u8, 39u8, 170u8, 143u8,
+                128u8, 28u8, 19u8, 217u8, 52u8, 191u8, 17u8, 172u8, 165u8, 123u8,
             ],
             [
-                251u8,
-                16u8,
-                40u8,
-                101u8,
-                213u8,
-                10u8,
-                221u8,
-                221u8,
-                246u8,
-                157u8,
-                169u8,
-                181u8,
-                170u8,
-                27u8,
-                206u8,
-                214u8,
-                108u8,
-                128u8,
-                207u8,
-                134u8,
-                154u8,
-                92u8,
-                141u8,
-                4u8,
-                113u8,
-                164u8,
-                103u8,
-                225u8,
-                140u8,
-                233u8,
-                202u8,
-                177u8,
+                251u8, 16u8, 40u8, 101u8, 213u8, 10u8, 221u8, 221u8, 246u8, 157u8, 169u8,
+                181u8, 170u8, 27u8, 206u8, 214u8, 108u8, 128u8, 207u8, 134u8, 154u8,
+                92u8, 141u8, 4u8, 113u8, 164u8, 103u8, 225u8, 140u8, 233u8, 202u8, 177u8,
             ],
         ];
     }
@@ -7563,22 +6822,16 @@ function test_VerifyProof_WhenGroth16() external view;
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<log as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <log as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                            validate,
-                        )
+                    <log as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
                         .map(Self::log)
                 }
                 Some(<log_address as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <log_address as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_address)
                 }
@@ -7586,7 +6839,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_array_0 as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_array_0)
                 }
@@ -7594,7 +6846,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_array_1 as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_array_1)
                 }
@@ -7602,7 +6853,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_array_2 as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_array_2)
                 }
@@ -7610,7 +6860,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_bytes as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_bytes)
                 }
@@ -7618,16 +6867,11 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_bytes32 as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_bytes32)
                 }
                 Some(<log_int as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <log_int as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                            validate,
-                        )
+                    <log_int as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
                         .map(Self::log_int)
                 }
                 Some(
@@ -7636,7 +6880,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_address as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_address)
                 }
@@ -7646,7 +6889,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_array_0 as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_array_0)
                 }
@@ -7656,7 +6898,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_array_1 as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_array_1)
                 }
@@ -7666,7 +6907,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_array_2 as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_array_2)
                 }
@@ -7674,7 +6914,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_bytes as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_bytes)
                 }
@@ -7684,7 +6923,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_bytes32 as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_bytes32)
                 }
@@ -7694,7 +6932,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_decimal_int as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_decimal_int)
                 }
@@ -7704,7 +6941,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_decimal_uint as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_decimal_uint)
                 }
@@ -7712,7 +6948,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_int as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_int)
                 }
@@ -7720,7 +6955,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_string as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_string)
                 }
@@ -7728,7 +6962,6 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_named_uint as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_named_uint)
                 }
@@ -7736,24 +6969,15 @@ function test_VerifyProof_WhenGroth16() external view;
                     <log_string as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
-                            validate,
                         )
                         .map(Self::log_string)
                 }
                 Some(<log_uint as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <log_uint as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                            validate,
-                        )
+                    <log_uint as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
                         .map(Self::log_uint)
                 }
                 Some(<logs as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <logs as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                            validate,
-                        )
+                    <logs as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
                         .map(Self::logs)
                 }
                 _ => {
@@ -7919,14 +7143,13 @@ function test_VerifyProof_WhenGroth16() external view;
 See the [wrapper's documentation](`SP1VerifierGroth16TestInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> SP1VerifierGroth16TestInstance<T, P, N> {
-        SP1VerifierGroth16TestInstance::<T, P, N>::new(address, provider)
+    ) -> SP1VerifierGroth16TestInstance<P, N> {
+        SP1VerifierGroth16TestInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -7935,15 +7158,14 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<SP1VerifierGroth16TestInstance<T, P, N>>,
+        Output = alloy_contract::Result<SP1VerifierGroth16TestInstance<P, N>>,
     > {
-        SP1VerifierGroth16TestInstance::<T, P, N>::deploy(provider)
+        SP1VerifierGroth16TestInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -7952,11 +7174,10 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
-        SP1VerifierGroth16TestInstance::<T, P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        SP1VerifierGroth16TestInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`SP1VerifierGroth16Test`](self) instance.
 
@@ -7970,17 +7191,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct SP1VerifierGroth16TestInstance<
-        T,
-        P,
-        N = alloy_contract::private::Ethereum,
-    > {
+    pub struct SP1VerifierGroth16TestInstance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for SP1VerifierGroth16TestInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for SP1VerifierGroth16TestInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("SP1VerifierGroth16TestInstance").field(&self.address).finish()
@@ -7989,10 +7206,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGroth16TestInstance<T, P, N> {
+    > SP1VerifierGroth16TestInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`SP1VerifierGroth16Test`](self) contract instance.
 
 See the [wrapper's documentation](`SP1VerifierGroth16TestInstance`) for more details.*/
@@ -8004,7 +7220,7 @@ See the [wrapper's documentation](`SP1VerifierGroth16TestInstance`) for more det
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -8015,7 +7231,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<SP1VerifierGroth16TestInstance<T, P, N>> {
+        ) -> alloy_contract::Result<SP1VerifierGroth16TestInstance<P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -8026,7 +7242,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -8053,24 +7269,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> SP1VerifierGroth16TestInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> SP1VerifierGroth16TestInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> SP1VerifierGroth16TestInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> SP1VerifierGroth16TestInstance<P, N> {
             SP1VerifierGroth16TestInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGroth16TestInstance<T, P, N> {
+    > SP1VerifierGroth16TestInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -8078,233 +7293,215 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`IS_TEST`] function.
-        pub fn IS_TEST(&self) -> alloy_contract::SolCallBuilder<T, &P, IS_TESTCall, N> {
-            self.call_builder(&IS_TESTCall {})
+        pub fn IS_TEST(&self) -> alloy_contract::SolCallBuilder<&P, IS_TESTCall, N> {
+            self.call_builder(&IS_TESTCall)
         }
         ///Creates a new call builder for the [`excludeArtifacts`] function.
         pub fn excludeArtifacts(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, excludeArtifactsCall, N> {
-            self.call_builder(&excludeArtifactsCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, excludeArtifactsCall, N> {
+            self.call_builder(&excludeArtifactsCall)
         }
         ///Creates a new call builder for the [`excludeContracts`] function.
         pub fn excludeContracts(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, excludeContractsCall, N> {
-            self.call_builder(&excludeContractsCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, excludeContractsCall, N> {
+            self.call_builder(&excludeContractsCall)
         }
         ///Creates a new call builder for the [`excludeSenders`] function.
         pub fn excludeSenders(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, excludeSendersCall, N> {
-            self.call_builder(&excludeSendersCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, excludeSendersCall, N> {
+            self.call_builder(&excludeSendersCall)
         }
         ///Creates a new call builder for the [`failed`] function.
-        pub fn failed(&self) -> alloy_contract::SolCallBuilder<T, &P, failedCall, N> {
-            self.call_builder(&failedCall {})
+        pub fn failed(&self) -> alloy_contract::SolCallBuilder<&P, failedCall, N> {
+            self.call_builder(&failedCall)
         }
         ///Creates a new call builder for the [`setUp`] function.
-        pub fn setUp(&self) -> alloy_contract::SolCallBuilder<T, &P, setUpCall, N> {
-            self.call_builder(&setUpCall {})
+        pub fn setUp(&self) -> alloy_contract::SolCallBuilder<&P, setUpCall, N> {
+            self.call_builder(&setUpCall)
         }
         ///Creates a new call builder for the [`targetArtifactSelectors`] function.
         pub fn targetArtifactSelectors(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, targetArtifactSelectorsCall, N> {
-            self.call_builder(&targetArtifactSelectorsCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, targetArtifactSelectorsCall, N> {
+            self.call_builder(&targetArtifactSelectorsCall)
         }
         ///Creates a new call builder for the [`targetArtifacts`] function.
         pub fn targetArtifacts(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, targetArtifactsCall, N> {
-            self.call_builder(&targetArtifactsCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, targetArtifactsCall, N> {
+            self.call_builder(&targetArtifactsCall)
         }
         ///Creates a new call builder for the [`targetContracts`] function.
         pub fn targetContracts(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, targetContractsCall, N> {
-            self.call_builder(&targetContractsCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, targetContractsCall, N> {
+            self.call_builder(&targetContractsCall)
         }
         ///Creates a new call builder for the [`targetInterfaces`] function.
         pub fn targetInterfaces(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, targetInterfacesCall, N> {
-            self.call_builder(&targetInterfacesCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, targetInterfacesCall, N> {
+            self.call_builder(&targetInterfacesCall)
         }
         ///Creates a new call builder for the [`targetSelectors`] function.
         pub fn targetSelectors(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, targetSelectorsCall, N> {
-            self.call_builder(&targetSelectorsCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, targetSelectorsCall, N> {
+            self.call_builder(&targetSelectorsCall)
         }
         ///Creates a new call builder for the [`targetSenders`] function.
         pub fn targetSenders(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, targetSendersCall, N> {
-            self.call_builder(&targetSendersCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, targetSendersCall, N> {
+            self.call_builder(&targetSendersCall)
         }
         ///Creates a new call builder for the [`test_RevertVerifyProof_WhenGroth16`] function.
         pub fn test_RevertVerifyProof_WhenGroth16(
             &self,
         ) -> alloy_contract::SolCallBuilder<
-            T,
             &P,
             test_RevertVerifyProof_WhenGroth16Call,
             N,
         > {
-            self.call_builder(
-                &test_RevertVerifyProof_WhenGroth16Call {
-                },
-            )
+            self.call_builder(&test_RevertVerifyProof_WhenGroth16Call)
         }
         ///Creates a new call builder for the [`test_VerifyProof_WhenGroth16`] function.
         pub fn test_VerifyProof_WhenGroth16(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, test_VerifyProof_WhenGroth16Call, N> {
-            self.call_builder(
-                &test_VerifyProof_WhenGroth16Call {
-                },
-            )
+        ) -> alloy_contract::SolCallBuilder<&P, test_VerifyProof_WhenGroth16Call, N> {
+            self.call_builder(&test_VerifyProof_WhenGroth16Call)
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SP1VerifierGroth16TestInstance<T, P, N> {
+    > SP1VerifierGroth16TestInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`log`] event.
-        pub fn log_filter(&self) -> alloy_contract::Event<T, &P, log, N> {
+        pub fn log_filter(&self) -> alloy_contract::Event<&P, log, N> {
             self.event_filter::<log>()
         }
         ///Creates a new event filter for the [`log_address`] event.
-        pub fn log_address_filter(
-            &self,
-        ) -> alloy_contract::Event<T, &P, log_address, N> {
+        pub fn log_address_filter(&self) -> alloy_contract::Event<&P, log_address, N> {
             self.event_filter::<log_address>()
         }
         ///Creates a new event filter for the [`log_array_0`] event.
-        pub fn log_array_0_filter(
-            &self,
-        ) -> alloy_contract::Event<T, &P, log_array_0, N> {
+        pub fn log_array_0_filter(&self) -> alloy_contract::Event<&P, log_array_0, N> {
             self.event_filter::<log_array_0>()
         }
         ///Creates a new event filter for the [`log_array_1`] event.
-        pub fn log_array_1_filter(
-            &self,
-        ) -> alloy_contract::Event<T, &P, log_array_1, N> {
+        pub fn log_array_1_filter(&self) -> alloy_contract::Event<&P, log_array_1, N> {
             self.event_filter::<log_array_1>()
         }
         ///Creates a new event filter for the [`log_array_2`] event.
-        pub fn log_array_2_filter(
-            &self,
-        ) -> alloy_contract::Event<T, &P, log_array_2, N> {
+        pub fn log_array_2_filter(&self) -> alloy_contract::Event<&P, log_array_2, N> {
             self.event_filter::<log_array_2>()
         }
         ///Creates a new event filter for the [`log_bytes`] event.
-        pub fn log_bytes_filter(&self) -> alloy_contract::Event<T, &P, log_bytes, N> {
+        pub fn log_bytes_filter(&self) -> alloy_contract::Event<&P, log_bytes, N> {
             self.event_filter::<log_bytes>()
         }
         ///Creates a new event filter for the [`log_bytes32`] event.
-        pub fn log_bytes32_filter(
-            &self,
-        ) -> alloy_contract::Event<T, &P, log_bytes32, N> {
+        pub fn log_bytes32_filter(&self) -> alloy_contract::Event<&P, log_bytes32, N> {
             self.event_filter::<log_bytes32>()
         }
         ///Creates a new event filter for the [`log_int`] event.
-        pub fn log_int_filter(&self) -> alloy_contract::Event<T, &P, log_int, N> {
+        pub fn log_int_filter(&self) -> alloy_contract::Event<&P, log_int, N> {
             self.event_filter::<log_int>()
         }
         ///Creates a new event filter for the [`log_named_address`] event.
         pub fn log_named_address_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_address, N> {
+        ) -> alloy_contract::Event<&P, log_named_address, N> {
             self.event_filter::<log_named_address>()
         }
         ///Creates a new event filter for the [`log_named_array_0`] event.
         pub fn log_named_array_0_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_array_0, N> {
+        ) -> alloy_contract::Event<&P, log_named_array_0, N> {
             self.event_filter::<log_named_array_0>()
         }
         ///Creates a new event filter for the [`log_named_array_1`] event.
         pub fn log_named_array_1_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_array_1, N> {
+        ) -> alloy_contract::Event<&P, log_named_array_1, N> {
             self.event_filter::<log_named_array_1>()
         }
         ///Creates a new event filter for the [`log_named_array_2`] event.
         pub fn log_named_array_2_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_array_2, N> {
+        ) -> alloy_contract::Event<&P, log_named_array_2, N> {
             self.event_filter::<log_named_array_2>()
         }
         ///Creates a new event filter for the [`log_named_bytes`] event.
         pub fn log_named_bytes_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_bytes, N> {
+        ) -> alloy_contract::Event<&P, log_named_bytes, N> {
             self.event_filter::<log_named_bytes>()
         }
         ///Creates a new event filter for the [`log_named_bytes32`] event.
         pub fn log_named_bytes32_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_bytes32, N> {
+        ) -> alloy_contract::Event<&P, log_named_bytes32, N> {
             self.event_filter::<log_named_bytes32>()
         }
         ///Creates a new event filter for the [`log_named_decimal_int`] event.
         pub fn log_named_decimal_int_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_decimal_int, N> {
+        ) -> alloy_contract::Event<&P, log_named_decimal_int, N> {
             self.event_filter::<log_named_decimal_int>()
         }
         ///Creates a new event filter for the [`log_named_decimal_uint`] event.
         pub fn log_named_decimal_uint_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_decimal_uint, N> {
+        ) -> alloy_contract::Event<&P, log_named_decimal_uint, N> {
             self.event_filter::<log_named_decimal_uint>()
         }
         ///Creates a new event filter for the [`log_named_int`] event.
         pub fn log_named_int_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_int, N> {
+        ) -> alloy_contract::Event<&P, log_named_int, N> {
             self.event_filter::<log_named_int>()
         }
         ///Creates a new event filter for the [`log_named_string`] event.
         pub fn log_named_string_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_string, N> {
+        ) -> alloy_contract::Event<&P, log_named_string, N> {
             self.event_filter::<log_named_string>()
         }
         ///Creates a new event filter for the [`log_named_uint`] event.
         pub fn log_named_uint_filter(
             &self,
-        ) -> alloy_contract::Event<T, &P, log_named_uint, N> {
+        ) -> alloy_contract::Event<&P, log_named_uint, N> {
             self.event_filter::<log_named_uint>()
         }
         ///Creates a new event filter for the [`log_string`] event.
-        pub fn log_string_filter(&self) -> alloy_contract::Event<T, &P, log_string, N> {
+        pub fn log_string_filter(&self) -> alloy_contract::Event<&P, log_string, N> {
             self.event_filter::<log_string>()
         }
         ///Creates a new event filter for the [`log_uint`] event.
-        pub fn log_uint_filter(&self) -> alloy_contract::Event<T, &P, log_uint, N> {
+        pub fn log_uint_filter(&self) -> alloy_contract::Event<&P, log_uint, N> {
             self.event_filter::<log_uint>()
         }
         ///Creates a new event filter for the [`logs`] event.
-        pub fn logs_filter(&self) -> alloy_contract::Event<T, &P, logs, N> {
+        pub fn logs_filter(&self) -> alloy_contract::Event<&P, logs, N> {
             self.event_filter::<logs>()
         }
     }
