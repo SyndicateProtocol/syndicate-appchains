@@ -12,6 +12,11 @@ on:
 env:
   GITHUB_REGISTRY: ghcr.io
 
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
 jobs:
   docker:
     name: Build and Push Nitro Node Builder
