@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "synd-withdrawals/synd-enclave/nitro/**"
+  workflow_dispatch:
+
 env:
   GITHUB_REGISTRY: ghcr.io
 
