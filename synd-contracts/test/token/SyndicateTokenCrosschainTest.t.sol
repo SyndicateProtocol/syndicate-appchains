@@ -535,6 +535,70 @@ contract SyndicateTokenCrosschainTest is Test {
 
         assertTrue(token.transfersLocked(), "Transfers should be locked after setting unlock timestamp");
     }
+
+    /*//////////////////////////////////////////////////////////////
+                        TRANSFER LOCK TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_CrosschainMint_RespectsTransferLock() public {
+        // Setup emission budget for bridge
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
+        
+        // Setup transfer lock
+        vm.prank(admin);
+        token.setUnlockTimestamp(block.timestamp + 30 days);
+        assertTrue(token.transfersLocked(), "Transfers should be locked");
+        
+        // Regular bridge should be blocked during transfer lock
+        vm.prank(bridge1);
+        vm.expectRevert(abi.encodeWithSignature("TransfersLocked()"));
+        token.crosschainMint(user, 1000 * 10**18);
+        
+        // Verify no tokens were minted
+        assertEq(token.balanceOf(user), 0);
+    }
+
+    function test_CrosschainMint_AirdropManagerBypassesLock() public {
+        // Setup emission budget for bridge
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
+        
+        // Grant AIRDROP_MANAGER_ROLE to bridge1 - use vm.startPrank for multiple calls
+        vm.startPrank(admin);
+        assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), admin), "Admin should have DEFAULT_ADMIN_ROLE");
+        token.grantRole(token.AIRDROP_MANAGER_ROLE(), bridge1);
+        assertTrue(token.hasRole(token.AIRDROP_MANAGER_ROLE(), bridge1), "Bridge should have AIRDROP_MANAGER_ROLE");
+        
+        // Setup transfer lock
+        token.setUnlockTimestamp(block.timestamp + 30 days);
+        vm.stopPrank();
+        
+        assertTrue(token.transfersLocked(), "Transfers should be locked");
+        
+        // Bridge with AIRDROP_MANAGER_ROLE should work during transfer lock
+        vm.prank(bridge1);
+        token.crosschainMint(user, 1000 * 10**18);
+        
+        // Verify tokens were minted
+        assertEq(token.balanceOf(user), 1000 * 10**18);
+    }
+
+    function test_CrosschainMint_WorksWhenNotLocked() public {
+        // Setup emission budget for bridge
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
+        
+        // Ensure transfers are not locked (default state)
+        assertFalse(token.transfersLocked(), "Transfers should not be locked");
+        
+        // Bridge should work when transfers are not locked
+        vm.prank(bridge1);
+        token.crosschainMint(user, 1000 * 10**18);
+        
+        // Verify tokens were minted
+        assertEq(token.balanceOf(user), 1000 * 10**18);
+    }
 }
 
 // Mock contract to test bridge validation

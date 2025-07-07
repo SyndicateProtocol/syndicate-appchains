@@ -118,6 +118,11 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         // Check and consume emission budget
         _validateAndConsumeEmissionBudget(msg.sender, amount);
 
+        // Check if transfers are locked and caller is not authorized to bypass
+        if (transfersLocked() && !hasRole(AIRDROP_MANAGER_ROLE, msg.sender)) {
+            revert TransfersLocked();
+        }
+
         // Mint tokens
         _mint(to, amount);
 
