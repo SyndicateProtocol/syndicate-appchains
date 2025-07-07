@@ -18,6 +18,8 @@ RUN --mount=type=cache,target=/var/cache/apt \
 # Stage 2: Build
 FROM builder AS build
 COPY . .
+RUN git submodule update --init --recursive
+
 
 # Install SP1 toolchain using official installer
 RUN curl -L https://sp1up.succinct.xyz | bash
