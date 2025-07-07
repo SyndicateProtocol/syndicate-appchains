@@ -396,6 +396,58 @@ contract SyndicateTokenCrosschainTest is Test {
         );
     }
 
+    function test_RemoveBridge() public {
+        // Setup multiple bridges
+        vm.prank(admin);
+        token.setBridgeLimits(bridge2, DAILY_LIMIT, DAILY_LIMIT);
+
+        // Verify both bridges exist
+        assertEq(token.getBridgeCount(), 2);
+        assertTrue(token.isBridgeAuthorized(bridge1));
+        assertTrue(token.isBridgeAuthorized(bridge2));
+
+        // Remove bridge1
+        vm.prank(admin);
+        token.removeBridge(bridge1);
+
+        // Verify bridge1 is removed
+        assertEq(token.getBridgeCount(), 1);
+        assertFalse(token.isBridgeAuthorized(bridge1));
+        assertTrue(token.isBridgeAuthorized(bridge2));
+
+        // Verify bridge2 is still accessible
+        assertEq(token.getBridgeAtIndex(0), bridge2);
+    }
+
+    function test_RemoveBridge_GasEfficiency() public {
+        // Test the gas efficiency improvement by adding many bridges
+        address[] memory bridges = new address[](100);
+
+        // Add 100 bridges
+        for (uint256 i = 0; i < 100; i++) {
+            bridges[i] = address(new MockBridge());
+            vm.prank(admin);
+            token.setBridgeLimits(bridges[i], DAILY_LIMIT, DAILY_LIMIT);
+        }
+
+        // Verify all bridges are added
+        assertEq(token.getBridgeCount(), 101); // 100 + bridge1 from setUp
+
+        // Remove a bridge in the middle (should be O(1) with EnumerableSet)
+        uint256 gasStart = gasleft();
+        vm.prank(admin);
+        token.removeBridge(bridges[50]);
+        uint256 gasUsed = gasStart - gasleft();
+
+        // Verify bridge is removed
+        assertEq(token.getBridgeCount(), 100);
+        assertFalse(token.isBridgeAuthorized(bridges[50]));
+
+        // Gas usage should be relatively low and constant regardless of bridge count
+        // This test ensures the fix is working properly
+        assertTrue(gasUsed < 50000, "Gas usage should be low for bridge removal");
+    }
+
     /*//////////////////////////////////////////////////////////////
                         CREATE2 DEPLOYMENT TESTS
     //////////////////////////////////////////////////////////////*/

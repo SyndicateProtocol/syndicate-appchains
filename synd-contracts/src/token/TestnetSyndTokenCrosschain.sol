@@ -13,7 +13,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
  * This contract provides all the features of both parent contracts:
  * - TestnetSyndToken: Flexible minting for testing, no initial supply constraints
  * - SyndicateTokenCrosschain: Crosschain capabilities, rate limiting, emission budgets
- * 
+ *
  * Key Features:
  * - All TestnetSyndToken functionality (flexible minting for testing)
  * - All SyndicateTokenCrosschain functionality (crosschain capabilities, rate limiting, emission budgets)
@@ -39,13 +39,13 @@ contract TestnetSyndTokenCrosschain is SyndicateTokenCrosschain {
      * @param defaultAdmin Address that will have default admin privileges
      * @param minter Address that will have minter privileges for testnet
      */
-    constructor(address defaultAdmin, address minter) 
+    constructor(address defaultAdmin, address minter)
         SyndicateTokenCrosschain(defaultAdmin, defaultAdmin) // Use admin as treasury for testnet
     {
         // Override token metadata for testnet
         // Note: We can't override name/symbol in constructor due to ERC20 limitations
         // but this contract will have testnet-specific behavior
-        
+
         // Grant testnet minter role
         _grantRole(MINTER_ROLE, minter);
         _grantRole(MINTER_ROLE, defaultAdmin);
@@ -99,13 +99,7 @@ contract TestnetSyndTokenCrosschain is SyndicateTokenCrosschain {
      * @param interfaceId Interface identifier to check
      * @return true if interface is supported
      */
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

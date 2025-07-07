@@ -6,6 +6,7 @@ import {IERC7802} from "./crosschain/interfaces/IERC7802.sol";
 import {IBridgeRateLimiter} from "./crosschain/interfaces/IBridgeRateLimiter.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /**
  * @title SyndicateTokenCrosschain
@@ -25,6 +26,8 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
  *
  */
 contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimiter {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     /*//////////////////////////////////////////////////////////////
                                   ROLES
     //////////////////////////////////////////////////////////////*/
@@ -42,11 +45,8 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     /// @notice Mapping of bridge address to bridge configuration
     mapping(address => BridgeConfig) public bridgeConfigs;
 
-    /// @notice List of all configured bridges for enumeration
-    address[] public bridges;
-
-    /// @notice Mapping to track if address is in bridges array
-    mapping(address => bool) public isBridgeAdded;
+    /// @notice Set of all configured bridges for enumeration and O(1) operations
+    EnumerableSet.AddressSet private bridges;
 
     /// @notice Mapping of bridge address to emission budget allocated
     mapping(address => uint256) public bridgeEmissionBudgets;
@@ -54,7 +54,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     /// @notice Mapping of bridge -> hour -> mint usage for sliding window rate limiting
     mapping(address => mapping(uint256 => uint256)) public hourlyMintUsage;
 
-    /// @notice Mapping of bridge -> hour -> burn usage for sliding window rate limiting  
+    /// @notice Mapping of bridge -> hour -> burn usage for sliding window rate limiting
     mapping(address => mapping(uint256 => uint256)) public hourlyBurnUsage;
 
     /*//////////////////////////////////////////////////////////////
@@ -93,7 +93,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     constructor(address defaultAdmin, address syndTreasuryAddress) SyndicateToken(defaultAdmin, syndTreasuryAddress) {
         // Grant bridge manager role to admin
         _grantRole(BRIDGE_MANAGER_ROLE, defaultAdmin);
-        
+
         // Grant emission budget manager role to admin (typically transferred to emission scheduler)
         _grantRole(EMISSION_BUDGET_MANAGER_ROLE, defaultAdmin);
     }
@@ -159,26 +159,21 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         onlyRole(BRIDGE_MANAGER_ROLE)
     {
         if (bridge == address(0)) revert ZeroAddress();
-        
+
         // Prevent bridge manager from adding themselves as a bridge
         if (bridge == msg.sender) revert CannotAddSelfAsBridge();
-        
+
         // Require bridge to be a contract (not an EOA)
         if (bridge.code.length == 0) revert BridgeMustBeContract();
 
-        // Add bridge to array if not already added
-        if (!isBridgeAdded[bridge]) {
-            bridges.push(bridge);
-            isBridgeAdded[bridge] = true;
+        // Add bridge to set if not already added
+        if (bridges.add(bridge)) {
             emit BridgeAdded(bridge, dailyMintLimit, dailyBurnLimit);
         }
 
         // Set bridge configuration
-        bridgeConfigs[bridge] = BridgeConfig({
-            dailyMintLimit: dailyMintLimit,
-            dailyBurnLimit: dailyBurnLimit,
-            isActive: true
-        });
+        bridgeConfigs[bridge] =
+            BridgeConfig({dailyMintLimit: dailyMintLimit, dailyBurnLimit: dailyBurnLimit, isActive: true});
 
         emit BridgeLimitsSet(bridge, dailyMintLimit, dailyBurnLimit);
     }
@@ -186,7 +181,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     /// @inheritdoc IBridgeRateLimiter
     function setBridgeActive(address bridge, bool isActive) external override onlyRole(BRIDGE_MANAGER_ROLE) {
         if (bridge == address(0)) revert ZeroAddress();
-        if (!isBridgeAdded[bridge]) revert UnauthorizedBridge(bridge);
+        if (!bridges.contains(bridge)) revert UnauthorizedBridge(bridge);
 
         bridgeConfigs[bridge].isActive = isActive;
         emit BridgeActiveStatusChanged(bridge, isActive);
@@ -199,20 +194,10 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
      */
     function removeBridge(address bridge) external onlyRole(BRIDGE_MANAGER_ROLE) {
         if (bridge == address(0)) revert ZeroAddress();
-        if (!isBridgeAdded[bridge]) revert UnauthorizedBridge(bridge);
+        if (!bridges.remove(bridge)) revert UnauthorizedBridge(bridge);
 
         // Remove from mapping
         delete bridgeConfigs[bridge];
-        isBridgeAdded[bridge] = false;
-
-        // Remove from array (swap with last element and pop)
-        for (uint256 i = 0; i < bridges.length; i++) {
-            if (bridges[i] == bridge) {
-                bridges[i] = bridges[bridges.length - 1];
-                bridges.pop();
-                break;
-            }
-        }
 
         emit BridgeRemoved(bridge);
     }
@@ -226,7 +211,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     function allocateEmissionBudget(address bridge, uint256 amount) external onlyRole(EMISSION_BUDGET_MANAGER_ROLE) {
         if (bridge == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
-        if (!isBridgeAdded[bridge]) revert UnauthorizedBridge(bridge);
+        if (!bridges.contains(bridge)) revert UnauthorizedBridge(bridge);
 
         bridgeEmissionBudgets[bridge] += amount;
         emit EmissionBudgetAllocated(bridge, amount);
@@ -245,7 +230,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         BridgeConfig storage config = bridgeConfigs[bridge];
 
         // Check if bridge is authorized
-        if (!isBridgeAdded[bridge] || !config.isActive) {
+        if (!bridges.contains(bridge) || !config.isActive) {
             revert UnauthorizedBridge(bridge);
         }
 
@@ -262,9 +247,8 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
 
         // Check if adding this amount would exceed the daily limit
         if (totalUsageIn24Hours + amount > config.dailyMintLimit) {
-            uint256 available = config.dailyMintLimit > totalUsageIn24Hours 
-                ? config.dailyMintLimit - totalUsageIn24Hours 
-                : 0;
+            uint256 available =
+                config.dailyMintLimit > totalUsageIn24Hours ? config.dailyMintLimit - totalUsageIn24Hours : 0;
             revert InsufficientMintLimit(bridge, amount, available);
         }
 
@@ -281,7 +265,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         BridgeConfig storage config = bridgeConfigs[bridge];
 
         // Check if bridge is authorized
-        if (!isBridgeAdded[bridge] || !config.isActive) {
+        if (!bridges.contains(bridge) || !config.isActive) {
             revert UnauthorizedBridge(bridge);
         }
 
@@ -298,9 +282,8 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
 
         // Check if adding this amount would exceed the daily limit
         if (totalUsageIn24Hours + amount > config.dailyBurnLimit) {
-            uint256 available = config.dailyBurnLimit > totalUsageIn24Hours 
-                ? config.dailyBurnLimit - totalUsageIn24Hours 
-                : 0;
+            uint256 available =
+                config.dailyBurnLimit > totalUsageIn24Hours ? config.dailyBurnLimit - totalUsageIn24Hours : 0;
             revert InsufficientBurnLimit(bridge, amount, available);
         }
 
@@ -350,9 +333,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         }
 
         // Return remaining limit
-        return config.dailyMintLimit > totalUsageIn24Hours 
-            ? config.dailyMintLimit - totalUsageIn24Hours 
-            : 0;
+        return config.dailyMintLimit > totalUsageIn24Hours ? config.dailyMintLimit - totalUsageIn24Hours : 0;
     }
 
     /// @inheritdoc IBridgeRateLimiter
@@ -371,15 +352,13 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         }
 
         // Return remaining limit
-        return config.dailyBurnLimit > totalUsageIn24Hours 
-            ? config.dailyBurnLimit - totalUsageIn24Hours 
-            : 0;
+        return config.dailyBurnLimit > totalUsageIn24Hours ? config.dailyBurnLimit - totalUsageIn24Hours : 0;
     }
 
     /// @inheritdoc IBridgeRateLimiter
     function isBridgeAuthorized(address bridge) external view override returns (bool authorized) {
         BridgeConfig memory config = bridgeConfigs[bridge];
-        return isBridgeAdded[bridge] && config.isActive;
+        return bridges.contains(bridge) && config.isActive;
     }
 
     /**
@@ -387,17 +366,17 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
      * @return count Number of bridges
      */
     function getBridgeCount() external view returns (uint256 count) {
-        return bridges.length;
+        return bridges.length();
     }
 
     /**
      * @notice Get bridge address at index
-     * @param index Index in bridges array
+     * @param index Index in bridges set
      * @return bridge Bridge address
      */
     function getBridgeAtIndex(uint256 index) external view returns (address bridge) {
-        require(index < bridges.length, "SyndicateTokenCrosschain: index out of bounds");
-        return bridges[index];
+        require(index < bridges.length(), "SyndicateTokenCrosschain: index out of bounds");
+        return bridges.at(index);
     }
 
     /**
@@ -405,7 +384,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
      * @return allBridges Array of bridge addresses
      */
     function getAllBridges() external view returns (address[] memory allBridges) {
-        return bridges;
+        return bridges.values();
     }
 
     /**
