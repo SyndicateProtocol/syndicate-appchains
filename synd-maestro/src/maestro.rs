@@ -341,13 +341,7 @@ impl MaestroService {
             InternalError(RpcMissing(chain_id))
         })?;
 
-        with_cache_metrics!(
-            &self.metrics.valkey,
-            Operation::StreamWrite,
-            CacheType::ValkeyStream,
-            producer.enqueue_transaction(raw_tx)
-        )
-        .map_err(|e| {
+        producer.enqueue_transaction(raw_tx).await.map_err(|e| {
             error!(%chain_id, %tx_hash, %e, "failed to enqueue transaction to Valkey Stream");
             InternalError(TransactionSubmissionFailed(tx_hash.to_string()))
         })?;
