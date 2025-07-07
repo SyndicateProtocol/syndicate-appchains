@@ -35,9 +35,9 @@ To achieve this in a non-breaking way, data from the `source chains` gets stitch
 - **synd-enclave**: TEE (Trusted Execution Environment) component that receives block data from `Ethereum L1`, the `sequencing chain`, and `settlement chain`, applies the rollup STF (state transition function) to derive the rollup state, and signs a state commitment that enables withdrawals from the settlement chain's bridge (in Arbitrum this is called the `sendRoot`)
 - **synd-proposer**: Acts as the connector between the TEE and the settlement chain bridge. This service feeds chain data to the TEE enclave at configurable intervals, obtains the signed state commitment (`sendRoot`), wraps it into an Ethereum transaction, and submits it to the [`TEEModule` smart contract](synd-contracts/src/withdrawal/TeeModule.sol)
 - **synd-tee-attestation-zk-proofs**: Split into multiple sub-crates:
-  - `aws-nitro`: Contains vanilla Rust code for validating TEE attestation documents signed by Amazon's x509 root certificate. It outputs the document validity window, relevant PCRs, and the TEE signing key. Designed for reuse across different ZK proof systems
-  - `sp1`: SP1-specific implementation for generating and verifying ZK proofs of AWS Nitro attestation documents. On-chain proof verification is handled by the [`AttestationDocVerifier` smart contract](synd-contracts/src/withdrawal/AttestationDocVerifier.sol)
-  - `proof-submitter`: CLI tool for fetching TEE attestation from an enclave, generating SP1-based ZK proofs, and submitting them on-chain
+  - **aws-nitro**: Contains vanilla Rust code for validating TEE attestation documents signed by Amazon's x509 root certificate. It outputs the document validity window, relevant PCRs, and the TEE signing key. Designed for reuse across different ZK proof systems
+  - **sp1**: SP1-specific implementation for generating and verifying ZK proofs of AWS Nitro attestation documents. On-chain proof verification is handled by the [`AttestationDocVerifier` smart contract](synd-contracts/src/withdrawal/AttestationDocVerifier.sol)
+  - **proof-submitter**: CLI tool for fetching TEE attestation from an enclave, generating SP1-based ZK proofs, and submitting them on-chain
 
 ## Development Setup
 
