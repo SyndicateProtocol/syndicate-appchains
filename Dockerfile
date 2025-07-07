@@ -88,7 +88,15 @@ RUN mkdir -p target/machines/latest \
       -- --path arbitrator/wasm-libraries/forward/forward_stub.wat --stub \
  && wat2wasm arbitrator/wasm-libraries/forward/forward_stub.wat \
       -o target/machines/latest/forward_stub.wasm
+
+# fake out the wasm-build step so no Docker call is made
+RUN mkdir -p target/lib-wasm \
+ && touch target/lib-wasm/libbrotlicommon-static.a \
+ && touch target/lib-wasm/libbrotlienc-static.a \
+ && touch target/lib-wasm/libbrotlidec-static.a
+
 RUN make build-node-deps
+
 
 # 6) Build the Go CLI
 WORKDIR /go/src/synd-proposer
