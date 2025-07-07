@@ -55,6 +55,12 @@ interface IBridgeRateLimiter {
     /// @notice Thrown when bridge has insufficient emission budget
     error InsufficientEmissionBudget();
 
+    /// @notice Thrown when mint limit is unreasonably high
+    error UnreasonableMintLimit();
+
+    /// @notice Thrown when burn limit is unreasonably high
+    error UnreasonableBurnLimit();
+
     /*//////////////////////////////////////////////////////////////
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/

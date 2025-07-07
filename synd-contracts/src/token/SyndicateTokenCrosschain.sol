@@ -171,6 +171,10 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         // Require bridge to be a contract (not an EOA)
         if (bridge.code.length == 0) revert BridgeMustBeContract();
 
+        // Verify that the limits are not unreasonably high (allow max uint256 as "unlimited")
+        if (dailyMintLimit != type(uint256).max && dailyMintLimit > TOTAL_SUPPLY) revert UnreasonableMintLimit();
+        if (dailyBurnLimit != type(uint256).max && dailyBurnLimit > TOTAL_SUPPLY) revert UnreasonableBurnLimit();
+
         // Add bridge to set if not already added
         if (bridges.add(bridge)) {
             emit BridgeAdded(bridge, dailyMintLimit, dailyBurnLimit);

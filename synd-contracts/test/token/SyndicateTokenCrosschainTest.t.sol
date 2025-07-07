@@ -537,6 +537,86 @@ contract SyndicateTokenCrosschainTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                        INPUT VALIDATION TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_SetBridgeLimits_RejectsEOA() public {
+        // Define an EOA address (no code)
+        address eoa = address(0x123);
+        
+        // Should revert when trying to add an EOA as a bridge
+        vm.prank(admin);
+        vm.expectRevert();
+        token.setBridgeLimits(eoa, DAILY_LIMIT, DAILY_LIMIT);
+    }
+
+    function test_SetBridgeLimits_RejectsUnreasonableMintLimit() public {
+        // Use a real contract address for this test
+        address contractBridge = address(new MockBridge());
+        
+        // Debug: Check values
+        uint256 totalSupply = token.TOTAL_SUPPLY();
+        uint256 testValue = totalSupply + 1;
+        
+        // Manual validation test
+        assertTrue(testValue > totalSupply, "Test value should be greater than total supply");
+        
+        // Should revert when mint limit exceeds total supply
+        vm.prank(admin);
+        vm.expectRevert();
+        token.setBridgeLimits(contractBridge, testValue, DAILY_LIMIT);
+    }
+
+    function test_SetBridgeLimits_RejectsUnreasonableBurnLimit() public {
+        // Use a real contract address for this test
+        address contractBridge = address(new MockBridge());
+        
+        // Debug: Check values
+        uint256 totalSupply = token.TOTAL_SUPPLY();
+        uint256 testValue = totalSupply + 1;
+        
+        // Manual validation test
+        assertTrue(testValue > totalSupply, "Test value should be greater than total supply");
+        
+        // Should revert when burn limit exceeds total supply
+        vm.prank(admin);
+        vm.expectRevert();
+        token.setBridgeLimits(contractBridge, DAILY_LIMIT, testValue);
+    }
+
+    function test_SetBridgeLimits_AcceptsReasonableLimits() public {
+        // Use a real contract address for this test
+        address contractBridge = address(new MockBridge());
+        
+        // Should accept limits at or below total supply - use the same pattern as other tests
+        vm.prank(admin);
+        token.setBridgeLimits(contractBridge, DAILY_LIMIT, DAILY_LIMIT);
+        
+        // Verify bridge was added successfully
+        assertTrue(token.isBridgeAuthorized(contractBridge));
+        
+        IBridgeRateLimiter.BridgeConfig memory config = token.getBridgeConfig(contractBridge);
+        assertEq(config.dailyMintLimit, DAILY_LIMIT);
+        assertEq(config.dailyBurnLimit, DAILY_LIMIT);
+    }
+
+    function test_SetBridgeLimits_AllowsMaxUint256() public {
+        // Use a real contract address for this test
+        address contractBridge = address(new MockBridge());
+        
+        // Should accept max uint256 as unlimited
+        vm.prank(admin);
+        token.setBridgeLimits(contractBridge, type(uint256).max, type(uint256).max);
+        
+        // Verify bridge was added successfully
+        assertTrue(token.isBridgeAuthorized(contractBridge));
+        
+        IBridgeRateLimiter.BridgeConfig memory config = token.getBridgeConfig(contractBridge);
+        assertEq(config.dailyMintLimit, type(uint256).max);
+        assertEq(config.dailyBurnLimit, type(uint256).max);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                         TRANSFER LOCK TESTS
     //////////////////////////////////////////////////////////////*/
 
