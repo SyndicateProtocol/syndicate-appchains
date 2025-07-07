@@ -63,7 +63,7 @@ synd-translator                           = { path = "synd-translator/bin/synd-t
 test-utils                                = { path = "shared/test-utils" }
 
 # dependencies
-alloy                              = { version = "1.0.17", default-features = false} 
+alloy                              = { version = "1.0.17", default-features = false }
 alloy-rlp                          = "0.3.11"
 alloy-trie                         = { version = "0.9.0" }
 assert_matches                     = "1.5.0"
