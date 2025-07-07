@@ -56,6 +56,9 @@ interface IBridgeRateLimiter {
     /// @notice Thrown when bridge address is not a contract
     error BridgeMustBeContract();
 
+    /// @notice Thrown when bridge has insufficient emission budget
+    error InsufficientEmissionBudget();
+
     /*//////////////////////////////////////////////////////////////
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/

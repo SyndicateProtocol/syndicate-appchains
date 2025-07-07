@@ -32,6 +32,9 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     /// @notice Role for managing bridge configurations
     bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 
+    /// @notice Role for allocating emission budgets to bridges (typically emission scheduler)
+    bytes32 public constant EMISSION_BUDGET_MANAGER_ROLE = keccak256("EMISSION_BUDGET_MANAGER_ROLE");
+
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -44,6 +47,9 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
 
     /// @notice Mapping to track if address is in bridges array
     mapping(address => bool) public isBridgeAdded;
+
+    /// @notice Mapping of bridge address to emission budget allocated
+    mapping(address => uint256) public bridgeEmissionBudgets;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -59,6 +65,16 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     /// @param bridge Bridge address
     event BridgeRemoved(address indexed bridge);
 
+    /// @notice Emitted when emission budget is allocated to a bridge
+    /// @param bridge Bridge address
+    /// @param amount Amount of emission budget allocated
+    event EmissionBudgetAllocated(address indexed bridge, uint256 amount);
+
+    /// @notice Emitted when emission budget is consumed by a bridge
+    /// @param bridge Bridge address
+    /// @param amount Amount of emission budget consumed
+    event EmissionBudgetConsumed(address indexed bridge, uint256 amount);
+
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -71,6 +87,9 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     constructor(address defaultAdmin, address syndTreasuryAddress) SyndicateToken(defaultAdmin, syndTreasuryAddress) {
         // Grant bridge manager role to admin
         _grantRole(BRIDGE_MANAGER_ROLE, defaultAdmin);
+        
+        // Grant emission budget manager role to admin (typically transferred to emission scheduler)
+        _grantRole(EMISSION_BUDGET_MANAGER_ROLE, defaultAdmin);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -89,6 +108,9 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
 
         // Check if bridge is authorized and has sufficient limits
         _validateAndUseMintLimit(msg.sender, amount);
+
+        // Check and consume emission budget
+        _validateAndConsumeEmissionBudget(msg.sender, amount);
 
         // Mint tokens
         _mint(to, amount);
@@ -193,6 +215,21 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         emit BridgeRemoved(bridge);
     }
 
+    /**
+     * @notice Allocate emission budget to a bridge
+     * @param bridge Bridge address to allocate budget to
+     * @param amount Amount of emission budget to allocate
+     * @dev Only callable by emission budget manager role (typically emission scheduler)
+     */
+    function allocateEmissionBudget(address bridge, uint256 amount) external onlyRole(EMISSION_BUDGET_MANAGER_ROLE) {
+        if (bridge == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
+        if (!isBridgeAdded[bridge]) revert UnauthorizedBridge(bridge);
+
+        bridgeEmissionBudgets[bridge] += amount;
+        emit EmissionBudgetAllocated(bridge, amount);
+    }
+
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -253,6 +290,23 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
 
         // Consume the limit
         config.currentBurnUsed += amount;
+    }
+
+    /**
+     * @notice Validate bridge emission budget and consume it
+     * @param bridge Bridge address
+     * @param amount Amount to consume from emission budget
+     */
+    function _validateAndConsumeEmissionBudget(address bridge, uint256 amount) internal {
+        // Check if bridge has sufficient emission budget
+        uint256 availableBudget = bridgeEmissionBudgets[bridge];
+        if (amount > availableBudget) {
+            revert InsufficientEmissionBudget();
+        }
+
+        // Consume the emission budget
+        bridgeEmissionBudgets[bridge] -= amount;
+        emit EmissionBudgetConsumed(bridge, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -320,6 +374,15 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
      */
     function getAllBridges() external view returns (address[] memory allBridges) {
         return bridges;
+    }
+
+    /**
+     * @notice Get emission budget for a bridge
+     * @param bridge Bridge address
+     * @return budget Available emission budget for the bridge
+     */
+    function getEmissionBudget(address bridge) external view returns (uint256 budget) {
+        return bridgeEmissionBudgets[bridge];
     }
 
     /*//////////////////////////////////////////////////////////////

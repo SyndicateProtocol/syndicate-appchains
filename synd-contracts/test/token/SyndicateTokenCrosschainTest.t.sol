@@ -114,12 +114,55 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_AllowValidContractBridge() public {
         // Deploy a mock contract to act as a bridge
         address mockBridge = address(new MockBridge());
-        
+
         vm.prank(admin);
         token.setBridgeLimits(mockBridge, DAILY_LIMIT, DAILY_LIMIT);
-        
+
         assertTrue(token.isBridgeAuthorized(mockBridge));
         assertEq(token.getAvailableMintLimit(mockBridge), DAILY_LIMIT);
+    }
+
+    function test_EmissionBudgetPreventsUnauthorizedMinting() public {
+        // Test that crosschain minting requires emission budget allocation
+        uint256 mintAmount = 100_000 * 10 ** 18;
+
+        // Attempt to mint without emission budget should fail
+        vm.prank(bridge1);
+        vm.expectRevert(abi.encodeWithSelector(IBridgeRateLimiter.InsufficientEmissionBudget.selector));
+        token.crosschainMint(user, mintAmount);
+
+        // Allocate emission budget
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, mintAmount);
+
+        // Now minting should work
+        vm.prank(bridge1);
+        token.crosschainMint(user, mintAmount);
+
+        assertEq(token.balanceOf(user), mintAmount);
+        assertEq(token.getEmissionBudget(bridge1), 0); // Budget should be consumed
+    }
+
+    function test_EmissionBudgetEnforcesSchedule() public {
+        // Test that bridges cannot mint more than their allocated budget
+        uint256 budgetAmount = 50_000 * 10 ** 18;
+        uint256 excessiveAmount = 100_000 * 10 ** 18;
+
+        // Allocate limited emission budget
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, budgetAmount);
+
+        // Attempting to mint more than budget should fail
+        vm.prank(bridge1);
+        vm.expectRevert(abi.encodeWithSelector(IBridgeRateLimiter.InsufficientEmissionBudget.selector));
+        token.crosschainMint(user, excessiveAmount);
+
+        // Minting within budget should work
+        vm.prank(bridge1);
+        token.crosschainMint(user, budgetAmount);
+
+        assertEq(token.balanceOf(user), budgetAmount);
+        assertEq(token.getEmissionBudget(bridge1), 0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -129,6 +172,10 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_CrosschainMint() public {
         uint256 mintAmount = 100_000 * 10 ** 18;
         uint256 initialSupply = token.totalSupply();
+
+        // Allocate emission budget first
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, mintAmount);
 
         vm.expectEmit(true, false, true, true);
         emit CrosschainMint(user, mintAmount, bridge1);
@@ -144,6 +191,10 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_CrosschainBurn() public {
         uint256 mintAmount = 100_000 * 10 ** 18;
         uint256 burnAmount = 50_000 * 10 ** 18;
+
+        // Allocate emission budget first
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, mintAmount);
 
         // First mint tokens
         vm.prank(bridge1);
@@ -165,6 +216,10 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_CrosschainBurnWithApproval() public {
         uint256 mintAmount = 100_000 * 10 ** 18;
         uint256 burnAmount = 50_000 * 10 ** 18;
+
+        // Allocate emission budget first
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, mintAmount);
 
         // First mint tokens to user
         vm.prank(bridge1);
@@ -206,6 +261,10 @@ contract SyndicateTokenCrosschainTest is Test {
         uint256 totalSupplyCap = token.TOTAL_SUPPLY();
         uint256 remainingSupply = totalSupplyCap - initialSupply;
 
+        // Allocate emission budget for remaining supply
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge2, remainingSupply);
+
         // Test 1: Verify minting up to total supply cap works
         vm.prank(bridge2);
         token.crosschainMint(user, remainingSupply);
@@ -238,6 +297,9 @@ contract SyndicateTokenCrosschainTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_RateLimitingMint() public {
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
+
         uint256 halfLimit = DAILY_LIMIT / 2;
 
         // Use half the limit
@@ -259,6 +321,9 @@ contract SyndicateTokenCrosschainTest is Test {
     }
 
     function test_RateLimitingReset() public {
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
+
         uint256 halfLimit = DAILY_LIMIT / 2;
 
         // Use half the limit
@@ -319,6 +384,10 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_Integration_CrosschainFlow() public {
         uint256 amount = 500_000 * 10 ** 18;
 
+        // Allocate emission budget first
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, amount);
+
         // 1. Bridge mints tokens on L2
         vm.prank(bridge1);
         token.crosschainMint(user, amount);
@@ -367,5 +436,5 @@ contract SyndicateTokenCrosschainTest is Test {
 
 // Mock contract to test bridge validation
 contract MockBridge {
-    // Empty contract that can be used as a bridge for testing
+// Empty contract that can be used as a bridge for testing
 }
