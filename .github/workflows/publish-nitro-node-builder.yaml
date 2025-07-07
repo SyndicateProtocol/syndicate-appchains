@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - "synd-withdrawals/synd-enclave/nitro/**"
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+    paths:
+      - "synd-withdrawals/synd-enclave/nitro/**"
   workflow_dispatch:
 
 env:
