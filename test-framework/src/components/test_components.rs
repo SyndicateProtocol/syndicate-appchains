@@ -699,6 +699,7 @@ impl TestComponents {
         // this is because the contract_instance gets confused after a reorg and fails the tests...
         // re-creating the contract instance after reorg did not help.
         // (this is a bug in alloy.)
+        // https://github.com/alloy-rs/alloy/issues/2668
         let raw_tx = self
             .sequencing_contract
             .processTransactionUncompressed(tx_bytes)

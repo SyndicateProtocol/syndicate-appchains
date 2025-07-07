@@ -397,6 +397,7 @@ async fn e2e_settlement_reorg() -> Result<()> {
             // this is because the contract_instance gets confused after a reorg and fails the
             // tests... re-creating the contract instance after reorg did not help.
             // (this is a bug in alloy.)
+            // https://github.com/alloy-rs/alloy/issues/2668
             let deposit_tx = inbox
                 .depositEth()
                 .value(parse_ether("0.01")?)
