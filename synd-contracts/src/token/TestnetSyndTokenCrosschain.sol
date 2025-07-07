@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {SyndicateTokenCrosschain} from "./SyndicateTokenCrosschain.sol";
+import {SyndicateTokenCrosschain, IBridgeRateLimiter, IERC7802} from "./SyndicateTokenCrosschain.sol";
 import {TestnetSyndToken} from "./TestnetSyndToken.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title TestnetSyndTokenCrosschain
@@ -100,6 +99,7 @@ contract TestnetSyndTokenCrosschain is SyndicateTokenCrosschain {
      * @return true if interface is supported
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC7802).interfaceId || interfaceId == type(IBridgeRateLimiter).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 }

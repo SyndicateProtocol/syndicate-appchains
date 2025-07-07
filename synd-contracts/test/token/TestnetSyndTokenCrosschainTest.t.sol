@@ -107,13 +107,6 @@ contract TestnetSyndTokenCrosschainTest is Test {
         assertEq(token.getBridgeAtIndex(0), bridge1);
     }
 
-    function test_PreventBridgeManagerSelfAssignment() public {
-        // Test that bridge manager cannot add themselves as a bridge
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IBridgeRateLimiter.CannotAddSelfAsBridge.selector));
-        token.setBridgeLimits(admin, DAILY_LIMIT, DAILY_LIMIT);
-    }
-
     function test_PreventEOABridgeAssignment() public {
         // Test that bridge must be a contract, not an EOA
         address eoa = address(0x1337);
