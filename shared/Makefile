@@ -8,7 +8,10 @@ create-contract-bindings-rust:
 	cd ../synd-contracts  && forge bind --alloy --force
 	cp -r ../synd-contracts/out/bindings/src/* contract-bindings/src/synd
 	mv contract-bindings/src/synd/lib.rs contract-bindings/src/synd/mod.rs
-
+  
+	# remove this specific contract binding until this issue is resolved: https://github.com/foundry-rs/foundry/issues/10911
+	rm contract-bindings/src/synd/syndicate_token_emission_scheduler.rs
+	sed -i '/pub mod r#syndicate_token_emission_scheduler;/d' contract-bindings/src/synd/mod.rs
 
 .PHONY: create-withdrawal-contract-bindings-go
 create-withdrawal-contract-bindings-go:

@@ -4,7 +4,9 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
     rpc::client::{ClientBuilder, RpcClient},
 };
-use contract_bindings::synd::{arbchainconfig, arbconfigmanager::ArbConfigManager};
+use contract_bindings::synd::{
+    arb_chain_config::ArbChainConfig, arb_config_manager::ArbConfigManager,
+};
 use eyre::Result;
 use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
 use tracing::{error, info, warn};
@@ -105,7 +107,7 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
 
     let urls = ingestor_provider.get_urls().await.unwrap();
     let client = rpc_client_from_urls(&urls).await;
-    let provider = ProviderBuilder::new().on_client(client);
+    let provider = ProviderBuilder::new().connect_client(client);
 
     let onchain = match get_config(address, U256::from(config.appchain_chain_id), provider).await {
         Ok(c) => c,
@@ -126,8 +128,7 @@ async fn get_config<T: Provider + Clone>(
     let config_manager_contract = ArbConfigManager::new(address, provider.clone());
     let config_address = config_manager_contract.getArbChainConfigAddress(chain_id).call().await?;
 
-    let arb_chain_config_contract =
-        arbchainconfig::ArbChainConfig::new(config_address._0, provider);
+    let arb_chain_config_contract = ArbChainConfig::new(config_address, provider);
 
     let arbitrum_bridge_address_call = arb_chain_config_contract.ARBITRUM_BRIDGE_ADDRESS();
     let arbitrum_inbox_address_call = arb_chain_config_contract.ARBITRUM_INBOX_ADDRESS();
@@ -157,13 +158,13 @@ async fn get_config<T: Provider + Clone>(
     )?;
 
     Ok(ChainConfig {
-        arbitrum_bridge_address: arbitrum_bridge_address._0,
-        arbitrum_inbox_address: arbitrum_inbox_address._0,
-        settlement_delay: settlement_delay._0,
-        settlement_start_block: settlement_start_block._0,
-        sequencing_start_block: sequencing_start_block._0,
-        sequencing_contract_address: sequencing_contract_address._0,
-        default_sequencing_chain_ws_rpc_url: default_sequencing_chain_ws_rpc_url._0,
+        arbitrum_bridge_address,
+        arbitrum_inbox_address,
+        settlement_delay,
+        settlement_start_block,
+        sequencing_start_block,
+        sequencing_contract_address,
+        default_sequencing_chain_ws_rpc_url,
     })
 }
 

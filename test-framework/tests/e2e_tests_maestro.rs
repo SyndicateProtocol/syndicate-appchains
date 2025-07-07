@@ -530,7 +530,7 @@ async fn create_and_fund_wallet(
     components: &TestComponents,
     funding_wallet_address: Address,
     value: U256,
-    inbox: &RollupInstance<(), &FilledProvider>,
+    inbox: &RollupInstance<&FilledProvider>,
 ) -> Result<(LocalSigner<SigningKey>, Address), eyre::Error> {
     let wallet_signer = PrivateKeySigner::random();
     let wallet_address = wallet_signer.address();
