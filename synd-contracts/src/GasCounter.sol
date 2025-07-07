@@ -45,6 +45,9 @@ abstract contract GasCounter {
     /// @notice Mapping of period index to gas period data
     mapping(uint256 => GasPeriod) public periods;
 
+    /// @notice Cumulative gas fees across all completed periods
+    uint256 public cumulativeGasFees;
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -142,6 +145,9 @@ abstract contract GasCounter {
             // Finalize current period
             currentPeriod.endTimestamp = currentPeriod.startTimestamp + PERIOD_DURATION;
 
+            // Add the completed period's gas cost to cumulative total
+            cumulativeGasFees += currentPeriod.totalGasCost;
+
             emit PeriodFinalized(
                 currentPeriodIndex,
                 currentPeriod.totalGasUsed,
@@ -217,6 +223,26 @@ abstract contract GasCounter {
     /// @return totalCost Total cost in SYND wei for current period's gas usage
     function getTotalGasFees() external view returns (uint256 totalCost) {
         return _getConceptualCurrentPeriod().totalGasCost;
+    }
+
+    /// @notice Get cumulative gas fees across all completed periods plus current period
+    /// @return totalCost Total cumulative gas fees since tracking began
+    function getCumulativeGasFees() external view returns (uint256 totalCost) {
+        return cumulativeGasFees + _getConceptualCurrentPeriod().totalGasCost;
+    }
+
+    /// @notice Get gas fees over an arbitrary duration using two cumulative snapshots
+    /// @dev This allows efficient calculation without fetching all events between start and end
+    /// @param startCumulative Cumulative gas fees at start time
+    /// @param endCumulative Cumulative gas fees at end time
+    /// @return feesDuring Gas fees accrued during the specified period
+    function getGasFeesInRange(uint256 startCumulative, uint256 endCumulative) 
+        external 
+        pure 
+        returns (uint256 feesDuring) 
+    {
+        require(endCumulative >= startCumulative, "GasCounter: invalid range");
+        return endCumulative - startCumulative;
     }
 
     /// @notice Get the time remaining in the current period

@@ -43,6 +43,8 @@ contract GasCounterTest is Test {
         assertEq(gasCounter.getTotalPeriods(), 0);
         assertEq(gasCounter.getCurrentPeriodGasUsed(), 0);
         assertEq(gasCounter.getTotalGasFees(), 0);
+        assertEq(gasCounter.getCumulativeGasFees(), 0);
+        assertEq(gasCounter.cumulativeGasFees(), 0);
         // Gas price is now dynamic based on tx.gasprice
     }
 
@@ -344,5 +346,161 @@ contract GasCounterTest is Test {
     function test_PeriodConstants() public view {
         assertEq(gasCounter.PERIOD_DURATION(), 30 days);
         // Gas price is now dynamic based on tx.gasprice
+    }
+
+    // ============ CUMULATIVE GAS FEES TESTS ============
+
+    function test_CumulativeGasFees_InitiallyZero() public view {
+        assertEq(gasCounter.getCumulativeGasFees(), 0);
+        assertEq(gasCounter.cumulativeGasFees(), 0);
+    }
+
+    function test_CumulativeGasFees_SinglePeriod() public {
+        gasCounter.initializeGasTrackingPublic();
+        
+        // Track gas in current period
+        gasCounter.trackGasPublic(1000);
+        uint256 expectedFees = 1000 * tx.gasprice;
+        
+        // Cumulative should include current period (no completed periods yet)
+        assertEq(gasCounter.getCumulativeGasFees(), expectedFees);
+        assertEq(gasCounter.cumulativeGasFees(), 0); // No completed periods
+        
+        // Track more gas
+        gasCounter.trackGasPublic(500);
+        expectedFees = 1500 * tx.gasprice;
+        assertEq(gasCounter.getCumulativeGasFees(), expectedFees);
+        assertEq(gasCounter.cumulativeGasFees(), 0);
+    }
+
+    function test_CumulativeGasFees_MultiplePeriods() public {
+        gasCounter.initializeGasTrackingPublic();
+        
+        // Track gas in first period
+        gasCounter.trackGasPublic(1000);
+        uint256 firstPeriodFees = 1000 * tx.gasprice;
+        
+        // Advance to second period
+        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        gasCounter.trackGasPublic(2000);
+        uint256 secondPeriodFees = 2000 * tx.gasprice;
+        
+        // Now cumulative should include completed first period + current second period
+        assertEq(gasCounter.cumulativeGasFees(), firstPeriodFees); // Only completed periods
+        assertEq(gasCounter.getCumulativeGasFees(), firstPeriodFees + secondPeriodFees); // All periods
+        
+        // Advance to third period
+        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        gasCounter.trackGasPublic(3000);
+        uint256 thirdPeriodFees = 3000 * tx.gasprice;
+        
+        // Now cumulative should include first + second completed periods + current third period
+        assertEq(gasCounter.cumulativeGasFees(), firstPeriodFees + secondPeriodFees); // Two completed periods
+        assertEq(gasCounter.getCumulativeGasFees(), firstPeriodFees + secondPeriodFees + thirdPeriodFees); // All periods
+    }
+
+    function test_CumulativeGasFees_WithDifferentGasPrices() public {
+        gasCounter.initializeGasTrackingPublic();
+        
+        // Track gas with first gas price
+        vm.txGasPrice(1e12); // 1000 gwei
+        gasCounter.trackGasPublic(1000);
+        uint256 firstPeriodFees = 1000 * 1e12;
+        
+        // Advance to second period with different gas price
+        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.txGasPrice(2e12); // 2000 gwei
+        gasCounter.trackGasPublic(1000);
+        uint256 secondPeriodFees = 1000 * 2e12;
+        
+        assertEq(gasCounter.cumulativeGasFees(), firstPeriodFees);
+        assertEq(gasCounter.getCumulativeGasFees(), firstPeriodFees + secondPeriodFees);
+    }
+
+    function test_GetGasFeesInRange_ValidRange() public view {
+        uint256 startCumulative = 1000;
+        uint256 endCumulative = 5000;
+        uint256 expected = 4000;
+        
+        uint256 result = gasCounter.getGasFeesInRange(startCumulative, endCumulative);
+        assertEq(result, expected);
+    }
+
+    function test_GetGasFeesInRange_ZeroRange() public view {
+        uint256 cumulative = 1000;
+        uint256 result = gasCounter.getGasFeesInRange(cumulative, cumulative);
+        assertEq(result, 0);
+    }
+
+    function test_GetGasFeesInRange_RevertsOnInvalidRange() public {
+        uint256 startCumulative = 5000;
+        uint256 endCumulative = 1000;
+        
+        vm.expectRevert("GasCounter: invalid range");
+        gasCounter.getGasFeesInRange(startCumulative, endCumulative);
+    }
+
+    function test_CumulativeGasFees_IntegrationWorkflow() public {
+        gasCounter.initializeGasTrackingPublic();
+        
+        // Snapshot at start
+        uint256 startSnapshot = gasCounter.getCumulativeGasFees();
+        assertEq(startSnapshot, 0);
+        
+        // Track gas in first period
+        gasCounter.trackGasPublic(1000);
+        gasCounter.trackGasPublic(500);
+        uint256 firstPeriodTotal = 1500 * tx.gasprice;
+        
+        // Mid-period snapshot
+        uint256 midSnapshot = gasCounter.getCumulativeGasFees();
+        assertEq(midSnapshot, firstPeriodTotal);
+        
+        // Advance to second period
+        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        gasCounter.trackGasPublic(2000);
+        uint256 secondPeriodFees = 2000 * tx.gasprice;
+        
+        // End snapshot
+        uint256 endSnapshot = gasCounter.getCumulativeGasFees();
+        assertEq(endSnapshot, firstPeriodTotal + secondPeriodFees);
+        
+        // Calculate fees for the entire duration
+        uint256 totalFees = gasCounter.getGasFeesInRange(startSnapshot, endSnapshot);
+        assertEq(totalFees, firstPeriodTotal + secondPeriodFees);
+        
+        // Calculate fees just for the second period
+        uint256 secondPeriodOnlyFees = gasCounter.getGasFeesInRange(midSnapshot, endSnapshot);
+        assertEq(secondPeriodOnlyFees, secondPeriodFees);
+    }
+
+    function testFuzz_CumulativeGasFees(uint256[] memory gasAmounts) public {
+        // Limit array size and bound values
+        vm.assume(gasAmounts.length <= 5);
+        vm.assume(gasAmounts.length > 0);
+        
+        gasCounter.initializeGasTrackingPublic();
+        
+        uint256 expectedTotal = 0;
+        for (uint256 i = 0; i < gasAmounts.length; i++) {
+            gasAmounts[i] = bound(gasAmounts[i], 1, 1e7);
+            gasCounter.trackGasPublic(gasAmounts[i]);
+            expectedTotal += gasAmounts[i];
+        }
+        
+        uint256 expectedFees = expectedTotal * tx.gasprice;
+        assertEq(gasCounter.getCumulativeGasFees(), expectedFees);
+        
+        // No periods completed yet, so cumulative should be 0
+        assertEq(gasCounter.cumulativeGasFees(), 0);
+    }
+
+    function testFuzz_GetGasFeesInRange(uint256 start, uint256 end) public view {
+        // Ensure valid range
+        vm.assume(end >= start);
+        vm.assume(start <= type(uint256).max - end); // Avoid overflow
+        
+        uint256 result = gasCounter.getGasFeesInRange(start, end);
+        assertEq(result, end - start);
     }
 }
