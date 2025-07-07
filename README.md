@@ -118,7 +118,7 @@ syndicate-appchains/
 ├── synd-withdrawals/        # TEE-based withdrawal system
 │   ├── synd-enclave/        # Trusted Execution Environment enclave code
 │   ├── synd-proposer/       # Proposer service that publishes signed state commitments on-chain
-│   └── synd-tee-attestation-zk-proofs/  # ZK proof system for TEE attestion docs
+│   └── synd-tee-attestation-zk-proofs/  # ZK proof system for TEE attestation docs
 ├── test-framework/          # Integration testing
 └── documentation/           # Deployment guides and configs
 ```
