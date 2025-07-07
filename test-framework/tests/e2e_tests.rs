@@ -7,14 +7,14 @@ use alloy::{
     rpc::types::{Block, TransactionRequest},
     sol,
 };
-use contract_bindings::synd::{iinbox::IInbox, rollup::Rollup};
+use contract_bindings::synd::{i_inbox::IInbox, rollup::Rollup};
 use eyre::Result;
 use std::time::Duration;
 use synd_chain_ingestor::client::IngestorProvider;
 use synd_mchain::client::Provider as _;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
-    test_components::TestComponents,
+    test_components::{TestComponents, SETTLEMENT_CHAIN_ID},
 };
 use test_utils::{chain_info::test_account1, preloaded_config::ContractVersion, wait_until};
 
@@ -391,7 +391,30 @@ async fn e2e_settlement_reorg() -> Result<()> {
             // the appchain should have reorged to a pre-deposit block
 
             // create new slots
-            let _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
+
+            // NOTE: build the tx manually, instead of using the much simpler
+            // let _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
+            // this is because the contract_instance gets confused after a reorg and fails the
+            // tests... re-creating the contract instance after reorg did not help.
+            // (this is a bug in alloy.)
+            // https://github.com/alloy-rs/alloy/issues/2668
+            let deposit_tx = inbox
+                .depositEth()
+                .value(parse_ether("0.01")?)
+                .nonce(
+                    components
+                        .settlement_provider
+                        .get_transaction_count(test_account1().address)
+                        .await?,
+                )
+                .gas(10_000_000)
+                .max_fee_per_gas(10_000_000)
+                .max_priority_fee_per_gas(0)
+                .chain_id(SETTLEMENT_CHAIN_ID)
+                .build_raw_transaction(test_account1().signer.clone())
+                .await?;
+            let _ = components.settlement_provider.send_raw_transaction(&deposit_tx).await?;
+
             components.mine_both(500).await?;
             components.mine_both(500).await?; // build `synd-mchain` to a height above what the appchain has seen before the reorg
 
@@ -453,7 +476,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             let inbox =
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
 
-            // create a deposit1 (that won't be rolled back) that will fit on synd-mchain's block 3
+            // create a deposit (that won't be rolled back) that will fit on synd-mchain's block 3
             let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
 
             components.mine_set_block(0).await?;
@@ -470,7 +493,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
                 Duration::from_secs(10)
             );
 
-            // deploy a storate contract on the appchain
+            // deploy a storage contract on the appchain
             let initial_value = U256::from(42);
             let deploy_storage_tx: Vec<u8> =
                 Storage::deploy_builder(&components.appchain_provider, initial_value)
@@ -488,7 +511,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             let storage_address = receipt.contract_address.unwrap();
             let storage = Storage::new(storage_address, &components.appchain_provider);
 
-            let current_value = storage.get().call().await?._0;
+            let current_value = storage.get().call().await?;
             assert_eq!(current_value, initial_value);
 
             // update the stored value (this will be reorged later)
@@ -505,7 +528,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             let receipt = components.sequence_tx(&update_storage_tx, 1, true).await?.unwrap();
             assert!(receipt.status());
 
-            let current_value = storage.get().call().await?._0;
+            let current_value = storage.get().call().await?;
             assert_eq!(current_value, U256::from(43));
 
             // reorg the sequencing chain by 1 block
@@ -516,7 +539,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             components.sequence_tx(b"potato", 10, false).await?;
 
             // state is correctly rolled back
-            wait_until!(storage.get().call().await?._0 == U256::from(42), Duration::from_secs(10));
+            wait_until!(storage.get().call().await? == U256::from(42), Duration::from_secs(10));
 
             assert_eq!(
                 components.appchain_provider.get_transaction_count(wallet_address).await?,

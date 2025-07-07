@@ -293,9 +293,13 @@ contract SyndicateTokenCrosschainTest is Test {
         // Check that tokens were minted
         assertEq(token.balanceOf(emissionUser), 100_000 * 10 ** 18);
 
+        // Test airdrop management
+        token.grantRole(token.AIRDROP_MANAGER_ROLE(), admin);
+
+        token.setUnlockTimestamp(block.timestamp + 1 days);
+
         vm.stopPrank();
 
-        // Test that existing functionality works
-        assertEq(token.balanceOf(emissionUser), 100_000 * 10 ** 18);
+        assertTrue(token.transfersLocked(), "Transfers should be locked after setting unlock timestamp");
     }
 }
