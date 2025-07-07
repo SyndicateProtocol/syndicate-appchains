@@ -36,14 +36,17 @@ Ensure you have the following dependencies installed:
 | **Docker**         | `28.2.2+`         | [docker.com](https://www.docker.com/products/docker-desktop/)  |
 | **abigen**         | `1.15.11-stable+` | `go install github.com/ethereum/go-ethereum/cmd/abigen@latest` |
 | **SP1 Toolchain**  | `v5.0.5+`         | [SP1 Documentation](https://docs.supranational.net/)           |
+| **NodeJS**         | `v22.9.0+`        | [nodejs.org](https://nodejs.org/)                              |
+| **Yarn**           | `1.22.22+`        | [yarnpkg.com](https://yarnpkg.com/getting-started/install)     |
 
 ### Development Setup
 
-1. **Clone the repository**
+1. **Clone the repository and download submodules**
 
    ```bash
    git clone https://github.com/syndicateio/syndicate-appchains.git
    cd syndicate-appchains
+   git submodule update --init
    ```
 
 2. **Install development tools**
