@@ -1,63 +1,34 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {SyndicateTokenCrosschain} from "./SyndicateTokenCrosschain.sol";
 import {TestnetSyndToken} from "./TestnetSyndToken.sol";
-import {IERC7802} from "./crosschain/interfaces/IERC7802.sol";
-import {IBridgeRateLimiter} from "./crosschain/interfaces/IBridgeRateLimiter.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title TestnetSyndTokenCrosschain
- * @notice Crosschain-compatible Testnet Syndicate Protocol token
- * @dev Extends the existing TestnetSyndToken with crosschain capabilities including:
- *      - ERC7802 compatibility for SuperChain and modern bridges
- *      - Bridge rate limiting and access controls
- *      - Same contract address across all chains via deterministic deployment
- *      - Full compatibility with existing testnet functionality
+ * @notice Testnet crosschain-compatible Syndicate Protocol token
+ * @dev Combines TestnetSyndToken functionality with SyndicateTokenCrosschain capabilities
  *
+ * This contract provides all the features of both parent contracts:
+ * - TestnetSyndToken: Flexible minting for testing, no initial supply constraints
+ * - SyndicateTokenCrosschain: Crosschain capabilities, rate limiting, emission budgets
+ * 
  * Key Features:
- * - All existing TestnetSyndToken functionality (governance, permits, minting, etc.)
- * - Native crosschain mint/burn functions for authorized bridges
- * - Rate limiting per bridge to prevent abuse
- * - Emergency controls for bridge management
- * - ERC165 interface detection for bridge compatibility
+ * - All TestnetSyndToken functionality (flexible minting for testing)
+ * - All SyndicateTokenCrosschain functionality (crosschain capabilities, rate limiting, emission budgets)
+ * - Secure bridge management and sliding window rate limiting
+ * - Emission budget controls for crosschain minting
+ * - Same contract address across all chains via deterministic deployment
  *
  */
-contract TestnetSyndTokenCrosschain is TestnetSyndToken, IERC7802, IBridgeRateLimiter {
+contract TestnetSyndTokenCrosschain is SyndicateTokenCrosschain {
     /*//////////////////////////////////////////////////////////////
-                                  ROLES
+                                 ROLES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Role for managing bridge configurations
-    bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
-
-    /*//////////////////////////////////////////////////////////////
-                            STATE VARIABLES
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Mapping of bridge address to bridge configuration
-    mapping(address => BridgeConfig) public bridgeConfigs;
-
-    /// @notice List of all configured bridges for enumeration
-    address[] public bridges;
-
-    /// @notice Mapping to track if address is in bridges array
-    mapping(address => bool) public isBridgeAdded;
-
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Emitted when a bridge is added to the system
-    /// @param bridge Bridge address
-    /// @param dailyMintLimit Initial daily mint limit
-    /// @param dailyBurnLimit Initial daily burn limit
-    event BridgeAdded(address indexed bridge, uint256 dailyMintLimit, uint256 dailyBurnLimit);
-
-    /// @notice Emitted when a bridge is removed from the system
-    /// @param bridge Bridge address
-    event BridgeRemoved(address indexed bridge);
+    /// @notice Role for minting tokens during testnet development
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -66,266 +37,75 @@ contract TestnetSyndTokenCrosschain is TestnetSyndToken, IERC7802, IBridgeRateLi
     /**
      * @notice Initialize the crosschain testnet Syndicate token
      * @param defaultAdmin Address that will have default admin privileges
-     * @param minter Address that will have minter privileges
+     * @param minter Address that will have minter privileges for testnet
      */
-    constructor(address defaultAdmin, address minter) TestnetSyndToken(defaultAdmin, minter) {
-        // Grant bridge manager role to admin
-        _grantRole(BRIDGE_MANAGER_ROLE, defaultAdmin);
+    constructor(address defaultAdmin, address minter) 
+        SyndicateTokenCrosschain(defaultAdmin, defaultAdmin) // Use admin as treasury for testnet
+    {
+        // Override token metadata for testnet
+        // Note: We can't override name/symbol in constructor due to ERC20 limitations
+        // but this contract will have testnet-specific behavior
+        
+        // Grant testnet minter role
+        _grantRole(MINTER_ROLE, minter);
+        _grantRole(MINTER_ROLE, defaultAdmin);
     }
 
     /*//////////////////////////////////////////////////////////////
-                        CROSSCHAIN FUNCTIONS
+                        TESTNET MINTING FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IERC7802
-    function crosschainMint(address to, uint256 amount) external override {
+    /**
+     * @notice Mint tokens for testnet purposes
+     * @dev This function allows flexible minting during testnet development
+     * @param to Address to mint tokens to
+     * @param amount Amount of tokens to mint
+     */
+    function mint(address to, uint256 amount) external override onlyRole(MINTER_ROLE) {
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 
-        // Check if bridge is authorized and has sufficient limits
-        _validateAndUseMintLimit(msg.sender, amount);
-
-        // Mint tokens
+        // For testnet, we don't enforce total supply restrictions
+        // This allows flexible testing without emission schedule constraints
         _mint(to, amount);
-
-        emit CrosschainMint(to, amount, msg.sender);
-    }
-
-    /// @inheritdoc IERC7802
-    function crosschainBurn(address from, uint256 amount) external override {
-        if (from == address(0)) revert ZeroAddress();
-        if (amount == 0) revert ZeroAmount();
-
-        // Check if bridge is authorized and has sufficient limits
-        _validateAndUseBurnLimit(msg.sender, amount);
-
-        // Handle allowance if caller is not the token owner and there is an allowance
-        if (msg.sender != from) {
-            uint256 currentAllowance = allowance(from, msg.sender);
-            if (currentAllowance != 0) {
-                // If there's an allowance, consume it
-                _spendAllowance(from, msg.sender, amount);
-            }
-            // If no allowance, trusted bridges can still burn (this is the crosschain bridge pattern)
-        }
-
-        // Burn tokens
-        _burn(from, amount);
-
-        emit CrosschainBurn(from, amount, msg.sender);
     }
 
     /*//////////////////////////////////////////////////////////////
-                        BRIDGE MANAGEMENT
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IBridgeRateLimiter
-    function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBurnLimit)
-        external
-        override
-        onlyRole(BRIDGE_MANAGER_ROLE)
-    {
-        if (bridge == address(0)) revert ZeroAddress();
-
-        // Add bridge to array if not already added
-        if (!isBridgeAdded[bridge]) {
-            bridges.push(bridge);
-            isBridgeAdded[bridge] = true;
-            emit BridgeAdded(bridge, dailyMintLimit, dailyBurnLimit);
-        }
-
-        // Reset daily usage when limits change
-        bridgeConfigs[bridge] = BridgeConfig({
-            dailyMintLimit: dailyMintLimit,
-            dailyBurnLimit: dailyBurnLimit,
-            lastMintTimestamp: block.timestamp,
-            lastBurnTimestamp: block.timestamp,
-            currentMintUsed: 0,
-            currentBurnUsed: 0,
-            isActive: true
-        });
-
-        emit BridgeLimitsSet(bridge, dailyMintLimit, dailyBurnLimit);
-    }
-
-    /// @inheritdoc IBridgeRateLimiter
-    function setBridgeActive(address bridge, bool isActive) external override onlyRole(BRIDGE_MANAGER_ROLE) {
-        if (bridge == address(0)) revert ZeroAddress();
-        if (!isBridgeAdded[bridge]) revert UnauthorizedBridge(bridge);
-
-        bridgeConfigs[bridge].isActive = isActive;
-        emit BridgeActiveStatusChanged(bridge, isActive);
-    }
-
-    /**
-     * @notice Remove a bridge from the system
-     * @param bridge Bridge address to remove
-     * @dev Only callable by bridge manager role
-     */
-    function removeBridge(address bridge) external onlyRole(BRIDGE_MANAGER_ROLE) {
-        if (bridge == address(0)) revert ZeroAddress();
-        if (!isBridgeAdded[bridge]) revert UnauthorizedBridge(bridge);
-
-        // Remove from mapping
-        delete bridgeConfigs[bridge];
-        isBridgeAdded[bridge] = false;
-
-        // Remove from array (swap with last element and pop)
-        for (uint256 i = 0; i < bridges.length; i++) {
-            if (bridges[i] == bridge) {
-                bridges[i] = bridges[bridges.length - 1];
-                bridges.pop();
-                break;
-            }
-        }
-
-        emit BridgeRemoved(bridge);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        INTERNAL FUNCTIONS
+                        METADATA OVERRIDES
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Validate bridge authorization and consume mint limit
-     * @param bridge Bridge address
-     * @param amount Amount to mint
+     * @notice Returns the name of the token
+     * @return The name of the testnet token
      */
-    function _validateAndUseMintLimit(address bridge, uint256 amount) internal {
-        BridgeConfig storage config = bridgeConfigs[bridge];
-
-        // Check if bridge is authorized
-        if (!isBridgeAdded[bridge] || !config.isActive) {
-            revert UnauthorizedBridge(bridge);
-        }
-
-        // Reset daily usage if a new day has started
-        if (block.timestamp >= config.lastMintTimestamp + 1 days) {
-            config.currentMintUsed = 0;
-            config.lastMintTimestamp = block.timestamp;
-        }
-
-        // Check if sufficient limit available
-        uint256 available = config.dailyMintLimit - config.currentMintUsed;
-        if (amount > available) {
-            revert InsufficientMintLimit(bridge, amount, available);
-        }
-
-        // Consume the limit
-        config.currentMintUsed += amount;
+    function name() public pure override returns (string memory) {
+        return "Testnet Syndicate";
     }
 
     /**
-     * @notice Validate bridge authorization and consume burn limit
-     * @param bridge Bridge address
-     * @param amount Amount to burn
+     * @notice Returns the symbol of the token
+     * @return The symbol of the testnet token
      */
-    function _validateAndUseBurnLimit(address bridge, uint256 amount) internal {
-        BridgeConfig storage config = bridgeConfigs[bridge];
-
-        // Check if bridge is authorized
-        if (!isBridgeAdded[bridge] || !config.isActive) {
-            revert UnauthorizedBridge(bridge);
-        }
-
-        // Reset daily usage if a new day has started
-        if (block.timestamp >= config.lastBurnTimestamp + 1 days) {
-            config.currentBurnUsed = 0;
-            config.lastBurnTimestamp = block.timestamp;
-        }
-
-        // Check if sufficient limit available
-        uint256 available = config.dailyBurnLimit - config.currentBurnUsed;
-        if (amount > available) {
-            revert InsufficientBurnLimit(bridge, amount, available);
-        }
-
-        // Consume the limit
-        config.currentBurnUsed += amount;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IBridgeRateLimiter
-    function getBridgeConfig(address bridge) external view override returns (BridgeConfig memory config) {
-        return bridgeConfigs[bridge];
-    }
-
-    /// @inheritdoc IBridgeRateLimiter
-    function getAvailableMintLimit(address bridge) external view override returns (uint256 available) {
-        BridgeConfig memory config = bridgeConfigs[bridge];
-
-        // If a new day has started, return full limit
-        if (block.timestamp >= config.lastMintTimestamp + 1 days) {
-            return config.dailyMintLimit;
-        }
-
-        // Return remaining limit for today
-        return config.dailyMintLimit - config.currentMintUsed;
-    }
-
-    /// @inheritdoc IBridgeRateLimiter
-    function getAvailableBurnLimit(address bridge) external view override returns (uint256 available) {
-        BridgeConfig memory config = bridgeConfigs[bridge];
-
-        // If a new day has started, return full limit
-        if (block.timestamp >= config.lastBurnTimestamp + 1 days) {
-            return config.dailyBurnLimit;
-        }
-
-        // Return remaining limit for today
-        return config.dailyBurnLimit - config.currentBurnUsed;
-    }
-
-    /// @inheritdoc IBridgeRateLimiter
-    function isBridgeAuthorized(address bridge) external view override returns (bool authorized) {
-        BridgeConfig memory config = bridgeConfigs[bridge];
-        return isBridgeAdded[bridge] && config.isActive;
-    }
-
-    /**
-     * @notice Get total number of configured bridges
-     * @return count Number of bridges
-     */
-    function getBridgeCount() external view returns (uint256 count) {
-        return bridges.length;
-    }
-
-    /**
-     * @notice Get bridge address at index
-     * @param index Index in bridges array
-     * @return bridge Bridge address
-     */
-    function getBridgeAtIndex(uint256 index) external view returns (address bridge) {
-        require(index < bridges.length, "TestnetSyndTokenCrosschain: index out of bounds");
-        return bridges[index];
-    }
-
-    /**
-     * @notice Get all configured bridges
-     * @return allBridges Array of bridge addresses
-     */
-    function getAllBridges() external view returns (address[] memory allBridges) {
-        return bridges;
+    function symbol() public pure override returns (string memory) {
+        return "TestnetSYND";
     }
 
     /*//////////////////////////////////////////////////////////////
                         INTERFACE SUPPORT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Check if contract supports an interface
-    /// @param interfaceId Interface identifier to check
-    /// @return true if interface is supported
+    /**
+     * @notice Check if contract supports an interface
+     * @param interfaceId Interface identifier to check
+     * @return true if interface is supported
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
         virtual
-        override(AccessControl, IERC165)
+        override
         returns (bool)
     {
-        return interfaceId == type(IERC7802).interfaceId || interfaceId == type(IBridgeRateLimiter).interfaceId
-            || super.supportsInterface(interfaceId);
+        return super.supportsInterface(interfaceId);
     }
 }

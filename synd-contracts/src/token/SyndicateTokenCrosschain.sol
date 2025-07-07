@@ -51,6 +51,12 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     /// @notice Mapping of bridge address to emission budget allocated
     mapping(address => uint256) public bridgeEmissionBudgets;
 
+    /// @notice Mapping of bridge -> hour -> mint usage for sliding window rate limiting
+    mapping(address => mapping(uint256 => uint256)) public hourlyMintUsage;
+
+    /// @notice Mapping of bridge -> hour -> burn usage for sliding window rate limiting  
+    mapping(address => mapping(uint256 => uint256)) public hourlyBurnUsage;
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -167,14 +173,10 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
             emit BridgeAdded(bridge, dailyMintLimit, dailyBurnLimit);
         }
 
-        // Reset daily usage when limits change
+        // Set bridge configuration
         bridgeConfigs[bridge] = BridgeConfig({
             dailyMintLimit: dailyMintLimit,
             dailyBurnLimit: dailyBurnLimit,
-            lastMintTimestamp: block.timestamp,
-            lastBurnTimestamp: block.timestamp,
-            currentMintUsed: 0,
-            currentBurnUsed: 0,
             isActive: true
         });
 
@@ -235,7 +237,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Validate bridge authorization and consume mint limit
+     * @notice Validate bridge authorization and consume mint limit using sliding window
      * @param bridge Bridge address
      * @param amount Amount to mint
      */
@@ -247,24 +249,31 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
             revert UnauthorizedBridge(bridge);
         }
 
-        // Reset daily usage if a new day has started
-        if (block.timestamp >= config.lastMintTimestamp + 1 days) {
-            config.currentMintUsed = 0;
-            config.lastMintTimestamp = block.timestamp;
+        // Calculate total usage in the past 24 hours using sliding window
+        uint256 currentHour = block.timestamp / 1 hours;
+        uint256 totalUsageIn24Hours = 0;
+
+        // Sum usage over the past 24 hourly buckets (sliding window)
+        for (uint256 i = 0; i < 24; i++) {
+            if (currentHour >= i) {
+                totalUsageIn24Hours += hourlyMintUsage[bridge][currentHour - i];
+            }
         }
 
-        // Check if sufficient limit available
-        uint256 available = config.dailyMintLimit - config.currentMintUsed;
-        if (amount > available) {
+        // Check if adding this amount would exceed the daily limit
+        if (totalUsageIn24Hours + amount > config.dailyMintLimit) {
+            uint256 available = config.dailyMintLimit > totalUsageIn24Hours 
+                ? config.dailyMintLimit - totalUsageIn24Hours 
+                : 0;
             revert InsufficientMintLimit(bridge, amount, available);
         }
 
-        // Consume the limit
-        config.currentMintUsed += amount;
+        // Record the new usage in the current hourly bucket
+        hourlyMintUsage[bridge][currentHour] += amount;
     }
 
     /**
-     * @notice Validate bridge authorization and consume burn limit
+     * @notice Validate bridge authorization and consume burn limit using sliding window
      * @param bridge Bridge address
      * @param amount Amount to burn
      */
@@ -276,20 +285,27 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
             revert UnauthorizedBridge(bridge);
         }
 
-        // Reset daily usage if a new day has started
-        if (block.timestamp >= config.lastBurnTimestamp + 1 days) {
-            config.currentBurnUsed = 0;
-            config.lastBurnTimestamp = block.timestamp;
+        // Calculate total usage in the past 24 hours using sliding window
+        uint256 currentHour = block.timestamp / 1 hours;
+        uint256 totalUsageIn24Hours = 0;
+
+        // Sum usage over the past 24 hourly buckets (sliding window)
+        for (uint256 i = 0; i < 24; i++) {
+            if (currentHour >= i) {
+                totalUsageIn24Hours += hourlyBurnUsage[bridge][currentHour - i];
+            }
         }
 
-        // Check if sufficient limit available
-        uint256 available = config.dailyBurnLimit - config.currentBurnUsed;
-        if (amount > available) {
+        // Check if adding this amount would exceed the daily limit
+        if (totalUsageIn24Hours + amount > config.dailyBurnLimit) {
+            uint256 available = config.dailyBurnLimit > totalUsageIn24Hours 
+                ? config.dailyBurnLimit - totalUsageIn24Hours 
+                : 0;
             revert InsufficientBurnLimit(bridge, amount, available);
         }
 
-        // Consume the limit
-        config.currentBurnUsed += amount;
+        // Record the new usage in the current hourly bucket
+        hourlyBurnUsage[bridge][currentHour] += amount;
     }
 
     /**
@@ -322,26 +338,42 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     function getAvailableMintLimit(address bridge) external view override returns (uint256 available) {
         BridgeConfig memory config = bridgeConfigs[bridge];
 
-        // If a new day has started, return full limit
-        if (block.timestamp >= config.lastMintTimestamp + 1 days) {
-            return config.dailyMintLimit;
+        // Calculate total usage in the past 24 hours using sliding window
+        uint256 currentHour = block.timestamp / 1 hours;
+        uint256 totalUsageIn24Hours = 0;
+
+        // Sum usage over the past 24 hourly buckets (sliding window)
+        for (uint256 i = 0; i < 24; i++) {
+            if (currentHour >= i) {
+                totalUsageIn24Hours += hourlyMintUsage[bridge][currentHour - i];
+            }
         }
 
-        // Return remaining limit for today
-        return config.dailyMintLimit - config.currentMintUsed;
+        // Return remaining limit
+        return config.dailyMintLimit > totalUsageIn24Hours 
+            ? config.dailyMintLimit - totalUsageIn24Hours 
+            : 0;
     }
 
     /// @inheritdoc IBridgeRateLimiter
     function getAvailableBurnLimit(address bridge) external view override returns (uint256 available) {
         BridgeConfig memory config = bridgeConfigs[bridge];
 
-        // If a new day has started, return full limit
-        if (block.timestamp >= config.lastBurnTimestamp + 1 days) {
-            return config.dailyBurnLimit;
+        // Calculate total usage in the past 24 hours using sliding window
+        uint256 currentHour = block.timestamp / 1 hours;
+        uint256 totalUsageIn24Hours = 0;
+
+        // Sum usage over the past 24 hourly buckets (sliding window)
+        for (uint256 i = 0; i < 24; i++) {
+            if (currentHour >= i) {
+                totalUsageIn24Hours += hourlyBurnUsage[bridge][currentHour - i];
+            }
         }
 
-        // Return remaining limit for today
-        return config.dailyBurnLimit - config.currentBurnUsed;
+        // Return remaining limit
+        return config.dailyBurnLimit > totalUsageIn24Hours 
+            ? config.dailyBurnLimit - totalUsageIn24Hours 
+            : 0;
     }
 
     /// @inheritdoc IBridgeRateLimiter

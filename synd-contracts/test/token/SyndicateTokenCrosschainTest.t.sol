@@ -345,6 +345,57 @@ contract SyndicateTokenCrosschainTest is Test {
         assertEq(token.getAvailableMintLimit(bridge1), halfLimit);
     }
 
+    function test_SlidingWindowPreventsBurstMinting() public {
+        // Test that sliding window prevents predictable burst minting attacks
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, DAILY_LIMIT * 2);
+
+        // Use full daily limit
+        vm.prank(bridge1);
+        token.crosschainMint(user, DAILY_LIMIT);
+
+        // Available limit should be 0
+        assertEq(token.getAvailableMintLimit(bridge1), 0);
+
+        // Fast forward exactly 24 hours
+        vm.warp(block.timestamp + 24 hours);
+
+        // With 24-hour sliding window, we're now at hour 24, looking back at hours [24,23,22,...,1]
+        // The usage was at hour 0, which is no longer in the window, so full limit is available
+        assertEq(token.getAvailableMintLimit(bridge1), DAILY_LIMIT);
+
+        // Fast forward 1 additional hour to confirm continued availability
+        vm.warp(block.timestamp + 1 hours);
+
+        // Should still have full capacity available
+        assertEq(token.getAvailableMintLimit(bridge1), DAILY_LIMIT);
+    }
+
+    function test_SlidingWindowGradualRecovery() public {
+        // Test that sliding window provides gradual limit recovery
+        uint256 hourlyAmount = DAILY_LIMIT / 24;
+
+        vm.prank(admin);
+        token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
+
+        // Mint in small hourly amounts to spread usage
+        for (uint256 i = 0; i < 12; i++) {
+            vm.prank(bridge1);
+            token.crosschainMint(user, hourlyAmount);
+
+            // Move forward 1 hour between mints
+            vm.warp(block.timestamp + 1 hours);
+        }
+
+        // After 12 hours of usage, available limit should be half
+        uint256 expectedAvailableOne = DAILY_LIMIT - (12 * hourlyAmount);
+        assertEq(
+            token.getAvailableMintLimit(bridge1),
+            expectedAvailableOne,
+            "Available limit should be half after 12 hours of usage"
+        );
+    }
+
     /*//////////////////////////////////////////////////////////////
                         CREATE2 DEPLOYMENT TESTS
     //////////////////////////////////////////////////////////////*/
