@@ -82,6 +82,11 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 
+        // Check that we don't exceed the total supply
+        if (totalSupply() + amount > TOTAL_SUPPLY) {
+            revert ExceedsTotalSupply();
+        }
+
         // Check if bridge is authorized and has sufficient limits
         _validateAndUseMintLimit(msg.sender, amount);
 

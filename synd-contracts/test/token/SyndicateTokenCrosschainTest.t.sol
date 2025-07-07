@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {SyndicateTokenCrosschain} from "src/token/SyndicateTokenCrosschain.sol";
+import {SyndicateTokenCrosschain, SyndicateToken} from "src/token/SyndicateTokenCrosschain.sol";
 import {IERC7802} from "src/token/crosschain/interfaces/IERC7802.sol";
 import {IBridgeRateLimiter} from "src/token/crosschain/interfaces/IBridgeRateLimiter.sol";
 
@@ -164,6 +164,37 @@ contract SyndicateTokenCrosschainTest is Test {
         vm.prank(bridge1);
         vm.expectRevert();
         token.crosschainMint(user, excessiveAmount);
+    }
+
+    function test_CrosschainMintRespectsTotalSupplyCap() public {
+        // Test that crosschain minting respects the total supply cap
+        vm.prank(admin);
+        token.setBridgeLimits(bridge2, type(uint256).max, type(uint256).max);
+
+        // Get initial state
+        uint256 initialSupply = token.totalSupply();
+        uint256 totalSupplyCap = token.TOTAL_SUPPLY();
+        uint256 remainingSupply = totalSupplyCap - initialSupply;
+
+        // Test 1: Verify minting up to total supply cap works
+        vm.prank(bridge2);
+        token.crosschainMint(user, remainingSupply);
+
+        assertEq(token.totalSupply(), totalSupplyCap, "Should reach total supply cap");
+        assertEq(token.balanceOf(user), remainingSupply, "User should receive remaining supply");
+
+        // Test 2: Verify that attempting to mint beyond total supply fails
+        vm.prank(bridge2);
+        vm.expectRevert(abi.encodeWithSelector(SyndicateToken.ExceedsTotalSupply.selector));
+        token.crosschainMint(user, 1);
+
+        // Test 3: Verify large amounts also fail when exceeding cap
+        vm.prank(bridge2);
+        vm.expectRevert(abi.encodeWithSelector(SyndicateToken.ExceedsTotalSupply.selector));
+        token.crosschainMint(user, 1_000_000_000 * 10 ** 18);
+
+        // Verify total supply remains at cap
+        assertEq(token.totalSupply(), totalSupplyCap, "Total supply should remain at cap");
     }
 
     function test_RevertWhen_CrosschainBurn_InsufficientBalance() public {
