@@ -37,72 +37,17 @@ RUN cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program && \
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
     cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
-# --- Go build stage for synd-proposer (fixed brotli-sys) ---
-FROM golang:1.23-bookworm AS go-synd-proposer-build
-
-# 1) Install system deps: build tools, Node 18, pkg-config, brotli-dev (just in case)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential cmake lld-14 libudev-dev wabt clang \
-        curl git ca-certificates gnupg2 \
-        pkg-config libbrotli-dev nodejs \
-        npm \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && npm install -g yarn
-
-# 2) Force brotli-sys to build its vendored C code
-ENV BROTLI_SYS_BUNDLED=1
-
-# 3) In case any other crate still tries pkg-config, make sure it can find brotli.pc
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
-
-# 4) Install Rust toolchains, cbindgen & Foundry
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:${PATH}
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-toolchain none && \
-    rustup toolchain install nightly-2025-02-14 \
-        --component rust-src,rustfmt,clippy \
-        --target wasm32-wasip1 --target wasm32-unknown-unknown && \
-    rustup toolchain install 1.84.1 \
-        --component cargo,rustc,clippy \
-        --target wasm32-wasip1 --target wasm32-unknown-unknown && \
-    rustup default 1.84.1 && \
-    cargo install --force cbindgen && \
-    curl -L https://foundry.paradigm.xyz | bash && \
-    ~/.foundry/bin/foundryup
-
-# 5) Copy in your Go & Nitro code and build the Nitro deps
-WORKDIR /go/src
-COPY ./synd-withdrawals/synd-enclave ./synd-enclave
+# --- Go build stage for synd-proposer ---
+FROM ghcr.io/syndicateprotocol/node-builder AS go-synd-proposer-build
+WORKDIR /
+COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
+COPY ./synd-withdrawals/synd-enclave/go.mod ./synd-enclave/go.mod
+COPY ./synd-withdrawals/synd-enclave/go.sum ./synd-enclave/go.sum
 COPY ./synd-withdrawals/synd-proposer ./synd-proposer
+RUN mv /workspace ./synd-enclave/nitro
 
-WORKDIR /go/src/synd-enclave/nitro
-# force Nitro to rebuild the vendored brotli C library
-RUN ./scripts/build-brotli.sh -l
-RUN mkdir -p target/machines/latest \
- && cargo run --manifest-path arbitrator/wasm-libraries/forward/Cargo.toml \
-      -- --path arbitrator/wasm-libraries/forward/forward.wat \
- && wat2wasm arbitrator/wasm-libraries/forward/forward.wat \
-      -o target/machines/latest/forward.wasm \
- && cargo run --manifest-path arbitrator/wasm-libraries/forward/Cargo.toml \
-      -- --path arbitrator/wasm-libraries/forward/forward_stub.wat --stub \
- && wat2wasm arbitrator/wasm-libraries/forward/forward_stub.wat \
-      -o target/machines/latest/forward_stub.wasm
-
-# fake out the wasm-build step so no Docker call is made
-RUN mkdir -p target/lib-wasm \
- && touch target/lib-wasm/libbrotlicommon-static.a \
- && touch target/lib-wasm/libbrotlienc-static.a \
- && touch target/lib-wasm/libbrotlidec-static.a
-
-RUN make build-node-deps
-
-
-# 6) Build the Go CLI
-WORKDIR /go/src/synd-proposer
-RUN go mod download && go mod tidy
+# Build the Go image
+WORKDIR /synd-proposer
 RUN CGO_ENABLED=1 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
     
 
