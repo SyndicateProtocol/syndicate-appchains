@@ -196,8 +196,10 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 
 **Bridge Targets**:
 
-- **Arbitrum**: L1GatewayRouter (`0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef`)
-- **Optimism**: L1StandardBridge (`0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1`)
+The bridge addresses are configurable deployment parameters passed to bridge proxy constructors:
+
+- **Arbitrum**: L1GatewayRouter (configurable - example: `0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef`)
+- **Optimism**: L1StandardBridge (configurable - example: `0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1`)
 
 **Access Control Roles**:
 
@@ -217,12 +219,11 @@ bytes32 public constant BRIDGE_CALLER_ROLE = keccak256("BRIDGE_CALLER_ROLE");
 
 ```mermaid
 graph TD
-    A[Deploy Factory] --> B[Generate Salt]
-    B --> C[Predict Address]
-    C --> D[Deploy Token via Factory]
-    D --> E[Same Address on All Chains]
-    E --> F[Configure Bridges]
-    F --> G[Cross-chain Operations]
+    A[Generate Salt] --> B[Predict Address]
+    B --> C[Deploy Token via CREATE3]
+    C --> D[Same Address on All Chains]
+    D --> E[Configure Bridges]
+    E --> F[Cross-chain Operations]
 ```
 
 ### 2. Complete Emission-to-Bridge Flow
@@ -350,18 +351,22 @@ bridgeProxy.grantRole(DEFAULT_ADMIN_ROLE, adminAddress);
 
 ### Configuration Dependencies
 
-#### Factory Deployment Configuration
+#### Direct Deployment Configuration
 
 ```solidity
-// REQUIRED: Deploy factories on all target chains
-SyndicateTokenCrosschainFactory factory = new SyndicateTokenCrosschainFactory();
-TestnetSyndTokenCrosschainFactory testnetFactory = new TestnetSyndTokenCrosschainFactory();
-
 // REQUIRED: Generate universal salt for consistent addressing
-bytes32 salt = factory.generateSalt(admin, treasury, chainId);
+bytes32 salt = keccak256(abi.encodePacked(admin, treasury, chainId));
 
-// REQUIRED: Deploy tokens with same salt on each chain
-address token = factory.deploySyndicateTokenCrosschain(admin, treasury, salt);
+// REQUIRED: Deploy tokens with same salt on each chain using CREATE3
+address predictedAddress = CREATE3.getDeployed(salt);
+address token = CREATE3.deploy(
+    salt,
+    abi.encodePacked(
+        type(SyndicateTokenCrosschain).creationCode,
+        abi.encode(admin, treasury)
+    ),
+    0
+);
 ```
 
 #### Crosschain Token Configuration
@@ -429,7 +434,7 @@ optimismBridgeProxy.setOptimismConfig(l2Recipient, gasLimit);
 3. **Bridge Target Validation**: Bridge proxy targets must be verified official bridge contracts
 4. **ETH Funding**: Arbitrum bridge proxy must maintain sufficient ETH for gas fees and submission costs
 5. **L2 Token Registration**: L2 tokens must be properly deployed and registered with bridges
-6. **Factory Address Consistency**: Same factory address must be deployed on all chains for deterministic addressing
+6. **Salt Consistency**: Same deployment salt must be used on all chains for deterministic addressing
 7. **Bridge Authorization**: Only authorized bridges can mint/burn crosschain tokens
 8. **Rate Limit Enforcement**: Bridge rate limits must be properly configured to prevent abuse
 
