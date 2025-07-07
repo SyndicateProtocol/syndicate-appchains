@@ -131,6 +131,12 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
         onlyRole(BRIDGE_MANAGER_ROLE)
     {
         if (bridge == address(0)) revert ZeroAddress();
+        
+        // Prevent bridge manager from adding themselves as a bridge
+        if (bridge == msg.sender) revert CannotAddSelfAsBridge();
+        
+        // Require bridge to be a contract (not an EOA)
+        if (bridge.code.length == 0) revert BridgeMustBeContract();
 
         // Add bridge to array if not already added
         if (!isBridgeAdded[bridge]) {

@@ -50,6 +50,12 @@ interface IBridgeRateLimiter {
     /// @notice Thrown when bridge is not active
     error BridgeNotActive(address bridge);
 
+    /// @notice Thrown when trying to add self as bridge
+    error CannotAddSelfAsBridge();
+
+    /// @notice Thrown when bridge address is not a contract
+    error BridgeMustBeContract();
+
     /*//////////////////////////////////////////////////////////////
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/

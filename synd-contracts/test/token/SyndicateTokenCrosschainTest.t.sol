@@ -11,8 +11,8 @@ contract SyndicateTokenCrosschainTest is Test {
 
     address public admin = address(0x1234);
     address public treasury = address(0x5678);
-    address public bridge1 = address(0x9ABC);
-    address public bridge2 = address(0xDEF0);
+    address public bridge1;
+    address public bridge2;
     address public user = address(0x1111);
 
     uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
@@ -25,6 +25,10 @@ contract SyndicateTokenCrosschainTest is Test {
     function setUp() public {
         // Deploy token directly for testing
         token = new SyndicateTokenCrosschain(admin, treasury);
+
+        // Deploy mock bridge contracts for testing
+        bridge1 = address(new MockBridge());
+        bridge2 = address(new MockBridge());
 
         // Setup bridges
         vm.prank(admin);
@@ -90,6 +94,32 @@ contract SyndicateTokenCrosschainTest is Test {
         assertEq(token.getAvailableBurnLimit(bridge1), DAILY_LIMIT);
         assertEq(token.getBridgeCount(), 1);
         assertEq(token.getBridgeAtIndex(0), bridge1);
+    }
+
+    function test_PreventBridgeManagerSelfAssignment() public {
+        // Test that bridge manager cannot add themselves as a bridge
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IBridgeRateLimiter.CannotAddSelfAsBridge.selector));
+        token.setBridgeLimits(admin, DAILY_LIMIT, DAILY_LIMIT);
+    }
+
+    function test_PreventEOABridgeAssignment() public {
+        // Test that bridge must be a contract, not an EOA
+        address eoa = address(0x1337);
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IBridgeRateLimiter.BridgeMustBeContract.selector));
+        token.setBridgeLimits(eoa, DAILY_LIMIT, DAILY_LIMIT);
+    }
+
+    function test_AllowValidContractBridge() public {
+        // Deploy a mock contract to act as a bridge
+        address mockBridge = address(new MockBridge());
+        
+        vm.prank(admin);
+        token.setBridgeLimits(mockBridge, DAILY_LIMIT, DAILY_LIMIT);
+        
+        assertTrue(token.isBridgeAuthorized(mockBridge));
+        assertEq(token.getAvailableMintLimit(mockBridge), DAILY_LIMIT);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -333,4 +363,9 @@ contract SyndicateTokenCrosschainTest is Test {
 
         assertTrue(token.transfersLocked(), "Transfers should be locked after setting unlock timestamp");
     }
+}
+
+// Mock contract to test bridge validation
+contract MockBridge {
+    // Empty contract that can be used as a bridge for testing
 }
