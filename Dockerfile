@@ -46,6 +46,7 @@ RUN apt-get update && \
         build-essential cmake lld-14 libudev-dev wabt clang \
         curl git ca-certificates gnupg2 \
         pkg-config libbrotli-dev nodejs \
+        npm \
     && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && npm install -g yarn
