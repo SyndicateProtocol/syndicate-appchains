@@ -13,17 +13,14 @@ use alloy::{
     signers::local::PrivateKeySigner,
     transports::{layers::RetryBackoffLayer, TransportError},
 };
-use axum::{
-    http::StatusCode,
-    response::Json,
-    routing::{get, MethodRouter},
-};
 use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::{aio::ConnectionManager, AsyncCommands, Client as ValkeyClient};
+use redis::{aio::ConnectionManager, Client as ValkeyClient};
 use shared::{
-    service_start_utils::{start_metrics_and_health, MetricsState},
+    service_start_utils::{
+        cache_health_check_handler, start_http_server_with_aux_handlers, MetricsState,
+    },
     tracing::SpanKind,
     types::FilledProvider,
 };
@@ -85,11 +82,12 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     // Start metrics and health endpoints
     let mut metrics_state = MetricsState::default();
     let metrics = BatcherMetrics::new(&mut metrics_state.registry);
-    let health_handler = health_handler(conn);
-    tokio::spawn(start_metrics_and_health(
+    let cache_health_handler = cache_health_check_handler(conn);
+    tokio::spawn(start_http_server_with_aux_handlers(
         metrics_state,
-        config.metrics_port,
-        Some(health_handler),
+        port,
+        Some(cache_health_handler.clone()),
+        Some(cache_health_handler), // same /ready behavior as /health
     ));
 
     let sequencing_contract_instance = create_sequencing_contract_instance(config).await?;
@@ -109,40 +107,6 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     });
     info!("Batcher job started");
     Ok(handle)
-}
-
-/// Checks if the cache connection is healthy
-/// This method attempts to ping the cache connection to check if it is healthy.
-fn health_handler(valkey_conn: ConnectionManager) -> MethodRouter<std::sync::Arc<MetricsState>> {
-    let mut conn = valkey_conn;
-    get(move || async move {
-        // Add timeout to prevent hanging when valkey is down
-        let health = tokio::time::timeout(Duration::from_secs(2), conn.ping::<String>()).await;
-
-        match health {
-            Ok(Ok(_)) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
-            Ok(Err(e)) => {
-                error!("Cache connection is not healthy: {:?}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({
-                        "health": false,
-                        "message": "Cache connection is not healthy"
-                    })),
-                )
-            }
-            Err(_) => {
-                error!("Cache connection ping timed out");
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({
-                        "health": false,
-                        "message": "Cache connection ping timed out"
-                    })),
-                )
-            }
-        }
-    })
 }
 
 async fn create_sequencing_contract_instance(

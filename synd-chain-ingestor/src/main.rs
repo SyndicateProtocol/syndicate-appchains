@@ -3,16 +3,22 @@
 use clap::Parser;
 use jsonrpsee::server::{PingConfig, Server, ServerConfigBuilder};
 use shared::{
-    service_start_utils::{start_metrics_and_health, MetricsState},
+    service_start_utils::{ready_handler_http, start_http_server_with_aux_handlers, MetricsState},
     tracing::setup_global_logging,
 };
-use std::time::Duration;
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 use synd_chain_ingestor::{config::Config, ingestor, metrics::ChainIngestorMetrics, server};
 use tokio::{
     signal::unix::{signal, SignalKind},
     time::sleep,
 };
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
@@ -23,7 +29,16 @@ async fn main() -> eyre::Result<()> {
     let mut provider = cfg.new_provider().await;
     let mut metrics_state = MetricsState::default();
     let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
+
+    let is_ready = Arc::new(AtomicBool::new(false));
+    let ready_handler = ready_handler_http(is_ready.clone(), "chain ingestor is not ready".into());
+
+    tokio::spawn(start_http_server_with_aux_handlers(
+        metrics_state,
+        cfg.port,
+        None,
+        Some(ready_handler),
+    ));
 
     let (module, ctx) = server::start(
         &provider,
@@ -34,6 +49,9 @@ async fn main() -> eyre::Result<()> {
         &metrics,
     )
     .await?;
+
+    is_ready.store(true, Ordering::SeqCst);
+    info!("Chain ingestor marked as ready");
 
     info!("starting synd-chain-ingestor server on {}", cfg.port);
     let jsonrpsee_cfg =
@@ -66,6 +84,7 @@ async fn main() -> eyre::Result<()> {
             sleep(Duration::from_secs(1)).await;
             // manually recreate the ws connection just in case.
             provider = cfg.new_provider().await;
+            trace!("ingestor connection restarted");
         }
     }
 }

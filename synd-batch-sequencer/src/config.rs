@@ -82,9 +82,9 @@ pub struct BatcherConfig {
     #[arg(short = 's', long, env = "SEQUENCING_ADDRESS", value_parser = parse_address)]
     pub sequencing_address: Address,
 
-    /// Metrics port to listen on
-    #[arg(short = 'm', long, env = "METRICS_PORT", default_value_t = 8082)]
-    pub metrics_port: u16,
+    /// Server port
+    #[arg(short = 'm', long, env = "PORT", default_value_t = 8082)]
+    pub port: u16,
 
     /// whether to wait for the receipt of the batch submission
     #[arg(long, env = "WAIT_FOR_RECEIPT", default_value_t = false)]

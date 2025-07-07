@@ -4,7 +4,7 @@ use crate::{
 };
 use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
-use shared::service_start_utils::{start_metrics_and_health, MetricsState};
+use shared::service_start_utils::{start_http_server_with_aux_handlers, MetricsState};
 use std::sync::Arc;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
@@ -20,7 +20,7 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
 
     let mut metrics_state = MetricsState::default();
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    start_metrics_and_health(metrics_state, config.metrics.metrics_port, None).await;
+    start_http_server_with_aux_handlers(metrics_state, config.port, None, None).await;
 
     loop {
         info!("Starting Syndicate Translator");
