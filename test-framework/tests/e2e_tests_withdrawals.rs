@@ -102,7 +102,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             let l1_provider = components.l1_provider.as_ref().unwrap();
             let sequencing_bridge = IBridge::new(sequencing_bridge_address, l1_provider);
             let l1_start_batch_acc =
-                sequencing_bridge.sequencerInboxAccs(U256::ZERO).call().await?._0;
+                sequencing_bridge.sequencerInboxAccs(U256::ZERO).call().await?;
 
             let (_l1_oracle_handle, l1_oracle_address) =
                 setup_l1_oracle(l1_provider.clone(), components.settlement_provider.clone()).await;
