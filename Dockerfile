@@ -47,7 +47,8 @@ RUN apt-get update && \
         curl git ca-certificates gnupg2 \
         pkg-config libbrotli-dev nodejs \
     && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && npm install -g yarn
 
 # 2) Force brotli-sys to build its vendored C code
 ENV BROTLI_SYS_BUNDLED=1
