@@ -28,7 +28,6 @@ abstract contract GasCounter {
     uint256 public constant PERIOD_DURATION = 30 days;
     uint256 public constant TRACKING_OVERHEAD = 5000; // Approximate gas overhead for tracking operations
 
-
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -100,12 +99,7 @@ abstract contract GasCounter {
             gasTrackingInitialized = true;
             currentPeriodIndex = 0;
 
-            periods[0] = GasPeriod({
-            startTimestamp: block.timestamp,
-            endTimestamp: 0,
-            totalGasUsed: 0,
-            totalGasCost: 0
-        });
+            periods[0] = GasPeriod({startTimestamp: block.timestamp, endTimestamp: 0, totalGasUsed: 0, totalGasCost: 0});
 
             emit NewPeriodStarted(0, block.timestamp);
         }
@@ -128,7 +122,7 @@ abstract contract GasCounter {
 
         // Calculate gas cost using current transaction gas price
         uint256 gasCost = gasUsed * tx.gasprice;
-        
+
         // Add gas and cost to current period
         periods[currentPeriodIndex].totalGasUsed += gasUsed;
         periods[currentPeriodIndex].totalGasCost += gasCost;
@@ -156,12 +150,8 @@ abstract contract GasCounter {
 
             // Start new period
             currentPeriodIndex++;
-            periods[currentPeriodIndex] = GasPeriod({
-                startTimestamp: block.timestamp,
-                endTimestamp: 0,
-                totalGasUsed: 0,
-                totalGasCost: 0
-            });
+            periods[currentPeriodIndex] =
+                GasPeriod({startTimestamp: block.timestamp, endTimestamp: 0, totalGasUsed: 0, totalGasCost: 0});
 
             emit NewPeriodStarted(currentPeriodIndex, block.timestamp);
         }
@@ -178,24 +168,24 @@ abstract contract GasCounter {
         if (!gasTrackingInitialized) {
             return GasPeriod(0, 0, 0, 0);
         }
-        
+
         GasPeriod memory storedPeriod = periods[currentPeriodIndex];
-        
+
         // Check if the stored current period has expired
         if (block.timestamp >= storedPeriod.startTimestamp + PERIOD_DURATION) {
             // The stored period has expired, return a conceptual current period
             // Calculate when the actual current period would start
             uint256 periodsElapsed = (block.timestamp - storedPeriod.startTimestamp) / PERIOD_DURATION;
             uint256 currentPeriodStart = storedPeriod.startTimestamp + (periodsElapsed * PERIOD_DURATION);
-            
+
             return GasPeriod({
                 startTimestamp: currentPeriodStart,
                 endTimestamp: 0, // Not finalized
                 totalGasUsed: 0, // No activity yet
-                totalGasCost: 0  // No cost yet
+                totalGasCost: 0 // No cost yet
             });
         }
-        
+
         return storedPeriod;
     }
 
@@ -236,10 +226,10 @@ abstract contract GasCounter {
     /// @param startCumulative Cumulative gas fees at start time
     /// @param endCumulative Cumulative gas fees at end time
     /// @return feesDuring Gas fees accrued during the specified period
-    function getGasFeesInRange(uint256 startCumulative, uint256 endCumulative) 
-        external 
-        pure 
-        returns (uint256 feesDuring) 
+    function getGasFeesInRange(uint256 startCumulative, uint256 endCumulative)
+        external
+        pure
+        returns (uint256 feesDuring)
     {
         require(endCumulative >= startCumulative, "GasCounter: invalid range");
         return endCumulative - startCumulative;
@@ -249,11 +239,11 @@ abstract contract GasCounter {
     /// @return timeRemaining Seconds remaining in current period (0 if expired)
     function getCurrentPeriodTimeRemaining() external view returns (uint256 timeRemaining) {
         GasPeriod memory currentPeriod = _getConceptualCurrentPeriod();
-        
+
         if (currentPeriod.startTimestamp == 0) {
             return 0; // Not initialized
         }
-        
+
         uint256 periodEnd = currentPeriod.startTimestamp + PERIOD_DURATION;
 
         if (block.timestamp >= periodEnd) {

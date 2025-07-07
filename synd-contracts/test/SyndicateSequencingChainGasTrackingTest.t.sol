@@ -34,7 +34,7 @@ contract SyndicateSequencingChainGasTrackingTest is Test {
         // Set up permission module to always allow
         permissionModule.addPermissionCheck(address(alwaysAllowed), false);
         vm.stopPrank();
-        
+
         // Set a default gas price for gas cost calculations
         vm.txGasPrice(1e9); // 1 gwei
     }
@@ -138,7 +138,7 @@ contract SyndicateSequencingChainGasTrackingTest is Test {
         chain.processTransaction(abi.encode("tx2"));
 
         uint256 totalFees = chain.getTotalGasFees();
-        
+
         // Total fees should be positive and based on actual gas prices
         assertGt(totalFees, 0);
         // Since gas price is dynamic, we just verify fees were calculated
