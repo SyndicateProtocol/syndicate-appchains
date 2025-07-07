@@ -543,7 +543,7 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_SetBridgeLimits_RejectsEOA() public {
         // Define an EOA address (no code)
         address eoa = address(0x123);
-        
+
         // Should revert when trying to add an EOA as a bridge
         vm.prank(admin);
         vm.expectRevert();
@@ -553,14 +553,14 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_SetBridgeLimits_RejectsUnreasonableMintLimit() public {
         // Use a real contract address for this test
         address contractBridge = address(new MockBridge());
-        
+
         // Debug: Check values
         uint256 totalSupply = token.TOTAL_SUPPLY();
         uint256 testValue = totalSupply + 1;
-        
+
         // Manual validation test
         assertTrue(testValue > totalSupply, "Test value should be greater than total supply");
-        
+
         // Should revert when mint limit exceeds total supply
         vm.prank(admin);
         vm.expectRevert();
@@ -570,14 +570,14 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_SetBridgeLimits_RejectsUnreasonableBurnLimit() public {
         // Use a real contract address for this test
         address contractBridge = address(new MockBridge());
-        
+
         // Debug: Check values
         uint256 totalSupply = token.TOTAL_SUPPLY();
         uint256 testValue = totalSupply + 1;
-        
+
         // Manual validation test
         assertTrue(testValue > totalSupply, "Test value should be greater than total supply");
-        
+
         // Should revert when burn limit exceeds total supply
         vm.prank(admin);
         vm.expectRevert();
@@ -587,14 +587,14 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_SetBridgeLimits_AcceptsReasonableLimits() public {
         // Use a real contract address for this test
         address contractBridge = address(new MockBridge());
-        
+
         // Should accept limits at or below total supply - use the same pattern as other tests
         vm.prank(admin);
         token.setBridgeLimits(contractBridge, DAILY_LIMIT, DAILY_LIMIT);
-        
+
         // Verify bridge was added successfully
         assertTrue(token.isBridgeAuthorized(contractBridge));
-        
+
         IBridgeRateLimiter.BridgeConfig memory config = token.getBridgeConfig(contractBridge);
         assertEq(config.dailyMintLimit, DAILY_LIMIT);
         assertEq(config.dailyBurnLimit, DAILY_LIMIT);
@@ -603,14 +603,14 @@ contract SyndicateTokenCrosschainTest is Test {
     function test_SetBridgeLimits_AllowsMaxUint256() public {
         // Use a real contract address for this test
         address contractBridge = address(new MockBridge());
-        
+
         // Should accept max uint256 as unlimited
         vm.prank(admin);
         token.setBridgeLimits(contractBridge, type(uint256).max, type(uint256).max);
-        
+
         // Verify bridge was added successfully
         assertTrue(token.isBridgeAuthorized(contractBridge));
-        
+
         IBridgeRateLimiter.BridgeConfig memory config = token.getBridgeConfig(contractBridge);
         assertEq(config.dailyMintLimit, type(uint256).max);
         assertEq(config.dailyBurnLimit, type(uint256).max);
@@ -624,17 +624,17 @@ contract SyndicateTokenCrosschainTest is Test {
         // Setup emission budget for bridge
         vm.prank(admin);
         token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
-        
+
         // Setup transfer lock
         vm.prank(admin);
         token.setUnlockTimestamp(block.timestamp + 30 days);
         assertTrue(token.transfersLocked(), "Transfers should be locked");
-        
+
         // Regular bridge should be blocked during transfer lock
         vm.prank(bridge1);
         vm.expectRevert(abi.encodeWithSignature("TransfersLocked()"));
-        token.crosschainMint(user, 1000 * 10**18);
-        
+        token.crosschainMint(user, 1000 * 10 ** 18);
+
         // Verify no tokens were minted
         assertEq(token.balanceOf(user), 0);
     }
@@ -643,41 +643,41 @@ contract SyndicateTokenCrosschainTest is Test {
         // Setup emission budget for bridge
         vm.prank(admin);
         token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
-        
+
         // Grant AIRDROP_MANAGER_ROLE to bridge1 - use vm.startPrank for multiple calls
         vm.startPrank(admin);
         assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), admin), "Admin should have DEFAULT_ADMIN_ROLE");
         token.grantRole(token.AIRDROP_MANAGER_ROLE(), bridge1);
         assertTrue(token.hasRole(token.AIRDROP_MANAGER_ROLE(), bridge1), "Bridge should have AIRDROP_MANAGER_ROLE");
-        
+
         // Setup transfer lock
         token.setUnlockTimestamp(block.timestamp + 30 days);
         vm.stopPrank();
-        
+
         assertTrue(token.transfersLocked(), "Transfers should be locked");
-        
+
         // Bridge with AIRDROP_MANAGER_ROLE should work during transfer lock
         vm.prank(bridge1);
-        token.crosschainMint(user, 1000 * 10**18);
-        
+        token.crosschainMint(user, 1000 * 10 ** 18);
+
         // Verify tokens were minted
-        assertEq(token.balanceOf(user), 1000 * 10**18);
+        assertEq(token.balanceOf(user), 1000 * 10 ** 18);
     }
 
     function test_CrosschainMint_WorksWhenNotLocked() public {
         // Setup emission budget for bridge
         vm.prank(admin);
         token.allocateEmissionBudget(bridge1, DAILY_LIMIT);
-        
+
         // Ensure transfers are not locked (default state)
         assertFalse(token.transfersLocked(), "Transfers should not be locked");
-        
+
         // Bridge should work when transfers are not locked
         vm.prank(bridge1);
-        token.crosschainMint(user, 1000 * 10**18);
-        
+        token.crosschainMint(user, 1000 * 10 ** 18);
+
         // Verify tokens were minted
-        assertEq(token.balanceOf(user), 1000 * 10**18);
+        assertEq(token.balanceOf(user), 1000 * 10 ** 18);
     }
 }
 
