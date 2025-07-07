@@ -174,7 +174,6 @@ pub mod r#syndicate_storage;
 pub mod r#syndicate_token;
 pub mod r#syndicate_token_crosschain;
 pub mod r#i_syndicate_token_mintable;
-pub mod r#syndicate_token_emission_scheduler;
 pub mod r#tee_key_manager;
 pub mod r#mock_attestation_doc_verifier;
 pub mod r#il1_block;
