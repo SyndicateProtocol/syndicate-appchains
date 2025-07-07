@@ -114,7 +114,7 @@ contract SyndicateSequencingChainGasTrackingTest is Test {
         uint256 firstPeriodGas = chain.getCurrentPeriodGasUsed();
 
         // Fast forward past period duration
-        vm.warp(block.timestamp + chain.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + chain.periodDuration() + 1);
 
         // Process transaction in new period - should trigger period advancement
         chain.processTransaction(data);
@@ -161,11 +161,11 @@ contract SyndicateSequencingChainGasTrackingTest is Test {
         assertTrue(chain.isGasTrackingInitialized());
 
         // Time remaining should be close to full period
-        assertGt(chain.getCurrentPeriodTimeRemaining(), chain.PERIOD_DURATION() - 100);
+        assertGt(chain.getCurrentPeriodTimeRemaining(), chain.periodDuration() - 100);
     }
 
     function test_Constants() public view {
-        assertEq(chain.PERIOD_DURATION(), 30 days);
+        assertEq(chain.periodDuration(), 30 days);
         // Gas price is now dynamic based on tx.gasprice
     }
 

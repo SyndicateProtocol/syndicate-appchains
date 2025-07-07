@@ -124,10 +124,10 @@ contract GasCounterTest is Test {
         gasCounter.trackGasPublic(1000);
 
         // Fast forward past period duration
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + gasCounter.periodDuration() + 1);
 
         vm.expectEmit(true, false, false, true);
-        emit PeriodFinalized(0, 1000, gasCounter.PERIOD_DURATION());
+        emit PeriodFinalized(0, 1000, gasCounter.periodDuration());
 
         vm.expectEmit(true, false, false, true);
         emit NewPeriodStarted(1, block.timestamp);
@@ -153,11 +153,11 @@ contract GasCounterTest is Test {
         gasCounter.trackGasPublic(1000);
 
         // Advance to second period
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + gasCounter.periodDuration() + 1);
         gasCounter.trackGasPublic(2000);
 
         // Advance to third period
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + gasCounter.periodDuration() + 1);
         gasCounter.trackGasPublic(3000);
 
         assertEq(gasCounter.currentPeriodIndex(), 2);
@@ -181,19 +181,19 @@ contract GasCounterTest is Test {
 
         // Should have close to full period remaining
         uint256 timeRemaining = gasCounter.getCurrentPeriodTimeRemaining();
-        assertEq(timeRemaining, gasCounter.PERIOD_DURATION());
+        assertEq(timeRemaining, gasCounter.periodDuration());
 
         // Fast forward half the period
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() / 2);
+        vm.warp(block.timestamp + gasCounter.periodDuration() / 2);
         timeRemaining = gasCounter.getCurrentPeriodTimeRemaining();
-        assertEq(timeRemaining, gasCounter.PERIOD_DURATION() / 2);
+        assertEq(timeRemaining, gasCounter.periodDuration() / 2);
 
         // Fast forward exactly to period end (now we're in a conceptual new period)
-        uint256 periodEnd = 1 + gasCounter.PERIOD_DURATION();
+        uint256 periodEnd = 1 + gasCounter.periodDuration();
         vm.warp(periodEnd);
         timeRemaining = gasCounter.getCurrentPeriodTimeRemaining();
         // Due to conceptual current period logic, we're now at the start of a new period
-        assertEq(timeRemaining, gasCounter.PERIOD_DURATION());
+        assertEq(timeRemaining, gasCounter.periodDuration());
     }
 
     function test_GetTotalGasFees() public {
@@ -324,7 +324,7 @@ contract GasCounterTest is Test {
         assertEq(firstPeriodGas, 3000);
 
         // Advance to second period
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + gasCounter.periodDuration() + 1);
         gasCounter.trackGasPublic(5000);
 
         // Check period advancement worked
@@ -344,7 +344,7 @@ contract GasCounterTest is Test {
     }
 
     function test_PeriodConstants() public view {
-        assertEq(gasCounter.PERIOD_DURATION(), 30 days);
+        assertEq(gasCounter.periodDuration(), 30 days);
         // Gas price is now dynamic based on tx.gasprice
     }
 
@@ -381,7 +381,7 @@ contract GasCounterTest is Test {
         uint256 firstPeriodFees = 1000 * tx.gasprice;
 
         // Advance to second period
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + gasCounter.periodDuration() + 1);
         gasCounter.trackGasPublic(2000);
         uint256 secondPeriodFees = 2000 * tx.gasprice;
 
@@ -390,7 +390,7 @@ contract GasCounterTest is Test {
         assertEq(gasCounter.getCumulativeGasFees(), firstPeriodFees + secondPeriodFees); // All periods
 
         // Advance to third period
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + gasCounter.periodDuration() + 1);
         gasCounter.trackGasPublic(3000);
         uint256 thirdPeriodFees = 3000 * tx.gasprice;
 
@@ -408,7 +408,7 @@ contract GasCounterTest is Test {
         uint256 firstPeriodFees = 1000 * 1e12;
 
         // Advance to second period with different gas price
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + gasCounter.periodDuration() + 1);
         vm.txGasPrice(2e12); // 2000 gwei
         gasCounter.trackGasPublic(1000);
         uint256 secondPeriodFees = 1000 * 2e12;
@@ -457,7 +457,7 @@ contract GasCounterTest is Test {
         assertEq(midSnapshot, firstPeriodTotal);
 
         // Advance to second period
-        vm.warp(block.timestamp + gasCounter.PERIOD_DURATION() + 1);
+        vm.warp(block.timestamp + gasCounter.periodDuration() + 1);
         gasCounter.trackGasPublic(2000);
         uint256 secondPeriodFees = 2000 * tx.gasprice;
 

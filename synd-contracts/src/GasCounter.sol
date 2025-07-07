@@ -21,16 +21,12 @@ abstract contract GasCounter {
     }
 
     /*//////////////////////////////////////////////////////////////
-                               CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Duration of each tracking period (30 days)
-    uint256 public constant PERIOD_DURATION = 30 days;
-    uint256 public constant TRACKING_OVERHEAD = 5000; // Approximate gas overhead for tracking operations
-
-    /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Duration of each tracking period (default 30 days)
+    /// @dev Can be modified by inheriting contracts if needed for testing or different use cases
+    uint256 public periodDuration = 30 days;
 
     /// @notice Index of the current active period
     uint256 public currentPeriodIndex;
@@ -83,9 +79,6 @@ abstract contract GasCounter {
         _;
         uint256 gasUsed = gasStart - gasleft();
 
-        // Add some gas for the tracking operations themselves
-        gasUsed += TRACKING_OVERHEAD; // Approximate gas for tracking operations
-
         _trackGas(gasUsed);
     }
 
@@ -135,9 +128,9 @@ abstract contract GasCounter {
         GasPeriod storage currentPeriod = periods[currentPeriodIndex];
 
         // Check if current period has expired
-        if (block.timestamp >= currentPeriod.startTimestamp + PERIOD_DURATION) {
+        if (block.timestamp >= currentPeriod.startTimestamp + periodDuration) {
             // Finalize current period
-            currentPeriod.endTimestamp = currentPeriod.startTimestamp + PERIOD_DURATION;
+            currentPeriod.endTimestamp = currentPeriod.startTimestamp + periodDuration;
 
             // Add the completed period's gas cost to cumulative total
             cumulativeGasFees += currentPeriod.totalGasCost;
@@ -172,11 +165,11 @@ abstract contract GasCounter {
         GasPeriod memory storedPeriod = periods[currentPeriodIndex];
 
         // Check if the stored current period has expired
-        if (block.timestamp >= storedPeriod.startTimestamp + PERIOD_DURATION) {
+        if (block.timestamp >= storedPeriod.startTimestamp + periodDuration) {
             // The stored period has expired, return a conceptual current period
             // Calculate when the actual current period would start
-            uint256 periodsElapsed = (block.timestamp - storedPeriod.startTimestamp) / PERIOD_DURATION;
-            uint256 currentPeriodStart = storedPeriod.startTimestamp + (periodsElapsed * PERIOD_DURATION);
+            uint256 periodsElapsed = (block.timestamp - storedPeriod.startTimestamp) / periodDuration;
+            uint256 currentPeriodStart = storedPeriod.startTimestamp + (periodsElapsed * periodDuration);
 
             return GasPeriod({
                 startTimestamp: currentPeriodStart,
@@ -244,7 +237,7 @@ abstract contract GasCounter {
             return 0; // Not initialized
         }
 
-        uint256 periodEnd = currentPeriod.startTimestamp + PERIOD_DURATION;
+        uint256 periodEnd = currentPeriod.startTimestamp + periodDuration;
 
         if (block.timestamp >= periodEnd) {
             return 0;
