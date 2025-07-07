@@ -16,12 +16,15 @@ interface GasCounter {
 
     function PERIOD_DURATION() external view returns (uint256);
     function TRACKING_OVERHEAD() external view returns (uint256);
+    function cumulativeGasFees() external view returns (uint256);
     function currentPeriodIndex() external view returns (uint256);
     function gasTrackingEnabled() external view returns (bool);
     function gasTrackingInitialized() external view returns (bool);
+    function getCumulativeGasFees() external view returns (uint256 totalCost);
     function getCurrentPeriod() external view returns (GasPeriod memory period);
     function getCurrentPeriodGasUsed() external view returns (uint256 totalGas);
     function getCurrentPeriodTimeRemaining() external view returns (uint256 timeRemaining);
+    function getGasFeesInRange(uint256 startCumulative, uint256 endCumulative) external pure returns (uint256 feesDuring);
     function getPeriod(uint256 periodIndex) external view returns (GasPeriod memory period);
     function getTotalGasFees() external view returns (uint256 totalCost);
     function getTotalPeriods() external view returns (uint256 totalPeriods);
@@ -49,6 +52,19 @@ interface GasCounter {
   {
     "type": "function",
     "name": "TRACKING_OVERHEAD",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "cumulativeGasFees",
     "inputs": [],
     "outputs": [
       {
@@ -94,6 +110,19 @@ interface GasCounter {
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getCumulativeGasFees",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "totalCost",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -158,6 +187,30 @@ interface GasCounter {
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getGasFeesInRange",
+    "inputs": [
+      {
+        "name": "startCumulative",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "endCumulative",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "feesDuring",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -1348,6 +1401,131 @@ function TRACKING_OVERHEAD() external view returns (uint256);
             }
         }
     };
+    /**Function with signature `cumulativeGasFees()` and selector `0xff7b3084`.
+```solidity
+function cumulativeGasFees() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct cumulativeGasFeesCall {}
+    ///Container type for the return parameters of the [`cumulativeGasFees()`](cumulativeGasFeesCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct cumulativeGasFeesReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<cumulativeGasFeesCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: cumulativeGasFeesCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for cumulativeGasFeesCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<cumulativeGasFeesReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: cumulativeGasFeesReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for cumulativeGasFeesReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for cumulativeGasFeesCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = cumulativeGasFeesReturn;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "cumulativeGasFees()";
+            const SELECTOR: [u8; 4] = [255u8, 123u8, 48u8, 132u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_returns(
+                data: &[u8],
+                validate: bool,
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
+            }
+        }
+    };
     /**Function with signature `currentPeriodIndex()` and selector `0x61543801`.
 ```solidity
 function currentPeriodIndex() external view returns (uint256);
@@ -1697,6 +1875,131 @@ function gasTrackingInitialized() external view returns (bool);
             > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "gasTrackingInitialized()";
             const SELECTOR: [u8; 4] = [59u8, 106u8, 178u8, 169u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_returns(
+                data: &[u8],
+                validate: bool,
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
+            }
+        }
+    };
+    /**Function with signature `getCumulativeGasFees()` and selector `0x7fbd295e`.
+```solidity
+function getCumulativeGasFees() external view returns (uint256 totalCost);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getCumulativeGasFeesCall {}
+    ///Container type for the return parameters of the [`getCumulativeGasFees()`](getCumulativeGasFeesCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getCumulativeGasFeesReturn {
+        #[allow(missing_docs)]
+        pub totalCost: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getCumulativeGasFeesCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getCumulativeGasFeesCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getCumulativeGasFeesCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getCumulativeGasFeesReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getCumulativeGasFeesReturn) -> Self {
+                    (value.totalCost,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getCumulativeGasFeesReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { totalCost: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for getCumulativeGasFeesCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = getCumulativeGasFeesReturn;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "getCumulativeGasFees()";
+            const SELECTOR: [u8; 4] = [127u8, 189u8, 41u8, 94u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -2081,6 +2384,155 @@ function getCurrentPeriodTimeRemaining() external view returns (uint256 timeRema
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
+            }
+            #[inline]
+            fn abi_decode_returns(
+                data: &[u8],
+                validate: bool,
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
+            }
+        }
+    };
+    /**Function with signature `getGasFeesInRange(uint256,uint256)` and selector `0xf7b8935e`.
+```solidity
+function getGasFeesInRange(uint256 startCumulative, uint256 endCumulative) external pure returns (uint256 feesDuring);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getGasFeesInRangeCall {
+        #[allow(missing_docs)]
+        pub startCumulative: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub endCumulative: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    ///Container type for the return parameters of the [`getGasFeesInRange(uint256,uint256)`](getGasFeesInRangeCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getGasFeesInRangeReturn {
+        #[allow(missing_docs)]
+        pub feesDuring: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getGasFeesInRangeCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getGasFeesInRangeCall) -> Self {
+                    (value.startCumulative, value.endCumulative)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getGasFeesInRangeCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        startCumulative: tuple.0,
+                        endCumulative: tuple.1,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getGasFeesInRangeReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getGasFeesInRangeReturn) -> Self {
+                    (value.feesDuring,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getGasFeesInRangeReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { feesDuring: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for getGasFeesInRangeCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = getGasFeesInRangeReturn;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "getGasFeesInRange(uint256,uint256)";
+            const SELECTOR: [u8; 4] = [247u8, 184u8, 147u8, 94u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.startCumulative),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.endCumulative),
+                )
             }
             #[inline]
             fn abi_decode_returns(
@@ -2759,17 +3211,23 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
         #[allow(missing_docs)]
         TRACKING_OVERHEAD(TRACKING_OVERHEADCall),
         #[allow(missing_docs)]
+        cumulativeGasFees(cumulativeGasFeesCall),
+        #[allow(missing_docs)]
         currentPeriodIndex(currentPeriodIndexCall),
         #[allow(missing_docs)]
         gasTrackingEnabled(gasTrackingEnabledCall),
         #[allow(missing_docs)]
         gasTrackingInitialized(gasTrackingInitializedCall),
         #[allow(missing_docs)]
+        getCumulativeGasFees(getCumulativeGasFeesCall),
+        #[allow(missing_docs)]
         getCurrentPeriod(getCurrentPeriodCall),
         #[allow(missing_docs)]
         getCurrentPeriodGasUsed(getCurrentPeriodGasUsedCall),
         #[allow(missing_docs)]
         getCurrentPeriodTimeRemaining(getCurrentPeriodTimeRemainingCall),
+        #[allow(missing_docs)]
+        getGasFeesInRange(getGasFeesInRangeCall),
         #[allow(missing_docs)]
         getPeriod(getPeriodCall),
         #[allow(missing_docs)]
@@ -2796,6 +3254,7 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
             [75u8, 44u8, 7u8, 6u8],
             [97u8, 84u8, 56u8, 1u8],
             [101u8, 88u8, 149u8, 79u8],
+            [127u8, 189u8, 41u8, 94u8],
             [130u8, 244u8, 74u8, 222u8],
             [132u8, 250u8, 182u8, 43u8],
             [141u8, 90u8, 35u8, 155u8],
@@ -2803,13 +3262,15 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
             [198u8, 96u8, 211u8, 243u8],
             [234u8, 74u8, 17u8, 4u8],
             [237u8, 224u8, 123u8, 214u8],
+            [247u8, 184u8, 147u8, 94u8],
+            [255u8, 123u8, 48u8, 132u8],
         ];
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for GasCounterCalls {
         const NAME: &'static str = "GasCounterCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 13usize;
+        const COUNT: usize = 16usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -2818,6 +3279,9 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 }
                 Self::TRACKING_OVERHEAD(_) => {
                     <TRACKING_OVERHEADCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::cumulativeGasFees(_) => {
+                    <cumulativeGasFeesCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::currentPeriodIndex(_) => {
                     <currentPeriodIndexCall as alloy_sol_types::SolCall>::SELECTOR
@@ -2828,6 +3292,9 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 Self::gasTrackingInitialized(_) => {
                     <gasTrackingInitializedCall as alloy_sol_types::SolCall>::SELECTOR
                 }
+                Self::getCumulativeGasFees(_) => {
+                    <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::getCurrentPeriod(_) => {
                     <getCurrentPeriodCall as alloy_sol_types::SolCall>::SELECTOR
                 }
@@ -2836,6 +3303,9 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 }
                 Self::getCurrentPeriodTimeRemaining(_) => {
                     <getCurrentPeriodTimeRemainingCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::getGasFeesInRange(_) => {
+                    <getGasFeesInRangeCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::getPeriod(_) => {
                     <getPeriodCall as alloy_sol_types::SolCall>::SELECTOR
@@ -2950,6 +3420,19 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                     PERIOD_DURATION
                 },
                 {
+                    fn getCumulativeGasFees(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<GasCounterCalls> {
+                        <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
+                            .map(GasCounterCalls::getCumulativeGasFees)
+                    }
+                    getCumulativeGasFees
+                },
+                {
                     fn getCurrentPeriodTimeRemaining(
                         data: &[u8],
                         validate: bool,
@@ -3040,6 +3523,32 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                     }
                     TRACKING_OVERHEAD
                 },
+                {
+                    fn getGasFeesInRange(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<GasCounterCalls> {
+                        <getGasFeesInRangeCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
+                            .map(GasCounterCalls::getGasFeesInRange)
+                    }
+                    getGasFeesInRange
+                },
+                {
+                    fn cumulativeGasFees(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<GasCounterCalls> {
+                        <cumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
+                            .map(GasCounterCalls::cumulativeGasFees)
+                    }
+                    cumulativeGasFees
+                },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
                 return Err(
@@ -3064,6 +3573,11 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                         inner,
                     )
                 }
+                Self::cumulativeGasFees(inner) => {
+                    <cumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::currentPeriodIndex(inner) => {
                     <currentPeriodIndexCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -3079,6 +3593,11 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                         inner,
                     )
                 }
+                Self::getCumulativeGasFees(inner) => {
+                    <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::getCurrentPeriod(inner) => {
                     <getCurrentPeriodCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -3091,6 +3610,11 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 }
                 Self::getCurrentPeriodTimeRemaining(inner) => {
                     <getCurrentPeriodTimeRemainingCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::getGasFeesInRange(inner) => {
+                    <getGasFeesInRangeCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -3132,6 +3656,12 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                         out,
                     )
                 }
+                Self::cumulativeGasFees(inner) => {
+                    <cumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::currentPeriodIndex(inner) => {
                     <currentPeriodIndexCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
@@ -3150,6 +3680,12 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                         out,
                     )
                 }
+                Self::getCumulativeGasFees(inner) => {
+                    <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::getCurrentPeriod(inner) => {
                     <getCurrentPeriodCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
@@ -3164,6 +3700,12 @@ function periods(uint256) external view returns (uint256 startTimestamp, uint256
                 }
                 Self::getCurrentPeriodTimeRemaining(inner) => {
                     <getCurrentPeriodTimeRemainingCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::getGasFeesInRange(inner) => {
+                    <getGasFeesInRangeCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -3573,6 +4115,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<T, &P, TRACKING_OVERHEADCall, N> {
             self.call_builder(&TRACKING_OVERHEADCall {})
         }
+        ///Creates a new call builder for the [`cumulativeGasFees`] function.
+        pub fn cumulativeGasFees(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<T, &P, cumulativeGasFeesCall, N> {
+            self.call_builder(&cumulativeGasFeesCall {})
+        }
         ///Creates a new call builder for the [`currentPeriodIndex`] function.
         pub fn currentPeriodIndex(
             &self,
@@ -3590,6 +4138,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<T, &P, gasTrackingInitializedCall, N> {
             self.call_builder(&gasTrackingInitializedCall {})
+        }
+        ///Creates a new call builder for the [`getCumulativeGasFees`] function.
+        pub fn getCumulativeGasFees(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<T, &P, getCumulativeGasFeesCall, N> {
+            self.call_builder(&getCumulativeGasFeesCall {})
         }
         ///Creates a new call builder for the [`getCurrentPeriod`] function.
         pub fn getCurrentPeriod(
@@ -3614,6 +4168,19 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         > {
             self.call_builder(
                 &getCurrentPeriodTimeRemainingCall {
+                },
+            )
+        }
+        ///Creates a new call builder for the [`getGasFeesInRange`] function.
+        pub fn getGasFeesInRange(
+            &self,
+            startCumulative: alloy::sol_types::private::primitives::aliases::U256,
+            endCumulative: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<T, &P, getGasFeesInRangeCall, N> {
+            self.call_builder(
+                &getGasFeesInRangeCall {
+                    startCumulative,
+                    endCumulative,
                 },
             )
         }
