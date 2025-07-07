@@ -14,6 +14,7 @@ use alloy::{
     transports::http::Client,
 };
 use eyre::Result;
+use redis::aio::ConnectionManager;
 use std::{
     env,
     future::Future,
@@ -180,7 +181,7 @@ pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2E
             .send()
             .await
             .is_ok_and(|x| x.status().is_success()),
-        Duration::from_secs(5*60)  // give it time to download the image if necessary
+        Duration::from_secs(10*60)  // give it time to download the image if necessary
     );
 }
 
@@ -355,7 +356,7 @@ pub async fn start_valkey() -> Result<(E2EProcess, String)> {
         if let Some(status) = valkey.try_wait()? {
             panic!("cache exited with {status}");
         };
-        valkey_client.get_multiplexed_async_connection().await.is_ok(),
+        ConnectionManager::new(valkey_client.clone()).await.is_ok(),
         Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
     Ok((valkey, valkey_url))

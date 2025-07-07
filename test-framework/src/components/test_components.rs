@@ -18,12 +18,14 @@ use alloy::{
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
-    alwaysallowedmodule::AlwaysAllowedModule,
-    assertionposter::AssertionPoster,
-    iinbox::IInbox,
-    iupgradeexecutor::IUpgradeExecutor,
+    always_allowed_module::AlwaysAllowedModule,
+    assertion_poster::AssertionPoster,
+    i_inbox::IInbox,
+    i_upgrade_executor::IUpgradeExecutor,
     rollup::Rollup,
-    syndicatesequencingchain::SyndicateSequencingChain::{self, SyndicateSequencingChainInstance},
+    syndicate_sequencing_chain::SyndicateSequencingChain::{
+        self, SyndicateSequencingChainInstance,
+    },
 };
 use eyre::Result;
 use serde_json::{json, Value};
@@ -89,7 +91,7 @@ pub struct TestComponents {
     /// Sequencing
     pub sequencing_provider: FilledProvider,
     pub sequencing_rpc_url: String,
-    pub sequencing_contract: SyndicateSequencingChainInstance<(), FilledProvider>,
+    pub sequencing_contract: SyndicateSequencingChainInstance<FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
@@ -114,6 +116,9 @@ pub struct TestComponents {
     #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
 }
+
+pub const SEQUENCING_CHAIN_ID: u64 = 15;
+pub const SETTLEMENT_CHAIN_ID: u64 = 31337;
 
 impl TestComponents {
     #[allow(clippy::unwrap_used)]
@@ -170,9 +175,11 @@ impl TestComponents {
             provider: seq_provider,
             http_url: _,
         } = match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => start_anvil(15).await?,
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+                start_anvil(SEQUENCING_CHAIN_ID).await?
+            }
             BaseChainsType::Nitro => {
-                let chain_id = 15;
+                let chain_id = SEQUENCING_CHAIN_ID;
                 let l1_info = l1_info.as_ref().unwrap();
 
                 // NOTE: use a different address to post batches to avoid nonce conflicts
@@ -245,7 +252,7 @@ impl TestComponents {
             http_url: set_rpc_http_url,
         } = match options.base_chains_type {
             BaseChainsType::Anvil => {
-                let chain_info = start_anvil(20).await?;
+                let chain_info = start_anvil(SETTLEMENT_CHAIN_ID).await?;
                 // Use the mock rollup contract for the test instead of deploying all the nitro
                 // rollup contracts
                 let _ = Rollup::deploy_builder(
@@ -262,7 +269,7 @@ impl TestComponents {
                 chain_info
             }
             BaseChainsType::Nitro => {
-                let chain_id = 20;
+                let chain_id = SETTLEMENT_CHAIN_ID;
                 let l1_info = l1_info.as_ref().unwrap();
 
                 // NOTE: use a different address to post batches to avoid nonce conflicts
@@ -316,9 +323,11 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                let chain_info =
-                    start_anvil_with_args(31337, &["--load-state", state_file.to_str().unwrap()])
-                        .await?;
+                let chain_info = start_anvil_with_args(
+                    SETTLEMENT_CHAIN_ID,
+                    &["--load-state", state_file.to_str().unwrap()],
+                )
+                .await?;
 
                 // Sync the tips of the sequencing and settlement chains
                 let block = chain_info
@@ -388,7 +397,7 @@ impl TestComponents {
         info!("Starting chain ingestors...");
         let temp = test_path("chain_ingestor");
         let seq_chain_ingestor_cfg = ChainIngestorConfig {
-            ws_url: seq_rpc_ws_url.to_string(),
+            ws_urls: vec![seq_rpc_ws_url.clone()],
             db_file: temp.clone() + "/sequencing_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -403,7 +412,7 @@ impl TestComponents {
         .await?;
 
         let set_chain_ingestor_cfg = ChainIngestorConfig {
-            ws_url: set_rpc_ws_url.clone(),
+            ws_urls: vec![set_rpc_ws_url.clone()],
             db_file: temp + "/settlement_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
@@ -428,14 +437,11 @@ impl TestComponents {
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_ws_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port().await,
-            arbitrum_bridge_address: Some(appchain_deployment.bridge),
-            arbitrum_inbox_address: Some(appchain_deployment.inbox),
-            sequencing_contract_address: Some(sequencing_contract_address),
+            // Needs to be provided as it needs to be the ingestor's URL
             sequencing_ws_url: Some(sequencing_rpc_url.clone()),
-            appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
-            sequencing_start_block: Some(options.sequencing_start_block),
-            settlement_start_block: Some(options.settlement_start_block),
-            settlement_delay: Some(options.settlement_delay),
+            // NOTE: do not fill the values that are meant to be filled by the config manager
+            // contract
+            ..Default::default()
         };
 
         let translator = start_component(
@@ -660,7 +666,7 @@ impl TestComponents {
             }))
             .send()
             .await?;
-        // assert!(response.status().is_success(), "EIP-1559 transaction request failed");
+        assert!(response.status().is_success(), "EIP-1559 transaction request failed");
         let json_resp: Value = response.json().await?;
         Ok(json_resp)
     }
@@ -687,8 +693,25 @@ impl TestComponents {
     ) -> Result<Option<TransactionReceipt>> {
         let tx_hash = keccak256(tx);
         let tx_bytes = Bytes::from(tx.to_vec());
-        let seq_tx =
-            self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;
+
+        // NOTE: build the tx manually, instead of using the much simpler
+        // `self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;`
+        // this is because the contract_instance gets confused after a reorg and fails the tests...
+        // re-creating the contract instance after reorg did not help.
+        // (this is a bug in alloy.)
+        // https://github.com/alloy-rs/alloy/issues/2668
+        let raw_tx = self
+            .sequencing_contract
+            .processTransactionUncompressed(tx_bytes)
+            .nonce(self.sequencing_provider.get_transaction_count(test_account1().address).await?)
+            .gas(10_000_000)
+            .max_fee_per_gas(10_000_000)
+            .max_priority_fee_per_gas(0)
+            .chain_id(SEQUENCING_CHAIN_ID)
+            .build_raw_transaction(test_account1().signer.clone())
+            .await?;
+        let seq_tx = self.sequencing_provider.send_raw_transaction(&raw_tx).await?;
+
         if self.sequencing_deployment.is_none() {
             // skip mining step when in nitro mode
             self.mine_seq_block(seq_delay).await?;

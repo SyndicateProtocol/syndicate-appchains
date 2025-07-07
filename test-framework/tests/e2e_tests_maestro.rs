@@ -12,6 +12,7 @@ use alloy::{
     },
 };
 use contract_bindings::synd::rollup::{Rollup, Rollup::RollupInstance};
+use redis::aio::ConnectionManager;
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -529,7 +530,7 @@ async fn create_and_fund_wallet(
     components: &TestComponents,
     funding_wallet_address: Address,
     value: U256,
-    inbox: &RollupInstance<(), &FilledProvider>,
+    inbox: &RollupInstance<&FilledProvider>,
 ) -> Result<(LocalSigner<SigningKey>, Address), eyre::Error> {
     let wallet_signer = PrivateKeySigner::random();
     let wallet_address = wallet_signer.address();
@@ -694,7 +695,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
 
             // Assert waiting txns in cache
             let valkey_client = redis::Client::open(components.valkey_url.as_str()).unwrap();
-            let mut valkey_conn = valkey_client.get_multiplexed_async_connection().await.unwrap();
+            let mut valkey_conn = ConnectionManager::new(valkey_client).await.unwrap();
             let waiting_txn_2 =
                 valkey_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
             assert!(waiting_txn_2.is_some());

@@ -292,8 +292,8 @@ pub trait Provider: Sync {
         unsubscribe_method: &'static str,
     ) -> Result<impl Stream<Item = Result<Notif, serde_json::Error>> + Send + 'static, ClientError>;
 
-    async fn get_url(&self) -> Result<String, ClientError> {
-        self.request("url", ((),)).await
+    async fn get_urls(&self) -> Result<Vec<String>, ClientError> {
+        self.request("urls", ((),)).await
     }
 
     async fn get_block_number(&self) -> Result<u64, ClientError> {

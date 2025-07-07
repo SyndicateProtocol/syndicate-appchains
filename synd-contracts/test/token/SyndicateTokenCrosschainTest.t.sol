@@ -297,8 +297,9 @@ contract SyndicateTokenCrosschainTest is Test {
         token.grantRole(token.AIRDROP_MANAGER_ROLE(), admin);
 
         token.setUnlockTimestamp(block.timestamp + 1 days);
+
         vm.stopPrank();
 
-        assertTrue(token.transfersLocked());
+        assertTrue(token.transfersLocked(), "Transfers should be locked after setting unlock timestamp");
     }
 }

@@ -26,7 +26,7 @@ use alloy::{
     signers::local::PrivateKeySigner,
 };
 use clap::Parser;
-use contract_bindings::synd::teekeymanager::TeeKeyManager;
+use contract_bindings::synd::tee_key_manager::TeeKeyManager;
 use shared::parse::parse_address;
 use std::{path::PathBuf, str::FromStr};
 use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
@@ -157,8 +157,8 @@ mod tests {
         providers::{ext::AnvilApi, WalletProvider},
     };
     use contract_bindings::{
-        sp1::{sp1verifiergateway::SP1VerifierGateway, sp1verifiergroth16::SP1VerifierGroth16},
-        synd::{attestationdocverifier::AttestationDocVerifier, teekeymanager::TeeKeyManager},
+        sp1::{sp1_verifier_gateway::SP1VerifierGateway, sp1_verifier_groth16::SP1VerifierGroth16},
+        synd::{attestation_doc_verifier::AttestationDocVerifier, tee_key_manager::TeeKeyManager},
     };
     use serde::Deserialize;
     use test_utils::{anvil::start_anvil, chain_info::PRIVATE_KEY};
@@ -179,7 +179,7 @@ mod tests {
         let sp1_verifier_contract = SP1VerifierGroth16::deploy(provider.clone()).await.unwrap();
 
         let version = sp1_verifier_contract.VERSION().call().await.unwrap();
-        assert_eq!(version._0, "v5.0.0");
+        assert_eq!(version, "v5.0.0");
 
         sp1_verifier_gateway_contract
             .addRoute(*sp1_verifier_contract.address())

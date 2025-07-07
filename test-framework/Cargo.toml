@@ -21,7 +21,7 @@ alloy = { workspace = true, features = [
 contract-bindings = { workspace = true }
 ctor = { workspace = true }
 eyre = { workspace = true }
-redis = { workspace = true }
+redis = { workspace = true, features = ["connection-manager"] }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -67,7 +67,7 @@ fn main() {
             pcr_1,
             pcr_2,
             pcr_8,
-        } = PublicValuesStruct::abi_decode(output.as_slice(), true).unwrap();
+        } = PublicValuesStruct::abi_decode_validate(output.as_slice()).unwrap();
         println!("root_cert_hash: {root_cert_hash}");
         println!("validity_window_start: {validity_window_start}");
         println!("validity_window_end: {validity_window_end}");

@@ -24,6 +24,7 @@ alloy = { workspace = true, features = [
 axum              = { workspace = true }
 bytes             = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
+derivative        = { workspace = true }
 eyre              = { workspace = true }
 futures-util      = { workspace = true }
 http              = { workspace = true }
@@ -31,7 +32,7 @@ http-body         = { workspace = true }
 humantime         = { workspace = true }
 jsonrpsee         = { workspace = true, features = ["full"] }
 prometheus-client = { workspace = true }
-redis             = { workspace = true, features = ["streams", "tokio-comp"] }
+redis             = { workspace = true, features = ["connection-manager", "streams", "tokio-comp"] }
 serde_json        = { workspace = true }
 shared            = { workspace = true }
 test-utils        = { workspace = true }
