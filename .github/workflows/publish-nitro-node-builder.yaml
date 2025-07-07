@@ -35,7 +35,5 @@ jobs:
       - name: Build and push Nitro Node Builder
         run: |
           cd synd-withdrawals/synd-enclave/nitro
-          ORG_LOWER=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
-          REPO_LOWER=$(echo "$GITHUB_REPOSITORY"       | tr '[:upper:]' '[:lower:]')
           docker buildx build --platform linux/amd64 -t ${{ env.GITHUB_REGISTRY }}/${REPO_LOWER}/node-builder:latest .
           docker push ${{ env.GITHUB_REGISTRY }}/${REPO_LOWER}/node-builder:latest
