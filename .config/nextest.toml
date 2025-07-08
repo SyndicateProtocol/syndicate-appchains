@@ -1,4 +1,4 @@
 # Run all synd-maestro integration tests and e2e_maestro tests in sequence
 [[profile.synd-maestro.overrides]]
-filter       = 'package(synd-maestro) & binary(integration_test) | package(test-framework) & test(e2e_maestro.*)'
+filter       = '(package(synd-maestro) & binary(integration_test)) | (package(test-framework) & test(e2e_maestro.*))'
 test-threads = 1
