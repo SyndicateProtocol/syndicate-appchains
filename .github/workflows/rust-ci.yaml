@@ -110,7 +110,7 @@ jobs:
 
   test:
     name: Tests
-    runs-on: vip-large-01
+    runs-on: shared-large-01
     timeout-minutes: 45
     needs: clippy
     steps:
@@ -146,13 +146,6 @@ jobs:
           which anvil
           anvil --version
 
-      - name: Build Packages
-        run: cargo build --workspace
-
-      - name: Build Tests
-        run: cargo test --workspace --no-run
-
-      # Install nextest
       - name: Install nextest
         uses: taiki-e/install-action@v2
         with:
@@ -160,4 +153,4 @@ jobs:
 
       # Run synd-maestro tests with nextest (using existing config)
       - name: Run Integration Tests with Nextest
-        run: cargo nextest run --workspace
+        run: cargo build --workspace && cargo test --workspace --no-run && cargo nextest run --workspace --fail-fast

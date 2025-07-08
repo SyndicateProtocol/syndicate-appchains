@@ -6,17 +6,18 @@ interface IBridgeRateLimiter {
     struct BridgeConfig {
         uint256 dailyMintLimit;
         uint256 dailyBurnLimit;
-        uint256 lastMintTimestamp;
-        uint256 lastBurnTimestamp;
-        uint256 currentMintUsed;
-        uint256 currentBurnUsed;
         bool isActive;
     }
 
+    error BridgeMustBeContract();
     error BridgeNotActive(address bridge);
+    error CannotAddSelfAsBridge();
     error InsufficientBurnLimit(address bridge, uint256 requested, uint256 available);
+    error InsufficientEmissionBudget();
     error InsufficientMintLimit(address bridge, uint256 requested, uint256 available);
     error UnauthorizedBridge(address bridge);
+    error UnreasonableBurnLimit();
+    error UnreasonableMintLimit();
 
     event BridgeActiveStatusChanged(address indexed bridge, bool isActive);
     event BridgeLimitsSet(address indexed bridge, uint256 dailyMintLimit, uint256 dailyBurnLimit);
@@ -94,26 +95,6 @@ interface IBridgeRateLimiter {
           },
           {
             "name": "dailyBurnLimit",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "lastMintTimestamp",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "lastBurnTimestamp",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "currentMintUsed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "currentBurnUsed",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -233,6 +214,11 @@ interface IBridgeRateLimiter {
   },
   {
     "type": "error",
+    "name": "BridgeMustBeContract",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "BridgeNotActive",
     "inputs": [
       {
@@ -241,6 +227,11 @@ interface IBridgeRateLimiter {
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "CannotAddSelfAsBridge",
+    "inputs": []
   },
   {
     "type": "error",
@@ -262,6 +253,11 @@ interface IBridgeRateLimiter {
         "internalType": "uint256"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "InsufficientEmissionBudget",
+    "inputs": []
   },
   {
     "type": "error",
@@ -294,6 +290,16 @@ interface IBridgeRateLimiter {
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "UnreasonableBurnLimit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnreasonableMintLimit",
+    "inputs": []
   }
 ]
 ```*/
@@ -330,7 +336,7 @@ pub mod IBridgeRateLimiter {
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**```solidity
-struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 lastMintTimestamp; uint256 lastBurnTimestamp; uint256 currentMintUsed; uint256 currentBurnUsed; bool isActive; }
+struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; bool isActive; }
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -339,14 +345,6 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
         pub dailyMintLimit: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
         pub dailyBurnLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub lastMintTimestamp: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub lastBurnTimestamp: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub currentMintUsed: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub currentBurnUsed: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
         pub isActive: bool,
     }
@@ -362,18 +360,10 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Bool,
         );
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (
-            alloy::sol_types::private::primitives::aliases::U256,
-            alloy::sol_types::private::primitives::aliases::U256,
-            alloy::sol_types::private::primitives::aliases::U256,
-            alloy::sol_types::private::primitives::aliases::U256,
             alloy::sol_types::private::primitives::aliases::U256,
             alloy::sol_types::private::primitives::aliases::U256,
             bool,
@@ -393,15 +383,7 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
         #[doc(hidden)]
         impl ::core::convert::From<BridgeConfig> for UnderlyingRustTuple<'_> {
             fn from(value: BridgeConfig) -> Self {
-                (
-                    value.dailyMintLimit,
-                    value.dailyBurnLimit,
-                    value.lastMintTimestamp,
-                    value.lastBurnTimestamp,
-                    value.currentMintUsed,
-                    value.currentBurnUsed,
-                    value.isActive,
-                )
+                (value.dailyMintLimit, value.dailyBurnLimit, value.isActive)
             }
         }
         #[automatically_derived]
@@ -411,11 +393,7 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
                 Self {
                     dailyMintLimit: tuple.0,
                     dailyBurnLimit: tuple.1,
-                    lastMintTimestamp: tuple.2,
-                    lastBurnTimestamp: tuple.3,
-                    currentMintUsed: tuple.4,
-                    currentBurnUsed: tuple.5,
-                    isActive: tuple.6,
+                    isActive: tuple.2,
                 }
             }
         }
@@ -434,18 +412,6 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.dailyBurnLimit),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.lastMintTimestamp),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.lastBurnTimestamp),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.currentMintUsed),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.currentBurnUsed),
                     <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
                         &self.isActive,
                     ),
@@ -523,7 +489,7 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
             #[inline]
             fn eip712_root_type() -> alloy_sol_types::private::Cow<'static, str> {
                 alloy_sol_types::private::Cow::Borrowed(
-                    "BridgeConfig(uint256 dailyMintLimit,uint256 dailyBurnLimit,uint256 lastMintTimestamp,uint256 lastBurnTimestamp,uint256 currentMintUsed,uint256 currentBurnUsed,bool isActive)",
+                    "BridgeConfig(uint256 dailyMintLimit,uint256 dailyBurnLimit,bool isActive)",
                 )
             }
             #[inline]
@@ -551,30 +517,6 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
                             &self.dailyBurnLimit,
                         )
                         .0,
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::eip712_data_word(
-                            &self.lastMintTimestamp,
-                        )
-                        .0,
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::eip712_data_word(
-                            &self.lastBurnTimestamp,
-                        )
-                        .0,
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::eip712_data_word(
-                            &self.currentMintUsed,
-                        )
-                        .0,
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::eip712_data_word(
-                            &self.currentBurnUsed,
-                        )
-                        .0,
                     <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::eip712_data_word(
                             &self.isActive,
                         )
@@ -597,26 +539,6 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
                         256,
                     > as alloy_sol_types::EventTopic>::topic_preimage_length(
                         &rust.dailyBurnLimit,
-                    )
-                    + <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.lastMintTimestamp,
-                    )
-                    + <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.lastBurnTimestamp,
-                    )
-                    + <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.currentMintUsed,
-                    )
-                    + <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.currentBurnUsed,
                     )
                     + <alloy::sol_types::sol_data::Bool as alloy_sol_types::EventTopic>::topic_preimage_length(
                         &rust.isActive,
@@ -642,30 +564,6 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
                     &rust.dailyBurnLimit,
                     out,
                 );
-                <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.lastMintTimestamp,
-                    out,
-                );
-                <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.lastBurnTimestamp,
-                    out,
-                );
-                <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.currentMintUsed,
-                    out,
-                );
-                <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.currentBurnUsed,
-                    out,
-                );
                 <alloy::sol_types::sol_data::Bool as alloy_sol_types::EventTopic>::encode_topic_preimage(
                     &rust.isActive,
                     out,
@@ -683,6 +581,79 @@ struct BridgeConfig { uint256 dailyMintLimit; uint256 dailyBurnLimit; uint256 la
                 alloy_sol_types::abi::token::WordToken(
                     alloy_sol_types::private::keccak256(out),
                 )
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `BridgeMustBeContract()` and selector `0x825431da`.
+```solidity
+error BridgeMustBeContract();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct BridgeMustBeContract;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<BridgeMustBeContract> for UnderlyingRustTuple<'_> {
+            fn from(value: BridgeMustBeContract) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for BridgeMustBeContract {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for BridgeMustBeContract {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "BridgeMustBeContract()";
+            const SELECTOR: [u8; 4] = [130u8, 84u8, 49u8, 218u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
             }
         }
     };
@@ -756,6 +727,79 @@ error BridgeNotActive(address bridge);
                         &self.bridge,
                     ),
                 )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `CannotAddSelfAsBridge()` and selector `0xfb8ce8c9`.
+```solidity
+error CannotAddSelfAsBridge();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct CannotAddSelfAsBridge;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<CannotAddSelfAsBridge> for UnderlyingRustTuple<'_> {
+            fn from(value: CannotAddSelfAsBridge) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for CannotAddSelfAsBridge {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for CannotAddSelfAsBridge {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "CannotAddSelfAsBridge()";
+            const SELECTOR: [u8; 4] = [251u8, 140u8, 232u8, 201u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
             }
             #[inline]
             fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
@@ -858,6 +902,81 @@ error InsufficientBurnLimit(address bridge, uint256 requested, uint256 available
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.available),
                 )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `InsufficientEmissionBudget()` and selector `0x7ade115c`.
+```solidity
+error InsufficientEmissionBudget();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct InsufficientEmissionBudget;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<InsufficientEmissionBudget>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: InsufficientEmissionBudget) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for InsufficientEmissionBudget {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for InsufficientEmissionBudget {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "InsufficientEmissionBudget()";
+            const SELECTOR: [u8; 4] = [122u8, 222u8, 17u8, 92u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
             }
             #[inline]
             fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
@@ -1040,6 +1159,152 @@ error UnauthorizedBridge(address bridge);
                         &self.bridge,
                     ),
                 )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `UnreasonableBurnLimit()` and selector `0x58ccad00`.
+```solidity
+error UnreasonableBurnLimit();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct UnreasonableBurnLimit;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnreasonableBurnLimit> for UnderlyingRustTuple<'_> {
+            fn from(value: UnreasonableBurnLimit) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for UnreasonableBurnLimit {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for UnreasonableBurnLimit {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "UnreasonableBurnLimit()";
+            const SELECTOR: [u8; 4] = [88u8, 204u8, 173u8, 0u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `UnreasonableMintLimit()` and selector `0x0a395c01`.
+```solidity
+error UnreasonableMintLimit();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct UnreasonableMintLimit;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnreasonableMintLimit> for UnderlyingRustTuple<'_> {
+            fn from(value: UnreasonableMintLimit) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for UnreasonableMintLimit {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for UnreasonableMintLimit {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "UnreasonableMintLimit()";
+            const SELECTOR: [u8; 4] = [10u8, 57u8, 92u8, 1u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
             }
             #[inline]
             fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
@@ -2561,13 +2826,23 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IBridgeRateLimiterErrors {
         #[allow(missing_docs)]
+        BridgeMustBeContract(BridgeMustBeContract),
+        #[allow(missing_docs)]
         BridgeNotActive(BridgeNotActive),
         #[allow(missing_docs)]
+        CannotAddSelfAsBridge(CannotAddSelfAsBridge),
+        #[allow(missing_docs)]
         InsufficientBurnLimit(InsufficientBurnLimit),
+        #[allow(missing_docs)]
+        InsufficientEmissionBudget(InsufficientEmissionBudget),
         #[allow(missing_docs)]
         InsufficientMintLimit(InsufficientMintLimit),
         #[allow(missing_docs)]
         UnauthorizedBridge(UnauthorizedBridge),
+        #[allow(missing_docs)]
+        UnreasonableBurnLimit(UnreasonableBurnLimit),
+        #[allow(missing_docs)]
+        UnreasonableMintLimit(UnreasonableMintLimit),
     }
     #[automatically_derived]
     impl IBridgeRateLimiterErrors {
@@ -2578,31 +2853,51 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
         ///
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
+            [10u8, 57u8, 92u8, 1u8],
             [64u8, 237u8, 54u8, 123u8],
+            [88u8, 204u8, 173u8, 0u8],
             [101u8, 133u8, 182u8, 13u8],
+            [122u8, 222u8, 17u8, 92u8],
+            [130u8, 84u8, 49u8, 218u8],
             [229u8, 254u8, 151u8, 162u8],
             [239u8, 218u8, 14u8, 6u8],
+            [251u8, 140u8, 232u8, 201u8],
         ];
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for IBridgeRateLimiterErrors {
         const NAME: &'static str = "IBridgeRateLimiterErrors";
-        const MIN_DATA_LENGTH: usize = 32usize;
-        const COUNT: usize = 4usize;
+        const MIN_DATA_LENGTH: usize = 0usize;
+        const COUNT: usize = 9usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
+                Self::BridgeMustBeContract(_) => {
+                    <BridgeMustBeContract as alloy_sol_types::SolError>::SELECTOR
+                }
                 Self::BridgeNotActive(_) => {
                     <BridgeNotActive as alloy_sol_types::SolError>::SELECTOR
                 }
+                Self::CannotAddSelfAsBridge(_) => {
+                    <CannotAddSelfAsBridge as alloy_sol_types::SolError>::SELECTOR
+                }
                 Self::InsufficientBurnLimit(_) => {
                     <InsufficientBurnLimit as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::InsufficientEmissionBudget(_) => {
+                    <InsufficientEmissionBudget as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::InsufficientMintLimit(_) => {
                     <InsufficientMintLimit as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::UnauthorizedBridge(_) => {
                     <UnauthorizedBridge as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::UnreasonableBurnLimit(_) => {
+                    <UnreasonableBurnLimit as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::UnreasonableMintLimit(_) => {
+                    <UnreasonableMintLimit as alloy_sol_types::SolError>::SELECTOR
                 }
             }
         }
@@ -2624,6 +2919,17 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                 &[u8],
             ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors>] = &[
                 {
+                    fn UnreasonableMintLimit(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <UnreasonableMintLimit as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::UnreasonableMintLimit)
+                    }
+                    UnreasonableMintLimit
+                },
+                {
                     fn InsufficientMintLimit(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
@@ -2635,6 +2941,17 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                     InsufficientMintLimit
                 },
                 {
+                    fn UnreasonableBurnLimit(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <UnreasonableBurnLimit as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::UnreasonableBurnLimit)
+                    }
+                    UnreasonableBurnLimit
+                },
+                {
                     fn UnauthorizedBridge(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
@@ -2644,6 +2961,28 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                             .map(IBridgeRateLimiterErrors::UnauthorizedBridge)
                     }
                     UnauthorizedBridge
+                },
+                {
+                    fn InsufficientEmissionBudget(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <InsufficientEmissionBudget as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::InsufficientEmissionBudget)
+                    }
+                    InsufficientEmissionBudget
+                },
+                {
+                    fn BridgeMustBeContract(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <BridgeMustBeContract as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::BridgeMustBeContract)
+                    }
+                    BridgeMustBeContract
                 },
                 {
                     fn InsufficientBurnLimit(
@@ -2667,6 +3006,17 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                     }
                     BridgeNotActive
                 },
+                {
+                    fn CannotAddSelfAsBridge(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <CannotAddSelfAsBridge as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::CannotAddSelfAsBridge)
+                    }
+                    CannotAddSelfAsBridge
+                },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
                 return Err(
@@ -2688,6 +3038,17 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                 &[u8],
             ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors>] = &[
                 {
+                    fn UnreasonableMintLimit(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <UnreasonableMintLimit as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::UnreasonableMintLimit)
+                    }
+                    UnreasonableMintLimit
+                },
+                {
                     fn InsufficientMintLimit(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
@@ -2699,6 +3060,17 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                     InsufficientMintLimit
                 },
                 {
+                    fn UnreasonableBurnLimit(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <UnreasonableBurnLimit as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::UnreasonableBurnLimit)
+                    }
+                    UnreasonableBurnLimit
+                },
+                {
                     fn UnauthorizedBridge(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
@@ -2708,6 +3080,28 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                             .map(IBridgeRateLimiterErrors::UnauthorizedBridge)
                     }
                     UnauthorizedBridge
+                },
+                {
+                    fn InsufficientEmissionBudget(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <InsufficientEmissionBudget as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::InsufficientEmissionBudget)
+                    }
+                    InsufficientEmissionBudget
+                },
+                {
+                    fn BridgeMustBeContract(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <BridgeMustBeContract as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::BridgeMustBeContract)
+                    }
+                    BridgeMustBeContract
                 },
                 {
                     fn InsufficientBurnLimit(
@@ -2731,6 +3125,17 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                     }
                     BridgeNotActive
                 },
+                {
+                    fn CannotAddSelfAsBridge(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IBridgeRateLimiterErrors> {
+                        <CannotAddSelfAsBridge as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IBridgeRateLimiterErrors::CannotAddSelfAsBridge)
+                    }
+                    CannotAddSelfAsBridge
+                },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
                 return Err(
@@ -2745,13 +3150,28 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
         #[inline]
         fn abi_encoded_size(&self) -> usize {
             match self {
+                Self::BridgeMustBeContract(inner) => {
+                    <BridgeMustBeContract as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::BridgeNotActive(inner) => {
                     <BridgeNotActive as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
                 }
+                Self::CannotAddSelfAsBridge(inner) => {
+                    <CannotAddSelfAsBridge as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::InsufficientBurnLimit(inner) => {
                     <InsufficientBurnLimit as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::InsufficientEmissionBudget(inner) => {
+                    <InsufficientEmissionBudget as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -2765,19 +3185,47 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                         inner,
                     )
                 }
+                Self::UnreasonableBurnLimit(inner) => {
+                    <UnreasonableBurnLimit as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::UnreasonableMintLimit(inner) => {
+                    <UnreasonableMintLimit as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
             }
         }
         #[inline]
         fn abi_encode_raw(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
             match self {
+                Self::BridgeMustBeContract(inner) => {
+                    <BridgeMustBeContract as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::BridgeNotActive(inner) => {
                     <BridgeNotActive as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
                 }
+                Self::CannotAddSelfAsBridge(inner) => {
+                    <CannotAddSelfAsBridge as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::InsufficientBurnLimit(inner) => {
                     <InsufficientBurnLimit as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::InsufficientEmissionBudget(inner) => {
+                    <InsufficientEmissionBudget as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -2790,6 +3238,18 @@ function setBridgeLimits(address bridge, uint256 dailyMintLimit, uint256 dailyBu
                 }
                 Self::UnauthorizedBridge(inner) => {
                     <UnauthorizedBridge as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::UnreasonableBurnLimit(inner) => {
+                    <UnreasonableBurnLimit as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::UnreasonableMintLimit(inner) => {
+                    <UnreasonableMintLimit as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )

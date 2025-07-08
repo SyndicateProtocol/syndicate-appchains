@@ -84,13 +84,9 @@ interface IERC7802 {
 // Bridge rate limiting interface
 interface IBridgeRateLimiter {
     struct BridgeConfig {
-        uint256 dailyMintLimit;
-        uint256 dailyBurnLimit;
-        uint256 lastMintTimestamp;
-        uint256 lastBurnTimestamp;
-        uint256 currentMintUsed;
-        uint256 currentBurnUsed;
-        bool isActive;
+        uint256 dailyMintLimit;    // Maximum tokens that can be minted per day
+        uint256 dailyBurnLimit;    // Maximum tokens that can be burned per day
+        bool isActive;             // Whether bridge is active
     }
 }
 ```
@@ -100,6 +96,9 @@ interface IBridgeRateLimiter {
 ```solidity
 // Role for managing bridge configurations
 bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
+
+// Role for allocating emission budgets to bridges (typically emission scheduler)
+bytes32 public constant EMISSION_BUDGET_MANAGER_ROLE = keccak256("EMISSION_BUDGET_MANAGER_ROLE");
 
 // Inherits all roles from SyndicateToken
 ```
@@ -196,8 +195,10 @@ bytes32 public constant BRIDGE_MANAGER_ROLE = keccak256("BRIDGE_MANAGER_ROLE");
 
 **Bridge Targets**:
 
-- **Arbitrum**: L1GatewayRouter (`0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef`)
-- **Optimism**: L1StandardBridge (`0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1`)
+The bridge addresses are configurable deployment parameters passed to bridge proxy constructors:
+
+- **Arbitrum**: L1GatewayRouter (configurable - example: `0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef`)
+- **Optimism**: L1StandardBridge (configurable - example: `0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1`)
 
 **Access Control Roles**:
 
@@ -217,12 +218,11 @@ bytes32 public constant BRIDGE_CALLER_ROLE = keccak256("BRIDGE_CALLER_ROLE");
 
 ```mermaid
 graph TD
-    A[Deploy Factory] --> B[Generate Salt]
-    B --> C[Predict Address]
-    C --> D[Deploy Token via Factory]
-    D --> E[Same Address on All Chains]
-    E --> F[Configure Bridges]
-    F --> G[Cross-chain Operations]
+    A[Generate Salt] --> B[Predict Address]
+    B --> C[Deploy Token via CREATE3]
+    C --> D[Same Address on All Chains]
+    D --> E[Configure Bridges]
+    E --> F[Cross-chain Operations]
 ```
 
 ### 2. Complete Emission-to-Bridge Flow
@@ -245,16 +245,19 @@ graph TD
 ```mermaid
 graph TD
     A[Bridge calls crosschainMint] --> B[Check bridge authorization]
-    B --> C[Validate rate limits]
-    C --> D[Update daily usage]
-    D --> E[Mint tokens to recipient]
-    E --> F[Emit CrosschainMint event]
+    B --> C[Validate sliding window rate limits]
+    C --> D[Check emission budget]
+    D --> E[Check transfer locks and role exemptions]
+    E --> F[Update hourly usage tracking]
+    F --> G[Mint tokens to recipient]
+    G --> H[Emit CrosschainMint event]
 
-    G[Bridge calls crosschainBurn] --> H[Check bridge authorization]
-    H --> I[Validate rate limits]
-    I --> J[Check allowance/balance]
-    J --> K[Burn tokens from address]
-    K --> L[Emit CrosschainBurn event]
+    I[Bridge calls crosschainBurn] --> J[Check bridge authorization]
+    J --> K[Validate sliding window rate limits]
+    K --> L[Check allowance/balance]
+    L --> M[Update hourly usage tracking]
+    M --> N[Burn tokens from address]
+    N --> O[Emit CrosschainBurn event]
 ```
 
 ### Detailed Component Interactions
@@ -273,9 +276,12 @@ graph TD
 #### Crosschain Flow
 
 1. **Bridge Authorization**: Bridge must have active configuration with rate limits
-2. **Rate Limit Check**: Daily mint/burn limits validated and updated
-3. **Token Operations**: Mint/burn executed with proper access controls
-4. **Event Emission**: Crosschain events emitted for bridge tracking
+2. **Sliding Window Rate Limiting**: 24-hour sliding window with hourly buckets validates and tracks usage
+3. **Emission Budget Control**: Mint operations require pre-allocated emission budget
+4. **Transfer Lock Enforcement**: Mint operations respect transfer locks with role-based exemptions
+5. **Input Validation**: Comprehensive validation including contract checks and reasonable limits
+6. **Token Operations**: Mint/burn executed with proper access controls
+7. **Event Emission**: Crosschain events emitted for bridge tracking
 
 ### Error Handling & Atomicity
 
@@ -350,28 +356,40 @@ bridgeProxy.grantRole(DEFAULT_ADMIN_ROLE, adminAddress);
 
 ### Configuration Dependencies
 
-#### Factory Deployment Configuration
+#### Direct Deployment Configuration
 
 ```solidity
-// REQUIRED: Deploy factories on all target chains
-SyndicateTokenCrosschainFactory factory = new SyndicateTokenCrosschainFactory();
-TestnetSyndTokenCrosschainFactory testnetFactory = new TestnetSyndTokenCrosschainFactory();
-
 // REQUIRED: Generate universal salt for consistent addressing
-bytes32 salt = factory.generateSalt(admin, treasury, chainId);
+bytes32 salt = keccak256(abi.encodePacked(admin, treasury, chainId));
 
-// REQUIRED: Deploy tokens with same salt on each chain
-address token = factory.deploySyndicateTokenCrosschain(admin, treasury, salt);
+// REQUIRED: Deploy tokens with same salt on each chain using CREATE3
+address predictedAddress = CREATE3.getDeployed(salt);
+address token = CREATE3.deploy(
+    salt,
+    abi.encodePacked(
+        type(SyndicateTokenCrosschain).creationCode,
+        abi.encode(admin, treasury)
+    ),
+    0
+);
 ```
 
 #### Crosschain Token Configuration
 
 ```solidity
 // REQUIRED: Configure authorized bridges with rate limits
+// NOTE: Bridge must be a contract, not an EOA
+// NOTE: Limits must be reasonable (≤ TOTAL_SUPPLY) or type(uint256).max for unlimited
 crosschainToken.setBridgeLimits(
     bridgeAddress,
-    1_000_000 * 10**18,  // Daily mint limit
-    1_000_000 * 10**18   // Daily burn limit
+    1_000_000 * 10**18,  // Daily mint limit (sliding window)
+    1_000_000 * 10**18   // Daily burn limit (sliding window)
+);
+
+// REQUIRED: Allocate emission budget for bridges that will mint
+crosschainToken.allocateEmissionBudget(
+    bridgeAddress,
+    emissionAmount
 );
 
 // REQUIRED: Activate bridge after configuration
@@ -429,16 +447,19 @@ optimismBridgeProxy.setOptimismConfig(l2Recipient, gasLimit);
 3. **Bridge Target Validation**: Bridge proxy targets must be verified official bridge contracts
 4. **ETH Funding**: Arbitrum bridge proxy must maintain sufficient ETH for gas fees and submission costs
 5. **L2 Token Registration**: L2 tokens must be properly deployed and registered with bridges
-6. **Factory Address Consistency**: Same factory address must be deployed on all chains for deterministic addressing
+6. **Salt Consistency**: Same deployment salt must be used on all chains for deterministic addressing
 7. **Bridge Authorization**: Only authorized bridges can mint/burn crosschain tokens
-8. **Rate Limit Enforcement**: Bridge rate limits must be properly configured to prevent abuse
+8. **Rate Limit Enforcement**: Sliding window rate limits with hourly buckets prevent abuse and limit bypass via reconfiguration
+9. **Emission Budget Control**: Bridges require pre-allocated emission budget for minting operations
+10. **Transfer Lock Compliance**: Crosschain mints respect transfer locks with role-based exemptions for airdrops
+11. **Input Validation**: Bridge addresses must be contracts with reasonable limits to prevent configuration errors
 
 ### Operational Security
 
 1. **Emission Schedule Immutability**: Once started, emission schedule cannot be modified
 2. **Bridge Configuration**: Bridge parameters can be updated by `BRIDGE_MANAGER_ROLE`
 3. **Emergency Pause**: Multiple actors can pause but only admin can unpause
-4. **Rate Limiting**: Protects against excessive token transfers in both legacy and crosschain systems
+4. **Rate Limiting**: Sliding window rate limiting protects against excessive token transfers and prevents limit bypass via reconfiguration
 5. **Crosschain Bridge Isolation**: Each bridge has independent rate limits and can be deactivated individually
 6. **Deterministic Deployment**: CREATE3 ensures predictable addresses but requires careful salt management
 
@@ -459,7 +480,7 @@ The crosschain token system provides:
 
 1. **Address Consistency**: Same contract address across all supported chains
 2. **Seamless Bridging**: ERC7802 compatibility with modern bridge infrastructure
-3. **Rate Limited Security**: Per-bridge limits prevent abuse while allowing legitimate transfers
+3. **Rate Limited Security**: Per-bridge sliding window limits prevent abuse and reconfiguration bypass while allowing legitimate transfers
 4. **Future Compatibility**: Built-in support for emerging crosschain standards
 5. **Governance Continuity**: Voting power maintained across chains
 
