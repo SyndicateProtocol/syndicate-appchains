@@ -120,7 +120,6 @@ jobs:
     name: Tests
     runs-on: shared-large-01
     timeout-minutes: 45
-    needs: clippy
     steps:
       - uses: actions/checkout@v4
 
