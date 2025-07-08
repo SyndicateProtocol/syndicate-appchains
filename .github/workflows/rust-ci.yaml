@@ -18,6 +18,8 @@ env:
   RUSTFLAGS: "-Dwarnings"
   # Use a shared cache key for all jobs in the same PR/run
   CACHE_KEY: "${{ github.event.pull_request.number || github.sha }}"
+  # Rust version for consistency across jobs
+  RUST_VERSION: "1.88.0"
 
 jobs:
   taplo:
@@ -91,7 +93,7 @@ jobs:
       - name: Install Rust Toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.88.0
+          toolchain: ${{ env.RUST_VERSION }}
           profile: default
           override: true
           default: true
@@ -109,10 +111,10 @@ jobs:
             target/
             ~/.rustup/
             ~/.sp1/
-          key: ${{ env.CACHE_KEY }}-rust-1.88.0-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ env.CACHE_KEY }}-rust-${{ env.RUST_VERSION }}-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
-            ${{ env.CACHE_KEY }}-rust-1.88.0-
-            rust-1.88.0-
+            ${{ env.CACHE_KEY }}-rust-${{ env.RUST_VERSION }}-
+            rust-${{ env.RUST_VERSION }}-
 
       - name: Install SP1 toolchain
         run: |
@@ -146,7 +148,7 @@ jobs:
       - name: Install Rust Toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.88.0
+          toolchain: ${{ env.RUST_VERSION }}
           profile: default
           override: true
           default: true
@@ -164,8 +166,8 @@ jobs:
             target/
             ~/.rustup/
             ~/.sp1/
-          key: rust-1.88.0-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: rust-1.88.0-
+          key: rust-${{ env.RUST_VERSION }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: rust-${{ env.RUST_VERSION }}-
 
       # Run Clippy checks on the entire workspace
       - name: Run Clippy
@@ -182,7 +184,7 @@ jobs:
       - name: Install Rust Toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.88.0
+          toolchain: ${{ env.RUST_VERSION }}
           profile: default
           override: true
           default: true
@@ -200,8 +202,8 @@ jobs:
             target/
             ~/.rustup/
             ~/.sp1/
-          key: rust-1.88.0-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: rust-1.88.0-
+          key: rust-${{ env.RUST_VERSION }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: rust-${{ env.RUST_VERSION }}-
 
       - name: Pre-download docker test docker images
         run: |
