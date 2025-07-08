@@ -151,6 +151,11 @@ jobs:
         with:
           tool: cargo-nextest
 
-      # Run synd-maestro tests with nextest (using existing config)
+      - name: Pre-download docker test docker images
+        run: |
+          docker pull ghcr.io/syndicateprotocol/generate_batch
+          docker pull valkey/valkey:latest
+          docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
+
       - name: Run Integration Tests with Nextest
-        run: cargo build --workspace && cargo test --workspace --no-run && cargo nextest run --workspace --fail-fast
+        run: cargo nextest run --workspace --fail-fast
