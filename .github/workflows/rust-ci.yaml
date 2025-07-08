@@ -9,8 +9,8 @@ on:
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
-  cancel-in-progress: true
+  group: rust-ci
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
