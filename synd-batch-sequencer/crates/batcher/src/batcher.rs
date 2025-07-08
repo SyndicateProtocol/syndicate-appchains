@@ -92,6 +92,7 @@ pub async fn run_batcher(
 
     let sequencing_contract_instance =
         create_sequencing_contract_instance(config, sequencing_contract_address).await?;
+    // TODO REMOVE ME
 
     let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics);
 
