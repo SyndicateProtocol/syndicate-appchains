@@ -88,48 +88,42 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        run: |
-          rustup toolchain install stable --profile minimal --component clippy
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          shared-key: ${{ env.CACHE_KEY }}
-          save-if: true
+          toolchain: 1.88.0
+          profile: default
+          override: true
+          default: true
+          components: llvm-tools, rustc-dev
 
-      - name: Cache SP1 toolchain
-        id: cache-sp1
-        uses: actions/cache@v4
-        with:
-          path: ~/.sp1
-          key: ${{ runner.os }}-sp1-toolchain-v1
-
-      - name: Install SP1 toolchain
-        if: steps.cache-sp1.outputs.cache-hit != 'true'
-        run: |
-          curl -L https://sp1.succinct.xyz | bash
-          $HOME/.sp1/bin/sp1up
-
-      - name: Verify SP1 installation
-        run: $HOME/.sp1/bin/cargo-prove prove --version
-
-      - name: Cache SP1 ELF program
-        id: cache-sp1-elf
+      # Combined cache for Rust and SP1 as recommended
+      - name: rust-cache
         uses: actions/cache@v4
         with:
           path: |
-            # Include ALL locations where the ELF might be
-            target/elf-compilation
-            synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf
-            synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target
-          key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            ~/.rustup/
+            ~/.sp1/
+          key: ${{ env.CACHE_KEY }}-rust-1.88.0-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ env.CACHE_KEY }}-rust-1.88.0-
+            rust-1.88.0-
+
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1up.succinct.xyz | bash
+          ~/.sp1/bin/sp1up --token "${{ secrets.GH_PAT }}"
+          ~/.sp1/bin/cargo-prove prove --version
 
       - name: Build SP1 ELF program
-        if: steps.cache-sp1-elf.outputs.cache-hit != 'true'
         run: |
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-          $HOME/.sp1/bin/cargo-prove prove build
+          ~/.sp1/bin/cargo-prove prove build
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -149,31 +143,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        run: |
-          rustup toolchain install stable --profile minimal --component clippy
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          shared-key: ${{ env.CACHE_KEY }}
-          save-if: false
+          toolchain: 1.81.0
+          profile: default
+          override: true
+          default: true
+          components: llvm-tools, rustc-dev
 
-      - name: Cache SP1 toolchain
-        uses: actions/cache@v4
-        with:
-          path: ~/.sp1
-          key: ${{ runner.os }}-sp1-toolchain-v1
-
-      - name: Cache SP1 ELF program
-        uses: actions/cache@v4
+      # Use the same cache configuration
+      - name: rust-cache
+        uses: actions/cache@v3
         with:
           path: |
-            # Include BOTH locations
-            target/elf-compilation
-            synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf
-            synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target
-          key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            ~/.rustup/
+            ~/.sp1/
+          key: rust-1.81.0-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: rust-1.81.0-
 
       # Run Clippy checks on the entire workspace
       - name: Run Clippy
@@ -187,28 +179,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal --component clippy
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          shared-key: ${{ env.CACHE_KEY }}
-          save-if: false
+          toolchain: 1.81.0
+          profile: default
+          override: true
+          default: true
+          components: llvm-tools, rustc-dev
 
-      - name: Cache SP1 toolchain
-        uses: actions/cache@v4
-        with:
-          path: ~/.sp1
-          key: ${{ runner.os }}-sp1-toolchain-v1
-
-      - name: Cache SP1 ELF program
-        uses: actions/cache@v4
+      # Use the same cache configuration
+      - name: rust-cache
+        uses: actions/cache@v3
         with:
           path: |
-            synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf
-            synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target
-          key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            ~/.rustup/
+            ~/.sp1/
+          key: rust-1.81.0-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: rust-1.81.0-
 
       - name: Pre-download docker test docker images
         run: |
