@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - "synd-withdrawals/synd-enclave/nitro/**"
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -39,5 +42,5 @@ jobs:
       - name: Build and push Nitro Node Builder
         run: |
           cd synd-withdrawals/synd-enclave/nitro
-          docker buildx build --platform linux/amd64 -t ${{ env.GITHUB_REGISTRY }}/${REPO_LOWER}/node-builder:latest .
+          docker buildx build --target node-builder --platform linux/amd64 -t ${{ env.GITHUB_REGISTRY }}/${REPO_LOWER}/node-builder:latest .
           docker push ${{ env.GITHUB_REGISTRY }}/${REPO_LOWER}/node-builder:latest
