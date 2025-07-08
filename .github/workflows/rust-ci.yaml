@@ -102,57 +102,31 @@ jobs:
         id: cache-sp1
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.sp1
-            ~/.rustup/toolchains/succinct*
-          key: ${{ runner.os }}-sp1-toolchain-v2
+          path: ~/.sp1
+          key: ${{ runner.os }}-sp1-toolchain-v1
 
       - name: Install SP1 toolchain
         run: |
           curl -L https://sp1.succinct.xyz | bash
-          $HOME/.sp1/bin/sp1up 
+          $HOME/.sp1/bin/sp1up
 
       - name: Verify SP1 installation
-        run: |
-          $HOME/.sp1/bin/cargo-prove prove --version
-          # Check if succinct toolchain is installed
-          rustup toolchain list | grep succinct || echo "Succinct toolchain not found"
+        run: $HOME/.sp1/bin/cargo-prove prove --version
 
       - name: Cache SP1 ELF program
         id: cache-sp1-elf
         uses: actions/cache@v4
         with:
           path: |
-            target/elf-compilation
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target
           key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-sp1-elf-
 
       - name: Build SP1 ELF program
         if: steps.cache-sp1-elf.outputs.cache-hit != 'true'
         run: |
-          # Source SP1 environment to get the correct PATH
-          source ~/.bashrc || true
-
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-
-          # Use the full cargo-prove command with environment
           $HOME/.sp1/bin/cargo-prove prove build
-
-          echo ""
-          echo "=== Post-build verification ==="
-          echo "Current directory after build: $(pwd)"
-          echo "Contents of current directory:"
-          ls -la
-          echo ""
-          echo "Looking for elf artifacts in workspace:"
-          cd ${{ github.workspace }}
-          find . -name "*synd-tee-attestation-zk-proofs-sp1-program*" -type f 2>/dev/null | grep -v ".git" | head -20
-          echo ""
-          echo "Checking target/elf-compilation:"
-          ls -la target/elf-compilation 2>/dev/null || echo "No elf-compilation directory"
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
