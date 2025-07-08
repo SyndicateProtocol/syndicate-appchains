@@ -9,13 +9,15 @@ on:
   pull_request:
 
 concurrency:
-  group: rust-ci
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
   # Make sure CI fails on all warnings, including Clippy lints
   RUSTFLAGS: "-Dwarnings"
+  # Use a shared cache key for all jobs in the same PR/run
+  CACHE_KEY: "${{ github.event.pull_request.number || github.sha }}"
 
 jobs:
 
@@ -39,6 +41,7 @@ jobs:
       # Check Cargo.toml formatting
       - name: Check Cargo.toml formatting. Remove `--check` from command to apply changes
         run: taplo fmt --check "**/Cargo.toml" --verbose
+
   machete:
     name: Machete
     runs-on: ubuntu-latest
@@ -88,10 +91,15 @@ jobs:
       # always manually select the rust toolchain before using the cache plugin (needs to be the same rustc version)
       - name: Install Rust toolchain
         run: |
-          rustup toolchain install stable --profile minimal
-          rustup component add clippy
+          rustup toolchain install stable --profile minimal --component clippy
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          # This creates a shared cache for this PR/commit
+          shared-key: ${{ env.SHARED_CACHE_KEY }}
+          # Only save cache from one job (not this one) to avoid conflicts
+          save-if: false
 
       - name: Install SP1 toolchain
         run: |
@@ -118,9 +126,21 @@ jobs:
 
       # always manually select the rust toolchain before using the cache plugin
       - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal
+        run: rustup toolchain install stable --profile minimal --component clippy
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          # Same shared key as `clippy` job
+          shared-key: ${{ env.SHARED_CACHE_KEY }}
+          # Save cache only from this `test` job
+          save-if: true
+
+      - name: Pre-download docker test docker images
+        run: |
+          docker pull ghcr.io/syndicateprotocol/generate_batch
+          docker pull valkey/valkey:latest
+          docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
 
       # Install Foundry (required for Anvil, a local Ethereum node simulator)
       # Anvil is a critical dependency for tests, particularly
@@ -150,12 +170,6 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest
-
-      - name: Pre-download docker test docker images
-        run: |
-          docker pull ghcr.io/syndicateprotocol/generate_batch
-          docker pull valkey/valkey:latest
-          docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
 
       - name: Run Integration Tests with Nextest
         run: cargo nextest run --workspace --fail-fast
