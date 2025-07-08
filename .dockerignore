@@ -35,5 +35,3 @@ logs/
 *.tar
 *.gz
 *.zip
-
-synd-withdrawals/synd-enclave/nitro/brotli/buildfiles
