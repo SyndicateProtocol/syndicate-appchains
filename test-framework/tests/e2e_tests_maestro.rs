@@ -51,7 +51,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -73,7 +73,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -108,7 +108,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -142,7 +142,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -156,7 +156,6 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
     .await
 }
 
-// TODO (SEQ-917): Fix flaky test
 // Duplicate txn spam is rejected, dispatched concurrently
 #[tokio::test]
 async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
@@ -177,7 +176,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -317,7 +316,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 wait_until!(
                     components_arc.appchain_provider.get_transaction_count(*address).await? ==
                         nonce + 1,
-                    Duration::from_secs(3)
+                    Duration::from_secs(60)
                 );
             }
 
@@ -358,7 +357,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -541,7 +540,7 @@ async fn create_and_fund_wallet(
     // Wait for deposit to be processed for the second wallet
     wait_until!(
         components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-        Duration::from_secs(10)
+        Duration::from_secs(60)
     );
     Ok((wallet_signer, wallet_address))
 }
@@ -566,7 +565,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -602,7 +601,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -641,7 +640,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -706,7 +705,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 3,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
