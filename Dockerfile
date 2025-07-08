@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
 # --- Go build stage for synd-proposer ---
 FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro
 
-FROM nitro AS go-synd-proposer-build
+FROM golang:1.23.0 AS go-synd-proposer-build
 WORKDIR /
 COPY --from=nitro . ./synd-enclave/nitro
 COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
