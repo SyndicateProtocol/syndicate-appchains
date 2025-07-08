@@ -5,7 +5,7 @@ use alloy::{
     network::Ethereum,
     primitives::{address, keccak256, utils::parse_ether, Address, B256, U256},
     providers::{ext::DebugApi, Provider},
-    rpc::types::trace::geth::GethDebugTracingOptions,
+    rpc::types::trace::geth::{GethDebugTracingOptions, GethTrace},
     signers::local::PrivateKeySigner,
     sol,
     sol_types::SolValue,
@@ -107,6 +107,15 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             let (_l1_oracle_handle, l1_oracle_address) =
                 setup_l1_oracle(l1_provider.clone(), components.settlement_provider.clone()).await;
 
+            wait_until!(
+                L1BlockOracle::new(l1_oracle_address, components.settlement_provider.clone())
+                    .timestamp()
+                    .call()
+                    .await? >
+                    0,
+                Duration::from_secs(20)
+            );
+
             let tee_module_addr = deploy_on_settlement_chain(
                 &components,
                 TeeModule::deploy_builder(
@@ -131,8 +140,16 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 components.assertion_poster_address,
                 &components.settlement_provider,
             );
+
+            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = assertion_poster
                 .transferOwnership(tee_module_addr)
+                .nonce(
+                    components
+                        .settlement_provider
+                        .get_transaction_count(test_account1().address)
+                        .await?,
+                )
                 .send()
                 .await?
                 .get_receipt()
@@ -179,8 +196,16 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             let key_mgr = TeeKeyManager::new(key_mgr_addr, &components.settlement_provider);
             let public_values = tee_public_key.abi_encode();
             let proof_bytes = vec![];
+
+            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = key_mgr
                 .addKey(public_values.into(), proof_bytes.into())
+                .nonce(
+                    components
+                        .settlement_provider
+                        .get_transaction_count(test_account1().address)
+                        .await?,
+                )
                 .send()
                 .await?
                 .get_receipt()
@@ -190,8 +215,21 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             // deposit funds to the appchain
             let inbox =
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
-            let receipt =
-                inbox.depositEth().value(parse_ether("1")?).send().await?.get_receipt().await?;
+
+            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+            let receipt = inbox
+                .depositEth()
+                .value(parse_ether("1")?)
+                .nonce(
+                    components
+                        .settlement_provider
+                        .get_transaction_count(test_account1().address)
+                        .await?,
+                )
+                .send()
+                .await?
+                .get_receipt()
+                .await?;
             assert!(receipt.status());
 
             // send a dummy tx so that the sequencing chain progresses and the deposit is
@@ -220,7 +258,20 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             // call `closeChallengeWindow` on the TEEmodule - to force the assertion to be posted
             time::sleep(Duration::from_secs(1)).await; // wait 1s (challenge window duration) to elapse
             let tee_module = TeeModule::new(tee_module_addr, &components.settlement_provider);
-            let receipt = tee_module.closeChallengeWindow().send().await?.get_receipt().await?;
+
+            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+            let receipt = tee_module
+                .closeChallengeWindow()
+                .nonce(
+                    components
+                        .settlement_provider
+                        .get_transaction_count(test_account1().address)
+                        .await?,
+                )
+                .send()
+                .await?
+                .get_receipt()
+                .await?;
             assert!(receipt.status());
 
             // look for `AssertionConfirmed` event on the `RollupCore` contract
@@ -285,13 +336,44 @@ where
         .await?;
 
     if !receipt.status() {
-        println!("receipt: {receipt:?}");
+        println!(
+            "Deployment failed. Receipt: hash={:?}, gas_used={:?}",
+            receipt.transaction_hash, receipt.gas_used
+        );
+
         let trace = components
             .settlement_provider
             .debug_trace_transaction(receipt.transaction_hash, GethDebugTracingOptions::default())
             .await
             .unwrap();
-        println!("trace: {trace:?}");
+
+        // Extract just the error information from the trace
+        match trace {
+            GethTrace::Default(frame) => {
+                if frame.failed {
+                    println!("Transaction failed with return value: {}", frame.return_value);
+                    // Look for error in struct logs
+                    for log in &frame.struct_logs {
+                        if let Some(error) = &log.error {
+                            println!("EVM Error: {error}");
+                        }
+                    }
+                } else {
+                    println!("Transaction succeeded but receipt shows failure");
+                }
+            }
+            GethTrace::CallTracer(frame) => {
+                if let Some(error) = &frame.error {
+                    println!("Call failed with error: {error}");
+                }
+                if let Some(revert_reason) = &frame.revert_reason {
+                    println!("Revert reason: {revert_reason}");
+                }
+            }
+            _ => {
+                println!("Unexpected trace type for failed transaction");
+            }
+        }
     }
     assert!(receipt.status());
     Ok(receipt.contract_address.unwrap())
@@ -368,11 +450,25 @@ sol! {
 }
 
 #[allow(clippy::unwrap_used)]
-async fn setup_l1_oracle<T: Provider<Ethereum> + Send + Sync + 'static>(
+async fn setup_l1_oracle<T: Provider<Ethereum> + Clone + Send + Sync + 'static>(
     l1_provider: T,
     target_chain_provider: T,
 ) -> (JoinHandle<()>, Address) {
-    let oracle_contract = L1BlockOracle::deploy(target_chain_provider).await.unwrap();
+    // NOTE: manually constructing the deployment tx shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+    // instead should just be:
+    // let oracle_contract = L1BlockOracle::deploy(target_chain_provider).await.unwrap();
+    //
+    let receipt = L1BlockOracle::deploy_builder(target_chain_provider.clone())
+        .nonce(target_chain_provider.get_transaction_count(test_account1().address).await.unwrap())
+        .send()
+        .await
+        .unwrap()
+        .get_receipt()
+        .await
+        .unwrap();
+    let oracle_contract =
+        L1BlockOracle::new(receipt.contract_address.unwrap(), target_chain_provider.clone());
+    // ---
     let oracle_contract_address = *oracle_contract.address();
     let handle = tokio::spawn(async move {
         let mut l1_block_sub = l1_provider.subscribe_blocks().await.unwrap();
@@ -382,8 +478,15 @@ async fn setup_l1_oracle<T: Provider<Ethereum> + Send + Sync + 'static>(
             println!("l1 block: {l1_block:?}");
             let l1_hash = l1_block.hash;
             let l1_timestamp = l1_block.timestamp;
+            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = oracle_contract
                 .setL1Block(l1_timestamp, l1_hash)
+                .nonce(
+                    target_chain_provider
+                        .get_transaction_count(test_account1().address)
+                        .await
+                        .unwrap(),
+                )
                 .send()
                 .await
                 .unwrap()
