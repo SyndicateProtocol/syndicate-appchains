@@ -38,13 +38,15 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
     cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
 # --- Go build stage for synd-proposer ---
-FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS go-synd-proposer-build
+FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro
+
+FROM nitro AS go-synd-proposer-build
 WORKDIR /
+COPY --from=nitro /workspace ./synd-enclave/nitro
 COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
 COPY ./synd-withdrawals/synd-enclave/go.mod ./synd-enclave/go.mod
 COPY ./synd-withdrawals/synd-enclave/go.sum ./synd-enclave/go.sum
 COPY ./synd-withdrawals/synd-proposer ./synd-proposer
-RUN mv /workspace ./synd-enclave/nitro
 
 # Build the Go image
 WORKDIR /synd-proposer
