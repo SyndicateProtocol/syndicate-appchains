@@ -92,10 +92,13 @@ fn init_tracer_provider(config: &ServiceTracingConfig) -> Result<SdkTracerProvid
 /// Initialize tracing-subscriber and return [`OtelGuard`]
 /// for OpenTelemetry-related termination processing.
 pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, Error> {
-    let tracer_provider = init_tracer_provider(&config)?;
-
-    let tracer = tracer_provider.tracer("tracing-opentelemetry");
-    opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
+    // logging to stdout
+    let json_log_layer = tracing_subscriber::fmt::layer()
+        // output in JSON format
+        .json()
+        // include codepath origin of log
+        .with_target(true)
+        .with_test_writer();
 
     let env_filter = EnvFilter::builder()
         .with_default_directive(filter::LevelFilter::INFO.into())
@@ -103,26 +106,20 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
         // disable spammy and unconnected jsonrpsee_server `connection` spans
         .add_directive("jsonrpsee_server=off".parse()?);
 
-    tracing_subscriber::registry()
-        // logging to stdout
-        .with(
-            tracing_subscriber::fmt::layer()
-                // output in JSON format
-                .json()
-                // include codepath origin of log
-                .with_target(true)
-                .with_test_writer(),
-        )
-        .with(env_filter)
-        // OpenTelemetry tracing + metrics layers
-        .with(OpenTelemetryLayer::new(tracer))
-        .try_init()
-        .map_err(|e| Error::DefaultLoggerInit(e.to_string()))?;
+    let base_subscriber = tracing_subscriber::registry().with(json_log_layer).with(env_filter);
 
-    Ok(OtelGuard {
-        tracer_provider,
-        // meter_provider
-    })
+    let tracing_enabled = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT").is_ok_and(|s| !s.is_empty());
+    let tracer_provider = tracing_enabled.then(|| init_tracer_provider(&config)).transpose()?;
+    if let Some(tracer_provider) = &tracer_provider {
+        opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
+        let tracer = tracer_provider.tracer("tracing-opentelemetry");
+        base_subscriber.with(OpenTelemetryLayer::new(tracer)).try_init()
+    } else {
+        base_subscriber.try_init()
+    }
+    .map_err(|e| Error::DefaultLoggerInit(e.to_string()))?;
+
+    Ok(OtelGuard { tracer_provider })
 }
 
 /// A shorthand to set up a subscriber for tests,
@@ -169,14 +166,16 @@ pub fn extract_tracing_context(extensions: &Extensions) -> Option<()> {
 /// while it is held, and properly shut down when dropped.
 #[derive(Debug)]
 pub struct OtelGuard {
-    tracer_provider: SdkTracerProvider,
+    tracer_provider: Option<SdkTracerProvider>,
 }
 
 impl Drop for OtelGuard {
     fn drop(&mut self) {
         // Can't handle errors in Drop, just log them
-        if let Err(err) = self.tracer_provider.shutdown() {
-            eprintln!("failed to shutdown OpenTelemetry tracing: {err:?}");
+        if let Some(provider) = &self.tracer_provider {
+            if let Err(err) = provider.shutdown() {
+                eprintln!("failed to shutdown OpenTelemetry tracing: {err:?}");
+            }
         }
     }
 }
