@@ -108,19 +108,12 @@ jobs:
           key: ${{ runner.os }}-sp1-toolchain-v2
 
       - name: Install SP1 toolchain
-        if: steps.cache-sp1.outputs.cache-hit != 'true'
         run: |
           curl -L https://sp1.succinct.xyz | bash
-          # Source the SP1 environment
-          source ~/.bashrc || true
-          $HOME/.sp1/bin/sp1up
-          # The sp1up command installs a custom rustup toolchain
-          rustup toolchain list
+          $HOME/.sp1/bin/sp1up 
 
       - name: Verify SP1 installation
         run: |
-          # Source SP1 environment
-          source ~/.bashrc || true
           $HOME/.sp1/bin/cargo-prove prove --version
           # Check if succinct toolchain is installed
           rustup toolchain list | grep succinct || echo "Succinct toolchain not found"
