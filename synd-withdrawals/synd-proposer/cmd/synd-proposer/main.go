@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/SyndicateProtocol/synd-proposer/pkg"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
 )
 
 func main() {
