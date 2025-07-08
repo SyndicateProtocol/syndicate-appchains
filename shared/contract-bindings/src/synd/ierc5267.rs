@@ -93,8 +93,6 @@ pub mod IERC5267 {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `EIP712DomainChanged()` and selector `0x0a6387c9ea3628b88a633bb4f3b151770f70085117a15f9bf3787cda53f13d31`.
 ```solidity
 event EIP712DomainChanged();
@@ -106,7 +104,7 @@ event EIP712DomainChanged();
         clippy::style
     )]
     #[derive(Clone)]
-    pub struct EIP712DomainChanged;
+    pub struct EIP712DomainChanged {}
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -124,9 +122,38 @@ event EIP712DomainChanged();
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "EIP712DomainChanged()";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                10u8, 99u8, 135u8, 201u8, 234u8, 54u8, 40u8, 184u8, 138u8, 99u8, 59u8,
-                180u8, 243u8, 177u8, 81u8, 119u8, 15u8, 112u8, 8u8, 81u8, 23u8, 161u8,
-                95u8, 155u8, 243u8, 120u8, 124u8, 218u8, 83u8, 241u8, 61u8, 49u8,
+                10u8,
+                99u8,
+                135u8,
+                201u8,
+                234u8,
+                54u8,
+                40u8,
+                184u8,
+                138u8,
+                99u8,
+                59u8,
+                180u8,
+                243u8,
+                177u8,
+                81u8,
+                119u8,
+                15u8,
+                112u8,
+                8u8,
+                81u8,
+                23u8,
+                161u8,
+                95u8,
+                155u8,
+                243u8,
+                120u8,
+                124u8,
+                218u8,
+                83u8,
+                241u8,
+                61u8,
+                49u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -191,17 +218,13 @@ event EIP712DomainChanged();
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `eip712Domain()` and selector `0x84b0196e`.
 ```solidity
 function eip712Domain() external view returns (bytes1 fields, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] memory extensions);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct eip712DomainCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    pub struct eip712DomainCall {}
     ///Container type for the return parameters of the [`eip712Domain()`](eip712DomainCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -258,7 +281,7 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for eip712DomainCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
+                    Self {}
                 }
             }
         }
@@ -327,35 +350,6 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
                 }
             }
         }
-        impl eip712DomainReturn {
-            fn _tokenize(
-                &self,
-            ) -> <eip712DomainCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::FixedBytes<
-                        1,
-                    > as alloy_sol_types::SolType>::tokenize(&self.fields),
-                    <alloy::sol_types::sol_data::String as alloy_sol_types::SolType>::tokenize(
-                        &self.name,
-                    ),
-                    <alloy::sol_types::sol_data::String as alloy_sol_types::SolType>::tokenize(
-                        &self.version,
-                    ),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.chainId),
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        &self.verifyingContract,
-                    ),
-                    <alloy::sol_types::sol_data::FixedBytes<
-                        32,
-                    > as alloy_sol_types::SolType>::tokenize(&self.salt),
-                    <alloy::sol_types::sol_data::Array<
-                        alloy::sol_types::sol_data::Uint<256>,
-                    > as alloy_sol_types::SolType>::tokenize(&self.extensions),
-                )
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for eip712DomainCall {
             type Parameters<'a> = ();
@@ -388,30 +382,18 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
                 ()
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                eip712DomainReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
     ///Container for all the [`IERC5267`](self) function calls.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive()]
     pub enum IERC5267Calls {
         #[allow(missing_docs)]
         eip712Domain(eip712DomainCall),
@@ -452,16 +434,20 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
+                bool,
             ) -> alloy_sol_types::Result<IERC5267Calls>] = &[
                 {
                     fn eip712Domain(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC5267Calls> {
                         <eip712DomainCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC5267Calls::eip712Domain)
                     }
@@ -476,38 +462,7 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data)
-        }
-        #[inline]
-        #[allow(non_snake_case)]
-        fn abi_decode_raw_validate(
-            selector: [u8; 4],
-            data: &[u8],
-        ) -> alloy_sol_types::Result<Self> {
-            static DECODE_VALIDATE_SHIMS: &[fn(
-                &[u8],
-            ) -> alloy_sol_types::Result<IERC5267Calls>] = &[
-                {
-                    fn eip712Domain(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC5267Calls> {
-                        <eip712DomainCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5267Calls::eip712Domain)
-                    }
-                    eip712Domain
-                },
-            ];
-            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                return Err(
-                    alloy_sol_types::Error::unknown_selector(
-                        <Self as alloy_sol_types::SolInterface>::NAME,
-                        selector,
-                    ),
-                );
-            };
-            DECODE_VALIDATE_SHIMS[idx](data)
+            DECODE_SHIMS[idx](data, validate)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -532,8 +487,6 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
         }
     }
     ///Container for all the [`IERC5267`](self) events.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC5267Events {
         #[allow(missing_docs)]
         EIP712DomainChanged(EIP712DomainChanged),
@@ -548,9 +501,38 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                10u8, 99u8, 135u8, 201u8, 234u8, 54u8, 40u8, 184u8, 138u8, 99u8, 59u8,
-                180u8, 243u8, 177u8, 81u8, 119u8, 15u8, 112u8, 8u8, 81u8, 23u8, 161u8,
-                95u8, 155u8, 243u8, 120u8, 124u8, 218u8, 83u8, 241u8, 61u8, 49u8,
+                10u8,
+                99u8,
+                135u8,
+                201u8,
+                234u8,
+                54u8,
+                40u8,
+                184u8,
+                138u8,
+                99u8,
+                59u8,
+                180u8,
+                243u8,
+                177u8,
+                81u8,
+                119u8,
+                15u8,
+                112u8,
+                8u8,
+                81u8,
+                23u8,
+                161u8,
+                95u8,
+                155u8,
+                243u8,
+                120u8,
+                124u8,
+                218u8,
+                83u8,
+                241u8,
+                61u8,
+                49u8,
             ],
         ];
     }
@@ -561,6 +543,7 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(
@@ -569,6 +552,7 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
                     <EIP712DomainChanged as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
+                            validate,
                         )
                         .map(Self::EIP712DomainChanged)
                 }
@@ -609,13 +593,14 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
 See the [wrapper's documentation](`IERC5267Instance`) for more details.*/
     #[inline]
     pub const fn new<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> IERC5267Instance<P, N> {
-        IERC5267Instance::<P, N>::new(address, provider)
+    ) -> IERC5267Instance<T, P, N> {
+        IERC5267Instance::<T, P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -624,14 +609,15 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<IERC5267Instance<P, N>>,
+        Output = alloy_contract::Result<IERC5267Instance<T, P, N>>,
     > {
-        IERC5267Instance::<P, N>::deploy(provider)
+        IERC5267Instance::<T, P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -640,10 +626,11 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        IERC5267Instance::<P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        IERC5267Instance::<T, P, N>::deploy_builder(provider)
     }
     /**A [`IERC5267`](self) instance.
 
@@ -657,13 +644,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct IERC5267Instance<P, N = alloy_contract::private::Ethereum> {
+    pub struct IERC5267Instance<T, P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network: ::core::marker::PhantomData<N>,
+        _network_transport: ::core::marker::PhantomData<(N, T)>,
     }
     #[automatically_derived]
-    impl<P, N> ::core::fmt::Debug for IERC5267Instance<P, N> {
+    impl<T, P, N> ::core::fmt::Debug for IERC5267Instance<T, P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("IERC5267Instance").field(&self.address).finish()
@@ -672,9 +659,10 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC5267Instance<P, N> {
+    > IERC5267Instance<T, P, N> {
         /**Creates a new wrapper around an on-chain [`IERC5267`](self) contract instance.
 
 See the [wrapper's documentation](`IERC5267Instance`) for more details.*/
@@ -686,7 +674,7 @@ See the [wrapper's documentation](`IERC5267Instance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -697,7 +685,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<IERC5267Instance<P, N>> {
+        ) -> alloy_contract::Result<IERC5267Instance<T, P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -708,7 +696,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -735,23 +723,24 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<P: ::core::clone::Clone, N> IERC5267Instance<&P, N> {
+    impl<T, P: ::core::clone::Clone, N> IERC5267Instance<T, &P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> IERC5267Instance<P, N> {
+        pub fn with_cloned_provider(self) -> IERC5267Instance<T, P, N> {
             IERC5267Instance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC5267Instance<P, N> {
+    > IERC5267Instance<T, P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -759,35 +748,36 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`eip712Domain`] function.
         pub fn eip712Domain(
             &self,
-        ) -> alloy_contract::SolCallBuilder<&P, eip712DomainCall, N> {
-            self.call_builder(&eip712DomainCall)
+        ) -> alloy_contract::SolCallBuilder<T, &P, eip712DomainCall, N> {
+            self.call_builder(&eip712DomainCall {})
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC5267Instance<P, N> {
+    > IERC5267Instance<T, P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<&P, E, N> {
+        ) -> alloy_contract::Event<T, &P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`EIP712DomainChanged`] event.
         pub fn EIP712DomainChanged_filter(
             &self,
-        ) -> alloy_contract::Event<&P, EIP712DomainChanged, N> {
+        ) -> alloy_contract::Event<T, &P, EIP712DomainChanged, N> {
             self.event_filter::<EIP712DomainChanged>()
         }
     }

@@ -340,8 +340,6 @@ pub mod IERC721 {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `Approval(address,address,uint256)` and selector `0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925`.
 ```solidity
 event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
@@ -383,9 +381,38 @@ event Approval(address indexed _owner, address indexed _approved, uint256 indexe
             );
             const SIGNATURE: &'static str = "Approval(address,address,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                140u8, 91u8, 225u8, 229u8, 235u8, 236u8, 125u8, 91u8, 209u8, 79u8, 113u8,
-                66u8, 125u8, 30u8, 132u8, 243u8, 221u8, 3u8, 20u8, 192u8, 247u8, 178u8,
-                41u8, 30u8, 91u8, 32u8, 10u8, 200u8, 199u8, 195u8, 185u8, 37u8,
+                140u8,
+                91u8,
+                225u8,
+                229u8,
+                235u8,
+                236u8,
+                125u8,
+                91u8,
+                209u8,
+                79u8,
+                113u8,
+                66u8,
+                125u8,
+                30u8,
+                132u8,
+                243u8,
+                221u8,
+                3u8,
+                20u8,
+                192u8,
+                247u8,
+                178u8,
+                41u8,
+                30u8,
+                91u8,
+                32u8,
+                10u8,
+                200u8,
+                199u8,
+                195u8,
+                185u8,
+                37u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -468,8 +495,6 @@ event Approval(address indexed _owner, address indexed _approved, uint256 indexe
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `ApprovalForAll(address,address,bool)` and selector `0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31`.
 ```solidity
 event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
@@ -510,9 +535,38 @@ event ApprovalForAll(address indexed _owner, address indexed _operator, bool _ap
             );
             const SIGNATURE: &'static str = "ApprovalForAll(address,address,bool)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                23u8, 48u8, 126u8, 171u8, 57u8, 171u8, 97u8, 7u8, 232u8, 137u8, 152u8,
-                69u8, 173u8, 61u8, 89u8, 189u8, 150u8, 83u8, 242u8, 0u8, 242u8, 32u8,
-                146u8, 4u8, 137u8, 202u8, 43u8, 89u8, 55u8, 105u8, 108u8, 49u8,
+                23u8,
+                48u8,
+                126u8,
+                171u8,
+                57u8,
+                171u8,
+                97u8,
+                7u8,
+                232u8,
+                137u8,
+                152u8,
+                69u8,
+                173u8,
+                61u8,
+                89u8,
+                189u8,
+                150u8,
+                83u8,
+                242u8,
+                0u8,
+                242u8,
+                32u8,
+                146u8,
+                4u8,
+                137u8,
+                202u8,
+                43u8,
+                89u8,
+                55u8,
+                105u8,
+                108u8,
+                49u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -595,8 +649,6 @@ event ApprovalForAll(address indexed _owner, address indexed _operator, bool _ap
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `Transfer(address,address,uint256)` and selector `0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`.
 ```solidity
 event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
@@ -638,9 +690,38 @@ event Transfer(address indexed _from, address indexed _to, uint256 indexed _toke
             );
             const SIGNATURE: &'static str = "Transfer(address,address,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                221u8, 242u8, 82u8, 173u8, 27u8, 226u8, 200u8, 155u8, 105u8, 194u8,
-                176u8, 104u8, 252u8, 55u8, 141u8, 170u8, 149u8, 43u8, 167u8, 241u8, 99u8,
-                196u8, 161u8, 22u8, 40u8, 245u8, 90u8, 77u8, 245u8, 35u8, 179u8, 239u8,
+                221u8,
+                242u8,
+                82u8,
+                173u8,
+                27u8,
+                226u8,
+                200u8,
+                155u8,
+                105u8,
+                194u8,
+                176u8,
+                104u8,
+                252u8,
+                55u8,
+                141u8,
+                170u8,
+                149u8,
+                43u8,
+                167u8,
+                241u8,
+                99u8,
+                196u8,
+                161u8,
+                22u8,
+                40u8,
+                245u8,
+                90u8,
+                77u8,
+                245u8,
+                35u8,
+                179u8,
+                239u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -723,8 +804,6 @@ event Transfer(address indexed _from, address indexed _to, uint256 indexed _toke
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `approve(address,uint256)` and selector `0x095ea7b3`.
 ```solidity
 function approve(address _approved, uint256 _tokenId) external payable;
@@ -820,13 +899,6 @@ function approve(address _approved, uint256 _tokenId) external payable;
                 }
             }
         }
-        impl approveReturn {
-            fn _tokenize(
-                &self,
-            ) -> <approveCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for approveCall {
             type Parameters<'a> = (
@@ -861,29 +933,17 @@ function approve(address _approved, uint256 _tokenId) external payable;
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                approveReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `balanceOf(address)` and selector `0x70a08231`.
 ```solidity
 function balanceOf(address _owner) external view returns (uint256);
@@ -894,8 +954,6 @@ function balanceOf(address _owner) external view returns (uint256);
         #[allow(missing_docs)]
         pub _owner: alloy::sol_types::private::Address,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`balanceOf(address)`](balanceOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -981,7 +1039,7 @@ function balanceOf(address _owner) external view returns (uint256);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type Return = balanceOfReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1003,39 +1061,17 @@ function balanceOf(address _owner) external view returns (uint256);
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: balanceOfReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: balanceOfReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getApproved(uint256)` and selector `0x081812fc`.
 ```solidity
 function getApproved(uint256 _tokenId) external view returns (address);
@@ -1046,8 +1082,6 @@ function getApproved(uint256 _tokenId) external view returns (address);
         #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getApproved(uint256)`](getApprovedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1133,7 +1167,7 @@ function getApproved(uint256 _tokenId) external view returns (address);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::Address;
+            type Return = getApprovedReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1155,39 +1189,17 @@ function getApproved(uint256 _tokenId) external view returns (address);
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getApprovedReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getApprovedReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isApprovedForAll(address,address)` and selector `0xe985e9c5`.
 ```solidity
 function isApprovedForAll(address _owner, address _operator) external view returns (bool);
@@ -1200,8 +1212,6 @@ function isApprovedForAll(address _owner, address _operator) external view retur
         #[allow(missing_docs)]
         pub _operator: alloy::sol_types::private::Address,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isApprovedForAll(address,address)`](isApprovedForAllCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1301,7 +1311,7 @@ function isApprovedForAll(address _owner, address _operator) external view retur
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
+            type Return = isApprovedForAllReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1326,39 +1336,17 @@ function isApprovedForAll(address _owner, address _operator) external view retur
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: isApprovedForAllReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: isApprovedForAllReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `ownerOf(uint256)` and selector `0x6352211e`.
 ```solidity
 function ownerOf(uint256 _tokenId) external view returns (address);
@@ -1369,8 +1357,6 @@ function ownerOf(uint256 _tokenId) external view returns (address);
         #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`ownerOf(uint256)`](ownerOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1456,7 +1442,7 @@ function ownerOf(uint256 _tokenId) external view returns (address);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::Address;
+            type Return = ownerOfReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1478,39 +1464,17 @@ function ownerOf(uint256 _tokenId) external view returns (address);
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: ownerOfReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: ownerOfReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `safeTransferFrom(address,address,uint256)` and selector `0x42842e0e`.
 ```solidity
 function safeTransferFrom(address _from, address _to, uint256 _tokenId) external payable;
@@ -1615,13 +1579,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId) external
                 }
             }
         }
-        impl safeTransferFrom_0Return {
-            fn _tokenize(
-                &self,
-            ) -> <safeTransferFrom_0Call as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for safeTransferFrom_0Call {
             type Parameters<'a> = (
@@ -1660,29 +1617,17 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId) external
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                safeTransferFrom_0Return::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `safeTransferFrom(address,address,uint256,bytes)` and selector `0xb88d4fde`.
 ```solidity
 function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory data) external payable;
@@ -1792,13 +1737,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes me
                 }
             }
         }
-        impl safeTransferFrom_1Return {
-            fn _tokenize(
-                &self,
-            ) -> <safeTransferFrom_1Call as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for safeTransferFrom_1Call {
             type Parameters<'a> = (
@@ -1841,29 +1779,17 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes me
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                safeTransferFrom_1Return::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `setApprovalForAll(address,bool)` and selector `0xa22cb465`.
 ```solidity
 function setApprovalForAll(address _operator, bool _approved) external;
@@ -1960,13 +1886,6 @@ function setApprovalForAll(address _operator, bool _approved) external;
                 }
             }
         }
-        impl setApprovalForAllReturn {
-            fn _tokenize(
-                &self,
-            ) -> <setApprovalForAllCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for setApprovalForAllCall {
             type Parameters<'a> = (
@@ -2001,29 +1920,17 @@ function setApprovalForAll(address _operator, bool _approved) external;
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                setApprovalForAllReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `supportsInterface(bytes4)` and selector `0x01ffc9a7`.
 ```solidity
 function supportsInterface(bytes4 interfaceID) external view returns (bool);
@@ -2034,8 +1941,6 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
         #[allow(missing_docs)]
         pub interfaceID: alloy::sol_types::private::FixedBytes<4>,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2123,7 +2028,7 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
+            type Return = supportsInterfaceReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -2145,39 +2050,17 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: supportsInterfaceReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: supportsInterfaceReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `transferFrom(address,address,uint256)` and selector `0x23b872dd`.
 ```solidity
 function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
@@ -2278,13 +2161,6 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                 }
             }
         }
-        impl transferFromReturn {
-            fn _tokenize(
-                &self,
-            ) -> <transferFromCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for transferFromCall {
             type Parameters<'a> = (
@@ -2323,30 +2199,18 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                transferFromReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
     ///Container for all the [`IERC721`](self) function calls.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive()]
     pub enum IERC721Calls {
         #[allow(missing_docs)]
         approve(approveCall),
@@ -2439,132 +2303,20 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
-            static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<IERC721Calls>] = &[
-                {
-                    fn supportsInterface(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <supportsInterfaceCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IERC721Calls::supportsInterface)
-                    }
-                    supportsInterface
-                },
-                {
-                    fn getApproved(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <getApprovedCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IERC721Calls::getApproved)
-                    }
-                    getApproved
-                },
-                {
-                    fn approve(data: &[u8]) -> alloy_sol_types::Result<IERC721Calls> {
-                        <approveCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
-                            .map(IERC721Calls::approve)
-                    }
-                    approve
-                },
-                {
-                    fn transferFrom(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <transferFromCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IERC721Calls::transferFrom)
-                    }
-                    transferFrom
-                },
-                {
-                    fn safeTransferFrom_0(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <safeTransferFrom_0Call as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IERC721Calls::safeTransferFrom_0)
-                    }
-                    safeTransferFrom_0
-                },
-                {
-                    fn ownerOf(data: &[u8]) -> alloy_sol_types::Result<IERC721Calls> {
-                        <ownerOfCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
-                            .map(IERC721Calls::ownerOf)
-                    }
-                    ownerOf
-                },
-                {
-                    fn balanceOf(data: &[u8]) -> alloy_sol_types::Result<IERC721Calls> {
-                        <balanceOfCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
-                            .map(IERC721Calls::balanceOf)
-                    }
-                    balanceOf
-                },
-                {
-                    fn setApprovalForAll(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <setApprovalForAllCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IERC721Calls::setApprovalForAll)
-                    }
-                    setApprovalForAll
-                },
-                {
-                    fn safeTransferFrom_1(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <safeTransferFrom_1Call as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IERC721Calls::safeTransferFrom_1)
-                    }
-                    safeTransferFrom_1
-                },
-                {
-                    fn isApprovedForAll(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <isApprovedForAllCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IERC721Calls::isApprovedForAll)
-                    }
-                    isApprovedForAll
-                },
-            ];
-            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                return Err(
-                    alloy_sol_types::Error::unknown_selector(
-                        <Self as alloy_sol_types::SolInterface>::NAME,
-                        selector,
-                    ),
-                );
-            };
-            DECODE_SHIMS[idx](data)
-        }
-        #[inline]
-        #[allow(non_snake_case)]
-        fn abi_decode_raw_validate(
-            selector: [u8; 4],
-            data: &[u8],
-        ) -> alloy_sol_types::Result<Self> {
-            static DECODE_VALIDATE_SHIMS: &[fn(
+            static DECODE_SHIMS: &[fn(
                 &[u8],
+                bool,
             ) -> alloy_sol_types::Result<IERC721Calls>] = &[
                 {
                     fn supportsInterface(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <supportsInterfaceCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <supportsInterfaceCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::supportsInterface)
                     }
@@ -2573,18 +2325,24 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                 {
                     fn getApproved(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <getApprovedCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <getApprovedCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::getApproved)
                     }
                     getApproved
                 },
                 {
-                    fn approve(data: &[u8]) -> alloy_sol_types::Result<IERC721Calls> {
-                        <approveCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                    fn approve(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<IERC721Calls> {
+                        <approveCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::approve)
                     }
@@ -2593,9 +2351,11 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                 {
                     fn transferFrom(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <transferFromCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <transferFromCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::transferFrom)
                     }
@@ -2604,27 +2364,37 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                 {
                     fn safeTransferFrom_0(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <safeTransferFrom_0Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <safeTransferFrom_0Call as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::safeTransferFrom_0)
                     }
                     safeTransferFrom_0
                 },
                 {
-                    fn ownerOf(data: &[u8]) -> alloy_sol_types::Result<IERC721Calls> {
-                        <ownerOfCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                    fn ownerOf(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<IERC721Calls> {
+                        <ownerOfCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::ownerOf)
                     }
                     ownerOf
                 },
                 {
-                    fn balanceOf(data: &[u8]) -> alloy_sol_types::Result<IERC721Calls> {
-                        <balanceOfCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                    fn balanceOf(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<IERC721Calls> {
+                        <balanceOfCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::balanceOf)
                     }
@@ -2633,9 +2403,11 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                 {
                     fn setApprovalForAll(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <setApprovalForAllCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <setApprovalForAllCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::setApprovalForAll)
                     }
@@ -2644,9 +2416,11 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                 {
                     fn safeTransferFrom_1(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <safeTransferFrom_1Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <safeTransferFrom_1Call as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::safeTransferFrom_1)
                     }
@@ -2655,9 +2429,11 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                 {
                     fn isApprovedForAll(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC721Calls> {
-                        <isApprovedForAllCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <isApprovedForAllCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC721Calls::isApprovedForAll)
                     }
@@ -2672,7 +2448,7 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
                     ),
                 );
             };
-            DECODE_VALIDATE_SHIMS[idx](data)
+            DECODE_SHIMS[idx](data, validate)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -2784,8 +2560,6 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
         }
     }
     ///Container for all the [`IERC721`](self) events.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC721Events {
         #[allow(missing_docs)]
         Approval(Approval),
@@ -2804,19 +2578,106 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                23u8, 48u8, 126u8, 171u8, 57u8, 171u8, 97u8, 7u8, 232u8, 137u8, 152u8,
-                69u8, 173u8, 61u8, 89u8, 189u8, 150u8, 83u8, 242u8, 0u8, 242u8, 32u8,
-                146u8, 4u8, 137u8, 202u8, 43u8, 89u8, 55u8, 105u8, 108u8, 49u8,
+                23u8,
+                48u8,
+                126u8,
+                171u8,
+                57u8,
+                171u8,
+                97u8,
+                7u8,
+                232u8,
+                137u8,
+                152u8,
+                69u8,
+                173u8,
+                61u8,
+                89u8,
+                189u8,
+                150u8,
+                83u8,
+                242u8,
+                0u8,
+                242u8,
+                32u8,
+                146u8,
+                4u8,
+                137u8,
+                202u8,
+                43u8,
+                89u8,
+                55u8,
+                105u8,
+                108u8,
+                49u8,
             ],
             [
-                140u8, 91u8, 225u8, 229u8, 235u8, 236u8, 125u8, 91u8, 209u8, 79u8, 113u8,
-                66u8, 125u8, 30u8, 132u8, 243u8, 221u8, 3u8, 20u8, 192u8, 247u8, 178u8,
-                41u8, 30u8, 91u8, 32u8, 10u8, 200u8, 199u8, 195u8, 185u8, 37u8,
+                140u8,
+                91u8,
+                225u8,
+                229u8,
+                235u8,
+                236u8,
+                125u8,
+                91u8,
+                209u8,
+                79u8,
+                113u8,
+                66u8,
+                125u8,
+                30u8,
+                132u8,
+                243u8,
+                221u8,
+                3u8,
+                20u8,
+                192u8,
+                247u8,
+                178u8,
+                41u8,
+                30u8,
+                91u8,
+                32u8,
+                10u8,
+                200u8,
+                199u8,
+                195u8,
+                185u8,
+                37u8,
             ],
             [
-                221u8, 242u8, 82u8, 173u8, 27u8, 226u8, 200u8, 155u8, 105u8, 194u8,
-                176u8, 104u8, 252u8, 55u8, 141u8, 170u8, 149u8, 43u8, 167u8, 241u8, 99u8,
-                196u8, 161u8, 22u8, 40u8, 245u8, 90u8, 77u8, 245u8, 35u8, 179u8, 239u8,
+                221u8,
+                242u8,
+                82u8,
+                173u8,
+                27u8,
+                226u8,
+                200u8,
+                155u8,
+                105u8,
+                194u8,
+                176u8,
+                104u8,
+                252u8,
+                55u8,
+                141u8,
+                170u8,
+                149u8,
+                43u8,
+                167u8,
+                241u8,
+                99u8,
+                196u8,
+                161u8,
+                22u8,
+                40u8,
+                245u8,
+                90u8,
+                77u8,
+                245u8,
+                35u8,
+                179u8,
+                239u8,
             ],
         ];
     }
@@ -2827,21 +2688,31 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<Approval as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <Approval as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
+                    <Approval as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                            validate,
+                        )
                         .map(Self::Approval)
                 }
                 Some(<ApprovalForAll as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <ApprovalForAll as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
+                            validate,
                         )
                         .map(Self::ApprovalForAll)
                 }
                 Some(<Transfer as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <Transfer as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
+                    <Transfer as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                            validate,
+                        )
                         .map(Self::Transfer)
                 }
                 _ => {
@@ -2893,10 +2764,14 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
 See the [wrapper's documentation](`IERC721Instance`) for more details.*/
     #[inline]
     pub const fn new<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    >(address: alloy_sol_types::private::Address, provider: P) -> IERC721Instance<P, N> {
-        IERC721Instance::<P, N>::new(address, provider)
+    >(
+        address: alloy_sol_types::private::Address,
+        provider: P,
+    ) -> IERC721Instance<T, P, N> {
+        IERC721Instance::<T, P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -2905,14 +2780,15 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<IERC721Instance<P, N>>,
+        Output = alloy_contract::Result<IERC721Instance<T, P, N>>,
     > {
-        IERC721Instance::<P, N>::deploy(provider)
+        IERC721Instance::<T, P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -2921,10 +2797,11 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        IERC721Instance::<P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        IERC721Instance::<T, P, N>::deploy_builder(provider)
     }
     /**A [`IERC721`](self) instance.
 
@@ -2938,13 +2815,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct IERC721Instance<P, N = alloy_contract::private::Ethereum> {
+    pub struct IERC721Instance<T, P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network: ::core::marker::PhantomData<N>,
+        _network_transport: ::core::marker::PhantomData<(N, T)>,
     }
     #[automatically_derived]
-    impl<P, N> ::core::fmt::Debug for IERC721Instance<P, N> {
+    impl<T, P, N> ::core::fmt::Debug for IERC721Instance<T, P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("IERC721Instance").field(&self.address).finish()
@@ -2953,9 +2830,10 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC721Instance<P, N> {
+    > IERC721Instance<T, P, N> {
         /**Creates a new wrapper around an on-chain [`IERC721`](self) contract instance.
 
 See the [wrapper's documentation](`IERC721Instance`) for more details.*/
@@ -2967,7 +2845,7 @@ See the [wrapper's documentation](`IERC721Instance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -2978,7 +2856,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<IERC721Instance<P, N>> {
+        ) -> alloy_contract::Result<IERC721Instance<T, P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -2989,7 +2867,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -3016,23 +2894,24 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<P: ::core::clone::Clone, N> IERC721Instance<&P, N> {
+    impl<T, P: ::core::clone::Clone, N> IERC721Instance<T, &P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> IERC721Instance<P, N> {
+        pub fn with_cloned_provider(self) -> IERC721Instance<T, P, N> {
             IERC721Instance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC721Instance<P, N> {
+    > IERC721Instance<T, P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -3040,7 +2919,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`approve`] function.
@@ -3048,21 +2927,21 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             _approved: alloy::sol_types::private::Address,
             _tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, approveCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, approveCall, N> {
             self.call_builder(&approveCall { _approved, _tokenId })
         }
         ///Creates a new call builder for the [`balanceOf`] function.
         pub fn balanceOf(
             &self,
             _owner: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<&P, balanceOfCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, balanceOfCall, N> {
             self.call_builder(&balanceOfCall { _owner })
         }
         ///Creates a new call builder for the [`getApproved`] function.
         pub fn getApproved(
             &self,
             _tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, getApprovedCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, getApprovedCall, N> {
             self.call_builder(&getApprovedCall { _tokenId })
         }
         ///Creates a new call builder for the [`isApprovedForAll`] function.
@@ -3070,7 +2949,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             _owner: alloy::sol_types::private::Address,
             _operator: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<&P, isApprovedForAllCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, isApprovedForAllCall, N> {
             self.call_builder(
                 &isApprovedForAllCall {
                     _owner,
@@ -3082,7 +2961,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn ownerOf(
             &self,
             _tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, ownerOfCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, ownerOfCall, N> {
             self.call_builder(&ownerOfCall { _tokenId })
         }
         ///Creates a new call builder for the [`safeTransferFrom_0`] function.
@@ -3091,7 +2970,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             _from: alloy::sol_types::private::Address,
             _to: alloy::sol_types::private::Address,
             _tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, safeTransferFrom_0Call, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, safeTransferFrom_0Call, N> {
             self.call_builder(
                 &safeTransferFrom_0Call {
                     _from,
@@ -3107,7 +2986,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             _to: alloy::sol_types::private::Address,
             _tokenId: alloy::sol_types::private::primitives::aliases::U256,
             data: alloy::sol_types::private::Bytes,
-        ) -> alloy_contract::SolCallBuilder<&P, safeTransferFrom_1Call, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, safeTransferFrom_1Call, N> {
             self.call_builder(
                 &safeTransferFrom_1Call {
                     _from,
@@ -3122,7 +3001,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             _operator: alloy::sol_types::private::Address,
             _approved: bool,
-        ) -> alloy_contract::SolCallBuilder<&P, setApprovalForAllCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, setApprovalForAllCall, N> {
             self.call_builder(
                 &setApprovalForAllCall {
                     _operator,
@@ -3134,7 +3013,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn supportsInterface(
             &self,
             interfaceID: alloy::sol_types::private::FixedBytes<4>,
-        ) -> alloy_contract::SolCallBuilder<&P, supportsInterfaceCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, supportsInterfaceCall, N> {
             self.call_builder(
                 &supportsInterfaceCall {
                     interfaceID,
@@ -3147,7 +3026,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             _from: alloy::sol_types::private::Address,
             _to: alloy::sol_types::private::Address,
             _tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, transferFromCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, transferFromCall, N> {
             self.call_builder(
                 &transferFromCall {
                     _from,
@@ -3160,30 +3039,31 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     /// Event filters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC721Instance<P, N> {
+    > IERC721Instance<T, P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<&P, E, N> {
+        ) -> alloy_contract::Event<T, &P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`Approval`] event.
-        pub fn Approval_filter(&self) -> alloy_contract::Event<&P, Approval, N> {
+        pub fn Approval_filter(&self) -> alloy_contract::Event<T, &P, Approval, N> {
             self.event_filter::<Approval>()
         }
         ///Creates a new event filter for the [`ApprovalForAll`] event.
         pub fn ApprovalForAll_filter(
             &self,
-        ) -> alloy_contract::Event<&P, ApprovalForAll, N> {
+        ) -> alloy_contract::Event<T, &P, ApprovalForAll, N> {
             self.event_filter::<ApprovalForAll>()
         }
         ///Creates a new event filter for the [`Transfer`] event.
-        pub fn Transfer_filter(&self) -> alloy_contract::Event<&P, Transfer, N> {
+        pub fn Transfer_filter(&self) -> alloy_contract::Event<T, &P, Transfer, N> {
             self.event_filter::<Transfer>()
         }
     }

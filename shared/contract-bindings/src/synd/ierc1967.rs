@@ -89,8 +89,6 @@ pub mod IERC1967 {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `AdminChanged(address,address)` and selector `0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f`.
 ```solidity
 event AdminChanged(address previousAdmin, address newAdmin);
@@ -128,9 +126,38 @@ event AdminChanged(address previousAdmin, address newAdmin);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "AdminChanged(address,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                126u8, 100u8, 77u8, 121u8, 66u8, 47u8, 23u8, 192u8, 30u8, 72u8, 148u8,
-                181u8, 244u8, 245u8, 136u8, 211u8, 49u8, 235u8, 250u8, 40u8, 101u8, 61u8,
-                66u8, 174u8, 131u8, 45u8, 197u8, 158u8, 56u8, 201u8, 121u8, 143u8,
+                126u8,
+                100u8,
+                77u8,
+                121u8,
+                66u8,
+                47u8,
+                23u8,
+                192u8,
+                30u8,
+                72u8,
+                148u8,
+                181u8,
+                244u8,
+                245u8,
+                136u8,
+                211u8,
+                49u8,
+                235u8,
+                250u8,
+                40u8,
+                101u8,
+                61u8,
+                66u8,
+                174u8,
+                131u8,
+                45u8,
+                197u8,
+                158u8,
+                56u8,
+                201u8,
+                121u8,
+                143u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -205,8 +232,6 @@ event AdminChanged(address previousAdmin, address newAdmin);
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `BeaconUpgraded(address)` and selector `0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e`.
 ```solidity
 event BeaconUpgraded(address indexed beacon);
@@ -242,9 +267,38 @@ event BeaconUpgraded(address indexed beacon);
             );
             const SIGNATURE: &'static str = "BeaconUpgraded(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                28u8, 243u8, 176u8, 58u8, 108u8, 241u8, 159u8, 162u8, 186u8, 186u8, 77u8,
-                241u8, 72u8, 233u8, 220u8, 171u8, 237u8, 234u8, 127u8, 138u8, 92u8, 7u8,
-                132u8, 14u8, 32u8, 126u8, 92u8, 8u8, 155u8, 233u8, 93u8, 62u8,
+                28u8,
+                243u8,
+                176u8,
+                58u8,
+                108u8,
+                241u8,
+                159u8,
+                162u8,
+                186u8,
+                186u8,
+                77u8,
+                241u8,
+                72u8,
+                233u8,
+                220u8,
+                171u8,
+                237u8,
+                234u8,
+                127u8,
+                138u8,
+                92u8,
+                7u8,
+                132u8,
+                14u8,
+                32u8,
+                126u8,
+                92u8,
+                8u8,
+                155u8,
+                233u8,
+                93u8,
+                62u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -312,8 +366,6 @@ event BeaconUpgraded(address indexed beacon);
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `Upgraded(address)` and selector `0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b`.
 ```solidity
 event Upgraded(address indexed implementation);
@@ -349,9 +401,38 @@ event Upgraded(address indexed implementation);
             );
             const SIGNATURE: &'static str = "Upgraded(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                188u8, 124u8, 215u8, 90u8, 32u8, 238u8, 39u8, 253u8, 154u8, 222u8, 186u8,
-                179u8, 32u8, 65u8, 247u8, 85u8, 33u8, 77u8, 188u8, 107u8, 255u8, 169u8,
-                12u8, 192u8, 34u8, 91u8, 57u8, 218u8, 46u8, 92u8, 45u8, 59u8,
+                188u8,
+                124u8,
+                215u8,
+                90u8,
+                32u8,
+                238u8,
+                39u8,
+                253u8,
+                154u8,
+                222u8,
+                186u8,
+                179u8,
+                32u8,
+                65u8,
+                247u8,
+                85u8,
+                33u8,
+                77u8,
+                188u8,
+                107u8,
+                255u8,
+                169u8,
+                12u8,
+                192u8,
+                34u8,
+                91u8,
+                57u8,
+                218u8,
+                46u8,
+                92u8,
+                45u8,
+                59u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -420,8 +501,6 @@ event Upgraded(address indexed implementation);
         }
     };
     ///Container for all the [`IERC1967`](self) events.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC1967Events {
         #[allow(missing_docs)]
         AdminChanged(AdminChanged),
@@ -440,19 +519,106 @@ event Upgraded(address indexed implementation);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                28u8, 243u8, 176u8, 58u8, 108u8, 241u8, 159u8, 162u8, 186u8, 186u8, 77u8,
-                241u8, 72u8, 233u8, 220u8, 171u8, 237u8, 234u8, 127u8, 138u8, 92u8, 7u8,
-                132u8, 14u8, 32u8, 126u8, 92u8, 8u8, 155u8, 233u8, 93u8, 62u8,
+                28u8,
+                243u8,
+                176u8,
+                58u8,
+                108u8,
+                241u8,
+                159u8,
+                162u8,
+                186u8,
+                186u8,
+                77u8,
+                241u8,
+                72u8,
+                233u8,
+                220u8,
+                171u8,
+                237u8,
+                234u8,
+                127u8,
+                138u8,
+                92u8,
+                7u8,
+                132u8,
+                14u8,
+                32u8,
+                126u8,
+                92u8,
+                8u8,
+                155u8,
+                233u8,
+                93u8,
+                62u8,
             ],
             [
-                126u8, 100u8, 77u8, 121u8, 66u8, 47u8, 23u8, 192u8, 30u8, 72u8, 148u8,
-                181u8, 244u8, 245u8, 136u8, 211u8, 49u8, 235u8, 250u8, 40u8, 101u8, 61u8,
-                66u8, 174u8, 131u8, 45u8, 197u8, 158u8, 56u8, 201u8, 121u8, 143u8,
+                126u8,
+                100u8,
+                77u8,
+                121u8,
+                66u8,
+                47u8,
+                23u8,
+                192u8,
+                30u8,
+                72u8,
+                148u8,
+                181u8,
+                244u8,
+                245u8,
+                136u8,
+                211u8,
+                49u8,
+                235u8,
+                250u8,
+                40u8,
+                101u8,
+                61u8,
+                66u8,
+                174u8,
+                131u8,
+                45u8,
+                197u8,
+                158u8,
+                56u8,
+                201u8,
+                121u8,
+                143u8,
             ],
             [
-                188u8, 124u8, 215u8, 90u8, 32u8, 238u8, 39u8, 253u8, 154u8, 222u8, 186u8,
-                179u8, 32u8, 65u8, 247u8, 85u8, 33u8, 77u8, 188u8, 107u8, 255u8, 169u8,
-                12u8, 192u8, 34u8, 91u8, 57u8, 218u8, 46u8, 92u8, 45u8, 59u8,
+                188u8,
+                124u8,
+                215u8,
+                90u8,
+                32u8,
+                238u8,
+                39u8,
+                253u8,
+                154u8,
+                222u8,
+                186u8,
+                179u8,
+                32u8,
+                65u8,
+                247u8,
+                85u8,
+                33u8,
+                77u8,
+                188u8,
+                107u8,
+                255u8,
+                169u8,
+                12u8,
+                192u8,
+                34u8,
+                91u8,
+                57u8,
+                218u8,
+                46u8,
+                92u8,
+                45u8,
+                59u8,
             ],
         ];
     }
@@ -463,12 +629,14 @@ event Upgraded(address indexed implementation);
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<AdminChanged as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <AdminChanged as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
+                            validate,
                         )
                         .map(Self::AdminChanged)
                 }
@@ -476,11 +644,16 @@ event Upgraded(address indexed implementation);
                     <BeaconUpgraded as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
+                            validate,
                         )
                         .map(Self::BeaconUpgraded)
                 }
                 Some(<Upgraded as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <Upgraded as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
+                    <Upgraded as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                            validate,
+                        )
                         .map(Self::Upgraded)
                 }
                 _ => {
@@ -532,13 +705,14 @@ event Upgraded(address indexed implementation);
 See the [wrapper's documentation](`IERC1967Instance`) for more details.*/
     #[inline]
     pub const fn new<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> IERC1967Instance<P, N> {
-        IERC1967Instance::<P, N>::new(address, provider)
+    ) -> IERC1967Instance<T, P, N> {
+        IERC1967Instance::<T, P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -547,14 +721,15 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<IERC1967Instance<P, N>>,
+        Output = alloy_contract::Result<IERC1967Instance<T, P, N>>,
     > {
-        IERC1967Instance::<P, N>::deploy(provider)
+        IERC1967Instance::<T, P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -563,10 +738,11 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        IERC1967Instance::<P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        IERC1967Instance::<T, P, N>::deploy_builder(provider)
     }
     /**A [`IERC1967`](self) instance.
 
@@ -580,13 +756,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct IERC1967Instance<P, N = alloy_contract::private::Ethereum> {
+    pub struct IERC1967Instance<T, P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network: ::core::marker::PhantomData<N>,
+        _network_transport: ::core::marker::PhantomData<(N, T)>,
     }
     #[automatically_derived]
-    impl<P, N> ::core::fmt::Debug for IERC1967Instance<P, N> {
+    impl<T, P, N> ::core::fmt::Debug for IERC1967Instance<T, P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("IERC1967Instance").field(&self.address).finish()
@@ -595,9 +771,10 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC1967Instance<P, N> {
+    > IERC1967Instance<T, P, N> {
         /**Creates a new wrapper around an on-chain [`IERC1967`](self) contract instance.
 
 See the [wrapper's documentation](`IERC1967Instance`) for more details.*/
@@ -609,7 +786,7 @@ See the [wrapper's documentation](`IERC1967Instance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -620,7 +797,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<IERC1967Instance<P, N>> {
+        ) -> alloy_contract::Result<IERC1967Instance<T, P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -631,7 +808,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -658,23 +835,24 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<P: ::core::clone::Clone, N> IERC1967Instance<&P, N> {
+    impl<T, P: ::core::clone::Clone, N> IERC1967Instance<T, &P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> IERC1967Instance<P, N> {
+        pub fn with_cloned_provider(self) -> IERC1967Instance<T, P, N> {
             IERC1967Instance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC1967Instance<P, N> {
+    > IERC1967Instance<T, P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -682,37 +860,40 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC1967Instance<P, N> {
+    > IERC1967Instance<T, P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<&P, E, N> {
+        ) -> alloy_contract::Event<T, &P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`AdminChanged`] event.
-        pub fn AdminChanged_filter(&self) -> alloy_contract::Event<&P, AdminChanged, N> {
+        pub fn AdminChanged_filter(
+            &self,
+        ) -> alloy_contract::Event<T, &P, AdminChanged, N> {
             self.event_filter::<AdminChanged>()
         }
         ///Creates a new event filter for the [`BeaconUpgraded`] event.
         pub fn BeaconUpgraded_filter(
             &self,
-        ) -> alloy_contract::Event<&P, BeaconUpgraded, N> {
+        ) -> alloy_contract::Event<T, &P, BeaconUpgraded, N> {
             self.event_filter::<BeaconUpgraded>()
         }
         ///Creates a new event filter for the [`Upgraded`] event.
-        pub fn Upgraded_filter(&self) -> alloy_contract::Event<&P, Upgraded, N> {
+        pub fn Upgraded_filter(&self) -> alloy_contract::Event<T, &P, Upgraded, N> {
             self.event_filter::<Upgraded>()
         }
     }
