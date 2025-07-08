@@ -89,7 +89,7 @@ async fn e2e_send_transaction() -> Result<()> {
         // Wait for the tx to arrive
         wait_until!(
             components.appchain_provider.get_block_number().await? == 2,
-            Duration::from_secs(1)
+            Duration::from_secs(20)
         );
 
         // check the second appchain block

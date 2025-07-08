@@ -150,7 +150,7 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
      * @param to The address to mint tokens to
      * @param amount The amount of tokens to mint
      */
-    function mint(address to, uint256 amount) external onlyRole(EMISSION_MINTER_ROLE) {
+    function mint(address to, uint256 amount) external virtual onlyRole(EMISSION_MINTER_ROLE) {
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 

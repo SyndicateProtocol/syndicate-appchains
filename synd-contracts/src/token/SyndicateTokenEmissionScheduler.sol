@@ -219,6 +219,11 @@ contract SyndicateTokenEmissionScheduler is AccessControl, Pausable, ReentrancyG
             totalToMint += emissionSchedule[currentEpoch + i];
         }
 
+        // If there's nothing to mint, return early (can happen in edge cases)
+        if (totalToMint == 0) {
+            return;
+        }
+
         // Update state before external calls
         currentEpoch += epochsToMint;
         totalEmissionsMinted += totalToMint;
