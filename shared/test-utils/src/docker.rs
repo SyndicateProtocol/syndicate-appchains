@@ -181,7 +181,7 @@ pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2E
             .send()
             .await
             .is_ok_and(|x| x.status().is_success()),
-        Duration::from_secs(10*60)  // give it time to download the image if necessary
+        Duration::from_secs(15*60)  // give it time to download the image if necessary
     );
 }
 
