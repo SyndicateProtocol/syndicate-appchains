@@ -1,29 +1,39 @@
 package pkg
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	EthereumRPCURL           string
-	SettlementRPCURL         string
-	SettlementChainID        uint64
-	SequencingRPCURL         string
-	AppchainRPCURL           string
-	EnclaveRPCURL            string
-	TeeModuleContractAddress string
-	ArbitrumBridgeAddress    string
-	InboxAddress             string
-	SequencerInboxAddress    string
-	PrivateKey               string
-	PollingInterval          time.Duration
-	CloseChallengeInterval   time.Duration
-	MetricsPort              int
+	EthereumRPCURL    string
+	SettlementRPCURL  string
+	SettlementChainID uint64
+
+	SequencingRPCURL string
+	AppchainRPCURL   string
+	EnclaveRPCURL    string
+
+	PrivateKey             *ecdsa.PrivateKey
+	PollingInterval        time.Duration
+	CloseChallengeInterval time.Duration
+	MetricsPort            int
+
+	TeeModuleContractAddress common.Address
+	SequencingInboxAddress   common.Address
+
+	AppchainBridgeAddress common.Address
+	AppchainInboxAddress  common.Address
+
+	EnclaveConfig enclave.Config
 }
 
 var ConfigKeys = map[string]struct {
@@ -38,13 +48,16 @@ var ConfigKeys = map[string]struct {
 	"appchain-rpc-url":            {"Appchain RPC URL", "", true},
 	"enclave-rpc-url":             {"Enclave RPC URL", "", true},
 	"tee-module-contract-address": {"TEE Module Contract Address", "", true},
-	"arbitrum-bridge-address":     {"Arbitrum Bridge Address", "", true},
-	"inbox-address":               {"Inbox Address", "", true},
-	"sequencer-inbox-address":     {"Sequencer Inbox Address", "", true},
+	"sequencing-inbox-address":    {"Sequencing Inbox Address", "", true},
+	"appchain-bridge-address":     {"Appchain Bridge Address", "", true},
+	"appchain-inbox-address":      {"Appchain Inbox Address", "", true},
 	"private-key":                 {"Private Key", "", true},
 	"polling-interval":            {"Polling interval", "10m", false},
 	"close-challenge-interval":    {"Close challenge interval", "5m", false},
 	"metrics-port":                {"Metrics port", "9292", false},
+	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
+	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
+	"settlement-delay":            {"Settlement Delay", "60", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
@@ -80,6 +93,11 @@ func LoadConfig() (*Config, error) {
 
 	metricsPort := viper.GetInt("metrics-port")
 
+	privateKey, err := crypto.HexToECDSA(viper.GetString("private-key"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid private-key: %v", err)
+	}
+
 	return &Config{
 		EthereumRPCURL:           viper.GetString("ethereum-rpc-url"),
 		SettlementRPCURL:         viper.GetString("settlement-rpc-url"),
@@ -87,14 +105,19 @@ func LoadConfig() (*Config, error) {
 		SequencingRPCURL:         viper.GetString("sequencing-rpc-url"),
 		AppchainRPCURL:           viper.GetString("appchain-rpc-url"),
 		EnclaveRPCURL:            viper.GetString("enclave-rpc-url"),
-		TeeModuleContractAddress: viper.GetString("tee-module-contract-address"),
-		ArbitrumBridgeAddress:    viper.GetString("arbitrum-bridge-address"),
-		InboxAddress:             viper.GetString("inbox-address"),
-		SequencerInboxAddress:    viper.GetString("sequencer-inbox-address"),
-		PrivateKey:               viper.GetString("private-key"),
+		TeeModuleContractAddress: common.HexToAddress(viper.GetString("tee-module-contract-address")),
+		SequencingInboxAddress:   common.HexToAddress(viper.GetString("sequencing-inbox-address")),
+		AppchainBridgeAddress:    common.HexToAddress(viper.GetString("appchain-bridge-address")),
+		AppchainInboxAddress:     common.HexToAddress(viper.GetString("appchain-inbox-address")),
+		PrivateKey:               privateKey,
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
 		MetricsPort:              metricsPort,
+		EnclaveConfig: enclave.Config{
+			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
+			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
+			SettlementDelay:           viper.GetUint64("settlement-delay"),
+		},
 	}, nil
 }
 
