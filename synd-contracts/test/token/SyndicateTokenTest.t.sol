@@ -175,7 +175,7 @@ contract SyndicateTokenTest is Test {
 
         vm.roll(block.number + 1);
 
-        assertEq(token.getPastVotingPower(user, block.number - 1), token.INITIAL_MINT_SUPPLY());
+        assertEq(token.getPastVotingPowerToTriggerCommand(user, block.number - 1), token.INITIAL_MINT_SUPPLY());
     }
 
     function test_GetCurrentTotalSupply() public view {
