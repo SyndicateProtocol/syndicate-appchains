@@ -9,16 +9,19 @@ on:
   pull_request:
 
 concurrency:
-  group: rust-ci
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
   # Make sure CI fails on all warnings, including Clippy lints
   RUSTFLAGS: "-Dwarnings"
+  # Use a shared cache key for all jobs in the same PR/run, as long as no dependencies have changed
+  CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}-${{ hashFiles('**/Cargo.lock') }}"
+  # Rust version for consistency across jobs
+  RUST_VERSION: "1.88.0"
 
 jobs:
-
   taplo:
     name: Cargo.toml format validation
     runs-on: ubuntu-latest
@@ -39,6 +42,7 @@ jobs:
       # Check Cargo.toml formatting
       - name: Check Cargo.toml formatting. Remove `--check` from command to apply changes
         run: taplo fmt --check "**/Cargo.toml" --verbose
+
   machete:
     name: Machete
     runs-on: ubuntu-latest
@@ -78,49 +82,58 @@ jobs:
 
       - name: Run Fmt
         run: cargo +nightly fmt --all --check -- --unstable-features
-      
+
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: shared-large-01
     steps:
       - uses: actions/checkout@v4
 
-      # always manually select the rust toolchain before using the cache plugin (needs to be the same rustc version)
       - name: Install Rust toolchain
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup component add clippy
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ env.CACHE_KEY }}
+          save-if: 'true' # skip saving this cache, only save the one in `tests`
 
       - name: Install SP1 toolchain
         run: |
-          curl -L https://sp1.succinct.xyz | bash
-          $HOME/.sp1/bin/sp1up 
-          $HOME/.sp1/bin/cargo-prove prove --version
+          curl -L https://sp1up.succinct.xyz | bash
+          ~/.sp1/bin/sp1up
+          ~/.sp1/bin/cargo-prove prove --version
 
       - name: Build SP1 ELF program
         run: |
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-          $HOME/.sp1/bin/cargo-prove prove build
+          ~/.sp1/bin/cargo-prove prove build
 
       # Run Clippy checks on entire workspace
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets --all-features
 
-  test:
-    name: Tests
-    runs-on: shared-large-01
+  unit-tests:
+    name: Unit tests
+    runs-on: shared-large-02
     timeout-minutes: 45
-    needs: clippy
     steps:
       - uses: actions/checkout@v4
 
-      # always manually select the rust toolchain before using the cache plugin
       - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ env.CACHE_KEY }}
+          save-if: 'true' # do save this one
 
       # Install Foundry (required for Anvil, a local Ethereum node simulator)
       # Anvil is a critical dependency for tests, particularly
@@ -147,9 +160,7 @@ jobs:
           anvil --version
 
       - name: Install nextest
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest
+        uses: taiki-e/install-action@nextest
 
       - name: Pre-download docker test docker images
         run: |
@@ -157,5 +168,62 @@ jobs:
           docker pull valkey/valkey:latest
           docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
 
-      - name: Run Integration Tests with Nextest
-        run: cargo nextest run --workspace --fail-fast
+      # Run unit and integration tests, excluding the test-framework package
+      - name: Run Unit and Integration Tests
+        run: cargo nextest run --workspace --exclude test-framework --fail-fast
+
+  e2e-tests:
+    name: E2E tests
+    runs-on: shared-large-02
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ env.CACHE_KEY }}
+          save-if: 'false'
+
+      # Install Foundry (required for Anvil, a local Ethereum node simulator)
+      # Anvil is a critical dependency for tests, particularly
+      # the block builder component which uses it to simulate blockchain operations
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          $HOME/.sp1/bin/sp1up 
+          $HOME/.sp1/bin/cargo-prove prove --version
+
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+          $HOME/.sp1/bin/cargo-prove prove build
+
+      - name: Verify Foundry Installation
+        run: |
+          which anvil
+          anvil --version
+
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Pre-download docker test docker images
+        run: |
+          docker pull ghcr.io/syndicateprotocol/generate_batch
+          docker pull valkey/valkey:latest
+          docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
+
+      # Run only the test-framework package tests
+      - name: Run E2E Tests
+        run: cargo nextest run --package test-framework --fail-fast
