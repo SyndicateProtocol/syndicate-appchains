@@ -110,7 +110,7 @@ jobs:
 
   test:
     name: Tests
-    runs-on: vip-large-01
+    runs-on: shared-large-01
     timeout-minutes: 45
     needs: clippy
     steps:
@@ -160,4 +160,4 @@ jobs:
 
       # Run synd-maestro tests with nextest (using existing config)
       - name: Run Integration Tests with Nextest
-        run: cargo nextest run --workspace
+        run: cargo nextest run --workspace --fail-fast
