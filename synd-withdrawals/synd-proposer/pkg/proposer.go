@@ -183,7 +183,7 @@ func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.Trusted
 	}
 
 	// Prove method
-	count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, trustedInput.L1StartBatchAcc)
+	count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, trustedInput.L1EndHash)
 	if err != nil {
 		return appOutput, err
 	}
@@ -247,8 +247,6 @@ func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.Trusted
 	if err := p.EthereumClient.Client().CallContext(ctx, &proof, "eth_getProof", p.Config.EnclaveConfig.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
 		return appOutput, err
 	}
-
-	fmt.Println("Proof: ", proof)
 
 	// derive sequencing chain
 	var seqOutput enclave.VerifySequencingChainOutput

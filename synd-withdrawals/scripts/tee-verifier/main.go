@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -46,7 +48,11 @@ func main() {
 	ctx := context.Background()
 
 	var teeModuleAddress common.Address // Don't need to set this value for this script
-	var privateKey *ecdsa.PrivateKey    // Don't need to set this value for this script
+
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
 
 	proposerConfig := &pkg.Config{
 		EthereumRPCURL:           *l1Url,
