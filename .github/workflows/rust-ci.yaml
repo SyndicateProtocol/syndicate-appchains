@@ -106,6 +106,7 @@ jobs:
           key: ${{ runner.os }}-sp1-toolchain-v1
 
       - name: Install SP1 toolchain
+        if: steps.cache-sp1.outputs.cache-hit != 'true'
         run: |
           curl -L https://sp1.succinct.xyz | bash
           $HOME/.sp1/bin/sp1up
@@ -118,6 +119,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
+            # Include ALL locations where the ELF might be
+            target/elf-compilation
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target
           key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}
@@ -166,6 +169,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
+            # Include BOTH locations
+            target/elf-compilation
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target
           key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}
