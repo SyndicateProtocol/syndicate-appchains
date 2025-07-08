@@ -97,7 +97,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           # This creates a shared cache for this PR/commit
-          shared-key: ${{ env.SHARED_CACHE_KEY }}
+          shared-key: ${{ env.CACHE_KEY }}
           # Only save cache from one job (not this one) to avoid conflicts
           save-if: false
 
@@ -131,7 +131,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           # Same shared key as `clippy` job
-          shared-key: ${{ env.SHARED_CACHE_KEY }}
+          shared-key: ${{ env.CACHE_KEY }}
           # Save cache only from this `test` job
           save-if: true
 
