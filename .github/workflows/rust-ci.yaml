@@ -110,7 +110,7 @@ jobs:
 
   test:
     name: Tests
-    runs-on: vip-large-01
+    runs-on: shared-large-01
     timeout-minutes: 45
     needs: clippy
     steps:
