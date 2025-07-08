@@ -4,7 +4,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "synd-withdrawals/synd-enclave/**"
+      - "synd-withdrawals/synd-proposer/**"
   pull_request:
+    paths:
+      - "synd-withdrawals/synd-enclave/**"
+      - "synd-withdrawals/synd-proposer/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -13,7 +19,7 @@ concurrency:
 jobs:
   enclave-build:
     name: build enclave
-    runs-on: vip-large-01
+    runs-on: shared-large-01
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -39,13 +45,66 @@ jobs:
 
   proposer-test:
     name: test synd-proposer
-    runs-on: ubuntu-latest
+    runs-on: shared-large-01
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
-      - name: Run Go tests
+          go-version: "1.24"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+
+      - name: Install Ubuntu dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential cmake lld-14 libudev-dev wabt clang
+          sudo ln -s /usr/bin/wasm-ld-14 /usr/local/bin/wasm-ld
+          # Verify WASM tools are available
+          which wat2wasm
+          which wasm-ld
+
+      - name: Install rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        id: install-rust-nightly
+        with:
+          toolchain: "nightly-2025-02-14"
+          targets: "wasm32-wasip1, wasm32-unknown-unknown"
+          components: "rust-src, rustfmt, clippy"
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.84.1"
+          targets: "wasm32-wasip1, wasm32-unknown-unknown"
+          components: "cargo, rustc, clippy"
+
+      - name: Install cbindgen
+        run: |
+          cargo install --force cbindgen
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          cache: false
+
+      - name: Build all lint dependencies
+        run: |
+          cd synd-withdrawals/synd-enclave/nitro
+          make build-node-deps
+
+      - name: Tidy modules
+        run: |
+          cd synd-withdrawals/synd-proposer
+          go mod tidy
+
+      - name: Run Synd-Proposer tests
         run: |
           cd synd-withdrawals/synd-proposer
           go test ./...

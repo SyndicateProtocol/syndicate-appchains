@@ -10,7 +10,6 @@ pub(super) struct TranslatorConfig {
     pub(crate) appchain_chain_id: Option<u64>,
     pub(crate) mchain_ws_url: String,
     pub(crate) sequencing_ws_url: Option<String>,
-    pub(crate) appchain_block_explorer_url: Option<String>,
     pub(crate) settlement_ws_url: String,
     pub(crate) metrics_port: u16,
     pub(crate) sequencing_start_block: Option<u64>,
@@ -31,10 +30,6 @@ impl TranslatorConfig {
 
         if let Some(url) = &self.sequencing_ws_url {
             args.extend(vec!["--sequencing-ws-url".to_string(), url.to_string()]);
-        }
-
-        if let Some(url) = &self.appchain_block_explorer_url {
-            args.extend(vec!["--appchain-block-explorer-url".to_string(), url.to_string()]);
         }
 
         if let Some(addr) = self.arbitrum_bridge_address {

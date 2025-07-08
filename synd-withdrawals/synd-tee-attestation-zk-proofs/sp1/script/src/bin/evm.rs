@@ -90,7 +90,7 @@ fn create_proof_fixture(
     // Deserialize the public values.
     let public_values_bytes = proof.public_values.as_slice();
 
-    let pub_values = PublicValuesStruct::abi_decode(public_values_bytes, true).unwrap();
+    let pub_values = PublicValuesStruct::abi_decode_validate(public_values_bytes).unwrap();
 
     // Create the testing fixture so we can test things end-to-end.
     let fixture = SP1x509ProofFixture {

@@ -21,20 +21,17 @@ alloy = { workspace = true, features = [
 contract-bindings = { workspace = true }
 ctor = { workspace = true }
 eyre = { workspace = true }
-redis = { workspace = true }
+redis = { workspace = true, features = ["connection-manager"] }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 shared = { workspace = true }
+synd-chain-ingestor = { workspace = true }
 synd-maestro = { workspace = true }
 synd-mchain = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }
-
-
-[dev-dependencies]
-synd-chain-ingestor = { workspace = true }
 
 [features]
 env-tests = []

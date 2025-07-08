@@ -10,8 +10,8 @@ use std::time::Duration;
 #[command(version, about)]
 #[allow(missing_docs)]
 pub struct Config {
-    #[arg(long, env = "WS_URL")]
-    pub ws_url: String,
+    #[arg(long, env = "WS_URLS")]
+    pub ws_urls: Vec<String>,
     #[arg(long, env = "DB_FILE")]
     pub db_file: String,
     #[arg(long, env = "START_BLOCK", default_value_t = 0)]
@@ -31,16 +31,24 @@ pub struct Config {
         value_parser = parse_duration
     )]
     pub request_timeout: Duration,
+    #[arg(
+        long,
+        env = "RPC_RETRY_INTERVAL",
+        default_value = "1s",
+        value_parser = parse_duration
+    )]
+    pub rpc_retry_interval: Duration,
 }
 
 impl Config {
     /// Creates a new [`EthClient`] provider from the configuration
     pub async fn new_provider(&self) -> EthClient {
         EthClient::new(
-            &self.ws_url,
+            self.ws_urls.clone(),
             self.request_timeout,
             Duration::from_secs(300),
             self.channel_size,
+            self.rpc_retry_interval,
         )
         .await
     }

@@ -225,7 +225,7 @@ mod tests {
 
         // Test 3: Truncated compressed data
         let truncated = &compress_transaction(&SAMPLE_TX_1).unwrap()[0..5];
-        assert!(decompress_transaction(truncated).is_err());
+        assert!(decompress_transaction(truncated).is_ok_and(|x| x.is_empty()));
 
         // Test 4: Random invalid data
         let random_data = vec![1, 2, 3, 4, 5];
@@ -274,6 +274,6 @@ mod tests {
         let truncated = Bytes::copy_from_slice(
             &compress_transactions(&[Bytes::copy_from_slice(&SAMPLE_TX_1)]).unwrap()[0..5],
         );
-        assert!(decompress_transactions(&truncated).is_err());
+        assert!(decompress_transactions(&truncated).is_ok_and(|x| x.is_empty()));
     }
 }

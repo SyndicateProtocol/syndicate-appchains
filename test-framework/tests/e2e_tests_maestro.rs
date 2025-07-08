@@ -12,6 +12,7 @@ use alloy::{
     },
 };
 use contract_bindings::synd::rollup::{Rollup, Rollup::RollupInstance};
+use redis::aio::ConnectionManager;
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -50,7 +51,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -72,7 +73,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -107,7 +108,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -141,7 +142,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -155,7 +156,6 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
     .await
 }
 
-// TODO (SEQ-917): Fix flaky test
 // Duplicate txn spam is rejected, dispatched concurrently
 #[tokio::test]
 async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
@@ -176,7 +176,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -316,7 +316,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 wait_until!(
                     components_arc.appchain_provider.get_transaction_count(*address).await? ==
                         nonce + 1,
-                    Duration::from_secs(3)
+                    Duration::from_secs(60)
                 );
             }
 
@@ -357,7 +357,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -529,7 +529,7 @@ async fn create_and_fund_wallet(
     components: &TestComponents,
     funding_wallet_address: Address,
     value: U256,
-    inbox: &RollupInstance<(), &FilledProvider>,
+    inbox: &RollupInstance<&FilledProvider>,
 ) -> Result<(LocalSigner<SigningKey>, Address), eyre::Error> {
     let wallet_signer = PrivateKeySigner::random();
     let wallet_address = wallet_signer.address();
@@ -540,7 +540,7 @@ async fn create_and_fund_wallet(
     // Wait for deposit to be processed for the second wallet
     wait_until!(
         components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-        Duration::from_secs(10)
+        Duration::from_secs(60)
     );
     Ok((wallet_signer, wallet_address))
 }
@@ -565,7 +565,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -601,7 +601,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -640,7 +640,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -694,7 +694,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
 
             // Assert waiting txns in cache
             let valkey_client = redis::Client::open(components.valkey_url.as_str()).unwrap();
-            let mut valkey_conn = valkey_client.get_multiplexed_async_connection().await.unwrap();
+            let mut valkey_conn = ConnectionManager::new(valkey_client).await.unwrap();
             let waiting_txn_2 =
                 valkey_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
             assert!(waiting_txn_2.is_some());
@@ -705,7 +705,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 3,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed

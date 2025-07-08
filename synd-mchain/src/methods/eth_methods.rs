@@ -14,13 +14,13 @@ use alloy::{
     sol_types::{SolCall, SolEvent as _, SolValue as _},
 };
 use contract_bindings::synd::{
-    ibridge::IBridge,
-    iinbox::IInbox,
-    iinboxbase::IInboxBase,
-    isequencerinbox::{self, ISequencerInbox},
+    i_bridge::IBridge,
+    i_inbox::IInbox,
+    i_inbox_base::IInboxBase,
+    i_sequencer_inbox::{self, ISequencerInbox},
 };
 use jsonrpsee::{
-    core::error::StringError,
+    core::SubscriptionError,
     types::{ErrorObjectOwned, Params},
     Extensions, PendingSubscriptionSink,
 };
@@ -38,7 +38,7 @@ pub async fn eth_subscribe(
     pending: PendingSubscriptionSink,
     ctx: Arc<(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>)>,
     _: Extensions,
-) -> Result<(), StringError> {
+) -> Result<(), SubscriptionError> {
     let (param,): (&str,) = p.parse()?;
     if param != "newHeads" {
         return Err(format!("unknown subscription event: {param}").into());
@@ -147,7 +147,7 @@ pub fn eth_get_logs(
                     afterAcc: block.after_batch_acc,
                     delayedAcc: block.after_message_acc(),
                     afterDelayedMessagesRead: U256::from(block.after_message_count()),
-                    timeBounds: isequencerinbox::IBridge::TimeBounds {
+                    timeBounds: i_sequencer_inbox::IBridge::TimeBounds {
                         minTimestamp: 0,
                         maxTimestamp: u64::MAX,
                         minBlockNumber: 0,
@@ -255,14 +255,13 @@ pub fn eth_call(
             Ok(db.get_state().batch_count.abi_encode().into())
         }
         IBridge::delayedInboxAccsCall::SELECTOR => {
-            let data =
-                IBridge::delayedInboxAccsCall::abi_decode(input.as_ref(), false).map_err(to_err)?;
-            let index = data._0.try_into().map_err(to_err)?;
+            let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
+            let index = data.0.try_into().map_err(to_err)?;
             Ok(db.get_message_acc(index)?.abi_encode().into())
         }
         ISequencerInbox::inboxAccsCall::SELECTOR => {
-            let data = ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref(), false)
-                .map_err(to_err)?;
+            let data =
+                ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
             let index: u64 = data.index.try_into().map_err(to_err)?;
             Ok(db.get_block(index + 1)?.after_batch_acc.abi_encode().into())
         }

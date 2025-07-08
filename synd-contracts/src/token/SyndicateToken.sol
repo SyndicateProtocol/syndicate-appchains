@@ -75,7 +75,7 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Initial mint to foundation: 900 million tokens (90%)
     uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
 
-    /// @notice Maximum lock duration: 90 days (1 year)
+    /// @notice Maximum lock duration: 90 days
     uint256 public constant MAX_LOCK_DURATION = 90 days;
 
     /*//////////////////////////////////////////////////////////////
@@ -150,7 +150,7 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
      * @param to The address to mint tokens to
      * @param amount The amount of tokens to mint
      */
-    function mint(address to, uint256 amount) external onlyRole(EMISSION_MINTER_ROLE) {
+    function mint(address to, uint256 amount) external virtual onlyRole(EMISSION_MINTER_ROLE) {
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 
@@ -164,8 +164,17 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        AIRDROP MANAGER FUNCTIONS
+                           BURN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Burn tokens from caller's balance
+     * @param amount Amount of tokens to burn
+     */
+    function burn(uint256 amount) external {
+        if (amount == 0) revert ZeroAmount();
+        _burn(msg.sender, amount);
+    }
 
     /**
      * @notice Burn tokens from a specific address (only during lock period)
@@ -175,7 +184,9 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
      */
     function burnFrom(address from, uint256 amount) external onlyRole(AIRDROP_MANAGER_ROLE) {
         if (from == address(0)) revert ZeroAddress();
+
         if (amount == 0) revert ZeroAmount();
+
         if (!transfersLocked()) revert BurnOnlyDuringLockPeriod();
 
         _burn(from, amount);
@@ -281,6 +292,7 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
             }
         }
 
+        // Call the parent implementation
         super._update(from, to, value);
     }
 

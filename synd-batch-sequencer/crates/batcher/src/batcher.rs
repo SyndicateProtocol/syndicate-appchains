@@ -9,18 +9,19 @@ use alloy::{
     network::EthereumWallet,
     primitives::{keccak256, Address, Bytes},
     providers::{Provider, ProviderBuilder, WalletProvider},
+    rpc::client::RpcClient,
     signers::local::PrivateKeySigner,
-    transports::TransportError,
+    transports::{layers::RetryBackoffLayer, TransportError},
 };
 use axum::{
     http::StatusCode,
     response::Json,
     routing::{get, MethodRouter},
 };
-use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
+use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::{aio::MultiplexedConnection, AsyncCommands, Client as ValkeyClient};
+use redis::{aio::ConnectionManager, AsyncCommands, Client as ValkeyClient};
 use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
     tracing::SpanKind,
@@ -46,7 +47,7 @@ struct Batcher {
     /// The Stream consumer for the batcher
     stream_consumer: StreamConsumer,
     /// The sequencing contract provider for the batcher
-    sequencing_contract_provider: SyndicateSequencingChainInstance<(), FilledProvider>,
+    sequencing_contract_instance: SyndicateSequencingChainInstance<FilledProvider>,
     /// The chain ID for the batcher
     chain_id: u64,
     /// The timeout for the batcher (default: 200ms)
@@ -78,7 +79,7 @@ pub async fn run_batcher(
     let client = ValkeyClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
-    let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
+    let conn = ConnectionManager::new(client).await.map_err(|e| {
         eyre!("Failed to get Valkey connection: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
     let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
@@ -89,17 +90,17 @@ pub async fn run_batcher(
     let health_handler = health_handler(conn);
     tokio::spawn(start_metrics_and_health(metrics_state, metrics_port, Some(health_handler)));
 
-    let sequencing_contract_provider =
-        create_sequencing_contract_provider(config, sequencing_contract_address).await?;
+    let sequencing_contract_instance =
+        create_sequencing_contract_instance(config, sequencing_contract_address).await?;
 
-    let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_provider, metrics);
+    let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics);
 
     let handle = tokio::spawn({
         async move {
             loop {
                 debug!("Batcher reading and batching transactions at time {:?}", Instant::now());
                 if let Err(e) = batcher.process_transactions().await {
-                    error!("Batcher error: {:?}", e);
+                    error!("Batcher error: {e:?}");
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             }
@@ -111,15 +112,15 @@ pub async fn run_batcher(
 
 /// Checks if the cache connection is healthy
 /// This method attempts to ping the cache connection to check if it is healthy.
-fn health_handler(
-    valkey_conn: MultiplexedConnection,
-) -> MethodRouter<std::sync::Arc<MetricsState>> {
+fn health_handler(valkey_conn: ConnectionManager) -> MethodRouter<std::sync::Arc<MetricsState>> {
     let mut conn = valkey_conn;
     get(move || async move {
-        let health: Result<String, _> = conn.ping().await;
+        // Add timeout to prevent hanging when valkey is down
+        let health = tokio::time::timeout(Duration::from_secs(2), conn.ping::<String>()).await;
+
         match health {
-            Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
-            Err(e) => {
+            Ok(Ok(_)) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
+            Ok(Err(e)) => {
                 error!("Cache connection is not healthy: {:?}", e);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -129,20 +130,41 @@ fn health_handler(
                     })),
                 )
             }
+            Err(_) => {
+                error!("Cache connection ping timed out");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "health": false,
+                        "message": "Cache connection ping timed out"
+                    })),
+                )
+            }
         }
     })
 }
 
-async fn create_sequencing_contract_provider(
+async fn create_sequencing_contract_instance(
     config: &BatcherConfig,
     sequencing_contract_address: Address,
-) -> Result<SyndicateSequencingChainInstance<(), FilledProvider>, TransportError> {
+) -> Result<SyndicateSequencingChainInstance<FilledProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
-    let sequencing_provider = ProviderBuilder::new()
-        .wallet(EthereumWallet::from(signer))
-        .connect(config.sequencing_rpc_url.as_str())
-        .await?;
+
+    let rpc_client = {
+        RetryBackoffLayer::new(
+            config.rpc_max_retries,
+            config.rpc_initial_backoff_ms,
+            config.rpc_compute_units_per_second,
+        )
+        .with_avg_unit_cost(config.rpc_compute_units_avg_request_cost);
+        RpcClient::builder().layer(())
+    }
+    .connect(config.sequencing_rpc_url.as_str())
+    .await?;
+
+    let sequencing_provider =
+        ProviderBuilder::new().wallet(EthereumWallet::from(signer)).connect_client(rpc_client);
     Ok(SyndicateSequencingChainInstance::new(sequencing_contract_address, sequencing_provider))
 }
 
@@ -150,14 +172,14 @@ impl Batcher {
     const fn new(
         config: &BatcherConfig,
         stream_consumer: StreamConsumer,
-        sequencing_contract_provider: SyndicateSequencingChainInstance<(), FilledProvider>,
+        sequencing_contract_instance: SyndicateSequencingChainInstance<FilledProvider>,
         metrics: BatcherMetrics,
     ) -> Self {
         Self {
             compression_enabled: config.compression_enabled,
             max_batch_size: config.max_batch_size.as_u64() as usize,
             stream_consumer,
-            sequencing_contract_provider,
+            sequencing_contract_instance,
             chain_id: config.chain_id,
             timeout: config.timeout,
             metrics,
@@ -281,13 +303,13 @@ impl Batcher {
 
         let _ = match batch {
             SequencingBatch::Compressed(batch) => {
-                self.sequencing_contract_provider
+                self.sequencing_contract_instance
                     .processTransaction(Bytes::from(batch))
                     .send()
                     .await
             }
             SequencingBatch::Uncompressed(batch) => {
-                self.sequencing_contract_provider
+                self.sequencing_contract_instance
                     .processTransactionsBulk(
                         batch.iter().map(|tx| Bytes::from(tx.clone())).collect(),
                     )
@@ -304,7 +326,7 @@ impl Batcher {
     }
 
     fn record_wallet_balance(&self) {
-        let provider = self.sequencing_contract_provider.provider().clone();
+        let provider = self.sequencing_contract_instance.provider().clone();
         let metrics = self.metrics.clone();
         tokio::spawn(async move {
             let wallet_address = provider.default_signer_address();
@@ -338,7 +360,7 @@ mod tests {
     // Create a mock provider that always succeeds
     async fn create_mock_contract(
         anvil: Option<&AnvilInstance>,
-    ) -> SyndicateSequencingChainInstance<(), FilledProvider> {
+    ) -> SyndicateSequencingChainInstance<FilledProvider> {
         let mock_address = Address::from([0; 20]); // Use a dummy address
 
         let signer = PrivateKeySigner::from_str(
@@ -361,7 +383,9 @@ mod tests {
             provider
         } else {
             let asserter = Asserter::new();
-            ProviderBuilder::new().wallet(EthereumWallet::from(signer)).on_mocked_client(asserter)
+            ProviderBuilder::new()
+                .wallet(EthereumWallet::from(signer))
+                .connect_mocked_client(asserter)
         };
         SyndicateSequencingChainInstance::new(mock_address, mock_provider)
     }
@@ -376,6 +400,7 @@ mod tests {
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            ..Default::default()
         }
     }
 
@@ -385,9 +410,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let chain_id = 1;
@@ -407,8 +430,9 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
+        let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher =
-            Batcher::new(&config, stream_consumer, create_mock_contract(None).await, metrics);
+            Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
 
         let result = batcher.read_and_batch_transactions().await;
         assert!(result.is_ok());
@@ -422,9 +446,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let chain_id = 1;
@@ -444,11 +466,12 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
+        let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher =
-            Batcher::new(&config, stream_consumer, create_mock_contract(None).await, metrics);
+            Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
 
         let result = batcher.read_and_batch_transactions().await;
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "result: {result:?}");
         assert!(result.unwrap().is_empty());
     }
 
@@ -458,9 +481,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
@@ -468,8 +489,9 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
+        let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher =
-            Batcher::new(&config, stream_consumer, create_mock_contract(None).await, metrics);
+            Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
         let result = batcher.read_and_batch_transactions().await;
 
         assert!(result.is_ok());
@@ -482,9 +504,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
@@ -515,12 +535,9 @@ mod tests {
         let metrics_clone = metrics.clone();
 
         let anvil = Anvil::new().spawn();
-        let mut batcher = Batcher::new(
-            &config,
-            stream_consumer,
-            create_mock_contract(Some(&anvil)).await,
-            metrics,
-        );
+        let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
+        let mut batcher =
+            Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
 
         // Run the batcher and verify it sends the batch
         let _handle = tokio::spawn(async move {
@@ -542,9 +559,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
 
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
@@ -575,12 +590,9 @@ mod tests {
         let metrics_clone = metrics.clone();
 
         let anvil = Anvil::new().spawn();
-        let mut batcher = Batcher::new(
-            &config,
-            stream_consumer,
-            create_mock_contract(Some(&anvil)).await,
-            metrics,
-        );
+        let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
+        let mut batcher =
+            Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
 
         // Run the batcher and verify it sends the batch
         let _handle = tokio::spawn(async move {
@@ -605,6 +617,8 @@ mod tests {
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            rpc_max_retries: 10,
+            ..Default::default()
         };
         let metrics_port = PortManager::instance().next_port().await;
         let sequencing_contract_address = Address::ZERO;
@@ -616,17 +630,18 @@ mod tests {
 
         let client = reqwest::Client::new();
 
-        tokio::time::sleep(Duration::from_secs(2)).await;
-
         // Should succeed
-        let response = client.get(&url).send().await.unwrap();
-        assert_eq!(response.status(), 200);
+        wait_until!(
+            client.get(&url).send().await.is_ok_and(|resp| resp.status() == 200),
+            Duration::from_secs(2)
+        );
 
         // Close Valkey container and test failure
         drop(valkey);
-        tokio::time::sleep(Duration::from_secs(2)).await;
 
-        let response = client.get(&url).send().await.unwrap();
-        assert_eq!(response.status(), 500);
+        wait_until!(
+            client.get(&url).send().await.is_ok_and(|resp| resp.status() == 500),
+            Duration::from_secs(2)
+        );
     }
 }
