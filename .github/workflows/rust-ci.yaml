@@ -102,60 +102,50 @@ jobs:
         id: cache-sp1
         uses: actions/cache@v4
         with:
-          path: ~/.sp1
-          key: ${{ runner.os }}-sp1-toolchain-v1
+          path: |
+            ~/.sp1
+            ~/.rustup/toolchains/succinct*
+          key: ${{ runner.os }}-sp1-toolchain-v2
 
       - name: Install SP1 toolchain
         if: steps.cache-sp1.outputs.cache-hit != 'true'
         run: |
           curl -L https://sp1.succinct.xyz | bash
+          # Source the SP1 environment
+          source ~/.bashrc || true
           $HOME/.sp1/bin/sp1up
+          # The sp1up command installs a custom rustup toolchain
+          rustup toolchain list
 
       - name: Verify SP1 installation
-        run: $HOME/.sp1/bin/cargo-prove prove --version
-
-      - name: Debug SP1 paths
         run: |
-          echo "=== Pre-build debugging ==="
-          echo "Current directory: $(pwd)"
-          echo "Checking if SP1 program directory exists:"
-          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/ || echo "Directory not found"
-          echo ""
-          echo "Finding all .rs files:"
-          find synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program -name "*.rs" -type f 2>/dev/null | head -10 || echo "No .rs files found"
-          echo ""
-          echo "Finding Cargo.toml:"
-          find synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program -name "Cargo.toml" -type f 2>/dev/null || echo "No Cargo.toml found"
-          echo ""
-          echo "Checking for existing elf/target directories:"
-          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf 2>/dev/null || echo "No elf directory yet"
-          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target 2>/dev/null || echo "No target directory yet"
+          # Source SP1 environment
+          source ~/.bashrc || true
+          $HOME/.sp1/bin/cargo-prove prove --version
+          # Check if succinct toolchain is installed
+          rustup toolchain list | grep succinct || echo "Succinct toolchain not found"
 
       - name: Cache SP1 ELF program
         id: cache-sp1-elf
         uses: actions/cache@v4
         with:
           path: |
+            target/elf-compilation
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target
           key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}
           restore-keys: |
             ${{ runner.os }}-sp1-elf-
 
-      - name: Debug cache result
-        run: |
-          echo "=== Cache debugging ==="
-          echo "Cache hit: ${{ steps.cache-sp1-elf.outputs.cache-hit }}"
-          echo "Cache primary key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}"
-          echo "Did we get a partial restore? Check if directories exist:"
-          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf 2>/dev/null && echo "elf directory restored from cache" || echo "No elf from cache"
-          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target 2>/dev/null && echo "target directory restored from cache" || echo "No target from cache"
-
       - name: Build SP1 ELF program
         if: steps.cache-sp1-elf.outputs.cache-hit != 'true'
         run: |
-          echo "=== Building SP1 ELF (cache miss) ==="
+          # Source SP1 environment to get the correct PATH
+          source ~/.bashrc || true
+
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+
+          # Use the full cargo-prove command with environment
           $HOME/.sp1/bin/cargo-prove prove build
 
           echo ""
@@ -164,14 +154,12 @@ jobs:
           echo "Contents of current directory:"
           ls -la
           echo ""
-          echo "Looking for elf artifacts:"
-          find . -name "*.elf" -o -type d -name "elf" | head -20
-          echo ""
-          echo "Checking specific paths that will be cached:"
-          echo "From repo root:"
+          echo "Looking for elf artifacts in workspace:"
           cd ${{ github.workspace }}
-          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf || echo "elf directory not found from repo root"
-          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target || echo "target directory not found from repo root"
+          find . -name "*synd-tee-attestation-zk-proofs-sp1-program*" -type f 2>/dev/null | grep -v ".git" | head -20
+          echo ""
+          echo "Checking target/elf-compilation:"
+          ls -la target/elf-compilation 2>/dev/null || echo "No elf-compilation directory"
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -186,7 +174,7 @@ jobs:
 
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: shared-large-01
     needs: build
     steps:
       - uses: actions/checkout@v4
