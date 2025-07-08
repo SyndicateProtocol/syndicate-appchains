@@ -42,7 +42,7 @@ FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro
 
 FROM nitro AS go-synd-proposer-build
 WORKDIR /
-COPY --from=nitro /workspace ./synd-enclave/nitro
+COPY --from=nitro . ./synd-enclave/nitro
 COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
 COPY ./synd-withdrawals/synd-enclave/go.mod ./synd-enclave/go.mod
 COPY ./synd-withdrawals/synd-enclave/go.sum ./synd-enclave/go.sum
