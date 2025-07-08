@@ -112,7 +112,7 @@ jobs:
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
           $HOME/.sp1/bin/cargo-prove prove build
 
-      # Run Clippy checks on entire workspace
+      # Run Clippy checks on the entire workspace
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets --all-features
 
