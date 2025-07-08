@@ -4,7 +4,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "synd-withdrawals/synd-enclave/**"
+      - "synd-withdrawals/synd-proposer/**"
   pull_request:
+    paths:
+      - "synd-withdrawals/synd-enclave/**"
+      - "synd-withdrawals/synd-proposer/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
