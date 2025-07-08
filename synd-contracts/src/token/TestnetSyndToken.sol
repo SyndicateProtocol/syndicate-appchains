@@ -63,7 +63,7 @@ contract TestnetSyndToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
      * @param blockNumber The block number to check
      * @return The voting power at that block
      */
-    function getPastVotingPowerToTriggerCommand(address account, uint256 blockNumber) external view returns (uint256) {
+    function getPastVotingPower(address account, uint256 blockNumber) external view returns (uint256) {
         return getPastVotes(account, blockNumber);
     }
 
