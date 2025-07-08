@@ -6,9 +6,6 @@ on:
       - main
     paths:
       - "synd-withdrawals/synd-enclave/nitro/**"
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 env:
