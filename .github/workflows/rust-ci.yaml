@@ -114,6 +114,23 @@ jobs:
       - name: Verify SP1 installation
         run: $HOME/.sp1/bin/cargo-prove prove --version
 
+      - name: Debug SP1 paths
+        run: |
+          echo "=== Pre-build debugging ==="
+          echo "Current directory: $(pwd)"
+          echo "Checking if SP1 program directory exists:"
+          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/ || echo "Directory not found"
+          echo ""
+          echo "Finding all .rs files:"
+          find synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program -name "*.rs" -type f 2>/dev/null | head -10 || echo "No .rs files found"
+          echo ""
+          echo "Finding Cargo.toml:"
+          find synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program -name "Cargo.toml" -type f 2>/dev/null || echo "No Cargo.toml found"
+          echo ""
+          echo "Checking for existing elf/target directories:"
+          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf 2>/dev/null || echo "No elf directory yet"
+          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target 2>/dev/null || echo "No target directory yet"
+
       - name: Cache SP1 ELF program
         id: cache-sp1-elf
         uses: actions/cache@v4
@@ -122,12 +139,39 @@ jobs:
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf
             synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target
           key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-sp1-elf-
+
+      - name: Debug cache result
+        run: |
+          echo "=== Cache debugging ==="
+          echo "Cache hit: ${{ steps.cache-sp1-elf.outputs.cache-hit }}"
+          echo "Cache primary key: ${{ runner.os }}-sp1-elf-${{ hashFiles('synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/**/*.rs', 'synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/Cargo.toml') }}"
+          echo "Did we get a partial restore? Check if directories exist:"
+          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf 2>/dev/null && echo "elf directory restored from cache" || echo "No elf from cache"
+          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target 2>/dev/null && echo "target directory restored from cache" || echo "No target from cache"
 
       - name: Build SP1 ELF program
         if: steps.cache-sp1-elf.outputs.cache-hit != 'true'
         run: |
+          echo "=== Building SP1 ELF (cache miss) ==="
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
           $HOME/.sp1/bin/cargo-prove prove build
+
+          echo ""
+          echo "=== Post-build verification ==="
+          echo "Current directory after build: $(pwd)"
+          echo "Contents of current directory:"
+          ls -la
+          echo ""
+          echo "Looking for elf artifacts:"
+          find . -name "*.elf" -o -type d -name "elf" | head -20
+          echo ""
+          echo "Checking specific paths that will be cached:"
+          echo "From repo root:"
+          cd ${{ github.workspace }}
+          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/elf || echo "elf directory not found from repo root"
+          ls -la synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program/target || echo "target directory not found from repo root"
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -139,7 +183,6 @@ jobs:
         run: |
           cargo build --workspace --all-targets --all-features
           cargo nextest run --no-run --workspace
-
 
   clippy:
     name: Clippy
