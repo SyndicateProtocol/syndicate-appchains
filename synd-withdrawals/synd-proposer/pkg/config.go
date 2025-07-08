@@ -27,13 +27,11 @@ type Config struct {
 	CloseChallengeInterval time.Duration
 	MetricsPort            int
 
-	L1StartBatch        uint64
-	L1EndBatch          uint64
-	SettlementMsgsCount uint64
-
 	TeeModuleContractAddress common.Address
-	ArbitrumBridgeAddress    common.Address
-	SequencerInboxAddress    common.Address
+	SequencingInboxAddress   common.Address
+
+	AppchainBridgeAddress common.Address
+	AppchainInboxAddress  common.Address
 
 	EnclaveConfig enclave.Config
 }
@@ -50,8 +48,9 @@ var ConfigKeys = map[string]struct {
 	"appchain-rpc-url":            {"Appchain RPC URL", "", true},
 	"enclave-rpc-url":             {"Enclave RPC URL", "", true},
 	"tee-module-contract-address": {"TEE Module Contract Address", "", true},
-	"arbitrum-bridge-address":     {"Arbitrum Bridge Address", "", true},
-	"sequencer-inbox-address":     {"Sequencer Inbox Address", "", true},
+	"sequencing-inbox-address":    {"Sequencing Inbox Address", "", true},
+	"appchain-bridge-address":     {"Appchain Bridge Address", "", true},
+	"appchain-inbox-address":      {"Appchain Inbox Address", "", true},
 	"private-key":                 {"Private Key", "", true},
 	"polling-interval":            {"Polling interval", "10m", false},
 	"close-challenge-interval":    {"Close challenge interval", "5m", false},
@@ -59,9 +58,6 @@ var ConfigKeys = map[string]struct {
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
 	"settlement-delay":            {"Settlement Delay", "60", false},
-	"l1-start-batch":              {"L1 Start Batch", "0", true},
-	"l1-end-batch":                {"L1 End Batch", "0", true},
-	"settlement-msgs-count":       {"Settlement Msgs Count", "0", true},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
@@ -110,8 +106,9 @@ func LoadConfig() (*Config, error) {
 		AppchainRPCURL:           viper.GetString("appchain-rpc-url"),
 		EnclaveRPCURL:            viper.GetString("enclave-rpc-url"),
 		TeeModuleContractAddress: common.HexToAddress(viper.GetString("tee-module-contract-address")),
-		ArbitrumBridgeAddress:    common.HexToAddress(viper.GetString("arbitrum-bridge-address")),
-		SequencerInboxAddress:    common.HexToAddress(viper.GetString("sequencer-inbox-address")),
+		SequencingInboxAddress:   common.HexToAddress(viper.GetString("sequencing-inbox-address")),
+		AppchainBridgeAddress:    common.HexToAddress(viper.GetString("appchain-bridge-address")),
+		AppchainInboxAddress:     common.HexToAddress(viper.GetString("appchain-inbox-address")),
 		PrivateKey:               privateKey,
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
@@ -121,9 +118,6 @@ func LoadConfig() (*Config, error) {
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
 		},
-		L1StartBatch:        viper.GetUint64("l1-start-batch"),
-		L1EndBatch:          viper.GetUint64("l1-end-batch"),
-		SettlementMsgsCount: viper.GetUint64("settlement-msgs-count"),
 	}, nil
 }
 

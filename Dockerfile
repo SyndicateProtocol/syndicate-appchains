@@ -38,7 +38,7 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
     cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
 # --- Go build stage for synd-proposer ---
-FROM ghcr.io/syndicateprotocol/node-builder AS go-synd-proposer-build
+FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS go-synd-proposer-build
 WORKDIR /
 COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
 COPY ./synd-withdrawals/synd-enclave/go.mod ./synd-enclave/go.mod

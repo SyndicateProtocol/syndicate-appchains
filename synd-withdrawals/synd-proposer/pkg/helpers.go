@@ -134,7 +134,7 @@ func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprov
 }
 
 // if count is zero, fetches the count instead
-func getMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Address, count uint64) (common.Hash, uint64, error) {
+func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Address, count uint64) (common.Hash, uint64, error) {
 	slot := common.BigToHash(big.NewInt(6))
 	if count == 0 {
 		countBytes, err := c.StorageAt(ctx, bridge, slot, nil)
@@ -162,7 +162,7 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 	if err != nil {
 		return common.Hash{}, nil, false, err
 	}
-	acc, end, err := getMessageAcc(ctx, c, bridge, 0)
+	acc, end, err := GetMessageAcc(ctx, c, bridge, 0)
 	if err != nil {
 		return common.Hash{}, nil, false, err
 	}
@@ -293,7 +293,7 @@ func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay ui
 }
 
 // find the last block <= l1 number. return an error if start is greater than l1 number.
-func findBlock(ctx context.Context, c *ethclient.Client, start uint64, l1Number uint64) (*execution.MessageResult, error) {
+func FindBlock(ctx context.Context, c *ethclient.Client, start uint64, l1Number uint64) (*execution.MessageResult, error) {
 	end, err := c.BlockNumber(ctx)
 	if err != nil {
 		return nil, err

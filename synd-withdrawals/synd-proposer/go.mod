@@ -1,4 +1,4 @@
-module github.com/SyndicateProtocol/synd-proposer
+module github.com/SyndicateProtocol/synd-appchains/synd-proposer
 
 go 1.23.0
 
