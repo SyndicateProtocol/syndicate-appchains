@@ -16,7 +16,7 @@ jobs:
   docker:
     uses: ./.github/workflows/publish-images.yaml
     with:
-      dry_run: true
+      dry_run: false
       runner_label: shared-large-01
       service: "" # all services
     secrets: inherit
