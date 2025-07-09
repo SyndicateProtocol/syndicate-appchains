@@ -35,7 +35,7 @@ type Config struct {
 
 	EnclaveConfig enclave.Config
 
-	MTLSConfig MTLSConfig
+	TLSConfig TLSConfig
 }
 
 var ConfigKeys = map[string]struct {
@@ -122,7 +122,7 @@ func LoadConfig() (*Config, error) {
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
 		},
-		MTLSConfig: MTLSConfig{
+		TLSConfig: TLSConfig{
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},

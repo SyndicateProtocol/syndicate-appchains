@@ -12,14 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-type MTLSConfig struct {
+type TLSConfig struct {
 	ClientCertPath string
 	ClientKeyPath  string
 }
 
-func createMTLSClient(cfg *MTLSConfig, rpcURL string) (*rpc.Client, error) {
+func createTLSClient(cfg *TLSConfig, rpcURL string) (*rpc.Client, error) {
 	if cfg.ClientCertPath == "" || cfg.ClientKeyPath == "" {
-		return nil, fmt.Errorf("mTLS client certificate and key paths are required")
+		return nil, fmt.Errorf("TLS client certificate and key paths are required")
 	}
 
 	// Load client certificate and private key
@@ -46,7 +46,7 @@ func createMTLSClient(cfg *MTLSConfig, rpcURL string) (*rpc.Client, error) {
 		rpc.WithHTTPClient(httpClient),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create enclave RPC client with mTLS: %v", err)
+		return nil, fmt.Errorf("failed to create enclave RPC client with TLS: %v", err)
 	}
 
 	return client, nil
@@ -59,7 +59,7 @@ func isTLSErr(err error) bool {
 
 func handleTLSErr(err error) error {
 	if isTLSErr(err) {
-		log.Println("mTLS error, exiting program so k8s can restart it. Error: ", err)
+		log.Println("TLS error, exiting program so k8s can restart it. Error: ", err)
 		// If the error is related to TLS, exit the program so k8s can restart it. That will automatically fix any cert expiry issues.
 		os.Exit(1)
 	}

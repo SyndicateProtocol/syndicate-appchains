@@ -49,7 +49,7 @@ func NewProposer(cfg *Config) *Proposer {
 		return nil
 	}
 
-	enclaveClient, err := createMTLSClient(&cfg.MTLSConfig, cfg.EnclaveRPCURL)
+	enclaveClient, err := createTLSClient(&cfg.TLSConfig, cfg.EnclaveRPCURL)
 	if err != nil {
 		log.Fatalf("Failed to create mTLS enclave provider: %v", err)
 		return nil
