@@ -4,7 +4,6 @@ members = [
   "shared/contract-bindings",
   "shared/test-utils",
   "synd-batch-sequencer",
-  "synd-batch-sequencer/crates/batcher",
   "synd-chain-ingestor",
   "synd-maestro",
   "synd-mchain",
@@ -46,7 +45,6 @@ version      = "0.1.0"
 [workspace.dependencies]
 
 # workspace dependencies (members of the workspace)
-batcher                                   = { path = "synd-batch-sequencer/crates/batcher" }
 common                                    = { path = "synd-translator/crates/common" }
 contract-bindings                         = { path = "shared/contract-bindings" }
 metrics                                   = { path = "synd-translator/crates/metrics" }

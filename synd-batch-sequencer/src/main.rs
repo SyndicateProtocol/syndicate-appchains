@@ -1,9 +1,9 @@
 //! The Batch Sequencer is a service that pulls transactions off the queue, processes and validates
 //! them, and submits them to the Appchain in batches (can be compressed or not).
 
-use batcher::{batcher::run_batcher, config::BatcherConfig};
 use eyre::Result;
 use shared::tracing::{setup_global_tracing, ServiceTracingConfig};
+use synd_batch_sequencer::{batcher::run_batcher, config::BatcherConfig};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 

@@ -1,4 +1,4 @@
-//! The Batcher service.
+//! The Batcher sequencer service.
 pub mod batcher;
 pub mod config;
 pub mod metrics;
