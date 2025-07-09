@@ -27,8 +27,6 @@ func TestInitProposerWithConfig(t *testing.T) {
 		EnclaveRPCURL:            "http://localhost:8549",
 		TeeModuleContractAddress: common.HexToAddress("0x41F2F55571f9e8e3Ba511Adc48879Bd67626A2b4"),
 		AppchainBridgeAddress:    common.HexToAddress("0x41F2F55571f9e8e3Ba511Adc48879Bd67626A2b5"),
-		AppchainInboxAddress:     common.HexToAddress("0x41F2F55571f9e8e3Ba511Adc48879Bd67626A2b6"),
-		SequencingInboxAddress:   common.HexToAddress("0x41F2F55571f9e8e3Ba511Adc48879Bd67626A2b6"),
 		PrivateKey:               privateKey,
 		PollingInterval:          10 * time.Second,
 		CloseChallengeInterval:   5 * time.Second,

@@ -387,13 +387,15 @@ func parseSeqBatches(input VerifySequencingChainInput) (SyndicateAccumulator, co
 		if len(batch) < 40 {
 			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch %d too short", j)
 		}
-		afterDelayedMessagesRead := binary.BigEndian.Uint64(batch[32:40])
-		if afterDelayedMessagesRead > msgCount+startIndex {
-			return SyndicateAccumulator{}, common.Hash{}, errors.New("missing delayed messages")
-		}
-		for i+startIndex < afterDelayedMessagesRead {
-			delayedAcc = delayedMessageAccumulate(delayedAcc, input.DelayedMessages[i])
-			i++
+		if msgCount > 0 {
+			afterDelayedMessagesRead := binary.BigEndian.Uint64(batch[32:40])
+			if afterDelayedMessagesRead > msgCount+startIndex {
+				return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("missing delayed messages: have %d, need %d", msgCount, afterDelayedMessagesRead-startIndex)
+			}
+			for i+startIndex < afterDelayedMessagesRead {
+				delayedAcc = delayedMessageAccumulate(delayedAcc, input.DelayedMessages[i])
+				i++
+			}
 		}
 		acc = crypto.Keccak256Hash(acc[:], crypto.Keccak256(batch), delayedAcc[:])
 	}
@@ -465,7 +467,6 @@ var allowedMsgs = map[byte]struct{}{
 	arbostypes.L1MessageType_L2Message:          {},
 	arbostypes.L1MessageType_L2FundedByL1:       {},
 	arbostypes.L1MessageType_SubmitRetryable:    {},
-	arbostypes.L1MessageType_Initialize:         {},
 	arbostypes.L1MessageType_EthDeposit:         {},
 	arbostypes.L1MessageType_BatchPostingReport: {},
 }

@@ -5,19 +5,23 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
+	"strings"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/offchainlabs/nitro/arbnode"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
-	"github.com/offchainlabs/nitro/arbstate/daprovider"
 	"github.com/offchainlabs/nitro/arbutil"
+	"github.com/offchainlabs/nitro/daprovider"
 	"github.com/offchainlabs/nitro/execution"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
 )
@@ -105,22 +109,28 @@ func getBatches(ctx context.Context, c *ethclient.Client, sequencerInbox common.
 	}
 	return data, nil
 }
-func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprovider.Reader, preimages map[common.Hash][]byte) error {
+
+func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprovider.Reader, preimages map[arbutil.PreimageType]map[common.Hash][]byte) error {
 	if len(batch) > 40 {
 		for _, dapReader := range dapReaders {
-			if dapReader != nil && dapReader.IsValidHeaderByte(batch[40]) {
-				preimageRecorder := func(key common.Hash, value []byte, _ arbutil.PreimageType) {
-					preimages[key] = value
-				}
+			if dapReader != nil && dapReader.IsValidHeaderByte(ctx, batch[40]) {
 				// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
-				_, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, preimageRecorder, true)
+				_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, nil, true)
 				if err != nil {
 					// Matches the way keyset validation was done inside DAS readers i.e logging the error
 					//  But other daproviders might just want to return the error
-					if errors.Is(err, daprovider.ErrSeqMsgValidation) && daprovider.IsDASMessageHeaderByte(batch[40]) {
+					if strings.Contains(err.Error(), daprovider.ErrSeqMsgValidation.Error()) && daprovider.IsDASMessageHeaderByte(batch[40]) {
 						log.Error(err.Error())
 					} else {
 						return err
+					}
+				}
+
+				for ty, images := range preimagesRecorded {
+					if preimages[ty] == nil {
+						preimages[ty] = images
+					} else {
+						maps.Copy(preimages[ty], images)
 					}
 				}
 				return nil
@@ -157,7 +167,7 @@ func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Addre
 	return common.Hash(acc), count - 1, nil
 }
 
-func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.Address, inbox common.Address, start uint64, endAcc common.Hash) (common.Hash, [][]byte, bool, error) {
+func GetDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.Address, start uint64, endAcc common.Hash) (common.Hash, [][]byte, bool, error) {
 	endBlock, err := c.BlockNumber(ctx)
 	if err != nil {
 		return common.Hash{}, nil, false, err
@@ -168,7 +178,7 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 	}
 
 	if acc != endAcc {
-		logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{[]common.Hash{messageDeliveredID}, nil, []common.Hash{endAcc}}, 1)
+		logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{{messageDeliveredID}, nil, {endAcc}}, 1)
 		if err != nil {
 			return common.Hash{}, nil, false, err
 		}
@@ -196,7 +206,7 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 			indexes = append(indexes, common.BigToHash(big.NewInt(int64(start))))
 		}
 	}
-	logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{[]common.Hash{messageDeliveredID}, indexes}, uint64(len(indexes)))
+	logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{{messageDeliveredID}, indexes}, uint64(len(indexes)))
 	if err != nil {
 		return common.Hash{}, nil, false, err
 	}
@@ -204,22 +214,54 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 		return common.Hash{}, nil, false, fmt.Errorf("unexpected number of logs found: got %d, expected %d", len(logs), len(indexes))
 	}
 
-	logs, _ = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
-		[]common.Address{bridge, inbox},
+	ibridge, err := bridgegen.NewBridge(bridge, c)
+	if err != nil {
+		return common.Hash{}, nil, false, err
+	}
+
+	seqInbox, err := ibridge.SequencerInbox(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return common.Hash{}, nil, false, err
+	}
+
+	addrs := []common.Address{bridge, seqInbox}
+
+	var i int64
+	for {
+		inbox, err := ibridge.AllowedDelayedInboxList(&bind.CallOpts{Context: ctx}, big.NewInt(i))
+		if err != nil {
+			if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+				break
+			}
+			return common.Hash{}, nil, false, err
+		}
+		addrs = append(addrs, inbox)
+		i++
+	}
+	if i == 0 {
+		return common.Hash{}, nil, false, errors.New("no inbox addresses found")
+	}
+
+	logs, err = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
+		addrs,
 		[][]common.Hash{
-			[]common.Hash{messageDeliveredID, inboxMessageDeliveredID},
+			{messageDeliveredID, inboxMessageDeliveredID},
 		}, 0)
 
-	ibridge, err := bridgegen.NewIBridge(bridge, c)
 	if err != nil {
 		return common.Hash{}, nil, false, err
 	}
-	iinbox, err := bridgegen.NewIDelayedMessageProvider(inbox, c)
-	if err != nil {
-		return common.Hash{}, nil, false, err
-	}
+
 	if len(logs)%2 != 0 {
-		return common.Hash{}, nil, false, errors.New("even number of logs expected")
+		for _, log := range logs {
+			fmt.Println("LOG: ", log.Topics[0], log.TxHash, log.Address, log.Topics[1].Big().Uint64())
+		}
+		return common.Hash{}, nil, false, fmt.Errorf("even number of logs expected: got %d", len(logs))
+	}
+
+	iinbox, err := bridgegen.NewIDelayedMessageProvider(common.Address{}, c)
+	if err != nil {
+		return common.Hash{}, nil, false, err
 	}
 
 	var msgs [][]byte

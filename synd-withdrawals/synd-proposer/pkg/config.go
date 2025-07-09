@@ -21,6 +21,7 @@ type Config struct {
 	SequencingRPCURL string
 	AppchainRPCURL   string
 	EnclaveRPCURL    string
+	EigenRPCUrl      string
 
 	PrivateKey             *ecdsa.PrivateKey
 	PollingInterval        time.Duration
@@ -28,10 +29,10 @@ type Config struct {
 	MetricsPort            int
 
 	TeeModuleContractAddress common.Address
-	SequencingInboxAddress   common.Address
 
 	AppchainBridgeAddress common.Address
-	AppchainInboxAddress  common.Address
+
+	IsL1Chain bool
 
 	EnclaveConfig    enclave.Config
 	EnclaveTLSConfig TLSConfig
@@ -47,11 +48,10 @@ var ConfigKeys = map[string]struct {
 	"settlement-chain-id":         {"Settlement Chain ID", "", true},
 	"sequencing-rpc-url":          {"Sequencing RPC URL", "", true},
 	"appchain-rpc-url":            {"Appchain RPC URL", "", true},
+	"eigen-rpc-url":               {"EigenDA RPC URL", "", true},
 	"enclave-rpc-url":             {"Enclave RPC URL", "", true},
 	"tee-module-contract-address": {"TEE Module Contract Address", "", true},
-	"sequencing-inbox-address":    {"Sequencing Inbox Address", "", true},
 	"appchain-bridge-address":     {"Appchain Bridge Address", "", true},
-	"appchain-inbox-address":      {"Appchain Inbox Address", "", true},
 	"private-key":                 {"Private Key", "", true},
 	"polling-interval":            {"Polling interval", "10m", false},
 	"close-challenge-interval":    {"Close challenge interval", "5m", false},
@@ -109,10 +109,9 @@ func LoadConfig() (*Config, error) {
 		SequencingRPCURL:         viper.GetString("sequencing-rpc-url"),
 		AppchainRPCURL:           viper.GetString("appchain-rpc-url"),
 		EnclaveRPCURL:            viper.GetString("enclave-rpc-url"),
+		EigenRPCUrl:              viper.GetString("eigen-rpc-url"),
 		TeeModuleContractAddress: common.HexToAddress(viper.GetString("tee-module-contract-address")),
-		SequencingInboxAddress:   common.HexToAddress(viper.GetString("sequencing-inbox-address")),
 		AppchainBridgeAddress:    common.HexToAddress(viper.GetString("appchain-bridge-address")),
-		AppchainInboxAddress:     common.HexToAddress(viper.GetString("appchain-inbox-address")),
 		PrivateKey:               privateKey,
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
