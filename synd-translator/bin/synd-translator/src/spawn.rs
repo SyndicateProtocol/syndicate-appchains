@@ -30,7 +30,7 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
                 error!("restarting the translator components: {e}");
                 // Sleep for 1 second to avoid spamming the logs on unrecoverable errors
                 // TODO [SEQ-985]: Review errors thrown by slotter and handle them appropriately
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
         };
     }
@@ -70,7 +70,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     let adapter = arbitrum_adapter.clone();
 
     let seq_client = EthClient::new(
-        &sequencing_client.get_url().await?,
+        sequencing_client.get_urls().await?,
         config.ws_request_timeout,
         config.get_logs_timeout,
         1024,
@@ -88,7 +88,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         .await?;
 
     let set_client = EthClient::new(
-        &settlement_client.get_url().await?,
+        settlement_client.get_urls().await?,
         config.ws_request_timeout,
         config.get_logs_timeout,
         1024,

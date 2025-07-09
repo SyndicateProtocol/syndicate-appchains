@@ -3,4 +3,5 @@ edition.workspace = true
 name              = "contract-bindings"
 
 [dependencies]
-alloy = { workspace = true }
+alloy = { workspace = true, features = ["serde"] }
+serde = { workspace = true, features = ["derive"] }

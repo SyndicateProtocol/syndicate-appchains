@@ -161,7 +161,7 @@ impl SettlementChainConfig {
 
 /// Common config struct for the `synd-translator`. This contains all possible config options
 /// which other crates can use
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 #[command(version, about)]
 pub struct TranslatorConfig {
     #[command(flatten)]
@@ -218,7 +218,6 @@ impl TranslatorConfig {
 
     /// Validate [`TranslatorConfig`]
     pub fn validate(&self) -> Result<(), ConfigError> {
-        self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
         self.sequencing.validate().map_err(ConfigError::Ingestor)?;
         self.settlement.validate().map_err(ConfigError::Ingestor)?;
         self.metrics.validate().map_err(ConfigError::Metrics)?;
@@ -257,24 +256,6 @@ impl TranslatorConfig {
         // Remove the trailing slash and newline
         cmd.truncate(cmd.len() - 2);
         println!("{cmd}");
-    }
-}
-
-impl Default for TranslatorConfig {
-    fn default() -> Self {
-        Self {
-            block_builder: BlockBuilderConfig::default(),
-            settlement_delay: Some(60),
-            sequencing: SequencingChainConfig::default(),
-            settlement: SettlementChainConfig::default(),
-            metrics: MetricsConfig::default(),
-            config_manager_address: None,
-            appchain_chain_id: 0,
-            appchain_block_explorer_url: None,
-            get_logs_timeout: Duration::from_secs(60),
-            ws_request_timeout: Duration::from_secs(10),
-            rpc_retry_interval: Duration::from_secs(1),
-        }
     }
 }
 

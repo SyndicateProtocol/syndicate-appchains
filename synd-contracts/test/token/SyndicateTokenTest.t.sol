@@ -15,6 +15,10 @@ contract SyndicateTokenTest is Test {
     address public user = address(0x1111);
     address public user2 = address(0x2222);
 
+    // Events that need to be declared for testing
+    event UnlockTimestampUpdated(uint256 oldTimestamp, uint256 newTimestamp, address indexed updatedBy);
+    event TokensBurnedByManager(address indexed from, uint256 amount, address indexed burner);
+
     function setUp() public {
         vm.startPrank(defaultAdmin);
 
@@ -318,7 +322,7 @@ contract SyndicateTokenTest is Test {
 
     // ============ AIRDROP LOCK FUNCTIONALITY TESTS ============
 
-    function test_Constructor_NoInitialLock() public view {
+    function test_InitialUnlockState() public view {
         assertEq(token.unlockTimestamp(), 0);
         assertFalse(token.transfersLocked());
         assertEq(token.getRemainingLockTime(), 0);
@@ -476,13 +480,13 @@ contract SyndicateTokenTest is Test {
         vm.prank(defaultAdmin);
         token.setUnlockTimestamp(futureTimestamp);
 
-        // Mint tokens to user
         vm.prank(emissionMinter);
         token.mint(user, 1000 * 10 ** 18);
 
         uint256 burnAmount = 100 * 10 ** 18;
         uint256 initialSupply = token.totalSupply();
 
+        // Mint tokens to user
         vm.expectEmit(true, false, false, true);
         emit TokensBurnedByManager(user, burnAmount, airdropManager);
 
@@ -587,6 +591,7 @@ contract SyndicateTokenTest is Test {
         vm.stopPrank();
 
         // Step 3: Verify transfers are locked
+
         vm.prank(user);
         vm.expectRevert(SyndicateToken.TransfersLocked.selector);
         token.transfer(user2, 100 * 10 ** 18);
@@ -607,7 +612,32 @@ contract SyndicateTokenTest is Test {
         assertEq(token.balanceOf(user2), 600 * 10 ** 18);
     }
 
-    // Events that need to be declared for testing
-    event UnlockTimestampUpdated(uint256 oldTimestamp, uint256 newTimestamp, address indexed updatedBy);
-    event TokensBurnedByManager(address indexed from, uint256 amount, address indexed burner);
+    // ============ BURN FUNCTIONALITY TESTS ============
+
+    function test_Burn_Success() public {
+        // Mint tokens to user first
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        uint256 burnAmount = 100 * 10 ** 18;
+        uint256 initialSupply = token.totalSupply();
+
+        vm.prank(user);
+        token.burn(burnAmount);
+
+        assertEq(token.balanceOf(user), 900 * 10 ** 18);
+        assertEq(token.totalSupply(), initialSupply - burnAmount);
+    }
+
+    function test_RevertWhen_Burn_ZeroAmount() public {
+        vm.prank(user);
+        vm.expectRevert(SyndicateToken.ZeroAmount.selector);
+        token.burn(0);
+    }
+
+    function test_RevertWhen_Burn_InsufficientBalance() public {
+        vm.prank(user);
+        vm.expectRevert();
+        token.burn(1000 * 10 ** 18); // User has no tokens
+    }
 }

@@ -17,8 +17,8 @@ use alloy::{
 };
 use common::types::{SequencingBlock, SettlementBlock};
 use contract_bindings::synd::{
-    ibridge::IBridge::MessageDelivered,
-    idelayedmessageprovider::IDelayedMessageProvider::{
+    i_bridge::IBridge::MessageDelivered,
+    i_delayed_message_provider::IDelayedMessageProvider::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
     },
 };
@@ -110,12 +110,6 @@ pub struct ArbitrumAdapter {
     pub inbox_address: Address,
 }
 
-impl Default for ArbitrumAdapter {
-    fn default() -> Self {
-        Self::new(&Default::default())
-    }
-}
-
 impl RollupAdapter for ArbitrumAdapter {
     fn transaction_parser(&self) -> &SequencingTransactionParser {
         &self.transaction_parser
@@ -181,7 +175,7 @@ impl ArbitrumAdapter {
                     let message_num = log.topics()[1].into();
 
                     // Decode the event using the contract bindings
-                    match InboxMessageDelivered::abi_decode_data(&log.data.data, true) {
+                    match InboxMessageDelivered::abi_decode_data_validate(&log.data.data) {
                         Ok(decoded) => {
                             message_data.insert(message_num, decoded.0);
                         }
@@ -256,7 +250,7 @@ impl ArbitrumAdapter {
         log: &Log,
         message_data: &HashMap<U256, Bytes>,
     ) -> Result<DelayedMessage, ArbitrumBlockBuilderError> {
-        let msg = MessageDelivered::decode_raw_log(log.topics(), &log.data.data, true)
+        let msg = MessageDelivered::decode_raw_log_validate(log.topics(), &log.data.data)
             .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
 
         let kind = L1MessageType::from_u8_panic(msg.kind);
@@ -349,14 +343,29 @@ mod tests {
     use assert_matches::assert_matches;
     use std::str::FromStr;
 
+    fn test_config() -> BlockBuilderConfig {
+        BlockBuilderConfig {
+            sequencing_contract_address: Some(
+                Address::from_str("0x1234000000000000000000000000000000000000").unwrap(),
+            ),
+            arbitrum_bridge_address: Some(
+                Address::from_str("0x1234000000000000000000000000000000000000").unwrap(),
+            ),
+            arbitrum_inbox_address: Some(
+                Address::from_str("0x1234000000000000000000000000000000000000").unwrap(),
+            ),
+            ..Default::default()
+        }
+    }
+
     #[test]
     fn test_new_builder() {
-        let sequencing_contract_address =
-            Address::from_str("0x1234000000000000000000000000000000000000")
-                .expect("Invalid address format");
+        let dummy_contract_addr = Address::from_str("0x1234000000000000000000000000000000000000")
+            .expect("Invalid address format");
         let config = BlockBuilderConfig {
-            sequencing_contract_address: Some(sequencing_contract_address),
-            arbitrum_bridge_address: Some(sequencing_contract_address),
+            sequencing_contract_address: Some(dummy_contract_addr),
+            arbitrum_bridge_address: Some(dummy_contract_addr),
+            arbitrum_inbox_address: Some(dummy_contract_addr),
             ..Default::default()
         };
 
@@ -367,7 +376,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_build_batch_empty_txs() {
-        let builder = ArbitrumAdapter::default();
+        let builder = ArbitrumAdapter::new(&test_config());
         let txs = vec![];
         let batch = builder.build_batch_txn(txs, 0, 0).unwrap();
 
@@ -380,7 +389,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_build_batch_with_txs() {
-        let builder = ArbitrumAdapter::default();
+        let builder = ArbitrumAdapter::new(&test_config());
         let txs = vec![
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
@@ -399,7 +408,7 @@ mod tests {
 
     #[test]
     fn test_delayed_message_to_mchain_txn_success() {
-        let builder = ArbitrumAdapter::default();
+        let builder = ArbitrumAdapter::new(&test_config());
 
         // Create message data
         let message_index = U256::from(1);
@@ -447,7 +456,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_delayed_message_to_mchain_txn_missing_data() {
-        let builder = ArbitrumAdapter::default();
+        let builder = ArbitrumAdapter::new(&test_config());
 
         // Create MessageDelivered event data without corresponding message data
         let message_index = U256::from(1);
@@ -477,7 +486,7 @@ mod tests {
 
     #[test]
     fn test_delayed_message_to_mchain_txn_invalid_event_data() {
-        let builder = ArbitrumAdapter::default();
+        let builder = ArbitrumAdapter::new(&test_config());
         let message_map = HashMap::new();
 
         // Create log with invalid event data
@@ -495,7 +504,7 @@ mod tests {
 
     #[test]
     fn test_delayed_message_to_mchain_txn_do_not_ignore_deposit() {
-        let builder = ArbitrumAdapter::new(&Default::default());
+        let builder = ArbitrumAdapter::new(&test_config());
 
         // Create message data
         let message_index = U256::from(1);

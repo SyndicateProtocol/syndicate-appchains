@@ -8,7 +8,7 @@ use alloy::{
     sol_types::SolEvent,
 };
 use common::compression::{get_compression_type, CompressionType};
-use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::TransactionProcessed;
+use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
 use shared::zlib_compression::decompress_transactions;
 use thiserror::Error;
 use tracing::error;
@@ -102,7 +102,7 @@ impl SequencingTransactionParser {
         if !self.is_log_transaction_processed(eth_log) {
             return Err(SequencingParserError::InvalidLogEvent);
         }
-        let decoded_event = TransactionProcessed::decode_log_data(&eth_log.data, true)
+        let decoded_event = TransactionProcessed::decode_log_data_validate(&eth_log.data)
             .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Decode the transactions

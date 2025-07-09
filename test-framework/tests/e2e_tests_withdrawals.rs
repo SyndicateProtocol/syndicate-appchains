@@ -11,8 +11,8 @@ use alloy::{
     sol_types::SolValue,
 };
 use contract_bindings::synd::{
-    assertionposter::AssertionPoster, iinbox::IInbox, irollup::IRollup,
-    teekeymanager::TeeKeyManager, teemodule::TeeModule,
+    assertion_poster::AssertionPoster, i_inbox::IInbox, i_rollup::IRollup,
+    tee_key_manager::TeeKeyManager, tee_module::TeeModule,
 };
 use eyre::Result;
 use serde::{Deserialize, Serialize};
@@ -269,9 +269,9 @@ async fn e2e_tee_withdrawal() -> Result<()> {
 }
 
 #[allow(clippy::unwrap_used)]
-async fn deploy_on_settlement_chain<T, P, D>(
+async fn deploy_on_settlement_chain<P, D>(
     components: &TestComponents,
-    call_builder: CallBuilder<T, P, D, Ethereum>,
+    call_builder: CallBuilder<P, D, Ethereum>,
     signer: &PrivateKeySigner,
 ) -> Result<Address>
 where

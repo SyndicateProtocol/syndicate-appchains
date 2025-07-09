@@ -71,6 +71,12 @@ pub fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Byte
 #[derive(Debug)]
 pub struct ParamsWrapper(Params<'static>);
 
+impl From<alloy::consensus::crypto::RecoveryError> for RpcError {
+    fn from(_e: alloy::consensus::crypto::RecoveryError) -> Self {
+        Self::InvalidInput(InvalidInputError::InvalidTransactionSignature)
+    }
+}
+
 impl From<Params<'static>> for ParamsWrapper {
     fn from(params: Params<'static>) -> Self {
         Self(params)
