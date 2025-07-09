@@ -5,7 +5,6 @@ use p384::{
     ecdsa::{signature::Verifier as P384Verifier, Signature as P384Signature},
     pkcs8::DecodePublicKey,
 };
-// use openssl::{error::ErrorStack, hash::MessageDigest, pkey::PKey, sign::Verifier};
 use serde::Deserialize;
 use std::collections::HashMap;
 use x509_cert::{
