@@ -3,11 +3,12 @@ package pkg
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strings"
+	"net/url"
 
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -53,15 +54,31 @@ func createTLSClient(cfg *TLSConfig, rpcURL string) (*rpc.Client, error) {
 
 }
 
+// isTLSErr returns true if err came from a failed TLS handshake / cert validation.
 func isTLSErr(err error) bool {
-	return strings.Contains(err.Error(), "tls") || strings.Contains(err.Error(), "certificate")
+	var urlErr *url.Error
+	if !errors.As(err, &urlErr) {
+		return false
+	}
+	// Certificate validation errors
+	var certInvalid x509.CertificateInvalidError
+	var unknownAuth x509.UnknownAuthorityError
+	if errors.As(urlErr.Err, &certInvalid) || errors.As(urlErr.Err, &unknownAuth) {
+		log.Printf("TLS handshake / certificate error: %v", err)
+		return true
+	}
+	// Any lower‐level TLS record error
+	if _, ok := urlErr.Err.(tls.RecordHeaderError); ok {
+		log.Printf("TLS record header error: %v", err)
+		return true
+	}
+	return false
 }
 
 func handleTLSErr(err error) error {
 	if isTLSErr(err) {
-		log.Println("TLS error, exiting program so k8s can restart it. Error: ", err)
 		// If the error is related to TLS, exit the program so k8s can restart it. That will automatically fix any cert expiry issues.
-		os.Exit(1)
+		log.Fatalf("TLS handshake / certificate error; exiting so k8s can rotate pod: %v", err)
 	}
 
 	return fmt.Errorf("failed to call enclave: %v", err)
