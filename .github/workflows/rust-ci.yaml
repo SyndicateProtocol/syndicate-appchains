@@ -17,7 +17,7 @@ env:
   # Make sure CI fails on all warnings, including Clippy lints
   RUSTFLAGS: "-Dwarnings"
   # Use a shared cache key for all jobs in the same PR/run, as long as no dependencies have changed
-  CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}-${{ hashFiles('**/Cargo.lock') }}"
+  CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}-${{ hashFiles('Cargo.lock') }}"
   # Rust version for consistency across jobs
   RUST_VERSION: "1.88.0"
 
