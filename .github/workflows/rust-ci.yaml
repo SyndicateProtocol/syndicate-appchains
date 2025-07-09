@@ -16,8 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   # Make sure CI fails on all warnings, including Clippy lints
   RUSTFLAGS: "-Dwarnings"
-  # Use a shared cache key for all jobs in the same PR/run, as long as no dependencies have changed
-  CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}-${{ hashFiles('Cargo.lock') }}"
+  # Use a shared cache key for all jobs in the same PR/run. Note the usage of `../Cargo.lock` in invocations
+  # below to check for any changed deps
+  CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}"
   # Rust version for consistency across jobs
   RUST_VERSION: "1.88.0"
 
@@ -98,7 +99,7 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ env.CACHE_KEY }}
+          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
           save-if: 'true' # skip saving this cache, only save the one in `tests`
 
       - name: Install SP1 toolchain
@@ -132,7 +133,7 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ env.CACHE_KEY }}
+          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
           save-if: 'true' # do save this one
 
       # Install Foundry (required for Anvil, a local Ethereum node simulator)
@@ -188,7 +189,7 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ env.CACHE_KEY }}
+          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
           save-if: 'false'
 
       # Install Foundry (required for Anvil, a local Ethereum node simulator)
