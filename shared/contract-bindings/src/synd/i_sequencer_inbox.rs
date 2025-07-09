@@ -906,6 +906,495 @@ See the [wrapper's documentation](`IBridgeInstance`) for more details.*/
         }
     }
 }
+///Module containing a contract's types and functions.
+/**
+
+```solidity
+library Messages {
+    struct Message { uint8 kind; address sender; uint64 blockNumber; uint64 timestamp; uint256 inboxSeqNum; uint256 baseFeeL1; bytes32 messageDataHash; }
+}
+```*/
+#[allow(
+    non_camel_case_types,
+    non_snake_case,
+    clippy::pub_underscore_fields,
+    clippy::style,
+    clippy::empty_structs_with_brackets
+)]
+pub mod Messages {
+    use super::*;
+    use alloy::sol_types as alloy_sol_types;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**```solidity
+struct Message { uint8 kind; address sender; uint64 blockNumber; uint64 timestamp; uint256 inboxSeqNum; uint256 baseFeeL1; bytes32 messageDataHash; }
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct Message {
+        #[allow(missing_docs)]
+        pub kind: u8,
+        #[allow(missing_docs)]
+        pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub blockNumber: u64,
+        #[allow(missing_docs)]
+        pub timestamp: u64,
+        #[allow(missing_docs)]
+        pub inboxSeqNum: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub baseFeeL1: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub messageDataHash: alloy::sol_types::private::FixedBytes<32>,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = (
+            alloy::sol_types::sol_data::Uint<8>,
+            alloy::sol_types::sol_data::Address,
+            alloy::sol_types::sol_data::Uint<64>,
+            alloy::sol_types::sol_data::Uint<64>,
+            alloy::sol_types::sol_data::Uint<256>,
+            alloy::sol_types::sol_data::Uint<256>,
+            alloy::sol_types::sol_data::FixedBytes<32>,
+        );
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (
+            u8,
+            alloy::sol_types::private::Address,
+            u64,
+            u64,
+            alloy::sol_types::private::primitives::aliases::U256,
+            alloy::sol_types::private::primitives::aliases::U256,
+            alloy::sol_types::private::FixedBytes<32>,
+        );
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<Message> for UnderlyingRustTuple<'_> {
+            fn from(value: Message) -> Self {
+                (
+                    value.kind,
+                    value.sender,
+                    value.blockNumber,
+                    value.timestamp,
+                    value.inboxSeqNum,
+                    value.baseFeeL1,
+                    value.messageDataHash,
+                )
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for Message {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self {
+                    kind: tuple.0,
+                    sender: tuple.1,
+                    blockNumber: tuple.2,
+                    timestamp: tuple.3,
+                    inboxSeqNum: tuple.4,
+                    baseFeeL1: tuple.5,
+                    messageDataHash: tuple.6,
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolValue for Message {
+            type SolType = Self;
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::SolTypeValue<Self> for Message {
+            #[inline]
+            fn stv_to_tokens(&self) -> <Self as alloy_sol_types::SolType>::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        8,
+                    > as alloy_sol_types::SolType>::tokenize(&self.kind),
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.sender,
+                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::tokenize(&self.blockNumber),
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::tokenize(&self.timestamp),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.inboxSeqNum),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.baseFeeL1),
+                    <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::SolType>::tokenize(&self.messageDataHash),
+                )
+            }
+            #[inline]
+            fn stv_abi_encoded_size(&self) -> usize {
+                if let Some(size) = <Self as alloy_sol_types::SolType>::ENCODED_SIZE {
+                    return size;
+                }
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_encoded_size(&tuple)
+            }
+            #[inline]
+            fn stv_eip712_data_word(&self) -> alloy_sol_types::Word {
+                <Self as alloy_sol_types::SolStruct>::eip712_hash_struct(self)
+            }
+            #[inline]
+            fn stv_abi_encode_packed_to(
+                &self,
+                out: &mut alloy_sol_types::private::Vec<u8>,
+            ) {
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
+            }
+            #[inline]
+            fn stv_abi_packed_encoded_size(&self) -> usize {
+                if let Some(size) = <Self as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE {
+                    return size;
+                }
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_packed_encoded_size(&tuple)
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolType for Message {
+            type RustType = Self;
+            type Token<'a> = <UnderlyingSolTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SOL_NAME: &'static str = <Self as alloy_sol_types::SolStruct>::NAME;
+            const ENCODED_SIZE: Option<usize> = <UnderlyingSolTuple<
+                '_,
+            > as alloy_sol_types::SolType>::ENCODED_SIZE;
+            const PACKED_ENCODED_SIZE: Option<usize> = <UnderlyingSolTuple<
+                '_,
+            > as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE;
+            #[inline]
+            fn valid_token(token: &Self::Token<'_>) -> bool {
+                <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::valid_token(token)
+            }
+            #[inline]
+            fn detokenize(token: Self::Token<'_>) -> Self::RustType {
+                let tuple = <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::detokenize(token);
+                <Self as ::core::convert::From<UnderlyingRustTuple<'_>>>::from(tuple)
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolStruct for Message {
+            const NAME: &'static str = "Message";
+            #[inline]
+            fn eip712_root_type() -> alloy_sol_types::private::Cow<'static, str> {
+                alloy_sol_types::private::Cow::Borrowed(
+                    "Message(uint8 kind,address sender,uint64 blockNumber,uint64 timestamp,uint256 inboxSeqNum,uint256 baseFeeL1,bytes32 messageDataHash)",
+                )
+            }
+            #[inline]
+            fn eip712_components() -> alloy_sol_types::private::Vec<
+                alloy_sol_types::private::Cow<'static, str>,
+            > {
+                alloy_sol_types::private::Vec::new()
+            }
+            #[inline]
+            fn eip712_encode_type() -> alloy_sol_types::private::Cow<'static, str> {
+                <Self as alloy_sol_types::SolStruct>::eip712_root_type()
+            }
+            #[inline]
+            fn eip712_encode_data(&self) -> alloy_sol_types::private::Vec<u8> {
+                [
+                    <alloy::sol_types::sol_data::Uint<
+                        8,
+                    > as alloy_sol_types::SolType>::eip712_data_word(&self.kind)
+                        .0,
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::eip712_data_word(
+                            &self.sender,
+                        )
+                        .0,
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::eip712_data_word(&self.blockNumber)
+                        .0,
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::eip712_data_word(&self.timestamp)
+                        .0,
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::eip712_data_word(&self.inboxSeqNum)
+                        .0,
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::eip712_data_word(&self.baseFeeL1)
+                        .0,
+                    <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::SolType>::eip712_data_word(
+                            &self.messageDataHash,
+                        )
+                        .0,
+                ]
+                    .concat()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::EventTopic for Message {
+            #[inline]
+            fn topic_preimage_length(rust: &Self::RustType) -> usize {
+                0usize
+                    + <alloy::sol_types::sol_data::Uint<
+                        8,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(&rust.kind)
+                    + <alloy::sol_types::sol_data::Address as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.sender,
+                    )
+                    + <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.blockNumber,
+                    )
+                    + <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.timestamp,
+                    )
+                    + <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.inboxSeqNum,
+                    )
+                    + <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.baseFeeL1,
+                    )
+                    + <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.messageDataHash,
+                    )
+            }
+            #[inline]
+            fn encode_topic_preimage(
+                rust: &Self::RustType,
+                out: &mut alloy_sol_types::private::Vec<u8>,
+            ) {
+                out.reserve(
+                    <Self as alloy_sol_types::EventTopic>::topic_preimage_length(rust),
+                );
+                <alloy::sol_types::sol_data::Uint<
+                    8,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.kind,
+                    out,
+                );
+                <alloy::sol_types::sol_data::Address as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.sender,
+                    out,
+                );
+                <alloy::sol_types::sol_data::Uint<
+                    64,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.blockNumber,
+                    out,
+                );
+                <alloy::sol_types::sol_data::Uint<
+                    64,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.timestamp,
+                    out,
+                );
+                <alloy::sol_types::sol_data::Uint<
+                    256,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.inboxSeqNum,
+                    out,
+                );
+                <alloy::sol_types::sol_data::Uint<
+                    256,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.baseFeeL1,
+                    out,
+                );
+                <alloy::sol_types::sol_data::FixedBytes<
+                    32,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.messageDataHash,
+                    out,
+                );
+            }
+            #[inline]
+            fn encode_topic(
+                rust: &Self::RustType,
+            ) -> alloy_sol_types::abi::token::WordToken {
+                let mut out = alloy_sol_types::private::Vec::new();
+                <Self as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    rust,
+                    &mut out,
+                );
+                alloy_sol_types::abi::token::WordToken(
+                    alloy_sol_types::private::keccak256(out),
+                )
+            }
+        }
+    };
+    use alloy::contract as alloy_contract;
+    /**Creates a new wrapper around an on-chain [`Messages`](self) contract instance.
+
+See the [wrapper's documentation](`MessagesInstance`) for more details.*/
+    #[inline]
+    pub const fn new<
+        P: alloy_contract::private::Provider<N>,
+        N: alloy_contract::private::Network,
+    >(
+        address: alloy_sol_types::private::Address,
+        provider: P,
+    ) -> MessagesInstance<P, N> {
+        MessagesInstance::<P, N>::new(address, provider)
+    }
+    /**A [`Messages`](self) instance.
+
+Contains type-safe methods for interacting with an on-chain instance of the
+[`Messages`](self) contract located at a given `address`, using a given
+provider `P`.
+
+If the contract bytecode is available (see the [`sol!`](alloy_sol_types::sol!)
+documentation on how to provide it), the `deploy` and `deploy_builder` methods can
+be used to deploy a new instance of the contract.
+
+See the [module-level documentation](self) for all the available methods.*/
+    #[derive(Clone)]
+    pub struct MessagesInstance<P, N = alloy_contract::private::Ethereum> {
+        address: alloy_sol_types::private::Address,
+        provider: P,
+        _network: ::core::marker::PhantomData<N>,
+    }
+    #[automatically_derived]
+    impl<P, N> ::core::fmt::Debug for MessagesInstance<P, N> {
+        #[inline]
+        fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+            f.debug_tuple("MessagesInstance").field(&self.address).finish()
+        }
+    }
+    /// Instantiation and getters/setters.
+    #[automatically_derived]
+    impl<
+        P: alloy_contract::private::Provider<N>,
+        N: alloy_contract::private::Network,
+    > MessagesInstance<P, N> {
+        /**Creates a new wrapper around an on-chain [`Messages`](self) contract instance.
+
+See the [wrapper's documentation](`MessagesInstance`) for more details.*/
+        #[inline]
+        pub const fn new(
+            address: alloy_sol_types::private::Address,
+            provider: P,
+        ) -> Self {
+            Self {
+                address,
+                provider,
+                _network: ::core::marker::PhantomData,
+            }
+        }
+        /// Returns a reference to the address.
+        #[inline]
+        pub const fn address(&self) -> &alloy_sol_types::private::Address {
+            &self.address
+        }
+        /// Sets the address.
+        #[inline]
+        pub fn set_address(&mut self, address: alloy_sol_types::private::Address) {
+            self.address = address;
+        }
+        /// Sets the address and returns `self`.
+        pub fn at(mut self, address: alloy_sol_types::private::Address) -> Self {
+            self.set_address(address);
+            self
+        }
+        /// Returns a reference to the provider.
+        #[inline]
+        pub const fn provider(&self) -> &P {
+            &self.provider
+        }
+    }
+    impl<P: ::core::clone::Clone, N> MessagesInstance<&P, N> {
+        /// Clones the provider and returns a new instance with the cloned provider.
+        #[inline]
+        pub fn with_cloned_provider(self) -> MessagesInstance<P, N> {
+            MessagesInstance {
+                address: self.address,
+                provider: ::core::clone::Clone::clone(&self.provider),
+                _network: ::core::marker::PhantomData,
+            }
+        }
+    }
+    /// Function calls.
+    #[automatically_derived]
+    impl<
+        P: alloy_contract::private::Provider<N>,
+        N: alloy_contract::private::Network,
+    > MessagesInstance<P, N> {
+        /// Creates a new call builder using this contract instance's provider and address.
+        ///
+        /// Note that the call can be any function call, not just those defined in this
+        /// contract. Prefer using the other methods for building type-safe contract calls.
+        pub fn call_builder<C: alloy_sol_types::SolCall>(
+            &self,
+            call: &C,
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
+            alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
+        }
+    }
+    /// Event filters.
+    #[automatically_derived]
+    impl<
+        P: alloy_contract::private::Provider<N>,
+        N: alloy_contract::private::Network,
+    > MessagesInstance<P, N> {
+        /// Creates a new event filter using this contract instance's provider and address.
+        ///
+        /// Note that the type can be any event, not just those defined in this contract.
+        /// Prefer using the other methods for building type-safe event filters.
+        pub fn event_filter<E: alloy_sol_types::SolEvent>(
+            &self,
+        ) -> alloy_contract::Event<&P, E, N> {
+            alloy_contract::Event::new_sol(&self.provider, &self.address)
+        }
+    }
+}
 /**
 
 Generated by the following Solidity interface...
@@ -924,6 +1413,18 @@ library IBridge {
         uint64 maxTimestamp;
         uint64 minBlockNumber;
         uint64 maxBlockNumber;
+    }
+}
+
+library Messages {
+    struct Message {
+        uint8 kind;
+        address sender;
+        uint64 blockNumber;
+        uint64 timestamp;
+        uint256 inboxSeqNum;
+        uint256 baseFeeL1;
+        bytes32 messageDataHash;
     }
 }
 
@@ -951,6 +1452,15 @@ interface ISequencerInbox {
         bytes inclusionProof;
         bytes quorumIndices;
     }
+    struct BufferConfig {
+        uint64 threshold;
+        uint64 max;
+        uint64 replenishRateInBasis;
+    }
+    struct DelayProof {
+        bytes32 beforeDelayedAcc;
+        Messages.Message delayedMessage;
+    }
     struct EigenDACert {
         BlobVerificationProof blobVerificationProof;
         BlobHeader blobHeader;
@@ -968,12 +1478,18 @@ interface ISequencerInbox {
         uint32 chunkLength;
     }
 
+    event BatchPosterManagerSet(address newBatchPosterManager);
+    event BatchPosterSet(address batchPoster, bool isBatchPoster);
+    event BufferConfigSet(BufferConfig bufferConfig);
+    event FeeTokenPricerSet(address feeTokenPricer);
     event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
     event InboxMessageDeliveredFromOrigin(uint256 indexed messageNum);
     event InvalidateKeyset(bytes32 indexed keysetHash);
+    event MaxTimeVariationSet(MaxTimeVariation maxTimeVariation);
     event OwnerFunctionCalled(uint256 indexed id);
     event SequencerBatchData(uint256 indexed batchSequenceNumber, bytes data);
     event SequencerBatchDelivered(uint256 indexed batchSequenceNumber, bytes32 indexed beforeAcc, bytes32 indexed afterAcc, bytes32 delayedAcc, uint256 afterDelayedMessagesRead, IBridge.TimeBounds timeBounds, IBridge.BatchDataLocation dataLocation);
+    event SequencerSet(address addr, bool isSequencer);
     event SetValidKeyset(bytes32 indexed keysetHash, bytes keysetBytes);
 
     function BROTLI_MESSAGE_HEADER_FLAG() external view returns (bytes1);
@@ -985,21 +1501,27 @@ interface ISequencerInbox {
     function TREE_DAS_MESSAGE_HEADER_FLAG() external view returns (bytes1);
     function ZERO_HEAVY_MESSAGE_HEADER_FLAG() external view returns (bytes1);
     function addSequencerL2Batch(uint256 sequenceNumber, bytes memory data, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount) external;
+    function addSequencerL2BatchDelayProof(uint256 sequenceNumber, bytes memory data, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount, DelayProof memory delayProof) external;
     function addSequencerL2BatchFromBlobs(uint256 sequenceNumber, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount) external;
+    function addSequencerL2BatchFromBlobsDelayProof(uint256 sequenceNumber, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount, DelayProof memory delayProof) external;
     function addSequencerL2BatchFromEigenDA(uint256 sequenceNumber, EigenDACert memory cert, address gasRefunder, uint256 afterDelayedMessagesRead, uint256 prevMessageCount, uint256 newMessageCount) external;
     function addSequencerL2BatchFromOrigin(uint256 sequenceNumber, bytes memory data, uint256 afterDelayedMessagesRead, address gasRefunder) external;
     function addSequencerL2BatchFromOrigin(uint256 sequenceNumber, bytes memory data, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount) external;
+    function addSequencerL2BatchFromOriginDelayProof(uint256 sequenceNumber, bytes memory data, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount, DelayProof memory delayProof) external;
     function batchCount() external view returns (uint256);
     function batchPosterManager() external view returns (address);
     function bridge() external view returns (address);
     function dasKeySetInfo(bytes32) external view returns (bool, uint64);
     function eigenDACertVerifier() external view returns (address);
+    function feeTokenPricer() external view returns (address);
     function forceInclusion(uint256 _totalDelayedMessagesRead, uint8 kind, uint64[2] memory l1BlockAndTime, uint256 baseFeeL1, address sender, bytes32 messageDataHash) external;
+    function forceInclusionDeadline(uint64 blockNumber) external view returns (uint64 blockNumberDeadline);
     function getKeysetCreationBlock(bytes32 ksHash) external view returns (uint256);
     function inboxAccs(uint256 index) external view returns (bytes32);
-    function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) external;
+    function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_, BufferConfig memory bufferConfig_, address feeTokenPricer_) external;
     function invalidateKeysetHash(bytes32 ksHash) external;
     function isBatchPoster(address) external view returns (bool);
+    function isDelayBufferable() external view returns (bool);
     function isSequencer(address) external view returns (bool);
     function isValidKeysetHash(bytes32 ksHash) external view returns (bool);
     function maxDataSize() external view returns (uint256);
@@ -1008,6 +1530,7 @@ interface ISequencerInbox {
     function rollup() external view returns (address);
     function setBatchPosterManager(address newBatchPosterManager) external;
     function setEigenDACertVerifier(address newCertVerifier) external;
+    function setFeeTokenPricer(address newFeeTokenPricer) external;
     function setIsBatchPoster(address addr, bool isBatchPoster_) external;
     function setIsSequencer(address addr, bool isSequencer_) external;
     function setMaxTimeVariation(MaxTimeVariation memory maxTimeVariation_) external;
@@ -1164,6 +1687,98 @@ interface ISequencerInbox {
   },
   {
     "type": "function",
+    "name": "addSequencerL2BatchDelayProof",
+    "inputs": [
+      {
+        "name": "sequenceNumber",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "afterDelayedMessagesRead",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "gasRefunder",
+        "type": "address",
+        "internalType": "contract IGasRefunder"
+      },
+      {
+        "name": "prevMessageCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newMessageCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "delayProof",
+        "type": "tuple",
+        "internalType": "struct DelayProof",
+        "components": [
+          {
+            "name": "beforeDelayedAcc",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "delayedMessage",
+            "type": "tuple",
+            "internalType": "struct Messages.Message",
+            "components": [
+              {
+                "name": "kind",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "sender",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "blockNumber",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "timestamp",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "inboxSeqNum",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "baseFeeL1",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "messageDataHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "addSequencerL2BatchFromBlobs",
     "inputs": [
       {
@@ -1190,6 +1805,93 @@ interface ISequencerInbox {
         "name": "newMessageCount",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "addSequencerL2BatchFromBlobsDelayProof",
+    "inputs": [
+      {
+        "name": "sequenceNumber",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "afterDelayedMessagesRead",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "gasRefunder",
+        "type": "address",
+        "internalType": "contract IGasRefunder"
+      },
+      {
+        "name": "prevMessageCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newMessageCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "delayProof",
+        "type": "tuple",
+        "internalType": "struct DelayProof",
+        "components": [
+          {
+            "name": "beforeDelayedAcc",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "delayedMessage",
+            "type": "tuple",
+            "internalType": "struct Messages.Message",
+            "components": [
+              {
+                "name": "kind",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "sender",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "blockNumber",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "timestamp",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "inboxSeqNum",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "baseFeeL1",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "messageDataHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              }
+            ]
+          }
+        ]
       }
     ],
     "outputs": [],
@@ -1430,6 +2132,98 @@ interface ISequencerInbox {
   },
   {
     "type": "function",
+    "name": "addSequencerL2BatchFromOriginDelayProof",
+    "inputs": [
+      {
+        "name": "sequenceNumber",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "afterDelayedMessagesRead",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "gasRefunder",
+        "type": "address",
+        "internalType": "contract IGasRefunder"
+      },
+      {
+        "name": "prevMessageCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newMessageCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "delayProof",
+        "type": "tuple",
+        "internalType": "struct DelayProof",
+        "components": [
+          {
+            "name": "beforeDelayedAcc",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "delayedMessage",
+            "type": "tuple",
+            "internalType": "struct Messages.Message",
+            "components": [
+              {
+                "name": "kind",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "sender",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "blockNumber",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "timestamp",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "inboxSeqNum",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "baseFeeL1",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "messageDataHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "batchCount",
     "inputs": [],
     "outputs": [
@@ -1506,6 +2300,19 @@ interface ISequencerInbox {
   },
   {
     "type": "function",
+    "name": "feeTokenPricer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IFeeTokenPricer"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "forceInclusion",
     "inputs": [
       {
@@ -1541,6 +2348,25 @@ interface ISequencerInbox {
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "forceInclusionDeadline",
+    "inputs": [
+      {
+        "name": "blockNumber",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "blockNumberDeadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1615,6 +2441,33 @@ interface ISequencerInbox {
             "internalType": "uint256"
           }
         ]
+      },
+      {
+        "name": "bufferConfig_",
+        "type": "tuple",
+        "internalType": "struct BufferConfig",
+        "components": [
+          {
+            "name": "threshold",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "max",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "replenishRateInBasis",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "feeTokenPricer_",
+        "type": "address",
+        "internalType": "contract IFeeTokenPricer"
       }
     ],
     "outputs": [],
@@ -1643,6 +2496,19 @@ interface ISequencerInbox {
         "internalType": "address"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isDelayBufferable",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
@@ -1779,6 +2645,19 @@ interface ISequencerInbox {
   },
   {
     "type": "function",
+    "name": "setFeeTokenPricer",
+    "inputs": [
+      {
+        "name": "newFeeTokenPricer",
+        "type": "address",
+        "internalType": "contract IFeeTokenPricer"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setIsBatchPoster",
     "inputs": [
       {
@@ -1883,6 +2762,81 @@ interface ISequencerInbox {
   },
   {
     "type": "event",
+    "name": "BatchPosterManagerSet",
+    "inputs": [
+      {
+        "name": "newBatchPosterManager",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BatchPosterSet",
+    "inputs": [
+      {
+        "name": "batchPoster",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "isBatchPoster",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BufferConfigSet",
+    "inputs": [
+      {
+        "name": "bufferConfig",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct BufferConfig",
+        "components": [
+          {
+            "name": "threshold",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "max",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "replenishRateInBasis",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeeTokenPricerSet",
+    "inputs": [
+      {
+        "name": "feeTokenPricer",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "InboxMessageDelivered",
     "inputs": [
       {
@@ -1922,6 +2876,41 @@ interface ISequencerInbox {
         "type": "bytes32",
         "indexed": true,
         "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MaxTimeVariationSet",
+    "inputs": [
+      {
+        "name": "maxTimeVariation",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct ISequencerInbox.MaxTimeVariation",
+        "components": [
+          {
+            "name": "delayBlocks",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "futureBlocks",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "delaySeconds",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "futureSeconds",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
     "anonymous": false
@@ -2025,6 +3014,25 @@ interface ISequencerInbox {
         "type": "uint8",
         "indexed": false,
         "internalType": "enum IBridge.BatchDataLocation"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SequencerSet",
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "isSequencer",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -3182,6 +4190,481 @@ struct BlobVerificationProof { uint32 batchId; uint32 blobIndex; BatchMetadata b
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**```solidity
+struct BufferConfig { uint64 threshold; uint64 max; uint64 replenishRateInBasis; }
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct BufferConfig {
+        #[allow(missing_docs)]
+        pub threshold: u64,
+        #[allow(missing_docs)]
+        pub max: u64,
+        #[allow(missing_docs)]
+        pub replenishRateInBasis: u64,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = (
+            alloy::sol_types::sol_data::Uint<64>,
+            alloy::sol_types::sol_data::Uint<64>,
+            alloy::sol_types::sol_data::Uint<64>,
+        );
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (u64, u64, u64);
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<BufferConfig> for UnderlyingRustTuple<'_> {
+            fn from(value: BufferConfig) -> Self {
+                (value.threshold, value.max, value.replenishRateInBasis)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for BufferConfig {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self {
+                    threshold: tuple.0,
+                    max: tuple.1,
+                    replenishRateInBasis: tuple.2,
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolValue for BufferConfig {
+            type SolType = Self;
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::SolTypeValue<Self> for BufferConfig {
+            #[inline]
+            fn stv_to_tokens(&self) -> <Self as alloy_sol_types::SolType>::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::tokenize(&self.threshold),
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::tokenize(&self.max),
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::tokenize(&self.replenishRateInBasis),
+                )
+            }
+            #[inline]
+            fn stv_abi_encoded_size(&self) -> usize {
+                if let Some(size) = <Self as alloy_sol_types::SolType>::ENCODED_SIZE {
+                    return size;
+                }
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_encoded_size(&tuple)
+            }
+            #[inline]
+            fn stv_eip712_data_word(&self) -> alloy_sol_types::Word {
+                <Self as alloy_sol_types::SolStruct>::eip712_hash_struct(self)
+            }
+            #[inline]
+            fn stv_abi_encode_packed_to(
+                &self,
+                out: &mut alloy_sol_types::private::Vec<u8>,
+            ) {
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
+            }
+            #[inline]
+            fn stv_abi_packed_encoded_size(&self) -> usize {
+                if let Some(size) = <Self as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE {
+                    return size;
+                }
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_packed_encoded_size(&tuple)
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolType for BufferConfig {
+            type RustType = Self;
+            type Token<'a> = <UnderlyingSolTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SOL_NAME: &'static str = <Self as alloy_sol_types::SolStruct>::NAME;
+            const ENCODED_SIZE: Option<usize> = <UnderlyingSolTuple<
+                '_,
+            > as alloy_sol_types::SolType>::ENCODED_SIZE;
+            const PACKED_ENCODED_SIZE: Option<usize> = <UnderlyingSolTuple<
+                '_,
+            > as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE;
+            #[inline]
+            fn valid_token(token: &Self::Token<'_>) -> bool {
+                <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::valid_token(token)
+            }
+            #[inline]
+            fn detokenize(token: Self::Token<'_>) -> Self::RustType {
+                let tuple = <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::detokenize(token);
+                <Self as ::core::convert::From<UnderlyingRustTuple<'_>>>::from(tuple)
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolStruct for BufferConfig {
+            const NAME: &'static str = "BufferConfig";
+            #[inline]
+            fn eip712_root_type() -> alloy_sol_types::private::Cow<'static, str> {
+                alloy_sol_types::private::Cow::Borrowed(
+                    "BufferConfig(uint64 threshold,uint64 max,uint64 replenishRateInBasis)",
+                )
+            }
+            #[inline]
+            fn eip712_components() -> alloy_sol_types::private::Vec<
+                alloy_sol_types::private::Cow<'static, str>,
+            > {
+                alloy_sol_types::private::Vec::new()
+            }
+            #[inline]
+            fn eip712_encode_type() -> alloy_sol_types::private::Cow<'static, str> {
+                <Self as alloy_sol_types::SolStruct>::eip712_root_type()
+            }
+            #[inline]
+            fn eip712_encode_data(&self) -> alloy_sol_types::private::Vec<u8> {
+                [
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::eip712_data_word(&self.threshold)
+                        .0,
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::eip712_data_word(&self.max)
+                        .0,
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::eip712_data_word(
+                            &self.replenishRateInBasis,
+                        )
+                        .0,
+                ]
+                    .concat()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::EventTopic for BufferConfig {
+            #[inline]
+            fn topic_preimage_length(rust: &Self::RustType) -> usize {
+                0usize
+                    + <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.threshold,
+                    )
+                    + <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(&rust.max)
+                    + <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.replenishRateInBasis,
+                    )
+            }
+            #[inline]
+            fn encode_topic_preimage(
+                rust: &Self::RustType,
+                out: &mut alloy_sol_types::private::Vec<u8>,
+            ) {
+                out.reserve(
+                    <Self as alloy_sol_types::EventTopic>::topic_preimage_length(rust),
+                );
+                <alloy::sol_types::sol_data::Uint<
+                    64,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.threshold,
+                    out,
+                );
+                <alloy::sol_types::sol_data::Uint<
+                    64,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(&rust.max, out);
+                <alloy::sol_types::sol_data::Uint<
+                    64,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.replenishRateInBasis,
+                    out,
+                );
+            }
+            #[inline]
+            fn encode_topic(
+                rust: &Self::RustType,
+            ) -> alloy_sol_types::abi::token::WordToken {
+                let mut out = alloy_sol_types::private::Vec::new();
+                <Self as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    rust,
+                    &mut out,
+                );
+                alloy_sol_types::abi::token::WordToken(
+                    alloy_sol_types::private::keccak256(out),
+                )
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**```solidity
+struct DelayProof { bytes32 beforeDelayedAcc; Messages.Message delayedMessage; }
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct DelayProof {
+        #[allow(missing_docs)]
+        pub beforeDelayedAcc: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
+        pub delayedMessage: <Messages::Message as alloy::sol_types::SolType>::RustType,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = (
+            alloy::sol_types::sol_data::FixedBytes<32>,
+            Messages::Message,
+        );
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (
+            alloy::sol_types::private::FixedBytes<32>,
+            <Messages::Message as alloy::sol_types::SolType>::RustType,
+        );
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<DelayProof> for UnderlyingRustTuple<'_> {
+            fn from(value: DelayProof) -> Self {
+                (value.beforeDelayedAcc, value.delayedMessage)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for DelayProof {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self {
+                    beforeDelayedAcc: tuple.0,
+                    delayedMessage: tuple.1,
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolValue for DelayProof {
+            type SolType = Self;
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::SolTypeValue<Self> for DelayProof {
+            #[inline]
+            fn stv_to_tokens(&self) -> <Self as alloy_sol_types::SolType>::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::SolType>::tokenize(&self.beforeDelayedAcc),
+                    <Messages::Message as alloy_sol_types::SolType>::tokenize(
+                        &self.delayedMessage,
+                    ),
+                )
+            }
+            #[inline]
+            fn stv_abi_encoded_size(&self) -> usize {
+                if let Some(size) = <Self as alloy_sol_types::SolType>::ENCODED_SIZE {
+                    return size;
+                }
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_encoded_size(&tuple)
+            }
+            #[inline]
+            fn stv_eip712_data_word(&self) -> alloy_sol_types::Word {
+                <Self as alloy_sol_types::SolStruct>::eip712_hash_struct(self)
+            }
+            #[inline]
+            fn stv_abi_encode_packed_to(
+                &self,
+                out: &mut alloy_sol_types::private::Vec<u8>,
+            ) {
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
+            }
+            #[inline]
+            fn stv_abi_packed_encoded_size(&self) -> usize {
+                if let Some(size) = <Self as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE {
+                    return size;
+                }
+                let tuple = <UnderlyingRustTuple<
+                    '_,
+                > as ::core::convert::From<Self>>::from(self.clone());
+                <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_packed_encoded_size(&tuple)
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolType for DelayProof {
+            type RustType = Self;
+            type Token<'a> = <UnderlyingSolTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SOL_NAME: &'static str = <Self as alloy_sol_types::SolStruct>::NAME;
+            const ENCODED_SIZE: Option<usize> = <UnderlyingSolTuple<
+                '_,
+            > as alloy_sol_types::SolType>::ENCODED_SIZE;
+            const PACKED_ENCODED_SIZE: Option<usize> = <UnderlyingSolTuple<
+                '_,
+            > as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE;
+            #[inline]
+            fn valid_token(token: &Self::Token<'_>) -> bool {
+                <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::valid_token(token)
+            }
+            #[inline]
+            fn detokenize(token: Self::Token<'_>) -> Self::RustType {
+                let tuple = <UnderlyingSolTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::detokenize(token);
+                <Self as ::core::convert::From<UnderlyingRustTuple<'_>>>::from(tuple)
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolStruct for DelayProof {
+            const NAME: &'static str = "DelayProof";
+            #[inline]
+            fn eip712_root_type() -> alloy_sol_types::private::Cow<'static, str> {
+                alloy_sol_types::private::Cow::Borrowed(
+                    "DelayProof(bytes32 beforeDelayedAcc,Message delayedMessage)",
+                )
+            }
+            #[inline]
+            fn eip712_components() -> alloy_sol_types::private::Vec<
+                alloy_sol_types::private::Cow<'static, str>,
+            > {
+                let mut components = alloy_sol_types::private::Vec::with_capacity(1);
+                components
+                    .push(
+                        <Messages::Message as alloy_sol_types::SolStruct>::eip712_root_type(),
+                    );
+                components
+                    .extend(
+                        <Messages::Message as alloy_sol_types::SolStruct>::eip712_components(),
+                    );
+                components
+            }
+            #[inline]
+            fn eip712_encode_data(&self) -> alloy_sol_types::private::Vec<u8> {
+                [
+                    <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::SolType>::eip712_data_word(
+                            &self.beforeDelayedAcc,
+                        )
+                        .0,
+                    <Messages::Message as alloy_sol_types::SolType>::eip712_data_word(
+                            &self.delayedMessage,
+                        )
+                        .0,
+                ]
+                    .concat()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::EventTopic for DelayProof {
+            #[inline]
+            fn topic_preimage_length(rust: &Self::RustType) -> usize {
+                0usize
+                    + <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.beforeDelayedAcc,
+                    )
+                    + <Messages::Message as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.delayedMessage,
+                    )
+            }
+            #[inline]
+            fn encode_topic_preimage(
+                rust: &Self::RustType,
+                out: &mut alloy_sol_types::private::Vec<u8>,
+            ) {
+                out.reserve(
+                    <Self as alloy_sol_types::EventTopic>::topic_preimage_length(rust),
+                );
+                <alloy::sol_types::sol_data::FixedBytes<
+                    32,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.beforeDelayedAcc,
+                    out,
+                );
+                <Messages::Message as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.delayedMessage,
+                    out,
+                );
+            }
+            #[inline]
+            fn encode_topic(
+                rust: &Self::RustType,
+            ) -> alloy_sol_types::abi::token::WordToken {
+                let mut out = alloy_sol_types::private::Vec::new();
+                <Self as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    rust,
+                    &mut out,
+                );
+                alloy_sol_types::abi::token::WordToken(
+                    alloy_sol_types::private::keccak256(out),
+                )
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**```solidity
 struct EigenDACert { BlobVerificationProof blobVerificationProof; BlobHeader blobHeader; }
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
@@ -3970,6 +5453,439 @@ struct QuorumBlobParam { uint8 quorumNumber; uint8 adversaryThresholdPercentage;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Event with signature `BatchPosterManagerSet(address)` and selector `0x3cd6c184800297a0f2b00926a683cbe76890bb7fd01480ac0a10ed6c8f7f6659`.
+```solidity
+event BatchPosterManagerSet(address newBatchPosterManager);
+```*/
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    #[derive(Clone)]
+    pub struct BatchPosterManagerSet {
+        #[allow(missing_docs)]
+        pub newBatchPosterManager: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[automatically_derived]
+        impl alloy_sol_types::SolEvent for BatchPosterManagerSet {
+            type DataTuple<'a> = (alloy::sol_types::sol_data::Address,);
+            type DataToken<'a> = <Self::DataTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
+            const SIGNATURE: &'static str = "BatchPosterManagerSet(address)";
+            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
+                60u8, 214u8, 193u8, 132u8, 128u8, 2u8, 151u8, 160u8, 242u8, 176u8, 9u8,
+                38u8, 166u8, 131u8, 203u8, 231u8, 104u8, 144u8, 187u8, 127u8, 208u8,
+                20u8, 128u8, 172u8, 10u8, 16u8, 237u8, 108u8, 143u8, 127u8, 102u8, 89u8,
+            ]);
+            const ANONYMOUS: bool = false;
+            #[allow(unused_variables)]
+            #[inline]
+            fn new(
+                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                Self {
+                    newBatchPosterManager: data.0,
+                }
+            }
+            #[inline]
+            fn check_signature(
+                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
+            ) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(
+                        alloy_sol_types::Error::invalid_event_signature_hash(
+                            Self::SIGNATURE,
+                            topics.0,
+                            Self::SIGNATURE_HASH,
+                        ),
+                    );
+                }
+                Ok(())
+            }
+            #[inline]
+            fn tokenize_body(&self) -> Self::DataToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.newBatchPosterManager,
+                    ),
+                )
+            }
+            #[inline]
+            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                (Self::SIGNATURE_HASH.into(),)
+            }
+            #[inline]
+            fn encode_topics_raw(
+                &self,
+                out: &mut [alloy_sol_types::abi::token::WordToken],
+            ) -> alloy_sol_types::Result<()> {
+                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                    return Err(alloy_sol_types::Error::Overrun);
+                }
+                out[0usize] = alloy_sol_types::abi::token::WordToken(
+                    Self::SIGNATURE_HASH,
+                );
+                Ok(())
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::IntoLogData for BatchPosterManagerSet {
+            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                From::from(self)
+            }
+            fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                From::from(&self)
+            }
+        }
+        #[automatically_derived]
+        impl From<&BatchPosterManagerSet> for alloy_sol_types::private::LogData {
+            #[inline]
+            fn from(this: &BatchPosterManagerSet) -> alloy_sol_types::private::LogData {
+                alloy_sol_types::SolEvent::encode_log_data(this)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Event with signature `BatchPosterSet(address,bool)` and selector `0x28bcc5626d357efe966b4b0876aa1ee8ab99e26da4f131f6a2623f1800701c21`.
+```solidity
+event BatchPosterSet(address batchPoster, bool isBatchPoster);
+```*/
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    #[derive(Clone)]
+    pub struct BatchPosterSet {
+        #[allow(missing_docs)]
+        pub batchPoster: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub isBatchPoster: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[automatically_derived]
+        impl alloy_sol_types::SolEvent for BatchPosterSet {
+            type DataTuple<'a> = (
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Bool,
+            );
+            type DataToken<'a> = <Self::DataTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
+            const SIGNATURE: &'static str = "BatchPosterSet(address,bool)";
+            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
+                40u8, 188u8, 197u8, 98u8, 109u8, 53u8, 126u8, 254u8, 150u8, 107u8, 75u8,
+                8u8, 118u8, 170u8, 30u8, 232u8, 171u8, 153u8, 226u8, 109u8, 164u8, 241u8,
+                49u8, 246u8, 162u8, 98u8, 63u8, 24u8, 0u8, 112u8, 28u8, 33u8,
+            ]);
+            const ANONYMOUS: bool = false;
+            #[allow(unused_variables)]
+            #[inline]
+            fn new(
+                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                Self {
+                    batchPoster: data.0,
+                    isBatchPoster: data.1,
+                }
+            }
+            #[inline]
+            fn check_signature(
+                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
+            ) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(
+                        alloy_sol_types::Error::invalid_event_signature_hash(
+                            Self::SIGNATURE,
+                            topics.0,
+                            Self::SIGNATURE_HASH,
+                        ),
+                    );
+                }
+                Ok(())
+            }
+            #[inline]
+            fn tokenize_body(&self) -> Self::DataToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.batchPoster,
+                    ),
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        &self.isBatchPoster,
+                    ),
+                )
+            }
+            #[inline]
+            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                (Self::SIGNATURE_HASH.into(),)
+            }
+            #[inline]
+            fn encode_topics_raw(
+                &self,
+                out: &mut [alloy_sol_types::abi::token::WordToken],
+            ) -> alloy_sol_types::Result<()> {
+                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                    return Err(alloy_sol_types::Error::Overrun);
+                }
+                out[0usize] = alloy_sol_types::abi::token::WordToken(
+                    Self::SIGNATURE_HASH,
+                );
+                Ok(())
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::IntoLogData for BatchPosterSet {
+            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                From::from(self)
+            }
+            fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                From::from(&self)
+            }
+        }
+        #[automatically_derived]
+        impl From<&BatchPosterSet> for alloy_sol_types::private::LogData {
+            #[inline]
+            fn from(this: &BatchPosterSet) -> alloy_sol_types::private::LogData {
+                alloy_sol_types::SolEvent::encode_log_data(this)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Event with signature `BufferConfigSet((uint64,uint64,uint64))` and selector `0xaa7a2d8175dee3b637814ad6346005dfcc357165396fb8327f649effe8abcf85`.
+```solidity
+event BufferConfigSet(BufferConfig bufferConfig);
+```*/
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    #[derive(Clone)]
+    pub struct BufferConfigSet {
+        #[allow(missing_docs)]
+        pub bufferConfig: <BufferConfig as alloy::sol_types::SolType>::RustType,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[automatically_derived]
+        impl alloy_sol_types::SolEvent for BufferConfigSet {
+            type DataTuple<'a> = (BufferConfig,);
+            type DataToken<'a> = <Self::DataTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
+            const SIGNATURE: &'static str = "BufferConfigSet((uint64,uint64,uint64))";
+            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
+                170u8, 122u8, 45u8, 129u8, 117u8, 222u8, 227u8, 182u8, 55u8, 129u8, 74u8,
+                214u8, 52u8, 96u8, 5u8, 223u8, 204u8, 53u8, 113u8, 101u8, 57u8, 111u8,
+                184u8, 50u8, 127u8, 100u8, 158u8, 255u8, 232u8, 171u8, 207u8, 133u8,
+            ]);
+            const ANONYMOUS: bool = false;
+            #[allow(unused_variables)]
+            #[inline]
+            fn new(
+                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                Self { bufferConfig: data.0 }
+            }
+            #[inline]
+            fn check_signature(
+                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
+            ) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(
+                        alloy_sol_types::Error::invalid_event_signature_hash(
+                            Self::SIGNATURE,
+                            topics.0,
+                            Self::SIGNATURE_HASH,
+                        ),
+                    );
+                }
+                Ok(())
+            }
+            #[inline]
+            fn tokenize_body(&self) -> Self::DataToken<'_> {
+                (
+                    <BufferConfig as alloy_sol_types::SolType>::tokenize(
+                        &self.bufferConfig,
+                    ),
+                )
+            }
+            #[inline]
+            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                (Self::SIGNATURE_HASH.into(),)
+            }
+            #[inline]
+            fn encode_topics_raw(
+                &self,
+                out: &mut [alloy_sol_types::abi::token::WordToken],
+            ) -> alloy_sol_types::Result<()> {
+                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                    return Err(alloy_sol_types::Error::Overrun);
+                }
+                out[0usize] = alloy_sol_types::abi::token::WordToken(
+                    Self::SIGNATURE_HASH,
+                );
+                Ok(())
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::IntoLogData for BufferConfigSet {
+            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                From::from(self)
+            }
+            fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                From::from(&self)
+            }
+        }
+        #[automatically_derived]
+        impl From<&BufferConfigSet> for alloy_sol_types::private::LogData {
+            #[inline]
+            fn from(this: &BufferConfigSet) -> alloy_sol_types::private::LogData {
+                alloy_sol_types::SolEvent::encode_log_data(this)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Event with signature `FeeTokenPricerSet(address)` and selector `0xe83d6153add50e41b8ee6c1115c4178687349bb12bc3902a50b1f6ad78a0c541`.
+```solidity
+event FeeTokenPricerSet(address feeTokenPricer);
+```*/
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    #[derive(Clone)]
+    pub struct FeeTokenPricerSet {
+        #[allow(missing_docs)]
+        pub feeTokenPricer: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[automatically_derived]
+        impl alloy_sol_types::SolEvent for FeeTokenPricerSet {
+            type DataTuple<'a> = (alloy::sol_types::sol_data::Address,);
+            type DataToken<'a> = <Self::DataTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
+            const SIGNATURE: &'static str = "FeeTokenPricerSet(address)";
+            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
+                232u8, 61u8, 97u8, 83u8, 173u8, 213u8, 14u8, 65u8, 184u8, 238u8, 108u8,
+                17u8, 21u8, 196u8, 23u8, 134u8, 135u8, 52u8, 155u8, 177u8, 43u8, 195u8,
+                144u8, 42u8, 80u8, 177u8, 246u8, 173u8, 120u8, 160u8, 197u8, 65u8,
+            ]);
+            const ANONYMOUS: bool = false;
+            #[allow(unused_variables)]
+            #[inline]
+            fn new(
+                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                Self { feeTokenPricer: data.0 }
+            }
+            #[inline]
+            fn check_signature(
+                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
+            ) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(
+                        alloy_sol_types::Error::invalid_event_signature_hash(
+                            Self::SIGNATURE,
+                            topics.0,
+                            Self::SIGNATURE_HASH,
+                        ),
+                    );
+                }
+                Ok(())
+            }
+            #[inline]
+            fn tokenize_body(&self) -> Self::DataToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.feeTokenPricer,
+                    ),
+                )
+            }
+            #[inline]
+            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                (Self::SIGNATURE_HASH.into(),)
+            }
+            #[inline]
+            fn encode_topics_raw(
+                &self,
+                out: &mut [alloy_sol_types::abi::token::WordToken],
+            ) -> alloy_sol_types::Result<()> {
+                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                    return Err(alloy_sol_types::Error::Overrun);
+                }
+                out[0usize] = alloy_sol_types::abi::token::WordToken(
+                    Self::SIGNATURE_HASH,
+                );
+                Ok(())
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::IntoLogData for FeeTokenPricerSet {
+            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                From::from(self)
+            }
+            fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                From::from(&self)
+            }
+        }
+        #[automatically_derived]
+        impl From<&FeeTokenPricerSet> for alloy_sol_types::private::LogData {
+            #[inline]
+            fn from(this: &FeeTokenPricerSet) -> alloy_sol_types::private::LogData {
+                alloy_sol_types::SolEvent::encode_log_data(this)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `InboxMessageDelivered(uint256,bytes)` and selector `0xff64905f73a67fb594e0f940a8075a860db489ad991e032f48c81123eb52d60b`.
 ```solidity
 event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
@@ -4297,6 +6213,111 @@ event InvalidateKeyset(bytes32 indexed keysetHash);
         impl From<&InvalidateKeyset> for alloy_sol_types::private::LogData {
             #[inline]
             fn from(this: &InvalidateKeyset) -> alloy_sol_types::private::LogData {
+                alloy_sol_types::SolEvent::encode_log_data(this)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Event with signature `MaxTimeVariationSet((uint256,uint256,uint256,uint256))` and selector `0xaa6a58dad31128ff7ecc2b80987ee6e003df80bc50cd8d0b0d1af0e07da6d19d`.
+```solidity
+event MaxTimeVariationSet(MaxTimeVariation maxTimeVariation);
+```*/
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    #[derive(Clone)]
+    pub struct MaxTimeVariationSet {
+        #[allow(missing_docs)]
+        pub maxTimeVariation: <MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[automatically_derived]
+        impl alloy_sol_types::SolEvent for MaxTimeVariationSet {
+            type DataTuple<'a> = (MaxTimeVariation,);
+            type DataToken<'a> = <Self::DataTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
+            const SIGNATURE: &'static str = "MaxTimeVariationSet((uint256,uint256,uint256,uint256))";
+            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
+                170u8, 106u8, 88u8, 218u8, 211u8, 17u8, 40u8, 255u8, 126u8, 204u8, 43u8,
+                128u8, 152u8, 126u8, 230u8, 224u8, 3u8, 223u8, 128u8, 188u8, 80u8, 205u8,
+                141u8, 11u8, 13u8, 26u8, 240u8, 224u8, 125u8, 166u8, 209u8, 157u8,
+            ]);
+            const ANONYMOUS: bool = false;
+            #[allow(unused_variables)]
+            #[inline]
+            fn new(
+                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                Self { maxTimeVariation: data.0 }
+            }
+            #[inline]
+            fn check_signature(
+                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
+            ) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(
+                        alloy_sol_types::Error::invalid_event_signature_hash(
+                            Self::SIGNATURE,
+                            topics.0,
+                            Self::SIGNATURE_HASH,
+                        ),
+                    );
+                }
+                Ok(())
+            }
+            #[inline]
+            fn tokenize_body(&self) -> Self::DataToken<'_> {
+                (
+                    <MaxTimeVariation as alloy_sol_types::SolType>::tokenize(
+                        &self.maxTimeVariation,
+                    ),
+                )
+            }
+            #[inline]
+            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                (Self::SIGNATURE_HASH.into(),)
+            }
+            #[inline]
+            fn encode_topics_raw(
+                &self,
+                out: &mut [alloy_sol_types::abi::token::WordToken],
+            ) -> alloy_sol_types::Result<()> {
+                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                    return Err(alloy_sol_types::Error::Overrun);
+                }
+                out[0usize] = alloy_sol_types::abi::token::WordToken(
+                    Self::SIGNATURE_HASH,
+                );
+                Ok(())
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::IntoLogData for MaxTimeVariationSet {
+            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                From::from(self)
+            }
+            fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                From::from(&self)
+            }
+        }
+        #[automatically_derived]
+        impl From<&MaxTimeVariationSet> for alloy_sol_types::private::LogData {
+            #[inline]
+            fn from(this: &MaxTimeVariationSet) -> alloy_sol_types::private::LogData {
                 alloy_sol_types::SolEvent::encode_log_data(this)
             }
         }
@@ -4686,6 +6707,122 @@ event SequencerBatchDelivered(uint256 indexed batchSequenceNumber, bytes32 index
             fn from(
                 this: &SequencerBatchDelivered,
             ) -> alloy_sol_types::private::LogData {
+                alloy_sol_types::SolEvent::encode_log_data(this)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Event with signature `SequencerSet(address,bool)` and selector `0xeb12a9a53eec138c91b27b4f912a257bd690c18fc8bde744be92a0365eb9b87e`.
+```solidity
+event SequencerSet(address addr, bool isSequencer);
+```*/
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    #[derive(Clone)]
+    pub struct SequencerSet {
+        #[allow(missing_docs)]
+        pub addr: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub isSequencer: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[automatically_derived]
+        impl alloy_sol_types::SolEvent for SequencerSet {
+            type DataTuple<'a> = (
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Bool,
+            );
+            type DataToken<'a> = <Self::DataTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
+            const SIGNATURE: &'static str = "SequencerSet(address,bool)";
+            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
+                235u8, 18u8, 169u8, 165u8, 62u8, 236u8, 19u8, 140u8, 145u8, 178u8, 123u8,
+                79u8, 145u8, 42u8, 37u8, 123u8, 214u8, 144u8, 193u8, 143u8, 200u8, 189u8,
+                231u8, 68u8, 190u8, 146u8, 160u8, 54u8, 94u8, 185u8, 184u8, 126u8,
+            ]);
+            const ANONYMOUS: bool = false;
+            #[allow(unused_variables)]
+            #[inline]
+            fn new(
+                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                Self {
+                    addr: data.0,
+                    isSequencer: data.1,
+                }
+            }
+            #[inline]
+            fn check_signature(
+                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
+            ) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(
+                        alloy_sol_types::Error::invalid_event_signature_hash(
+                            Self::SIGNATURE,
+                            topics.0,
+                            Self::SIGNATURE_HASH,
+                        ),
+                    );
+                }
+                Ok(())
+            }
+            #[inline]
+            fn tokenize_body(&self) -> Self::DataToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.addr,
+                    ),
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        &self.isSequencer,
+                    ),
+                )
+            }
+            #[inline]
+            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                (Self::SIGNATURE_HASH.into(),)
+            }
+            #[inline]
+            fn encode_topics_raw(
+                &self,
+                out: &mut [alloy_sol_types::abi::token::WordToken],
+            ) -> alloy_sol_types::Result<()> {
+                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                    return Err(alloy_sol_types::Error::Overrun);
+                }
+                out[0usize] = alloy_sol_types::abi::token::WordToken(
+                    Self::SIGNATURE_HASH,
+                );
+                Ok(())
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::IntoLogData for SequencerSet {
+            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                From::from(self)
+            }
+            fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                From::from(&self)
+            }
+        }
+        #[automatically_derived]
+        impl From<&SequencerSet> for alloy_sol_types::private::LogData {
+            #[inline]
+            fn from(this: &SequencerSet) -> alloy_sol_types::private::LogData {
                 alloy_sol_types::SolEvent::encode_log_data(this)
             }
         }
@@ -6190,6 +8327,224 @@ function addSequencerL2Batch(uint256 sequenceNumber, bytes memory data, uint256 
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `addSequencerL2BatchDelayProof(uint256,bytes,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))` and selector `0x6e620055`.
+```solidity
+function addSequencerL2BatchDelayProof(uint256 sequenceNumber, bytes memory data, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount, DelayProof memory delayProof) external;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct addSequencerL2BatchDelayProofCall {
+        #[allow(missing_docs)]
+        pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
+        pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
+    }
+    ///Container type for the return parameters of the [`addSequencerL2BatchDelayProof(uint256,bytes,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))`](addSequencerL2BatchDelayProofCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct addSequencerL2BatchDelayProofReturn {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                DelayProof,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::Bytes,
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::Address,
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+                <DelayProof as alloy::sol_types::SolType>::RustType,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<addSequencerL2BatchDelayProofCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: addSequencerL2BatchDelayProofCall) -> Self {
+                    (
+                        value.sequenceNumber,
+                        value.data,
+                        value.afterDelayedMessagesRead,
+                        value.gasRefunder,
+                        value.prevMessageCount,
+                        value.newMessageCount,
+                        value.delayProof,
+                    )
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for addSequencerL2BatchDelayProofCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        sequenceNumber: tuple.0,
+                        data: tuple.1,
+                        afterDelayedMessagesRead: tuple.2,
+                        gasRefunder: tuple.3,
+                        prevMessageCount: tuple.4,
+                        newMessageCount: tuple.5,
+                        delayProof: tuple.6,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<addSequencerL2BatchDelayProofReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: addSequencerL2BatchDelayProofReturn) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for addSequencerL2BatchDelayProofReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl addSequencerL2BatchDelayProofReturn {
+            fn _tokenize(
+                &self,
+            ) -> <addSequencerL2BatchDelayProofCall as alloy_sol_types::SolCall>::ReturnToken<
+                '_,
+            > {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for addSequencerL2BatchDelayProofCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                DelayProof,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = addSequencerL2BatchDelayProofReturn;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "addSequencerL2BatchDelayProof(uint256,bytes,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))";
+            const SELECTOR: [u8; 4] = [110u8, 98u8, 0u8, 85u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.sequenceNumber),
+                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
+                        &self.data,
+                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(
+                        &self.afterDelayedMessagesRead,
+                    ),
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.gasRefunder,
+                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.prevMessageCount),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.newMessageCount),
+                    <DelayProof as alloy_sol_types::SolType>::tokenize(&self.delayProof),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                addSequencerL2BatchDelayProofReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `addSequencerL2BatchFromBlobs(uint256,uint256,address,uint256,uint256)` and selector `0x3e5aa082`.
 ```solidity
 function addSequencerL2BatchFromBlobs(uint256 sequenceNumber, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount) external;
@@ -6369,6 +8724,214 @@ function addSequencerL2BatchFromBlobs(uint256 sequenceNumber, uint256 afterDelay
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
                 addSequencerL2BatchFromBlobsReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `addSequencerL2BatchFromBlobsDelayProof(uint256,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))` and selector `0x917cf8ac`.
+```solidity
+function addSequencerL2BatchFromBlobsDelayProof(uint256 sequenceNumber, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount, DelayProof memory delayProof) external;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct addSequencerL2BatchFromBlobsDelayProofCall {
+        #[allow(missing_docs)]
+        pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
+    }
+    ///Container type for the return parameters of the [`addSequencerL2BatchFromBlobsDelayProof(uint256,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))`](addSequencerL2BatchFromBlobsDelayProofCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct addSequencerL2BatchFromBlobsDelayProofReturn {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                DelayProof,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::Address,
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+                <DelayProof as alloy::sol_types::SolType>::RustType,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<addSequencerL2BatchFromBlobsDelayProofCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: addSequencerL2BatchFromBlobsDelayProofCall) -> Self {
+                    (
+                        value.sequenceNumber,
+                        value.afterDelayedMessagesRead,
+                        value.gasRefunder,
+                        value.prevMessageCount,
+                        value.newMessageCount,
+                        value.delayProof,
+                    )
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for addSequencerL2BatchFromBlobsDelayProofCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        sequenceNumber: tuple.0,
+                        afterDelayedMessagesRead: tuple.1,
+                        gasRefunder: tuple.2,
+                        prevMessageCount: tuple.3,
+                        newMessageCount: tuple.4,
+                        delayProof: tuple.5,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<addSequencerL2BatchFromBlobsDelayProofReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: addSequencerL2BatchFromBlobsDelayProofReturn) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for addSequencerL2BatchFromBlobsDelayProofReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl addSequencerL2BatchFromBlobsDelayProofReturn {
+            fn _tokenize(
+                &self,
+            ) -> <addSequencerL2BatchFromBlobsDelayProofCall as alloy_sol_types::SolCall>::ReturnToken<
+                '_,
+            > {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for addSequencerL2BatchFromBlobsDelayProofCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                DelayProof,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = addSequencerL2BatchFromBlobsDelayProofReturn;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "addSequencerL2BatchFromBlobsDelayProof(uint256,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))";
+            const SELECTOR: [u8; 4] = [145u8, 124u8, 248u8, 172u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.sequenceNumber),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(
+                        &self.afterDelayedMessagesRead,
+                    ),
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.gasRefunder,
+                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.prevMessageCount),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.newMessageCount),
+                    <DelayProof as alloy_sol_types::SolType>::tokenize(&self.delayProof),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                addSequencerL2BatchFromBlobsDelayProofReturn::_tokenize(ret)
             }
             #[inline]
             fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
@@ -6977,6 +9540,224 @@ function addSequencerL2BatchFromOrigin(uint256 sequenceNumber, bytes memory data
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
                 addSequencerL2BatchFromOrigin_1Return::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `addSequencerL2BatchFromOriginDelayProof(uint256,bytes,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))` and selector `0x69cacded`.
+```solidity
+function addSequencerL2BatchFromOriginDelayProof(uint256 sequenceNumber, bytes memory data, uint256 afterDelayedMessagesRead, address gasRefunder, uint256 prevMessageCount, uint256 newMessageCount, DelayProof memory delayProof) external;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct addSequencerL2BatchFromOriginDelayProofCall {
+        #[allow(missing_docs)]
+        pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
+        pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
+    }
+    ///Container type for the return parameters of the [`addSequencerL2BatchFromOriginDelayProof(uint256,bytes,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))`](addSequencerL2BatchFromOriginDelayProofCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct addSequencerL2BatchFromOriginDelayProofReturn {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                DelayProof,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::Bytes,
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::Address,
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+                <DelayProof as alloy::sol_types::SolType>::RustType,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<addSequencerL2BatchFromOriginDelayProofCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: addSequencerL2BatchFromOriginDelayProofCall) -> Self {
+                    (
+                        value.sequenceNumber,
+                        value.data,
+                        value.afterDelayedMessagesRead,
+                        value.gasRefunder,
+                        value.prevMessageCount,
+                        value.newMessageCount,
+                        value.delayProof,
+                    )
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for addSequencerL2BatchFromOriginDelayProofCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        sequenceNumber: tuple.0,
+                        data: tuple.1,
+                        afterDelayedMessagesRead: tuple.2,
+                        gasRefunder: tuple.3,
+                        prevMessageCount: tuple.4,
+                        newMessageCount: tuple.5,
+                        delayProof: tuple.6,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<addSequencerL2BatchFromOriginDelayProofReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: addSequencerL2BatchFromOriginDelayProofReturn) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for addSequencerL2BatchFromOriginDelayProofReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl addSequencerL2BatchFromOriginDelayProofReturn {
+            fn _tokenize(
+                &self,
+            ) -> <addSequencerL2BatchFromOriginDelayProofCall as alloy_sol_types::SolCall>::ReturnToken<
+                '_,
+            > {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for addSequencerL2BatchFromOriginDelayProofCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                DelayProof,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = addSequencerL2BatchFromOriginDelayProofReturn;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "addSequencerL2BatchFromOriginDelayProof(uint256,bytes,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))";
+            const SELECTOR: [u8; 4] = [105u8, 202u8, 205u8, 237u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.sequenceNumber),
+                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
+                        &self.data,
+                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(
+                        &self.afterDelayedMessagesRead,
+                    ),
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.gasRefunder,
+                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.prevMessageCount),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.newMessageCount),
+                    <DelayProof as alloy_sol_types::SolType>::tokenize(&self.delayProof),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                addSequencerL2BatchFromOriginDelayProofReturn::_tokenize(ret)
             }
             #[inline]
             fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
@@ -7739,6 +10520,151 @@ function eigenDACertVerifier() external view returns (address);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `feeTokenPricer()` and selector `0x22291e8d`.
+```solidity
+function feeTokenPricer() external view returns (address);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct feeTokenPricerCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`feeTokenPricer()`](feeTokenPricerCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct feeTokenPricerReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<feeTokenPricerCall> for UnderlyingRustTuple<'_> {
+                fn from(value: feeTokenPricerCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for feeTokenPricerCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<feeTokenPricerReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: feeTokenPricerReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for feeTokenPricerReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for feeTokenPricerCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::Address;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "feeTokenPricer()";
+            const SELECTOR: [u8; 4] = [34u8, 41u8, 30u8, 141u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: feeTokenPricerReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: feeTokenPricerReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `forceInclusion(uint256,uint8,uint64[2],uint256,address,bytes32)` and selector `0xf1981578`.
 ```solidity
 function forceInclusion(uint256 _totalDelayedMessagesRead, uint8 kind, uint64[2] memory l1BlockAndTime, uint256 baseFeeL1, address sender, bytes32 messageDataHash) external;
@@ -7947,6 +10873,162 @@ function forceInclusion(uint256 _totalDelayedMessagesRead, uint8 kind, uint64[2]
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `forceInclusionDeadline(uint64)` and selector `0xdd44e6e0`.
+```solidity
+function forceInclusionDeadline(uint64 blockNumber) external view returns (uint64 blockNumberDeadline);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct forceInclusionDeadlineCall {
+        #[allow(missing_docs)]
+        pub blockNumber: u64,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`forceInclusionDeadline(uint64)`](forceInclusionDeadlineCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct forceInclusionDeadlineReturn {
+        #[allow(missing_docs)]
+        pub blockNumberDeadline: u64,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (u64,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<forceInclusionDeadlineCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: forceInclusionDeadlineCall) -> Self {
+                    (value.blockNumber,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for forceInclusionDeadlineCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { blockNumber: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (u64,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<forceInclusionDeadlineReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: forceInclusionDeadlineReturn) -> Self {
+                    (value.blockNumberDeadline,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for forceInclusionDeadlineReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        blockNumberDeadline: tuple.0,
+                    }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for forceInclusionDeadlineCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<64>,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = u64;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "forceInclusionDeadline(uint64)";
+            const SELECTOR: [u8; 4] = [221u8, 68u8, 230u8, 224u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::tokenize(&self.blockNumber),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        64,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: forceInclusionDeadlineReturn = r.into();
+                        r.blockNumberDeadline
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: forceInclusionDeadlineReturn = r.into();
+                        r.blockNumberDeadline
+                    })
             }
         }
     };
@@ -8260,9 +11342,9 @@ function inboxAccs(uint256 index) external view returns (bytes32);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `initialize(address,(uint256,uint256,uint256,uint256))` and selector `0x1f7a92b2`.
+    /**Function with signature `initialize(address,(uint256,uint256,uint256,uint256),(uint64,uint64,uint64),address)` and selector `0xa84840b7`.
 ```solidity
-function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) external;
+function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_, BufferConfig memory bufferConfig_, address feeTokenPricer_) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -8271,8 +11353,12 @@ function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) 
         pub bridge_: alloy::sol_types::private::Address,
         #[allow(missing_docs)]
         pub maxTimeVariation_: <MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
+        pub bufferConfig_: <BufferConfig as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
+        pub feeTokenPricer_: alloy::sol_types::private::Address,
     }
-    ///Container type for the return parameters of the [`initialize(address,(uint256,uint256,uint256,uint256))`](initializeCall) function.
+    ///Container type for the return parameters of the [`initialize(address,(uint256,uint256,uint256,uint256),(uint64,uint64,uint64),address)`](initializeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeReturn {}
@@ -8289,11 +11375,15 @@ function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) 
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 MaxTimeVariation,
+                BufferConfig,
+                alloy::sol_types::sol_data::Address,
             );
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
                 alloy::sol_types::private::Address,
                 <MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+                <BufferConfig as alloy::sol_types::SolType>::RustType,
+                alloy::sol_types::private::Address,
             );
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
@@ -8310,7 +11400,12 @@ function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) 
             #[doc(hidden)]
             impl ::core::convert::From<initializeCall> for UnderlyingRustTuple<'_> {
                 fn from(value: initializeCall) -> Self {
-                    (value.bridge_, value.maxTimeVariation_)
+                    (
+                        value.bridge_,
+                        value.maxTimeVariation_,
+                        value.bufferConfig_,
+                        value.feeTokenPricer_,
+                    )
                 }
             }
             #[automatically_derived]
@@ -8320,6 +11415,8 @@ function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) 
                     Self {
                         bridge_: tuple.0,
                         maxTimeVariation_: tuple.1,
+                        bufferConfig_: tuple.2,
+                        feeTokenPricer_: tuple.3,
                     }
                 }
             }
@@ -8367,6 +11464,8 @@ function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) 
             type Parameters<'a> = (
                 alloy::sol_types::sol_data::Address,
                 MaxTimeVariation,
+                BufferConfig,
+                alloy::sol_types::sol_data::Address,
             );
             type Token<'a> = <Self::Parameters<
                 'a,
@@ -8376,8 +11475,8 @@ function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) 
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "initialize(address,(uint256,uint256,uint256,uint256))";
-            const SELECTOR: [u8; 4] = [31u8, 122u8, 146u8, 178u8];
+            const SIGNATURE: &'static str = "initialize(address,(uint256,uint256,uint256,uint256),(uint64,uint64,uint64),address)";
+            const SELECTOR: [u8; 4] = [168u8, 72u8, 64u8, 183u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -8392,6 +11491,12 @@ function initialize(address bridge_, MaxTimeVariation memory maxTimeVariation_) 
                     ),
                     <MaxTimeVariation as alloy_sol_types::SolType>::tokenize(
                         &self.maxTimeVariation_,
+                    ),
+                    <BufferConfig as alloy_sol_types::SolType>::tokenize(
+                        &self.bufferConfig_,
+                    ),
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.feeTokenPricer_,
                     ),
                 )
             }
@@ -8707,6 +11812,153 @@ function isBatchPoster(address) external view returns (bool);
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
                         let r: isBatchPosterReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `isDelayBufferable()` and selector `0x4b678a66`.
+```solidity
+function isDelayBufferable() external view returns (bool);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct isDelayBufferableCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`isDelayBufferable()`](isDelayBufferableCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct isDelayBufferableReturn {
+        #[allow(missing_docs)]
+        pub _0: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<isDelayBufferableCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: isDelayBufferableCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for isDelayBufferableCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (bool,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<isDelayBufferableReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: isDelayBufferableReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for isDelayBufferableReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for isDelayBufferableCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = bool;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "isDelayBufferable()";
+            const SELECTOR: [u8; 4] = [75u8, 103u8, 138u8, 102u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: isDelayBufferableReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: isDelayBufferableReturn = r.into();
                         r._0
                     })
             }
@@ -9930,6 +13182,152 @@ function setEigenDACertVerifier(address newCertVerifier) external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `setFeeTokenPricer(address)` and selector `0x036f7ed3`.
+```solidity
+function setFeeTokenPricer(address newFeeTokenPricer) external;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct setFeeTokenPricerCall {
+        #[allow(missing_docs)]
+        pub newFeeTokenPricer: alloy::sol_types::private::Address,
+    }
+    ///Container type for the return parameters of the [`setFeeTokenPricer(address)`](setFeeTokenPricerCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct setFeeTokenPricerReturn {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<setFeeTokenPricerCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: setFeeTokenPricerCall) -> Self {
+                    (value.newFeeTokenPricer,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for setFeeTokenPricerCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { newFeeTokenPricer: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<setFeeTokenPricerReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: setFeeTokenPricerReturn) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for setFeeTokenPricerReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl setFeeTokenPricerReturn {
+            fn _tokenize(
+                &self,
+            ) -> <setFeeTokenPricerCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for setFeeTokenPricerCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Address,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = setFeeTokenPricerReturn;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "setFeeTokenPricer(address)";
+            const SELECTOR: [u8; 4] = [3u8, 111u8, 126u8, 211u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.newFeeTokenPricer,
+                    ),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                setFeeTokenPricerReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `setIsBatchPoster(address,bool)` and selector `0x6e7df3e7`.
 ```solidity
 function setIsBatchPoster(address addr, bool isBatchPoster_) external;
@@ -10849,13 +14247,23 @@ function updateRollupAddress() external;
         #[allow(missing_docs)]
         addSequencerL2Batch(addSequencerL2BatchCall),
         #[allow(missing_docs)]
+        addSequencerL2BatchDelayProof(addSequencerL2BatchDelayProofCall),
+        #[allow(missing_docs)]
         addSequencerL2BatchFromBlobs(addSequencerL2BatchFromBlobsCall),
+        #[allow(missing_docs)]
+        addSequencerL2BatchFromBlobsDelayProof(
+            addSequencerL2BatchFromBlobsDelayProofCall,
+        ),
         #[allow(missing_docs)]
         addSequencerL2BatchFromEigenDA(addSequencerL2BatchFromEigenDACall),
         #[allow(missing_docs)]
         addSequencerL2BatchFromOrigin_0(addSequencerL2BatchFromOrigin_0Call),
         #[allow(missing_docs)]
         addSequencerL2BatchFromOrigin_1(addSequencerL2BatchFromOrigin_1Call),
+        #[allow(missing_docs)]
+        addSequencerL2BatchFromOriginDelayProof(
+            addSequencerL2BatchFromOriginDelayProofCall,
+        ),
         #[allow(missing_docs)]
         batchCount(batchCountCall),
         #[allow(missing_docs)]
@@ -10867,7 +14275,11 @@ function updateRollupAddress() external;
         #[allow(missing_docs)]
         eigenDACertVerifier(eigenDACertVerifierCall),
         #[allow(missing_docs)]
+        feeTokenPricer(feeTokenPricerCall),
+        #[allow(missing_docs)]
         forceInclusion(forceInclusionCall),
+        #[allow(missing_docs)]
+        forceInclusionDeadline(forceInclusionDeadlineCall),
         #[allow(missing_docs)]
         getKeysetCreationBlock(getKeysetCreationBlockCall),
         #[allow(missing_docs)]
@@ -10878,6 +14290,8 @@ function updateRollupAddress() external;
         invalidateKeysetHash(invalidateKeysetHashCall),
         #[allow(missing_docs)]
         isBatchPoster(isBatchPosterCall),
+        #[allow(missing_docs)]
+        isDelayBufferable(isDelayBufferableCall),
         #[allow(missing_docs)]
         isSequencer(isSequencerCall),
         #[allow(missing_docs)]
@@ -10894,6 +14308,8 @@ function updateRollupAddress() external;
         setBatchPosterManager(setBatchPosterManagerCall),
         #[allow(missing_docs)]
         setEigenDACertVerifier(setEigenDACertVerifierCall),
+        #[allow(missing_docs)]
+        setFeeTokenPricer(setFeeTokenPricerCall),
         #[allow(missing_docs)]
         setIsBatchPoster(setIsBatchPosterCall),
         #[allow(missing_docs)]
@@ -10917,21 +14333,25 @@ function updateRollupAddress() external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [2u8, 201u8, 146u8, 117u8],
+            [3u8, 111u8, 126u8, 211u8],
             [6u8, 241u8, 48u8, 86u8],
             [22u8, 55u8, 190u8, 72u8],
             [22u8, 175u8, 145u8, 167u8],
             [25u8, 27u8, 52u8, 2u8],
-            [31u8, 122u8, 146u8, 178u8],
             [31u8, 149u8, 102u8, 50u8],
             [31u8, 246u8, 71u8, 144u8],
+            [34u8, 41u8, 30u8, 141u8],
             [37u8, 143u8, 4u8, 149u8],
             [39u8, 149u8, 122u8, 73u8],
             [40u8, 61u8, 130u8, 37u8],
             [44u8, 191u8, 116u8, 229u8],
             [62u8, 90u8, 160u8, 130u8],
+            [75u8, 103u8, 138u8, 102u8],
+            [105u8, 202u8, 205u8, 237u8],
             [106u8, 231u8, 31u8, 18u8],
             [108u8, 137u8, 4u8, 80u8],
             [109u8, 70u8, 233u8, 135u8],
+            [110u8, 98u8, 0u8, 85u8],
             [110u8, 125u8, 243u8, 231u8],
             [111u8, 18u8, 176u8, 201u8],
             [113u8, 94u8, 163u8, 75u8],
@@ -10939,14 +14359,17 @@ function updateRollupAddress() external;
             [127u8, 163u8, 164u8, 14u8],
             [132u8, 66u8, 8u8, 96u8],
             [143u8, 17u8, 31u8, 60u8],
+            [145u8, 124u8, 248u8, 172u8],
             [150u8, 204u8, 92u8, 120u8],
             [166u8, 131u8, 238u8, 216u8],
+            [168u8, 72u8, 64u8, 183u8],
             [179u8, 23u8, 97u8, 248u8],
             [183u8, 75u8, 0u8, 200u8],
             [203u8, 35u8, 188u8, 181u8],
             [204u8, 42u8, 26u8, 12u8],
             [209u8, 206u8, 141u8, 168u8],
             [217u8, 221u8, 103u8, 171u8],
+            [221u8, 68u8, 230u8, 224u8],
             [224u8, 188u8, 151u8, 41u8],
             [229u8, 163u8, 88u8, 200u8],
             [231u8, 140u8, 234u8, 146u8],
@@ -10960,7 +14383,7 @@ function updateRollupAddress() external;
     impl alloy_sol_types::SolInterface for ISequencerInboxCalls {
         const NAME: &'static str = "ISequencerInboxCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 38usize;
+        const COUNT: usize = 45usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -10991,8 +14414,14 @@ function updateRollupAddress() external;
                 Self::addSequencerL2Batch(_) => {
                     <addSequencerL2BatchCall as alloy_sol_types::SolCall>::SELECTOR
                 }
+                Self::addSequencerL2BatchDelayProof(_) => {
+                    <addSequencerL2BatchDelayProofCall as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::addSequencerL2BatchFromBlobs(_) => {
                     <addSequencerL2BatchFromBlobsCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::addSequencerL2BatchFromBlobsDelayProof(_) => {
+                    <addSequencerL2BatchFromBlobsDelayProofCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::addSequencerL2BatchFromEigenDA(_) => {
                     <addSequencerL2BatchFromEigenDACall as alloy_sol_types::SolCall>::SELECTOR
@@ -11002,6 +14431,9 @@ function updateRollupAddress() external;
                 }
                 Self::addSequencerL2BatchFromOrigin_1(_) => {
                     <addSequencerL2BatchFromOrigin_1Call as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::addSequencerL2BatchFromOriginDelayProof(_) => {
+                    <addSequencerL2BatchFromOriginDelayProofCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::batchCount(_) => {
                     <batchCountCall as alloy_sol_types::SolCall>::SELECTOR
@@ -11016,8 +14448,14 @@ function updateRollupAddress() external;
                 Self::eigenDACertVerifier(_) => {
                     <eigenDACertVerifierCall as alloy_sol_types::SolCall>::SELECTOR
                 }
+                Self::feeTokenPricer(_) => {
+                    <feeTokenPricerCall as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::forceInclusion(_) => {
                     <forceInclusionCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::forceInclusionDeadline(_) => {
+                    <forceInclusionDeadlineCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::getKeysetCreationBlock(_) => {
                     <getKeysetCreationBlockCall as alloy_sol_types::SolCall>::SELECTOR
@@ -11033,6 +14471,9 @@ function updateRollupAddress() external;
                 }
                 Self::isBatchPoster(_) => {
                     <isBatchPosterCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::isDelayBufferable(_) => {
+                    <isDelayBufferableCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::isSequencer(_) => {
                     <isSequencerCall as alloy_sol_types::SolCall>::SELECTOR
@@ -11055,6 +14496,9 @@ function updateRollupAddress() external;
                 }
                 Self::setEigenDACertVerifier(_) => {
                     <setEigenDACertVerifierCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::setFeeTokenPricer(_) => {
+                    <setFeeTokenPricerCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::setIsBatchPoster(_) => {
                     <setIsBatchPosterCall as alloy_sol_types::SolCall>::SELECTOR
@@ -11105,6 +14549,17 @@ function updateRollupAddress() external;
                     ZERO_HEAVY_MESSAGE_HEADER_FLAG
                 },
                 {
+                    fn setFeeTokenPricer(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <setFeeTokenPricerCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::setFeeTokenPricer)
+                    }
+                    setFeeTokenPricer
+                },
+                {
                     fn batchCount(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
@@ -11149,17 +14604,6 @@ function updateRollupAddress() external;
                     eigenDACertVerifier
                 },
                 {
-                    fn initialize(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
-                        <initializeCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(ISequencerInboxCalls::initialize)
-                    }
-                    initialize
-                },
-                {
                     fn setIsSequencer(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
@@ -11180,6 +14624,17 @@ function updateRollupAddress() external;
                             .map(ISequencerInboxCalls::setBatchPosterManager)
                     }
                     setBatchPosterManager
+                },
+                {
+                    fn feeTokenPricer(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <feeTokenPricerCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::feeTokenPricer)
+                    }
+                    feeTokenPricer
                 },
                 {
                     fn getKeysetCreationBlock(
@@ -11237,6 +14692,30 @@ function updateRollupAddress() external;
                     addSequencerL2BatchFromBlobs
                 },
                 {
+                    fn isDelayBufferable(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <isDelayBufferableCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::isDelayBufferable)
+                    }
+                    isDelayBufferable
+                },
+                {
+                    fn addSequencerL2BatchFromOriginDelayProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <addSequencerL2BatchFromOriginDelayProofCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(
+                                ISequencerInboxCalls::addSequencerL2BatchFromOriginDelayProof,
+                            )
+                    }
+                    addSequencerL2BatchFromOriginDelayProof
+                },
+                {
                     fn updateRollupAddress(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
@@ -11268,6 +14747,17 @@ function updateRollupAddress() external;
                             .map(ISequencerInboxCalls::isSequencer)
                     }
                     isSequencer
+                },
+                {
+                    fn addSequencerL2BatchDelayProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <addSequencerL2BatchDelayProofCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::addSequencerL2BatchDelayProof)
+                    }
+                    addSequencerL2BatchDelayProof
                 },
                 {
                     fn setIsBatchPoster(
@@ -11347,6 +14837,19 @@ function updateRollupAddress() external;
                     addSequencerL2BatchFromOrigin_1
                 },
                 {
+                    fn addSequencerL2BatchFromBlobsDelayProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <addSequencerL2BatchFromBlobsDelayProofCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(
+                                ISequencerInboxCalls::addSequencerL2BatchFromBlobsDelayProof,
+                            )
+                    }
+                    addSequencerL2BatchFromBlobsDelayProof
+                },
+                {
                     fn removeDelayAfterFork(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
@@ -11367,6 +14870,17 @@ function updateRollupAddress() external;
                             .map(ISequencerInboxCalls::EIGENDA_MESSAGE_HEADER_FLAG)
                     }
                     EIGENDA_MESSAGE_HEADER_FLAG
+                },
+                {
+                    fn initialize(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <initializeCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::initialize)
+                    }
+                    initialize
                 },
                 {
                     fn setMaxTimeVariation(
@@ -11429,6 +14943,17 @@ function updateRollupAddress() external;
                             .map(ISequencerInboxCalls::inboxAccs)
                     }
                     inboxAccs
+                },
+                {
+                    fn forceInclusionDeadline(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <forceInclusionDeadlineCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::forceInclusionDeadline)
+                    }
+                    forceInclusionDeadline
                 },
                 {
                     fn addSequencerL2Batch(
@@ -11537,6 +15062,17 @@ function updateRollupAddress() external;
                     ZERO_HEAVY_MESSAGE_HEADER_FLAG
                 },
                 {
+                    fn setFeeTokenPricer(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <setFeeTokenPricerCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::setFeeTokenPricer)
+                    }
+                    setFeeTokenPricer
+                },
+                {
                     fn batchCount(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
@@ -11581,17 +15117,6 @@ function updateRollupAddress() external;
                     eigenDACertVerifier
                 },
                 {
-                    fn initialize(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
-                        <initializeCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(ISequencerInboxCalls::initialize)
-                    }
-                    initialize
-                },
-                {
                     fn setIsSequencer(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
@@ -11612,6 +15137,17 @@ function updateRollupAddress() external;
                             .map(ISequencerInboxCalls::setBatchPosterManager)
                     }
                     setBatchPosterManager
+                },
+                {
+                    fn feeTokenPricer(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <feeTokenPricerCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::feeTokenPricer)
+                    }
+                    feeTokenPricer
                 },
                 {
                     fn getKeysetCreationBlock(
@@ -11669,6 +15205,30 @@ function updateRollupAddress() external;
                     addSequencerL2BatchFromBlobs
                 },
                 {
+                    fn isDelayBufferable(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <isDelayBufferableCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::isDelayBufferable)
+                    }
+                    isDelayBufferable
+                },
+                {
+                    fn addSequencerL2BatchFromOriginDelayProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <addSequencerL2BatchFromOriginDelayProofCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(
+                                ISequencerInboxCalls::addSequencerL2BatchFromOriginDelayProof,
+                            )
+                    }
+                    addSequencerL2BatchFromOriginDelayProof
+                },
+                {
                     fn updateRollupAddress(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
@@ -11700,6 +15260,17 @@ function updateRollupAddress() external;
                             .map(ISequencerInboxCalls::isSequencer)
                     }
                     isSequencer
+                },
+                {
+                    fn addSequencerL2BatchDelayProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <addSequencerL2BatchDelayProofCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::addSequencerL2BatchDelayProof)
+                    }
+                    addSequencerL2BatchDelayProof
                 },
                 {
                     fn setIsBatchPoster(
@@ -11779,6 +15350,19 @@ function updateRollupAddress() external;
                     addSequencerL2BatchFromOrigin_1
                 },
                 {
+                    fn addSequencerL2BatchFromBlobsDelayProof(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <addSequencerL2BatchFromBlobsDelayProofCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(
+                                ISequencerInboxCalls::addSequencerL2BatchFromBlobsDelayProof,
+                            )
+                    }
+                    addSequencerL2BatchFromBlobsDelayProof
+                },
+                {
                     fn removeDelayAfterFork(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
@@ -11799,6 +15383,17 @@ function updateRollupAddress() external;
                             .map(ISequencerInboxCalls::EIGENDA_MESSAGE_HEADER_FLAG)
                     }
                     EIGENDA_MESSAGE_HEADER_FLAG
+                },
+                {
+                    fn initialize(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <initializeCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::initialize)
+                    }
+                    initialize
                 },
                 {
                     fn setMaxTimeVariation(
@@ -11865,6 +15460,17 @@ function updateRollupAddress() external;
                             .map(ISequencerInboxCalls::inboxAccs)
                     }
                     inboxAccs
+                },
+                {
+                    fn forceInclusionDeadline(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISequencerInboxCalls> {
+                        <forceInclusionDeadlineCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISequencerInboxCalls::forceInclusionDeadline)
+                    }
+                    forceInclusionDeadline
                 },
                 {
                     fn addSequencerL2Batch(
@@ -12002,8 +15608,18 @@ function updateRollupAddress() external;
                         inner,
                     )
                 }
+                Self::addSequencerL2BatchDelayProof(inner) => {
+                    <addSequencerL2BatchDelayProofCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::addSequencerL2BatchFromBlobs(inner) => {
                     <addSequencerL2BatchFromBlobsCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::addSequencerL2BatchFromBlobsDelayProof(inner) => {
+                    <addSequencerL2BatchFromBlobsDelayProofCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -12019,6 +15635,11 @@ function updateRollupAddress() external;
                 }
                 Self::addSequencerL2BatchFromOrigin_1(inner) => {
                     <addSequencerL2BatchFromOrigin_1Call as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::addSequencerL2BatchFromOriginDelayProof(inner) => {
+                    <addSequencerL2BatchFromOriginDelayProofCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -12043,8 +15664,18 @@ function updateRollupAddress() external;
                         inner,
                     )
                 }
+                Self::feeTokenPricer(inner) => {
+                    <feeTokenPricerCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::forceInclusion(inner) => {
                     <forceInclusionCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::forceInclusionDeadline(inner) => {
+                    <forceInclusionDeadlineCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -12066,6 +15697,11 @@ function updateRollupAddress() external;
                 }
                 Self::isBatchPoster(inner) => {
                     <isBatchPosterCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::isDelayBufferable(inner) => {
+                    <isDelayBufferableCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -12104,6 +15740,11 @@ function updateRollupAddress() external;
                 }
                 Self::setEigenDACertVerifier(inner) => {
                     <setEigenDACertVerifierCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::setFeeTokenPricer(inner) => {
+                    <setFeeTokenPricerCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -12196,8 +15837,20 @@ function updateRollupAddress() external;
                         out,
                     )
                 }
+                Self::addSequencerL2BatchDelayProof(inner) => {
+                    <addSequencerL2BatchDelayProofCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::addSequencerL2BatchFromBlobs(inner) => {
                     <addSequencerL2BatchFromBlobsCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::addSequencerL2BatchFromBlobsDelayProof(inner) => {
+                    <addSequencerL2BatchFromBlobsDelayProofCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -12216,6 +15869,12 @@ function updateRollupAddress() external;
                 }
                 Self::addSequencerL2BatchFromOrigin_1(inner) => {
                     <addSequencerL2BatchFromOrigin_1Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::addSequencerL2BatchFromOriginDelayProof(inner) => {
+                    <addSequencerL2BatchFromOriginDelayProofCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -12247,8 +15906,20 @@ function updateRollupAddress() external;
                         out,
                     )
                 }
+                Self::feeTokenPricer(inner) => {
+                    <feeTokenPricerCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::forceInclusion(inner) => {
                     <forceInclusionCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::forceInclusionDeadline(inner) => {
+                    <forceInclusionDeadlineCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -12279,6 +15950,12 @@ function updateRollupAddress() external;
                 }
                 Self::isBatchPoster(inner) => {
                     <isBatchPosterCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::isDelayBufferable(inner) => {
+                    <isDelayBufferableCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -12328,6 +16005,12 @@ function updateRollupAddress() external;
                         out,
                     )
                 }
+                Self::setFeeTokenPricer(inner) => {
+                    <setFeeTokenPricerCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::setIsBatchPoster(inner) => {
                     <setIsBatchPosterCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
@@ -12372,17 +16055,29 @@ function updateRollupAddress() external;
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ISequencerInboxEvents {
         #[allow(missing_docs)]
+        BatchPosterManagerSet(BatchPosterManagerSet),
+        #[allow(missing_docs)]
+        BatchPosterSet(BatchPosterSet),
+        #[allow(missing_docs)]
+        BufferConfigSet(BufferConfigSet),
+        #[allow(missing_docs)]
+        FeeTokenPricerSet(FeeTokenPricerSet),
+        #[allow(missing_docs)]
         InboxMessageDelivered(InboxMessageDelivered),
         #[allow(missing_docs)]
         InboxMessageDeliveredFromOrigin(InboxMessageDeliveredFromOrigin),
         #[allow(missing_docs)]
         InvalidateKeyset(InvalidateKeyset),
         #[allow(missing_docs)]
+        MaxTimeVariationSet(MaxTimeVariationSet),
+        #[allow(missing_docs)]
         OwnerFunctionCalled(OwnerFunctionCalled),
         #[allow(missing_docs)]
         SequencerBatchData(SequencerBatchData),
         #[allow(missing_docs)]
         SequencerBatchDelivered(SequencerBatchDelivered),
+        #[allow(missing_docs)]
+        SequencerSet(SequencerSet),
         #[allow(missing_docs)]
         SetValidKeyset(SetValidKeyset),
     }
@@ -12396,6 +16091,16 @@ function updateRollupAddress() external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
+                40u8, 188u8, 197u8, 98u8, 109u8, 53u8, 126u8, 254u8, 150u8, 107u8, 75u8,
+                8u8, 118u8, 170u8, 30u8, 232u8, 171u8, 153u8, 226u8, 109u8, 164u8, 241u8,
+                49u8, 246u8, 162u8, 98u8, 63u8, 24u8, 0u8, 112u8, 28u8, 33u8,
+            ],
+            [
+                60u8, 214u8, 193u8, 132u8, 128u8, 2u8, 151u8, 160u8, 242u8, 176u8, 9u8,
+                38u8, 166u8, 131u8, 203u8, 231u8, 104u8, 144u8, 187u8, 127u8, 208u8,
+                20u8, 128u8, 172u8, 10u8, 16u8, 237u8, 108u8, 143u8, 127u8, 102u8, 89u8,
+            ],
+            [
                 92u8, 180u8, 33u8, 139u8, 39u8, 47u8, 210u8, 20u8, 22u8, 138u8, 196u8,
                 62u8, 144u8, 251u8, 77u8, 5u8, 214u8, 195u8, 111u8, 11u8, 23u8, 255u8,
                 180u8, 194u8, 221u8, 7u8, 194u8, 52u8, 215u8, 68u8, 235u8, 42u8,
@@ -12404,6 +16109,16 @@ function updateRollupAddress() external;
                 115u8, 148u8, 244u8, 161u8, 154u8, 19u8, 199u8, 185u8, 43u8, 91u8, 183u8,
                 16u8, 51u8, 36u8, 83u8, 5u8, 148u8, 110u8, 247u8, 132u8, 82u8, 247u8,
                 180u8, 152u8, 106u8, 193u8, 57u8, 11u8, 93u8, 244u8, 235u8, 215u8,
+            ],
+            [
+                170u8, 106u8, 88u8, 218u8, 211u8, 17u8, 40u8, 255u8, 126u8, 204u8, 43u8,
+                128u8, 152u8, 126u8, 230u8, 224u8, 3u8, 223u8, 128u8, 188u8, 80u8, 205u8,
+                141u8, 11u8, 13u8, 26u8, 240u8, 224u8, 125u8, 166u8, 209u8, 157u8,
+            ],
+            [
+                170u8, 122u8, 45u8, 129u8, 117u8, 222u8, 227u8, 182u8, 55u8, 129u8, 74u8,
+                214u8, 52u8, 96u8, 5u8, 223u8, 204u8, 53u8, 113u8, 101u8, 57u8, 111u8,
+                184u8, 50u8, 127u8, 100u8, 158u8, 255u8, 232u8, 171u8, 207u8, 133u8,
             ],
             [
                 171u8, 83u8, 35u8, 133u8, 190u8, 143u8, 16u8, 5u8, 164u8, 182u8, 186u8,
@@ -12416,9 +16131,19 @@ function updateRollupAddress() external;
                 175u8, 11u8, 69u8, 122u8, 147u8, 53u8, 239u8, 101u8, 87u8, 34u8,
             ],
             [
+                232u8, 61u8, 97u8, 83u8, 173u8, 213u8, 14u8, 65u8, 184u8, 238u8, 108u8,
+                17u8, 21u8, 196u8, 23u8, 134u8, 135u8, 52u8, 155u8, 177u8, 43u8, 195u8,
+                144u8, 42u8, 80u8, 177u8, 246u8, 173u8, 120u8, 160u8, 197u8, 65u8,
+            ],
+            [
                 234u8, 135u8, 135u8, 241u8, 40u8, 209u8, 11u8, 44u8, 192u8, 49u8, 123u8,
                 12u8, 57u8, 96u8, 249u8, 173u8, 68u8, 127u8, 127u8, 108u8, 30u8, 209u8,
                 137u8, 219u8, 16u8, 131u8, 204u8, 255u8, 210u8, 15u8, 69u8, 110u8,
+            ],
+            [
+                235u8, 18u8, 169u8, 165u8, 62u8, 236u8, 19u8, 140u8, 145u8, 178u8, 123u8,
+                79u8, 145u8, 42u8, 37u8, 123u8, 214u8, 144u8, 193u8, 143u8, 200u8, 189u8,
+                231u8, 68u8, 190u8, 146u8, 160u8, 54u8, 94u8, 185u8, 184u8, 126u8,
             ],
             [
                 254u8, 50u8, 92u8, 161u8, 239u8, 228u8, 197u8, 193u8, 6u8, 44u8, 152u8,
@@ -12435,12 +16160,44 @@ function updateRollupAddress() external;
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for ISequencerInboxEvents {
         const NAME: &'static str = "ISequencerInboxEvents";
-        const COUNT: usize = 7usize;
+        const COUNT: usize = 13usize;
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
+                Some(
+                    <BatchPosterManagerSet as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
+                ) => {
+                    <BatchPosterManagerSet as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                        )
+                        .map(Self::BatchPosterManagerSet)
+                }
+                Some(<BatchPosterSet as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
+                    <BatchPosterSet as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                        )
+                        .map(Self::BatchPosterSet)
+                }
+                Some(<BufferConfigSet as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
+                    <BufferConfigSet as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                        )
+                        .map(Self::BufferConfigSet)
+                }
+                Some(
+                    <FeeTokenPricerSet as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
+                ) => {
+                    <FeeTokenPricerSet as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                        )
+                        .map(Self::FeeTokenPricerSet)
+                }
                 Some(
                     <InboxMessageDelivered as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
                 ) => {
@@ -12465,6 +16222,15 @@ function updateRollupAddress() external;
                             data,
                         )
                         .map(Self::InvalidateKeyset)
+                }
+                Some(
+                    <MaxTimeVariationSet as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
+                ) => {
+                    <MaxTimeVariationSet as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                        )
+                        .map(Self::MaxTimeVariationSet)
                 }
                 Some(
                     <OwnerFunctionCalled as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
@@ -12493,6 +16259,13 @@ function updateRollupAddress() external;
                         )
                         .map(Self::SequencerBatchDelivered)
                 }
+                Some(<SequencerSet as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
+                    <SequencerSet as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                        )
+                        .map(Self::SequencerSet)
+                }
                 Some(<SetValidKeyset as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <SetValidKeyset as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
@@ -12518,6 +16291,18 @@ function updateRollupAddress() external;
     impl alloy_sol_types::private::IntoLogData for ISequencerInboxEvents {
         fn to_log_data(&self) -> alloy_sol_types::private::LogData {
             match self {
+                Self::BatchPosterManagerSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
+                }
+                Self::BatchPosterSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
+                }
+                Self::BufferConfigSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
+                }
+                Self::FeeTokenPricerSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
+                }
                 Self::InboxMessageDelivered(inner) => {
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
@@ -12527,6 +16312,9 @@ function updateRollupAddress() external;
                 Self::InvalidateKeyset(inner) => {
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
+                Self::MaxTimeVariationSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
+                }
                 Self::OwnerFunctionCalled(inner) => {
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
@@ -12534,6 +16322,9 @@ function updateRollupAddress() external;
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
                 Self::SequencerBatchDelivered(inner) => {
+                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
+                }
+                Self::SequencerSet(inner) => {
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
                 Self::SetValidKeyset(inner) => {
@@ -12543,6 +16334,18 @@ function updateRollupAddress() external;
         }
         fn into_log_data(self) -> alloy_sol_types::private::LogData {
             match self {
+                Self::BatchPosterManagerSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
+                }
+                Self::BatchPosterSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
+                }
+                Self::BufferConfigSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
+                }
+                Self::FeeTokenPricerSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
+                }
                 Self::InboxMessageDelivered(inner) => {
                     alloy_sol_types::private::IntoLogData::into_log_data(inner)
                 }
@@ -12552,6 +16355,9 @@ function updateRollupAddress() external;
                 Self::InvalidateKeyset(inner) => {
                     alloy_sol_types::private::IntoLogData::into_log_data(inner)
                 }
+                Self::MaxTimeVariationSet(inner) => {
+                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
+                }
                 Self::OwnerFunctionCalled(inner) => {
                     alloy_sol_types::private::IntoLogData::into_log_data(inner)
                 }
@@ -12559,6 +16365,9 @@ function updateRollupAddress() external;
                     alloy_sol_types::private::IntoLogData::into_log_data(inner)
                 }
                 Self::SequencerBatchDelivered(inner) => {
+                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
+                }
+                Self::SequencerSet(inner) => {
                     alloy_sol_types::private::IntoLogData::into_log_data(inner)
                 }
                 Self::SetValidKeyset(inner) => {
@@ -12795,6 +16604,29 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
+        ///Creates a new call builder for the [`addSequencerL2BatchDelayProof`] function.
+        pub fn addSequencerL2BatchDelayProof(
+            &self,
+            sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+            data: alloy::sol_types::private::Bytes,
+            afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+            gasRefunder: alloy::sol_types::private::Address,
+            prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+            newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+            delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
+        ) -> alloy_contract::SolCallBuilder<&P, addSequencerL2BatchDelayProofCall, N> {
+            self.call_builder(
+                &addSequencerL2BatchDelayProofCall {
+                    sequenceNumber,
+                    data,
+                    afterDelayedMessagesRead,
+                    gasRefunder,
+                    prevMessageCount,
+                    newMessageCount,
+                    delayProof,
+                },
+            )
+        }
         ///Creates a new call builder for the [`addSequencerL2BatchFromBlobs`] function.
         pub fn addSequencerL2BatchFromBlobs(
             &self,
@@ -12811,6 +16643,31 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                     gasRefunder,
                     prevMessageCount,
                     newMessageCount,
+                },
+            )
+        }
+        ///Creates a new call builder for the [`addSequencerL2BatchFromBlobsDelayProof`] function.
+        pub fn addSequencerL2BatchFromBlobsDelayProof(
+            &self,
+            sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+            afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+            gasRefunder: alloy::sol_types::private::Address,
+            prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+            newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+            delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
+        ) -> alloy_contract::SolCallBuilder<
+            &P,
+            addSequencerL2BatchFromBlobsDelayProofCall,
+            N,
+        > {
+            self.call_builder(
+                &addSequencerL2BatchFromBlobsDelayProofCall {
+                    sequenceNumber,
+                    afterDelayedMessagesRead,
+                    gasRefunder,
+                    prevMessageCount,
+                    newMessageCount,
+                    delayProof,
                 },
             )
         }
@@ -12873,6 +16730,33 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
+        ///Creates a new call builder for the [`addSequencerL2BatchFromOriginDelayProof`] function.
+        pub fn addSequencerL2BatchFromOriginDelayProof(
+            &self,
+            sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+            data: alloy::sol_types::private::Bytes,
+            afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+            gasRefunder: alloy::sol_types::private::Address,
+            prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+            newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+            delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
+        ) -> alloy_contract::SolCallBuilder<
+            &P,
+            addSequencerL2BatchFromOriginDelayProofCall,
+            N,
+        > {
+            self.call_builder(
+                &addSequencerL2BatchFromOriginDelayProofCall {
+                    sequenceNumber,
+                    data,
+                    afterDelayedMessagesRead,
+                    gasRefunder,
+                    prevMessageCount,
+                    newMessageCount,
+                    delayProof,
+                },
+            )
+        }
         ///Creates a new call builder for the [`batchCount`] function.
         pub fn batchCount(
             &self,
@@ -12902,6 +16786,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, eigenDACertVerifierCall, N> {
             self.call_builder(&eigenDACertVerifierCall)
         }
+        ///Creates a new call builder for the [`feeTokenPricer`] function.
+        pub fn feeTokenPricer(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, feeTokenPricerCall, N> {
+            self.call_builder(&feeTokenPricerCall)
+        }
         ///Creates a new call builder for the [`forceInclusion`] function.
         pub fn forceInclusion(
             &self,
@@ -12920,6 +16810,17 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                     baseFeeL1,
                     sender,
                     messageDataHash,
+                },
+            )
+        }
+        ///Creates a new call builder for the [`forceInclusionDeadline`] function.
+        pub fn forceInclusionDeadline(
+            &self,
+            blockNumber: u64,
+        ) -> alloy_contract::SolCallBuilder<&P, forceInclusionDeadlineCall, N> {
+            self.call_builder(
+                &forceInclusionDeadlineCall {
+                    blockNumber,
                 },
             )
         }
@@ -12946,11 +16847,15 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             bridge_: alloy::sol_types::private::Address,
             maxTimeVariation_: <MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+            bufferConfig_: <BufferConfig as alloy::sol_types::SolType>::RustType,
+            feeTokenPricer_: alloy::sol_types::private::Address,
         ) -> alloy_contract::SolCallBuilder<&P, initializeCall, N> {
             self.call_builder(
                 &initializeCall {
                     bridge_,
                     maxTimeVariation_,
+                    bufferConfig_,
+                    feeTokenPricer_,
                 },
             )
         }
@@ -12967,6 +16872,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             _0: alloy::sol_types::private::Address,
         ) -> alloy_contract::SolCallBuilder<&P, isBatchPosterCall, N> {
             self.call_builder(&isBatchPosterCall(_0))
+        }
+        ///Creates a new call builder for the [`isDelayBufferable`] function.
+        pub fn isDelayBufferable(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, isDelayBufferableCall, N> {
+            self.call_builder(&isDelayBufferableCall)
         }
         ///Creates a new call builder for the [`isSequencer`] function.
         pub fn isSequencer(
@@ -13023,6 +16934,17 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             self.call_builder(
                 &setEigenDACertVerifierCall {
                     newCertVerifier,
+                },
+            )
+        }
+        ///Creates a new call builder for the [`setFeeTokenPricer`] function.
+        pub fn setFeeTokenPricer(
+            &self,
+            newFeeTokenPricer: alloy::sol_types::private::Address,
+        ) -> alloy_contract::SolCallBuilder<&P, setFeeTokenPricerCall, N> {
+            self.call_builder(
+                &setFeeTokenPricerCall {
+                    newFeeTokenPricer,
                 },
             )
         }
@@ -13098,6 +17020,30 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
+        ///Creates a new event filter for the [`BatchPosterManagerSet`] event.
+        pub fn BatchPosterManagerSet_filter(
+            &self,
+        ) -> alloy_contract::Event<&P, BatchPosterManagerSet, N> {
+            self.event_filter::<BatchPosterManagerSet>()
+        }
+        ///Creates a new event filter for the [`BatchPosterSet`] event.
+        pub fn BatchPosterSet_filter(
+            &self,
+        ) -> alloy_contract::Event<&P, BatchPosterSet, N> {
+            self.event_filter::<BatchPosterSet>()
+        }
+        ///Creates a new event filter for the [`BufferConfigSet`] event.
+        pub fn BufferConfigSet_filter(
+            &self,
+        ) -> alloy_contract::Event<&P, BufferConfigSet, N> {
+            self.event_filter::<BufferConfigSet>()
+        }
+        ///Creates a new event filter for the [`FeeTokenPricerSet`] event.
+        pub fn FeeTokenPricerSet_filter(
+            &self,
+        ) -> alloy_contract::Event<&P, FeeTokenPricerSet, N> {
+            self.event_filter::<FeeTokenPricerSet>()
+        }
         ///Creates a new event filter for the [`InboxMessageDelivered`] event.
         pub fn InboxMessageDelivered_filter(
             &self,
@@ -13116,6 +17062,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::Event<&P, InvalidateKeyset, N> {
             self.event_filter::<InvalidateKeyset>()
         }
+        ///Creates a new event filter for the [`MaxTimeVariationSet`] event.
+        pub fn MaxTimeVariationSet_filter(
+            &self,
+        ) -> alloy_contract::Event<&P, MaxTimeVariationSet, N> {
+            self.event_filter::<MaxTimeVariationSet>()
+        }
         ///Creates a new event filter for the [`OwnerFunctionCalled`] event.
         pub fn OwnerFunctionCalled_filter(
             &self,
@@ -13133,6 +17085,10 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::Event<&P, SequencerBatchDelivered, N> {
             self.event_filter::<SequencerBatchDelivered>()
+        }
+        ///Creates a new event filter for the [`SequencerSet`] event.
+        pub fn SequencerSet_filter(&self) -> alloy_contract::Event<&P, SequencerSet, N> {
+            self.event_filter::<SequencerSet>()
         }
         ///Creates a new event filter for the [`SetValidKeyset`] event.
         pub fn SetValidKeyset_filter(

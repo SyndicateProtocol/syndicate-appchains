@@ -8,6 +8,7 @@ interface IOneStepProver {
     struct ExecutionContext {
         uint256 maxInboxMessagesRead;
         address bridge;
+        bytes32 initialWasmModuleRoot;
     }
     struct Instruction {
         uint16 opcode;
@@ -91,6 +92,11 @@ interface IOneStepProver {
             "name": "bridge",
             "type": "address",
             "internalType": "contract IBridge"
+          },
+          {
+            "name": "initialWasmModuleRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
           }
         ]
       },
@@ -938,7 +944,7 @@ pub mod IOneStepProver {
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**```solidity
-struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
+struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; bytes32 initialWasmModuleRoot; }
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -947,6 +953,8 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
         pub maxInboxMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub initialWasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
         non_camel_case_types,
@@ -960,11 +968,13 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Address,
+            alloy::sol_types::sol_data::FixedBytes<32>,
         );
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (
             alloy::sol_types::private::primitives::aliases::U256,
             alloy::sol_types::private::Address,
+            alloy::sol_types::private::FixedBytes<32>,
         );
         #[cfg(test)]
         #[allow(dead_code, unreachable_patterns)]
@@ -981,7 +991,7 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
         #[doc(hidden)]
         impl ::core::convert::From<ExecutionContext> for UnderlyingRustTuple<'_> {
             fn from(value: ExecutionContext) -> Self {
-                (value.maxInboxMessagesRead, value.bridge)
+                (value.maxInboxMessagesRead, value.bridge, value.initialWasmModuleRoot)
             }
         }
         #[automatically_derived]
@@ -991,6 +1001,7 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
                 Self {
                     maxInboxMessagesRead: tuple.0,
                     bridge: tuple.1,
+                    initialWasmModuleRoot: tuple.2,
                 }
             }
         }
@@ -1009,6 +1020,9 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.bridge,
                     ),
+                    <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::SolType>::tokenize(&self.initialWasmModuleRoot),
                 )
             }
             #[inline]
@@ -1083,7 +1097,7 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
             #[inline]
             fn eip712_root_type() -> alloy_sol_types::private::Cow<'static, str> {
                 alloy_sol_types::private::Cow::Borrowed(
-                    "ExecutionContext(uint256 maxInboxMessagesRead,address bridge)",
+                    "ExecutionContext(uint256 maxInboxMessagesRead,address bridge,bytes32 initialWasmModuleRoot)",
                 )
             }
             #[inline]
@@ -1109,6 +1123,12 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
                             &self.bridge,
                         )
                         .0,
+                    <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::SolType>::eip712_data_word(
+                            &self.initialWasmModuleRoot,
+                        )
+                        .0,
                 ]
                     .concat()
             }
@@ -1125,6 +1145,11 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
                     )
                     + <alloy::sol_types::sol_data::Address as alloy_sol_types::EventTopic>::topic_preimage_length(
                         &rust.bridge,
+                    )
+                    + <alloy::sol_types::sol_data::FixedBytes<
+                        32,
+                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
+                        &rust.initialWasmModuleRoot,
                     )
             }
             #[inline]
@@ -1143,6 +1168,12 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
                 );
                 <alloy::sol_types::sol_data::Address as alloy_sol_types::EventTopic>::encode_topic_preimage(
                     &rust.bridge,
+                    out,
+                );
+                <alloy::sol_types::sol_data::FixedBytes<
+                    32,
+                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
+                    &rust.initialWasmModuleRoot,
                     out,
                 );
             }
@@ -3847,7 +3878,7 @@ struct ValueStack { ValueArray proved; bytes32 remainingHash; }
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `executeOneStep((uint256,address),(uint8,(((uint8,uint256)[]),bytes32),(bytes32,bytes32),(((uint8,uint256)[]),bytes32),(((uint8,uint256),bytes32,uint32,uint32)[],bytes32),(bytes32,bytes32),bytes32,uint32,uint32,uint32,bytes32,bytes32),(bytes32,(uint64,uint64,bytes32),bytes32,bytes32,bytes32,uint32),(uint16,uint256),bytes)` and selector `0x3604366f`.
+    /**Function with signature `executeOneStep((uint256,address,bytes32),(uint8,(((uint8,uint256)[]),bytes32),(bytes32,bytes32),(((uint8,uint256)[]),bytes32),(((uint8,uint256),bytes32,uint32,uint32)[],bytes32),(bytes32,bytes32),bytes32,uint32,uint32,uint32,bytes32,bytes32),(bytes32,(uint64,uint64,bytes32),bytes32,bytes32,bytes32,uint32),(uint16,uint256),bytes)` and selector `0xa92cb501`.
 ```solidity
 function executeOneStep(ExecutionContext memory execCtx, Machine memory mach, Module memory r#mod, Instruction memory instruction, bytes memory proof) external view returns (Machine memory result, Module memory resultMod);
 ```*/
@@ -3867,7 +3898,7 @@ function executeOneStep(ExecutionContext memory execCtx, Machine memory mach, Mo
     }
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`executeOneStep((uint256,address),(uint8,(((uint8,uint256)[]),bytes32),(bytes32,bytes32),(((uint8,uint256)[]),bytes32),(((uint8,uint256),bytes32,uint32,uint32)[],bytes32),(bytes32,bytes32),bytes32,uint32,uint32,uint32,bytes32,bytes32),(bytes32,(uint64,uint64,bytes32),bytes32,bytes32,bytes32,uint32),(uint16,uint256),bytes)`](executeOneStepCall) function.
+    ///Container type for the return parameters of the [`executeOneStep((uint256,address,bytes32),(uint8,(((uint8,uint256)[]),bytes32),(bytes32,bytes32),(((uint8,uint256)[]),bytes32),(((uint8,uint256),bytes32,uint32,uint32)[],bytes32),(bytes32,bytes32),bytes32,uint32,uint32,uint32,bytes32,bytes32),(bytes32,(uint64,uint64,bytes32),bytes32,bytes32,bytes32,uint32),(uint16,uint256),bytes)`](executeOneStepCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeOneStepReturn {
@@ -4005,8 +4036,8 @@ function executeOneStep(ExecutionContext memory execCtx, Machine memory mach, Mo
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "executeOneStep((uint256,address),(uint8,(((uint8,uint256)[]),bytes32),(bytes32,bytes32),(((uint8,uint256)[]),bytes32),(((uint8,uint256),bytes32,uint32,uint32)[],bytes32),(bytes32,bytes32),bytes32,uint32,uint32,uint32,bytes32,bytes32),(bytes32,(uint64,uint64,bytes32),bytes32,bytes32,bytes32,uint32),(uint16,uint256),bytes)";
-            const SELECTOR: [u8; 4] = [54u8, 4u8, 54u8, 111u8];
+            const SIGNATURE: &'static str = "executeOneStep((uint256,address,bytes32),(uint8,(((uint8,uint256)[]),bytes32),(bytes32,bytes32),(((uint8,uint256)[]),bytes32),(((uint8,uint256),bytes32,uint32,uint32)[],bytes32),(bytes32,bytes32),bytes32,uint32,uint32,uint32,bytes32,bytes32),(bytes32,(uint64,uint64,bytes32),bytes32,bytes32,bytes32,uint32),(uint16,uint256),bytes)";
+            const SELECTOR: [u8; 4] = [169u8, 44u8, 181u8, 1u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -4066,12 +4097,12 @@ function executeOneStep(ExecutionContext memory execCtx, Machine memory mach, Mo
         /// No guarantees are made about the order of the selectors.
         ///
         /// Prefer using `SolInterface` methods instead.
-        pub const SELECTORS: &'static [[u8; 4usize]] = &[[54u8, 4u8, 54u8, 111u8]];
+        pub const SELECTORS: &'static [[u8; 4usize]] = &[[169u8, 44u8, 181u8, 1u8]];
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for IOneStepProverCalls {
         const NAME: &'static str = "IOneStepProverCalls";
-        const MIN_DATA_LENGTH: usize = 1088usize;
+        const MIN_DATA_LENGTH: usize = 1120usize;
         const COUNT: usize = 1usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {

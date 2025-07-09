@@ -22,6 +22,7 @@ jobs:
     runs-on: shared-large-01
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
@@ -59,7 +60,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "18.x"
+          node-version: "22.x"
 
       - name: Install Ubuntu dependencies
         run: |

@@ -10,6 +10,7 @@ interface ArbOwnerPublic {
     function getInfraFeeAccount() external view returns (address);
     function getNetworkFeeAccount() external view returns (address);
     function getScheduledUpgrade() external view returns (uint64 arbosVersion, uint64 scheduledForTimestamp);
+    function isCalldataPriceIncreaseEnabled() external view returns (bool);
     function isChainOwner(address addr) external view returns (bool);
     function rectifyChainOwner(address ownerToRectify) external;
 }
@@ -84,6 +85,19 @@ interface ArbOwnerPublic {
         "name": "scheduledForTimestamp",
         "type": "uint64",
         "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isCalldataPriceIncreaseEnabled",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -1030,6 +1044,153 @@ function getScheduledUpgrade() external view returns (uint64 arbosVersion, uint6
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `isCalldataPriceIncreaseEnabled()` and selector `0x2aa9551e`.
+```solidity
+function isCalldataPriceIncreaseEnabled() external view returns (bool);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct isCalldataPriceIncreaseEnabledCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`isCalldataPriceIncreaseEnabled()`](isCalldataPriceIncreaseEnabledCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct isCalldataPriceIncreaseEnabledReturn {
+        #[allow(missing_docs)]
+        pub _0: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<isCalldataPriceIncreaseEnabledCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: isCalldataPriceIncreaseEnabledCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for isCalldataPriceIncreaseEnabledCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (bool,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<isCalldataPriceIncreaseEnabledReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: isCalldataPriceIncreaseEnabledReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for isCalldataPriceIncreaseEnabledReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for isCalldataPriceIncreaseEnabledCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = bool;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "isCalldataPriceIncreaseEnabled()";
+            const SELECTOR: [u8; 4] = [42u8, 169u8, 85u8, 30u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: isCalldataPriceIncreaseEnabledReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: isCalldataPriceIncreaseEnabledReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isChainOwner(address)` and selector `0x26ef7f68`.
 ```solidity
 function isChainOwner(address addr) external view returns (bool);
@@ -1339,6 +1500,8 @@ function rectifyChainOwner(address ownerToRectify) external;
         #[allow(missing_docs)]
         getScheduledUpgrade(getScheduledUpgradeCall),
         #[allow(missing_docs)]
+        isCalldataPriceIncreaseEnabled(isCalldataPriceIncreaseEnabledCall),
+        #[allow(missing_docs)]
         isChainOwner(isChainOwnerCall),
         #[allow(missing_docs)]
         rectifyChainOwner(rectifyChainOwnerCall),
@@ -1354,6 +1517,7 @@ function rectifyChainOwner(address ownerToRectify) external;
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [34u8, 212u8, 153u8, 199u8],
             [38u8, 239u8, 127u8, 104u8],
+            [42u8, 169u8, 85u8, 30u8],
             [45u8, 145u8, 37u8, 233u8],
             [81u8, 107u8, 78u8, 15u8],
             [111u8, 232u8, 99u8, 115u8],
@@ -1365,7 +1529,7 @@ function rectifyChainOwner(address ownerToRectify) external;
     impl alloy_sol_types::SolInterface for ArbOwnerPublicCalls {
         const NAME: &'static str = "ArbOwnerPublicCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 7usize;
+        const COUNT: usize = 8usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -1383,6 +1547,9 @@ function rectifyChainOwner(address ownerToRectify) external;
                 }
                 Self::getScheduledUpgrade(_) => {
                     <getScheduledUpgradeCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::isCalldataPriceIncreaseEnabled(_) => {
+                    <isCalldataPriceIncreaseEnabledCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::isChainOwner(_) => {
                     <isChainOwnerCall as alloy_sol_types::SolCall>::SELECTOR
@@ -1430,6 +1597,17 @@ function rectifyChainOwner(address ownerToRectify) external;
                             .map(ArbOwnerPublicCalls::isChainOwner)
                     }
                     isChainOwner
+                },
+                {
+                    fn isCalldataPriceIncreaseEnabled(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ArbOwnerPublicCalls> {
+                        <isCalldataPriceIncreaseEnabledCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(ArbOwnerPublicCalls::isCalldataPriceIncreaseEnabled)
+                    }
+                    isCalldataPriceIncreaseEnabled
                 },
                 {
                     fn getNetworkFeeAccount(
@@ -1529,6 +1707,17 @@ function rectifyChainOwner(address ownerToRectify) external;
                     isChainOwner
                 },
                 {
+                    fn isCalldataPriceIncreaseEnabled(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ArbOwnerPublicCalls> {
+                        <isCalldataPriceIncreaseEnabledCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ArbOwnerPublicCalls::isCalldataPriceIncreaseEnabled)
+                    }
+                    isCalldataPriceIncreaseEnabled
+                },
+                {
                     fn getNetworkFeeAccount(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ArbOwnerPublicCalls> {
@@ -1622,6 +1811,11 @@ function rectifyChainOwner(address ownerToRectify) external;
                         inner,
                     )
                 }
+                Self::isCalldataPriceIncreaseEnabled(inner) => {
+                    <isCalldataPriceIncreaseEnabledCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::isChainOwner(inner) => {
                     <isChainOwnerCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -1663,6 +1857,12 @@ function rectifyChainOwner(address ownerToRectify) external;
                 }
                 Self::getScheduledUpgrade(inner) => {
                     <getScheduledUpgradeCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::isCalldataPriceIncreaseEnabled(inner) => {
+                    <isCalldataPriceIncreaseEnabledCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -1942,6 +2142,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<&P, getScheduledUpgradeCall, N> {
             self.call_builder(&getScheduledUpgradeCall)
+        }
+        ///Creates a new call builder for the [`isCalldataPriceIncreaseEnabled`] function.
+        pub fn isCalldataPriceIncreaseEnabled(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, isCalldataPriceIncreaseEnabledCall, N> {
+            self.call_builder(&isCalldataPriceIncreaseEnabledCall)
         }
         ///Creates a new call builder for the [`isChainOwner`] function.
         pub fn isChainOwner(

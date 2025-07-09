@@ -240,7 +240,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
 
             wait_until!(
                 rollup_core
-                    .NodeConfirmed_filter()
+                    .AssertionConfirmed_filter()
                     .query()
                     .await?
                     .iter()

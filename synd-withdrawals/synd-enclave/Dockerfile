@@ -26,7 +26,7 @@ RUN apt-get update && \
 FROM scratch AS brotli-library-export
 COPY --from=brotli-library-builder /workspace/install/ /
 
-FROM node:18-bookworm-slim AS contracts-builder
+FROM node:22-bookworm-slim AS contracts-builder
 RUN apt-get update && \
     apt-get install -y git python3 make g++ curl
 RUN curl -L https://foundry.paradigm.xyz | bash && . ~/.bashrc && ~/.foundry/bin/foundryup -i 1.0.0
@@ -38,7 +38,7 @@ RUN cd contracts && yarn install
 COPY nitro/contracts-legacy contracts-legacy/
 COPY nitro/contracts contracts/
 COPY nitro/safe-smart-account safe-smart-account/
-RUN cd safe-smart-account && yarn install
+RUN cd safe-smart-account && yarn install --ignore-engines
 COPY nitro/Makefile .
 RUN . ~/.bashrc && NITRO_BUILD_IGNORE_TIMESTAMPS=1 make build-solidity
 
@@ -59,6 +59,7 @@ COPY nitro/arbitrator/wasm-libraries arbitrator/wasm-libraries
 COPY nitro/arbitrator/jit arbitrator/jit
 COPY nitro/arbitrator/stylus arbitrator/stylus
 COPY nitro/arbitrator/tools/wasmer arbitrator/tools/wasmer
+COPY nitro/arbitrator/rust-kzg-bn254 arbitrator/rust-kzg-bn254
 COPY --from=brotli-wasm-export / target/
 COPY nitro/scripts/build-brotli.sh scripts/
 COPY nitro/brotli brotli
@@ -90,6 +91,7 @@ COPY nitro/arbitrator/jit/Cargo.toml arbitrator/jit/
 COPY nitro/arbitrator/stylus/Cargo.toml arbitrator/stylus/
 COPY nitro/arbitrator/tools/wasmer arbitrator/tools/wasmer
 COPY nitro/arbitrator/wasm-libraries/user-host-trait/Cargo.toml arbitrator/wasm-libraries/user-host-trait/Cargo.toml
+COPY nitro/arbitrator/rust-kzg-bn254 arbitrator/rust-kzg-bn254
 RUN bash -c 'mkdir arbitrator/{prover,jit,stylus}/src arbitrator/wasm-libraries/user-host-trait/src'
 RUN echo "fn test() {}" > arbitrator/jit/src/lib.rs && \
     echo "fn test() {}" > arbitrator/prover/src/lib.rs && \
@@ -107,6 +109,7 @@ COPY nitro/arbitrator/prover arbitrator/prover
 COPY nitro/arbitrator/wasm-libraries arbitrator/wasm-libraries
 COPY nitro/arbitrator/jit arbitrator/jit
 COPY nitro/arbitrator/stylus arbitrator/stylus
+COPY nitro/arbitrator/rust-kzg-bn254 arbitrator/rust-kzg-bn254
 COPY --from=brotli-wasm-export / target/
 COPY nitro/scripts/build-brotli.sh scripts/
 COPY nitro/brotli brotli
@@ -148,10 +151,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y wabt
 COPY --parents **/go.mod **/go.sum .
+COPY nitro nitro
 RUN go mod download
 COPY cmd/enclave/main.go cmd/enclave/main.go
+COPY cmd/enclave/g1.point cmd/enclave/g1.point
 COPY enclave enclave
-COPY nitro nitro
 WORKDIR /build/nitro
 COPY --from=contracts-builder workspace/contracts/build/ contracts/build/
 COPY --from=contracts-builder workspace/contracts/out/ contracts/out/
