@@ -4,14 +4,11 @@ name              = "synd-batch-sequencer"
 version.workspace = true
 
 [dependencies]
-alloy     = { workspace = true }
-batcher   = { workspace = true }
-clap      = { workspace = true }
-eyre      = { workspace = true }
-shared    = { workspace = true }
-thiserror = { workspace = true }
-tokio     = { workspace = true, features = ["signal"] }
-tracing   = { workspace = true }
+batcher = { workspace = true }
+eyre    = { workspace = true }
+shared  = { workspace = true }
+tokio   = { workspace = true, features = ["signal"] }
+tracing = { workspace = true }
 
 
 [dev-dependencies]

@@ -1,12 +1,12 @@
 //! This module contains `config` for the `Batcher` service
 
 use alloy::{
-    primitives::ChainId,
+    primitives::{Address, ChainId},
     providers::{Provider, ProviderBuilder},
     transports::TransportError,
 };
 use clap::Parser;
-use shared::parse::parse_url;
+use shared::parse::{parse_address, parse_url};
 use std::{fmt::Debug, time::Duration};
 use thiserror::Error;
 use url::Url;
@@ -77,6 +77,18 @@ pub struct BatcherConfig {
     /// The average cost of a request in compute units
     #[arg(long, env = "RPC_COMPUTE_UNITS_AVG_REQUEST_COST", default_value = "17")]
     pub rpc_compute_units_avg_request_cost: u64,
+
+    /// The contract address that the sequencer will use to submit batches
+    #[arg(short = 's', long, env = "SEQUENCING_ADDRESS", value_parser = parse_address)]
+    pub sequencing_address: Address,
+
+    /// Metrics port to listen on
+    #[arg(short = 'm', long, env = "METRICS_PORT", default_value_t = 8082)]
+    pub metrics_port: u16,
+
+    /// whether to wait for the receipt of the batch submission
+    #[arg(long, env = "WAIT_FOR_RECEIPT", default_value_t = false)]
+    pub wait_for_receipt: bool,
 }
 
 impl BatcherConfig {
@@ -116,6 +128,9 @@ impl Default for BatcherConfig {
             rpc_initial_backoff_ms: 100,
             rpc_compute_units_per_second: 1000,
             rpc_compute_units_avg_request_cost: 17,
+            sequencing_address: Address::ZERO,
+            metrics_port: 8082,
+            wait_for_receipt: false,
         }
     }
 }

@@ -7016,13 +7016,10 @@ dependencies = [
 name = "synd-batch-sequencer"
 version = "0.1.0"
 dependencies = [
- "alloy",
  "batcher",
- "clap",
  "eyre",
  "mockito",
  "shared",
- "thiserror 2.0.12",
  "tokio",
  "tracing",
  "url",
