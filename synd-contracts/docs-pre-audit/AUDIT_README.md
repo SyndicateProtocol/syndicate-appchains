@@ -2,9 +2,10 @@
 
 The Smart contracts we intend to have the audit are the following:
 
-- [SyndicateFactory](src/src/SyndicateFactory.sol/contract.SyndicateFactory.md)
+- [SyndicateFactory](src/src/factory/SyndicateFactory.sol/contract.SyndicateFactory.md)
+- [PermissionModuleFactories](src/src/factory/PermissionModuleFactories.sol/contract.PermissionModuleFactories.md)
+- [SyndicateFactoryWrapper](src/src/factory/SyndicateFactoryWrapper.sol/contract.SyndicateFactoryWrapper.md)
 - [SyndicateSequencingChain](src/src/SyndicateSequencingChain.sol/contract.SyndicateSequencingChain.md)
-- [SyndicateAccumulator](src/src/SyndicateAccumulator.sol/contract.SyndicateAccumulator.md)
 - [SequencingModuleChecker](src/src/SequencingModuleChecker.sol/abstract.SequencingModuleChecker.md)
 - [AllowlistSequencingModule](src/src/sequencing-modules/AllowlistSequencingModule.sol/contract.AllowlistSequencingModule.md)
 - [WalletPoolWrapperModule](src/src/sequencing-modules/WalletPoolWrapperModule.sol/contract.WalletPoolWrapperModule.md)
@@ -13,7 +14,6 @@ The Smart contracts we intend to have the audit are the following:
 - [RequireAndModule](src/src/requirement-modules/RequireAndModule.sol/contract.RequireAndModule.md)
 - [RequireOrModule](src/src/requirement-modules/RequireOrModule.sol/contract.RequireOrModule.md)
 - [RequireCompositeModule](src/src/requirement-modules/RequireCompositeModule.sol/contract.RequireCompositeModule.md)
-- [SyndicateToken](src/src/token/SyndicateToken.sol/contract.SyndicateToken.md)
 - [IRequirementModule](src/src/interfaces/IRequirementModule.sol/interface.IRequirementModule.md)
 - [PermissionModule](src/src/interfaces/IPermissionModule.sol/interface.IPermissionModule.md)
 - [AddressStructuredLinkedList](src/src/LinkedList/AddressStructuredLinkedList.sol/library.AddressStructuredLinkedList.md)
@@ -21,6 +21,9 @@ The Smart contracts we intend to have the audit are the following:
 - [ArbChainConfig](src/src/config/ArbChainConfig.sol/contract.ArbChainConfig.md)
 - [ArbConfigManagerFactory](src/src/config/ArbConfigManagerFactory.sol/contract.ArbConfigManagerFactory.md)
 - [AssertionPoster](src/src/withdrawal/AssertionPoster.sol/contract.AssertionPoster.md)
+- [AttestationDocVerifier](src/src/withdrawal/AttestationDocVerifier.sol/contract.AttestationDocVerifier.md)
+- [TeeKeyManager](src/src/withdrawal/TeeKeyManager.sol/contract.TeeKeyManager.md)
+- [TeeModule](src/src/withdrawal/TeeModule.sol/contract.TeeModule.md)
 
 ## General Overview of Syndicate Sequencer Chain and Its Smart Contracts
 
