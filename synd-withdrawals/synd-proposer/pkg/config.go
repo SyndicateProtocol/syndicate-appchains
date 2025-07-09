@@ -61,7 +61,7 @@ var ConfigKeys = map[string]struct {
 	"settlement-delay":            {"Settlement Delay", "60", false},
 	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
-	"mtls-enabled":                {"mTLS enabled", "true", false},
+	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
