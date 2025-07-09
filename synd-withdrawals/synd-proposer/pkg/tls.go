@@ -17,7 +17,6 @@ type MTLSConfig struct {
 	ClientKeyPath  string
 }
 
-// createMTLSClient creates an RPC client with mTLS support
 func createMTLSClient(cfg *MTLSConfig, rpcURL string) (*rpc.Client, error) {
 	if cfg.ClientCertPath == "" || cfg.ClientKeyPath == "" {
 		return nil, fmt.Errorf("mTLS client certificate and key paths are required")
@@ -35,14 +34,12 @@ func createMTLSClient(cfg *MTLSConfig, rpcURL string) (*rpc.Client, error) {
 		MinVersion:         tls.VersionTLS12,
 	}
 
-	// Create HTTP client with TLS configuration
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
 	}
 
-	// Create RPC client with custom HTTP client
 	client, err := rpc.DialOptions(
 		context.Background(),
 		rpcURL,
