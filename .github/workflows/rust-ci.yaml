@@ -90,14 +90,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          profile: default
-          override: true
-          default: true
-          components: llvm-tools, rustc-dev
+          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
 
       # Combined cache for Rust and SP1 as recommended
       - name: rust-cache
@@ -145,18 +142,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          profile: default
-          override: true
-          default: true
-          components: llvm-tools, rustc-dev
+          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
 
       # Use the same cache configuration
       - name: rust-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -181,18 +175,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          profile: default
-          override: true
-          default: true
-          components: llvm-tools, rustc-dev
+          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
 
       # Use the same cache configuration
       - name: rust-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
