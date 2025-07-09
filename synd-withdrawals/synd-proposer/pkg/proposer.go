@@ -50,8 +50,8 @@ func NewProposer(cfg *Config) *Proposer {
 	}
 
 	var enclaveClient *rpc.Client
-	if cfg.TLSConfig.Enabled {
-		enclaveClient, err = createTLSClient(&cfg.TLSConfig, cfg.EnclaveRPCURL)
+	if cfg.EnclaveTLSConfig.Enabled {
+		enclaveClient, err = createTLSClient(&cfg.EnclaveTLSConfig, cfg.EnclaveRPCURL)
 	} else {
 		enclaveClient, err = rpc.Dial(cfg.EnclaveRPCURL)
 	}
