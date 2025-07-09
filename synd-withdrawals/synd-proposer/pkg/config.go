@@ -32,6 +32,8 @@ type Config struct {
 
 	AppchainBridgeAddress common.Address
 
+	IsL1Chain bool
+
 	EnclaveConfig enclave.Config
 }
 
