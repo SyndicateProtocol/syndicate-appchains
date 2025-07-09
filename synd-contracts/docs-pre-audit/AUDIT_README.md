@@ -3,7 +3,9 @@
 The Smart contracts we intend to have the audit are the following:
 
 - [SyndicateFactory](src/src/factory/SyndicateFactory.sol/contract.SyndicateFactory.md)
-- [PermissionModuleFactories](src/src/factory/PermissionModuleFactories.sol/contract.PermissionModuleFactories.md)
+- [RequireAndModuleFactory](src/src/factory/PermissionModuleFactories.sol/contract.RequireAndModuleFactory.md)
+- [RequireCompositeModuleFactory](src/src/factory/PermissionModuleFactories.sol/contract.RequireCompositeModuleFactory.md)
+- [RequireOrModuleFactory](src/src/factory/PermissionModuleFactories.sol/contract.RequireOrModuleFactory.md)
 - [SyndicateFactoryWrapper](src/src/factory/SyndicateFactoryWrapper.sol/contract.SyndicateFactoryWrapper.md)
 - [SyndicateSequencingChain](src/src/SyndicateSequencingChain.sol/contract.SyndicateSequencingChain.md)
 - [SequencingModuleChecker](src/src/SequencingModuleChecker.sol/abstract.SequencingModuleChecker.md)
