@@ -60,7 +60,11 @@ contract RequireAndModuleTest is Test {
         module.addPermissionCheck(checker, true);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAndModule.AndPermissionCheckFailed.selector, checker, address(this), emptyData));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RequireAndModule.AndPermissionCheckFailed.selector, checker, address(this), emptyData
+            )
+        );
         module.isAllowed(address(this), address(0), emptyData);
     }
 

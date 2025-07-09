@@ -79,7 +79,11 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         permissionModule.addPermissionCheck(mockRequireAll, false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAndModule.AndPermissionCheckFailed.selector, mockRequireAll, address(this), validTxn));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RequireAndModule.AndPermissionCheckFailed.selector, mockRequireAll, address(this), validTxn
+            )
+        );
         chain.processTransaction(validTxn);
     }
 
@@ -91,7 +95,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         permissionModuleAny.addPermissionCheck(address(new MockIsAllowed(false)), false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.AllOrPermissionChecksFailed.selector, address(this), validTxn));
+        vm.expectRevert(
+            abi.encodeWithSelector(RequireOrModule.AllOrPermissionChecksFailed.selector, address(this), validTxn)
+        );
         chain.processTransaction(validTxn);
     }
 
