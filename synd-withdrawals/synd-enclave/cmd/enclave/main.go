@@ -23,6 +23,8 @@ func main() {
 	flag.Parse()
 
 	wavmio.Init(g1Data)
+	g1Data = nil
+
 	s := rpc.NewServer()
 	s.SetHTTPBodyLimit(math.MaxInt32)
 	serv, err := enclave.NewServer()
