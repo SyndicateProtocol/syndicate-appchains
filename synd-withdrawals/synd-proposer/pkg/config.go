@@ -62,6 +62,7 @@ var ConfigKeys = map[string]struct {
 	"settlement-delay":            {"Settlement Delay", "60", false},
 	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
+	"mtls-enabled":                {"mTLS enabled", "true", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
@@ -123,6 +124,7 @@ func LoadConfig() (*Config, error) {
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
 		},
 		TLSConfig: TLSConfig{
+			Enabled:        viper.GetBool("mtls-enabled"),
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},

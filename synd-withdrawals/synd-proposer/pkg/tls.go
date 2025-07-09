@@ -14,6 +14,7 @@ import (
 )
 
 type TLSConfig struct {
+	Enabled        bool
 	ClientCertPath string
 	ClientKeyPath  string
 }
