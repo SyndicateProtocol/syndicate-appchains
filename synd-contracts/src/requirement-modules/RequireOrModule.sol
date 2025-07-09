@@ -12,9 +12,10 @@ import {IPermissionModule} from "../interfaces/IPermissionModule.sol";
  */
 contract RequireOrModule is BaseRequirementModule {
     // Errors
-    /// @notice Thrown when all permission checks fail
+    /// @notice Thrown when all permission checks fail in OR logic
     /// @param msgSender The address of the sender
-    error CheckFailed(address msgSender);
+    /// @param data The calldata that was being checked
+    error AllOrPermissionChecksFailed(address msgSender, bytes data);
 
     /**
      * @notice Initializes the contract with an admin address
@@ -53,6 +54,6 @@ contract RequireOrModule is BaseRequirementModule {
             currentCheck = nextCheck;
         }
 
-        revert CheckFailed(msgSender);
+        revert AllOrPermissionChecksFailed(msgSender, data);
     }
 }

@@ -217,7 +217,7 @@ pub struct NitroDeployment {
 }
 
 #[allow(clippy::unwrap_used)]
-/// Deploys a mock rollup contract. - It expects `yarn` and `hardhat` to be installed.
+/// Deploys a mock rollup contract. - It expects `yarn` to be installed.
 /// NOTE: only used for the base chains when in Nitro mode, it expects `l1_provider` to have
 /// automine enabled
 pub async fn deploy_nitro_rollup(
