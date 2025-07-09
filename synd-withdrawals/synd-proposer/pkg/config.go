@@ -34,6 +34,8 @@ type Config struct {
 	AppchainInboxAddress  common.Address
 
 	EnclaveConfig enclave.Config
+
+	MTLSConfig MTLSConfig
 }
 
 var ConfigKeys = map[string]struct {
@@ -58,6 +60,8 @@ var ConfigKeys = map[string]struct {
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
 	"settlement-delay":            {"Settlement Delay", "60", false},
+	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
+	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
@@ -117,6 +121,10 @@ func LoadConfig() (*Config, error) {
 			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
+		},
+		MTLSConfig: MTLSConfig{
+			ClientCertPath: viper.GetString("mtls-client-cert-path"),
+			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
 	}, nil
 }
