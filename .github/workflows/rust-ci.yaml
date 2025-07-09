@@ -96,33 +96,39 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
           components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
 
-      # Combined cache for Rust and SP1 as recommended
-      - name: rust-cache
-        uses: actions/cache@v4
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-            ~/.rustup/
-            ~/.sp1/
-          key: ${{ env.CACHE_KEY }}-rust-${{ env.RUST_VERSION }}-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: |
-            ${{ env.CACHE_KEY }}-rust-${{ env.RUST_VERSION }}-
-            rust-${{ env.RUST_VERSION }}-
+          shared-key: ${{ env.CACHE_KEY }}
+          save-if: true
 
-      - name: Install SP1 toolchain
-        run: |
-          curl -L https://sp1up.succinct.xyz | bash
-          ~/.sp1/bin/sp1up
-          ~/.sp1/bin/cargo-prove prove --version
+#      # Combined cache for Rust and SP1 as recommended
+#      - name: rust-cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/.cargo/bin/
+#            ~/.cargo/registry/index/
+#            ~/.cargo/registry/cache/
+#            ~/.cargo/git/db/
+#            target/
+#            ~/.rustup/
+#            ~/.sp1/
+#          key: ${{ env.CACHE_KEY }}-rust-${{ env.RUST_VERSION }}-${{ hashFiles('**/Cargo.toml') }}
+#          restore-keys: |
+#            ${{ env.CACHE_KEY }}-rust-${{ env.RUST_VERSION }}-
+#            rust-${{ env.RUST_VERSION }}-
 
-      - name: Build SP1 ELF program
-        run: |
-          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-          ~/.sp1/bin/cargo-prove prove build
+#      - name: Install SP1 toolchain
+#        run: |
+#          curl -L https://sp1up.succinct.xyz | bash
+#          ~/.sp1/bin/sp1up
+#          ~/.sp1/bin/cargo-prove prove --version
+#
+#      - name: Build SP1 ELF program
+#        run: |
+#          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+#          ~/.sp1/bin/cargo-prove prove build
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -142,26 +148,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust stable
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
           components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
 
-      # Use the same cache configuration
-      - name: rust-cache
-        uses: actions/cache@v4
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-            ~/.rustup/
-            ~/.sp1/
-          key: rust-${{ env.RUST_VERSION }}-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: rust-${{ env.RUST_VERSION }}-
+          shared-key: ${{ env.CACHE_KEY }}
+
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1up.succinct.xyz | bash
+          ~/.sp1/bin/sp1up
+          ~/.sp1/bin/cargo-prove prove --version
+
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+          ~/.sp1/bin/cargo-prove prove build
 
       # Run Clippy checks on the entire workspace
       - name: Run Clippy
@@ -175,26 +182,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust stable
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
           components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
 
-      # Use the same cache configuration
-      - name: rust-cache
-        uses: actions/cache@v4
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-            ~/.rustup/
-            ~/.sp1/
-          key: rust-${{ env.RUST_VERSION }}-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: rust-${{ env.RUST_VERSION }}-
+          shared-key: ${{ env.CACHE_KEY }}
+
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1up.succinct.xyz | bash
+          ~/.sp1/bin/sp1up
+          ~/.sp1/bin/cargo-prove prove --version
+
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+          ~/.sp1/bin/cargo-prove prove build
 
       - name: Pre-download docker test docker images
         run: |
