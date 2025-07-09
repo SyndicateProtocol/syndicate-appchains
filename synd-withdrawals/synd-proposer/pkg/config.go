@@ -123,7 +123,7 @@ func LoadConfig() (*Config, error) {
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
 		},
 		EnclaveTLSConfig: TLSConfig{
-			Enabled:        viper.GetBool("mtls-enabled"),
+			Enabled:        viper.GetBool("mtls-enabled-enclave"),
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
