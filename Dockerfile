@@ -38,13 +38,20 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
     cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
 # --- Go build stage for synd-proposer ---
-FROM golang:1.23-bookworm AS go-synd-proposer-build
-WORKDIR /go/src/synd-proposer
-COPY ./synd-withdrawals/synd-proposer .
-# Download Go dependencies for better build caching
-RUN go mod download
-RUN go mod tidy
-RUN CGO_ENABLED=0 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
+FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro
+
+FROM golang:1.23.0 AS go-synd-proposer-build
+WORKDIR /
+COPY --from=nitro /workspace ./synd-enclave/nitro
+COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
+COPY ./synd-withdrawals/synd-enclave/go.mod ./synd-enclave/go.mod
+COPY ./synd-withdrawals/synd-enclave/go.sum ./synd-enclave/go.sum
+COPY ./synd-withdrawals/synd-proposer ./synd-proposer
+
+# Build the Go image
+WORKDIR /synd-proposer
+RUN CGO_ENABLED=1 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
+    
 
 # Stage 3: Optional Foundry install
 FROM debian:bookworm-slim AS foundry
@@ -75,6 +82,7 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
 LABEL service=synd-translator
+
 FROM runtime-base AS synd-proposer
 COPY --from=go-synd-proposer-build /go/bin/synd-proposer /usr/local/bin/synd-proposer
 ENTRYPOINT ["/usr/local/bin/synd-proposer"]
