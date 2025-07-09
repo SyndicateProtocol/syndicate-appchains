@@ -117,8 +117,8 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets --all-features
 
-  unit-tests:
-    name: Unit tests
+  test:
+    name: Tests
     runs-on: shared-large-02
     timeout-minutes: 45
     steps:
@@ -137,8 +137,7 @@ jobs:
           save-if: 'true' # do save this one
 
       # Install Foundry (required for Anvil, a local Ethereum node simulator)
-      # Anvil is a critical dependency for tests, particularly
-      # the block builder component which uses it to simulate blockchain operations
+      # Anvil is a critical dependency for tests
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
@@ -155,76 +154,14 @@ jobs:
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
           $HOME/.sp1/bin/cargo-prove prove build
 
-      - name: Verify Foundry Installation
-        run: |
-          which anvil
-          anvil --version
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
       - name: Pre-download docker test docker images
         run: |
           docker pull ghcr.io/syndicateprotocol/generate_batch
           docker pull valkey/valkey:latest
           docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
 
-      # Run unit and integration tests, excluding the test-framework package
-      - name: Run Unit and Integration Tests
-        run: cargo nextest run --workspace --exclude test-framework --fail-fast
-
-  e2e-tests:
-    name: E2E tests
-    runs-on: shared-large-02
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
-          save-if: 'false'
-
-      # Install Foundry (required for Anvil, a local Ethereum node simulator)
-      # Anvil is a critical dependency for tests, particularly
-      # the block builder component which uses it to simulate blockchain operations
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Install SP1 toolchain
-        run: |
-          curl -L https://sp1.succinct.xyz | bash
-          $HOME/.sp1/bin/sp1up 
-          $HOME/.sp1/bin/cargo-prove prove --version
-
-      - name: Build SP1 ELF program
-        run: |
-          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-          $HOME/.sp1/bin/cargo-prove prove build
-
-      - name: Verify Foundry Installation
-        run: |
-          which anvil
-          anvil --version
-
       - name: Install nextest
         uses: taiki-e/install-action@nextest
 
-      - name: Pre-download docker test docker images
-        run: |
-          docker pull ghcr.io/syndicateprotocol/generate_batch
-          docker pull valkey/valkey:latest
-          docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
-
-      # Run only the test-framework package tests
-      - name: Run E2E Tests
-        run: cargo nextest run --package test-framework --fail-fast
+      - name: Run all tests with nextest
+        run: cargo build && cargo nextest run --workspace --fail-fast
