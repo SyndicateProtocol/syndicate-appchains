@@ -2,30 +2,64 @@
 
 The Smart contracts we intend to have the audit are the following:
 
-- [SyndicateFactory](src/src/factory/SyndicateFactory.sol/contract.SyndicateFactory.md)
-- [RequireAndModuleFactory](src/src/factory/PermissionModuleFactories.sol/contract.RequireAndModuleFactory.md)
-- [RequireCompositeModuleFactory](src/src/factory/PermissionModuleFactories.sol/contract.RequireCompositeModuleFactory.md)
-- [RequireOrModuleFactory](src/src/factory/PermissionModuleFactories.sol/contract.RequireOrModuleFactory.md)
-- [SyndicateFactoryWrapper](src/src/factory/SyndicateFactoryWrapper.sol/contract.SyndicateFactoryWrapper.md)
-- [SyndicateSequencingChain](src/src/SyndicateSequencingChain.sol/contract.SyndicateSequencingChain.md)
-- [SequencingModuleChecker](src/src/SequencingModuleChecker.sol/abstract.SequencingModuleChecker.md)
-- [AllowlistSequencingModule](src/src/sequencing-modules/AllowlistSequencingModule.sol/contract.AllowlistSequencingModule.md)
-- [WalletPoolWrapperModule](src/src/sequencing-modules/WalletPoolWrapperModule.sol/contract.WalletPoolWrapperModule.md)
-- [AtomicSequencer](src/src/atomic-sequencer/AtomicSequencer.sol/contract.AtomicSequencer.md)
-- [AtomicSequencerImplementation](src/src/atomic-sequencer/AtomicSequencerImplementation.sol/contract.AtomicSequencerImplementation.md)
-- [RequireAndModule](src/src/requirement-modules/RequireAndModule.sol/contract.RequireAndModule.md)
-- [RequireOrModule](src/src/requirement-modules/RequireOrModule.sol/contract.RequireOrModule.md)
-- [RequireCompositeModule](src/src/requirement-modules/RequireCompositeModule.sol/contract.RequireCompositeModule.md)
-- [IRequirementModule](src/src/interfaces/IRequirementModule.sol/interface.IRequirementModule.md)
-- [PermissionModule](src/src/interfaces/IPermissionModule.sol/interface.IPermissionModule.md)
-- [AddressStructuredLinkedList](src/src/LinkedList/AddressStructuredLinkedList.sol/library.AddressStructuredLinkedList.md)
-- [ArbConfigManager](src/src/config/ArbConfigManager.sol/contract.ArbConfigManager.md)
-- [ArbChainConfig](src/src/config/ArbChainConfig.sol/contract.ArbChainConfig.md)
-- [ArbConfigManagerFactory](src/src/config/ArbConfigManagerFactory.sol/contract.ArbConfigManagerFactory.md)
-- [AssertionPoster](src/src/withdrawal/AssertionPoster.sol/contract.AssertionPoster.md)
-- [AttestationDocVerifier](src/src/withdrawal/AttestationDocVerifier.sol/contract.AttestationDocVerifier.md)
-- [TeeKeyManager](src/src/withdrawal/TeeKeyManager.sol/contract.TeeKeyManager.md)
-- [TeeModule](src/src/withdrawal/TeeModule.sol/contract.TeeModule.md)
+## Core Sequencing Contracts
+
+- [SyndicateFactory](src/src/factory/SyndicateFactory.sol) - Deploys new rollup configurations with customized sequencing rules
+- [RequireAndModuleFactory](src/src/factory/PermissionModuleFactories.sol) - Factory for AND logic requirement modules
+- [RequireCompositeModuleFactory](src/src/factory/PermissionModuleFactories.sol) - Factory for composite requirement modules
+- [RequireOrModuleFactory](src/src/factory/PermissionModuleFactories.sol) - Factory for OR logic requirement modules
+- [SyndicateFactoryWrapper](src/src/factory/SyndicateFactoryWrapper.sol) - Wrapper for enhanced factory functionality
+- [SyndicateSequencingChain](src/src/SyndicateSequencingChain.sol) - Central contract that processes and orders transactions
+- [SequencingModuleChecker](src/src/SequencingModuleChecker.sol) - Validates transactions against requirement modules
+- [AllowlistSequencingModule](src/src/sequencing-modules/AllowlistSequencingModule.sol) - Allowlist-based sequencing control
+- [WalletPoolWrapperModule](src/src/sequencing-modules/WalletPoolWrapperModule.sol) - Wallet pool wrapper for sequencing
+- [AtomicSequencer](src/src/atomic-sequencer/AtomicSequencer.sol) - Low-level atomic sequencing components
+- [AtomicSequencerImplementation](src/src/atomic-sequencer/AtomicSequencerImplementation.sol) - Implementation for atomic sequencer
+
+## Permission and Requirement Modules
+
+- [RequireAndModule](src/src/requirement-modules/RequireAndModule.sol) - Requires ALL permission checks to pass (AND logic)
+- [RequireOrModule](src/src/requirement-modules/RequireOrModule.sol) - Requires ANY permission check to pass (OR logic)
+- [RequireCompositeModule](src/src/requirement-modules/RequireCompositeModule.sol) - Composite permission logic combining AND/OR
+
+## Interfaces and Libraries
+
+- [IRequirementModule](src/src/interfaces/IRequirementModule.sol) - Interface for requirement modules
+- [IPermissionModule](src/src/interfaces/IPermissionModule.sol) - Interface for permission modules
+- [AddressStructuredLinkedList](src/src/LinkedList/AddressStructuredLinkedList.sol) - Library for managing linked lists
+
+## Configuration Management
+
+- [ArbConfigManager](src/src/config/ArbConfigManager.sol) - Manages deployment and upgrading of chain configurations
+- [ArbChainConfig](src/src/config/ArbChainConfig.sol) - Configuration store for Arbitrum rollup parameters
+- [ArbConfigManagerFactory](src/src/config/ArbConfigManagerFactory.sol) - Factory for deploying configuration managers
+
+### Bridge Proxy Contracts
+
+- [ArbitrumBridgeProxy](src/src/token/bridges/ArbitrumBridgeProxy.sol) - Arbitrum L1-L2 bridge integration
+- [BaseBridgeProxy](src/src/token/bridges/BaseBridgeProxy.sol) - Base L1-L2 bridge integration
+- [OptimismBridgeProxy](src/src/token/bridges/OptimismBridgeProxy.sol) - Optimism L1-L2 bridge integration
+
+### Token Interfaces and Libraries
+
+- [IBridgeProxy](src/src/token/interfaces/IBridgeProxy.sol) - Generic bridge proxy interface
+- [IERC7802](src/src/token/crosschain/interfaces/IERC7802.sol) - ERC-7802 Crosschain Fungibility Extension
+- [IBridgeRateLimiter](src/src/token/crosschain/interfaces/IBridgeRateLimiter.sol) - Bridge rate limiting interface
+- [CREATE3](src/src/token/crosschain/libraries/CREATE3.sol) - Deterministic deployment library
+- [Bytes32AddressLib](src/src/token/crosschain/libraries/Bytes32AddressLib.sol) - Address utilities
+
+## Withdrawal System (TEE-based)
+
+- [AssertionPoster](src/src/withdrawal/AssertionPoster.sol) - Posts assertions to Arbitrum rollups (supports v2 and v3)
+- [AttestationDocVerifier](src/src/withdrawal/AttestationDocVerifier.sol) - Verifies TEE attestation documents using SP1 proofs
+- [TeeKeyManager](src/src/withdrawal/TeeKeyManager.sol) - Manages TEE program hashes and public keys
+- [TeeModule](src/src/withdrawal/TeeModule.sol) - Main TEE orchestrator for withdrawal process with challenge mechanism
+
+### Withdrawal Interfaces
+
+- [IAssertionPoster](src/src/withdrawal/IAssertionPoster.sol) - Interface for posting assertions
+- [IAttestationDocVerifier](src/src/withdrawal/IAttestationDocVerifier.sol) - Interface for verifying attestation documents
+- [ITeeKeyManager](src/src/withdrawal/ITeeKeyManager.sol) - Interface for TEE key management
 
 ## General Overview of Syndicate Sequencer Chain and Its Smart Contracts
 
@@ -178,25 +212,113 @@ The configuration management system is a critical infrastructure component that:
 
 This configuration system acts as the backbone for the Syndicate Sequencer Chain's multi-chain capabilities, allowing it to correctly route transactions and interact with different Arbitrum-based rollups while maintaining separation and security between chains.
 
-### Assertion Poster
+## Withdrawal System Architecture
 
-The `AssertionPoster` contract is a generic assertion posting utility for Arbitrum rollups
+The withdrawal system represents a critical component of the Syndicate Sequencer Chain, implementing a TEE (Trusted Execution Environment) based approach to secure and verifiable withdrawal operations. This system enables secure withdrawal of funds from the sequencer chain while maintaining decentralization and trustlessness.
 
-Core functionalities include:
+### Key Components Overview
 
-1. **Generic Assertion Management**:
+The withdrawal system consists of four main contracts working together:
 
-   - Posts assertions to Arbitrum rollups with configurable block hashes and send roots
+1. **TeeModule**: The main orchestrator contract that manages the withdrawal process
+2. **AssertionPoster**: Handles posting assertions to Arbitrum rollups
+3. **AttestationDocVerifier**: Verifies TEE attestation documents using zero-knowledge proofs
+4. **TeeKeyManager**: Manages valid TEE program hashes and public keys
+
+### TeeModule - Core Withdrawal Logic
+
+The `TeeModule` contract serves as the central coordinator for the withdrawal process, implementing a sophisticated challenge-response mechanism:
+
+#### Core Functionality:
+
+1. **Assertion Management**:
+
+   - Accepts assertions signed by verified TEE instances
+   - Manages pending assertions with configurable challenge windows
+   - Tracks assertion state through multiple phases (pending, challenged, finalized)
+
+2. **Challenge System**:
+
+   - Implements a challenge period where disputes can be raised
+   - Handles multiple competing assertions through a "hack" detection mechanism
+   - Rewards honest participants and penalizes malicious behavior
+
+3. **TEE Integration**:
+
+   - Validates that assertions come from authorized TEE instances
+   - Ensures assertions are properly signed by verified TEE keys
+   - Maintains separation between different TEE program versions
+
+4. **Input Validation**:
+   - Manages trusted inputs that TEE instances can reference
+   - Provides a secure way to feed external data into the TEE environment
+   - Prevents unauthorized manipulation of input data
+
+### AssertionPoster - Rollup Integration
+
+The `AssertionPoster` contract provides a generic interface for posting assertions to Arbitrum rollups:
+
+#### Key Features:
+
+1. **Multi-Protocol Support**:
+
    - Supports both legacy (v2) and new (v3) Arbitrum Nitro rollup protocols
-   - Manages rollup state progression through assertion posting
+   - Auto-detects rollup version and adapts behavior accordingly
+   - Handles version-specific assertion formats and function calls
 
-2. **Permission Control**:
+2. **Permission Management**:
 
    - Restricts assertion posting to authorized addresses (contract owner)
    - Configures rollup permissions to prevent unauthorized assertion creation
    - Sets up proper validator and batch poster permissions
 
-3. **Protocol Compatibility**:
-   - Auto-detects rollup version and adapts behavior accordingly
-   - Handles version-specific assertion formats and function calls
-   - Manages rollup configuration updates and state synchronization
+3. **State Management**:
+   - Manages rollup state progression through assertion posting
+   - Handles rollup configuration updates and state synchronization
+   - Ensures assertions are posted in correct sequence
+
+### AttestationDocVerifier - TEE Validation
+
+The `AttestationDocVerifier` contract implements cryptographic verification of TEE attestation documents:
+
+#### Verification Process:
+
+1. **Document Validation**:
+
+   - Verifies AWS Nitro Enclave attestation documents using SP1 zero-knowledge proofs
+   - Validates root certificate hashes against trusted roots
+   - Checks document validity windows and timestamps
+
+2. **PCR (Platform Configuration Register) Validation**:
+
+   - Validates PCR values to ensure TEE instances are running expected code
+   - Prevents tampering with TEE execution environment
+   - Ensures reproducible and verifiable TEE deployments
+
+3. **Key Extraction**:
+   - Extracts TEE signing keys from verified attestation documents
+   - Provides cryptographic proof that keys belong to legitimate TEE instances
+   - Enables downstream verification of TEE-signed assertions
+
+### TeeKeyManager - Key Lifecycle Management
+
+The `TeeKeyManager` contract manages the lifecycle of TEE keys and program hashes:
+
+#### Key Management Features:
+
+1. **Permissionless Key Addition**:
+
+   - Allows anyone to add a key by providing a valid attestation document proof
+   - Verifies attestation documents before accepting keys
+   - Maintains registry of all valid TEE keys
+
+2. **Program Hash Management**:
+
+   - Associates keys with specific TEE program hashes
+   - Ensures keys can only be used by intended TEE programs
+   - Prevents key reuse across different program versions
+
+3. **Emergency Controls**:
+   - Owner can revoke all keys in case of security incidents
+   - Ability to update attestation document verifier
+   - Provides escape hatch for system recovery
