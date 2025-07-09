@@ -34,6 +34,11 @@ func TestInitProposerWithConfig(t *testing.T) {
 		CloseChallengeInterval:   5 * time.Second,
 		MetricsPort:              9292,
 		SettlementChainID:        9999,
+		EnclaveTLSConfig: pkg.TLSConfig{
+			Enabled:        false,
+			ClientCertPath: "/etc/tls/tls.crt",
+			ClientKeyPath:  "/etc/tls/tls.key",
+		},
 	}
 	proposer := pkg.NewProposer(dummyCfg)
 	if proposer.Config != dummyCfg {

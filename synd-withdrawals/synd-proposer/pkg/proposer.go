@@ -48,11 +48,18 @@ func NewProposer(cfg *Config) *Proposer {
 		log.Fatalf("Failed to create ethereum provider: %v", err)
 		return nil
 	}
-	enclaveClient, err := rpc.Dial(cfg.EnclaveRPCURL)
+
+	var enclaveClient *rpc.Client
+	if cfg.EnclaveTLSConfig.Enabled {
+		enclaveClient, err = createTLSClient(&cfg.EnclaveTLSConfig, cfg.EnclaveRPCURL)
+	} else {
+		enclaveClient, err = rpc.Dial(cfg.EnclaveRPCURL)
+	}
 	if err != nil {
 		log.Fatalf("Failed to create enclave provider: %v", err)
 		return nil
 	}
+
 	settlementClient, err := ethclient.Dial(cfg.SettlementRPCURL)
 	if err != nil {
 		log.Fatalf("Failed to create settlement provider: %v", err)
@@ -250,7 +257,7 @@ func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.Trusted
 
 	// derive sequencing chain
 	var seqOutput enclave.VerifySequencingChainOutput
-	if err := p.EnclaveClient.Call(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
+	if err := p.handleEnclaveCall(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
 		TrustedInput:                    trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 valData.DelayedMessages,
@@ -292,7 +299,7 @@ func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.Trusted
 	}
 
 	// derive appchain
-	if err := p.EnclaveClient.Call(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
+	if err := p.handleEnclaveCall(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
 		TrustedInput:                    trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 msgs,
@@ -362,4 +369,11 @@ func (p *Proposer) Verify(ctx context.Context, trustedInputParam *enclave.Truste
 		AppchainSendRoot:    appEndBlock.SendRoot,
 	}
 	return appOutput, nil
+}
+
+func (p *Proposer) handleEnclaveCall(output interface{}, method string, input interface{}) error {
+	if err := p.EnclaveClient.Call(output, method, input); err != nil {
+		return handleTLSErr(err)
+	}
+	return nil
 }
