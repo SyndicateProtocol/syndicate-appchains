@@ -20,7 +20,8 @@ import (
 	"github.com/offchainlabs/nitro/arbos"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
 	"github.com/offchainlabs/nitro/arbstate"
-	"github.com/offchainlabs/nitro/arbstate/daprovider"
+	"github.com/offchainlabs/nitro/arbutil"
+	"github.com/offchainlabs/nitro/daprovider"
 )
 
 // AccountResult struct for eth_getProof response
@@ -63,7 +64,7 @@ type VerifySequencingChainInput struct {
 	StartDelayedMessagesAccumulator common.Hash
 	Batches                         [][]byte
 	IsL1Chain                       bool
-	PreimageData                    [][]byte
+	PreimageData                    map[arbutil.PreimageType][][]byte
 
 	// Additional trustless input when the settlement chain is not a l1 chain
 	EndBatchAccumulatorMerkleProof *AccountResult
@@ -79,7 +80,7 @@ type VerifyAppchainInput struct {
 	VerifySequencingChainOutput     VerifySequencingChainOutput
 	// TODO: rm AppStartBlockHeader & fetch from preimage data instead
 	AppStartBlockHeader types.Header
-	PreimageData        [][]byte
+	PreimageData        map[arbutil.PreimageType][][]byte
 }
 
 type Config struct {

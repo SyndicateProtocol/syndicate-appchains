@@ -1,22 +1,28 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"math"
 	"net/http"
 	"os"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/mdlayher/vsock"
 )
+
+//go:embed g1.point
+var g1Data []byte
 
 func main() {
 	log.SetDefault(log.NewLogger(log.LogfmtHandlerWithLevel(os.Stdout, log.LevelDebug)))
 	log.Info("Starting Enclave")
 	flag.Parse()
 
+	wavmio.Init(g1Data)
 	s := rpc.NewServer()
 	s.SetHTTPBodyLimit(math.MaxInt32)
 	serv, err := enclave.NewServer()

@@ -10,20 +10,24 @@ import (
 	"maps"
 	"math/big"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/nitro/arbnode"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
-	"github.com/offchainlabs/nitro/arbstate/daprovider"
 	"github.com/offchainlabs/nitro/arbutil"
+	"github.com/offchainlabs/nitro/daprovider"
+	"github.com/offchainlabs/nitro/eigenda"
 	"github.com/offchainlabs/nitro/execution"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
 )
@@ -111,22 +115,28 @@ func getBatches(ctx context.Context, c *ethclient.Client, sequencerInbox common.
 	}
 	return data, nil
 }
-func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprovider.Reader, preimages map[common.Hash][]byte) error {
+
+func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprovider.Reader, preimages map[arbutil.PreimageType]map[common.Hash][]byte) error {
 	if len(batch) > 40 {
 		for _, dapReader := range dapReaders {
-			if dapReader != nil && dapReader.IsValidHeaderByte(batch[40]) {
-				preimageRecorder := func(key common.Hash, value []byte, _ arbutil.PreimageType) {
-					preimages[key] = value
-				}
+			if dapReader != nil && dapReader.IsValidHeaderByte(ctx, batch[40]) {
 				// TODO: try to speed this up - can disable validation as well if it is slow.
-				_, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, preimageRecorder, true)
+				_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, nil, true)
 				if err != nil {
 					// Matches the way keyset validation was done inside DAS readers i.e logging the error
 					//  But other daproviders might just want to return the error
-					if errors.Is(err, daprovider.ErrSeqMsgValidation) && daprovider.IsDASMessageHeaderByte(batch[40]) {
+					if strings.Contains(err.Error(), daprovider.ErrSeqMsgValidation.Error()) && daprovider.IsDASMessageHeaderByte(batch[40]) {
 						log.Error(err.Error())
 					} else {
 						return err
+					}
+				}
+
+				for ty, images := range preimagesRecorded {
+					if preimages[ty] == nil {
+						preimages[ty] = images
+					} else {
+						maps.Copy(preimages[ty], images)
 					}
 				}
 				return nil
@@ -163,7 +173,7 @@ func getMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Addre
 	return common.Hash(acc), count - 1, nil
 }
 
-func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.Address, inbox common.Address, start uint64, endAcc common.Hash) (common.Hash, [][]byte, bool, error) {
+func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.Address, start uint64, endAcc common.Hash) (common.Hash, [][]byte, bool, error) {
 	endBlock, err := c.BlockNumber(ctx)
 	if err != nil {
 		return common.Hash{}, nil, false, err
@@ -174,7 +184,7 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 	}
 
 	if acc != endAcc {
-		logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{[]common.Hash{messageDeliveredID}, nil, []common.Hash{endAcc}}, 1)
+		logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{{messageDeliveredID}, nil, {endAcc}}, 1)
 		if err != nil {
 			return common.Hash{}, nil, false, err
 		}
@@ -202,7 +212,7 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 			indexes = append(indexes, common.BigToHash(big.NewInt(int64(start))))
 		}
 	}
-	logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{[]common.Hash{messageDeliveredID}, indexes}, uint64(len(indexes)))
+	logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{{messageDeliveredID}, indexes}, uint64(len(indexes)))
 	if err != nil {
 		return common.Hash{}, nil, false, err
 	}
@@ -210,22 +220,54 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 		return common.Hash{}, nil, false, fmt.Errorf("unexpected number of logs found: got %d, expected %d", len(logs), len(indexes))
 	}
 
+	ibridge, err := bridgegen.NewBridge(bridge, c)
+	if err != nil {
+		return common.Hash{}, nil, false, err
+	}
+
+	seqInbox, err := ibridge.SequencerInbox(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return common.Hash{}, nil, false, err
+	}
+
+	addrs := []common.Address{bridge, seqInbox}
+
+	var i int64
+	for {
+		inbox, err := ibridge.AllowedDelayedInboxList(&bind.CallOpts{Context: ctx}, big.NewInt(i))
+		if err != nil {
+			if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+				break
+			}
+			return common.Hash{}, nil, false, err
+		}
+		addrs = append(addrs, inbox)
+		i++
+	}
+	if i == 0 {
+		return common.Hash{}, nil, false, errors.New("no inbox addresses found")
+	}
+
 	logs, err = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
-		[]common.Address{bridge, inbox},
+		addrs,
 		[][]common.Hash{
-			[]common.Hash{messageDeliveredID, inboxMessageDeliveredID},
+			{messageDeliveredID, inboxMessageDeliveredID},
 		}, 0)
 
-	ibridge, err := bridgegen.NewIBridge(bridge, c)
 	if err != nil {
 		return common.Hash{}, nil, false, err
 	}
-	iinbox, err := bridgegen.NewIDelayedMessageProvider(inbox, c)
-	if err != nil {
-		return common.Hash{}, nil, false, err
-	}
+
 	if len(logs)%2 != 0 {
-		return common.Hash{}, nil, false, errors.New("even number of logs expected")
+		for _, log := range logs {
+			fmt.Println("LOG: ", log.Topics[0], log.TxHash, log.Address, log.Topics[1].Big().Uint64())
+		}
+		return common.Hash{}, nil, false, fmt.Errorf("even number of logs expected: got %d", len(logs))
+	}
+
+	iinbox, err := bridgegen.NewIDelayedMessageProvider(common.Address{}, c)
+	if err != nil {
+		return common.Hash{}, nil, false, err
 	}
 
 	var msgs [][]byte
@@ -287,7 +329,7 @@ func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay ui
 	i := 0
 	for _, b := range batches {
 		hasMsg := false
-		for i < len(dmsgs) && binary.BigEndian.Uint64(dmsgs[i][enclave.TimestampOffset:enclave.TimestampOffset+8])+setDelay <= b.Timestamp {
+		for i < len(dmsgs) && binary.BigEndian.Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset:enclave.DelayedMessageTimestampOffset+8])+setDelay <= b.Timestamp {
 			i++
 			hasMsg = true
 		}
@@ -306,8 +348,7 @@ type Client struct {
 	enclaveClient *rpc.Client
 	cfg           enclave.Config
 	appBridge     common.Address
-	appInbox      common.Address
-	seqInbox      common.Address
+	dapReaders    []daprovider.Reader
 }
 
 // find the last block <= l1 number. return an error if start is greater than l1 number.
@@ -411,7 +452,7 @@ func (c *Client) Prove(ctx context.Context, trustedInput enclave.TrustedInput, i
 		}
 		endBatchCount = common.BytesToHash(count).Big().Uint64()
 	}
-	fmt.Println("get end batch count took", time.Now().Sub(now))
+	fmt.Println("get end batch count took", time.Since(now))
 
 	if endBatchCount == 0 {
 		return nil, errors.New("end batch count is 0")
@@ -429,31 +470,43 @@ func (c *Client) Prove(ctx context.Context, trustedInput enclave.TrustedInput, i
 	if err := c.seqClient.Client().CallContext(ctx, &valData, "synd_validationData", header.Number.Uint64(), endBatchCount-1, false); err != nil {
 		return nil, err
 	}
-	fmt.Println("synd_validationData took", time.Now().Sub(now))
-	preimages := make(map[common.Hash][]byte)
+	fmt.Println("synd_validationData took", time.Since(now))
+	preimages := make(map[arbutil.PreimageType]map[common.Hash][]byte)
+	preimages[arbutil.Keccak256PreimageType] = make(map[common.Hash][]byte)
 	for _, preimage := range valData.PreimageData {
-		preimages[crypto.Keccak256Hash(preimage)] = preimage
+		preimages[arbutil.Keccak256PreimageType][crypto.Keccak256Hash(preimage)] = preimage
 	}
 
 	// get batches
 	var batches [][]byte
 	if valData.BatchEndIndex >= valData.BatchStartIndex {
-		now = time.Now()
-		batches, err = getBatches(ctx, c.l1Client, c.seqInbox, valData.BatchStartIndex, valData.BatchEndIndex, valData.BatchStartBlockNum, valData.BatchEndBlockNum)
+		ibridge, err := bridgegen.NewIBridgeCaller(c.cfg.SequencingBridgeAddress, c.l1Client)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("getBatches() took", time.Now().Sub(now))
+
+		seqInbox, err := ibridge.SequencerInbox(&bind.CallOpts{Context: ctx})
+		if err != nil {
+			return nil, err
+		}
+
+		now = time.Now()
+		batches, err = getBatches(ctx, c.l1Client, seqInbox, valData.BatchStartIndex, valData.BatchEndIndex, valData.BatchStartBlockNum, valData.BatchEndBlockNum)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("getBatches() took", time.Since(now))
 		if len(batches) == 0 {
 			return nil, errors.New("found 0 batches")
 		}
 		// update preimages
+		now = time.Now()
 		for _, batch := range batches {
-			// TODO: add dapReaders to this function call
-			if err := getBatchPreimageData(ctx, batch, nil, preimages); err != nil {
+			if err := getBatchPreimageData(ctx, batch, c.dapReaders, preimages); err != nil {
 				return nil, err
 			}
 		}
+		fmt.Println("getBatchPreimageData() took", time.Since(now))
 	}
 
 	var proof *enclave.AccountResult
@@ -469,12 +522,18 @@ func (c *Client) Prove(ctx context.Context, trustedInput enclave.TrustedInput, i
 		if err := c.l1Client.Client().CallContext(ctx, &proof, "eth_getProof", c.cfg.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
 			return nil, err
 		}
-		fmt.Println("eth_getProof took", time.Now().Sub(now))
+		fmt.Println("eth_getProof took", time.Since(now))
+	}
+
+	preimagesData := make(map[arbutil.PreimageType][][]byte)
+	for ty, images := range preimages {
+		preimagesData[ty] = slices.Collect(maps.Values(images))
 	}
 
 	// derive sequencing chain
 	now = time.Now()
 	var seqOutput enclave.VerifySequencingChainOutput
+	fmt.Println("deriving seq chain")
 	if err := c.enclaveClient.Call(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
 		TrustedInput:                    trustedInput,
 		Config:                          c.cfg,
@@ -482,22 +541,13 @@ func (c *Client) Prove(ctx context.Context, trustedInput enclave.TrustedInput, i
 		StartDelayedMessagesAccumulator: valData.StartDelayedAcc,
 		Batches:                         batches,
 		IsL1Chain:                       isL1Chain,
-		PreimageData:                    slices.Collect(maps.Values(preimages)),
+		PreimageData:                    preimagesData,
 		EndBatchAccumulatorMerkleProof:  proof,
 		L1EndBlockHeader:                header,
 	}); err != nil {
 		return nil, err
 	}
-	fmt.Println("seq enclave runtime: ", time.Now().Sub(now))
-
-	// print seq output for debugging
-	/*
-		out, err := json.Marshal(seqOutput)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println("Seq output: ", string(out))
-	*/
+	fmt.Println("seq enclave runtime: ", time.Since(now))
 
 	// get appchain start block
 	if header, err = c.appClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
@@ -506,11 +556,11 @@ func (c *Client) Prove(ctx context.Context, trustedInput enclave.TrustedInput, i
 
 	// get delayed messages
 	now = time.Now()
-	startAcc, msgs, isDummy, err := getDelayedMessages(ctx, c.setClient, c.appBridge, c.appInbox, header.Nonce.Uint64(), trustedInput.SetDelayedMessageAcc)
+	startAcc, msgs, isDummy, err := getDelayedMessages(ctx, c.setClient, c.appBridge, header.Nonce.Uint64(), trustedInput.SetDelayedMessageAcc)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("getDelayedMessages() took", time.Now().Sub(now))
+	fmt.Println("getDelayedMessages() took", time.Since(now))
 
 	// get the number of batches. ignore the delayed message if it is a dummy one
 	var realMsgs [][]byte
@@ -525,7 +575,7 @@ func (c *Client) Prove(ctx context.Context, trustedInput enclave.TrustedInput, i
 	if err := c.appClient.Client().CallContext(ctx, &preimageData, "synd_preimageData", header.Number, numBatches, true); err != nil {
 		return nil, err
 	}
-	fmt.Println("synd_preimageData took", time.Now().Sub(now))
+	fmt.Println("synd_preimageData took", time.Since(now))
 
 	// derive appchain
 	now = time.Now()
@@ -537,41 +587,43 @@ func (c *Client) Prove(ctx context.Context, trustedInput enclave.TrustedInput, i
 		StartDelayedMessagesAccumulator: startAcc,
 		VerifySequencingChainOutput:     seqOutput,
 		AppStartBlockHeader:             *header,
-		PreimageData:                    preimageData,
+		PreimageData: map[arbutil.PreimageType][][]byte{
+			arbutil.Keccak256PreimageType: preimageData},
 	}); err != nil {
 		return nil, err
 	}
-	fmt.Println("app enclave runtime: ", time.Now().Sub(now))
+	fmt.Println("app enclave runtime: ", time.Since(now))
 	return &appOutput, nil
 }
 
 func main() {
 	now := time.Now()
 
-	// config flags - optional
+	// config flags - optional. urls
+	eigenUrl := flag.String("eigenda-url", "https://risa-testnet-eigenda-mirror.rollups.alchemy.com", "eigenda proxy url")
 	l1Url := flag.String("l1-url", "https://eth-sepolia.g.alchemy.com/v2/xZF7o-Vl3z94HOqwaQtrZP06swu4_E15", "l1 rpc url")
 	setUrl := flag.String("set-url", "https://base-sepolia.g.alchemy.com/v2/FFOCYExawZ3K46YRNHqaUEo3pbqS5F1F", "settlement rpc url")
 	seqUrl := flag.String("seq-url", "http://localhost:8545", "sequencing chain rpc url")
-	seqContractFlag := flag.String("seq-contract", "0xb89D1d2E9bc9A14855e6C8509dd5435422CcDd8f", "sequencing contract address for appchain")
-	seqBridgeFlag := flag.String("seq-bridge", "0x765E6EC7f3A8c8A2712EA230754E5968E45E124b", "sequencing chain bridge contract address")
-	setDelay := flag.Uint64("set-delay", 60, "settlement chain delay, in seconds")
 	enclaveUrl := flag.String("enclave-url", "http://localhost:1234", "enclave rpc url")
 	appUrl := flag.String("app-url", "http://localhost:8546", "appchain rpc url")
-	appBridgeFlag := flag.String("app-bridge", "0xC5432874Fe53da9185a34eCdf48A3a2a2A8Bd241", "appchain bridge address")
-	appInboxFlag := flag.String("app-inbox", "0xb04170ea0cdE895778f96f809C4078Ae5A0Ea3a8", "appchain inbox address")
-	seqInboxFlag := flag.String("seq-inbox", "0x756915d733C9550Acec8ca0627412bC5086aB472", "sequencer inbox for the sequencing chain")
+
+	// config flags - optional. addrs
+	seqContractFlag := flag.String("seq-contract", "0x7f389b0827d38D047c98fAbBfbf004a966dB8Dc1", "sequencing contract address for appchain")
+	seqBridgeFlag := flag.String("seq-bridge", "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA", "sequencing chain bridge contract address")
+	appBridgeFlag := flag.String("app-bridge", "0x509e8942e6C1626dA3d45060aB39B86e8F246E98", "appchain bridge address")
+
+	// config flags - optional. settlement
 	setMsgs := flag.Uint64("set-msg-count", 0, "settlement delayed message count")
+	setDelay := flag.Uint64("set-delay", 60, "settlement chain delay, in seconds")
 
 	// config flags - required
 	l1StartBatch := flag.Uint64("start-batch", 0, "l1 start batch")
 	l1EndBatch := flag.Uint64("end-batch", 0, "l1 end batch")
 
 	flag.Parse()
-	appInbox := common.HexToAddress(*appInboxFlag)
 	appBridge := common.HexToAddress(*appBridgeFlag)
 	seqContractAddress := common.HexToAddress(*seqContractFlag)
 	seqBridgeAddress := common.HexToAddress(*seqBridgeFlag)
-	seqInbox := common.HexToAddress(*seqInboxFlag)
 
 	ctx := context.Background()
 
@@ -655,12 +707,21 @@ func main() {
 	}
 	fmt.Println("Trusted input: ", string(trustedInputJson))
 
-	p := Client{
-		l1Client, seqClient, setClient, appClient, enclaveClient,
-		cfg, appBridge, appInbox, seqInbox,
+	eigenClient, err := eigenda.NewEigenDA(&eigenda.EigenDAConfig{
+		Enable: true,
+		Rpc:    *eigenUrl,
+	})
+
+	if err != nil {
+		panic(err)
 	}
 
-	fmt.Println("ready in", time.Now().Sub(now))
+	p := Client{
+		l1Client, seqClient, setClient, appClient, enclaveClient,
+		cfg, appBridge, []daprovider.Reader{eigenda.NewReaderForEigenDA(eigenClient)},
+	}
+
+	fmt.Println("ready in", time.Since(now))
 	now = time.Now()
 	appOutput, err := p.Prove(ctx, trustedInput, false)
 	if err != nil {
@@ -671,7 +732,7 @@ func main() {
 		panic(err)
 	}
 	println("Proof output: ", string(out))
-	fmt.Println("proof took", time.Now().Sub(now))
+	fmt.Println("proof took", time.Since(now))
 	now = time.Now()
 	verifyOutput, err := Verify(ctx, p.appClient, p.seqClient, p.l1Client, p.cfg.SequencingBridgeAddress, trustedInput, false)
 	if err != nil {
@@ -682,5 +743,5 @@ func main() {
 		panic(err)
 	}
 	println("Verify output: ", string(out))
-	fmt.Println("verify took", time.Now().Sub(now))
+	fmt.Println("verify took", time.Since(now))
 }
