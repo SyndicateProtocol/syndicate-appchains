@@ -100,7 +100,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
-          save-if: 'true' # skip saving this cache, only save the one in `tests`
+          save-if: 'false' # skip saving this cache, only save the one in `tests`
 
       - name: Install SP1 toolchain
         run: |
