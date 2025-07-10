@@ -21,6 +21,7 @@ type Config struct {
 	SequencingRPCURL string
 	AppchainRPCURL   string
 	EnclaveRPCURL    string
+	EigenRPCUrl      string
 
 	PrivateKey             *ecdsa.PrivateKey
 	PollingInterval        time.Duration
@@ -28,12 +29,13 @@ type Config struct {
 	MetricsPort            int
 
 	TeeModuleContractAddress common.Address
-	SequencingInboxAddress   common.Address
 
 	AppchainBridgeAddress common.Address
-	AppchainInboxAddress  common.Address
 
-	EnclaveConfig enclave.Config
+	IsL1Chain bool
+
+	EnclaveConfig    enclave.Config
+	EnclaveTLSConfig TLSConfig
 }
 
 var ConfigKeys = map[string]struct {
@@ -46,11 +48,10 @@ var ConfigKeys = map[string]struct {
 	"settlement-chain-id":         {"Settlement Chain ID", "", true},
 	"sequencing-rpc-url":          {"Sequencing RPC URL", "", true},
 	"appchain-rpc-url":            {"Appchain RPC URL", "", true},
+	"eigen-rpc-url":               {"EigenDA RPC URL", "", true},
 	"enclave-rpc-url":             {"Enclave RPC URL", "", true},
 	"tee-module-contract-address": {"TEE Module Contract Address", "", true},
-	"sequencing-inbox-address":    {"Sequencing Inbox Address", "", true},
 	"appchain-bridge-address":     {"Appchain Bridge Address", "", true},
-	"appchain-inbox-address":      {"Appchain Inbox Address", "", true},
 	"private-key":                 {"Private Key", "", true},
 	"polling-interval":            {"Polling interval", "10m", false},
 	"close-challenge-interval":    {"Close challenge interval", "5m", false},
@@ -58,6 +59,9 @@ var ConfigKeys = map[string]struct {
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
 	"settlement-delay":            {"Settlement Delay", "60", false},
+	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
+	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
+	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
@@ -105,10 +109,9 @@ func LoadConfig() (*Config, error) {
 		SequencingRPCURL:         viper.GetString("sequencing-rpc-url"),
 		AppchainRPCURL:           viper.GetString("appchain-rpc-url"),
 		EnclaveRPCURL:            viper.GetString("enclave-rpc-url"),
+		EigenRPCUrl:              viper.GetString("eigen-rpc-url"),
 		TeeModuleContractAddress: common.HexToAddress(viper.GetString("tee-module-contract-address")),
-		SequencingInboxAddress:   common.HexToAddress(viper.GetString("sequencing-inbox-address")),
 		AppchainBridgeAddress:    common.HexToAddress(viper.GetString("appchain-bridge-address")),
-		AppchainInboxAddress:     common.HexToAddress(viper.GetString("appchain-inbox-address")),
 		PrivateKey:               privateKey,
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
@@ -117,6 +120,11 @@ func LoadConfig() (*Config, error) {
 			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
+		},
+		EnclaveTLSConfig: TLSConfig{
+			Enabled:        viper.GetBool("mtls-enabled-enclave"),
+			ClientCertPath: viper.GetString("mtls-client-cert-path"),
+			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
 	}, nil
 }

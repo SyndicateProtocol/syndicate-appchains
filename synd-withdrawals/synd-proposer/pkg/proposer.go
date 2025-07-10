@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"maps"
@@ -18,6 +19,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/nitro/arbnode"
+	"github.com/offchainlabs/nitro/arbutil"
+	"github.com/offchainlabs/nitro/daprovider"
+	"github.com/offchainlabs/nitro/eigenda"
+	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
 )
 
 type Proposer struct {
@@ -28,6 +33,7 @@ type Proposer struct {
 	SettlementClient *ethclient.Client
 	SettlementAuth   *bind.TransactOpts
 	EnclaveClient    *rpc.Client
+	DapReaders       []daprovider.Reader
 	TeeModule        *teemodule.Teemodule
 }
 
@@ -48,16 +54,32 @@ func NewProposer(cfg *Config) *Proposer {
 		log.Fatalf("Failed to create ethereum provider: %v", err)
 		return nil
 	}
-	enclaveClient, err := rpc.Dial(cfg.EnclaveRPCURL)
+
+	var enclaveClient *rpc.Client
+	if cfg.EnclaveTLSConfig.Enabled {
+		enclaveClient, err = createTLSClient(&cfg.EnclaveTLSConfig, cfg.EnclaveRPCURL)
+	} else {
+		enclaveClient, err = rpc.Dial(cfg.EnclaveRPCURL)
+	}
 	if err != nil {
 		log.Fatalf("Failed to create enclave provider: %v", err)
 		return nil
 	}
+
 	settlementClient, err := ethclient.Dial(cfg.SettlementRPCURL)
 	if err != nil {
 		log.Fatalf("Failed to create settlement provider: %v", err)
 		return nil
 	}
+	eigenClient, err := eigenda.NewEigenDA(&eigenda.EigenDAConfig{
+		Enable: true,
+		Rpc:    cfg.EigenRPCUrl,
+	})
+	if err != nil {
+		log.Fatalf("Failed to create eignen provider: %v", err)
+		return nil
+	}
+
 	settlementAuth, err := bind.NewKeyedTransactorWithChainID(cfg.PrivateKey, big.NewInt(int64(cfg.SettlementChainID)))
 	if err != nil {
 		log.Fatalf("Failed to create transactor: %v", err)
@@ -77,6 +99,7 @@ func NewProposer(cfg *Config) *Proposer {
 		EnclaveClient:    enclaveClient,
 		SettlementClient: settlementClient,
 		SettlementAuth:   settlementAuth,
+		DapReaders:       []daprovider.Reader{eigenda.NewReaderForEigenDA(eigenClient)},
 		TeeModule:        teeModule,
 	}
 }
@@ -149,10 +172,10 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 	}
 }
 
-func (p *Proposer) getTrustedInput() (enclave.TrustedInput, error) {
-	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(nil)
+func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, error) {
+	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(&bind.CallOpts{Context: ctx})
 	if err != nil {
-		return enclave.TrustedInput{}, err
+		return nil, err
 	}
 	trustedInput := enclave.TrustedInput{
 		ConfigHash:           contractTrustedInput.ConfigHash,
@@ -164,119 +187,136 @@ func (p *Proposer) getTrustedInput() (enclave.TrustedInput, error) {
 	}
 
 	fmt.Println("Trusted input: ", trustedInput)
-	return trustedInput, nil
+	return &trustedInput, nil
+}
+
+func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint64, error) {
+	var batchCount uint64
+	if p.Config.IsL1Chain {
+		if err := p.SequencingClient.Client().CallContext(ctx, &batchCount, "synd_batchFromAcc", l1Hash); err != nil {
+			return 0, err
+		}
+	} else {
+		count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, l1Hash)
+		if err != nil {
+			return 0, err
+		}
+		batchCount = common.BytesToHash(count).Big().Uint64()
+	}
+	if batchCount == 0 {
+		return 0, errors.New("end batch count is 0")
+	}
+	return batchCount, nil
 }
 
 // TODO (SEQ-1061): Replace enclave types with auto-generated types from the bindings
-func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.TrustedInput) (enclave.VerifyAppchainOutput, error) {
-	var appOutput enclave.VerifyAppchainOutput
-	var trustedInput enclave.TrustedInput
-
-	if trustedInputParam == nil {
+func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput) (*enclave.VerifyAppchainOutput, error) {
+	// get trusted input
+	if trustedInput == nil {
 		var err error
-		trustedInput, err = p.getTrustedInput()
+		trustedInput, err = p.getTrustedInput(ctx)
 		if err != nil {
-			return appOutput, err
+			return nil, err
 		}
-	} else {
-		trustedInput = *trustedInputParam
 	}
 
-	// Prove method
-	count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, trustedInput.L1EndHash)
+	// get the batch count
+	endBatchCount, err := p.getBatchCount(ctx, trustedInput.L1EndHash)
 	if err != nil {
-		return appOutput, err
-	}
-	endBatchCount := common.BytesToHash(count).Big().Uint64()
-	fmt.Println("End batch count: ", endBatchCount)
-
-	if endBatchCount == 0 {
-		return appOutput, fmt.Errorf("end batch count is 0")
+		return nil, err
 	}
 
 	// get the start block
 	header, err := p.SequencingClient.HeaderByHash(ctx, trustedInput.SeqStartBlockHash)
 	if err != nil {
-		return appOutput, err
+		return nil, err
 	}
 
 	// get validation data
 	var valData ValidationData
 	if err := p.SequencingClient.Client().CallContext(ctx, &valData, "synd_validationData", header.Number.Uint64(), endBatchCount-1, false); err != nil {
-		return appOutput, err
+		return nil, err
 	}
 
-	fmt.Println("Validation data: ", valData)
-
-	// get preimages
-	preimages := make(map[common.Hash][]byte)
+	preimages := make(map[arbutil.PreimageType]map[common.Hash][]byte)
+	preimages[arbutil.Keccak256PreimageType] = make(map[common.Hash][]byte)
 	for _, preimage := range valData.PreimageData {
-		preimages[crypto.Keccak256Hash(preimage)] = preimage
+		preimages[arbutil.Keccak256PreimageType][crypto.Keccak256Hash(preimage)] = preimage
 	}
-
-	fmt.Println("Preimages: ", preimages)
 
 	// get batches
 	var batches [][]byte
 	if valData.BatchEndIndex >= valData.BatchStartIndex {
-		batches, err = getBatches(ctx, p.EthereumClient, p.Config.SequencingInboxAddress, valData.BatchStartIndex, valData.BatchEndIndex, valData.BatchStartBlockNum, valData.BatchEndBlockNum)
+		ibridge, err := bridgegen.NewIBridgeCaller(p.Config.EnclaveConfig.SequencingBridgeAddress, p.EthereumClient)
 		if err != nil {
-			return appOutput, err
+			return nil, err
+		}
+
+		seqInbox, err := ibridge.SequencerInbox(&bind.CallOpts{Context: ctx})
+		if err != nil {
+			return nil, err
+		}
+
+		batches, err = getBatches(ctx, p.EthereumClient, seqInbox, valData.BatchStartIndex, valData.BatchEndIndex, valData.BatchStartBlockNum, valData.BatchEndBlockNum)
+		if err != nil {
+			return nil, err
 		}
 		if len(batches) == 0 {
-			return appOutput, fmt.Errorf("found 0 batches")
+			return nil, errors.New("found 0 batches")
 		}
 		// update preimages
 		for _, batch := range batches {
-			// TODO (SEQ-1062): add dapReaders to this function call
-			if err := getBatchPreimageData(ctx, batch, nil, preimages); err != nil {
-				return appOutput, err
+			if err := getBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
+				return nil, err
 			}
 		}
 	}
 
 	var proof *enclave.AccountResult
+	if !p.Config.IsL1Chain {
+		// get the end block header
+		if header, err = p.EthereumClient.HeaderByHash(ctx, trustedInput.L1EndHash); err != nil {
+			return nil, err
+		}
 
-	// get the end block header
-	if header, err = p.EthereumClient.HeaderByHash(ctx, trustedInput.L1EndHash); err != nil {
-		return appOutput, err
+		// get merkle proof
+		accSlot := common.BigToHash(new(big.Int).Add(enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE, big.NewInt(int64(endBatchCount))))
+		if err := p.EthereumClient.Client().CallContext(ctx, &proof, "eth_getProof", p.Config.EnclaveConfig.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
+			return nil, err
+		}
 	}
 
-	// get merkle proof
-	accSlot := common.BigToHash(new(big.Int).Add(enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE, big.NewInt(int64(endBatchCount))))
-	if err := p.EthereumClient.Client().CallContext(ctx, &proof, "eth_getProof", p.Config.EnclaveConfig.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
-		return appOutput, err
+	preimageData := make(map[arbutil.PreimageType][][]byte)
+	for ty, images := range preimages {
+		preimageData[ty] = slices.Collect(maps.Values(images))
 	}
 
 	// derive sequencing chain
 	var seqOutput enclave.VerifySequencingChainOutput
-	if err := p.EnclaveClient.Call(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
-		TrustedInput:                    trustedInput,
+	if err := p.handleEnclaveCall(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
+		TrustedInput:                    *trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 valData.DelayedMessages,
 		StartDelayedMessagesAccumulator: valData.StartDelayedAcc,
 		Batches:                         batches,
-		IsL1Chain:                       false,
-		PreimageData:                    slices.Collect(maps.Values(preimages)),
+		IsL1Chain:                       p.Config.IsL1Chain,
+		PreimageData:                    preimageData,
 		EndBatchAccumulatorMerkleProof:  proof,
 		L1EndBlockHeader:                header,
 	}); err != nil {
-		return appOutput, err
+		return nil, err
 	}
-
-	fmt.Println("Sequencing chain: ", seqOutput)
 
 	// get appchain start block
 	if header, err = p.AppchainClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
-		return appOutput, err
+		return nil, err
 	}
 
 	// get delayed messages
-	startAcc, msgs, isDummy, err := getDelayedMessages(ctx, p.SettlementClient, p.Config.AppchainBridgeAddress, p.Config.AppchainInboxAddress, header.Nonce.Uint64(), trustedInput.SetDelayedMessageAcc)
+	startAcc, msgs, isDummy, err := GetDelayedMessages(ctx, p.SettlementClient, p.Config.AppchainBridgeAddress, header.Nonce.Uint64(), trustedInput.SetDelayedMessageAcc)
 	if err != nil {
-		return appOutput, err
+		return nil, err
 	}
-	fmt.Println("Delayed messages: ", msgs)
 
 	// get the number of batches. ignore the delayed message if it is a dummy one
 	var realMsgs [][]byte
@@ -285,81 +325,86 @@ func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.Trusted
 	}
 	numBatches := getNumBatches(seqOutput.Batches, realMsgs, p.Config.EnclaveConfig.SettlementDelay)
 
-	// get preimage data
-	var preimageData [][]byte
-	if err := p.AppchainClient.Client().CallContext(ctx, &preimageData, "synd_preimageData", header.Number, numBatches, true); err != nil {
-		return appOutput, err
+	// get appchain preimage data
+	var appPreimages [][]byte
+	if err := p.AppchainClient.Client().CallContext(ctx, &appPreimages, "synd_preimageData", header.Number, numBatches, true); err != nil {
+		return nil, err
 	}
 
 	// derive appchain
-	if err := p.EnclaveClient.Call(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
-		TrustedInput:                    trustedInput,
+	var appOutput enclave.VerifyAppchainOutput
+	if err := p.handleEnclaveCall(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
+		TrustedInput:                    *trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 msgs,
 		StartDelayedMessagesAccumulator: startAcc,
 		VerifySequencingChainOutput:     seqOutput,
 		AppStartBlockHeader:             *header,
-		PreimageData:                    preimageData,
+		PreimageData: map[arbutil.PreimageType][][]byte{
+			arbutil.Keccak256PreimageType: appPreimages},
 	}); err != nil {
-		return appOutput, err
+		return nil, err
 	}
-	fmt.Println("Appchain output: ", appOutput)
-
-	return appOutput, nil
+	return &appOutput, nil
 }
 
-func (p *Proposer) Verify(ctx context.Context, trustedInputParam *enclave.TrustedInput) (enclave.VerifyAppchainOutput, error) {
-	var appOutput enclave.VerifyAppchainOutput
-	var trustedInput enclave.TrustedInput
-
-	if trustedInputParam == nil {
+func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInput) (*enclave.VerifyAppchainOutput, error) {
+	// get trusted input
+	if trustedInput == nil {
 		var err error
-		trustedInput, err = p.getTrustedInput()
+		trustedInput, err = p.getTrustedInput(ctx)
 		if err != nil {
-			return appOutput, err
+			return nil, err
 		}
-	} else {
-		trustedInput = *trustedInputParam
 	}
 
-	count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, trustedInput.L1EndHash)
+	// get the batch count
+	endBatchCount, err := p.getBatchCount(ctx, trustedInput.L1EndHash)
 	if err != nil {
-		return appOutput, err
+		return nil, err
 	}
-	endBatchCount := common.BytesToHash(count).Big().Uint64()
+
 	if endBatchCount == 0 {
-		return appOutput, fmt.Errorf("end batch count is 0")
+		return nil, errors.New("end batch count is 0")
 	}
 
 	var metadata arbnode.BatchMetadata
 	if err := p.SequencingClient.Client().CallContext(ctx, &metadata, "synd_batchMetadata", endBatchCount-1); err != nil {
-		return appOutput, err
+		return nil, err
 	}
 
 	if metadata.MessageCount == 0 {
-		return appOutput, fmt.Errorf("message count is 0")
+		return nil, errors.New("message count is 0")
 	}
 
+	// get the end block
 	header, err := p.SequencingClient.HeaderByNumber(ctx, big.NewInt(int64(metadata.MessageCount-1)))
 	if err != nil {
-		return appOutput, err
+		return nil, err
 	}
 	sequencingBlockHash := header.Hash()
 
 	if header, err = p.AppchainClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
-		return appOutput, err
+		return nil, err
 	}
 
 	// binary search to find the appchain end block
 	appEndBlock, err := FindBlock(ctx, p.AppchainClient, header.Number.Uint64(), uint64(metadata.MessageCount-1))
 	if err != nil {
-		return appOutput, err
+		return nil, err
 	}
-	appOutput = enclave.VerifyAppchainOutput{
+
+	return &enclave.VerifyAppchainOutput{
 		L1BatchAcc:          metadata.Accumulator,
 		SequencingBlockHash: sequencingBlockHash,
 		AppchainBlockHash:   appEndBlock.BlockHash,
 		AppchainSendRoot:    appEndBlock.SendRoot,
+	}, nil
+}
+
+func (p *Proposer) handleEnclaveCall(output interface{}, method string, input interface{}) error {
+	if err := p.EnclaveClient.Call(output, method, input); err != nil {
+		return handleTLSErr(err)
 	}
-	return appOutput, nil
+	return nil
 }

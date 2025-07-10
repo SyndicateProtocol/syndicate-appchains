@@ -1,22 +1,39 @@
 [package]
-edition.workspace = true
-name              = "synd-batch-sequencer"
-version.workspace = true
+description            = "Syndicate Batch Sequencer"
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-batch-sequencer"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
 
 [dependencies]
-alloy     = { workspace = true }
-batcher   = { workspace = true }
-clap      = { workspace = true }
-eyre      = { workspace = true }
-shared    = { workspace = true }
-thiserror = { workspace = true }
-tokio     = { workspace = true, features = ["signal"] }
-tracing   = { workspace = true }
-
+alloy             = { workspace = true }
+axum              = { workspace = true }
+byte-unit         = { workspace = true }
+clap              = { workspace = true, features = ["derive", "env"] }
+contract-bindings = { workspace = true }
+derivative        = { workspace = true }
+eyre              = { workspace = true }
+flate2            = { workspace = true }
+humantime         = { workspace = true }
+prometheus-client = { workspace = true }
+redis             = { workspace = true, features = ["streams", "tokio-comp"] }
+rlp               = { workspace = true }
+serde_json        = { workspace = true }
+shared            = { workspace = true }
+synd-maestro      = { workspace = true }
+thiserror         = { workspace = true }
+tokio             = { workspace = true }
+tracing           = { workspace = true }
+url               = { workspace = true }
 
 [dev-dependencies]
-mockito = { workspace = true }
-url     = { workspace = true }
+mockall    = { workspace = true }
+reqwest    = { workspace = true }
+test-utils = { workspace = true }
 
 
 [lints]
