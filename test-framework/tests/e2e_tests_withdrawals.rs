@@ -4,7 +4,7 @@ use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::Ethereum,
     primitives::{address, keccak256, utils::parse_ether, Address, B256, U256},
-    providers::{ext::DebugApi, Provider, ProviderBuilder, WalletProvider},
+    providers::{ext::DebugApi, Provider, ProviderBuilder},
     rpc::types::trace::geth::{GethDebugTracingOptions, GethTrace},
     signers::local::PrivateKeySigner,
     sol,
@@ -315,7 +315,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
 
             wait_until!(
                 rollup_core
-                    .AssertionConfirmed_filter()
+                    .NodeConfirmed_filter()
                     .query()
                     .await?
                     .iter()
