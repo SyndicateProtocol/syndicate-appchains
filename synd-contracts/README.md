@@ -163,6 +163,18 @@ $ make deploy-syndicate-factory
 
 ### Deployed Contracts
 
+### Risa
+
+| Contract Name                 | Address                                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SyndicateFactoryWrapper       | [0x99d2b60FD2dBdF08CDA18165D20f4E713768b07E](https://risa-testnet.explorer.alchemy.com/address/0x99d2b60FD2dBdF08CDA18165D20f4E713768b07E) |
+| SyndicateFactory              | [0x33aB24E0a47A7aAe869755420950A6326e3CB9F3](https://risa-testnet.explorer.alchemy.com/address/0x33aB24E0a47A7aAe869755420950A6326e3CB9F3) |
+| ArbConfigManagerFactory       | [0xFfb9e55bE21C3dE847CC58c5b1EAD02112CB060C](https://risa-testnet.explorer.alchemy.com/address/0xFfb9e55bE21C3dE847CC58c5b1EAD02112CB060C) |
+| ArbConfigManager              | [0x0e191fBAc40975D4d07CdE5e7FE7697009D35aa3](https://risa-testnet.explorer.alchemy.com/address/0x0e191fBAc40975D4d07CdE5e7FE7697009D35aa3) |
+| RequireAndModuleFactory       | [0x2f3CC13661A95DD616311a7bddB9cDB4bA67C4d2](https://risa-testnet.explorer.alchemy.com/address/0x2f3CC13661A95DD616311a7bddB9cDB4bA67C4d2) |
+| RequireOrModuleFactory        | [0x61fC28cf640235d560bd89350033cAee9642F8E5](https://risa-testnet.explorer.alchemy.com/address/0x61fC28cf640235d560bd89350033cAee9642F8E5) |
+| RequireCompositeModuleFactory | [0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603](https://risa-testnet.explorer.alchemy.com/address/0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603) |
+
 ### Risa Devnet
 
 | Contract Name                 | Address                                                                                                                                               |
