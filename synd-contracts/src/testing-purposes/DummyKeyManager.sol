@@ -18,8 +18,7 @@ contract DummyKeyManager is ITeeKeyManager {
      * @return True if the key is valid (i.e., marked as valid in `keyValidity`), false otherwise.
      */
     function isKeyValid(address publicKey) external view override returns (bool) {
-        // return validKeys.contains(publicKey);
-        return true;
+        return validKeys.contains(publicKey);
     }
 
     function addKey(address publicKey) external {
