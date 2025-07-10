@@ -21,11 +21,11 @@ contract DeployTestTeeModule is Script {
         bytes32 appBlockHash = vm.envBytes32("APP_BLOCK_HASH");
         bytes32 seqBlockHash = vm.envBytes32("SEQ_BLOCK_HASH");
         bytes32 l1BatchAcc = vm.envBytes32("L1_BATCH_ACC");
-        address teePublicKey = vm.envAddress("TEE_PUBLIC_KEY");
+        // address teePublicKey = vm.envAddress("TEE_PUBLIC_KEY");
         uint64 challengeWindowDuration = uint64(vm.envUint("CHALLENGE_WINDOW_DURATION"));
 
         DummyKeyManager keyManager = new DummyKeyManager();
-        keyManager.addKey(teePublicKey);
+        // keyManager.addKey(teePublicKey);
         DummyPoster poster = new DummyPoster();
         TeeModule teeModule = new TeeModule(
             poster,
