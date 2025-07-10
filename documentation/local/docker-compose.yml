@@ -21,7 +21,7 @@ services:
     volumes:
       - ./:/chains
     environment:
-      - DB_FILE=/chains/1205614516323464.db
+      - DB_FILE=/chains/${SEQUENCING_CHAIN_ID}.db
       - START_BLOCK=0
       - WS_URLS=${SEQUENCING_WS_URL}
 
@@ -69,13 +69,13 @@ services:
       healthcheck:
         condition: service_healthy
 
-  nitro:
-    image: offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
-    command: "--parent-chain.connection.url=ws://mchain:8545 --http.port=8545 --http.addr=0.0.0.0 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/${CHAIN_INFO_FILE}"
-    depends_on:
-      healthcheck:
-        condition: service_healthy
-    volumes:
-      - ./config:/cfg:ro
-    ports:
-      - 8545:8545
+  # nitro:
+  #   image: offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
+  #   command: "--parent-chain.connection.url=ws://mchain:8545 --http.port=8545 --http.addr=0.0.0.0 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/${CHAIN_INFO_FILE}"
+  #   depends_on:
+  #     healthcheck:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./config:/cfg:ro
+  #   ports:
+  #     - 8545:8545
