@@ -1,3 +1,5 @@
-//! The `batch-sequencer`
-
+//! The Batcher sequencer service.
+pub mod batcher;
 pub mod config;
+pub mod metrics;
+pub mod sequencing_batch;
