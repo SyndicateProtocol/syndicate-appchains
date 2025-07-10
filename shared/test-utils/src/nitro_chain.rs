@@ -36,7 +36,7 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
         native_token,
         upgrade_executor,
         validator_wallet_creator,
-        validator_utils,
+        stake_token,
         ..
     } = deployment;
 
@@ -61,8 +61,8 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
                 "rollup": "{rollup}",
                 "native-token": "{native_token}",
                 "upgrade-executor": "{upgrade_executor}",
-                "validator-utils": "{validator_utils}",
-                "validator-wallet-creator": "{validator_wallet_creator}"
+                "validator-wallet-creator": "{validator_wallet_creator}",
+                "stake-token": "{stake_token}"
               }}
             }}]"#
     )
@@ -197,6 +197,9 @@ pub struct NitroDeployment {
     #[serde(rename = "sequencer-inbox", deserialize_with = "deserialize_address")]
     pub sequencer_inbox: Address,
 
+    #[serde(rename = "deployed-at")]
+    pub deployed_at: u64,
+
     #[serde(deserialize_with = "deserialize_address")]
     pub rollup: Address,
 
@@ -206,14 +209,11 @@ pub struct NitroDeployment {
     #[serde(rename = "upgrade-executor", deserialize_with = "deserialize_address")]
     pub upgrade_executor: Address,
 
-    #[serde(rename = "validator-utils", deserialize_with = "deserialize_address")]
-    pub validator_utils: Address,
-
     #[serde(rename = "validator-wallet-creator", deserialize_with = "deserialize_address")]
     pub validator_wallet_creator: Address,
 
-    #[serde(rename = "deployed-at")]
-    pub deployed_at: u64,
+    #[serde(rename = "stake-token", deserialize_with = "deserialize_address")]
+    pub stake_token: Address,
 }
 
 #[allow(clippy::unwrap_used)]
@@ -227,21 +227,6 @@ pub async fn deploy_nitro_rollup(
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
     let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
-
-    // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
-    // apply patch to hardhat.config.ts to add custom network
-    let patch_path = format!("{project_root}/shared/test-utils/src/nitro-hardhat-config.patch");
-    let status = E2EProcess::new(
-        Command::new("git")
-            .current_dir(nitro_contracts_dir.clone())
-            .arg("apply")
-            .arg("--recount")
-            .arg(patch_path),
-        "patch-nitro-contracts",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
 
     // install and build dependencies
     let status = E2EProcess::new(
