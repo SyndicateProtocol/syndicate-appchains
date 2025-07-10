@@ -119,11 +119,16 @@ impl Drop for E2EProcess {
 
 async fn ensure_nitro_node_deps() -> Result<()> {
     let workspace_dir = env!("CARGO_WORKSPACE_DIR");
-    let nitro_solgen_dir = format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro/solgen",);
+    let nitro_solgen_dir = format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro/solgen");
 
     // consider deps installed if there is more than 1 file (`gen.go`) in the solgen directory
-    if fs::read_dir(&nitro_solgen_dir).await.iter().count() > 1 {
-        return Ok(());
+    let mut entries = fs::read_dir(&nitro_solgen_dir).await?;
+    let mut count = 0;
+    while (entries.next_entry().await?).is_some() {
+        count += 1;
+        if count > 1 {
+            return Ok(());
+        }
     }
     warn!("building nitro node-deps... (this can take a long time");
 
@@ -155,10 +160,10 @@ async fn ensure_nitro_node_deps() -> Result<()> {
     )?
     .wait()
     .await?;
-
     if !status.success() {
         return Err(eyre::eyre!("Failed to build nitro node-deps. Exit status: {}", status));
     }
+
     info!("nitro node-deps built successfully");
     Ok(())
 }
@@ -337,7 +342,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg("--init")
             .arg("--rm")
             .arg("--net=host")
-            .arg(format!("offchainlabs/nitro-node:{tag}"))
+            .arg(format!("offchainlabs/nitro-node:{tag}")) // TODO try to use our fork?
             .arg(format!("--parent-chain.connection.url={}", args.parent_chain_url))
             .arg("--node.dangerous.disable-blob-reader")
             .arg("--node.inbox-reader.check-delay=100ms")

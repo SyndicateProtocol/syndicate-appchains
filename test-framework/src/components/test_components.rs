@@ -90,11 +90,13 @@ pub struct TestComponents {
 
     /// Sequencing
     pub sequencing_provider: FilledProvider,
+    pub sequencing_ingestor_rpc_url: String,
     pub sequencing_rpc_url: String,
     pub sequencing_contract: SyndicateSequencingChainInstance<FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
+    pub settlement_ingestor_rpc_url: String,
     pub settlement_rpc_url: String,
     pub assertion_poster_address: Address,
 
@@ -165,6 +167,9 @@ impl TestComponents {
                 Some(info)
             }
         };
+
+        // TODO deploying the rollups (in Nitro mode) can take a while, we could potentially
+        // parallelize this with different chain owners
 
         // Launch mock sequencing chain and deploy contracts
         info!("Starting sequencing chain...");
@@ -434,18 +439,18 @@ impl TestComponents {
         )
         .await?;
 
-        let sequencing_rpc_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
-        let settlement_rpc_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
+        let sequencing_ingestor_rpc_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
+        let settlement_ingestor_rpc_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
 
         info!("Starting translator...");
         let translator_config = TranslatorConfig {
-            settlement_ws_url: settlement_rpc_url.clone(),
+            settlement_ws_url: settlement_ingestor_rpc_url.clone(),
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_ws_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port().await,
             // Needs to be provided as it needs to be the ingestor's URL
-            sequencing_ws_url: Some(sequencing_rpc_url.clone()),
+            sequencing_ws_url: Some(sequencing_ingestor_rpc_url.clone()),
             // NOTE: do not fill the values that are meant to be filled by the config manager
             // contract
             ..Default::default()
@@ -580,11 +585,13 @@ impl TestComponents {
                 l1_ws_rpc_url,
 
                 sequencing_provider: seq_provider,
-                sequencing_rpc_url,
+                sequencing_ingestor_rpc_url,
+                sequencing_rpc_url: seq_rpc_ws_url,
                 sequencing_contract,
 
                 settlement_provider: set_provider,
-                settlement_rpc_url,
+                settlement_ingestor_rpc_url,
+                settlement_rpc_url: set_rpc_ws_url,
 
                 appchain_provider,
                 appchain_chain_id: options.appchain_chain_id,

@@ -4,7 +4,7 @@ use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::Ethereum,
     primitives::{address, keccak256, utils::parse_ether, Address, B256, U256},
-    providers::{ext::DebugApi, Provider},
+    providers::{ext::DebugApi, Provider, ProviderBuilder, WalletProvider},
     rpc::types::trace::geth::{GethDebugTracingOptions, GethTrace},
     signers::local::PrivateKeySigner,
     sol,
@@ -23,7 +23,7 @@ use test_framework::components::{
     test_components::TestComponents,
 };
 use test_utils::{
-    chain_info::test_account1,
+    chain_info::{test_account1, test_account2},
     docker::{launch_enclave_server, start_component},
     nitro_chain::{execute_withdrawal, init_withdrawal_tx},
     port_manager::PortManager,
@@ -104,9 +104,38 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             let l1_start_batch_acc =
                 sequencing_bridge.sequencerInboxAccs(U256::ZERO).call().await?;
 
-            let (_l1_oracle_handle, l1_oracle_address) =
-                setup_l1_oracle(l1_provider.clone(), components.settlement_provider.clone()).await;
+            // setup an oracle to push L1 data onto the settlement chain (could potentially be
+            // removed if we use actual optimism stack (SEQ-1079))
 
+            // NOTE: use test_account2 for the oracle to avoid race condition with test_account1
+            // nonces
+            let tx = IInbox::new(
+                components.settlement_deployment.as_ref().unwrap().inbox,
+                l1_provider.clone(),
+            )
+            .depositEth()
+            .value(parse_ether("10")?)
+            .nonce(0)
+            .gas(100_000)
+            .max_fee_per_gas(100_000_000)
+            .max_priority_fee_per_gas(0)
+            .build_raw_transaction(test_account2().signer.clone())
+            .await?;
+            _ = l1_provider.send_raw_transaction(&tx).await?;
+            wait_until!(
+                components.settlement_provider.get_balance(test_account2().address).await? >=
+                    parse_ether("10")?,
+                Duration::from_secs(20)
+            );
+
+            let oracle_settlement_provider = ProviderBuilder::new()
+                .wallet(test_account2().signer.clone())
+                .connect(&components.settlement_rpc_url)
+                .await?;
+            let (_l1_oracle_handle, l1_oracle_address) =
+                setup_l1_oracle(l1_provider.clone(), oracle_settlement_provider).await;
+
+            // wait until the oracle is operational
             wait_until!(
                 L1BlockOracle::new(l1_oracle_address, components.settlement_provider.clone())
                     .timestamp()
@@ -163,17 +192,19 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             let proposer_config = ProposerConfig {
                 ethereum_rpc_url: components.l1_ws_rpc_url.clone(),
                 tee_module_contract_address: tee_module_addr,
-                arbitrum_bridge_address: components.appchain_deployment.bridge,
-                inbox_address: components.appchain_deployment.inbox,
-                sequencer_inbox_address: components.appchain_deployment.sequencer_inbox,
-                settlement_rpc_url: components.settlement_rpc_url.clone(),
+                settlement_rpc_url: components.settlement_ingestor_rpc_url.clone(),
                 metrics_port: PortManager::instance().next_port().await,
                 appchain_rpc_url: components.appchain_ws_rpc_url.clone(),
-                sequencing_rpc_url: components.sequencing_rpc_url.clone(),
+                sequencing_rpc_url: components.sequencing_ingestor_rpc_url.clone(),
                 enclave_rpc_url,
                 polling_interval: "1m".to_string(),
                 close_challenge_interval: format!("{}s", close_challenge_interval.as_secs()),
                 settlement_chain_id: 84532,
+                eigen_rpc_url: String::new(), // TODO add eigenDA rpc url
+                appchain_bridge_address: components.appchain_deployment.bridge,
+                sequencing_contract_address: *components.sequencing_contract.address(),
+                sequencing_bridge_address,
+                settlement_delay: ConfigurationOptions::default().settlement_delay,
             };
 
             let mut proposer_instance = start_component(
@@ -457,9 +488,8 @@ async fn setup_l1_oracle<T: Provider<Ethereum> + Clone + Send + Sync + 'static>(
     // NOTE: manually constructing the deployment tx shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
     // instead should just be:
     // let oracle_contract = L1BlockOracle::deploy(target_chain_provider).await.unwrap();
-    //
     let receipt = L1BlockOracle::deploy_builder(target_chain_provider.clone())
-        .nonce(target_chain_provider.get_transaction_count(test_account1().address).await.unwrap())
+        .nonce(target_chain_provider.get_transaction_count(test_account2().address).await.unwrap())
         .send()
         .await
         .unwrap()
@@ -483,7 +513,7 @@ async fn setup_l1_oracle<T: Provider<Ethereum> + Clone + Send + Sync + 'static>(
                 .setL1Block(l1_timestamp, l1_hash)
                 .nonce(
                     target_chain_provider
-                        .get_transaction_count(test_account1().address)
+                        .get_transaction_count(test_account2().address)
                         .await
                         .unwrap(),
                 )
