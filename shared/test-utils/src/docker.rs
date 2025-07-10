@@ -24,6 +24,7 @@ use std::{
 use synd_mchain::client::MProvider;
 use synd_tee_attestation_zk_proofs_submitter::{self, get_signer_public_key};
 use tokio::{
+    fs,
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
 };
@@ -116,6 +117,52 @@ impl Drop for E2EProcess {
     }
 }
 
+async fn ensure_nitro_node_deps() -> Result<()> {
+    let workspace_dir = env!("CARGO_WORKSPACE_DIR");
+    let nitro_solgen_dir = format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro/solgen",);
+
+    // consider deps installed if there is more than 1 file (`gen.go`) in the solgen directory
+    if fs::read_dir(&nitro_solgen_dir).await.iter().count() > 1 {
+        return Ok(());
+    }
+    warn!("building nitro node-deps... (this can take a long time");
+
+    // fist run `yarn install --ignore-engines` in the`safe-smart-account` dir to circumvent
+    // NodeJS version error
+    let status = E2EProcess::new(
+        Command::new("yarn")
+            .current_dir(format!(
+                "{workspace_dir}/synd-withdrawals/synd-enclave/nitro/safe-smart-account"
+            ))
+            .arg("install")
+            .arg("--ignore-engines"),
+        "yarn-install-safe-smart-account",
+    )?
+    .wait()
+    .await?;
+    if !status.success() {
+        return Err(eyre::eyre!(
+            "Failed to run yarn install in safe-smart-account. Exit status: {}",
+            status
+        ));
+    }
+
+    let status = E2EProcess::new(
+        Command::new("make")
+            .current_dir(format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro"))
+            .arg("build-node-deps"),
+        "build-node-deps",
+    )?
+    .wait()
+    .await?;
+
+    if !status.success() {
+        return Err(eyre::eyre!("Failed to build nitro node-deps. Exit status: {}", status));
+    }
+    info!("nitro node-deps built successfully");
+    Ok(())
+}
+
 pub async fn start_component(
     executable_name: &str,
     api_port: u16,
@@ -138,6 +185,7 @@ pub async fn start_component(
             executable_name,
         )
     } else if executable_name == "synd-proposer" {
+        ensure_nitro_node_deps().await?;
         // Synd-proposer is a Go service, so we need to use the Go command to run it
         let mut cmd = Command::new("go");
         cmd.current_dir(format!("{}/synd-withdrawals/synd-proposer", env!("CARGO_WORKSPACE_DIR")));
