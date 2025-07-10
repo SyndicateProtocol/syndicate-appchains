@@ -3980,16 +3980,12 @@ checksum = "3d97bbf43eb4f088f8ca469930cde17fa036207c9a5e02ccc5107c4e8b17c964"
 name = "metrics"
 version = "0.1.0"
 dependencies = [
- "assert_matches",
  "axum 0.8.4",
- "clap",
  "prometheus-client",
  "reqwest",
  "shared",
  "synd-slotter",
- "thiserror 2.0.12",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -6274,6 +6270,7 @@ dependencies = [
  "opentelemetry-stdout",
  "opentelemetry_sdk",
  "prometheus-client",
+ "redis",
  "rlp 0.6.1",
  "serde",
  "serde_json",
@@ -7107,6 +7104,7 @@ dependencies = [
  "synd-chain-ingestor",
  "test-utils",
  "tokio",
+ "tower 0.5.2",
  "tracing",
 ]
 

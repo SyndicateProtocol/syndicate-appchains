@@ -129,7 +129,7 @@ impl Default for BatcherConfig {
             rpc_compute_units_per_second: 1000,
             rpc_compute_units_avg_request_cost: 17,
             sequencing_address: Address::ZERO,
-            metrics_port: 8082,
+            port: 8082,
             wait_for_receipt: false,
         }
     }

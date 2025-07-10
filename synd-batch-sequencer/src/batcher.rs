@@ -85,7 +85,7 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let cache_health_handler = cache_health_check_handler(conn);
     tokio::spawn(start_http_server_with_aux_handlers(
         metrics_state,
-        port,
+        config.port,
         Some(cache_health_handler.clone()),
         Some(cache_health_handler), // same /ready behavior as /health
     ));
@@ -597,14 +597,14 @@ mod tests {
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             rpc_max_retries: 10,
-            metrics_port: PortManager::instance().next_port().await,
+            port: PortManager::instance().next_port().await,
             sequencing_address: Address::ZERO,
             ..Default::default()
         };
 
         let _handle = run_batcher(&config).await.unwrap();
 
-        let url = format!("http://0.0.0.0:{}/health", config.metrics_port);
+        let url = format!("http://0.0.0.0:{}/health", config.port);
 
         let client = reqwest::Client::new();
 
