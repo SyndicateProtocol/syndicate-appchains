@@ -75,8 +75,8 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Initial mint to foundation: 900 million tokens (90%)
     uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
 
-    /// @notice Maximum lock duration: 90 days
-    uint256 public constant MAX_LOCK_DURATION = 90 days;
+    /// @notice Maximum lock duration: 120 days
+    uint256 public constant MAX_LOCK_DURATION = 120 days;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -216,14 +216,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /*//////////////////////////////////////////////////////////////
                               VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Get remaining tokens that can be minted
-     * @return The amount of tokens still available to mint to reach TOTAL_SUPPLY
-     */
-    function getRemainingEmissions() external view returns (uint256) {
-        return TOTAL_SUPPLY - totalSupply();
-    }
 
     /**
      * @notice Check if transfers are currently locked

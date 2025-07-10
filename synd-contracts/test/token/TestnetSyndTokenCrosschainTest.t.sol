@@ -167,6 +167,10 @@ contract TestnetSyndTokenCrosschainTest is Test {
         vm.prank(minter);
         token.mint(user, mintAmount);
 
+        // user allow bridge to use tokens
+        vm.prank(user);
+        token.approve(bridge1, mintAmount);
+
         uint256 initialSupply = token.totalSupply();
 
         vm.expectEmit(true, false, true, true);

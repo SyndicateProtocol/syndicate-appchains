@@ -196,6 +196,10 @@ contract SyndicateTokenCrosschainTest is Test {
         vm.prank(admin);
         token.allocateEmissionBudget(bridge1, mintAmount);
 
+        // user allow bridge to use tokens
+        vm.prank(user);
+        token.approve(bridge1, mintAmount);
+
         // First mint tokens
         vm.prank(bridge1);
         token.crosschainMint(user, mintAmount);
