@@ -15,7 +15,7 @@ contract SyndicateTokenCrosschainTest is Test {
     address public bridge2;
     address public user = address(0x1111);
 
-    uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
+    uint256 public constant INITIAL_MINT_SUPPLY = 920_000_000 * 10 ** 18;
     uint256 public constant DAILY_LIMIT = 1_000_000 * 10 ** 18;
 
     event CrosschainMint(address indexed to, uint256 amount, address indexed bridge);

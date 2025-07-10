@@ -41,7 +41,7 @@ contract SyndicateTokenTest is Test {
         assertEq(token.symbol(), "SYND");
         assertEq(token.decimals(), 18);
         assertEq(token.TOTAL_SUPPLY(), 1_000_000_000 * 10 ** 18);
-        assertEq(token.INITIAL_MINT_SUPPLY(), 900_000_000 * 10 ** 18);
+        assertEq(token.INITIAL_MINT_SUPPLY(), 920_000_000 * 10 ** 18);
     }
 
     function test_Constructor_RoleAssignment() public view {
