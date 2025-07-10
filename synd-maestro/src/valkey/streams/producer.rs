@@ -222,6 +222,8 @@ impl StreamProducer {
                     retries_value =
                         String::from_utf8(value.clone()).ok().and_then(|s| s.parse::<u32>().ok());
                 }
+                // The `traceparent` field is optional and used for tracing purposes
+                "traceparent" => (),
                 _ => {
                     error!(%stream_key, entry_id = %id, "Unexpected field: {}", name);
                 }
