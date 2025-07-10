@@ -164,7 +164,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 			if p.PendingTeeInputHash != trustedInput.Hash() {
 				log.Println("Proving new assertion...")
-				appOutput, err := p.Prove(ctx, nil)
+				appOutput, err := p.Prove(ctx, trustedInput)
 				if err != nil {
 					log.Printf("Failed to prove: %v", err)
 				}
