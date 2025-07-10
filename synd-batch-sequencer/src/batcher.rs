@@ -7,7 +7,7 @@ use crate::{
 };
 use alloy::{
     network::EthereumWallet,
-    primitives::{keccak256, Address, Bytes},
+    primitives::{keccak256, Bytes},
     providers::{Provider, ProviderBuilder, WalletProvider},
     rpc::client::RpcClient,
     signers::local::PrivateKeySigner,
@@ -34,7 +34,7 @@ use std::{
 };
 use synd_maestro::valkey::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info, instrument, trace};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 /// Batcher service
 #[derive(Derivative)]
@@ -56,6 +56,8 @@ struct Batcher {
     metrics: BatcherMetrics,
     /// Outstanding transactions that didn't fit in the last batch
     outstanding_txs: Vec<Bytes>,
+    /// Whether to wait for the receipt of the batch submission
+    wait_for_receipt: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -71,11 +73,7 @@ enum BatchError {
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
-pub async fn run_batcher(
-    config: &BatcherConfig,
-    sequencing_contract_address: Address,
-    metrics_port: u16,
-) -> Result<JoinHandle<()>> {
+pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let client = ValkeyClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
@@ -88,10 +86,13 @@ pub async fn run_batcher(
     let mut metrics_state = MetricsState::default();
     let metrics = BatcherMetrics::new(&mut metrics_state.registry);
     let health_handler = health_handler(conn);
-    tokio::spawn(start_metrics_and_health(metrics_state, metrics_port, Some(health_handler)));
+    tokio::spawn(start_metrics_and_health(
+        metrics_state,
+        config.metrics_port,
+        Some(health_handler),
+    ));
 
-    let sequencing_contract_instance =
-        create_sequencing_contract_instance(config, sequencing_contract_address).await?;
+    let sequencing_contract_instance = create_sequencing_contract_instance(config).await?;
 
     let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics);
 
@@ -146,7 +147,6 @@ fn health_handler(valkey_conn: ConnectionManager) -> MethodRouter<std::sync::Arc
 
 async fn create_sequencing_contract_instance(
     config: &BatcherConfig,
-    sequencing_contract_address: Address,
 ) -> Result<SyndicateSequencingChainInstance<FilledProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
@@ -165,7 +165,7 @@ async fn create_sequencing_contract_instance(
 
     let sequencing_provider =
         ProviderBuilder::new().wallet(EthereumWallet::from(signer)).connect_client(rpc_client);
-    Ok(SyndicateSequencingChainInstance::new(sequencing_contract_address, sequencing_provider))
+    Ok(SyndicateSequencingChainInstance::new(config.sequencing_address, sequencing_provider))
 }
 
 impl Batcher {
@@ -182,6 +182,7 @@ impl Batcher {
             sequencing_contract_instance,
             chain_id: config.chain_id,
             timeout: config.timeout,
+            wait_for_receipt: config.wait_for_receipt,
             metrics,
             outstanding_txs: Vec::new(),
         }
@@ -297,27 +298,41 @@ impl Batcher {
     )]
     async fn send_batch(&self, batch: SequencingBatch) -> Result<(), BatchError> {
         debug!(
-            %self.chain_id, "Batch sent - size: {} bytes",
+            %self.chain_id, "Sending Batch - size: {} bytes",
             batch.len()
         );
 
-        let _ = match batch {
-            SequencingBatch::Compressed(batch) => {
-                self.sequencing_contract_instance
-                    .processTransaction(Bytes::from(batch))
-                    .send()
-                    .await
+        let transaction_request = match batch {
+            SequencingBatch::Compressed(batch) => self
+                .sequencing_contract_instance
+                .processTransaction(Bytes::from(batch))
+                .into_transaction_request(),
+            SequencingBatch::Uncompressed(batch) => self
+                .sequencing_contract_instance
+                .processTransactionsBulk(batch.iter().map(|tx| Bytes::from(tx.clone())).collect())
+                .into_transaction_request(),
+        };
+
+        let pending_tx = self
+            .sequencing_contract_instance
+            .provider()
+            .send_transaction(transaction_request.clone())
+            .await
+            .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
+
+        if self.wait_for_receipt {
+            let receipt = pending_tx
+                .get_receipt()
+                .await
+                .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
+            warn!(%self.chain_id, "Batch submitted and receipt received: {:?}", receipt);
+            if !receipt.status() {
+                error!(%self.chain_id, "Batch submission failed. tx: {:?}, receipt: {:?}", transaction_request, receipt);
+                return Err(BatchError::SendBatchFailed("Batch submission failed".to_string()));
             }
-            SequencingBatch::Uncompressed(batch) => {
-                self.sequencing_contract_instance
-                    .processTransactionsBulk(
-                        batch.iter().map(|tx| Bytes::from(tx.clone())).collect(),
-                    )
-                    .send()
-                    .await
-            }
+        } else {
+            debug!(%self.chain_id, "Batch submitted");
         }
-        .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
 
         // Record the wallet balance in the background
         self.record_wallet_balance();
@@ -348,7 +363,7 @@ mod tests {
     use super::*;
     use alloy::{
         node_bindings::{Anvil, AnvilInstance},
-        primitives::U256,
+        primitives::{Address, U256},
         providers::ext::AnvilApi,
         transports::mock::Asserter,
     };
@@ -618,15 +633,14 @@ mod tests {
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             rpc_max_retries: 10,
+            metrics_port: PortManager::instance().next_port().await,
+            sequencing_address: Address::ZERO,
             ..Default::default()
         };
-        let metrics_port = PortManager::instance().next_port().await;
-        let sequencing_contract_address = Address::ZERO;
 
-        let _handle =
-            run_batcher(&config, sequencing_contract_address, metrics_port).await.unwrap();
+        let _handle = run_batcher(&config).await.unwrap();
 
-        let url = format!("http://0.0.0.0:{metrics_port}/health");
+        let url = format!("http://0.0.0.0:{}/health", config.metrics_port);
 
         let client = reqwest::Client::new();
 

@@ -135,7 +135,7 @@ func main() {
 	fmt.Println("Trusted input: ", string(trustedInputJson))
 	fmt.Println("ready in", time.Since(now))
 	now = time.Now()
-	appOutput, err := proposer.Prove(ctx, trustedInput, false)
+	appOutput, err := proposer.Prove(ctx, trustedInput)
 	if err != nil {
 		panic(err)
 	}
@@ -146,7 +146,7 @@ func main() {
 	println("Proof output: ", string(out))
 	fmt.Println("proof took", time.Since(now))
 	now = time.Now()
-	verifyOutput, err := proposer.Verify(ctx, trustedInput, false)
+	verifyOutput, err := proposer.Verify(ctx, trustedInput)
 	if err != nil {
 		panic(err)
 	}

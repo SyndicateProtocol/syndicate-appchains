@@ -54,11 +54,18 @@ func NewProposer(cfg *Config) *Proposer {
 		log.Fatalf("Failed to create ethereum provider: %v", err)
 		return nil
 	}
-	enclaveClient, err := rpc.Dial(cfg.EnclaveRPCURL)
+
+	var enclaveClient *rpc.Client
+	if cfg.EnclaveTLSConfig.Enabled {
+		enclaveClient, err = createTLSClient(&cfg.EnclaveTLSConfig, cfg.EnclaveRPCURL)
+	} else {
+		enclaveClient, err = rpc.Dial(cfg.EnclaveRPCURL)
+	}
 	if err != nil {
 		log.Fatalf("Failed to create enclave provider: %v", err)
 		return nil
 	}
+
 	settlementClient, err := ethclient.Dial(cfg.SettlementRPCURL)
 	if err != nil {
 		log.Fatalf("Failed to create settlement provider: %v", err)
@@ -146,7 +153,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 		case <-ticker.C:
 			// TODO (SEQ-1060): Optimize this to only prove if the last assertion is not the same as the current one. Use `Verify` to check if the last assertion is the same as the current one.
 			log.Println("Polling loop tick...")
-			appOutput, err := p.Prove(ctx, nil, false)
+			appOutput, err := p.Prove(ctx, nil)
 			if err != nil {
 				log.Printf("Failed to prove: %v", err)
 			}
@@ -165,10 +172,10 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 	}
 }
 
-func (p *Proposer) getTrustedInput() (enclave.TrustedInput, error) {
-	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(nil)
+func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, error) {
+	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(&bind.CallOpts{Context: ctx})
 	if err != nil {
-		return enclave.TrustedInput{}, err
+		return nil, err
 	}
 	trustedInput := enclave.TrustedInput{
 		ConfigHash:           contractTrustedInput.ConfigHash,
@@ -180,39 +187,43 @@ func (p *Proposer) getTrustedInput() (enclave.TrustedInput, error) {
 	}
 
 	fmt.Println("Trusted input: ", trustedInput)
-	return trustedInput, nil
+	return &trustedInput, nil
+}
+
+func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint64, error) {
+	var batchCount uint64
+	if p.Config.IsL1Chain {
+		if err := p.SequencingClient.Client().CallContext(ctx, &batchCount, "synd_batchFromAcc", l1Hash); err != nil {
+			return 0, err
+		}
+	} else {
+		count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, l1Hash)
+		if err != nil {
+			return 0, err
+		}
+		batchCount = common.BytesToHash(count).Big().Uint64()
+	}
+	if batchCount == 0 {
+		return 0, errors.New("end batch count is 0")
+	}
+	return batchCount, nil
 }
 
 // TODO (SEQ-1061): Replace enclave types with auto-generated types from the bindings
-func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.TrustedInput, isL1Chain bool) (*enclave.VerifyAppchainOutput, error) {
-	var trustedInput enclave.TrustedInput
-
-	if trustedInputParam == nil {
+func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput) (*enclave.VerifyAppchainOutput, error) {
+	// get trusted input
+	if trustedInput == nil {
 		var err error
-		trustedInput, err = p.getTrustedInput()
+		trustedInput, err = p.getTrustedInput(ctx)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		trustedInput = *trustedInputParam
 	}
 
 	// get the batch count
-	var endBatchCount uint64
-	if isL1Chain {
-		if err := p.SequencingClient.Client().CallContext(ctx, &endBatchCount, "synd_batchFromAcc", trustedInput.L1EndHash); err != nil {
-			return nil, err
-		}
-	} else {
-		count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, trustedInput.L1EndHash)
-		if err != nil {
-			return nil, err
-		}
-		endBatchCount = common.BytesToHash(count).Big().Uint64()
-	}
-
-	if endBatchCount == 0 {
-		return nil, errors.New("end batch count is 0")
+	endBatchCount, err := p.getBatchCount(ctx, trustedInput.L1EndHash)
+	if err != nil {
+		return nil, err
 	}
 
 	// get the start block
@@ -262,7 +273,7 @@ func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.Trusted
 	}
 
 	var proof *enclave.AccountResult
-	if !isL1Chain {
+	if !p.Config.IsL1Chain {
 		// get the end block header
 		if header, err = p.EthereumClient.HeaderByHash(ctx, trustedInput.L1EndHash); err != nil {
 			return nil, err
@@ -275,21 +286,21 @@ func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.Trusted
 		}
 	}
 
-	preimagesData := make(map[arbutil.PreimageType][][]byte)
+	preimageData := make(map[arbutil.PreimageType][][]byte)
 	for ty, images := range preimages {
-		preimagesData[ty] = slices.Collect(maps.Values(images))
+		preimageData[ty] = slices.Collect(maps.Values(images))
 	}
 
 	// derive sequencing chain
 	var seqOutput enclave.VerifySequencingChainOutput
-	if err := p.EnclaveClient.Call(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
-		TrustedInput:                    trustedInput,
+	if err := p.handleEnclaveCall(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
+		TrustedInput:                    *trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 valData.DelayedMessages,
 		StartDelayedMessagesAccumulator: valData.StartDelayedAcc,
 		Batches:                         batches,
-		IsL1Chain:                       isL1Chain,
-		PreimageData:                    preimagesData,
+		IsL1Chain:                       p.Config.IsL1Chain,
+		PreimageData:                    preimageData,
 		EndBatchAccumulatorMerkleProof:  proof,
 		L1EndBlockHeader:                header,
 	}); err != nil {
@@ -314,54 +325,44 @@ func (p *Proposer) Prove(ctx context.Context, trustedInputParam *enclave.Trusted
 	}
 	numBatches := getNumBatches(seqOutput.Batches, realMsgs, p.Config.EnclaveConfig.SettlementDelay)
 
-	// get preimage data
-	var preimageData [][]byte
-	if err := p.AppchainClient.Client().CallContext(ctx, &preimageData, "synd_preimageData", header.Number, numBatches, true); err != nil {
+	// get appchain preimage data
+	var appPreimages [][]byte
+	if err := p.AppchainClient.Client().CallContext(ctx, &appPreimages, "synd_preimageData", header.Number, numBatches, true); err != nil {
 		return nil, err
 	}
 
 	// derive appchain
 	var appOutput enclave.VerifyAppchainOutput
-	if err := p.EnclaveClient.Call(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
-		TrustedInput:                    trustedInput,
+	if err := p.handleEnclaveCall(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
+		TrustedInput:                    *trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 msgs,
 		StartDelayedMessagesAccumulator: startAcc,
 		VerifySequencingChainOutput:     seqOutput,
 		AppStartBlockHeader:             *header,
 		PreimageData: map[arbutil.PreimageType][][]byte{
-			arbutil.Keccak256PreimageType: preimageData},
+			arbutil.Keccak256PreimageType: appPreimages,
+		},
 	}); err != nil {
 		return nil, err
 	}
 	return &appOutput, nil
 }
 
-func (p *Proposer) Verify(ctx context.Context, trustedInputParam *enclave.TrustedInput, isL1Chain bool) (*enclave.VerifyAppchainOutput, error) {
-	var trustedInput enclave.TrustedInput
-
-	if trustedInputParam == nil {
+func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInput) (*enclave.VerifyAppchainOutput, error) {
+	// get trusted input
+	if trustedInput == nil {
 		var err error
-		trustedInput, err = p.getTrustedInput()
+		trustedInput, err = p.getTrustedInput(ctx)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		trustedInput = *trustedInputParam
 	}
 
 	// get the batch count
-	var endBatchCount uint64
-	if isL1Chain {
-		if err := p.SequencingClient.Client().CallContext(ctx, &endBatchCount, "synd_batchFromAcc", trustedInput.L1EndHash); err != nil {
-			return nil, err
-		}
-	} else {
-		count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress, enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, trustedInput.L1EndHash)
-		if err != nil {
-			return nil, err
-		}
-		endBatchCount = common.BytesToHash(count).Big().Uint64()
+	endBatchCount, err := p.getBatchCount(ctx, trustedInput.L1EndHash)
+	if err != nil {
+		return nil, err
 	}
 
 	if endBatchCount == 0 {
@@ -400,4 +401,11 @@ func (p *Proposer) Verify(ctx context.Context, trustedInputParam *enclave.Truste
 		AppchainBlockHash:   appEndBlock.BlockHash,
 		AppchainSendRoot:    appEndBlock.SendRoot,
 	}, nil
+}
+
+func (p *Proposer) handleEnclaveCall(output interface{}, method string, input interface{}) error {
+	if err := p.EnclaveClient.Call(output, method, input); err != nil {
+		return handleTLSErr(err)
+	}
+	return nil
 }

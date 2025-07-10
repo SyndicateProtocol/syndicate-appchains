@@ -1,19 +1,19 @@
 # ArbChainConfig
-
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/config/ArbChainConfig.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/config/ArbChainConfig.sol)
 
 **Inherits:**
 Initializable
 
-_Configuration contract for settlement chain parameters_
+*Configuration contract for settlement chain parameters*
+
 
 ## State Variables
-
 ### owner
 
 ```solidity
 address public owner;
 ```
+
 
 ### INITIAL_APPCHAIN_OWNER
 
@@ -21,11 +21,13 @@ address public owner;
 address public INITIAL_APPCHAIN_OWNER;
 ```
 
+
 ### ARBITRUM_BRIDGE_ADDRESS
 
 ```solidity
 address public ARBITRUM_BRIDGE_ADDRESS;
 ```
+
 
 ### ARBITRUM_INBOX_ADDRESS
 
@@ -33,11 +35,13 @@ address public ARBITRUM_BRIDGE_ADDRESS;
 address public ARBITRUM_INBOX_ADDRESS;
 ```
 
+
 ### SEQUENCING_CONTRACT_ADDRESS
 
 ```solidity
 address public SEQUENCING_CONTRACT_ADDRESS;
 ```
+
 
 ### CHAIN_ID
 
@@ -45,11 +49,13 @@ address public SEQUENCING_CONTRACT_ADDRESS;
 uint256 public CHAIN_ID;
 ```
 
+
 ### SEQUENCING_CHAIN_ID
 
 ```solidity
 uint256 public SEQUENCING_CHAIN_ID;
 ```
+
 
 ### SETTLEMENT_DELAY
 
@@ -57,11 +63,13 @@ uint256 public SEQUENCING_CHAIN_ID;
 uint256 public SETTLEMENT_DELAY;
 ```
 
+
 ### SETTLEMENT_START_BLOCK
 
 ```solidity
 uint256 public SETTLEMENT_START_BLOCK;
 ```
+
 
 ### SEQUENCING_START_BLOCK
 
@@ -69,11 +77,13 @@ uint256 public SETTLEMENT_START_BLOCK;
 uint256 public SEQUENCING_START_BLOCK;
 ```
 
-### DEFAULT_SEQUENCING_CHAIN_RPC_URL
+
+### DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL
 
 ```solidity
-string public DEFAULT_SEQUENCING_CHAIN_RPC_URL;
+string public DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL;
 ```
+
 
 ### APPCHAIN_BLOCK_EXPLORER_URL
 
@@ -81,13 +91,14 @@ string public DEFAULT_SEQUENCING_CHAIN_RPC_URL;
 string public APPCHAIN_BLOCK_EXPLORER_URL;
 ```
 
-## Functions
 
+## Functions
 ### constructor
 
-_Constructor for the implementation contract
+*Constructor for the implementation contract
 This is only used when deploying the implementation contract
-It will not be called when deploying proxies_
+It will not be called when deploying proxies*
+
 
 ```solidity
 constructor();
@@ -95,7 +106,8 @@ constructor();
 
 ### initialize
 
-_Initializer function - replaces constructor for proxy pattern_
+*Initializer function - replaces constructor for proxy pattern*
+
 
 ```solidity
 function initialize(
@@ -109,102 +121,92 @@ function initialize(
     address sequencingContractAddress,
     uint256 sequencingStartBlock,
     address initialAppchainOwner,
-    string memory sequencingChainRpcUrl,
-    string memory appchainBlockExplorerUrl,
-) public initializer;
+    string memory sequencingChainWsRpcUrl,
+    string memory appchainBlockExplorerUrl
+) external initializer;
 ```
-
 **Parameters**
 
-| Name                        | Type      | Description                              |
-| --------------------------- | --------- | ---------------------------------------- |
-| `_owner`                    | `address` | The address of the contract owner        |
-| `chainId`                   | `uint256` | The chain ID                             |
-| `sequencingChainId`         | `uint256` | The ID of the sequencing chain           |
-| `arbitrumBridgeAddress`     | `address` | Address of the Arbitrum bridge           |
-| `arbitrumInboxAddress`      | `address` | Address of the Arbitrum inbox            |
-| `settlementDelay`           | `uint256` | Delay for settlement                     |
-| `settlementStartBlock`      | `uint256` | Starting block for settlement            |
-| `sequencingContractAddress` | `address` | Address of the sequencing contract       |
-| `sequencingStartBlock`      | `uint256` | Starting block for sequencing            |
-| `initialAppchainOwner`      | `address` | Initial appchain owner                   |
-| `sequencingChainRpcUrl`     | `string`  | Default RPC URL for the sequencing chain |
-| `appchainBlockExplorerUrl`  | `string`  | URL for the appchain block explorer      |
+|Name|Type|Description|
+|----|----|-----------|
+|`_owner`|`address`|The address of the contract owner|
+|`chainId`|`uint256`|The chain ID|
+|`sequencingChainId`|`uint256`|The ID of the sequencing chain|
+|`arbitrumBridgeAddress`|`address`|Address of the Arbitrum bridge|
+|`arbitrumInboxAddress`|`address`|Address of the Arbitrum inbox|
+|`settlementDelay`|`uint256`|Delay for settlement|
+|`settlementStartBlock`|`uint256`|Starting block for settlement|
+|`sequencingContractAddress`|`address`|Address of the sequencing contract|
+|`sequencingStartBlock`|`uint256`|Starting block for sequencing|
+|`initialAppchainOwner`|`address`|Initial appchain owner|
+|`sequencingChainWsRpcUrl`|`string`|Default RPC URL for the sequencing chain|
+|`appchainBlockExplorerUrl`|`string`|URL for the appchain block explorer|
+
 
 ### onlyOwner
 
-_Modifier to check if the caller is the owner_
+*Modifier to check if the caller is the owner*
+
 
 ```solidity
 modifier onlyOwner();
 ```
 
-### updateDefaultSequencingChainRpcUrl
+### updateDefaultSequencingChainWsRpcUrl
 
-_Update DEFAULT_SEQUENCING_CHAIN_RPC_URL_
+*Update DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL*
+
 
 ```solidity
-function updateDefaultSequencingChainRpcUrl(string calldata newRpcUrl) external onlyOwner;
+function updateDefaultSequencingChainWsRpcUrl(string calldata newWsRpcUrl) external onlyOwner;
 ```
-
 **Parameters**
 
-| Name        | Type     | Description                          |
-| ----------- | -------- | ------------------------------------ |
-| `newRpcUrl` | `string` | The new RPC URL for sequencing chain |
+|Name|Type|Description|
+|----|----|-----------|
+|`newWsRpcUrl`|`string`|The new RPC URL for sequencing chain|
+
 
 ### updateAppchainBlockExplorerUrl
 
-_Update APPCHAIN_BLOCK_EXPLORER_URL_
+*Update APPCHAIN_BLOCK_EXPLORER_URL*
+
 
 ```solidity
 function updateAppchainBlockExplorerUrl(string calldata newUrl) external onlyOwner;
 ```
-
 **Parameters**
 
-| Name     | Type     | Description                                 |
-| -------- | -------- | ------------------------------------------- |
-| `newUrl` | `string` | The new URL for the appchain block explorer |
+|Name|Type|Description|
+|----|----|-----------|
+|`newUrl`|`string`|The new URL for the appchain block explorer|
+
 
 ### transferOwnership
 
-_Transfers ownership of the contract to a new account (`newOwner`).
-Can only be called by the current owner._
+*Transfers ownership of the contract to a new account (`newOwner`).
+Can only be called by the current owner.*
+
 
 ```solidity
 function transferOwnership(address newOwner) public virtual onlyOwner;
 ```
 
-### getAllowedSettlementAddresses
+### _transferOwnership
 
-_Get the allowed settlement addresses_
+*Transfers ownership of the contract to a new account (`newOwner`).
+Internal function without access restriction.*
 
-```solidity
-function getAllowedSettlementAddresses() public view returns (address[] memory);
-```
-
-**Returns**
-
-| Name     | Type        | Description                      |
-| -------- | ----------- | -------------------------------- |
-| `<none>` | `address[]` | The allowed settlement addresses |
-
-### \_transferOwnership
-
-_Transfers ownership of the contract to a new account (`newOwner`).
-Internal function without access restriction._
 
 ```solidity
 function _transferOwnership(address newOwner) internal virtual;
 ```
 
 ## Events
-
-### DefaultSequencingChainRpcUrlUpdated
+### DefaultSequencingChainWsRpcUrlUpdated
 
 ```solidity
-event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
+event DefaultSequencingChainWsRpcUrlUpdated(string newWsRpcUrl);
 ```
 
 ### AppchainBlockExplorerUrlUpdated
@@ -218,3 +220,4 @@ event AppchainBlockExplorerUrlUpdated(string newUrl);
 ```solidity
 event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 ```
+

@@ -293,7 +293,14 @@ impl TestComponents {
 
                 // deposit some funds for the default signer
                 let inbox = IInbox::new(set_deployment.inbox, &l1_info.provider);
-                let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
+                let _ = inbox
+                    .depositEth()
+                    .value(parse_ether("10")?)
+                    // NOTE: manually setting the nonce should NOT be be necessary, likely an
+                    // artifact of https://github.com/alloy-rs/alloy/issues/2668
+                    .nonce(l1_info.provider.get_transaction_count(test_account1().address).await?)
+                    .send()
+                    .await?;
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
@@ -549,6 +556,7 @@ impl TestComponents {
                 sequencing_address: sequencing_contract_address,
                 sequencing_rpc_url: seq_rpc_ws_url.to_string(),
                 metrics_port: PortManager::instance().next_port().await,
+                wait_for_receipt: true,
             };
             let batch_sequencer_instance = start_component(
                 "synd-batch-sequencer",
@@ -705,7 +713,7 @@ impl TestComponents {
             .processTransactionUncompressed(tx_bytes)
             .nonce(self.sequencing_provider.get_transaction_count(test_account1().address).await?)
             .gas(10_000_000)
-            .max_fee_per_gas(10_000_000)
+            .max_fee_per_gas(100_000_000)
             .max_priority_fee_per_gas(0)
             .chain_id(SEQUENCING_CHAIN_ID)
             .build_raw_transaction(test_account1().signer.clone())

@@ -17,3 +17,5 @@ vendor/
 .idea/
 .vscode/
 *.swp 
+
+cmd/synd-proposer/synd-proposer
