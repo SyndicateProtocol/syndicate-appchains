@@ -54,7 +54,8 @@ RUN CGO_ENABLED=1 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
 
 # Run tests for synd-proposer
 FROM synd-proposer-build AS synd-proposer-test
-RUN go test ./synd-withdrawals/synd-proposer/...
+WORKDIR /synd-proposer  
+RUN go test ./...
 
 # Stage 3: Optional Foundry install
 FROM debian:bookworm-slim AS foundry
