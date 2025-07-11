@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use thiserror::Error;
 
 /// Configuration for the block builder service
-#[derive(Parser, Clone)]
+#[derive(Parser, Clone, Default)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
     #[arg(long, env = "MCHAIN_WS_URL")]
@@ -40,17 +40,6 @@ impl Debug for BlockBuilderConfig {
     }
 }
 
-impl Default for BlockBuilderConfig {
-    fn default() -> Self {
-        Self {
-            mchain_ws_url: String::new(),
-            sequencing_contract_address: Some(Address::ZERO),
-            arbitrum_bridge_address: Some(Address::ZERO),
-            arbitrum_inbox_address: Some(Address::ZERO),
-        }
-    }
-}
-
 impl BlockBuilderConfig {
     /// Validates the config and ensures all mandatory fields have values (including optional fields
     /// that might have been defined by the `ConfigManager` contract)
@@ -72,9 +61,6 @@ impl BlockBuilderConfig {
 /// Possible errors that can occur when initializing the block builder configuration
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("Unsupported appchain type: {0}")]
-    UnsupportedAppchainType(String),
-
     #[error("Sequencing contract address is missing")]
     SequencingContractAddressMissing,
 

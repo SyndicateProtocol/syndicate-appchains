@@ -6,7 +6,7 @@ use shared::types::BlockRef;
 use synd_chain_ingestor::client::BlockStreamT;
 use synd_mchain::{
     client::{KnownState, Provider},
-    db::{MBlock, Slot},
+    db::{ArbitrumBatch, MBlock, Slot},
 };
 use thiserror::Error;
 use tracing::{error, info, trace};
@@ -14,6 +14,7 @@ use tracing::{error, info, trace};
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
 /// slots to the slot processor to generate `synd-mchain` blocks.
 #[allow(clippy::expect_used)]
+#[allow(clippy::cognitive_complexity)]
 pub async fn run(
     settlement_delay: u64,
     known_state: Option<KnownState>,
@@ -76,9 +77,11 @@ pub async fn run(
         let mut messages = vec![];
 
         let mut blocks_per_slot: u64 = 1;
-        let slot_end_ts = (seq_block.block_ref.timestamp >= settlement_delay)
-            .then(|| seq_block.block_ref.timestamp - settlement_delay + 1)
-            .unwrap_or_default();
+        let slot_end_ts = if seq_block.block_ref.timestamp >= settlement_delay {
+            seq_block.block_ref.timestamp - settlement_delay + 1
+        } else {
+            Default::default()
+        };
         while set_block.block_ref.timestamp < slot_end_ts {
             blocks_per_slot += 1;
             messages.append(&mut set_block.messages);
@@ -96,7 +99,7 @@ pub async fn run(
         }
 
         if seq_block.tx_count > 0 || !messages.is_empty() {
-            mblock.payload = Some((seq_block.batch, messages));
+            mblock.payload = Some(ArbitrumBatch::new(seq_block.batch, messages));
         }
         mblock.slot.set_block_hash = set_block.block_ref.hash;
         mblock.slot.set_block_number = set_block.block_ref.number;
@@ -112,7 +115,7 @@ pub async fn run(
                 "Sent slot {} ({} seq, {} set) with timestamp {} in {:?}",
                 mblock.slot.seq_block_number,
                 seq_block.tx_count,
-                payload.1.len(),
+                payload.delayed_messages.len(),
                 mblock.timestamp,
                 time.elapsed()
             );

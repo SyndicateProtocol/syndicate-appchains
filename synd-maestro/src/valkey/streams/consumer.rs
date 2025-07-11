@@ -4,8 +4,9 @@
 
 use crate::valkey::streams::producer::tx_stream_key;
 use alloy::primitives::ChainId;
+use derivative::Derivative;
 use redis::{
-    aio::MultiplexedConnection,
+    aio::ConnectionManager,
     streams::{StreamReadOptions, StreamReadReply},
     AsyncCommands,
 };
@@ -21,10 +22,10 @@ use tracing::{info_span, instrument, Span};
 ///
 /// # Example
 /// ```no_compile
-/// use valkey::aio::MultiplexedConnection;
+/// use valkey::aio::ConnectionManager;
 /// use synd-maestro::valkey::consumer::StreamConsumer;
 ///
-/// let conn: MultiplexedConnection = // ... get Valkey connection
+/// let conn: ConnectionManager = // ... get Valkey connection
 /// let chain_id = 1;
 /// let start_from_id = "0-0";
 /// let mut consumer = StreamConsumer::new(conn, chain_id, start_from_id);
@@ -34,9 +35,11 @@ use tracing::{info_span, instrument, Span};
 ///     // Process transaction data
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct StreamConsumer {
-    conn: MultiplexedConnection,
+    #[derivative(Debug = "ignore")]
+    conn: ConnectionManager,
     stream_key: String,
     last_id: String,
 }
@@ -51,8 +54,8 @@ impl StreamConsumer {
     ///   beginning)
     /// # Returns
     /// A new `StreamConsumer` instance configured to read from the stream for the given chain.
-    pub fn new(conn: MultiplexedConnection, chain_id: ChainId, start_from_id: String) -> Self {
-        // NOTE maybe we don't need MultiplexedConnection here (unless we want to have multiple
+    pub fn new(conn: ConnectionManager, chain_id: ChainId, start_from_id: String) -> Self {
+        // NOTE maybe we don't need ConnectionManager here (unless we want to have multiple
         // consumers per service)
         Self { conn, stream_key: tx_stream_key(chain_id), last_id: start_from_id }
     }
@@ -168,9 +171,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
         // Connect to Valkey
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
 
@@ -207,9 +208,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
         // Connect to Valkey
-        let conn = redis::Client::open(valkey_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
 

@@ -11,6 +11,7 @@ use jsonrpsee::{
     types::{ErrorCode, Params},
     RpcModule,
 };
+use redis::aio::{ConnectionManager, ConnectionManagerConfig};
 use serde_json::Value as JsonValue;
 use shared::{
     json_rpc::{
@@ -44,7 +45,7 @@ pub async fn run(
         vec![HEADER_CHAIN_ID.to_string(), "traceparent".to_string(), "tracestate".to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
-        .layer(ProxyGetRequestLayer::new("/health", "health")?);
+        .layer(ProxyGetRequestLayer::new([("/health", "health")])?);
 
     let server = Server::builder()
         .set_http_middleware(http_middleware)
@@ -53,7 +54,10 @@ pub async fn run(
 
     // Create the service internally again
     let client = redis::Client::open(config.valkey_url.as_str())?;
-    let valkey_conn = client.get_multiplexed_async_connection().await?;
+
+    let connection_mgr_config = ConnectionManagerConfig::new();
+    let valkey_conn = ConnectionManager::new_with_config(client, connection_mgr_config).await?;
+
     let service = Arc::new(MaestroService::new(valkey_conn, config.clone(), metrics).await?);
     info!("MaestroService created and connected to Valkey successfully!");
 
@@ -278,7 +282,7 @@ mod tests {
         let client = reqwest::Client::new();
 
         // Test health endpoint
-        let response = client.get(format!("http://{}/health", addr)).send().await.unwrap();
+        let response = client.get(format!("http://{addr}/health")).send().await.unwrap();
         assert_eq!(response.status(), 200);
         assert_eq!(
             response.json::<JsonValue>().await.unwrap(),
@@ -290,7 +294,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         // Test unhealthy health endpoint
-        let response = client.get(format!("http://{}/health", addr)).send().await.unwrap();
+        let response = client.get(format!("http://{addr}/health")).send().await.unwrap();
         assert_eq!(response.status(), 500);
         // Cleanup
         shutdown_fn().await.unwrap();

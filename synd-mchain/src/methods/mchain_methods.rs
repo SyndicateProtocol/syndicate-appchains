@@ -35,15 +35,15 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
         assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block);
         data.subs.retain_mut(|sink| {
             !sink.is_closed() &&
-                sink.try_send(
-                    SubscriptionMessage::from_json(&create_header(
+                sink.try_send(SubscriptionMessage::from(
+                    serde_json::value::to_raw_value(&create_header(
                         block,
                         seq_block_number,
                         timestamp,
                     ))
                     .unwrap(),
-                )
-                .inspect_err(|err| error!("try_send failed: {}", err))
+                ))
+                .inspect_err(|err| error!("try_send failed: {err}"))
                 .is_ok()
         });
         drop(data);
@@ -66,7 +66,7 @@ pub fn rollback_to_block(
         return Err(err("cannot set head before the first block"));
     }
 
-    // Get the block to rollback to
+    // Get the block to roll back to
     let block = db.get_block(block_number).unwrap();
     let l1_block_number = block.slot.seq_block_number;
     let block_message_count = block.after_message_count();
@@ -116,15 +116,15 @@ pub fn rollback_to_block(
 
     data.subs.retain_mut(|sink| {
         !sink.is_closed() &&
-            sink.try_send(
-                SubscriptionMessage::from_json(&create_header(
+            sink.try_send(SubscriptionMessage::from(
+                serde_json::value::to_raw_value(&create_header(
                     block_number,
                     l1_block_number,
                     timestamp,
                 ))
                 .unwrap(),
-            )
-            .inspect_err(|err| error!("try_send failed: {}", err))
+            ))
+            .inspect_err(|err| error!("try_send failed: {err}"))
             .is_ok()
     });
     drop(data);
@@ -147,14 +147,14 @@ pub fn get_source_chains_processed_blocks(
             let block = db.get_block(block_num)?;
             Ok((block.slot, block_num))
         }
-        _ => Err(to_err(format!("unexpected block tag: {}", tag))),
+        _ => Err(to_err(format!("unexpected block tag: {tag}"))),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DelayedMessage;
+    use crate::db::ArbitrumBatch;
     use alloy::primitives::Bytes;
     use shared::service_start_utils::MetricsState;
     use std::{
@@ -197,7 +197,7 @@ mod tests {
 
     fn get_test_mblock() -> MBlock {
         MBlock {
-            payload: Some((Bytes::default(), vec![DelayedMessage::default()])),
+            payload: Some(ArbitrumBatch::default()),
             timestamp: 1000,
             slot: Slot { seq_block_number: 1, ..Default::default() },
         }

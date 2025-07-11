@@ -8,7 +8,7 @@ use crate::json_rpc::{
     RpcError::{InvalidInput, TransactionRejected},
 };
 use alloy::{
-    consensus::{Transaction, TxEnvelope},
+    consensus::{transaction::SignerRecoverable, Transaction, TxEnvelope},
     primitives::{Address, Bytes, U256},
     rlp::Decodable,
 };
@@ -111,7 +111,7 @@ mod tests {
     use super::*;
     use alloy::{
         consensus::{Signed, TxEip1559, TxLegacy},
-        primitives::{b256, Bytes, PrimitiveSignature},
+        primitives::{b256, Bytes, Signature},
     };
     use byte_unit::Byte;
     use std::str::FromStr;
@@ -146,7 +146,7 @@ mod tests {
     fn wrap_txn_legacy(tx: TxLegacy) -> TxEnvelope {
         TxEnvelope::Legacy(Signed::new_unchecked(
             tx,
-            PrimitiveSignature::test_signature(),
+            Signature::test_signature(),
             Default::default(),
         ))
     }
@@ -154,7 +154,7 @@ mod tests {
     fn wrap_txn_eip1559(tx: TxEip1559) -> TxEnvelope {
         TxEnvelope::Eip1559(Signed::new_unchecked(
             tx,
-            PrimitiveSignature::test_signature(),
+            Signature::test_signature(),
             Default::default(),
         ))
     }
@@ -180,7 +180,7 @@ mod tests {
         // Transaction with invalid signature should fail
         let invalid_tx = TxEnvelope::Legacy(Signed::new_unchecked(
             TxLegacy::default(),
-            PrimitiveSignature::from_scalars_and_parity(
+            Signature::from_scalars_and_parity(
                 b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
                 b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
                 true,
@@ -249,8 +249,7 @@ mod tests {
             let error_message = error.to_string();
             assert_eq!(
                 error_message, "invalid input: transaction too large: limit 127 KB - got 200 KB",
-                "Unexpected error message: {}",
-                error_message
+                "Unexpected error message: {error_message}"
             );
         }
     }
@@ -277,8 +276,7 @@ mod tests {
             let error_message = error.to_string();
             assert_eq!(
                 error_message, "invalid input: transaction too large: limit 125 KiB - got 200 KB",
-                "Unexpected error message: {}",
-                error_message
+                "Unexpected error message: {error_message}"
             );
         }
     }

@@ -1,5 +1,5 @@
-//! The eth client is used by both the synd-chain-ingestor server and client crates for interacting
-//! with the ethereum chain.
+//! The `eth_client` is used by both the `synd-chain-ingestor` server and client crates for
+//! interacting with the Ethereum-like chain.
 
 use alloy::{
     eips::BlockNumberOrTag,
@@ -11,78 +11,80 @@ use alloy::{
 use shared::types::Receipt;
 use std::time::Duration;
 use tokio::time::timeout;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
 /// This client is designed to retrieve blockchain data such as blocks and receipts
 /// by interacting with an Ethereum JSON-RPC endpoint.
-#[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub struct EthClient {
+    /// The underlying client for the Ethereum-like chains
     pub client: RootProvider,
     timeout: Duration,
     log_timeout: Duration,
+    retry_interval: Duration,
 }
 
 fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
     error!("{}: {}", name, err);
     if let RpcError::Transport(err) = err {
+        // TODO(SEQ-1055): Revisit `recoverable()` usage if necessary
         assert!(err.recoverable(), "{}: {}: {}", name, "fatal transport error", err);
     }
 }
 
 impl EthClient {
-    /// Creates a new `EthClient` instance. Infinitely retries until it is able to connect.
+    /// Creates a new [`EthClient`] instance. Retries indefinitely until it is able to connect.
     pub async fn new(
-        ws_url: &str,
+        ws_urls: Vec<String>,
         timeout: Duration,
         log_timeout: Duration,
         channel_size: usize,
+        retry_interval: Duration,
     ) -> Self {
         loop {
-            match tokio::time::timeout(
-                timeout,
-                ProviderBuilder::default().on_ws(WsConnect::new(ws_url).with_config(
-                    WebSocketConfig::default().max_message_size(None).max_frame_size(None),
-                )),
-            )
-            .await
-            {
-                Err(_) => {
-                    error!("timed out connecting to websocket");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                Ok(Err(err)) => {
-                    handle_rpc_error("failed to connect to websocket", &err);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                Ok(Ok(client)) => {
-                    client.client().expect_pubsub_frontend().set_channel_size(channel_size);
-                    return Self { client, timeout, log_timeout };
+            // fallback to next ws url if the current one fails
+            for ws_url in ws_urls.clone() {
+                match tokio::time::timeout(
+                    timeout,
+                    ProviderBuilder::default().connect_ws(WsConnect::new(ws_url).with_config(
+                        WebSocketConfig::default().max_message_size(None).max_frame_size(None),
+                    )),
+                )
+                .await
+                {
+                    Err(_) => {
+                        error!("timed out connecting to websocket");
+                    }
+                    Ok(Err(err)) => {
+                        handle_rpc_error("failed to connect to websocket", &err);
+                    }
+                    Ok(Ok(client)) => {
+                        client.client().expect_pubsub_frontend().set_channel_size(channel_size);
+                        return Self { client, timeout, log_timeout, retry_interval };
+                    }
                 }
             }
+            tokio::time::sleep(retry_interval).await;
         }
     }
 }
 
 impl EthClient {
-    /// Retrieves a block by its number with a timeout. Infinitely retries until the request
+    /// Retrieves a block by its number with a timeout. Retries indefinitely until the request
     /// succeeds.
     pub async fn get_block_header(&self, block_identifier: BlockNumberOrTag) -> Header {
         loop {
             match timeout(self.timeout, self.client.get_block_by_number(block_identifier)).await {
                 Err(_) => {
-                    error!("eth_getBlockByNumber request timed out");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    warn!(%block_identifier, "eth_getBlockByNumber request timed out");
                 }
                 Ok(Err(err)) => {
-                    handle_rpc_error("failed to fetch block header", &err);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    handle_rpc_error("failed to fetch a block header", &err);
                 }
                 Ok(Ok(None)) => {
-                    error!("fetched empty block header");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    warn!(%block_identifier, "fetched an empty block header");
                 }
                 Ok(Ok(Some(block))) => {
                     if let BlockNumberOrTag::Number(number) = block_identifier {
@@ -91,11 +93,12 @@ impl EthClient {
                     return block.header;
                 }
             }
+            tokio::time::sleep(self.retry_interval).await;
         }
     }
 
-    /// Retrieves the transaction receipts for a given block hash with a timeout. Infinitely retries
-    /// until the request succeeds.
+    /// Retrieves the transaction receipts for a given block hash with a timeout. Retries
+    /// indefinitely until the request succeeds.
     pub async fn get_block_receipts(&self, number: u64) -> Vec<Receipt> {
         loop {
             match timeout(
@@ -109,53 +112,51 @@ impl EthClient {
             {
                 Err(_) => {
                     error!("eth_getBlockReceipts request timed out");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
                     handle_rpc_error("failed to fetch receipts", &err);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Ok(receipts)) => return receipts,
             }
+            tokio::time::sleep(self.retry_interval).await;
         }
     }
 
-    /// Subscribe to blocks over the websocket connection with a timeout. Infinitely retries until
-    /// the request succeeds.
+    /// Subscribes to blocks over the websocket connection with a timeout. Retries indefinitely
+    /// until the request succeeds.
     pub async fn subscribe_blocks(&self) -> Subscription<Header> {
         loop {
             match timeout(self.timeout, self.client.subscribe_blocks()).await {
                 Err(_) => {
                     error!("eth_subscribe request timed out");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
                     handle_rpc_error("failed to subscribe to blocks", &err);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Ok(sub)) => return sub,
             }
+            tokio::time::sleep(self.retry_interval).await;
         }
     }
 
-    /// Get the chain id. Infinitely retries until the request succeeds.
+    /// Gets the chain id. Retries indefinitely until the request succeeds.
     pub async fn get_chain_id(&self) -> u64 {
         loop {
             match timeout(self.timeout, self.client.get_chain_id()).await {
                 Err(_) => {
                     error!("eth_chainId request timed out");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Err(err)) => {
                     handle_rpc_error("failed to get chain id", &err);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(Ok(chain_id)) => return chain_id,
             }
+            tokio::time::sleep(self.retry_interval).await;
         }
     }
 
     /// Get logs, binary search version.
+    #[allow(clippy::cognitive_complexity)]
     pub async fn get_logs(
         &self,
         filter: &Filter,
@@ -176,7 +177,7 @@ impl EthClient {
                     _ => (0, 0),
                 };
 
-                // If range is too small, return error
+                // Error if the range is too small
                 if to_block <= from_block {
                     error!("failed to get logs ({:?}): {}", filter, err);
                     return Err(RpcError::ErrorResp(err));

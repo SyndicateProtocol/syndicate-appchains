@@ -14,13 +14,13 @@ use alloy::{
     sol_types::{SolCall, SolEvent as _, SolValue as _},
 };
 use contract_bindings::synd::{
-    ibridge::IBridge,
-    iinbox::IInbox,
-    iinboxbase::IInboxBase,
-    isequencerinbox::{self, ISequencerInbox},
+    i_bridge::IBridge,
+    i_inbox::IInbox,
+    i_inbox_base::IInboxBase,
+    i_sequencer_inbox::{self, ISequencerInbox},
 };
 use jsonrpsee::{
-    core::error::StringError,
+    core::SubscriptionError,
     types::{ErrorObjectOwned, Params},
     Extensions, PendingSubscriptionSink,
 };
@@ -38,10 +38,10 @@ pub async fn eth_subscribe(
     pending: PendingSubscriptionSink,
     ctx: Arc<(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>)>,
     _: Extensions,
-) -> Result<(), StringError> {
+) -> Result<(), SubscriptionError> {
     let (param,): (&str,) = p.parse()?;
     if param != "newHeads" {
-        return Err(format!("unknown subscription event: {}", param).into());
+        return Err(format!("unknown subscription event: {param}").into());
     }
     let sink = pending.accept().await.map_err(to_err)?;
     ctx.2.lock().unwrap().subs.push(sink.clone());
@@ -56,7 +56,7 @@ pub fn eth_chain_id(
     _: &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
     _: &Extensions,
 ) -> String {
-    format!("{:#x}", MCHAIN_ID)
+    format!("{MCHAIN_ID:#x}")
 }
 
 /// `eth_getCode`
@@ -147,7 +147,7 @@ pub fn eth_get_logs(
                     afterAcc: block.after_batch_acc,
                     delayedAcc: block.after_message_acc(),
                     afterDelayedMessagesRead: U256::from(block.after_message_count()),
-                    timeBounds: isequencerinbox::IBridge::TimeBounds {
+                    timeBounds: i_sequencer_inbox::IBridge::TimeBounds {
                         minTimestamp: 0,
                         maxTimestamp: u64::MAX,
                         minBlockNumber: 0,
@@ -225,7 +225,7 @@ pub fn eth_get_block_by_number(
 
             data.finalized_block
         }
-        _ => return Err(format!("invalid tag: {}", tag)).map_err(to_err),
+        _ => return Err(format!("invalid tag: {tag}")).map_err(to_err),
     };
     let block = db.get_block(number).unwrap();
     Ok(alloy::rpc::types::Block {
@@ -255,14 +255,13 @@ pub fn eth_call(
             Ok(db.get_state().batch_count.abi_encode().into())
         }
         IBridge::delayedInboxAccsCall::SELECTOR => {
-            let data =
-                IBridge::delayedInboxAccsCall::abi_decode(input.as_ref(), false).map_err(to_err)?;
-            let index = data._0.try_into().map_err(to_err)?;
+            let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
+            let index = data.0.try_into().map_err(to_err)?;
             Ok(db.get_message_acc(index)?.abi_encode().into())
         }
         ISequencerInbox::inboxAccsCall::SELECTOR => {
-            let data = ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref(), false)
-                .map_err(to_err)?;
+            let data =
+                ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
             let index: u64 = data.index.try_into().map_err(to_err)?;
             Ok(db.get_block(index + 1)?.after_batch_acc.abi_encode().into())
         }
@@ -273,7 +272,7 @@ pub fn eth_call(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{DelayedMessage, MBlock, Slot};
+    use crate::db::{ArbitrumBatch, MBlock, Slot};
     use alloy::{primitives::Bytes, rpc::types::TransactionInput};
     use shared::service_start_utils::MetricsState;
     use std::{
@@ -317,7 +316,7 @@ mod tests {
 
     fn get_test_mblock() -> MBlock {
         MBlock {
-            payload: Some((Bytes::default(), vec![DelayedMessage::default()])),
+            payload: Some(ArbitrumBatch::default()),
             timestamp: 1000,
             slot: Slot { seq_block_number: 1, ..Default::default() },
         }
@@ -326,7 +325,7 @@ mod tests {
     #[test]
     fn test_eth_chain_id() {
         let result = eth_chain_id(Params::new(None), &get_test_context(), &Extensions::default());
-        assert_eq!(result, format!("{:#x}", MCHAIN_ID));
+        assert_eq!(result, format!("{MCHAIN_ID:#x}"));
     }
 
     #[test]

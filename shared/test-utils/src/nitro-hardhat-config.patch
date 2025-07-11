@@ -1,0 +1,14 @@
+diff --git a/hardhat.config.ts b/hardhat.config.ts
+index 0b24341..31d687a 100644
+--- a/hardhat.config.ts
++++ b/hardhat.config.ts
+@@ -184,6 +184,9 @@ module.exports = {
+         ? [process.env['DEVNET_PRIVKEY']]
+         : [],
+     },
++    custom: {
++      url: process.env['CUSTOM_RPC_URL'] || 'N/A',
++    },
+     geth: {
+       url: 'http://localhost:8545',
+     },

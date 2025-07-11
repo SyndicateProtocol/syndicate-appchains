@@ -1,4 +1,4 @@
-//! Arbitrum rollup synd-block-builder implementation
+//! Arbitrum rollup `synd-block-builder` implementation
 //!
 //! This module provides functionality for encoding batches of transactions
 //! that can be submitted by the batcher.
@@ -14,12 +14,14 @@ const BROTLI_MESSAGE_HEADER_BYTE: u8 = 0;
 #[derive(Debug, Serialize, Clone)]
 #[serde(untagged)]
 pub enum BatchMessage {
-    /// Message submitted to the delayed inbox contract, eg. a deposit
+    /// Message submitted to the delayed inbox contract, e.g. a deposit
     Delayed,
     /// Message sequenced by the sequencer containing l2 transactions
     L2(L1IncomingMessage),
 }
 
+/// See <https://docs.arbitrum.io/how-arbitrum-works/data-availability#how-full-nodes-decode-the-data-from-the-parent-chain>
+/// and <https://github.com/OffchainLabs/nitro/blob/master/arbstate/inbox.go#L187> for `BatchSegmentKind` details
 enum BatchSegmentKind {
     L2Message = 0,
     // L2MessageBrotli = 1,
@@ -37,7 +39,7 @@ enum L2MessageKind {
 #[derive(Debug, Serialize)]
 pub struct Batch(pub Vec<BatchMessage>);
 
-/// See arbos/arbostypes/incomingmessage.go for the nitro version of this struct.
+/// See `/arbos/arbostypes/incomingmessage.go` for the nitro version of this struct.
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
@@ -47,7 +49,7 @@ pub struct L1IncomingMessage {
     pub l2_msg: Vec<Bytes>,
 }
 
-/// See arbos/arbostypes/incomingmessage.go for the nitro version of this struct.
+/// See `/arbos/arbostypes/incomingmessage.go` for the nitro version of this struct.
 #[derive(Debug, Serialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
@@ -57,7 +59,7 @@ pub struct L1IncomingMessageHeader {
     pub timestamp: u64,
 }
 
-// See arbstate/inbox.go for the nitro version of these constants
+// See `/arbstate/inbox.go` for the nitro version of these constants
 const MAX_DECOMPRESSED_LEN: usize = 1024 * 1024 * 16; // 16 MiB
 const MAX_SEGMENTS_PER_SEQUENCER_MESSAGE: usize = 100 * 1024;
 
@@ -98,7 +100,7 @@ impl Batch {
             };
             input.append(&mut data);
         }
-        // TOOD(SEQ-815): add logic to split large batches which exceed these limits into multiple
+        // TODO(SEQ-815): add logic to split large batches which exceed these limits into multiple
         // batches
         if segments > MAX_SEGMENTS_PER_SEQUENCER_MESSAGE {
             return Err(eyre::eyre!("too many batch segments"));
@@ -107,7 +109,7 @@ impl Batch {
             return Err(eyre::eyre!("batch data exceeds the 16 mb size limit"));
         }
         let mut out: Vec<u8> = vec![];
-        // TODO(SEQ-806): configure brotli compression settings & try to make compression
+        //TODO(SEQ-806): configure brotli compression settings & try to make compression
         // deterministic if possible
         brotli::enc::BrotliCompress(
             &mut input.as_slice(),

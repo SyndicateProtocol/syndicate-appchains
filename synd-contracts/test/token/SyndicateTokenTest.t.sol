@@ -15,6 +15,10 @@ contract SyndicateTokenTest is Test {
     address public user = address(0x1111);
     address public user2 = address(0x2222);
 
+    // Events that need to be declared for testing
+    event UnlockTimestampUpdated(uint256 oldTimestamp, uint256 newTimestamp, address indexed updatedBy);
+    event TokensBurnedByManager(address indexed from, uint256 amount, address indexed burner);
+
     function setUp() public {
         vm.startPrank(defaultAdmin);
 
@@ -318,7 +322,7 @@ contract SyndicateTokenTest is Test {
 
     // ============ AIRDROP LOCK FUNCTIONALITY TESTS ============
 
-    function test_Constructor_NoInitialLock() public view {
+    function test_InitialUnlockState() public view {
         assertEq(token.unlockTimestamp(), 0);
         assertFalse(token.transfersLocked());
         assertEq(token.getRemainingLockTime(), 0);
@@ -336,18 +340,6 @@ contract SyndicateTokenTest is Test {
         assertEq(token.unlockTimestamp(), futureTimestamp);
         assertTrue(token.transfersLocked());
         assertEq(token.getRemainingLockTime(), 30 days);
-    }
-
-    function test_RevertWhen_SetUnlockTimestamp_AlreadySet() public {
-        // First set a lock
-        uint256 futureTimestamp = block.timestamp + 30 days;
-        vm.prank(defaultAdmin);
-        token.setUnlockTimestamp(futureTimestamp);
-
-        // Try to set it again
-        vm.prank(defaultAdmin);
-        vm.expectRevert(SyndicateToken.UnlockTimestampAlreadySet.selector);
-        token.setUnlockTimestamp(block.timestamp + 60 days);
     }
 
     function test_RevertWhen_SetUnlockTimestamp_NotAdmin() public {
@@ -378,6 +370,53 @@ contract SyndicateTokenTest is Test {
         vm.prank(defaultAdmin);
         vm.expectRevert(SyndicateToken.UnlockTimestampTooLate.selector);
         token.setUnlockTimestamp(tooLateTimestamp);
+    }
+
+    function test_SetUnlockTimestamp_MultipleUpdates() public {
+        // Test that admin can update unlock timestamp multiple times
+        uint256 firstTimestamp = block.timestamp + 10 days;
+        uint256 secondTimestamp = block.timestamp + 20 days;
+        uint256 thirdTimestamp = block.timestamp + 45 days; // Still within MAX_LOCK_DURATION (90 days)
+
+        // First update
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(0, firstTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(firstTimestamp);
+
+        assertEq(token.unlockTimestamp(), firstTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Second update - extend the lock period
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(firstTimestamp, secondTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(secondTimestamp);
+
+        assertEq(token.unlockTimestamp(), secondTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Third update - extend further but still within MAX_LOCK_DURATION
+        vm.expectEmit(true, false, false, true);
+        emit UnlockTimestampUpdated(secondTimestamp, thirdTimestamp, defaultAdmin);
+
+        vm.prank(defaultAdmin);
+        token.setUnlockTimestamp(thirdTimestamp);
+
+        assertEq(token.unlockTimestamp(), thirdTimestamp);
+        assertTrue(token.transfersLocked());
+
+        // Verify that even after multiple updates, MAX_LOCK_DURATION constraint is enforced
+        uint256 tooLateTimestamp = block.timestamp + token.MAX_LOCK_DURATION() + 1;
+
+        vm.prank(defaultAdmin);
+        vm.expectRevert(SyndicateToken.UnlockTimestampTooLate.selector);
+        token.setUnlockTimestamp(tooLateTimestamp);
+
+        // Verify the timestamp wasn't changed after the failed update
+        assertEq(token.unlockTimestamp(), thirdTimestamp);
     }
 
     function test_TransferLocked_RegularUser() public {
@@ -441,13 +480,13 @@ contract SyndicateTokenTest is Test {
         vm.prank(defaultAdmin);
         token.setUnlockTimestamp(futureTimestamp);
 
-        // Mint tokens to user
         vm.prank(emissionMinter);
         token.mint(user, 1000 * 10 ** 18);
 
         uint256 burnAmount = 100 * 10 ** 18;
         uint256 initialSupply = token.totalSupply();
 
+        // Mint tokens to user
         vm.expectEmit(true, false, false, true);
         emit TokensBurnedByManager(user, burnAmount, airdropManager);
 
@@ -552,6 +591,7 @@ contract SyndicateTokenTest is Test {
         vm.stopPrank();
 
         // Step 3: Verify transfers are locked
+
         vm.prank(user);
         vm.expectRevert(SyndicateToken.TransfersLocked.selector);
         token.transfer(user2, 100 * 10 ** 18);
@@ -572,7 +612,32 @@ contract SyndicateTokenTest is Test {
         assertEq(token.balanceOf(user2), 600 * 10 ** 18);
     }
 
-    // Events that need to be declared for testing
-    event UnlockTimestampUpdated(uint256 oldTimestamp, uint256 newTimestamp, address indexed updatedBy);
-    event TokensBurnedByManager(address indexed from, uint256 amount, address indexed burner);
+    // ============ BURN FUNCTIONALITY TESTS ============
+
+    function test_Burn_Success() public {
+        // Mint tokens to user first
+        vm.prank(emissionMinter);
+        token.mint(user, 1000 * 10 ** 18);
+
+        uint256 burnAmount = 100 * 10 ** 18;
+        uint256 initialSupply = token.totalSupply();
+
+        vm.prank(user);
+        token.burn(burnAmount);
+
+        assertEq(token.balanceOf(user), 900 * 10 ** 18);
+        assertEq(token.totalSupply(), initialSupply - burnAmount);
+    }
+
+    function test_RevertWhen_Burn_ZeroAmount() public {
+        vm.prank(user);
+        vm.expectRevert(SyndicateToken.ZeroAmount.selector);
+        token.burn(0);
+    }
+
+    function test_RevertWhen_Burn_InsufficientBalance() public {
+        vm.prank(user);
+        vm.expectRevert();
+        token.burn(1000 * 10 ** 18); // User has no tokens
+    }
 }

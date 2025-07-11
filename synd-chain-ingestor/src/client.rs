@@ -28,11 +28,11 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tracing::{error, info};
+use tracing::info;
 
-// Uses the eth client to fetch log data for blocks in a range & combines them with raw (timestamp,
-// block hash) data from the db to build partial blocks
-#[allow(clippy::unwrap_used)]
+/// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
+/// (timestamp, block hash) data from the db to build partial blocks
+#[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 async fn build_partial_blocks(
     start_block: u64,
     data: &Bytes,
@@ -53,7 +53,7 @@ async fn build_partial_blocks(
         blocks.push(PartialBlock {
             block_ref: BlockRef {
                 number: i,
-                timestamp: u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap()) as u64,
+                timestamp: u32::from_be_bytes(data[offset..offset + 4].try_into()?) as u64,
                 hash,
             },
             parent_hash,
@@ -64,12 +64,12 @@ async fn build_partial_blocks(
 
     let end_block = start_block + count - 1;
 
-    let mut safe_block = client.get_block_header(BlockNumberOrTag::Safe).await.number;
+    let mut safe_block = client.get_block_header(BlockNumberOrTag::Latest).await.number;
     if safe_block < start_block {
         safe_block = start_block - 1;
     }
 
-    info!("fetching partial logs from {} to {}", start_block, end_block);
+    info!("fetching partial logs from blocks {} to {}", start_block, end_block);
     let mut logs = client
         .get_logs(&Filter::new().address(addrs.clone()).from_block(start_block).to_block(end_block))
         .await?;
@@ -90,11 +90,13 @@ async fn build_partial_blocks(
     }
 
     if safe_block < end_block {
-        // fetch all logs for unsafe blocks -> makes it more likely that a log is included which
+        // Fetch all logs for unsafe blocks. This makes it more likely that a log is included which
         // contains block hash info with it.
-        info!("fetching full logs from {} to {}", safe_block + 1, end_block);
-        let mut unsafe_logs =
-            client.get_logs(&Filter::new().from_block(safe_block + 1).to_block(end_block)).await?;
+        let first_unsafe_block = safe_block + 1;
+        info!("fetching full logs from blocks {} to {}", first_unsafe_block, end_block);
+        let mut unsafe_logs = client
+            .get_logs(&Filter::new().from_block(first_unsafe_block).to_block(end_block))
+            .await?;
 
         if let Some(log) = unsafe_logs.last() {
             safe_block = log.block_number.unwrap();
@@ -117,7 +119,7 @@ async fn build_partial_blocks(
 
         // for blocks without any logs, refetch by block hash
         // to make sure the block hash matches
-        for i in safe_block + 1..end_block + 1 {
+        for i in first_unsafe_block..end_block + 1 {
             info!("fetching logs for block {} of {}", i, end_block);
             let mut block_logs = client
                 .get_logs(
@@ -182,7 +184,8 @@ impl<
     }
 }
 
-/// BlockStream is a stream of blocks that automatically updates stale/reorged blocks in the queue.
+/// `BlockStream` is a stream of blocks that automatically updates stale/reorged blocks in the
+/// queue.
 #[async_trait]
 pub trait BlockStreamT<Block> {
     /// recv fetches the next block once a block with timestamp greater than or equal to the
@@ -259,13 +262,13 @@ impl Message {
     fn init(self) -> Bytes {
         match self {
             Self::Init(x) => x,
-            x => panic!("expected init message, found {:?}", x),
+            x => panic!("expected init message type, found {x:?}"),
         }
     }
     fn block(self) -> PartialBlock {
         match self {
             Self::Block(x) => x,
-            x => panic!("expected block message, found {:?}", x),
+            x => panic!("expected block message type, found {x:?}"),
         }
     }
 }
@@ -289,8 +292,8 @@ pub trait Provider: Sync {
         unsubscribe_method: &'static str,
     ) -> Result<impl Stream<Item = Result<Notif, serde_json::Error>> + Send + 'static, ClientError>;
 
-    async fn get_url(&self) -> Result<String, ClientError> {
-        self.request("url", ((),)).await
+    async fn get_urls(&self) -> Result<Vec<String>, ClientError> {
+        self.request("urls", ((),)).await
     }
 
     async fn get_block_number(&self) -> Result<u64, ClientError> {
@@ -330,25 +333,22 @@ pub struct IngestorProvider(Arc<WsClient>);
 #[allow(missing_docs)]
 impl IngestorProvider {
     pub async fn new(url: &str, timeout: Duration) -> Self {
-        loop {
-            match tokio::time::timeout(
-                timeout,
-                WsClientBuilder::new()
-                    .max_response_size(u32::MAX)
-                    .max_buffer_capacity_per_subscription(1024)
-                    .request_timeout(timeout)
-                    .enable_ws_ping(PingConfig::default())
-                    .build(url),
-            )
-            .await
-            {
-                Err(_) => {
-                    error!("timed out connecting to websocket");
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                Ok(Err(err)) => panic!("failed to connect to websocket: {}, url={}", err, url),
-                Ok(Ok(client)) => return Self(Arc::new(client)),
+        match tokio::time::timeout(
+            timeout,
+            WsClientBuilder::new()
+                .max_response_size(u32::MAX)
+                .max_buffer_capacity_per_subscription(1024)
+                .request_timeout(timeout)
+                .enable_ws_ping(PingConfig::default())
+                .build(url),
+        )
+        .await
+        {
+            Err(_) => {
+                panic!("timed out connecting to websocket: timeout={timeout:?}, url={url}");
             }
+            Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
+            Ok(Ok(client)) => Self(Arc::new(client)),
         }
     }
 }
@@ -383,6 +383,7 @@ mod tests {
         MethodsError, RpcModule,
     };
     use serde::de::DeserializeOwned;
+    use serde_json::value::RawValue;
     use std::{marker::PhantomData, pin::Pin, task::Poll};
     use tokio::sync::mpsc;
 
@@ -399,7 +400,7 @@ mod tests {
         }
     }
 
-    struct SubscriptionStream<Notif>(mpsc::Receiver<String>, PhantomData<Notif>);
+    struct SubscriptionStream<Notif>(mpsc::Receiver<Box<RawValue>>, PhantomData<Notif>);
 
     impl<Notif: DeserializeOwned + Unpin> Stream for SubscriptionStream<Notif> {
         type Item = Result<Notif, serde_json::Error>;
@@ -410,7 +411,7 @@ mod tests {
         ) -> Poll<Option<Self::Item>> {
             self.0.poll_recv(cx).map(|x| {
                 x.map(|x| {
-                    serde_json::from_str::<SubscriptionResponse<'_, Notif>>(&x)
+                    serde_json::from_str::<SubscriptionResponse<'_, Notif>>(x.get())
                         .map(|x| x.params.result)
                 })
             })
@@ -440,8 +441,8 @@ mod tests {
             ClientError,
         > {
             let params = params.to_rpc_params()?;
-            let req = serde_json::to_string(&Request::new(
-                method.into(),
+            let req = serde_json::to_string(&Request::borrowed(
+                method,
                 params.as_ref().map(|p| p.as_ref()),
                 Id::Number(0),
             ))?;

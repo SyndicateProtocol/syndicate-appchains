@@ -20,8 +20,8 @@ pub mod wallet_nonce {
         chain_id: ChainId,
         wallet_address: Address,
     ) -> ChainWalletNonceKey {
-        let chain_wallet_composite_key = format!("{}_{}", chain_id, wallet_address);
-        format!("{}:{}", WALLET_NONCE_KEY_PREFIX, chain_wallet_composite_key)
+        let chain_wallet_composite_key = format!("{chain_id}_{wallet_address}");
+        format!("{WALLET_NONCE_KEY_PREFIX}:{chain_wallet_composite_key}")
     }
 
     /// Key produced by `chain_wallet_nonce_key()` above
@@ -46,7 +46,7 @@ pub mod waiting_txn {
     /// # Returns
     /// A string in the format `synd-maestro:waiting-gap-txns:{chain_id}_{wallet_address}_{nonce}`
     pub fn waiting_gap_txns_key(chain_id: ChainId, wallet_address: Address, nonce: u64) -> String {
-        let waiting_gap_composite_key = format!("{}_{}_{}", chain_id, wallet_address, nonce);
-        format!("{}:{}", WAITING_GAP_KEY_PREFIX, waiting_gap_composite_key)
+        let waiting_gap_composite_key = format!("{chain_id}_{wallet_address}_{nonce}");
+        format!("{WAITING_GAP_KEY_PREFIX}:{waiting_gap_composite_key}")
     }
 }

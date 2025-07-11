@@ -1,24 +1,29 @@
 #![allow(missing_docs)]
 
-use alloy::{primitives::Address, providers::WalletProvider};
-use contract_bindings::synd::arbconfigmanager::ArbConfigManager;
+use crate::components::test_components::SEQUENCING_CHAIN_ID;
+use alloy::{
+    primitives::{Address, U256},
+    providers::WalletProvider,
+};
+use contract_bindings::synd::arb_config_manager::ArbConfigManager;
 use eyre::Result;
 use shared::types::FilledProvider;
 use std::time::Duration;
-use test_utils::anvil::mine_block;
+use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BaseChainsType {
+    Anvil,
+    PreLoaded(ContractVersion),
+    /// auto-mine enabled
+    Nitro,
+}
 
 /// Arbitrum Nitro contract version on the settlement chain used for testing
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
-pub enum ContractVersion {
-    V213,
-    V300,
-}
-
-#[derive(Debug, Clone)]
-#[allow(clippy::redundant_pub_crate)]
 pub struct ConfigurationOptions {
-    pub pre_loaded: Option<ContractVersion>,
+    pub base_chains_type: BaseChainsType,
     pub use_write_loop: bool,
     pub sequencing_start_block: u64,
     pub settlement_start_block: u64,
@@ -28,12 +33,13 @@ pub struct ConfigurationOptions {
     pub finality_delay: u64,
     pub maestro_finalization_duration: Option<Duration>,
     pub maestro_finalization_checker_interval: Option<Duration>,
+    pub close_challenge_interval: Duration,
 }
 
 impl Default for ConfigurationOptions {
     fn default() -> Self {
         Self {
-            pre_loaded: None,
+            base_chains_type: BaseChainsType::Anvil,
             // Spins up write loop components
             use_write_loop: false,
             // skip the genesis block
@@ -46,6 +52,7 @@ impl Default for ConfigurationOptions {
             finality_delay: 60,
             maestro_finalization_duration: None,
             maestro_finalization_checker_interval: None,
+            close_challenge_interval: Duration::from_secs(1),
         }
     }
 }
@@ -65,7 +72,11 @@ pub(super) async fn setup_config_manager(
     let config_manager_owner = set_provider.default_signer_address();
     let config_manager_tx =
         ArbConfigManager::deploy_builder(set_provider, config_manager_owner).send().await?;
-    mine_block(set_provider, 0).await?;
+
+    if options.base_chains_type != BaseChainsType::Nitro {
+        mine_block(set_provider, 0).await?;
+    }
+
     let config_manager_address = config_manager_tx.get_receipt().await?.contract_address.unwrap();
     let config_manager = ArbConfigManager::new(config_manager_address, set_provider.clone());
 
@@ -77,7 +88,7 @@ pub(super) async fn setup_config_manager(
         .createArbChainConfig(
             config_manager_owner,
             options_clone.appchain_chain_id.try_into().unwrap(),
-            options_clone.appchain_chain_id.try_into().unwrap(),
+            U256::from(SEQUENCING_CHAIN_ID),
             arbitrum_bridge_address,
             arbitrum_inbox_address,
             options_clone.settlement_delay.try_into().unwrap(),
@@ -90,7 +101,9 @@ pub(super) async fn setup_config_manager(
         )
         .send()
         .await?;
-    mine_block(set_provider, 0).await?;
+    if options.base_chains_type != BaseChainsType::Nitro {
+        mine_block(set_provider, 0).await?;
+    }
 
     assert!(create_chain_config_tx.get_receipt().await?.status());
 

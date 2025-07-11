@@ -1,14 +1,20 @@
 //! The `MockChain` is used for appchain block derivation.
 
 use clap::Parser;
-use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
+#[cfg(feature = "rocksdb")]
+use jsonrpsee::server::{RandomStringIdProvider, Server};
+#[cfg(feature = "rocksdb")]
 use rocksdb::DB;
+#[cfg(feature = "rocksdb")]
 use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
     tracing::setup_global_logging,
 };
+#[cfg(feature = "rocksdb")]
 use synd_mchain::{metrics::MchainMetrics, server::start_mchain};
+#[cfg(feature = "rocksdb")]
 use tokio::signal::unix::{signal, SignalKind};
+#[cfg(feature = "rocksdb")]
 use tracing::info;
 
 /// CLI args for the `synd-mchain` executable
@@ -31,8 +37,14 @@ struct Config {
 
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
+#[cfg(feature = "rocksdb")]
 async fn main() -> eyre::Result<()> {
     // Initialize logging
+
+    use jsonrpsee::{
+        server::{PingConfig, ServerConfigBuilder},
+        ws_client::RpcServiceBuilder,
+    };
     #[allow(clippy::unwrap_used)]
     setup_global_logging().unwrap();
 
@@ -46,9 +58,14 @@ async fn main() -> eyre::Result<()> {
     info!("starting synd-mchain server on port {}", cfg.port);
     let module = start_mchain(cfg.appchain_chain_id, cfg.finality_delay, db, metrics);
 
-    let handle = Server::builder()
+    let jsonrpsee_cfg = ServerConfigBuilder::new()
         .ws_only()
+        .enable_ws_ping(PingConfig::default())
         .set_id_provider(RandomStringIdProvider::new(64))
+        .build();
+
+    let handle = Server::builder()
+        .set_config(jsonrpsee_cfg)
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
@@ -71,5 +88,10 @@ async fn main() -> eyre::Result<()> {
 
     _ = handle.stop();
     handle.stopped().await;
+    Ok(())
+}
+#[tokio::main]
+#[cfg(not(feature = "rocksdb"))]
+async fn main() -> eyre::Result<()> {
     Ok(())
 }

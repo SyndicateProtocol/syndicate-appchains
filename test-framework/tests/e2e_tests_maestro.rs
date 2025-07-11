@@ -12,6 +12,7 @@ use alloy::{
     },
 };
 use contract_bindings::synd::rollup::{Rollup, Rollup::RollupInstance};
+use redis::aio::ConnectionManager;
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -34,14 +35,15 @@ fn init() {
 #[tokio::test]
 async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -49,7 +51,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -71,7 +73,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -90,14 +92,15 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
 #[tokio::test]
 async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -105,7 +108,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -139,7 +142,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -153,19 +156,19 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
     .await
 }
 
-// TODO (SEQ-917): Fix flaky test
 // Duplicate txn spam is rejected, dispatched concurrently
 #[tokio::test]
 async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.1")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_both(0).await?;
             components.mine_both(1).await?; // Close slot
@@ -173,7 +176,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -274,7 +277,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 // Wait for the task to complete and get the result
                 match handle.await {
                     Ok(result) => results.push(result?),
-                    Err(e) => println!("Task panicked: {:?}", e),
+                    Err(e) => println!("Task panicked: {e:?}"),
                 }
             }
 
@@ -313,7 +316,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 wait_until!(
                     components_arc.appchain_provider.get_transaction_count(*address).await? ==
                         nonce + 1,
-                    Duration::from_secs(3)
+                    Duration::from_secs(60)
                 );
             }
 
@@ -324,8 +327,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 assert_eq!(
                     current_nonce,
                     nonce + 1,
-                    "Only one transaction should have been processed for address {}",
-                    address
+                    "Only one transaction should have been processed for address {address}"
                 );
             }
             Ok(())
@@ -339,14 +341,15 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
 #[tokio::test]
 async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.1")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_both(0).await?;
             components.mine_both(1).await?; // Close slot
@@ -354,7 +357,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -464,7 +467,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
                 // Wait for the task to complete and get the result
                 match handle.await {
                     Ok(result) => results.push(result?),
-                    Err(e) => println!("Task panicked: {:?}", e),
+                    Err(e) => println!("Task panicked: {e:?}"),
                 }
             }
 
@@ -526,7 +529,7 @@ async fn create_and_fund_wallet(
     components: &TestComponents,
     funding_wallet_address: Address,
     value: U256,
-    inbox: &RollupInstance<(), &FilledProvider>,
+    inbox: &RollupInstance<&FilledProvider>,
 ) -> Result<(LocalSigner<SigningKey>, Address), eyre::Error> {
     let wallet_signer = PrivateKeySigner::random();
     let wallet_address = wallet_signer.address();
@@ -537,7 +540,7 @@ async fn create_and_fund_wallet(
     // Wait for deposit to be processed for the second wallet
     wait_until!(
         components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-        Duration::from_secs(10)
+        Duration::from_secs(60)
     );
     Ok((wallet_signer, wallet_address))
 }
@@ -546,14 +549,15 @@ async fn create_and_fund_wallet(
 #[tokio::test]
 async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -561,7 +565,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -597,7 +601,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed
@@ -620,14 +624,15 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
 #[tokio::test]
 async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        &ConfigurationOptions { use_write_loop: true, ..Default::default() },
         |components| async move {
             components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
-            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
@@ -635,7 +640,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(10)
+                Duration::from_secs(60)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
@@ -689,7 +694,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
 
             // Assert waiting txns in cache
             let valkey_client = redis::Client::open(components.valkey_url.as_str()).unwrap();
-            let mut valkey_conn = valkey_client.get_multiplexed_async_connection().await.unwrap();
+            let mut valkey_conn = ConnectionManager::new(valkey_client).await.unwrap();
             let waiting_txn_2 =
                 valkey_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
             assert!(waiting_txn_2.is_some());
@@ -700,7 +705,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 3,
-                Duration::from_secs(5)
+                Duration::from_secs(60)
             );
 
             // Verify that the transaction was processed

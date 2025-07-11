@@ -2,7 +2,8 @@
 //! and process transactions across different chains.
 
 use alloy::{hex, primitives::keccak256};
-use redis::{aio::MultiplexedConnection, AsyncCommands, RedisError};
+use derivative::Derivative;
+use redis::{aio::ConnectionManager, AsyncCommands, RedisError};
 use shared::tracing::{current_traceparent, SpanKind};
 use std::{self, time::Duration};
 use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
@@ -22,7 +23,7 @@ const TX_STREAM_KEY: &str = "maestro:transactions";
 /// # Returns
 /// A string in the format `synd-maestro:transactions:{chain_id}`
 pub fn tx_stream_key(chain_id: u64) -> String {
-    format!("{}:{}", TX_STREAM_KEY, chain_id)
+    format!("{TX_STREAM_KEY}:{chain_id}")
 }
 
 /// Valkey Stream producer for enqueueing transactions to a specific chain's stream
@@ -33,11 +34,11 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 ///
 /// # Examples
 /// ```rust
-/// use redis::aio::MultiplexedConnection;
+/// use redis::aio::ConnectionManager;
 /// use std::time::Duration;
 /// use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
 ///
-/// async fn example(valkey_conn: MultiplexedConnection) {
+/// async fn example(valkey_conn: ConnectionManager) {
 ///     let mut producer = StreamProducer::new(
 ///         valkey_conn,
 ///         1,
@@ -51,9 +52,11 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 ///     let id = producer.enqueue_transaction(&tx_data).await.unwrap();
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct StreamProducer {
-    conn: MultiplexedConnection,
+    #[derivative(Debug = "ignore")]
+    conn: ConnectionManager,
     pub(crate) stream_key: String,
     shutdown_token: CancellationToken,
     finalization_task_handle: Mutex<Option<JoinHandle<()>>>,
@@ -73,7 +76,7 @@ impl StreamProducer {
     /// # Returns
     /// A new `StreamProducer` instance configured for the specified chain
     pub async fn new<F, Fut>(
-        conn: MultiplexedConnection,
+        conn: ConnectionManager,
         chain_id: u64,
         finalization_checker_interval: Duration,
         finalization_duration: Duration,
@@ -133,7 +136,7 @@ impl StreamProducer {
         )
     )]
     async fn add_to_stream(
-        conn: &MultiplexedConnection,
+        conn: &ConnectionManager,
         stream_key: &str,
         raw_tx: &[u8],
         retries: u32,
@@ -158,7 +161,7 @@ impl StreamProducer {
     /// Get all transactions that are older than the finalization duration, deletes them from the
     /// stream and returns them
     async fn get_finalized_transactions(
-        conn: &mut MultiplexedConnection,
+        conn: &mut ConnectionManager,
         stream_key: &str,
         finalization_ms: u128,
     ) -> Result<Vec<(String, Vec<(String, Vec<u8>)>)>, RedisError> {
@@ -219,6 +222,8 @@ impl StreamProducer {
                     retries_value =
                         String::from_utf8(value.clone()).ok().and_then(|s| s.parse::<u32>().ok());
                 }
+                // The `traceparent` field is optional and used for tracing purposes
+                "traceparent" => (),
                 _ => {
                     error!(%stream_key, entry_id = %id, "Unexpected field: {}", name);
                 }
@@ -289,7 +294,6 @@ impl StreamProducer {
                     Ok(entries) => entries,
                     Err(e) => {
                         error!(%stream_key, %e, "Finalization checker: Failed to fetch old entries");
-                        tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
                 };
@@ -413,7 +417,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
         let client = redis::Client::open(valkey_url.as_str()).unwrap();
-        let conn = client.get_multiplexed_async_connection().await.unwrap();
+        let conn = ConnectionManager::new(client).await.unwrap();
 
         let mut conn_clone = conn.clone();
 
@@ -474,7 +478,7 @@ mod tests {
                 .xadd(
                     &producer_stream_key,
                     "*",
-                    &[("data", format!("test-{}", i).as_bytes()), ("retries", b"0" as &[u8])],
+                    &[("data", format!("test-{i}").as_bytes()), ("retries", b"0" as &[u8])],
                 )
                 .await
                 .unwrap();
@@ -503,8 +507,8 @@ mod tests {
         let data_guard = assert_callback_data.lock().await;
         assert_eq!(data_guard.len(), 5, "Callback should have collected 5 data items");
         for i in 0..5 {
-            let expected_data = format!("test-{}", i).into_bytes();
-            assert_eq!(data_guard[i], expected_data, "Mismatch in collected data for item {}", i);
+            let expected_data = format!("test-{i}").into_bytes();
+            assert_eq!(data_guard[i], expected_data, "Mismatch in collected data for item {i}");
         }
         drop(data_guard);
 
@@ -539,7 +543,7 @@ mod tests {
 
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         let client = redis::Client::open(valkey_url.as_str()).unwrap();
-        let conn = client.get_multiplexed_async_connection().await.unwrap();
+        let conn = ConnectionManager::new(client).await.unwrap();
         let mut conn_clone_for_setup = conn.clone();
         let mut conn_clone_for_assert = conn.clone();
 

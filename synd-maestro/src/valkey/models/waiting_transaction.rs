@@ -6,7 +6,7 @@ use alloy::{
     hex,
     primitives::{Address, Bytes, ChainId},
 };
-use redis::{aio::MultiplexedConnection, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
+use redis::{aio::ConnectionManager, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
 use std::{future::Future, time::Duration};
 
 /// Extension trait for Valkey connections to work with waiting transactions
@@ -36,7 +36,7 @@ pub trait WaitingGapTxnExt {
     ) -> impl Future<Output = RedisResult<u64>> + Send;
 }
 
-impl WaitingGapTxnExt for MultiplexedConnection {
+impl WaitingGapTxnExt for ConnectionManager {
     /// note: returns hex encoded String
     fn get_waiting_txn(
         &mut self,
@@ -113,8 +113,7 @@ mod tests {
         assert_eq!(
             key,
             format!(
-                "{}:{}_0x4242424242424242424242424242424242424242_5",
-                WAITING_GAP_KEY_PREFIX, chain_id
+                "{WAITING_GAP_KEY_PREFIX}:{chain_id}_0x4242424242424242424242424242424242424242_5"
             )
         );
     }
@@ -137,7 +136,7 @@ mod tests {
         Ok(())
     }
 
-    async fn test_set_get_waiting_txn(mut conn: MultiplexedConnection) {
+    async fn test_set_get_waiting_txn(mut conn: ConnectionManager) {
         let chain_id = 4u64;
         let signer = Address::from_slice(&[0x42; 20]);
         let nonce = 42u64;
@@ -156,7 +155,7 @@ mod tests {
         );
     }
 
-    async fn test_del_waiting_txn_key(mut conn: MultiplexedConnection) {
+    async fn test_del_waiting_txn_key(mut conn: ConnectionManager) {
         let chain_id = 5u64;
         let wallet_address = Address::from_slice(&[0x24; 20]);
         let nonce = 123u64;
@@ -186,7 +185,7 @@ mod tests {
         assert_eq!(get_after_del, None, "Transaction should be deleted");
     }
 
-    async fn test_del_multiple_waiting_txn_key(mut conn: MultiplexedConnection) {
+    async fn test_del_multiple_waiting_txn_key(mut conn: ConnectionManager) {
         let chain_id = 5u64;
         let wallet_address = Address::from_slice(&[0x24; 20]);
         let nonce = 123u64;
@@ -225,7 +224,7 @@ mod tests {
         assert_eq!(get_after_del, None, "Transaction should be deleted");
     }
 
-    async fn test_waiting_txn_expiration(mut conn: MultiplexedConnection) {
+    async fn test_waiting_txn_expiration(mut conn: ConnectionManager) {
         // For testing TTL, we'll use a much shorter TTL than the default
 
         let chain_id = 6u64;
@@ -260,7 +259,7 @@ mod tests {
         );
     }
 
-    async fn test_multiple_waiting_txns_independence(mut conn: MultiplexedConnection) {
+    async fn test_multiple_waiting_txns_independence(mut conn: ConnectionManager) {
         let chain_id = 7u64;
         let signer1 = Address::from_slice(&[0x5A; 20]);
         let signer2 = Address::from_slice(&[0x5B; 20]);
@@ -296,7 +295,7 @@ mod tests {
         );
     }
 
-    async fn test_same_signer_different_nonces(mut conn: MultiplexedConnection) {
+    async fn test_same_signer_different_nonces(mut conn: ConnectionManager) {
         let chain_id = 8u64;
         let signer = Address::from_slice(&[0x6C; 20]);
         let nonce1 = 100u64;
@@ -316,7 +315,7 @@ mod tests {
         assert_eq!(get2, Some(hex::encode(raw_txn2.clone())), "Transaction for nonce2 incorrect");
     }
 
-    async fn test_overwrite_existing_waiting_txn(mut conn: MultiplexedConnection) {
+    async fn test_overwrite_existing_waiting_txn(mut conn: ConnectionManager) {
         let chain_id = 9u64;
         let signer = Address::from_slice(&[0x7D; 20]);
         let nonce = 42u64;
@@ -346,7 +345,7 @@ mod tests {
         );
     }
 
-    async fn test_different_chains_independence(mut conn: MultiplexedConnection) {
+    async fn test_different_chains_independence(mut conn: ConnectionManager) {
         let chain_id1 = 10u64;
         let chain_id2 = 11u64;
         let signer = Address::from_slice(&[0x8E; 20]);
@@ -366,7 +365,7 @@ mod tests {
         assert_eq!(get2, Some(hex::encode(raw_txn2.clone())), "Transaction on chain 2 incorrect");
     }
 
-    async fn test_delete_nonexistent_key(mut conn: MultiplexedConnection) {
+    async fn test_delete_nonexistent_key(mut conn: ConnectionManager) {
         let chain_id = 12u64;
         let wallet_address = Address::from_slice(&[0x9F; 20]);
         let nonce = 999u64;

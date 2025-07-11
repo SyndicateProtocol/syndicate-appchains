@@ -1,5 +1,5 @@
 # ArbConfigManager
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/config/ArbConfigManager.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/config/ArbConfigManager.sol)
 
 **Inherits:**
 Ownable
@@ -30,7 +30,7 @@ mapping(uint256 chainId => address deployedProxyAddress) public deployedConfigs;
 
 
 ```solidity
-constructor(address _owner) Ownable(_owner);
+constructor(address owner_) Ownable(owner_);
 ```
 
 ### createArbChainConfig
@@ -45,15 +45,13 @@ function createArbChainConfig(
     uint256 sequencingChainId,
     address arbitrumBridgeAddress,
     address arbitrumInboxAddress,
-    bool arbitrumIgnoreDelayedMessages,
     uint256 settlementDelay,
     uint256 settlementStartBlock,
     address sequencingContractAddress,
     uint256 sequencingStartBlock,
     address initialAppchainOwner,
     string memory sequencingChainRpcUrl,
-    string memory appchainBlockExplorerUrl,
-    address[] memory allowedSettlementAddresses
+    string memory appchainBlockExplorerUrl
 ) external onlyOwner returns (address);
 ```
 **Parameters**
@@ -65,7 +63,6 @@ function createArbChainConfig(
 |`sequencingChainId`|`uint256`|The ID of the sequencing chain|
 |`arbitrumBridgeAddress`|`address`|Address of the Arbitrum bridge|
 |`arbitrumInboxAddress`|`address`|Address of the Arbitrum inbox|
-|`arbitrumIgnoreDelayedMessages`|`bool`|Whether to ignore delayed messages|
 |`settlementDelay`|`uint256`|Delay for settlement|
 |`settlementStartBlock`|`uint256`|Starting block for settlement|
 |`sequencingContractAddress`|`address`|Address of the sequencing contract|
@@ -73,7 +70,6 @@ function createArbChainConfig(
 |`initialAppchainOwner`|`address`|Initial appchain owner|
 |`sequencingChainRpcUrl`|`string`|Default RPC URL for the sequencing chain|
 |`appchainBlockExplorerUrl`|`string`|URL for the appchain block explorer|
-|`allowedSettlementAddresses`|`address[]`|Array of addresses allowed for settlement|
 
 **Returns**
 
@@ -88,7 +84,7 @@ function createArbChainConfig(
 
 
 ```solidity
-function getArbChainConfigAddress(uint256 chainId) public view returns (address);
+function getArbChainConfigAddress(uint256 chainId) external view returns (address);
 ```
 **Parameters**
 

@@ -1,6 +1,6 @@
 # Global build arguments
 ARG BUILD_PROFILE=release
-ARG FEATURES=""
+ARG FEATURES="rocksdb" 
 
 # Stage 1: Base image with Rust
 FROM rust:slim-bookworm AS builder
@@ -12,17 +12,50 @@ WORKDIR /app
 RUN --mount=type=cache,target=/var/cache/apt \
     --mount=type=cache,target=/var/lib/apt \
     apt-get update && \
-    apt-get install -y libclang-dev pkg-config build-essential libssl-dev && \
+    apt-get install -y libclang-dev pkg-config build-essential libssl-dev curl git && \
     rm -rf /var/lib/apt/lists/*
 
 # Stage 2: Build
 FROM builder AS build
 COPY . .
 
+# Install SP1 toolchain using official installer
+RUN curl -L https://sp1up.succinct.xyz | bash
+ENV PATH="/root/.sp1/bin:${PATH}"
+RUN sp1up
+
+# Verify SP1 installation (optional)
+RUN cargo prove --version && \
+    rustup toolchain list | grep succinct
+
+# Build SP1 ELF program
+RUN cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program && \
+    cargo prove build && \
+    cd /app
+
 # Perform cargo build with cached Cargo and target directories
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
-    cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --workspace
+    cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
 
+# --- Go build stage for synd-proposer ---
+FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro
+
+FROM golang:1.23.0 AS synd-proposer-build
+WORKDIR /
+COPY --from=nitro /workspace ./synd-enclave/nitro
+COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
+COPY ./synd-withdrawals/synd-enclave/go.mod ./synd-enclave/go.mod
+COPY ./synd-withdrawals/synd-enclave/go.sum ./synd-enclave/go.sum
+COPY ./synd-withdrawals/synd-proposer ./synd-proposer
+
+# Build the Go image
+WORKDIR /synd-proposer
+RUN CGO_ENABLED=1 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
+
+# Run tests for synd-proposer
+FROM synd-proposer-build AS synd-proposer-test
+WORKDIR /synd-proposer  
+RUN go test ./...
 
 # Stage 3: Optional Foundry install
 FROM debian:bookworm-slim AS foundry
@@ -55,8 +88,7 @@ EXPOSE 8545 8546
 LABEL service=synd-translator
 
 FROM runtime-base AS synd-proposer
-ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/synd-proposer /usr/local/bin/synd-proposer
+COPY --from=synd-proposer-build /go/bin/synd-proposer /usr/local/bin/synd-proposer
 ENTRYPOINT ["/usr/local/bin/synd-proposer"]
 LABEL service=synd-proposer
 
