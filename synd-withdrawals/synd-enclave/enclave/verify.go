@@ -362,6 +362,9 @@ func Verify(data wavmio.ValidationInput, processor interface {
 		}
 
 		header = block.Header()
+		if header.Number.Uint64()%1000 == 0 {
+			log.Debug("Verifying block", "block", header.Number.Uint64(), "currentBatch", wavm.GetInboxPosition(), "batchCount", batchCount)
+		}
 		bytes, err := rlp.EncodeToBytes(header)
 		if err != nil {
 			return nil, fmt.Errorf("Error RLP encoding header: %v", err)
