@@ -1,0 +1,43 @@
+name: Publish Nitro Node Builder
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "synd-withdrawals/synd-enclave/nitro"
+  workflow_dispatch:
+
+env:
+  GITHUB_REGISTRY: ghcr.io
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+jobs:
+  docker:
+    name: Build and Push Nitro Node Builder
+    runs-on: shared-large-01
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set lower-case repo name
+        run: echo "REPO_LOWER=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+      - name: Build and push Nitro Node Builder
+        run: |
+          cd synd-withdrawals/synd-enclave/nitro
+          docker buildx build --target node-builder --platform linux/amd64 -t ${{ env.GITHUB_REGISTRY }}/${REPO_LOWER}/node-builder:latest .
+          docker push ${{ env.GITHUB_REGISTRY }}/${REPO_LOWER}/node-builder:latest
