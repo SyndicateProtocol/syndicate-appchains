@@ -6982,6 +6982,7 @@ dependencies = [
  "serde_json",
  "shared",
  "tokio",
+ "tower 0.5.2",
  "tracing",
 ]
 

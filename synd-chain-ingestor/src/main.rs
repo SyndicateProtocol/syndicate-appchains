@@ -1,19 +1,26 @@
 //! The `synd-chain-ingestor` serves blocks from a chain to all appchains that use the chain.
 
 use clap::Parser;
-use jsonrpsee::server::{PingConfig, Server, ServerConfigBuilder};
+use jsonrpsee::server::{
+    middleware::http::ProxyGetRequestLayer, PingConfig, Server, ServerConfigBuilder,
+};
 use shared::{
-    service_start_utils::{ready_handler_http, start_http_server_with_aux_handlers, MetricsState},
+    service_start_utils::{start_http_server_with_metrics_only, MetricsState},
     tracing::setup_global_logging,
 };
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     time::Duration,
 };
-use synd_chain_ingestor::{config::Config, ingestor, metrics::ChainIngestorMetrics, server};
+use synd_chain_ingestor::{
+    config::Config,
+    ingestor,
+    metrics::ChainIngestorMetrics,
+    server::{create_module, sync_db, Context},
+};
 use tokio::{
     signal::unix::{signal, SignalKind},
     time::sleep,
@@ -31,36 +38,58 @@ async fn main() -> eyre::Result<()> {
     let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
 
     let is_ready = Arc::new(AtomicBool::new(false));
-    let ready_handler = ready_handler_http(is_ready.clone(), "chain ingestor is not ready".into());
+    tokio::spawn(start_http_server_with_metrics_only(metrics_state, cfg.metrics_port));
 
-    tokio::spawn(start_http_server_with_aux_handlers(
-        metrics_state,
-        cfg.port,
-        None,
-        Some(ready_handler),
-    ));
+    // Create context with None DB
+    let ctx = Arc::new(Mutex::new(Context { db: None, subs: Default::default() }));
 
-    let (module, ctx) = server::start(
+    // Create and start the module immediately
+    let module = create_module(ctx.clone(), cfg.ws_urls.clone(), is_ready.clone());
+
+    info!("starting synd-chain-ingestor server on {} (syncing mode)", cfg.port);
+    let jsonrpsee_cfg =
+        ServerConfigBuilder::new().ws_only().enable_ws_ping(PingConfig::default()).build();
+
+    let http_middleware = tower::builder::ServiceBuilder::new()
+        .layer(ProxyGetRequestLayer::new([("/health", "health"), ("/ready", "ready")])?);
+    let _handle = Server::builder()
+        .set_config(jsonrpsee_cfg)
+        .set_http_middleware(http_middleware)
+        .build(format!("0.0.0.0:{}", cfg.port))
+        .await?
+        .start(module);
+
+    // Sync the DB
+    let chain_id = provider.get_chain_id().await;
+    let db = sync_db(
         &provider,
-        cfg.ws_urls.clone(),
         &cfg.db_file,
         cfg.start_block,
+        chain_id,
         cfg.parallel_sync_requests,
         &metrics,
     )
     .await?;
 
+    // Update the context with the synced DB
+    {
+        #[allow(clippy::expect_used)]
+        let mut lock =
+            ctx.lock().map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?;
+        lock.db = Some(db);
+    }
+
     is_ready.store(true, Ordering::SeqCst);
     info!("Chain ingestor marked as ready");
 
-    info!("starting synd-chain-ingestor server on {}", cfg.port);
-    let jsonrpsee_cfg =
-        ServerConfigBuilder::new().ws_only().enable_ws_ping(PingConfig::default()).build();
-    let _handle = Server::builder()
-        .set_config(jsonrpsee_cfg)
-        .build(format!("0.0.0.0:{}", cfg.port))
-        .await?
-        .start(module);
+    // info!("starting synd-chain-ingestor server on {}", cfg.port);
+    // let jsonrpsee_cfg =
+    //     ServerConfigBuilder::new().ws_only().enable_ws_ping(PingConfig::default()).build();
+    // let _handle = Server::builder()
+    //     .set_config(jsonrpsee_cfg)
+    //     .build(format!("0.0.0.0:{}", cfg.port))
+    //     .await?
+    //     .start(module);
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");

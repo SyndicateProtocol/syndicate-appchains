@@ -408,6 +408,7 @@ impl TestComponents {
             db_file: temp.clone() + "/sequencing_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
+            metrics_port: PortManager::instance().next_port().await,
         };
         info!("seq_chain_ingestor_cfg: {:?}", seq_chain_ingestor_cfg);
         let sequencing_chain_ingestor = start_component(
@@ -423,6 +424,7 @@ impl TestComponents {
             db_file: temp + "/settlement_chain.db",
             start_block: 0,
             port: PortManager::instance().next_port().await,
+            metrics_port: PortManager::instance().next_port().await,
         };
         info!("set_chain_ingestor_cfg: {:?}", set_chain_ingestor_cfg);
 
