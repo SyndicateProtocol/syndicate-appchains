@@ -177,7 +177,7 @@ pub fn error_still_syncing() -> ErrorObjectOwned {
 }
 
 /// Creates a new `RpcModule` that handles JSON-RPC requests.
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::option_if_let_else)]
 pub fn create_module(
     ctx: Arc<Mutex<Context>>,
     ws_urls: Vec<String>,

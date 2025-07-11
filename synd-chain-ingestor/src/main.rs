@@ -43,12 +43,10 @@ async fn main() -> eyre::Result<()> {
     // Create context with None DB
     let ctx = Arc::new(Mutex::new(Context { db: None, subs: Default::default() }));
 
-    // Create and start the module immediately
+    // Create and start the JSON-RPC server immediately
+    info!("starting synd-chain-ingestor server on port {} (syncing)", cfg.port);
     let module = create_module(ctx.clone(), cfg.ws_urls.clone(), is_ready.clone());
-
-    info!("starting synd-chain-ingestor server on {} (syncing mode)", cfg.port);
     let jsonrpsee_cfg = ServerConfigBuilder::new().enable_ws_ping(PingConfig::default()).build();
-
     let http_middleware = tower::builder::ServiceBuilder::new()
         .layer(ProxyGetRequestLayer::new([("/health", "health"), ("/ready", "ready")])?);
     let _handle = Server::builder()
@@ -74,21 +72,11 @@ async fn main() -> eyre::Result<()> {
     {
         #[allow(clippy::expect_used)]
         let mut lock =
-            ctx.lock().map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?;
+            ctx.lock().map_err(|e| eyre::eyre!("Failed to acquire context lock: {}", e))?;
         lock.db = Some(db);
     }
-
     is_ready.store(true, Ordering::SeqCst);
-    info!("Chain ingestor marked as ready");
-
-    // info!("starting synd-chain-ingestor server on {}", cfg.port);
-    // let jsonrpsee_cfg =
-    //     ServerConfigBuilder::new().ws_only().enable_ws_ping(PingConfig::default()).build();
-    // let _handle = Server::builder()
-    //     .set_config(jsonrpsee_cfg)
-    //     .build(format!("0.0.0.0:{}", cfg.port))
-    //     .await?
-    //     .start(module);
+    info!("Chain ingestor is ready (sync complete)");
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
