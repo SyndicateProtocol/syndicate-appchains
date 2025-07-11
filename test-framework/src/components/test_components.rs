@@ -556,6 +556,7 @@ impl TestComponents {
                 sequencing_address: sequencing_contract_address,
                 sequencing_rpc_url: seq_rpc_ws_url.to_string(),
                 metrics_port: PortManager::instance().next_port().await,
+                wait_for_receipt: true,
             };
             let batch_sequencer_instance = start_component(
                 "synd-batch-sequencer",
