@@ -20,6 +20,11 @@ jobs:
   enclave-build:
     name: build enclave
     runs-on: shared-large-01
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
