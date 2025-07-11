@@ -206,7 +206,7 @@ pub async fn start_mchain(
 
     let docker = start_component(
         "synd-mchain",
-        metric_port,
+        port,
         args,
         vec!["--datadir".to_string(), temp.to_string()],
     )

@@ -83,7 +83,7 @@ pub struct BatcherConfig {
     pub sequencing_address: Address,
 
     /// Server port
-    #[arg(short = 'm', long, env = "PORT", default_value_t = 8082)]
+    #[arg(long, env = "PORT", default_value_t = 8082)]
     pub port: u16,
 
     /// whether to wait for the receipt of the batch submission

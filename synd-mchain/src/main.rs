@@ -42,7 +42,7 @@ async fn main() -> eyre::Result<()> {
     setup_global_logging()?;
 
     let cfg = Config::parse();
-    info!("loading rockdb db {}", cfg.datadir);
+    info!("loading rocksdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir)?;
 
     let mut metrics_state = MetricsState::default();

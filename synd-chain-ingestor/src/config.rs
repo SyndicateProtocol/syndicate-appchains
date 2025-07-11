@@ -22,6 +22,8 @@ pub struct Config {
     pub parallel_sync_requests: u64,
     #[arg(long, env = "PORT", default_value_t = 8545)]
     pub port: u16,
+    #[arg(long, env = "METRICS_PORT", default_value_t = 8546)]
+    pub metrics_port: u16,
     #[arg(
         long,
         env = "REQUEST_TIMEOUT",
