@@ -48,7 +48,7 @@ async fn main() -> eyre::Result<()> {
 
     info!("starting synd-chain-ingestor server on {} (syncing mode)", cfg.port);
     let jsonrpsee_cfg =
-        ServerConfigBuilder::new().ws_only().enable_ws_ping(PingConfig::default()).build();
+        ServerConfigBuilder::new().enable_ws_ping(PingConfig::default()).build();
 
     let http_middleware = tower::builder::ServiceBuilder::new()
         .layer(ProxyGetRequestLayer::new([("/health", "health"), ("/ready", "ready")])?);
