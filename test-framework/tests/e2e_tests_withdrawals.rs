@@ -167,7 +167,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 inbox_address: components.appchain_deployment.inbox,
                 sequencer_inbox_address: components.appchain_deployment.sequencer_inbox,
                 settlement_rpc_url: components.settlement_rpc_url.clone(),
-                metrics_port: PortManager::instance().next_port().await,
+                port: PortManager::instance().next_port().await,
                 appchain_rpc_url: components.appchain_ws_rpc_url.clone(),
                 sequencing_rpc_url: components.sequencing_rpc_url.clone(),
                 enclave_rpc_url,
@@ -176,10 +176,9 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 settlement_chain_id: 84532,
             };
 
-            // TODO(SEQ-971) - update Proposer to also not have metrics_port
             let mut proposer_instance = start_component(
                 "synd-proposer",
-                proposer_config.metrics_port,
+                proposer_config.port,
                 proposer_config.cli_args(),
                 Default::default(),
             )
