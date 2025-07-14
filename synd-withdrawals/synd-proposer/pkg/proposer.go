@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -26,15 +27,18 @@ import (
 )
 
 type Proposer struct {
-	Config           *Config
-	AppchainClient   *ethclient.Client
-	SequencingClient *ethclient.Client
-	EthereumClient   *ethclient.Client
-	SettlementClient *ethclient.Client
-	SettlementAuth   *bind.TransactOpts
-	EnclaveClient    *rpc.Client
-	DapReaders       []daprovider.Reader
-	TeeModule        *teemodule.Teemodule
+	Config              *Config
+	AppchainClient      *ethclient.Client
+	SequencingClient    *ethclient.Client
+	EthereumClient      *ethclient.Client
+	SettlementClient    *ethclient.Client
+	SettlementAuth      *bind.TransactOpts
+	EnclaveClient       *rpc.Client
+	DapReaders          []daprovider.Reader
+	TeeModule           *teemodule.Teemodule
+	PendingAssertion    *teemodule.PendingAssertion
+	PendingTeeInputHash common.Hash
+	PendingSignature    []byte
 }
 
 func NewProposer(cfg *Config) *Proposer {
@@ -151,23 +155,36 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			log.Println("Polling loop shutting down...")
 			return
 		case <-ticker.C:
-			// TODO (SEQ-1060): Optimize this to only prove if the last assertion is not the same as the current one. Use `Verify` to check if the last assertion is the same as the current one.
 			log.Println("Polling loop tick...")
-			appOutput, err := p.Prove(ctx, nil)
+			trustedInput, err := p.getTrustedInput(ctx)
 			if err != nil {
-				log.Printf("Failed to prove: %v", err)
+				log.Printf("Failed to get trusted input: %v", err)
+				continue
 			}
-			pendingAssertion := teemodule.PendingAssertion{
-				AppBlockHash: appOutput.AppchainBlockHash,
-				AppSendRoot:  appOutput.AppchainSendRoot,
-				SeqBlockHash: appOutput.SequencingBlockHash,
-				L1BatchAcc:   appOutput.L1BatchAcc,
+
+			if p.PendingTeeInputHash != trustedInput.Hash() {
+				log.Println("Proving new assertion...")
+				appOutput, err := p.Prove(ctx, trustedInput)
+				if err != nil {
+					log.Printf("Failed to prove: %v", err)
+				}
+
+				p.PendingAssertion = &teemodule.PendingAssertion{
+					AppBlockHash: appOutput.AppchainBlockHash,
+					AppSendRoot:  appOutput.AppchainSendRoot,
+					SeqBlockHash: appOutput.SequencingBlockHash,
+					L1BatchAcc:   appOutput.L1BatchAcc,
+				}
+				p.PendingTeeInputHash = trustedInput.Hash()
+				p.PendingSignature = appOutput.Signature
 			}
-			fmt.Println("Appchain output: ", appOutput)
-			p.TeeModule.SubmitAssertion(p.SettlementAuth, pendingAssertion, appOutput.Signature, crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
+
+			transaction, err := p.TeeModule.SubmitAssertion(p.SettlementAuth, *p.PendingAssertion, p.PendingSignature, crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
 			if err != nil {
 				log.Printf("Failed to submit assertion: %v", err)
+				continue
 			}
+			log.Println("Submitted assertion: ", transaction.Hash())
 		}
 	}
 }
@@ -186,7 +203,11 @@ func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, 
 		L1EndHash:            contractTrustedInput.L1EndHash,
 	}
 
-	fmt.Println("Trusted input: ", trustedInput)
+	jsonInput, err := json.Marshal(trustedInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal trusted input: %v", err)
+	}
+	log.Println("Trusted input: ", string(jsonInput))
 	return &trustedInput, nil
 }
 
@@ -216,26 +237,27 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 		var err error
 		trustedInput, err = p.getTrustedInput(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get trusted input: %v", err)
 		}
 	}
 
 	// get the batch count
 	endBatchCount, err := p.getBatchCount(ctx, trustedInput.L1EndHash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get batch count: %v", err)
 	}
 
 	// get the start block
 	header, err := p.SequencingClient.HeaderByHash(ctx, trustedInput.SeqStartBlockHash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get sequencing header: %v", err)
 	}
 
 	// get validation data
 	var valData ValidationData
+	log.Println("Getting validation data from start block: ", header.Number.Uint64(), " to end batch: ", endBatchCount-1)
 	if err := p.SequencingClient.Client().CallContext(ctx, &valData, "synd_validationData", header.Number.Uint64(), endBatchCount-1, false); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get validation data: %v", err)
 	}
 
 	preimages := make(map[arbutil.PreimageType]map[common.Hash][]byte)
@@ -245,44 +267,46 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 	}
 
 	// get batches
+	log.Println("Getting batches...")
 	var batches [][]byte
 	if valData.BatchEndIndex >= valData.BatchStartIndex {
 		ibridge, err := bridgegen.NewIBridgeCaller(p.Config.EnclaveConfig.SequencingBridgeAddress, p.EthereumClient)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create ibridge caller: %v", err)
 		}
 
 		seqInbox, err := ibridge.SequencerInbox(&bind.CallOpts{Context: ctx})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get sequencer inbox: %v", err)
 		}
 
 		batches, err = getBatches(ctx, p.EthereumClient, seqInbox, valData.BatchStartIndex, valData.BatchEndIndex, valData.BatchStartBlockNum, valData.BatchEndBlockNum)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get batches: %v", err)
 		}
 		if len(batches) == 0 {
-			return nil, errors.New("found 0 batches")
+			return nil, fmt.Errorf("found 0 batches")
 		}
 		// update preimages
 		for _, batch := range batches {
 			if err := getBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to get batch preimage data: %v", err)
 			}
 		}
 	}
 
+	log.Println("Getting proof...")
 	var proof *enclave.AccountResult
 	if !p.Config.IsL1Chain {
 		// get the end block header
 		if header, err = p.EthereumClient.HeaderByHash(ctx, trustedInput.L1EndHash); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get sequencing header: %v", err)
 		}
 
 		// get merkle proof
 		accSlot := common.BigToHash(new(big.Int).Add(enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE, big.NewInt(int64(endBatchCount))))
 		if err := p.EthereumClient.Client().CallContext(ctx, &proof, "eth_getProof", p.Config.EnclaveConfig.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get proof: %v", err)
 		}
 	}
 
@@ -292,6 +316,7 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 	}
 
 	// derive sequencing chain
+	log.Println("Verifying sequencing chain...")
 	var seqOutput enclave.VerifySequencingChainOutput
 	if err := p.handleEnclaveCall(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
 		TrustedInput:                    *trustedInput,
@@ -304,18 +329,18 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 		EndBatchAccumulatorMerkleProof:  proof,
 		L1EndBlockHeader:                header,
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to verify sequencing chain: %v", err)
 	}
 
 	// get appchain start block
 	if header, err = p.AppchainClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get appchain header: %v", err)
 	}
 
 	// get delayed messages
 	startAcc, msgs, isDummy, err := GetDelayedMessages(ctx, p.SettlementClient, p.Config.AppchainBridgeAddress, header.Nonce.Uint64(), trustedInput.SetDelayedMessageAcc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get delayed messages: %v", err)
 	}
 
 	// get the number of batches. ignore the delayed message if it is a dummy one
@@ -328,10 +353,11 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 	// get appchain preimage data
 	var appPreimages [][]byte
 	if err := p.AppchainClient.Client().CallContext(ctx, &appPreimages, "synd_preimageData", header.Number, numBatches, true); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get appchain preimage data: %v", err)
 	}
 
 	// derive appchain
+	log.Println("Verifying appchain...")
 	var appOutput enclave.VerifyAppchainOutput
 	if err := p.handleEnclaveCall(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
 		TrustedInput:                    *trustedInput,
@@ -343,7 +369,7 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 		PreimageData: map[arbutil.PreimageType][][]byte{
 			arbutil.Keccak256PreimageType: appPreimages},
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to verify appchain: %v", err)
 	}
 	return &appOutput, nil
 }
@@ -354,23 +380,20 @@ func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInpu
 		var err error
 		trustedInput, err = p.getTrustedInput(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get trusted input: %v", err)
 		}
 	}
 
 	// get the batch count
 	endBatchCount, err := p.getBatchCount(ctx, trustedInput.L1EndHash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get batch count: %v", err)
 	}
-
-	if endBatchCount == 0 {
-		return nil, errors.New("end batch count is 0")
-	}
+	log.Println("Getting batch metadata for batch: ", endBatchCount-1)
 
 	var metadata arbnode.BatchMetadata
 	if err := p.SequencingClient.Client().CallContext(ctx, &metadata, "synd_batchMetadata", endBatchCount-1); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get batch metadata: %v", err)
 	}
 
 	if metadata.MessageCount == 0 {
@@ -380,18 +403,18 @@ func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInpu
 	// get the end block
 	header, err := p.SequencingClient.HeaderByNumber(ctx, big.NewInt(int64(metadata.MessageCount-1)))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get sequencing header: %v", err)
 	}
 	sequencingBlockHash := header.Hash()
 
 	if header, err = p.AppchainClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get appchain header: %v", err)
 	}
 
 	// binary search to find the appchain end block
 	appEndBlock, err := FindBlock(ctx, p.AppchainClient, header.Number.Uint64(), uint64(metadata.MessageCount-1))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to find appchain end block: %v", err)
 	}
 
 	return &enclave.VerifyAppchainOutput{
