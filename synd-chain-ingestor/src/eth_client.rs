@@ -164,8 +164,11 @@ impl EthClient {
         match timeout(self.log_timeout, self.client.get_logs(filter)).await {
             Err(_) => {
                 warn!("eth_getLogs request timed out. Attempting binary search: {:?}", filter);
-                let err = TransportErrorKind::Custom("request timed out".into()).into();
-                self.handle_binary_search(filter, err).await
+                self.handle_binary_search(
+                    filter,
+                    TransportErrorKind::Custom("request timed out".into()).into(),
+                )
+                .await
             }
             Ok(Ok(x)) => Ok(x),
             Ok(Err(RpcError::ErrorResp(err))) => {
