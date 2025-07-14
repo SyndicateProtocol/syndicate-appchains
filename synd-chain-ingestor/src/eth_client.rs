@@ -163,44 +163,49 @@ impl EthClient {
     ) -> Result<Vec<alloy::rpc::types::Log>, RpcError<TransportErrorKind>> {
         match timeout(self.log_timeout, self.client.get_logs(filter)).await {
             Err(_) => {
-                error!("eth_getLogs request timed out: {:?}", filter);
-                Err(TransportErrorKind::Custom("request timed out".into()).into())
+                warn!("eth_getLogs request timed out. Attempting binary search: {:?}", filter);
+                let err = TransportErrorKind::Custom("request timed out".into()).into();
+                self.handle_binary_search(filter, err).await
             }
             Ok(Ok(x)) => Ok(x),
             Ok(Err(RpcError::ErrorResp(err))) => {
-                // Only attempt binary search if we have a valid block range
-                let (from_block, to_block) = match filter.block_option {
-                    FilterBlockOption::Range {
-                        from_block: Some(BlockNumberOrTag::Number(from)),
-                        to_block: Some(BlockNumberOrTag::Number(to)),
-                    } => (from, to),
-                    _ => (0, 0),
-                };
-
-                // Error if the range is too small
-                if to_block <= from_block {
-                    error!("failed to get logs ({:?}): {}", filter, err);
-                    return Err(RpcError::ErrorResp(err));
-                }
-
-                // Split range in half and recursively fetch logs
-                info!(
-                    "splitting eth_getLogs range ({} to {}) due to error: {}",
-                    from_block, to_block, err
-                );
-                let mid = (from_block + to_block) / 2;
-                let lower_range =
-                    Box::pin(self.get_logs(&filter.clone().from_block(from_block).to_block(mid)))
-                        .await?;
-                let upper_range =
-                    Box::pin(self.get_logs(&filter.clone().from_block(mid + 1).to_block(to_block)))
-                        .await?;
-                Ok([lower_range, upper_range].concat())
+                warn!("eth_getLogs request failed. Attempting binary search: {:?}", filter);
+                self.handle_binary_search(filter, RpcError::ErrorResp(err)).await
             }
             Ok(Err(err)) => {
                 handle_rpc_error("failed to get logs", &err);
                 Err(err)
             }
         }
+    }
+
+    async fn handle_binary_search(
+        &self,
+        filter: &Filter,
+        err: RpcError<TransportErrorKind>,
+    ) -> Result<Vec<alloy::rpc::types::Log>, RpcError<TransportErrorKind>> {
+        // Only attempt binary search if we have a valid block range
+        let (from_block, to_block) = match filter.block_option {
+            FilterBlockOption::Range {
+                from_block: Some(BlockNumberOrTag::Number(from)),
+                to_block: Some(BlockNumberOrTag::Number(to)),
+            } => (from, to),
+            _ => (0, 0),
+        };
+
+        // Error if the range is too small
+        if to_block <= from_block {
+            error!("failed to get logs ({:?})", filter);
+            return Err(err);
+        }
+
+        // Split range in half and recursively fetch logs
+        info!("splitting eth_getLogs range ({} to {})", from_block, to_block);
+        let mid = (from_block + to_block) / 2;
+        let lower_range =
+            Box::pin(self.get_logs(&filter.clone().from_block(from_block).to_block(mid))).await?;
+        let upper_range =
+            Box::pin(self.get_logs(&filter.clone().from_block(mid + 1).to_block(to_block))).await?;
+        Ok([lower_range, upper_range].concat())
     }
 }
