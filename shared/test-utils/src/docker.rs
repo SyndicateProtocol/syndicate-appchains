@@ -204,13 +204,9 @@ pub async fn start_mchain(
         finality_delay.to_string(),
     ];
 
-    let docker = start_component(
-        "synd-mchain",
-        metric_port,
-        args,
-        vec!["--datadir".to_string(), temp.to_string()],
-    )
-    .await?;
+    let docker =
+        start_component("synd-mchain", port, args, vec!["--datadir".to_string(), temp.to_string()])
+            .await?;
     let url = format!("ws://localhost:{port}");
     let mchain = MProvider::new(&url).await?;
     Ok((url, docker, mchain))

@@ -2,20 +2,16 @@
 
 use clap::Parser;
 #[cfg(feature = "rocksdb")]
-use jsonrpsee::server::{RandomStringIdProvider, Server};
-#[cfg(feature = "rocksdb")]
-use rocksdb::DB;
-#[cfg(feature = "rocksdb")]
-use shared::{
-    service_start_utils::{start_metrics_and_health, MetricsState},
-    tracing::setup_global_logging,
+use {
+    jsonrpsee::server::middleware::http::ProxyGetRequestLayer,
+    jsonrpsee::server::{RandomStringIdProvider, Server},
+    rocksdb::DB,
+    shared::service_start_utils::start_http_server_with_metrics_only,
+    shared::{service_start_utils::MetricsState, tracing::setup_global_logging},
+    synd_mchain::{metrics::MchainMetrics, server::start_mchain},
+    tokio::signal::unix::{signal, SignalKind},
+    tracing::info,
 };
-#[cfg(feature = "rocksdb")]
-use synd_mchain::{metrics::MchainMetrics, server::start_mchain};
-#[cfg(feature = "rocksdb")]
-use tokio::signal::unix::{signal, SignalKind};
-#[cfg(feature = "rocksdb")]
-use tracing::info;
 
 /// CLI args for the `synd-mchain` executable
 #[derive(Parser, Debug, Clone)]
@@ -36,41 +32,39 @@ struct Config {
 }
 
 #[tokio::main]
-#[allow(clippy::redundant_pub_crate)]
 #[cfg(feature = "rocksdb")]
 async fn main() -> eyre::Result<()> {
-    // Initialize logging
-
     use jsonrpsee::{
         server::{PingConfig, ServerConfigBuilder},
         ws_client::RpcServiceBuilder,
     };
-    #[allow(clippy::unwrap_used)]
-    setup_global_logging().unwrap();
+    // Initialize logging
+    setup_global_logging()?;
 
     let cfg = Config::parse();
-    info!("loading rockdb db {}", cfg.datadir);
+    info!("loading rocksdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir)?;
 
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
 
     info!("starting synd-mchain server on port {}", cfg.port);
+    tokio::spawn(start_http_server_with_metrics_only(metrics_state, cfg.metrics_port));
     let module = start_mchain(cfg.appchain_chain_id, cfg.finality_delay, db, metrics);
-
     let jsonrpsee_cfg = ServerConfigBuilder::new()
-        .ws_only()
         .enable_ws_ping(PingConfig::default())
         .set_id_provider(RandomStringIdProvider::new(64))
         .build();
 
+    let http_middleware = tower::builder::ServiceBuilder::new()
+        .layer(ProxyGetRequestLayer::new([("/health", "health"), ("/ready", "ready")])?);
     let handle = Server::builder()
         .set_config(jsonrpsee_cfg)
+        .set_http_middleware(http_middleware)
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
         .start(module);
-    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port, None));
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
@@ -84,7 +78,7 @@ async fn main() -> eyre::Result<()> {
         _ = sigterm.recv() => {
             println!("Received SIGTERM, initiating shutdown...");
         }
-    };
+    }
 
     _ = handle.stop();
     handle.stopped().await;

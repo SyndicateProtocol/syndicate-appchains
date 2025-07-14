@@ -21,14 +21,21 @@ pub async fn run(
     metrics: &ChainIngestorMetrics,
 ) -> eyre::Result<()> {
     let mut sub = provider.subscribe_blocks().await;
-    let mut block_count =
-        ctx.lock().map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?.db.next_block();
+    let mut block_count = ctx
+        .lock()
+        .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
+        .db
+        .as_ref()
+        .ok_or_else(|| eyre::eyre!("Database not initialized"))?
+        .next_block();
 
     loop {
         let next_block = ctx
             .lock()
             .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
             .db
+            .as_ref()
+            .ok_or_else(|| eyre::eyre!("Database not initialized"))?
             .next_block();
 
         // fetch next block
@@ -52,6 +59,8 @@ pub async fn run(
             .lock()
             .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
             .db
+            .as_mut()
+            .ok_or_else(|| eyre::eyre!("Database not initialized"))?
             .update_block(&block, metrics) !=
             BlockUpdateResult::Added
         {
@@ -76,6 +85,8 @@ pub async fn run(
             .lock()
             .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
             .db
+            .as_mut()
+            .ok_or_else(|| eyre::eyre!("Database not initialized"))?
             .update_block(&block, metrics) ==
             BlockUpdateResult::Reorged
         {

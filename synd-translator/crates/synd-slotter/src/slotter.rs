@@ -1,4 +1,5 @@
 //! Slotter module for `synd-translator`
+
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::{FixedBytes, B256};
 use common::types::{Chain, SequencingBlock, SettlementBlock};
