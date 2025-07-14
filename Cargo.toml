@@ -20,7 +20,7 @@ members = [
   "test-framework",
 ]
 
-# Default members are the services that are built by default when running `cargo build` (leveraged by docker build to build less crates)
+# Default members are the services that are built by default when running `cargo build` (leveraged by docker build to build fewer crates)
 default-members = [
   "synd-batch-sequencer",
   "synd-chain-ingestor",

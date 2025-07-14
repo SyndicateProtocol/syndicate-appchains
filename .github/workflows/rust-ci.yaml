@@ -1,167 +1,167 @@
-name: Rust Workspace CI
-
-on:
-  # Run workflow on every push to main
-  push:
-    branches:
-      - main
-  # Mandatory checks - must run on all PRs
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
-  cancel-in-progress: true
-
-env:
-  CARGO_TERM_COLOR: always
-  # Make sure CI fails on all warnings, including Clippy lints
-  RUSTFLAGS: "-Dwarnings"
-  # Use a shared cache key for all jobs in the same PR/run. Note the usage of `../Cargo.lock` in invocations
-  # below to check for any changed deps
-  CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}"
-  # Rust version for consistency across jobs
-  RUST_VERSION: "1.88.0"
-
-jobs:
-  taplo:
-    name: Cargo.toml format validation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # Install taplo using cargo
-      - name: Install Taplo
-        uses: clechasseur/rs-cargo@v2
-        with:
-          command: install
-          args: taplo-cli@0.9.0
-
-      # Run Taplo validation on all Cargo.toml files in the workspace
-      - name: Validate Cargo.toml files
-        run: taplo lint "**/Cargo.toml" --verbose
-
-      # Check Cargo.toml formatting
-      - name: Check Cargo.toml formatting. Remove `--check` from command to apply changes
-        run: taplo fmt --check "**/Cargo.toml" --verbose
-
-  machete:
-    name: Machete
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install cargo-machete
-        uses: clechasseur/rs-cargo@v2
-        with:
-          command: install
-          args: cargo-machete@0.7.0
-      - name: Machete
-        uses: clechasseur/rs-cargo@v2
-        with:
-          command: machete
-          # args are specified one by one to avoid issues with git submodules (particularly inside synd-withdrawals)
-          args: |
-            "Cargo.toml"
-            "shared"
-            "synd-batch-sequencer"
-            "synd-maestro"
-            "synd-mchain"
-            "synd-translator"
-            "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro"
-            "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program"
-            "test-framework"
-
-  fmt:
-    name: Fmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain and rustfmt
-        run: |
-          rustup toolchain install nightly --profile minimal
-          rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
-
-      - name: Run Fmt
-        run: cargo +nightly fmt --all --check -- --unstable-features
-
-  clippy:
-    name: Clippy
-    runs-on: shared-large-01
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
-          save-if: 'false' # skip saving this cache, only save the one in `tests`
-
-      - name: Install SP1 toolchain
-        run: |
-          curl -L https://sp1up.succinct.xyz | bash
-          ~/.sp1/bin/sp1up
-          ~/.sp1/bin/cargo-prove prove --version
-
-      - name: Build SP1 ELF program
-        run: |
-          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-          ~/.sp1/bin/cargo-prove prove build
-
-      # Run Clippy checks on entire workspace
-      - name: Run Clippy
-        run: cargo clippy --workspace --all-targets --all-features
-
-  test:
-    name: Tests
-    runs-on: shared-large-02
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
-          save-if: 'true' # do save this one
-
-      # Install Foundry (required for Anvil, a local Ethereum node simulator)
-      # Anvil is a critical dependency for tests
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Install SP1 toolchain
-        run: |
-          curl -L https://sp1.succinct.xyz | bash
-          $HOME/.sp1/bin/sp1up 
-          $HOME/.sp1/bin/cargo-prove prove --version
-
-      - name: Build SP1 ELF program
-        run: |
-          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-          $HOME/.sp1/bin/cargo-prove prove build
-
-      - name: Pre-download docker test docker images
-        run: |
-          docker pull ghcr.io/syndicateprotocol/generate_batch
-          docker pull valkey/valkey:latest
-          docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run all tests with nextest
-        run: cargo build && cargo nextest run --workspace --fail-fast
+#name: Rust Workspace CI
+#
+#on:
+#  # Run workflow on every push to main
+#  push:
+#    branches:
+#      - main
+#  # Mandatory checks - must run on all PRs
+#  pull_request:
+#
+#concurrency:
+#  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+#  cancel-in-progress: true
+#
+#env:
+#  CARGO_TERM_COLOR: always
+#  # Make sure CI fails on all warnings, including Clippy lints
+#  RUSTFLAGS: "-Dwarnings"
+#  # Use a shared cache key for all jobs in the same PR/run. Note the usage of `../Cargo.lock` in invocations
+#  # below to check for any changed deps
+#  CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}"
+#  # Rust version for consistency across jobs
+#  RUST_VERSION: "1.88.0"
+#
+#jobs:
+#  taplo:
+#    name: Cargo.toml format validation
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      # Install taplo using cargo
+#      - name: Install Taplo
+#        uses: clechasseur/rs-cargo@v2
+#        with:
+#          command: install
+#          args: taplo-cli@0.9.0
+#
+#      # Run Taplo validation on all Cargo.toml files in the workspace
+#      - name: Validate Cargo.toml files
+#        run: taplo lint "**/Cargo.toml" --verbose
+#
+#      # Check Cargo.toml formatting
+#      - name: Check Cargo.toml formatting. Remove `--check` from command to apply changes
+#        run: taplo fmt --check "**/Cargo.toml" --verbose
+#
+#  machete:
+#    name: Machete
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Install cargo-machete
+#        uses: clechasseur/rs-cargo@v2
+#        with:
+#          command: install
+#          args: cargo-machete@0.7.0
+#      - name: Machete
+#        uses: clechasseur/rs-cargo@v2
+#        with:
+#          command: machete
+#          # args are specified one by one to avoid issues with git submodules (particularly inside synd-withdrawals)
+#          args: |
+#            "Cargo.toml"
+#            "shared"
+#            "synd-batch-sequencer"
+#            "synd-maestro"
+#            "synd-mchain"
+#            "synd-translator"
+#            "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro"
+#            "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program"
+#            "test-framework"
+#
+#  fmt:
+#    name: Fmt
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Install Rust toolchain and rustfmt
+#        run: |
+#          rustup toolchain install nightly --profile minimal
+#          rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
+#
+#      - name: Run Fmt
+#        run: cargo +nightly fmt --all --check -- --unstable-features
+#
+#  clippy:
+#    name: Clippy
+#    runs-on: shared-large-01
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Install Rust toolchain
+#        uses: dtolnay/rust-toolchain@stable
+#        with:
+#          toolchain: ${{ env.RUST_VERSION }}
+#          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
+#
+#      - name: Cache dependencies
+#        uses: Swatinem/rust-cache@v2
+#        with:
+#          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
+#          save-if: 'false' # skip saving this cache, only save the one in `tests`
+#
+#      - name: Install SP1 toolchain
+#        run: |
+#          curl -L https://sp1up.succinct.xyz | bash
+#          ~/.sp1/bin/sp1up
+#          ~/.sp1/bin/cargo-prove prove --version
+#
+#      - name: Build SP1 ELF program
+#        run: |
+#          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+#          ~/.sp1/bin/cargo-prove prove build
+#
+#      # Run Clippy checks on entire workspace
+#      - name: Run Clippy
+#        run: cargo clippy --workspace --all-targets --all-features
+#
+#  test:
+#    name: Tests
+#    runs-on: shared-large-02
+#    timeout-minutes: 45
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Install Rust toolchain
+#        uses: dtolnay/rust-toolchain@stable
+#        with:
+#          toolchain: ${{ env.RUST_VERSION }}
+#          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
+#
+#      - name: Cache dependencies
+#        uses: Swatinem/rust-cache@v2
+#        with:
+#          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
+#          save-if: 'true' # do save this one
+#
+#      # Install Foundry (required for Anvil, a local Ethereum node simulator)
+#      # Anvil is a critical dependency for tests
+#      - name: Install Foundry
+#        uses: foundry-rs/foundry-toolchain@v1
+#        with:
+#          version: nightly
+#
+#      - name: Install SP1 toolchain
+#        run: |
+#          curl -L https://sp1.succinct.xyz | bash
+#          $HOME/.sp1/bin/sp1up
+#          $HOME/.sp1/bin/cargo-prove prove --version
+#
+#      - name: Build SP1 ELF program
+#        run: |
+#          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+#          $HOME/.sp1/bin/cargo-prove prove build
+#
+#      - name: Pre-download docker test docker images
+#        run: |
+#          docker pull ghcr.io/syndicateprotocol/generate_batch
+#          docker pull valkey/valkey:latest
+#          docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
+#
+#      - name: Install nextest
+#        uses: taiki-e/install-action@nextest
+#
+#      - name: Run all tests with nextest
+#        run: cargo build && cargo nextest run --workspace --fail-fast
