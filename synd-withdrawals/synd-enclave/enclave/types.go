@@ -159,6 +159,7 @@ func (output *VerifyAppchainOutput) sign(input *TrustedInput, priv *ecdsa.Privat
 	// We need to add 27 to the v value to get the correct signature
 	// OpenZeppelin's ECDSA.recover expects the v-byte of a 65-byte signature to be 27 or 28,
 	// but Go-Ethereum's crypto.Sign spits out 0 or 1 for that final byte.
+	// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/bc8f775df2132ea5f8f7d6db9c456f46adaa957f/contracts/utils/cryptography/ECDSA.sol#L174-L175
 	if len(output.Signature) != 65 {
 		return fmt.Errorf("signature must be 65 bytes")
 	}
