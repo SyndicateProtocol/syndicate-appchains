@@ -11,7 +11,7 @@ pub(super) struct TranslatorConfig {
     pub(crate) mchain_ws_url: String,
     pub(crate) sequencing_ws_url: Option<String>,
     pub(crate) settlement_ws_url: String,
-    pub(crate) metrics_port: u16,
+    pub(crate) port: u16,
     pub(crate) sequencing_start_block: Option<u64>,
     pub(crate) settlement_start_block: Option<u64>,
     pub(crate) settlement_delay: Option<u64>,
@@ -24,8 +24,8 @@ impl TranslatorConfig {
             self.mchain_ws_url.to_string(),
             "--settlement-ws-url".to_string(),
             self.settlement_ws_url.to_string(),
-            "--metrics-port".to_string(),
-            self.metrics_port.to_string(),
+            "--port".to_string(),
+            self.port.to_string(),
         ];
 
         if let Some(url) = &self.sequencing_ws_url {

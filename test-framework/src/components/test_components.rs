@@ -410,9 +410,10 @@ impl TestComponents {
             port: PortManager::instance().next_port().await,
             metrics_port: PortManager::instance().next_port().await,
         };
+        info!("seq_chain_ingestor_cfg: {:?}", seq_chain_ingestor_cfg);
         let sequencing_chain_ingestor = start_component(
             "synd-chain-ingestor",
-            seq_chain_ingestor_cfg.metrics_port,
+            seq_chain_ingestor_cfg.port,
             seq_chain_ingestor_cfg.cli_args(),
             Default::default(),
         )
@@ -425,10 +426,11 @@ impl TestComponents {
             port: PortManager::instance().next_port().await,
             metrics_port: PortManager::instance().next_port().await,
         };
+        info!("set_chain_ingestor_cfg: {:?}", set_chain_ingestor_cfg);
 
         let settlement_chain_ingestor = start_component(
             "synd-chain-ingestor",
-            set_chain_ingestor_cfg.metrics_port,
+            set_chain_ingestor_cfg.port,
             set_chain_ingestor_cfg.cli_args(),
             Default::default(),
         )
@@ -443,7 +445,7 @@ impl TestComponents {
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_ws_url: mchain_rpc_url.clone(),
-            metrics_port: PortManager::instance().next_port().await,
+            port: PortManager::instance().next_port().await,
             // Needs to be provided as it needs to be the ingestor's URL
             sequencing_ws_url: Some(sequencing_rpc_url.clone()),
             // NOTE: do not fill the values that are meant to be filled by the config manager
@@ -453,7 +455,7 @@ impl TestComponents {
 
         let translator = start_component(
             "synd-translator",
-            translator_config.metrics_port,
+            translator_config.port,
             translator_config.cli_args(),
             vec![],
         )
@@ -555,12 +557,12 @@ impl TestComponents {
                 private_key: PRIVATE_KEY.to_string(),
                 sequencing_address: sequencing_contract_address,
                 sequencing_rpc_url: seq_rpc_ws_url.to_string(),
-                metrics_port: PortManager::instance().next_port().await,
+                port: PortManager::instance().next_port().await,
                 wait_for_receipt: true,
             };
             let batch_sequencer_instance = start_component(
                 "synd-batch-sequencer",
-                batch_sequencer_config.metrics_port,
+                batch_sequencer_config.port,
                 batch_sequencer_config.cli_args(),
                 Default::default(),
             )

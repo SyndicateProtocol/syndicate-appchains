@@ -84,7 +84,7 @@ mod tests {
             server::run(config, metrics).await.expect("Failed to start server");
         let base_url = format!("http://{addr}");
 
-        // Wait for server to be ready by checking health endpoint
+        // Wait for the server to be ready by checking health endpoint
         let client = Client::new();
         wait_until!(
             client
