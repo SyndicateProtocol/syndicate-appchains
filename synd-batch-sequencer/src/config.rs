@@ -82,9 +82,9 @@ pub struct BatcherConfig {
     #[arg(short = 's', long, env = "SEQUENCING_ADDRESS", value_parser = parse_address)]
     pub sequencing_address: Address,
 
-    /// Metrics port to listen on
-    #[arg(short = 'm', long, env = "METRICS_PORT", default_value_t = 8082)]
-    pub metrics_port: u16,
+    /// Server port
+    #[arg(long, env = "PORT", default_value_t = 8082)]
+    pub port: u16,
 
     /// whether to wait for the receipt of the batch submission
     #[arg(long, env = "WAIT_FOR_RECEIPT", default_value_t = false)]
@@ -129,7 +129,7 @@ impl Default for BatcherConfig {
             rpc_compute_units_per_second: 1000,
             rpc_compute_units_avg_request_cost: 17,
             sequencing_address: Address::ZERO,
-            metrics_port: 8082,
+            port: 8082,
             wait_for_receipt: false,
         }
     }

@@ -22,16 +22,16 @@ impl TranslatorMetrics {
 mod tests {
     use axum::http::StatusCode;
     use reqwest::Client;
-    use shared::service_start_utils::{start_metrics_and_health, MetricsState};
+    use shared::service_start_utils::{start_http_server_with_aux_handlers, MetricsState};
     use std::time::Duration;
     use tokio::time::sleep;
 
     #[tokio::test]
-    async fn test_start_metrics() {
+    async fn test_start_server_with_metrics() {
         let metrics_state = MetricsState::default();
         let port = 9001;
 
-        let handle = start_metrics_and_health(metrics_state, port, None).await;
+        let handle = start_http_server_with_aux_handlers(metrics_state, port, None, None).await;
 
         sleep(Duration::from_secs(1)).await;
         let client = Client::new();

@@ -1,7 +1,7 @@
 //! Configuration module for the chain ingestor service
 
 use crate::eth_client::EthClient;
-use clap::{command, Parser};
+use clap::Parser;
 use humantime::parse_duration;
 use std::time::Duration;
 

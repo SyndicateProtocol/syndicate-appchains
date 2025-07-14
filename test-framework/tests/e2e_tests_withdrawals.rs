@@ -176,6 +176,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 settlement_chain_id: 84532,
             };
 
+            // TODO(SEQ-971) - update Proposer to also not have metrics_port
             let mut proposer_instance = start_component(
                 "synd-proposer",
                 proposer_config.metrics_port,

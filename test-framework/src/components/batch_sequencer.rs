@@ -6,7 +6,7 @@ pub(super) struct BatchSequencerConfig {
     pub(crate) private_key: String,
     pub(crate) sequencing_address: Address,
     pub(crate) sequencing_rpc_url: String,
-    pub(crate) metrics_port: u16,
+    pub(crate) port: u16,
     pub(crate) wait_for_receipt: bool,
 }
 
@@ -23,8 +23,8 @@ impl BatchSequencerConfig {
             self.sequencing_address.to_string(),
             "--sequencing-rpc-url".to_string(),
             self.sequencing_rpc_url.to_string(),
-            "--metrics-port".to_string(),
-            self.metrics_port.to_string(),
+            "--port".to_string(),
+            self.port.to_string(),
         ];
 
         if self.wait_for_receipt {
