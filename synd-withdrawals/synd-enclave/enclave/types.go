@@ -51,7 +51,7 @@ type TrustedInput struct {
 	L1EndHash            common.Hash
 }
 
-func (input *TrustedInput) hash() common.Hash {
+func (input *TrustedInput) Hash() common.Hash {
 	return crypto.Keccak256Hash(input.ConfigHash[:], input.AppStartBlockHash[:], input.SeqStartBlockHash[:], input.SetDelayedMessageAcc[:], input.L1StartBatchAcc[:], input.L1EndHash[:])
 }
 
@@ -118,7 +118,7 @@ func (output *VerifySequencingChainOutput) hash(input *TrustedInput) []byte {
 		data = append(data, buffer[:]...)
 		data = append(data, batch.Data...)
 	}
-	teeHash := input.hash()
+	teeHash := input.Hash()
 	var startBlock [8]byte
 	binary.BigEndian.PutUint64(startBlock[:], output.SequencingBlockNumber)
 	return crypto.Keccak256(teeHash[:], output.L1BatchAcc[:], output.SequencingBlockHash[:], startBlock[:], data)
@@ -150,17 +150,30 @@ type VerifyAppchainOutput struct {
 }
 
 func (output *VerifyAppchainOutput) hash(input *TrustedInput) []byte {
-	teeHash := input.hash()
+	teeHash := input.Hash()
 	return crypto.Keccak256(teeHash[:], crypto.Keccak256(output.AppchainBlockHash[:], output.AppchainSendRoot[:], output.SequencingBlockHash[:], output.L1BatchAcc[:]))
 }
 
 func (output *VerifyAppchainOutput) sign(input *TrustedInput, priv *ecdsa.PrivateKey) (err error) {
 	output.Signature, err = crypto.Sign(output.hash(input), priv)
+	// We need to add 27 to the v value to get the correct signature
+	// OpenZeppelin's ECDSA.recover expects the v-byte of a 65-byte signature to be 27 or 28,
+	// but Go-Ethereum's crypto.Sign spits out 0 or 1 for that final byte.
+	if len(output.Signature) != 65 {
+		return fmt.Errorf("signature must be 65 bytes")
+	}
+	output.Signature[64] += 27
 	return
 }
 
 func (output *VerifyAppchainOutput) validate(input *TrustedInput, key *ecdsa.PublicKey) error {
-	pubkey, err := crypto.SigToPub(output.hash(input), output.Signature)
+	if len(output.Signature) != 65 {
+		return fmt.Errorf("signature must be 65 bytes")
+	}
+	outputSignatureCopy := make([]byte, len(output.Signature))
+	copy(outputSignatureCopy, output.Signature)
+	outputSignatureCopy[64] -= 27
+	pubkey, err := crypto.SigToPub(output.hash(input), outputSignatureCopy)
 	if err != nil {
 		return err
 	}

@@ -28,10 +28,15 @@ func main() {
 	enclaveUrl := flag.String("enclave-url", "http://localhost:1234", "enclave rpc url")
 	appUrl := flag.String("app-url", "http://localhost:8546", "appchain rpc url")
 
-	// config flags - optional. addrs
+	// config flags - for risa testnet
 	seqContractFlag := flag.String("seq-contract", "0x7f389b0827d38D047c98fAbBfbf004a966dB8Dc1", "sequencing contract address for appchain")
 	seqBridgeFlag := flag.String("seq-bridge", "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA", "sequencing chain bridge contract address")
 	appBridgeFlag := flag.String("app-bridge", "0x509e8942e6C1626dA3d45060aB39B86e8F246E98", "appchain bridge address")
+
+	// config flags - for risa devnet
+	// seqContractFlag := flag.String("seq-contract", "0xb89D1d2E9bc9A14855e6C8509dd5435422CcDd8f", "sequencing contract address for appchain")
+	// seqBridgeFlag := flag.String("seq-bridge", "0x765E6EC7f3A8c8A2712EA230754E5968E45E124b", "sequencing chain bridge contract address")
+	// appBridgeFlag := flag.String("app-bridge", "0xC5432874Fe53da9185a34eCdf48A3a2a2A8Bd241", "appchain bridge address")
 
 	// config flags - optional. settlement
 	setMsgs := flag.Uint64("set-msg-count", 0, "settlement delayed message count")
@@ -135,11 +140,11 @@ func main() {
 	fmt.Println("Trusted input: ", string(trustedInputJson))
 	fmt.Println("ready in", time.Since(now))
 	now = time.Now()
-	appOutput, err := proposer.Prove(ctx, trustedInput)
+	proveOutput, err := proposer.Prove(ctx, trustedInput)
 	if err != nil {
 		panic(err)
 	}
-	out, err := json.Marshal(appOutput)
+	out, err := json.Marshal(proveOutput)
 	if err != nil {
 		panic(err)
 	}
@@ -156,4 +161,19 @@ func main() {
 	}
 	println("Verify output: ", string(out))
 	fmt.Println("verify took", time.Since(now))
+
+	if verifyOutput.AppchainBlockHash != proveOutput.AppchainBlockHash {
+		panic("appchain block hash mismatch")
+	}
+	if verifyOutput.AppchainSendRoot != proveOutput.AppchainSendRoot {
+		panic("appchain send root mismatch")
+	}
+	if verifyOutput.SequencingBlockHash != proveOutput.SequencingBlockHash {
+		panic("sequencing block hash mismatch")
+	}
+	if verifyOutput.L1BatchAcc != proveOutput.L1BatchAcc {
+		panic("l1 batch acc mismatch")
+	}
+
+	println("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅ All good! 🎉")
 }

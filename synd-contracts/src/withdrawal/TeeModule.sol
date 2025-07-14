@@ -246,19 +246,4 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
         }
         revert("assertion not found");
     }
-
-    /*
-    // These functions are disabled currently.
-
-    function setChallengeWindowDuration(uint64 duration) external onlyOwner {
-        require(pendingAssertions.length == 0, "cannot update challenge window while assertion is pending");
-        challengeWindowDuration = duration;
-    }
-
-    function setConfigHash(bytes32 hash) external onlyOwner {
-        require(pendingAssertions.length == 0, "cannot update config hash while assertions are pending");
-        teeTrustedInput.configHash = hash;
-        emit TeeConfigHash(hash);
-    }
-    */
 }
