@@ -309,17 +309,6 @@ impl TestComponents {
                     Duration::from_secs(10)
                 );
 
-                // deploy the rollup contract for the appchain on the settlement chain
-                let _ = Rollup::deploy_builder(
-                    &set_chain_info.provider,
-                    U256::from(options.appchain_chain_id),
-                    "null".to_string(),
-                    test_account1().address,
-                )
-                .nonce(0)
-                .send()
-                .await?;
-
                 settlement_deployment = Some(set_deployment);
                 set_chain_info
             }
@@ -473,6 +462,7 @@ impl TestComponents {
             parent_chain_id: MCHAIN_ID,
             sequencer_mode: NitroSequencerMode::None,
             chain_name: "appchain".to_string(),
+            //NOTE: these deployment values are for the mchain, not the real contracts
             deployment: NitroDeployment {
                 bridge: APPCHAIN_CONTRACT,
                 sequencer_inbox: APPCHAIN_CONTRACT,
