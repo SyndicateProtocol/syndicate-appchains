@@ -245,7 +245,7 @@ contract TeeModuleTest is Test {
 
     function testConstructorL1Chain() public {
         MockBridge l1Bridge = new MockBridge();
-        
+
         // For L1 chain mode, we need to set up the bridge to return sequencer message count
         // The MockBridge needs to implement sequencerMessageCount() properly
         vm.mockCall(
@@ -306,17 +306,12 @@ contract TeeModuleTest is Test {
     }
 
     function testSubmitAssertion_Success() public {
-        PendingAssertion memory assertion = PendingAssertion({
-            appBlockHash: bytes32(uint256(100)),
-            appSendRoot: bytes32(uint256(200)),
-            seqBlockHash: bytes32(uint256(300)),
-            l1BatchAcc: bytes32(uint256(400))
-        });
+        PendingAssertion memory assertion = _createAssertion(100);
 
         // Create a valid signature (mock)
         bytes memory signature = _createValidSignature(assertion);
 
-        // Submit assertion without checking for exact event emission since 
+        // Submit assertion without checking for exact event emission since
         // the TeeInput event is only emitted in closeChallengeWindow, not submitAssertion
         teeModule.submitAssertion(assertion, signature, user1);
 
@@ -330,12 +325,7 @@ contract TeeModuleTest is Test {
     }
 
     function testRevert_SubmitAssertionZeroRewardAddress() public {
-        PendingAssertion memory assertion = PendingAssertion({
-            appBlockHash: bytes32(uint256(100)),
-            appSendRoot: bytes32(uint256(200)),
-            seqBlockHash: bytes32(uint256(300)),
-            l1BatchAcc: bytes32(uint256(400))
-        });
+        PendingAssertion memory assertion = _createAssertion(100);
 
         bytes memory signature = _createValidSignature(assertion);
 
@@ -344,12 +334,7 @@ contract TeeModuleTest is Test {
     }
 
     function testRevert_SubmitAssertionInvalidSignatureLength() public {
-        PendingAssertion memory assertion = PendingAssertion({
-            appBlockHash: bytes32(uint256(100)),
-            appSendRoot: bytes32(uint256(200)),
-            seqBlockHash: bytes32(uint256(300)),
-            l1BatchAcc: bytes32(uint256(400))
-        });
+        PendingAssertion memory assertion = _createAssertion(100);
 
         bytes memory invalidSignature = hex"1234"; // Too short
 
@@ -358,12 +343,7 @@ contract TeeModuleTest is Test {
     }
 
     function testRevert_SubmitAssertionInvalidTeeSignature() public {
-        PendingAssertion memory assertion = PendingAssertion({
-            appBlockHash: bytes32(uint256(100)),
-            appSendRoot: bytes32(uint256(200)),
-            seqBlockHash: bytes32(uint256(300)),
-            l1BatchAcc: bytes32(uint256(400))
-        });
+        PendingAssertion memory assertion = _createAssertion(100);
 
         // Create signature but don't set the key as valid (use an invalid signature)
         bytes memory signature =
@@ -394,24 +374,12 @@ contract TeeModuleTest is Test {
 
     function testTeeHackDetection() public {
         // Submit first assertion
-        PendingAssertion memory assertion1 = PendingAssertion({
-            appBlockHash: bytes32(uint256(100)),
-            appSendRoot: bytes32(uint256(200)),
-            seqBlockHash: bytes32(uint256(300)),
-            l1BatchAcc: bytes32(uint256(400))
-        });
-
+        PendingAssertion memory assertion1 = _createAssertion(100);
         bytes memory signature1 = _createValidSignature(assertion1);
         teeModule.submitAssertion(assertion1, signature1, user1);
 
         // Submit second assertion (should trigger TEE hack detection)
-        PendingAssertion memory assertion2 = PendingAssertion({
-            appBlockHash: bytes32(uint256(101)),
-            appSendRoot: bytes32(uint256(201)),
-            seqBlockHash: bytes32(uint256(301)),
-            l1BatchAcc: bytes32(uint256(401))
-        });
-
+        PendingAssertion memory assertion2 = _createAssertion(101);
         bytes memory signature2 = _createValidSignature(assertion2);
 
         uint256 userBalanceBefore = user2.balance;
@@ -544,7 +512,7 @@ contract TeeModuleTest is Test {
         // This test demonstrates a bug in the TeeModule contract where resolveChallenge
         // cannot be called because it has nonReentrant modifier and calls closeChallengeWindow
         // which also has nonReentrant modifier, causing a reentrancy guard error.
-        
+
         // Submit two assertions to create a challenge
         PendingAssertion memory assertion1 = PendingAssertion({
             appBlockHash: bytes32(uint256(100)),
@@ -684,10 +652,10 @@ contract TeeModuleTest is Test {
         // Wait for challenge window to expire and close it
         vm.warp(block.timestamp + CHALLENGE_WINDOW_DURATION + 1);
         mockL1Block.setTimestamp(uint64(block.timestamp + 1));
-        
+
         // Change the L1 block hash to ensure state changes
         mockL1Block.setHash(bytes32(uint256(54321)));
-        
+
         teeModule.closeChallengeWindow();
 
         // Now TeeTrustedInput has changed (l1EndHash updated to new L1 block hash)
@@ -823,6 +791,30 @@ contract TeeModuleTest is Test {
         teeModule.submitAssertion(assertion2, signature2, address(rejecter));
     }
 
+    // Helper function to create a PendingAssertion with the given values
+    function _createAssertion(bytes32 appBlockHash, bytes32 appSendRoot, bytes32 seqBlockHash, bytes32 l1BatchAcc)
+        private
+        pure
+        returns (PendingAssertion memory)
+    {
+        return PendingAssertion({
+            appBlockHash: appBlockHash,
+            appSendRoot: appSendRoot,
+            seqBlockHash: seqBlockHash,
+            l1BatchAcc: l1BatchAcc
+        });
+    }
+
+    // Helper function to create a PendingAssertion with incremental values
+    function _createAssertion(uint256 baseValue) private pure returns (PendingAssertion memory) {
+        return PendingAssertion({
+            appBlockHash: bytes32(baseValue),
+            appSendRoot: bytes32(baseValue + 100),
+            seqBlockHash: bytes32(baseValue + 200),
+            l1BatchAcc: bytes32(baseValue + 300)
+        });
+    }
+
     // Helper function to create a valid signature for testing
     function _createValidSignature(PendingAssertion memory assertion) private view returns (bytes memory) {
         // In a real implementation, this would create a proper ECDSA signature
@@ -847,12 +839,7 @@ contract TeeModuleTest is Test {
 
         bytes32 trustedInputHash = keccak256(
             abi.encodePacked(
-                configHash,
-                appStartBlockHash,
-                seqStartBlockHash,
-                setDelayedMessageAcc,
-                l1StartBatchAcc,
-                l1EndHash
+                configHash, appStartBlockHash, seqStartBlockHash, setDelayedMessageAcc, l1StartBatchAcc, l1EndHash
             )
         );
 

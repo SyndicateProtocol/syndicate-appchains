@@ -76,7 +76,9 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         bytes memory proof = fixture.proof;
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(fixture.publicValues, proof);
 
-        assert(publicKey == address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E));
+        assertEq(
+            publicKey, address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E), "Public key does not match expected value"
+        );
     }
 
     function testRevert_InvalidAttestationDocVerifierProof() public virtual {
@@ -124,7 +126,9 @@ abstract contract BaseAttestationDocVerifierTest is Test {
 
         // This should still work due to expiration tolerance
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(fixture.publicValues, fixture.proof);
-        assert(publicKey == address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E));
+        assertEq(
+            publicKey, address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E), "Public key does not match expected value"
+        );
 
         // But one second later should fail
         vm.warp(publicValues.validity_window_end + attestationDocVerifier.expirationTolerance() + 1);
@@ -210,7 +214,9 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         // Verify it works within validity window
         vm.warp(1748509951);
         address publicKey = strictVerifier.verifyAttestationDocProof(fixture.publicValues, fixture.proof);
-        assert(publicKey == address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E));
+        assertEq(
+            publicKey, address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E), "Public key does not match expected value"
+        );
 
         // Verify it fails immediately after validity window
         PublicValuesStruct memory publicValues = abi.decode(fixture.publicValues, (PublicValuesStruct));
@@ -240,7 +246,9 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         vm.warp(publicValues.validity_window_end + largeExpiration);
 
         address publicKey = lenientVerifier.verifyAttestationDocProof(fixture.publicValues, fixture.proof);
-        assert(publicKey == address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E));
+        assertEq(
+            publicKey, address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E), "Public key does not match expected value"
+        );
 
         // But should still fail beyond the tolerance
         vm.warp(publicValues.validity_window_end + largeExpiration + 1);
