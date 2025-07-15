@@ -155,7 +155,7 @@ impl EthClient {
         }
     }
 
-    /// Get logs, binary search version.
+    /// Get logs, splitting the range in half if the request fails.
     #[allow(clippy::cognitive_complexity)]
     pub async fn get_logs(
         &self,
@@ -163,8 +163,8 @@ impl EthClient {
     ) -> Result<Vec<alloy::rpc::types::Log>, RpcError<TransportErrorKind>> {
         match timeout(self.log_timeout, self.client.get_logs(filter)).await {
             Err(_) => {
-                warn!("eth_getLogs request timed out. Attempting binary search: {:?}", filter);
-                self.handle_binary_search(
+                warn!("eth_getLogs request timed out. Attempting to split range: {:?}", filter);
+                self.handle_split_range(
                     filter,
                     TransportErrorKind::Custom("request timed out".into()).into(),
                 )
@@ -172,8 +172,8 @@ impl EthClient {
             }
             Ok(Ok(x)) => Ok(x),
             Ok(Err(RpcError::ErrorResp(err))) => {
-                warn!("eth_getLogs request failed. Attempting binary search: {:?}", filter);
-                self.handle_binary_search(filter, RpcError::ErrorResp(err)).await
+                warn!("eth_getLogs request failed. Attempting to split range: {:?}", filter);
+                self.handle_split_range(filter, RpcError::ErrorResp(err)).await
             }
             Ok(Err(err)) => {
                 handle_rpc_error("failed to get logs", &err);
@@ -182,12 +182,12 @@ impl EthClient {
         }
     }
 
-    async fn handle_binary_search(
+    async fn handle_split_range(
         &self,
         filter: &Filter,
         err: RpcError<TransportErrorKind>,
     ) -> Result<Vec<alloy::rpc::types::Log>, RpcError<TransportErrorKind>> {
-        // Only attempt binary search if we have a valid block range
+        // Only attempt to split the range if we have a valid block range
         let (from_block, to_block) = match filter.block_option {
             FilterBlockOption::Range {
                 from_block: Some(BlockNumberOrTag::Number(from)),
