@@ -43,7 +43,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-external-id: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
           role-duration-seconds: 1200
-          role-session-name: Publish-S3-${{ github.run_id }}
 
       - name: Upload eif.bin to AWS S3
         uses: usualdesigner/s3-artifact-upload@main
