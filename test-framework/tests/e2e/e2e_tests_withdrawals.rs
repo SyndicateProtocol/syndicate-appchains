@@ -4,7 +4,7 @@ use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::Ethereum,
     primitives::{address, keccak256, utils::parse_ether, Address, B256, U256},
-    providers::{ext::DebugApi, Provider},
+    providers::{ext::DebugApi, Provider, ProviderBuilder},
     rpc::types::trace::geth::{GethDebugTracingOptions, GethTrace},
     signers::local::PrivateKeySigner,
     sol,
@@ -20,37 +20,65 @@ use std::{fmt::Debug, time::Duration};
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     proposer::ProposerConfig,
-    test_components::TestComponents,
+    test_components::{TestComponents, SETTLEMENT_CHAIN_ID},
 };
 use test_utils::{
-    chain_info::test_account1,
+    chain_info::{test_account1, test_account2, test_account3, PRIVATE_KEY3},
     docker::{launch_enclave_server, start_component},
     nitro_chain::{execute_withdrawal, init_withdrawal_tx},
     port_manager::PortManager,
     wait_until,
 };
-use tokio::{task::JoinHandle, time};
+use tokio::task::JoinHandle;
 
 #[ctor::ctor]
 fn init() {
     shared::tracing::setup_global_logging();
 }
 
+// TODO SEQ-1032
+// #[tokio::test]
+// async fn e2e_tee_withdrawal_with_eigenda() -> Result<()> {
+//     e2e_tee_withdrawal(BaseChainsType::NitroWithEigenda).await
+// }
+
 #[tokio::test]
+async fn e2e_tee_withdrawal_with_calldata() -> Result<()> {
+    e2e_tee_withdrawal(BaseChainsType::Nitro).await
+}
+
 #[allow(clippy::unwrap_used)]
-#[ignore] // TODO remove once the proposer is ready
-async fn e2e_tee_withdrawal() -> Result<()> {
+async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
     let close_challenge_interval = Duration::from_secs(1);
     TestComponents::run(
-        // NOTE: important to use base chains type == Nitro
         &ConfigurationOptions {
-            base_chains_type: BaseChainsType::Nitro,
+            base_chains_type,
             rollup_owner: test_account1().address,
             settlement_delay: 2,
             close_challenge_interval,
             ..Default::default()
         },
         |components| async move {
+            // deposit funds to the appchain
+            let inbox =
+                IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
+
+            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+            let receipt = inbox
+                .depositEth()
+                .value(parse_ether("1")?)
+                .nonce(
+                    components
+                        .settlement_provider
+                        .get_transaction_count(test_account1().address)
+                        .await?,
+                )
+                .send()
+                .await?
+                .get_receipt()
+                .await?;
+            assert!(receipt.status());
+
             // deploy contracts:
             // - Tee module
             // - key manager
@@ -101,12 +129,42 @@ async fn e2e_tee_withdrawal() -> Result<()> {
 
             let l1_provider = components.l1_provider.as_ref().unwrap();
             let sequencing_bridge = IBridge::new(sequencing_bridge_address, l1_provider);
+
             let l1_start_batch_acc =
-                sequencing_bridge.sequencerInboxAccs(U256::ZERO).call().await?;
+                sequencing_bridge.sequencerInboxAccs(U256::from(U256::ZERO)).call().await?;
 
+            // setup an oracle to push L1 data onto the settlement chain (could potentially be
+            // removed if we use actual optimism stack (SEQ-1079))
+
+            // NOTE: use test_account2 for the oracle to avoid race condition with test_account1
+            // nonces
+            let tx = IInbox::new(
+                components.settlement_deployment.as_ref().unwrap().inbox,
+                l1_provider.clone(),
+            )
+            .depositEth()
+            .value(parse_ether("10")?)
+            .nonce(l1_provider.get_transaction_count(test_account2().address).await?)
+            .gas(100_000)
+            .max_fee_per_gas(100_000_000)
+            .max_priority_fee_per_gas(0)
+            .build_raw_transaction(test_account2().signer.clone())
+            .await?;
+            _ = l1_provider.send_raw_transaction(&tx).await?;
+            wait_until!(
+                components.settlement_provider.get_balance(test_account2().address).await? >=
+                    parse_ether("10")?,
+                Duration::from_secs(20)
+            );
+
+            let oracle_settlement_provider = ProviderBuilder::new()
+                .wallet(test_account2().signer.clone())
+                .connect(&components.settlement_rpc_url)
+                .await?;
             let (_l1_oracle_handle, l1_oracle_address) =
-                setup_l1_oracle(l1_provider.clone(), components.settlement_provider.clone()).await;
+                setup_l1_oracle(l1_provider.clone(), oracle_settlement_provider).await;
 
+            // wait until the oracle is operational
             wait_until!(
                 L1BlockOracle::new(l1_oracle_address, components.settlement_provider.clone())
                     .timestamp()
@@ -160,40 +218,52 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             let (mut enclave_server_instance, enclave_rpc_url, tee_public_key) =
                 launch_enclave_server().await?;
 
+            // deposit funds for the proposer to use on the settlement chain
+            let tx = IInbox::new(
+                components.settlement_deployment.as_ref().unwrap().inbox,
+                l1_provider.clone(),
+            )
+            .depositEth()
+            .value(parse_ether("10")?)
+            .nonce(l1_provider.get_transaction_count(test_account3().address).await?)
+            .gas(100_000)
+            .max_fee_per_gas(100_000_000)
+            .max_priority_fee_per_gas(0)
+            .build_raw_transaction(test_account3().signer.clone())
+            .await?;
+            _ = l1_provider.send_raw_transaction(&tx).await?;
+            wait_until!(
+                components.settlement_provider.get_balance(test_account3().address).await? >=
+                    parse_ether("10")?,
+                Duration::from_secs(20)
+            );
+
             let proposer_config = ProposerConfig {
                 ethereum_rpc_url: components.l1_ws_rpc_url.clone(),
                 tee_module_contract_address: tee_module_addr,
-                arbitrum_bridge_address: components.appchain_deployment.bridge,
-                inbox_address: components.appchain_deployment.inbox,
-                sequencer_inbox_address: components.appchain_deployment.sequencer_inbox,
                 settlement_rpc_url: components.settlement_rpc_url.clone(),
                 port: PortManager::instance().next_port().await,
                 appchain_rpc_url: components.appchain_ws_rpc_url.clone(),
                 sequencing_rpc_url: components.sequencing_rpc_url.clone(),
                 enclave_rpc_url,
-                polling_interval: "1m".to_string(),
+                polling_interval: "100ms".to_string(),
                 close_challenge_interval: format!("{}s", close_challenge_interval.as_secs()),
-                settlement_chain_id: 84532,
+                settlement_chain_id: SETTLEMENT_CHAIN_ID,
+                // TODO SEQ-1032
+                // - does the propose need to see eigenDA data on L1? (prob not)
+                eigen_rpc_url: components
+                    .eigenda_proxy_url
+                    .clone()
+                    .unwrap_or_else(|| "http://localhost:0000".to_string()), // mock url
+                appchain_bridge_address: components.appchain_deployment.bridge,
+                sequencing_contract_address: *components.sequencing_contract.address(),
+                sequencing_bridge_address_on_l1: sequencing_bridge_address,
+                settlement_delay: ConfigurationOptions::default().settlement_delay,
+                private_key: PRIVATE_KEY3.to_string().strip_prefix("0x").unwrap().to_string(),
             };
 
-            let mut proposer_instance = start_component(
-                "synd-proposer",
-                proposer_config.port,
-                proposer_config.cli_args(),
-                Default::default(),
-            )
-            .await?;
-
-            // fail the tests if the services die
-            tokio::spawn(async move {
-                tokio::select! {
-                    e = proposer_instance.wait() => panic!("synd-proposer died: {:#?}", e),
-                    e = enclave_server_instance.wait() => panic!("enclave server died: {:#?}", e),
-                }
-            });
-
             // add the TEE signer address to the key manager using a mock proof
-            let key_mgr = TeeKeyManager::new(key_mgr_addr, &components.settlement_provider);
+            let key_mgr = TeeKeyManager::new(key_mgr_addr, components.settlement_provider.clone());
             let public_values = tee_public_key.abi_encode();
             let proof_bytes = vec![];
 
@@ -212,25 +282,26 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 .await?;
             assert!(receipt.status());
 
-            // deposit funds to the appchain
-            let inbox =
-                IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
+            let is_valid = key_mgr.isKeyValid(tee_public_key).call().await?;
+            assert!(is_valid);
 
-            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
-            let receipt = inbox
-                .depositEth()
-                .value(parse_ether("1")?)
-                .nonce(
-                    components
-                        .settlement_provider
-                        .get_transaction_count(test_account1().address)
-                        .await?,
-                )
-                .send()
-                .await?
-                .get_receipt()
-                .await?;
-            assert!(receipt.status());
+            let mut proposer_instance = start_component(
+                "synd-proposer",
+                proposer_config.port,
+                proposer_config.cli_args(),
+                Default::default(),
+            )
+            .await?;
+
+            // Catch if the services die (NOTE: this won't kill the test, just log it)
+            tokio::spawn(async move {
+                tokio::select! {
+                    e = proposer_instance.wait() => {
+                        panic!("synd-proposer died: {e:#?}")
+                    },
+                    e = enclave_server_instance.wait() => panic!("enclave server died: {e:#?}"),
+                }
+            });
 
             // send a dummy tx so that the sequencing chain progresses and the deposit is
             // slotted in
@@ -255,25 +326,6 @@ async fn e2e_tee_withdrawal() -> Result<()> {
             //
             // now wait until the withdrawal root is posted
 
-            // call `closeChallengeWindow` on the TEEmodule - to force the assertion to be posted
-            time::sleep(Duration::from_secs(1)).await; // wait 1s (challenge window duration) to elapse
-            let tee_module = TeeModule::new(tee_module_addr, &components.settlement_provider);
-
-            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
-            let receipt = tee_module
-                .closeChallengeWindow()
-                .nonce(
-                    components
-                        .settlement_provider
-                        .get_transaction_count(test_account1().address)
-                        .await?,
-                )
-                .send()
-                .await?
-                .get_receipt()
-                .await?;
-            assert!(receipt.status());
-
             // look for `AssertionConfirmed` event on the `RollupCore` contract
             // NOTE: `AssertionConfirmed` is only available on nito-contracts V3.... since this test
             // uses the legacy version we must check for `NodeConfirmed` event instead
@@ -289,7 +341,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                     .await?
                     .iter()
                     .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
-                Duration::from_secs(20)
+                Duration::from_secs(120)
             );
 
             // finish the withdrawal on the settlement chain
@@ -457,9 +509,8 @@ async fn setup_l1_oracle<T: Provider<Ethereum> + Clone + Send + Sync + 'static>(
     // NOTE: manually constructing the deployment tx shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
     // instead should just be:
     // let oracle_contract = L1BlockOracle::deploy(target_chain_provider).await.unwrap();
-    //
     let receipt = L1BlockOracle::deploy_builder(target_chain_provider.clone())
-        .nonce(target_chain_provider.get_transaction_count(test_account1().address).await.unwrap())
+        .nonce(target_chain_provider.get_transaction_count(test_account2().address).await.unwrap())
         .send()
         .await
         .unwrap()
@@ -483,7 +534,7 @@ async fn setup_l1_oracle<T: Provider<Ethereum> + Clone + Send + Sync + 'static>(
                 .setL1Block(l1_timestamp, l1_hash)
                 .nonce(
                     target_chain_provider
-                        .get_transaction_count(test_account1().address)
+                        .get_transaction_count(test_account2().address)
                         .await
                         .unwrap(),
                 )

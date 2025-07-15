@@ -180,6 +180,12 @@ pub async fn execute_withdrawal(
             withdrawal_value,                             // value
             Bytes::new(),                                 // data (always empty)
         )
+        // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+        .nonce(
+            settlement_provider
+                .get_transaction_count(settlement_provider.default_signer_address())
+                .await?,
+        )
         .send()
         .await?;
     Ok(())

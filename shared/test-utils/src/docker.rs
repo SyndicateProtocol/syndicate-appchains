@@ -24,6 +24,7 @@ use std::{
 };
 use synd_mchain::client::MProvider;
 use tokio::{
+    fs,
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
 };
@@ -116,6 +117,57 @@ impl Drop for E2EProcess {
     }
 }
 
+async fn ensure_nitro_node_deps() -> Result<()> {
+    let workspace_dir = env!("CARGO_WORKSPACE_DIR");
+    let nitro_solgen_dir = format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro/solgen");
+
+    // consider deps installed if there is more than 1 file (`gen.go`) in the solgen directory
+    let mut entries = fs::read_dir(&nitro_solgen_dir).await?;
+    let mut count = 0;
+    while (entries.next_entry().await?).is_some() {
+        count += 1;
+        if count > 1 {
+            return Ok(());
+        }
+    }
+    warn!("building nitro node-deps... (this can take a long time");
+
+    // fist run `yarn install --ignore-engines` in the`safe-smart-account` dir to circumvent
+    // NodeJS version error
+    let status = E2EProcess::new(
+        Command::new("yarn")
+            .current_dir(format!(
+                "{workspace_dir}/synd-withdrawals/synd-enclave/nitro/safe-smart-account"
+            ))
+            .arg("install")
+            .arg("--ignore-engines"),
+        "yarn-install-safe-smart-account",
+    )?
+    .wait()
+    .await?;
+    if !status.success() {
+        return Err(eyre::eyre!(
+            "Failed to run yarn install in safe-smart-account. Exit status: {}",
+            status
+        ));
+    }
+
+    let status = E2EProcess::new(
+        Command::new("make")
+            .current_dir(format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro"))
+            .arg("build-node-deps"),
+        "build-node-deps",
+    )?
+    .wait()
+    .await?;
+    if !status.success() {
+        return Err(eyre::eyre!("Failed to build nitro node-deps. Exit status: {}", status));
+    }
+
+    info!("nitro node-deps built successfully");
+    Ok(())
+}
+
 pub async fn start_component(
     executable_name: &str,
     api_port: u16,
@@ -138,6 +190,7 @@ pub async fn start_component(
             executable_name,
         )
     } else if executable_name == "synd-proposer" {
+        ensure_nitro_node_deps().await?;
         // Synd-proposer is a Go service, so we need to use the Go command to run it
         let mut cmd = Command::new("go");
         cmd.current_dir(format!("{}/synd-withdrawals/synd-proposer", env!("CARGO_WORKSPACE_DIR")));
@@ -236,7 +289,7 @@ pub struct NitroNodeArgs {
 
 /// Starts nitro instance
 pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
-    let tag = env::var("NITRO_TAG").unwrap_or("v3.6.2-5b41a2d-slim".to_string());
+    let tag = env::var("NITRO_TAG").unwrap_or("nitro:eigenda-v3.6.4-dev.2".to_string());
     let port = PortManager::instance().next_port().await;
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
@@ -279,13 +332,22 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
         }
     };
 
+    // TODO do this for eigenDA
+    // ENV_NODE_EIGEN__DA_ENABLE=true ENV_NODE_EIGEN__DA_RPC=https://risa-testnet-eigenda-mirror.rollups.alchemy.com ../nitro/cmd/nitro/nitro
+
+    // need to set this to listen to the ENV vars
+    // --conf.env-prefix=ENV
+    // --http.api=eth,synd // enable synd api
+
+    // --http.server-timeouts.write-timeout 60m
+
     let mut nitro = E2EProcess::new(
         Command::new("docker")
             .arg("run")
             .arg("--init")
             .arg("--rm")
             .arg("--net=host")
-            .arg(format!("offchainlabs/nitro-node:{tag}"))
+            .arg(format!("ghcr.io/syndicateprotocol/nitro:{tag}"))
             .arg(format!("--parent-chain.connection.url={}", args.parent_chain_url))
             .arg("--node.dangerous.disable-blob-reader")
             .arg("--node.inbox-reader.check-delay=100ms")
@@ -304,7 +366,8 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
                 })
             ))
             .arg("--http.addr=0.0.0.0")
-            .arg("--http.api=net,web3,eth,debug,trace")
+            .arg("--http.api=net,web3,eth,debug,trace,synd")
+            .arg("--ws.api=net,web3,eth,debug,trace,synd")
             .arg(format!("--http.port={port}"))
             .arg("--ws.expose-all")
             .arg(format!("--ws.port={port}"))
@@ -411,8 +474,9 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     // NOTE: in theory we we should get the attestation doc instead, but it's hard to get that
     // function to work outside the AWS enclave. We'll just use the public key for now.
     let signer_pub_key_hex = get_signer_public_key(enclave_rpc_url.clone()).await?;
+    println!("signer_pub_key_hex: {signer_pub_key_hex}");
     let signer_pub_key_bytes = hex::decode(signer_pub_key_hex).unwrap();
-    let signer_address = Address::from_raw_public_key(&signer_pub_key_bytes[..64]);
+    let signer_address = Address::from_raw_public_key(&signer_pub_key_bytes[1..]); // skip the first byte (0x04)
 
     Ok((docker, enclave_rpc_url, signer_address))
 }
@@ -426,4 +490,37 @@ async fn get_signer_public_key(enclave_rpc_url: String) -> Result<String> {
         .build(enclave_rpc_url)?;
 
     Ok(client.request::<String, [(); 0]>("enclave_signerPublicKey", []).await?)
+}
+
+pub async fn start_eigenda_proxy() -> Result<(E2EProcess, String)> {
+    let port = PortManager::instance().next_port().await;
+    let mut eigenda_proxy = E2EProcess::new(
+        Command::new("docker")
+            .arg("run")
+            .arg("--rm")
+            .arg("-p")
+            .arg(format!("{port}:{port}"))
+            .arg("ghcr.io/layr-labs/eigenda-proxy:latest")
+            .arg("--memstore.enabled")
+            .arg("--port")
+            .arg(port.to_string()),
+        "eigenda-proxy",
+    )?;
+
+    let eigenda_proxy_url = format!("http://localhost:{port}");
+
+    let client = Client::new();
+    wait_until!(
+        if let Some(status) = eigenda_proxy.try_wait()? {
+            panic!("eigenda-proxy exited with {status}");
+        };
+        client
+            .get(format!("{eigenda_proxy_url}/health"))
+            .send()
+            .await
+            .is_ok_and(|x| x.status().is_success()),
+        Duration::from_secs(5 * 60) // give it time to download the image if necessary
+    );
+
+    Ok((eigenda_proxy, eigenda_proxy_url))
 }

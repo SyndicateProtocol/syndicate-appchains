@@ -55,7 +55,7 @@ var ConfigKeys = map[string]struct {
 	"private-key":                 {"Private Key", "", true},
 	"polling-interval":            {"Polling interval", "10m", false},
 	"close-challenge-interval":    {"Close challenge interval", "5m", false},
-	"port":                        {"Server port", "9292", false},
+	"port":                        {"health and metrics port", "9292", false},
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
 	"settlement-delay":            {"Settlement Delay", "60", false},

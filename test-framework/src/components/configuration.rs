@@ -17,6 +17,7 @@ pub enum BaseChainsType {
     PreLoaded(ContractVersion),
     /// auto-mine enabled
     Nitro,
+    // NitroWithEigenda,
 }
 
 /// Arbitrum Nitro contract version on the settlement chain used for testing

@@ -37,8 +37,10 @@ type ValidationData struct {
 	PreimageData       [][]byte
 }
 
-var messageDeliveredID common.Hash
-var inboxMessageDeliveredID common.Hash
+var (
+	messageDeliveredID      common.Hash
+	inboxMessageDeliveredID common.Hash
+)
 
 func init() {
 	parsedIBridgeABI, err := bridgegen.IBridgeMetaData.GetAbi()
@@ -110,7 +112,13 @@ func getBatches(ctx context.Context, c *ethclient.Client, sequencerInbox common.
 	return data, nil
 }
 
-func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprovider.Reader, preimages map[arbutil.PreimageType]map[common.Hash][]byte) error {
+func getBatchPreimageData(
+	ctx context.Context,
+	batch []byte,
+	dapReaders []daprovider.Reader,
+	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
+	settlesToArbitrumRollup bool,
+) error {
 	if len(batch) > 40 {
 		for _, dapReader := range dapReaders {
 			if dapReader != nil && dapReader.IsValidHeaderByte(ctx, batch[40]) {
@@ -167,7 +175,14 @@ func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Addre
 	return common.Hash(acc), count - 1, nil
 }
 
-func GetDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.Address, start uint64, endAcc common.Hash) (common.Hash, [][]byte, bool, error) {
+func GetDelayedMessages(
+	ctx context.Context,
+	c *ethclient.Client,
+	bridge common.Address,
+	start uint64,
+	endAcc common.Hash,
+	settlesToArbitrumRollup bool,
+) (common.Hash, [][]byte, bool, error) {
 	endBlock, err := c.BlockNumber(ctx)
 	if err != nil {
 		return common.Hash{}, nil, false, err
@@ -247,7 +262,6 @@ func GetDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 		[][]common.Hash{
 			{messageDeliveredID, inboxMessageDeliveredID},
 		}, 0)
-
 	if err != nil {
 		return common.Hash{}, nil, false, err
 	}
@@ -295,6 +309,7 @@ func GetDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 			prevAcc = &hash
 		}
 		requestId := common.BigToHash(log.MessageIndex)
+
 		msg := arbostypes.L1IncomingMessage{
 			Header: &arbostypes.L1IncomingMessageHeader{
 				Kind:        log.Kind,
@@ -306,10 +321,23 @@ func GetDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 			},
 			L2msg: dataLog.Data,
 		}
+
+		if settlesToArbitrumRollup {
+			block, err := c.BlockByHash(ctx, log.Raw.BlockHash)
+			if err != nil {
+				return common.Hash{}, nil, false, err
+			}
+
+			// Override the block number with the L1 block number (that's what is used during contract execution in nitro rollups)
+			l1blocknum := types.DeserializeHeaderExtraInformation(block.Header()).L1BlockNumber
+			msg.Header.BlockNumber = l1blocknum
+		}
+
 		data, err := msg.Serialize()
 		if err != nil {
 			return common.Hash{}, nil, false, err
 		}
+
 		msgs = append(msgs, data)
 	}
 	if start != end+1 || prevAcc == nil {
