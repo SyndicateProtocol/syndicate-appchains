@@ -6,12 +6,13 @@ pub(super) struct BatchSequencerConfig {
     pub(crate) private_key: String,
     pub(crate) sequencing_address: Address,
     pub(crate) sequencing_rpc_url: String,
-    pub(crate) metrics_port: u16,
+    pub(crate) port: u16,
+    pub(crate) wait_for_receipt: bool,
 }
 
 impl BatchSequencerConfig {
     pub(crate) fn cli_args(&self) -> Vec<String> {
-        vec![
+        let mut args = vec![
             "--chain-id".to_string(),
             self.chain_id.to_string(),
             "--valkey-url".to_string(),
@@ -22,8 +23,14 @@ impl BatchSequencerConfig {
             self.sequencing_address.to_string(),
             "--sequencing-rpc-url".to_string(),
             self.sequencing_rpc_url.to_string(),
-            "--metrics-port".to_string(),
-            self.metrics_port.to_string(),
-        ]
+            "--port".to_string(),
+            self.port.to_string(),
+        ];
+
+        if self.wait_for_receipt {
+            args.push("--wait-for-receipt".to_string());
+        }
+
+        args
     }
 }

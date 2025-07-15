@@ -5,7 +5,7 @@ use alloy::{
     primitives::{Address, U256},
     providers::WalletProvider,
 };
-use contract_bindings::synd::arbconfigmanager::ArbConfigManager;
+use contract_bindings::synd::arb_config_manager::ArbConfigManager;
 use eyre::Result;
 use shared::types::FilledProvider;
 use std::time::Duration;

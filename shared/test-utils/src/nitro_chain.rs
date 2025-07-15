@@ -8,8 +8,8 @@ use alloy::{
     providers::{Provider, WalletProvider},
 };
 use contract_bindings::synd::{
-    arbsys::ArbSys, ibridge::IBridge, ioutbox::IOutbox, irollupcore::IRollupCore,
-    nodeinterface::NodeInterface,
+    arb_sys::ArbSys, i_bridge::IBridge, i_outbox::IOutbox, i_rollup_core::IRollupCore,
+    node_interface::NodeInterface,
 };
 use eyre::Ok;
 use serde::{Deserialize, Serialize};
@@ -158,11 +158,10 @@ pub async fn execute_withdrawal(
     // Execute withdrawal
     let bridge = IBridge::new(bridge_address, &settlement_provider);
     let outbox = IOutbox::new(
-        IRollupCore::new(bridge.rollup().call().await?._0, &settlement_provider)
+        IRollupCore::new(bridge.rollup().call().await?, &settlement_provider)
             .outbox()
             .call()
-            .await?
-            ._0,
+            .await?,
         &settlement_provider,
     );
 
@@ -218,7 +217,7 @@ pub struct NitroDeployment {
 }
 
 #[allow(clippy::unwrap_used)]
-/// Deploys a mock rollup contract. - It expects `yarn` and `hardhat` to be installed.
+/// Deploys a mock rollup contract. - It expects `yarn` to be installed.
 /// NOTE: only used for the base chains when in Nitro mode, it expects `l1_provider` to have
 /// automine enabled
 pub async fn deploy_nitro_rollup(

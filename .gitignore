@@ -76,3 +76,7 @@ documentation/local/chains/
 synd-contracts/.claude/settings.local.json
 
 bin/
+
+*.db
+
+run.sh

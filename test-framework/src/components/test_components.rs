@@ -18,12 +18,14 @@ use alloy::{
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
-    alwaysallowedmodule::AlwaysAllowedModule,
-    assertionposter::AssertionPoster,
-    iinbox::IInbox,
-    iupgradeexecutor::IUpgradeExecutor,
+    always_allowed_module::AlwaysAllowedModule,
+    assertion_poster::AssertionPoster,
+    i_inbox::IInbox,
+    i_upgrade_executor::IUpgradeExecutor,
     rollup::Rollup,
-    syndicatesequencingchain::SyndicateSequencingChain::{self, SyndicateSequencingChainInstance},
+    syndicate_sequencing_chain::SyndicateSequencingChain::{
+        self, SyndicateSequencingChainInstance,
+    },
 };
 use eyre::Result;
 use serde_json::{json, Value};
@@ -89,7 +91,7 @@ pub struct TestComponents {
     /// Sequencing
     pub sequencing_provider: FilledProvider,
     pub sequencing_rpc_url: String,
-    pub sequencing_contract: SyndicateSequencingChainInstance<(), FilledProvider>,
+    pub sequencing_contract: SyndicateSequencingChainInstance<FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
@@ -116,7 +118,7 @@ pub struct TestComponents {
 }
 
 pub const SEQUENCING_CHAIN_ID: u64 = 15;
-pub const SETTLEMENT_CHAIN_ID: u64 = 20;
+pub const SETTLEMENT_CHAIN_ID: u64 = 31337;
 
 impl TestComponents {
     #[allow(clippy::unwrap_used)]
@@ -291,7 +293,14 @@ impl TestComponents {
 
                 // deposit some funds for the default signer
                 let inbox = IInbox::new(set_deployment.inbox, &l1_info.provider);
-                let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
+                let _ = inbox
+                    .depositEth()
+                    .value(parse_ether("10")?)
+                    // NOTE: manually setting the nonce should NOT be be necessary, likely an
+                    // artifact of https://github.com/alloy-rs/alloy/issues/2668
+                    .nonce(l1_info.provider.get_transaction_count(test_account1().address).await?)
+                    .send()
+                    .await?;
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
@@ -299,17 +308,6 @@ impl TestComponents {
                         parse_ether("10")?,
                     Duration::from_secs(10)
                 );
-
-                // deploy the rollup contract for the appchain on the settlement chain
-                let _ = Rollup::deploy_builder(
-                    &set_chain_info.provider,
-                    U256::from(options.appchain_chain_id),
-                    "null".to_string(),
-                    test_account1().address,
-                )
-                .nonce(0)
-                .send()
-                .await?;
 
                 settlement_deployment = Some(set_deployment);
                 set_chain_info
@@ -321,9 +319,11 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                let chain_info =
-                    start_anvil_with_args(31337, &["--load-state", state_file.to_str().unwrap()])
-                        .await?;
+                let chain_info = start_anvil_with_args(
+                    SETTLEMENT_CHAIN_ID,
+                    &["--load-state", state_file.to_str().unwrap()],
+                )
+                .await?;
 
                 // Sync the tips of the sequencing and settlement chains
                 let block = chain_info
@@ -399,9 +399,10 @@ impl TestComponents {
             port: PortManager::instance().next_port().await,
             metrics_port: PortManager::instance().next_port().await,
         };
+        info!("seq_chain_ingestor_cfg: {:?}", seq_chain_ingestor_cfg);
         let sequencing_chain_ingestor = start_component(
             "synd-chain-ingestor",
-            seq_chain_ingestor_cfg.metrics_port,
+            seq_chain_ingestor_cfg.port,
             seq_chain_ingestor_cfg.cli_args(),
             Default::default(),
         )
@@ -414,10 +415,11 @@ impl TestComponents {
             port: PortManager::instance().next_port().await,
             metrics_port: PortManager::instance().next_port().await,
         };
+        info!("set_chain_ingestor_cfg: {:?}", set_chain_ingestor_cfg);
 
         let settlement_chain_ingestor = start_component(
             "synd-chain-ingestor",
-            set_chain_ingestor_cfg.metrics_port,
+            set_chain_ingestor_cfg.port,
             set_chain_ingestor_cfg.cli_args(),
             Default::default(),
         )
@@ -432,7 +434,7 @@ impl TestComponents {
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_ws_url: mchain_rpc_url.clone(),
-            metrics_port: PortManager::instance().next_port().await,
+            port: PortManager::instance().next_port().await,
             // Needs to be provided as it needs to be the ingestor's URL
             sequencing_ws_url: Some(sequencing_rpc_url.clone()),
             // NOTE: do not fill the values that are meant to be filled by the config manager
@@ -442,7 +444,7 @@ impl TestComponents {
 
         let translator = start_component(
             "synd-translator",
-            translator_config.metrics_port,
+            translator_config.port,
             translator_config.cli_args(),
             vec![],
         )
@@ -462,6 +464,7 @@ impl TestComponents {
             parent_chain_id: MCHAIN_ID,
             sequencer_mode: NitroSequencerMode::None,
             chain_name: "appchain".to_string(),
+            //NOTE: these deployment values are for the mchain, not the real contracts
             deployment: NitroDeployment {
                 bridge: APPCHAIN_CONTRACT,
                 sequencer_inbox: APPCHAIN_CONTRACT,
@@ -544,11 +547,12 @@ impl TestComponents {
                 private_key: PRIVATE_KEY.to_string(),
                 sequencing_address: sequencing_contract_address,
                 sequencing_rpc_url: seq_rpc_ws_url.to_string(),
-                metrics_port: PortManager::instance().next_port().await,
+                port: PortManager::instance().next_port().await,
+                wait_for_receipt: true,
             };
             let batch_sequencer_instance = start_component(
                 "synd-batch-sequencer",
-                batch_sequencer_config.metrics_port,
+                batch_sequencer_config.port,
                 batch_sequencer_config.cli_args(),
                 Default::default(),
             )
@@ -689,8 +693,25 @@ impl TestComponents {
     ) -> Result<Option<TransactionReceipt>> {
         let tx_hash = keccak256(tx);
         let tx_bytes = Bytes::from(tx.to_vec());
-        let seq_tx =
-            self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;
+
+        // NOTE: build the tx manually, instead of using the much simpler
+        // `self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;`
+        // this is because the contract_instance gets confused after a reorg and fails the tests...
+        // re-creating the contract instance after reorg did not help.
+        // (this is a bug in alloy.)
+        // https://github.com/alloy-rs/alloy/issues/2668
+        let raw_tx = self
+            .sequencing_contract
+            .processTransactionUncompressed(tx_bytes)
+            .nonce(self.sequencing_provider.get_transaction_count(test_account1().address).await?)
+            .gas(10_000_000)
+            .max_fee_per_gas(100_000_000)
+            .max_priority_fee_per_gas(0)
+            .chain_id(SEQUENCING_CHAIN_ID)
+            .build_raw_transaction(test_account1().signer.clone())
+            .await?;
+        let seq_tx = self.sequencing_provider.send_raw_transaction(&raw_tx).await?;
+
         if self.sequencing_deployment.is_none() {
             // skip mining step when in nitro mode
             self.mine_seq_block(seq_delay).await?;

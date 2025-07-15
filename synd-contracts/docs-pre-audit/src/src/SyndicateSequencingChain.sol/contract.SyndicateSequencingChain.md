@@ -1,8 +1,8 @@
 # SyndicateSequencingChain
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/SyndicateSequencingChain.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/SyndicateSequencingChain.sol)
 
 **Inherits:**
-[SequencingModuleChecker](/src/SequencingModuleChecker.sol/abstract.SequencingModuleChecker.md), [SyndicateAccumulator](/src/SyndicateAccumulator.sol/contract.SyndicateAccumulator.md)
+[SequencingModuleChecker](/src/SequencingModuleChecker.sol/abstract.SequencingModuleChecker.md)
 
 The core contract for sequencing transactions using a modular permission architecture
 
@@ -110,4 +110,20 @@ function prependZeroByte(bytes calldata _data) public pure returns (bytes memory
 |----|----|-----------|
 |`<none>`|`bytes`|bytes The transaction data with a zero byte prepended|
 
+
+## Events
+### TransactionProcessed
+Emitted when a new transaction is processed
+
+
+```solidity
+event TransactionProcessed(address indexed sender, bytes data);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`sender`|`address`|The address that submitted the transaction|
+|`data`|`bytes`|The transaction data that was processed|
 

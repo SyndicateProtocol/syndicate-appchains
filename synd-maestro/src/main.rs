@@ -2,7 +2,7 @@
 
 use eyre::Result;
 use shared::{
-    service_start_utils::{start_metrics_and_health, MetricsState},
+    service_start_utils::{start_http_server_with_metrics_only, MetricsState},
     tracing::{setup_global_tracing, ServiceTracingConfig},
 };
 use synd_maestro::{config::Config, metrics::MaestroMetrics};
@@ -22,10 +22,10 @@ async fn main() -> Result<()> {
 
     let mut metrics_state = MetricsState::default();
     let metrics = MaestroMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port, None));
+    tokio::spawn(start_http_server_with_metrics_only(metrics_state, config.metrics_port));
 
-    // Server::run now creates the service internally and returns a shutdown function
-    // that also handles stopping the server handle.
+    // Server::run creates the service and returns a shutdown function that also handles stopping
+    // the server handle.
     let (addr, shutdown_fn) = synd_maestro::server::run(config, metrics).await?;
     info!(
         %addr,

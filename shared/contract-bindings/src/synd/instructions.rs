@@ -22,22 +22,22 @@ pub mod Instructions {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b6008602c823930815050600890f35b6027565b60405190565b5f80fdfe60806040525f80fd
+    ///0x6080806040523460175760039081601c823930815050f35b5f80fdfe5f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`\x08`,\x8290\x81PP`\x08\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD",
+        b"`\x80\x80`@R4`\x17W`\x03\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fd
+    ///0x5f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD",
+        b"_\x80\xFD",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`Instructions`](self) contract instance.
@@ -45,14 +45,13 @@ pub mod Instructions {
 See the [wrapper's documentation](`InstructionsInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> InstructionsInstance<T, P, N> {
-        InstructionsInstance::<T, P, N>::new(address, provider)
+    ) -> InstructionsInstance<P, N> {
+        InstructionsInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -61,15 +60,14 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<InstructionsInstance<T, P, N>>,
+        Output = alloy_contract::Result<InstructionsInstance<P, N>>,
     > {
-        InstructionsInstance::<T, P, N>::deploy(provider)
+        InstructionsInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -78,11 +76,10 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
-        InstructionsInstance::<T, P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        InstructionsInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`Instructions`](self) instance.
 
@@ -96,13 +93,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct InstructionsInstance<T, P, N = alloy_contract::private::Ethereum> {
+    pub struct InstructionsInstance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for InstructionsInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for InstructionsInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("InstructionsInstance").field(&self.address).finish()
@@ -111,10 +108,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > InstructionsInstance<T, P, N> {
+    > InstructionsInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`Instructions`](self) contract instance.
 
 See the [wrapper's documentation](`InstructionsInstance`) for more details.*/
@@ -126,7 +122,7 @@ See the [wrapper's documentation](`InstructionsInstance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -137,7 +133,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<InstructionsInstance<T, P, N>> {
+        ) -> alloy_contract::Result<InstructionsInstance<P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -148,7 +144,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -175,24 +171,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> InstructionsInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> InstructionsInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> InstructionsInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> InstructionsInstance<P, N> {
             InstructionsInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > InstructionsInstance<T, P, N> {
+    > InstructionsInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -200,24 +195,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > InstructionsInstance<T, P, N> {
+    > InstructionsInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
     }

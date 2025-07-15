@@ -21,8 +21,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
+	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/triedb"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
@@ -30,10 +32,12 @@ import (
 	"github.com/offchainlabs/nitro/arbos/arbosState"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
 	"github.com/offchainlabs/nitro/arbstate"
-	"github.com/offchainlabs/nitro/arbstate/daprovider"
 	"github.com/offchainlabs/nitro/arbutil"
 	"github.com/offchainlabs/nitro/cmd/chaininfo"
-	"github.com/offchainlabs/nitro/das/dastree"
+	"github.com/offchainlabs/nitro/daprovider"
+	"github.com/offchainlabs/nitro/daprovider/das/dastree"
+	"github.com/offchainlabs/nitro/daprovider/das/dasutil"
+	"github.com/offchainlabs/nitro/eigenda"
 	"github.com/offchainlabs/nitro/execution"
 	"github.com/offchainlabs/nitro/gethhook"
 )
@@ -127,8 +131,8 @@ func (dasReader *PreimageDASReader) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-func (dasReader *PreimageDASReader) ExpirationPolicy(ctx context.Context) (daprovider.ExpirationPolicy, error) {
-	return daprovider.DiscardImmediately, nil
+func (dasReader *PreimageDASReader) ExpirationPolicy(ctx context.Context) (dasutil.ExpirationPolicy, error) {
+	return dasutil.DiscardImmediately, nil
 }
 
 type BlobPreimageReader struct {
@@ -158,6 +162,32 @@ func (r *BlobPreimageReader) GetBlobs(
 
 func (r *BlobPreimageReader) Initialize(ctx context.Context) error {
 	return nil
+}
+
+type EigenDAPreimageReader struct {
+	wavm *wavmio.Wavm
+}
+
+// QueryBlob returns the blob for the given cert from the preimage oracle using the hash of the
+// certificate kzg commitment for identifying the preimage.
+func (dasReader *EigenDAPreimageReader) QueryBlob(ctx context.Context, cert *eigenda.EigenDAV1Cert, domain string) ([]byte, error) {
+	hash, err := cert.PreimageHash()
+	if err != nil {
+		return nil, err
+	}
+
+	preimage, err := dasReader.wavm.ResolveTypedPreimage(arbutil.EigenDaPreimageType, *hash)
+	if err != nil {
+		return nil, err
+	}
+
+	decodedBlob, err := eigenda.GenericDecodeBlob(preimage)
+	if err != nil {
+		println("Error decoding blob: ", err)
+		return nil, err
+	}
+
+	return decodedBlob, nil
 }
 
 // To generate:
@@ -211,7 +241,7 @@ func Verify(data wavmio.ValidationInput, processor interface {
 		}
 	}()
 
-	wavm, err := wavmio.Init(data)
+	wavm, err := wavmio.New(data)
 	if err != nil {
 		return nil, err
 	}
@@ -230,25 +260,28 @@ func Verify(data wavmio.ValidationInput, processor interface {
 	if err != nil {
 		return nil, err
 	}
-	block := types.NewBlockWithHeader(header)
 
+	db := state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), nil), nil)
 	for wavm.GetInboxPosition() < batchCount {
-		raw := rawdb.NewDatabase(PreimageDb{wavm})
-		db := state.NewDatabase(triedb.NewDatabase(raw, nil), nil)
-		statedb, err := state.NewDeterministic(block.Root(), db)
+		statedb, err := state.NewDeterministic(header.Root, db)
 		if err != nil {
-			return nil, fmt.Errorf("Error opening state db: %v", err.Error())
+			return nil, fmt.Errorf("Error opening state db for block %s: %v", header.Hash(), err.Error())
 		}
 
-		readMessage := func(dasEnabled bool) (*arbostypes.MessageWithMetadata, error) {
-			delayedMessagesRead := block.Nonce()
+		readMessage := func(dasEnabled bool, eigenDAEnabled bool) (*arbostypes.MessageWithMetadata, error) {
+			delayedMessagesRead := header.Nonce.Uint64()
 
-			var dasReader daprovider.DASReader
-			var dasKeysetFetcher daprovider.DASKeysetFetcher
+			var dasReader dasutil.DASReader
+			var eigenDAReader *EigenDAPreimageReader
+			var dasKeysetFetcher dasutil.DASKeysetFetcher
 			if dasEnabled {
 				// DAS batch and keysets are all together in the same preimage binary.
 				dasReader = &PreimageDASReader{wavm}
 				dasKeysetFetcher = &PreimageDASReader{wavm}
+			}
+
+			if eigenDAEnabled {
+				eigenDAReader = &EigenDAPreimageReader{wavm}
 			}
 			backend := WavmInbox{wavm}
 			var keysetValidationMode = daprovider.KeysetPanicIfInvalid
@@ -257,8 +290,12 @@ func Verify(data wavmio.ValidationInput, processor interface {
 			}
 			var dapReaders []daprovider.Reader
 			if dasReader != nil {
-				dapReaders = append(dapReaders, daprovider.NewReaderForDAS(dasReader, dasKeysetFetcher))
+				dapReaders = append(dapReaders, dasutil.NewReaderForDAS(dasReader, dasKeysetFetcher))
 			}
+			if eigenDAReader != nil {
+				dapReaders = append(dapReaders, eigenda.NewReaderForEigenDA(eigenDAReader))
+			}
+
 			dapReaders = append(dapReaders, daprovider.NewReaderForBlobReader(&BlobPreimageReader{wavm}))
 			inboxMultiplexer := arbstate.NewInboxMultiplexer(backend, delayedMessagesRead, dapReaders, keysetValidationMode)
 			ctx := context.Background()
@@ -312,17 +349,34 @@ func Verify(data wavmio.ValidationInput, processor interface {
 			}
 		}
 
-		message, err := readMessage(chainConfig.ArbitrumChainParams.DataAvailabilityCommittee)
+		message, err := readMessage(chainConfig.ArbitrumChainParams.DataAvailabilityCommittee, chainConfig.ArbitrumChainParams.EigenDA)
 		if err != nil {
 			return nil, err
 		}
 
 		chainContext := WavmChainContext{chainConfig: chainConfig, wavm: wavm}
 
-		var receipts types.Receipts
-		block, receipts, err = arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, block.Header(), statedb, chainContext, false, core.MessageReplayMode)
+		block, receipts, err := arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, header, statedb, chainContext, false, core.MessageReplayMode)
 		if err != nil {
 			return nil, err
+		}
+
+		header = block.Header()
+		if header.Number.Uint64()%1000 == 0 {
+			log.Debug("Verifying block", "block", header.Number.Uint64(), "currentBatch", wavm.GetInboxPosition(), "batchCount", batchCount)
+		}
+		bytes, err := rlp.EncodeToBytes(header)
+		if err != nil {
+			return nil, fmt.Errorf("Error RLP encoding header: %v", err)
+		}
+		wavm.Preimages[arbutil.Keccak256PreimageType][crypto.Keccak256Hash(bytes)] = bytes
+
+		result, err := statedb.Commit(block.NumberU64(), true, false)
+		if err != nil {
+			return nil, err
+		}
+		if result != header.Root {
+			return nil, fmt.Errorf("bad commit root hash expected %v, got %v", header.Root, result)
 		}
 
 		if processor != nil {
@@ -336,10 +390,10 @@ func Verify(data wavmio.ValidationInput, processor interface {
 		return nil, fmt.Errorf("invalid end state: batch count %d != %d or message position %d != 0", wavm.GetInboxPosition(), batchCount, wavm.GetPositionWithinMessage())
 	}
 
-	extraInfo := types.DeserializeHeaderExtraInformation(block.Header())
+	extraInfo := types.DeserializeHeaderExtraInformation(header)
 	if extraInfo.ArbOSFormatVersion == 0 {
-		return nil, fmt.Errorf("Error deserializing header extra info: %+v", block.Header())
+		return nil, fmt.Errorf("Error deserializing header extra info: %+v", header)
 	}
 
-	return &execution.MessageResult{BlockHash: block.Hash(), SendRoot: extraInfo.SendRoot}, nil
+	return &execution.MessageResult{BlockHash: header.Hash(), SendRoot: extraInfo.SendRoot}, nil
 }

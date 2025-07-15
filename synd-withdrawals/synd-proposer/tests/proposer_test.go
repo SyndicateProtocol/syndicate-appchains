@@ -9,25 +9,34 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/SyndicateProtocol/synd-proposer/pkg"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func TestInitProposerWithConfig(t *testing.T) {
+	privateKey, err := crypto.HexToECDSA("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+	if err != nil {
+		t.Fatalf("failed to parse private key: %v", err)
+	}
 	dummyCfg := &pkg.Config{
 		EthereumRPCURL:           "http://localhost:8545",
 		SettlementRPCURL:         "http://localhost:8546",
 		SequencingRPCURL:         "http://localhost:8547",
 		AppchainRPCURL:           "http://localhost:8548",
 		EnclaveRPCURL:            "http://localhost:8549",
-		TeeModuleContractAddress: "0x123",
-		ArbitrumBridgeAddress:    "0x456",
-		InboxAddress:             "0x789",
-		SequencerInboxAddress:    "0xabc",
-		PrivateKey:               "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		TeeModuleContractAddress: common.HexToAddress("0x41F2F55571f9e8e3Ba511Adc48879Bd67626A2b4"),
+		AppchainBridgeAddress:    common.HexToAddress("0x41F2F55571f9e8e3Ba511Adc48879Bd67626A2b5"),
+		PrivateKey:               privateKey,
 		PollingInterval:          10 * time.Second,
 		CloseChallengeInterval:   5 * time.Second,
-		MetricsPort:              9292,
+		Port:                     9292,
 		SettlementChainID:        9999,
+		EnclaveTLSConfig: pkg.TLSConfig{
+			Enabled:        false,
+			ClientCertPath: "/etc/tls/tls.crt",
+			ClientKeyPath:  "/etc/tls/tls.key",
+		},
 	}
 	proposer := pkg.NewProposer(dummyCfg)
 	if proposer.Config != dummyCfg {

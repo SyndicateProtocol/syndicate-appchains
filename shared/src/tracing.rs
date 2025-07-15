@@ -128,8 +128,12 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
 /// A shorthand to set up a subscriber for tests,
 /// bypassing tracing/metrics initialization.
 pub fn setup_global_logging() -> Result<(), Error> {
+    let env_filter =
+        EnvFilter::builder().with_default_directive(filter::LevelFilter::INFO.into()).from_env()?;
+
     tracing_subscriber::fmt()
         .json()
+        .with_env_filter(env_filter)
         .with_target(true)
         .with_test_writer()
         .try_init()

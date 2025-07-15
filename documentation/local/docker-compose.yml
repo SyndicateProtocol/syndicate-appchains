@@ -1,35 +1,43 @@
 services:
   mchain:
-    build:
-      context: ../
-      target: synd-mchain
-      dockerfile: Dockerfile
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:latest
+    platform: linux/amd64
+    # build:
+    #   context: ../../
+    #   target: synd-mchain
+    #   dockerfile: Dockerfile
     environment:
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
+    ports:
+      - 5555:8545
 
   seq-ingestor:
-    build:
-      context: ../
-      target: synd-chain-ingestor
-      dockerfile: Dockerfile
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
+    platform: linux/amd64
+    # build:
+    #   context: ../../
+    #   target: synd-chain-ingestor
+    #   dockerfile: Dockerfile
     volumes:
       - ./:/chains
     environment:
-      - DB_FILE=/chains/5113.db
+      - DB_FILE=/chains/${SEQUENCING_CHAIN_ID}.db
       - START_BLOCK=0
-      - RPC_URL={{ SEQUENCING_RPC_URL }}
+      - WS_URLS=${SEQUENCING_WS_URL}
 
   set-ingestor:
-    build:
-      context: ../
-      target: synd-chain-ingestor
-      dockerfile: Dockerfile
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
+    platform: linux/amd64
+    # build:
+    #   context: ../../
+    #   target: synd-chain-ingestor
+    #   dockerfile: Dockerfile
     volumes:
       - ./:/chains
     environment:
       - DB_FILE=/chains/84532.db
       - START_BLOCK=20000000
-      - RPC_URL={{ SETTLEMENT_RPC_URL }}
+      - WS_URLS=${SETTLEMENT_WS_URL}
 
   healthcheck:
     image: curlimages/curl:8.13.0
@@ -40,20 +48,22 @@ services:
     entrypoint: /bin/sh
 
   translator:
-    build:
-      context: ../
-      target: synd-translator
-      dockerfile: Dockerfile
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:latest
+    platform: linux/amd64
+    # build:
+    #   context: ../../
+    #   target: synd-translator
+    #   dockerfile: Dockerfile
     environment:
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
       SEQUENCING_CONTRACT_ADDRESS: ${SEQUENCING_CONTRACT_ADDRESS}
       ARBITRUM_BRIDGE_ADDRESS: ${ARBITRUM_BRIDGE_ADDRESS}
       ARBITRUM_INBOX_ADDRESS: ${ARBITRUM_INBOX_ADDRESS}
-      SEQUENCING_RPC_URL: "ws://seq-ingestor:8545"
+      SEQUENCING_WS_URL: "ws://seq-ingestor:8545"
       SEQUENCING_START_BLOCK: ${SEQUENCING_START_BLOCK}
-      SETTLEMENT_RPC_URL: "ws://set-ingestor:8545"
+      SETTLEMENT_WS_URL: "ws://set-ingestor:8545"
       SETTLEMENT_START_BLOCK: ${SETTLEMENT_START_BLOCK}
-      MCHAIN_RPC_URL: "ws://mchain:8545"
+      MCHAIN_WS_URL: "ws://mchain:8545"
       SETTLEMENT_DELAY: "60"
     depends_on:
       healthcheck:

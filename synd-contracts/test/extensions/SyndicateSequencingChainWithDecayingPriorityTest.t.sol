@@ -229,7 +229,9 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
 
         // Expect specific error from RequireAndModule
         vm.expectRevert(
-            abi.encodeWithSelector(RequireAndModule.CheckFailed.selector, mockRequireAllAddr, address(this))
+            abi.encodeWithSelector(
+                RequireAndModule.AndPermissionCheckFailed.selector, mockRequireAllAddr, address(this), testData2
+            )
         );
 
         // This should revert with CheckFailed
@@ -243,7 +245,9 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
         vm.stopPrank();
 
         // Expect specific RequireAny module error
-        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(
+            abi.encodeWithSelector(RequireOrModule.AllOrPermissionChecksFailed.selector, address(this), testData2)
+        );
 
         // This should revert with CheckFailed
         chain.processTransaction(testData2, 1);
