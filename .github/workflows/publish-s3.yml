@@ -1,0 +1,58 @@
+name: Publish to S3
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  publish-s3:
+    runs-on: shared-medium-01
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build synd-withdrawals/server
+        run: |
+          cd synd-withdrawals/server
+          docker build --output=. .
+
+      - name: Pull submodules
+        run: |
+          cd synd-withdrawals/synd-enclave && \
+          git submodule update --init --recursive
+
+      - name: Build eif.bin file
+        run: |
+          cd synd-withdrawals/synd-enclave
+          docker build --target eif-bin --output=out .
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-external-id: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
+          role-duration-seconds: 1200
+          role-skip-session-tagging: true
+
+      - name: Upload eif.bin to AWS S3
+        uses: usualdesigner/s3-artifact-upload@main
+        with:
+          bucket-name: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          file: synd-withdrawals/synd-enclave/out/eif.bin
+
+      - name: Upload server to AWS S3
+        uses: usualdesigner/s3-artifact-upload@main
+        with:
+          bucket-name: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          file: synd-withdrawals/server/app/server
