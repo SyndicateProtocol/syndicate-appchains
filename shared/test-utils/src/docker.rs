@@ -14,6 +14,7 @@ use alloy::{
     transports::http::Client,
 };
 use eyre::Result;
+use jsonrpsee::{core::client::ClientT, http_client::HttpClientBuilder};
 use redis::aio::ConnectionManager;
 use std::{
     env,
@@ -22,7 +23,6 @@ use std::{
     time::Duration,
 };
 use synd_mchain::client::MProvider;
-use synd_tee_attestation_zk_proofs_submitter::{self, get_signer_public_key};
 use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
@@ -415,4 +415,15 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     let signer_address = Address::from_raw_public_key(&signer_pub_key_bytes[..64]);
 
     Ok((docker, enclave_rpc_url, signer_address))
+}
+
+/// Duplicated from `synd-withdrawals/synd-enclave/src/lib.rs` to avoid pulling the heavy ZK deps
+/// into `/shared`.
+/// Gets the public key from the TEE, no attestation. Used for testing only
+async fn get_signer_public_key(enclave_rpc_url: String) -> Result<String> {
+    let client = HttpClientBuilder::default()
+        .request_timeout(Duration::from_secs(10))
+        .build(enclave_rpc_url)?;
+
+    Ok(client.request::<String, [(); 0]>("enclave_signerPublicKey", []).await?)
 }

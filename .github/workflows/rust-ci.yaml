@@ -146,7 +146,7 @@ jobs:
       - name: Install SP1 toolchain
         run: |
           curl -L https://sp1.succinct.xyz | bash
-          $HOME/.sp1/bin/sp1up 
+          $HOME/.sp1/bin/sp1up
           $HOME/.sp1/bin/cargo-prove prove --version
 
       - name: Build SP1 ELF program
