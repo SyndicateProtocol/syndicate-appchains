@@ -4,8 +4,14 @@ use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::Ethereum,
     primitives::{address, keccak256, utils::parse_ether, Address, B256, U256},
-    providers::{ext::DebugApi, Provider, ProviderBuilder},
-    rpc::types::trace::geth::{GethDebugTracingOptions, GethTrace},
+    providers::{
+        ext::{AnvilApi, DebugApi},
+        Provider, ProviderBuilder,
+    },
+    rpc::types::{
+        anvil::MineOptions,
+        trace::geth::{GethDebugTracingOptions, GethTrace},
+    },
     signers::local::PrivateKeySigner,
     sol,
     sol_types::SolValue,
@@ -36,11 +42,10 @@ fn init() {
     shared::tracing::setup_global_logging();
 }
 
-// TODO SEQ-1032
-// #[tokio::test]
-// async fn e2e_tee_withdrawal_with_eigenda() -> Result<()> {
-//     e2e_tee_withdrawal(BaseChainsType::NitroWithEigenda).await
-// }
+#[tokio::test]
+async fn e2e_tee_withdrawal_with_eigenda() -> Result<()> {
+    e2e_tee_withdrawal(BaseChainsType::NitroWithEigenda).await
+}
 
 #[tokio::test]
 async fn e2e_tee_withdrawal_with_calldata() -> Result<()> {
@@ -164,6 +169,11 @@ async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
             let (_l1_oracle_handle, l1_oracle_address) =
                 setup_l1_oracle(l1_provider.clone(), oracle_settlement_provider).await;
 
+            // Mine a block on L1 to trigger the oracle update after subscription is established
+            l1_provider
+                .evm_mine(Some(MineOptions::Options { timestamp: None, blocks: Some(1) }))
+                .await?;
+
             // wait until the oracle is operational
             wait_until!(
                 L1BlockOracle::new(l1_oracle_address, components.settlement_provider.clone())
@@ -249,12 +259,10 @@ async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
                 polling_interval: "100ms".to_string(),
                 close_challenge_interval: format!("{}s", close_challenge_interval.as_secs()),
                 settlement_chain_id: SETTLEMENT_CHAIN_ID,
-                // TODO SEQ-1032
-                // - does the propose need to see eigenDA data on L1? (prob not)
                 eigen_rpc_url: components
                     .eigenda_proxy_url
                     .clone()
-                    .unwrap_or_else(|| "http://localhost:0000".to_string()), // mock url
+                    .unwrap_or_else(|| "http://localhost:0000".to_string()),
                 appchain_bridge_address: components.appchain_deployment.bridge,
                 sequencing_contract_address: *components.sequencing_contract.address(),
                 sequencing_bridge_address_on_l1: sequencing_bridge_address,

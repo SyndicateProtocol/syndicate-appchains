@@ -15,9 +15,8 @@ use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
 pub enum BaseChainsType {
     Anvil,
     PreLoaded(ContractVersion),
-    /// auto-mine enabled
-    Nitro,
-    // NitroWithEigenda,
+    Nitro,            // auto-mine enabled
+    NitroWithEigenda, // auto-mine enabled
 }
 
 /// Arbitrum Nitro contract version on the settlement chain used for testing
@@ -74,9 +73,12 @@ pub(super) async fn setup_config_manager(
     let config_manager_tx =
         ArbConfigManager::deploy_builder(set_provider, config_manager_owner).send().await?;
 
-    if options.base_chains_type != BaseChainsType::Nitro {
-        mine_block(set_provider, 0).await?;
-    }
+    match options.base_chains_type {
+        BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+            mine_block(set_provider, 0).await?;
+        }
+        _ => {}
+    };
 
     let config_manager_address = config_manager_tx.get_receipt().await?.contract_address.unwrap();
     let config_manager = ArbConfigManager::new(config_manager_address, set_provider.clone());
@@ -102,9 +104,13 @@ pub(super) async fn setup_config_manager(
         )
         .send()
         .await?;
-    if options.base_chains_type != BaseChainsType::Nitro {
-        mine_block(set_provider, 0).await?;
-    }
+
+    match options.base_chains_type {
+        BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+            mine_block(set_provider, 0).await?;
+        }
+        _ => {}
+    };
 
     assert!(create_chain_config_tx.get_receipt().await?.status());
 

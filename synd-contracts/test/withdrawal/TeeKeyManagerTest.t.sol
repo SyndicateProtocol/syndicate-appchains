@@ -57,15 +57,18 @@ contract TeeKeyManagerTest is Test {
         vm.stopPrank();
     }
 
-    function test_InitialState() public view {
+    function test_InitialState() public {
         assertEq(address(keyManager.attestationDocVerifier()), address(mockVerifier), "Initial verifier mismatch");
         assertEq(keyManager.owner(), owner, "Initial owner mismatch");
-        assertFalse(keyManager.isKeyValid(teeKey1), "Key should not be valid initially");
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey1));
+        keyManager.isKeyValid(teeKey1);
     }
 
     // --- Test addKey ---
     function test_AddKey_Success() public {
-        assertFalse(keyManager.isKeyValid(teeKey1), "Key should initially be invalid");
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey1));
+        keyManager.isKeyValid(teeKey1);
+
         mockVerifier.setPublicKeyToReturn(teeKey1);
 
         vm.expectEmit(true, true, true, true, address(keyManager));
@@ -106,8 +109,11 @@ contract TeeKeyManagerTest is Test {
         keyManager.revokeAllKeys();
         vm.stopPrank();
 
-        assertFalse(keyManager.isKeyValid(teeKey1), "teeKey1 should be invalid after revoke");
-        assertFalse(keyManager.isKeyValid(teeKey2), "teeKey2 should be invalid after revoke");
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey1));
+        keyManager.isKeyValid(teeKey1);
+
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey2));
+        keyManager.isKeyValid(teeKey2);
     }
 
     function test_RevokeAllKeys_FailsIfNotOwner() public {
@@ -143,7 +149,8 @@ contract TeeKeyManagerTest is Test {
         vm.stopPrank();
 
         assertEq(address(keyManager.attestationDocVerifier()), address(newMockVerifier), "Verifier address not updated");
-        assertFalse(keyManager.isKeyValid(teeKey1), "teeKey1 should be invalid after verifier update (keys revoked)");
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey1));
+        keyManager.isKeyValid(teeKey1);
 
         // Test adding a key with the new verifier
         address newTeeKey = vm.addr(6);

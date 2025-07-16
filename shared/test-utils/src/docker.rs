@@ -265,6 +265,7 @@ pub async fn start_mchain(
     Ok((url, docker, mchain))
 }
 
+#[derive(Clone)]
 pub enum NitroSequencerMode {
     // No sequencer mode - used for the appchain that will simply derive the state
     None,
@@ -273,7 +274,9 @@ pub enum NitroSequencerMode {
     // Sequencer mode - used for base chains when E2E's Nitro mode is enabled, these chains will
     // post batch data to L1
     Sequencer,
-    // TODO SEQ-1032: add EigenDA mode
+    // EigenDA sequencer mode - used for base chains when E2E's NitroWithEigenda mode is enabled,
+    // requires (URL of the eigenDA disperser, l1 rpc url)
+    EigenDASequencer(String, String),
 }
 
 pub struct NitroNodeArgs {
@@ -289,7 +292,7 @@ pub struct NitroNodeArgs {
 
 /// Starts nitro instance
 pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
-    let tag = env::var("NITRO_TAG").unwrap_or("nitro:eigenda-v3.6.4-dev.2".to_string());
+    let tag = env::var("NITRO_TAG").unwrap_or("eigenda-v3.6.4-dev.2".to_string());
     let port = PortManager::instance().next_port().await;
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
@@ -299,8 +302,8 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
         NitroSequencerMode::Forwarding(port) => {
             vec![format!("--execution.forwarding-target=http://localhost:{port}")]
         }
-        NitroSequencerMode::Sequencer => {
-            vec![
+        NitroSequencerMode::Sequencer | NitroSequencerMode::EigenDASequencer(_, _) => {
+            let mut cmd_args = vec![
                 "--node.sequencer=true".to_string(),
                 "--node.batch-poster.enable=true".to_string(),
                 "--execution.sequencer.enable=true".to_string(),
@@ -328,18 +331,31 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
                     .to_string(),
                 "--node.batch-poster.max-delay=1s".to_string(),
                 "--node.batch-poster.wait-for-max-delay=false".to_string(),
-            ]
+            ];
+
+            if let NitroSequencerMode::EigenDASequencer(_, parent_chain_url) = &args.sequencer_mode
+            {
+                // cmd_args.push(format!("--node.eigen-da.rpc={eigen_da_url}"));
+                // NOTE: for some reason, the eigenDA configuration comes in form of env vars and
+                // this flag is necessary to enable them
+                cmd_args.push("--conf.env-prefix=ENV".to_string());
+                cmd_args.push("--node.data-availability.enable=true".to_string());
+                cmd_args.push("--node.data-availability.rpc-aggregator.enable=true".to_string());
+                cmd_args.push("--node.data-availability.rest-aggregator.enable".to_string());
+                cmd_args.push(format!(
+                    "--node.data-availability.parent-chain-node-url={parent_chain_url}"
+                ));
+            }
+            cmd_args
         }
     };
 
-    // TODO do this for eigenDA
-    // ENV_NODE_EIGEN__DA_ENABLE=true ENV_NODE_EIGEN__DA_RPC=https://risa-testnet-eigenda-mirror.rollups.alchemy.com ../nitro/cmd/nitro/nitro
-
-    // need to set this to listen to the ENV vars
-    // --conf.env-prefix=ENV
-    // --http.api=eth,synd // enable synd api
-
-    // --http.server-timeouts.write-timeout 60m
+    //
+    let mut env_vars = vec![];
+    if let NitroSequencerMode::EigenDASequencer(eigen_da_url, _) = args.sequencer_mode.clone() {
+        env_vars.push(("ENV_NODE_EIGEN__DA_ENABLE".to_string(), "true".to_string()));
+        env_vars.push(("ENV_NODE_EIGEN__DA_RPC".to_string(), eigen_da_url.to_string()));
+    }
 
     let mut nitro = E2EProcess::new(
         Command::new("docker")
@@ -347,7 +363,8 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg("--init")
             .arg("--rm")
             .arg("--net=host")
-            .arg(format!("ghcr.io/syndicateprotocol/nitro:{tag}"))
+            .arg("synd-nitro") // TODO remove
+            // .arg(format!("ghcr.io/syndicateprotocol/nitro/nitro:{tag}"))
             .arg(format!("--parent-chain.connection.url={}", args.parent_chain_url))
             .arg("--node.dangerous.disable-blob-reader")
             .arg("--node.inbox-reader.check-delay=100ms")
@@ -363,6 +380,10 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
                     chain_owner: args.chain_owner,
                     chain_name: args.chain_name.clone(),
                     deployment: args.deployment,
+                    use_eigen_da: matches!(
+                        args.sequencer_mode,
+                        NitroSequencerMode::EigenDASequencer(_, _)
+                    ),
                 })
             ))
             .arg("--http.addr=0.0.0.0")
@@ -374,7 +395,9 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg("--ws.addr=0.0.0.0")
             .arg("--ws.origins=\\*")
             .arg(format!("--log-level={log_level}"))
-            .args(sequencer_args),
+            // .arg("--http.server-timeouts.write-timeout 60m") // NOTE: this crashes the node lol
+            .args(sequencer_args)
+            .envs(env_vars),
         format!("nitro-{}", args.chain_name).as_str(),
     )?;
 
@@ -500,7 +523,7 @@ pub async fn start_eigenda_proxy() -> Result<(E2EProcess, String)> {
             .arg("--rm")
             .arg("-p")
             .arg(format!("{port}:{port}"))
-            .arg("ghcr.io/layr-labs/eigenda-proxy:latest")
+            .arg("ghcr.io/layr-labs/eigenda-proxy:latest@sha256:dc5564dc557e3d349e38bdcb48cad2b31a16f185216e9e3f25796a5b966de5e9")
             .arg("--memstore.enabled")
             .arg("--port")
             .arg(port.to_string()),

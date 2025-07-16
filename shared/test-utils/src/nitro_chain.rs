@@ -22,6 +22,7 @@ pub struct NitroChainInfoArgs {
     pub chain_owner: Address,
     pub chain_name: String,
     pub deployment: NitroDeployment,
+    pub use_eigen_da: bool,
 }
 
 /// Get the nitro json configuration data for the appchain
@@ -40,7 +41,7 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
         ..
     } = deployment;
 
-    let appchain_config = chain_config(args.chain_id, args.chain_owner);
+    let appchain_config = chain_config(args.chain_id, args.chain_owner, args.use_eigen_da);
     format!(
         r#"[{{
               "chain-name": "{chain_name}",
@@ -69,9 +70,7 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
 }
 
 /// Return the on-chain config for a rollup with a given chain id
-pub fn chain_config(chain_id: u64, chain_owner: Address) -> String {
-    // TODO SEQ-1032: DataAvailabilityCommittee might need to be true for set/seq chains with
-    // eigenDA
+pub fn chain_config(chain_id: u64, chain_owner: Address, use_eigen_da: bool) -> String {
     let mut cfg = format!(
         r#"{{
           "chainId": {chain_id},
@@ -96,7 +95,7 @@ pub fn chain_config(chain_id: u64, chain_owner: Address) -> String {
           "arbitrum": {{
             "EnableArbOS": true,
             "AllowDebugPrecompiles": false,
-            "DataAvailabilityCommittee": false,
+            "DataAvailabilityCommittee": {use_eigen_da},
             "InitialArbOSVersion": 32,
             "InitialChainOwner": "{chain_owner}",
             "GenesisBlockNum": 0
@@ -230,6 +229,7 @@ pub async fn deploy_nitro_rollup(
     l1_rpc_url_http: &str,
     rollup_chain_id: u64,
     rollup_owner: Address,
+    batch_posters: Vec<Address>,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
     let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
@@ -266,7 +266,7 @@ pub async fn deploy_nitro_rollup(
     .await?;
     assert!(status.success(), "Failed to run `yarn build` in nitro contracts");
 
-    let chain_config_json = chain_config(rollup_chain_id, rollup_owner);
+    let chain_config_json = chain_config(rollup_chain_id, rollup_owner, false);
     let zero_address = Address::ZERO;
 
     // setup config.ts (unfortunately, the script expects the config to be in a specific path)
@@ -334,6 +334,10 @@ pub async fn deploy_nitro_rollup(
             .env("CHILD_CHAIN_CONFIG_PATH", "./l2_chain_config.json")
             .env("OWNER_ADDRESS", rollup_owner.to_string())
             .env("SEQUENCER_ADDRESS", rollup_owner.to_string()) // is set as the batch poster manager by default
+            .env(
+                "BATCH_POSTERS",
+                batch_posters.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(","),
+            )
             .env(
                 "WASM_MODULE_ROOT",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
