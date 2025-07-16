@@ -1,7 +1,6 @@
 # Global build arguments
 ARG BUILD_PROFILE=release
 ARG FEATURES="rocksdb"
-#ARG PACKAGE
 
 # Stage 1: Base image with Rust
 FROM rust:slim-bookworm AS builder
@@ -19,22 +18,6 @@ RUN --mount=type=cache,target=/var/cache/apt \
 # Stage 2: Build
 FROM builder AS build
 COPY . .
-
-## Install SP1 toolchain using official installer
-#RUN curl -L https://sp1up.succinct.xyz | bash
-#ENV PATH="/root/.sp1/bin:${PATH}"
-#RUN sp1up
-#
-## Verify SP1 installation (optional)
-#RUN cargo prove --version && \
-#    rustup toolchain list | grep succinct
-#
-## Build SP1 ELF program
-#RUN cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program && \
-#    cargo prove build && \
-#    cd /app
-
-# TODO look at `withdrawals-test` feature flag to put ZK deps behind
 
 # Perform `cargo build` only with packages that we want images for. Avoid heavy ZK deps
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
@@ -60,16 +43,16 @@ FROM synd-proposer-build AS synd-proposer-test
 WORKDIR /synd-proposer  
 RUN go test ./...
 
-## Stage 3: Optional Foundry install
-#FROM debian:bookworm-slim AS foundry
-#RUN apt-get update && \
-#    apt-get install -y --no-install-recommends \
-#    curl \
-#    git \
-#    ca-certificates && \
-#    curl -L https://foundry.paradigm.xyz | bash && \
-#    ~/.foundry/bin/foundryup && \
-#    rm -rf /var/lib/apt/lists/*
+# Stage 3: Optional Foundry install
+FROM debian:bookworm-slim AS foundry
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    ca-certificates && \
+    curl -L https://foundry.paradigm.xyz | bash && \
+    ~/.foundry/bin/foundryup && \
+    rm -rf /var/lib/apt/lists/*
 
 # Stage 3: Runtime images
 
@@ -84,8 +67,8 @@ FROM gcr.io/distroless/cc AS runtime-base
 FROM runtime-base AS synd-translator
 ARG BUILD_PROFILE
 COPY --from=build /app/target/${BUILD_PROFILE}/synd-translator /usr/local/bin/synd-translator
-#COPY --from=foundry /root/.foundry /root/.foundry
-#ENV PATH="/root/.foundry/bin:${PATH}"
+COPY --from=foundry /root/.foundry /root/.foundry
+ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
 LABEL service=synd-translator
@@ -128,8 +111,8 @@ FROM ubuntu:22.04 AS synd-translator-debug
 ARG BUILD_PROFILE
 RUN apt-get update && apt-get install -y heaptrack libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/target/${BUILD_PROFILE}/synd-translator /usr/local/bin/synd-translator
-#COPY --from=foundry /root/.foundry /root/.foundry
-#ENV PATH="/root/.foundry/bin:${PATH}"
+COPY --from=foundry /root/.foundry /root/.foundry
+ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
 LABEL service=synd-translator
