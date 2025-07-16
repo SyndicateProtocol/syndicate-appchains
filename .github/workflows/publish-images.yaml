@@ -110,3 +110,7 @@ jobs:
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             .
+          
+          echo "Pruning buildx and system..."
+          docker buildx prune --all --force
+          docker system prune --all --volumes --force
