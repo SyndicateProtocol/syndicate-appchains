@@ -138,7 +138,7 @@ RUN mkdir out
 RUN nix-build --option filter-syscalls false -A kernel && cp -r result/* out/
 RUN nix-build --option filter-syscalls false -A init && cp -r result/* out/
 
-FROM golang:1.23.1-bookworm AS builder
+FROM golang:1.24.2-bookworm AS builder
 RUN go install github.com/linuxkit/linuxkit/src/cmd/linuxkit@270fd1c5aa1986977b31af6c743c6a2681f67a29
 WORKDIR /build
 ARG version=""
@@ -156,6 +156,7 @@ COPY cmd/enclave/main.go cmd/enclave/main.go
 COPY cmd/enclave/g1.point cmd/enclave/g1.point
 COPY enclave enclave
 COPY nitro nitro
+COPY teemodule teemodule
 WORKDIR /build/nitro
 COPY --from=contracts-builder workspace/contracts/build/ contracts/build/
 COPY --from=contracts-builder workspace/contracts/out/ contracts/out/

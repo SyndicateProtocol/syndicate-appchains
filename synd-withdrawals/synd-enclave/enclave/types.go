@@ -10,6 +10,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
 	"github.com/andybalholm/brotli"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,6 +24,9 @@ import (
 	"github.com/offchainlabs/nitro/arbutil"
 	"github.com/offchainlabs/nitro/daprovider"
 )
+
+// Wrapper around the teemodule.TeeTrustedInput to define the Hash method
+type TrustedInput teemodule.TeeTrustedInput
 
 // AccountResult struct for eth_getProof response
 type AccountResult struct {
@@ -40,15 +44,6 @@ type StorageResult struct {
 	// TODO: use hexutil.U256 instead of hexutil.Big
 	Value hexutil.Big     `json:"value"`
 	Proof []hexutil.Bytes `json:"proof"`
-}
-
-type TrustedInput struct {
-	ConfigHash           common.Hash
-	AppStartBlockHash    common.Hash
-	SeqStartBlockHash    common.Hash
-	SetDelayedMessageAcc common.Hash
-	L1StartBatchAcc      common.Hash
-	L1EndHash            common.Hash
 }
 
 func (input *TrustedInput) Hash() common.Hash {
@@ -142,16 +137,13 @@ func (output *VerifySequencingChainOutput) validate(input *TrustedInput, key *ec
 }
 
 type VerifyAppchainOutput struct {
-	AppchainBlockHash   common.Hash
-	AppchainSendRoot    common.Hash
-	SequencingBlockHash common.Hash
-	L1BatchAcc          common.Hash
-	Signature           []byte
+	PendingAssertion teemodule.PendingAssertion
+	Signature        []byte
 }
 
 func (output *VerifyAppchainOutput) hash(input *TrustedInput) []byte {
 	teeHash := input.Hash()
-	return crypto.Keccak256(teeHash[:], crypto.Keccak256(output.AppchainBlockHash[:], output.AppchainSendRoot[:], output.SequencingBlockHash[:], output.L1BatchAcc[:]))
+	return crypto.Keccak256(teeHash[:], crypto.Keccak256(output.PendingAssertion.AppBlockHash[:], output.PendingAssertion.AppSendRoot[:], output.PendingAssertion.SeqBlockHash[:], output.PendingAssertion.L1BatchAcc[:]))
 }
 
 func (output *VerifyAppchainOutput) sign(input *TrustedInput, priv *ecdsa.PrivateKey) (err error) {

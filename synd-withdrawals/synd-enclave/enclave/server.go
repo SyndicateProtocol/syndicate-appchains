@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -530,7 +531,7 @@ func parseAppBatches(input *VerifyAppchainInput) ([][]byte, error) {
 		acc = delayedMessageAccumulate(acc, msg)
 	}
 	if acc != input.TrustedInput.SetDelayedMessageAcc {
-		return nil, fmt.Errorf("delayed message accumulator mismatch: got %s, expected %s", common.Bytes2Hex(acc.Bytes()), common.Bytes2Hex(input.TrustedInput.SetDelayedMessageAcc.Bytes()))
+		return nil, fmt.Errorf("delayed message accumulator mismatch: got %s, expected %s", common.Bytes2Hex(acc.Bytes()), common.Bytes2Hex(input.TrustedInput.SetDelayedMessageAcc[:]))
 	}
 
 	// remove dummy delayed message used to verify the count of the accumulator
@@ -598,10 +599,12 @@ func (s *Server) VerifyAppchain(ctx context.Context, input VerifyAppchainInput) 
 		}
 	}
 	output := VerifyAppchainOutput{
-		L1BatchAcc:          input.VerifySequencingChainOutput.L1BatchAcc,
-		SequencingBlockHash: input.VerifySequencingChainOutput.SequencingBlockHash,
-		AppchainBlockHash:   result.BlockHash,
-		AppchainSendRoot:    result.SendRoot,
+		PendingAssertion: teemodule.PendingAssertion{
+			AppBlockHash: result.BlockHash,
+			AppSendRoot:  result.SendRoot,
+			SeqBlockHash: input.VerifySequencingChainOutput.SequencingBlockHash,
+			L1BatchAcc:   input.VerifySequencingChainOutput.L1BatchAcc,
+		},
 	}
 	if err := output.sign(&input.TrustedInput, s.signerKey); err != nil {
 		return nil, err
@@ -621,9 +624,9 @@ func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppc
 	if input.Inputs[0].ConfigHash != input.Inputs[1].ConfigHash || input.Config.Hash() != input.Inputs[0].ConfigHash {
 		return nil, errors.New("config hash mismatch")
 	}
-	if input.Outputs[0].SequencingBlockHash != input.Inputs[1].SeqStartBlockHash ||
-		input.Outputs[0].AppchainBlockHash != input.Inputs[1].AppStartBlockHash ||
-		input.Outputs[0].L1BatchAcc != input.Inputs[1].L1StartBatchAcc {
+	if input.Outputs[0].PendingAssertion.SeqBlockHash != input.Inputs[1].SeqStartBlockHash ||
+		input.Outputs[0].PendingAssertion.AppBlockHash != input.Inputs[1].AppStartBlockHash ||
+		input.Outputs[0].PendingAssertion.L1BatchAcc != input.Inputs[1].L1StartBatchAcc {
 		return nil, errors.New("input output mismatch")
 	}
 
@@ -643,7 +646,7 @@ func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppc
 		if input.SeqFirstEndBlockHeader == nil {
 			return nil, errors.New("missing seq first end block header")
 		}
-		if input.SeqFirstEndBlockHeader.Hash() != input.Outputs[0].SequencingBlockHash {
+		if input.SeqFirstEndBlockHeader.Hash() != input.Outputs[0].PendingAssertion.SeqBlockHash {
 			return nil, errors.New("seq first end block header hash mismatch")
 		}
 		if timestamp+input.Config.SettlementDelay <= input.SeqFirstEndBlockHeader.Time {
