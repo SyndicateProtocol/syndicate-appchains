@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
-	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/teemodule"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -169,12 +169,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 					log.Printf("Failed to prove: %v", err)
 				}
 
-				p.PendingAssertion = &teemodule.PendingAssertion{
-					AppBlockHash: appOutput.AppchainBlockHash,
-					AppSendRoot:  appOutput.AppchainSendRoot,
-					SeqBlockHash: appOutput.SequencingBlockHash,
-					L1BatchAcc:   appOutput.L1BatchAcc,
-				}
+				p.PendingAssertion = &appOutput.PendingAssertion
 				p.PendingTeeInputHash = trustedInput.Hash()
 				p.PendingSignature = appOutput.Signature
 			}
@@ -194,16 +189,9 @@ func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, 
 	if err != nil {
 		return nil, err
 	}
-	trustedInput := enclave.TrustedInput{
-		ConfigHash:           contractTrustedInput.ConfigHash,
-		AppStartBlockHash:    contractTrustedInput.AppStartBlockHash,
-		SeqStartBlockHash:    contractTrustedInput.SeqStartBlockHash,
-		SetDelayedMessageAcc: contractTrustedInput.SetDelayedMessageAcc,
-		L1StartBatchAcc:      contractTrustedInput.L1StartBatchAcc,
-		L1EndHash:            contractTrustedInput.L1EndHash,
-	}
+	trustedInput := enclave.TrustedInput(contractTrustedInput)
 
-	jsonInput, err := json.Marshal(trustedInput)
+	jsonInput, err := json.Marshal(contractTrustedInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal trusted input: %v", err)
 	}
@@ -230,7 +218,6 @@ func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint6
 	return batchCount, nil
 }
 
-// TODO (SEQ-1061): Replace enclave types with auto-generated types from the bindings
 func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput) (*enclave.VerifyAppchainOutput, error) {
 	// get trusted input
 	if trustedInput == nil {
@@ -418,10 +405,12 @@ func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInpu
 	}
 
 	return &enclave.VerifyAppchainOutput{
-		L1BatchAcc:          metadata.Accumulator,
-		SequencingBlockHash: sequencingBlockHash,
-		AppchainBlockHash:   appEndBlock.BlockHash,
-		AppchainSendRoot:    appEndBlock.SendRoot,
+		PendingAssertion: teemodule.PendingAssertion{
+			AppBlockHash: appEndBlock.BlockHash,
+			AppSendRoot:  appEndBlock.SendRoot,
+			SeqBlockHash: sequencingBlockHash,
+			L1BatchAcc:   metadata.Accumulator,
+		},
 	}, nil
 }
 

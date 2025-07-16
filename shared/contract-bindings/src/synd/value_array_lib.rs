@@ -22,22 +22,22 @@ pub mod ValueArrayLib {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b6008602c823930815050600890f35b6027565b60405190565b5f80fdfe60806040525f80fd
+    ///0x6080806040523460175760039081601c823930815050f35b5f80fdfe5f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`\x08`,\x8290\x81PP`\x08\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD",
+        b"`\x80\x80`@R4`\x17W`\x03\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fd
+    ///0x5f80fd
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD",
+        b"_\x80\xFD",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`ValueArrayLib`](self) contract instance.

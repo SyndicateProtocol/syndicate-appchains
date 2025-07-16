@@ -30,7 +30,7 @@ func TestInitProposerWithConfig(t *testing.T) {
 		PrivateKey:               privateKey,
 		PollingInterval:          10 * time.Second,
 		CloseChallengeInterval:   5 * time.Second,
-		MetricsPort:              9292,
+		Port:                     9292,
 		SettlementChainID:        9999,
 		EnclaveTLSConfig: pkg.TLSConfig{
 			Enabled:        false,
