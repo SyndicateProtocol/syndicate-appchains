@@ -36,13 +36,9 @@ COPY . .
 
 # TODO look at `withdrawals-test` feature flag to put ZK deps behind
 
-# Perform cargo build with cached Cargo and target directories
+# Perform `cargo build` only with packages that we want images for. Avoid heavy ZK deps
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
-    cargo build --package synd-batch-sequencer --profile ${BUILD_PROFILE} --locked && \
-    cargo build --package synd-chain-ingestor --profile ${BUILD_PROFILE}  --locked && \
-    cargo build --package synd-maestro --profile ${BUILD_PROFILE} --locked && \
-    cargo build --package synd-mchain --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked && \
-    cargo build --package synd-translator --profile ${BUILD_PROFILE} --locked
+    cargo build --package synd-batch-sequencer --package synd-chain-ingestor --package synd-maestro --package synd-mchain --features ${FEATURES} --package synd-translator --profile ${BUILD_PROFILE}
 
 # --- Go build stage for synd-proposer ---
 FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro
