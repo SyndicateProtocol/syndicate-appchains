@@ -9,12 +9,13 @@ use contract_bindings::synd::{
 };
 use eyre::Result;
 use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 async fn rpc_client_from_urls(urls: &[String]) -> RpcClient {
     for url in urls {
         match ClientBuilder::default().connect(url.as_str()).await {
             Ok(client) => {
+                debug!("obtaining chain config from RPC URL: {url}");
                 return client;
             }
             Err(e) => {
@@ -106,6 +107,7 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
             .await;
 
     let urls = ingestor_provider.get_urls().await.unwrap();
+    info!("got urls from sequencing chain ingestor: {urls:?}");
     let client = rpc_client_from_urls(&urls).await;
     let provider = ProviderBuilder::new().connect_client(client);
 
