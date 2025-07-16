@@ -311,27 +311,6 @@ pub struct ErrorLabels {
 
 impl ValkeyMetrics {
     /// Create a new `ValkeyMetrics` instance and register all metrics with the provided registry.
-    ///
-    /// This method creates all the necessary metric families and registers them with descriptive
-    /// names and help text in the Prometheus registry.
-    ///
-    /// # Arguments
-    ///
-    /// * `registry` - Mutable reference to a Prometheus registry where metrics will be registered
-    ///
-    /// # Returns
-    ///
-    /// A new `ValkeyMetrics` instance ready for use
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use prometheus_client::registry::Registry;
-    /// use synd_maestro::valkey_metrics::ValkeyMetrics;
-    ///
-    /// let mut registry = Registry::default();
-    /// let metrics = ValkeyMetrics::new(&mut registry);
-    /// ```
     pub fn new(registry: &mut Registry) -> Self {
         let metrics = Self {
             cache_operations_total: Family::<OperationLabels, Counter>::default(),
@@ -367,43 +346,9 @@ impl ValkeyMetrics {
         metrics
     }
 
-    /// Record a cache operation with automatic timing and error handling.
-    ///
-    /// This high-level method wraps a cache operation, automatically recording its duration,
-    /// success/failure status, and any errors that occur. It provides comprehensive metrics
-    /// collection with minimal overhead.
-    ///
-    /// # Type Parameters
-    ///
-    /// - `F`: Function that returns a future
-    /// - `Fut`: Future type returned by the function
-    /// - `R`: Success result type
-    /// - `E`: Error type (must implement `std::error::Error`)
-    ///
-    /// # Arguments
-    ///
-    /// * `operation` - The type of operation being performed
-    /// * `cache_type` - The type of cache being accessed
-    /// * `f` - Function that performs the actual cache operation
-    ///
-    /// # Returns
-    ///
-    /// The original result of the operation, while recording metrics as a side effect
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// # use synd_maestro::valkey_metrics::{ValkeyMetrics, Operation, CacheType};
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// # let metrics = ValkeyMetrics::default();
-    /// let result = metrics
-    ///     .record_operation(Operation::Read, CacheType::ValkeyCache, "conn.myFunc".into(), || async {
-    ///         Ok::<String, std::io::Error>("data".to_string())
-    ///     })
-    ///     .await;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Record a cache operation with automatic timing and error handling. Note that the
+    /// `with_cache_metrics!` macro is the preferred and more readable approach for recording
+    /// metrics info for cache calls.
     pub async fn record_operation<F, Fut, R, E>(
         &self,
         operation: Operation,
