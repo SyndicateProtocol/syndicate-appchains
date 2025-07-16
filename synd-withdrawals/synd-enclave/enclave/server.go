@@ -19,8 +19,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/SyndicateProtocol/synd-appchains/bindings/teemodule"
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"

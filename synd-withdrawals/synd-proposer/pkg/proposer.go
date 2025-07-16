@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SyndicateProtocol/synd-appchains/bindings/teemodule"
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

@@ -2,11 +2,8 @@ module github.com/SyndicateProtocol/synd-appchains/synd-enclave
 
 go 1.24.2
 
-replace github.com/SyndicateProtocol/synd-appchains/bindings => ../bindings
-
 require (
 	github.com/Layr-Labs/eigenda v0.9.1
-	github.com/SyndicateProtocol/synd-appchains/bindings v0.0.0-00010101000000-000000000000
 	github.com/ethereum/go-ethereum v1.16.1
 	github.com/hf/nitrite v0.0.0-20211104000856-f9e0dcc73703
 	github.com/hf/nsm v0.0.0-20220930140112-cd181bd646b9
