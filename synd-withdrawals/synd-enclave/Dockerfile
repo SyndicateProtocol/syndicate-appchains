@@ -156,6 +156,7 @@ COPY cmd/enclave/main.go cmd/enclave/main.go
 COPY cmd/enclave/g1.point cmd/enclave/g1.point
 COPY enclave enclave
 COPY nitro nitro
+COPY teemodule teemodule
 WORKDIR /build/nitro
 COPY --from=contracts-builder workspace/contracts/build/ contracts/build/
 COPY --from=contracts-builder workspace/contracts/out/ contracts/out/

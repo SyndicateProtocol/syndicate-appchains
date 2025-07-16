@@ -189,16 +189,14 @@ func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, 
 	if err != nil {
 		return nil, err
 	}
-	trustedInput := &enclave.TrustedInput{
-		TeeTrustedInput: contractTrustedInput,
-	}
+	trustedInput := enclave.TrustedInput(contractTrustedInput)
 
 	jsonInput, err := json.Marshal(contractTrustedInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal trusted input: %v", err)
 	}
 	log.Println("Trusted input: ", string(jsonInput))
-	return trustedInput, nil
+	return &trustedInput, nil
 }
 
 func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint64, error) {

@@ -26,9 +26,7 @@ import (
 )
 
 // Wrapper around the teemodule.TeeTrustedInput to define the Hash method
-type TrustedInput struct {
-	teemodule.TeeTrustedInput
-}
+type TrustedInput teemodule.TeeTrustedInput
 
 // AccountResult struct for eth_getProof response
 type AccountResult struct {
