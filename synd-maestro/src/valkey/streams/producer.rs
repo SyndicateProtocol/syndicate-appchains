@@ -1,7 +1,7 @@
 //! This module provides the producer implementation for Valkey Streams used to queue
 //! and process transactions across different chains.
 
-use crate::{valkey_metrics::ValkeyMetrics, with_cache_metrics};
+use crate::{valkey::valkey_metrics::ValkeyMetrics, with_cache_metrics};
 use alloy::{hex, primitives::keccak256};
 use derivative::Derivative;
 use redis::{aio::ConnectionManager, AsyncCommands, RedisError};
@@ -37,8 +37,8 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 /// ```rust
 /// use redis::aio::ConnectionManager;
 /// use std::{sync::Arc, time::Duration};
-/// use synd_maestro::{
-///     valkey::streams::producer::{CheckFinalizationResult, StreamProducer},
+/// use synd_maestro::valkey::{
+///     streams::producer::{CheckFinalizationResult, StreamProducer},
 ///     valkey_metrics::ValkeyMetrics,
 /// };
 ///

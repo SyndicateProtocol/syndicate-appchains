@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use crate::valkey_metrics::ValkeyMetrics;
+use crate::valkey::valkey_metrics::ValkeyMetrics;
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 use std::time::Duration;
 

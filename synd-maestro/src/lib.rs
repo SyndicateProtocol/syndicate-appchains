@@ -8,4 +8,3 @@ pub mod maestro;
 pub mod metrics;
 pub mod server;
 pub mod valkey;
-pub mod valkey_metrics;

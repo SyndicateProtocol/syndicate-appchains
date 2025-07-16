@@ -20,8 +20,8 @@ use crate::{
             wallet_nonce::WalletNonceExt,
         },
         streams::producer::{CheckFinalizationResult, StreamProducer},
+        valkey_metrics::{CacheType, Operation},
     },
-    valkey_metrics::{CacheType, Operation},
     with_cache_metrics,
 };
 use alloy::{

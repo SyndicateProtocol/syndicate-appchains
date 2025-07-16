@@ -2,7 +2,7 @@
 
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 use std::time::Duration;
-use synd_maestro::valkey_metrics::ValkeyMetrics;
+use synd_maestro::valkey::valkey_metrics::ValkeyMetrics;
 
 #[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]
@@ -14,7 +14,7 @@ pub struct BatcherMetrics {
     pub batch_submission_latency_ms: Gauge,
     pub total_txs_processed: Gauge,
     pub wallet_balance: Gauge,
-    /// Cache metrics for Valkey operations (stream reads, etc.)
+    /// Cache metrics for Valkey cache operations (stream reads, etc.)
     pub valkey: ValkeyMetrics,
 }
 

@@ -1,56 +1,33 @@
 //! Prometheus metrics for Valkey cache operations.
 //!
-//! This module provides comprehensive metrics collection for Valkey (Redis-compatible) cache
+//! # Overview
+//!
+//! This module implements metrics collection for Valkey (Redis-compatible) cache
 //! operations, including operation counters, duration tracking, error classification, and
 //! connection monitoring.
 //!
-//! # Features
+//! The module offers three ways to record metrics:
 //!
-//! - **Operation Metrics**: Track cache operations (read, write, delete, stream operations) with
-//!   status labels
-//! - **Duration Tracking**: Monitor operation latency in microseconds
-//! - **Cache Performance**: Track hit/miss ratios for cache effectiveness
-//! - **Error Classification**: Detailed error tracking by type and context
-//! - **Connection Monitoring**: Track active and idle connection counts
-//! - **Automatic Recording**: High-level wrapper for automatic timing and error handling
-//! - **Macro Integration**: Automated metrics recording via `with_cache_metrics!` macro
+//! 1. **Macro-based recording** ([`with_cache_metrics!`]) - Recommended for most use cases
+//! 2. **Async closure recording** ([`ValkeyMetrics::record_operation`]) - For custom async
+//!    operations
+//! 3. **Direct API** - Low-level methods for fine-grained control
 //!
 //! # Usage
 //!
-//! ## Manual Recording
-//! ```rust
-//! use prometheus_client::registry::Registry;
-//! use std::time::Duration;
-//! use synd_maestro::valkey_metrics::{CacheType, Operation, ValkeyMetrics};
+//! ## Macro-based Recording (Recommended)
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Create metrics and register with Prometheus
-//! let mut registry = Registry::default();
-//! let metrics = ValkeyMetrics::new(&mut registry);
+//! The [`with_cache_metrics!`] macro provides the most convenient and readable way to instrument
+//! cache operations:
 //!
-//! // Record operations manually
-//! metrics.record_hit();
-//! metrics.record_miss();
-//!
-//! // Or use automatic recording with error handling
-//! let result = metrics
-//!     .record_operation(Operation::Read, CacheType::ValkeyCache, "conn.myFunc".into(), || async {
-//!         Ok::<String, std::io::Error>("data".to_string())
-//!     })
-//!     .await;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! ## Macro-based Automated Recording
 //! ```rust
 //! use synd_maestro::{
-//!     valkey_metrics::{CacheType, Operation},
+//!     valkey::valkey_metrics::{CacheType, Operation},
 //!     with_cache_metrics,
 //! };
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! # let metrics = synd_maestro::valkey_metrics::ValkeyMetrics::default();
+//! # let metrics = synd_maestro::valkey::valkey_metrics::ValkeyMetrics::default();
 //! # struct MockConn;
 //! # impl MockConn {
 //! #     async fn get(&self, _key: &str) -> Result<String, std::io::Error> {
@@ -63,16 +40,76 @@
 //! # let conn = MockConn;
 //! # let chain_id = 1u64;
 //! # let address = "0x123";
-//!
-//! // Automatically wrap cache operations with metrics
-//! let result =
-//!     with_cache_metrics!(&metrics, Operation::Read, CacheType::ValkeyCache, conn.get("key"));
-//!
-//! // Or let the macro infer the operation type
+//! // Let the macro auto-detect operation type from method name
 //! let result = with_cache_metrics!(
 //!     &metrics,
-//!     conn.get_wallet_nonce(chain_id, address), // Auto-detects as (Operation::Read, CacheType::ValkeyCache)
+//!     conn.get_wallet_nonce(chain_id, address), // Auto-detects as `Read` operation, `ValkeyCache` type
 //!     track_hit_miss: false
+//! );
+//!
+//! // Explicitly specify the operation type, if necessary
+//! let result = with_cache_metrics!(
+//!     &metrics,
+//!     Operation::Read,
+//!     CacheType::ValkeyCache,
+//!     conn.get("key")
+//! );
+//!
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Async Closure Recording
+//!
+//! For custom async operations that need automatic timing and error handling:
+//!
+//! ```rust
+//! use prometheus_client::registry::Registry;
+//! use synd_maestro::valkey::valkey_metrics::{CacheType, Operation, ValkeyMetrics};
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut registry = Registry::default();
+//! let metrics = ValkeyMetrics::new(&mut registry);
+//!
+//! let result = metrics
+//!     .record_operation(
+//!         Operation::Read,
+//!         CacheType::ValkeyCache,
+//!         "custom_operation".into(),
+//!         || async {
+//!             // Your async cache operation here
+//!             Ok::<String, std::io::Error>("data".to_string())
+//!         },
+//!     )
+//!     .await;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Direct API
+//!
+//! For fine-grained control over metric recording:
+//!
+//! ```rust
+//! use prometheus_client::registry::Registry;
+//! use std::time::Duration;
+//! use synd_maestro::valkey::valkey_metrics::{
+//!     CacheType, Operation, OperationStatus, ValkeyMetrics,
+//! };
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut registry = Registry::default();
+//! let metrics = ValkeyMetrics::new(&mut registry);
+//!
+//! // Record individual metrics
+//! metrics.record_hit();
+//! metrics.record_miss();
+//! metrics.increment_operation(Operation::Read, OperationStatus::Success, "my_function".into());
+//! metrics.record_duration(
+//!     Operation::Read,
+//!     CacheType::ValkeyCache,
+//!     "my_function".into(),
+//!     Duration::from_micros(100),
 //! );
 //! # Ok(())
 //! # }
@@ -560,8 +597,11 @@ pub fn classify_error_type(error: &dyn std::error::Error) -> ErrorType {
 ///
 /// ## Explicit Operation Type
 /// ```rust
-/// # use synd_maestro::{valkey_metrics::{ValkeyMetrics, Operation, CacheType}, with_cache_metrics};
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// use synd_maestro::valkey::valkey_metrics::ValkeyMetrics;///
+///
+/// use synd_maestro::with_cache_metrics;
+///
+/// async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let metrics = ValkeyMetrics::default();
 /// # struct MockConn;
 /// # impl MockConn {
@@ -571,8 +611,8 @@ pub fn classify_error_type(error: &dyn std::error::Error) -> ErrorType {
 /// # }
 /// # let conn = MockConn;
 /// let result = with_cache_metrics!(
-///     &metrics,               // ValkeyMetrics instance
-///     conn.get("key")         // The cache operation
+///     &metrics,        // ValkeyMetrics instance
+///     conn.get("key")  // The cache operation
 /// );
 /// # Ok(())
 /// # }
@@ -580,7 +620,7 @@ pub fn classify_error_type(error: &dyn std::error::Error) -> ErrorType {
 ///
 /// ## Auto-detected Operation Type
 /// ```rust
-/// # use synd_maestro::{valkey_metrics::{ValkeyMetrics, CacheType}, with_cache_metrics};
+/// # use synd_maestro::{valkey::valkey_metrics::{ValkeyMetrics, CacheType}, with_cache_metrics};
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let metrics = ValkeyMetrics::default();
 /// # struct MockConn;
@@ -602,7 +642,7 @@ pub fn classify_error_type(error: &dyn std::error::Error) -> ErrorType {
 ///
 /// ## With Hit/Miss Tracking
 /// ```rust
-/// # use synd_maestro::{valkey_metrics::{ValkeyMetrics, CacheType}, with_cache_metrics};
+/// # use synd_maestro::{valkey::valkey_metrics::{ValkeyMetrics, CacheType}, with_cache_metrics};
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let metrics = ValkeyMetrics::default();
 /// # struct MockConn;
@@ -627,7 +667,7 @@ macro_rules! with_cache_metrics {
         use std::time::Instant;
 
         let start = Instant::now();
-        let func_name = $crate::valkey_metrics::extract_func_name(stringify!($operation_expr));
+        let func_name = $crate::valkey::valkey_metrics::extract_func_name(stringify!($operation_expr));
         let result = $operation_expr.await;
         let duration = start.elapsed();
 
@@ -636,12 +676,12 @@ macro_rules! with_cache_metrics {
 
         match &result {
             Ok(value) => {
-                $metrics.increment_operation($operation.clone(), $crate::valkey_metrics::OperationStatus::Success, func_name.clone());
+                $metrics.increment_operation($operation.clone(), $crate::valkey::valkey_metrics::OperationStatus::Success, func_name.clone());
 
                 // Track hit/miss for read operations if requested
-                if $track && matches!($operation, $crate::valkey_metrics::Operation::Read) {
+                if $track && matches!($operation, $crate::valkey::valkey_metrics::Operation::Read) {
                     // Try to determine if this was a hit or miss based on the result
-                    if $crate::valkey_metrics::is_cache_hit(value) {
+                    if $crate::valkey::valkey_metrics::is_cache_hit(value) {
                         $metrics.record_hit();
                     } else {
                         $metrics.record_miss();
@@ -649,13 +689,13 @@ macro_rules! with_cache_metrics {
                 }
             }
             Err(error) => {
-                let status = $crate::valkey_metrics::classify_error_status(error);
-                let error_type = $crate::valkey_metrics::classify_error_type(error);
+                let status = $crate::valkey::valkey_metrics::classify_error_status(error);
+                let error_type = $crate::valkey::valkey_metrics::classify_error_type(error);
 
                 $metrics.increment_operation($operation.clone(), status, func_name.clone());
                 $metrics.record_error(error_type, $operation.clone(), $cache_type.clone(), func_name.clone());
 
-                if $track && matches!($operation, $crate::valkey_metrics::Operation::Read) {
+                if $track && matches!($operation, $crate::valkey::valkey_metrics::Operation::Read) {
                     // Errors on reads are considered misses
                     $metrics.record_miss();
                 }
@@ -672,13 +712,13 @@ macro_rules! with_cache_metrics {
 
     // Auto-detect operation type with hit/miss tracking
     ($metrics:expr, $operation_expr:expr, track_hit_miss: $track:expr) => {{
-        let (operation, cache_type) = $crate::valkey_metrics::detect_operation_and_cache_type(stringify!($operation_expr));
+        let (operation, cache_type) = $crate::valkey::valkey_metrics::detect_operation_and_cache_type(stringify!($operation_expr));
         $crate::with_cache_metrics!($metrics, operation, cache_type, $operation_expr, track_hit_miss: $track)
     }};
 
     // Auto-detect operation type without hit/miss tracking (default case)
     ($metrics:expr, $operation_expr:expr) => {{
-        let (operation, cache_type) = $crate::valkey_metrics::detect_operation_and_cache_type(stringify!($operation_expr));
+        let (operation, cache_type) = $crate::valkey::valkey_metrics::detect_operation_and_cache_type(stringify!($operation_expr));
         $crate::with_cache_metrics!($metrics, operation, cache_type, $operation_expr, track_hit_miss: true)
     }};
 }

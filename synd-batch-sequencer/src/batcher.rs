@@ -30,7 +30,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use synd_maestro::{valkey::streams::consumer::StreamConsumer, valkey_metrics::ValkeyMetrics};
+use synd_maestro::valkey::{streams::consumer::StreamConsumer, valkey_metrics::ValkeyMetrics};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, instrument, trace, warn};
 
@@ -343,10 +343,7 @@ mod tests {
     use prometheus_client::registry::Registry;
     use reqwest;
     use std::sync::Arc;
-    use synd_maestro::{
-        valkey::streams::producer::{CheckFinalizationResult, StreamProducer},
-        valkey_metrics::ValkeyMetrics,
-    };
+    use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
     use test_utils::{docker::start_valkey, port_manager::PortManager, wait_until};
     use url::Url;
 

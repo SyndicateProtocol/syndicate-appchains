@@ -2,7 +2,8 @@
 //! and process transactions across different chains.
 
 use crate::{
-    valkey::streams::producer::tx_stream_key, valkey_metrics::ValkeyMetrics, with_cache_metrics,
+    valkey::{streams::producer::tx_stream_key, valkey_metrics::ValkeyMetrics},
+    with_cache_metrics,
 };
 use alloy::primitives::ChainId;
 use derivative::Derivative;
