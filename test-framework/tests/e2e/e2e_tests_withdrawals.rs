@@ -396,7 +396,7 @@ sol! {
 /// Configuration for the verifier
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
-pub struct VerifierConfig {
+struct VerifierConfig {
     /// Sequencing contract address on the sequencing chain
     pub sequencing_contract_address: Address,
 
@@ -410,7 +410,7 @@ pub struct VerifierConfig {
 impl VerifierConfig {
     /// Hash the verifier config
     #[allow(clippy::unwrap_used)]
-    pub fn hash(&self) -> B256 {
+    fn hash(&self) -> B256 {
         keccak256(
             (
                 self.sequencing_contract_address,
