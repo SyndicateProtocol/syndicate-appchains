@@ -10,10 +10,7 @@ replace github.com/ethereum/go-ethereum => ../synd-enclave/nitro/go-ethereum
 
 replace github.com/SyndicateProtocol/synd-appchains/synd-enclave => ../synd-enclave
 
-replace github.com/SyndicateProtocol/synd-appchains/bindings => ../bindings
-
 require (
-	github.com/SyndicateProtocol/synd-appchains/bindings v0.0.0-00010101000000-000000000000
 	github.com/SyndicateProtocol/synd-appchains/synd-enclave v0.0.0-00010101000000-000000000000
 	github.com/ethereum/go-ethereum v1.16.1
 	github.com/offchainlabs/nitro v0.0.0-00010101000000-000000000000
