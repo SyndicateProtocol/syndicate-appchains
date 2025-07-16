@@ -25,14 +25,14 @@ contract DeployTeeModule is Script {
         } else {
             console2.log("Deploying attestation doc verifier...");
             attestationDocVerifier = new AttestationDocVerifier(
-                vm.envAddress("SP1_VERIFIER_ADDRESS"),
-                vm.envBytes32("ATTESTATION_DOC_VERIFIER_V_KEY"),
-                vm.envBytes32("ROOT_CERT_HASH"),
-                keccak256(vm.envBytes("PCR_0")),
-                keccak256(vm.envBytes("PCR_1")),
-                keccak256(vm.envBytes("PCR_2")),
-                keccak256(vm.envBytes("PCR_8")),
-                uint64(vm.envUint("EXPIRATION_TOLERANCE"))
+                vm.envAddress("SP1_VERIFIER_ADDRESS"), // https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/deployments/84532.json
+                vm.envBytes32("ATTESTATION_DOC_VERIFIER_V_KEY"), // cargo run --release --bin vkey
+                vm.envBytes32("ROOT_CERT_HASH"), // https://github.com/SyndicateProtocol/syndicate-appchains/blob/7e148d3b7118786f30ae0b1d22339b888edaf8e9/synd-contracts/test/withdrawal/fixtures/groth16-fixture.json
+                keccak256(vm.envBytes("PCR_0")), // Get from TEE
+                keccak256(vm.envBytes("PCR_1")), // Get from TEE
+                keccak256(vm.envBytes("PCR_2")), // Get from TEE
+                keccak256(vm.envBytes("PCR_8")), // Get from TEE
+                uint64(vm.envUint("EXPIRATION_TOLERANCE")) // Arbitrary value, usually 24h
             );
             console2.log("Attestation doc verifier deployed to:", address(attestationDocVerifier));
         }
