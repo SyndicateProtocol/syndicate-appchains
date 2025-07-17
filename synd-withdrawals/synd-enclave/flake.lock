@@ -1,6 +1,6 @@
 {
   "nodes": {
-    "aws-nitro-enclaves-image-format": {
+    "enclaves-image-format": {
       "flake": false,
       "locked": {
         "lastModified": 1722610415,
@@ -17,7 +17,7 @@
         "type": "github"
       }
     },
-    "aws-nitro-enclaves-sdk-bootstrap": {
+    "enclaves-sdk-bootstrap": {
       "flake": false,
       "locked": {
         "lastModified": 1721807759,
@@ -85,8 +85,8 @@
     },
     "root": {
       "inputs": {
-        "aws-nitro-enclaves-image-format": "aws-nitro-enclaves-image-format",
-        "aws-nitro-enclaves-sdk-bootstrap": "aws-nitro-enclaves-sdk-bootstrap",
+        "enclaves-image-format": "enclaves-image-format",
+        "enclaves-sdk-bootstrap": "enclaves-sdk-bootstrap",
         "flake-parts": "flake-parts",
         "nixpkgs": "nixpkgs",
         "systems": "systems"

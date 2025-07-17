@@ -6,7 +6,7 @@
     systems.url = "github:nix-systems/default-linux";
     flake-parts.url = "github:hercules-ci/flake-parts";
 
-    aws-nitro-enclaves-sdk-bootstrap = {
+    enclaves-sdk-bootstrap = {
       type = "github";
       owner = "aws";
       repo = "aws-nitro-enclaves-sdk-bootstrap";
@@ -14,7 +14,7 @@
       flake = false;
     };
 
-    aws-nitro-enclaves-image-format = {
+    enclaves-image-format = {
       type = "github";
       owner = "aws";
       repo = "aws-nitro-enclaves-image-format";
@@ -30,23 +30,22 @@
   outputs = inputs @ {
     systems,
     flake-parts,
-    aws-nitro-enclaves-sdk-bootstrap,
-    aws-nitro-enclaves-image-format,
+    enclaves-sdk-bootstrap,
+    enclaves-image-format,
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
       systems = import systems;
       perSystem = {pkgs, ...}: {
         packages = {
-          enclaves-sdk-init =
-            (import "${aws-nitro-enclaves-sdk-bootstrap}/init/init.nix") {inherit pkgs;};
-          enclaves-sdk-kernel = (import "${aws-nitro-enclaves-sdk-bootstrap}/kernel/kernel.nix") {inherit pkgs;};
-          linuxkit = (import "${aws-nitro-enclaves-sdk-bootstrap}/linuxkit/linuxkit.nix") {inherit pkgs;};
+          enclaves-sdk-init = (import "${enclaves-sdk-bootstrap}/init/init.nix") {inherit pkgs;};
+          enclaves-sdk-kernel = (import "${enclaves-sdk-bootstrap}/kernel/kernel.nix") {inherit pkgs;};
+          linuxkit = (import "${enclaves-sdk-bootstrap}/linuxkit/linuxkit.nix") {inherit pkgs;};
 
           eif-build = pkgs.rustPlatform.buildRustPackage {
             pname = "eif_build";
             version = "0.2.0";
-            src = aws-nitro-enclaves-image-format;
+            src = enclaves-image-format;
             buildAndTestSubdir = "eif_build";
             cargoHash = "sha256-mQGxBZFWQ3xW4R4j13LCt4NtAYQyO09uigLwXgOWDVE=";
             cargoPatches = [./0001-eif-build-add-cargo-lock.patch];
