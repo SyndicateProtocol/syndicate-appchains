@@ -6,13 +6,13 @@ use alloy::{
     rpc::types::Header,
 };
 use fs2::FileExt as _;
-use shared::types::BlockRef;
+use shared::{tracing::SpanKind, types::BlockRef};
 use std::{
     fs::{File, OpenOptions},
     io::Write,
     os::unix::fs::{FileExt, MetadataExt as _},
 };
-use tracing::{debug, info, warn};
+use tracing::{debug, info, instrument, warn};
 
 #[derive(Debug)]
 #[allow(missing_docs)]
@@ -43,6 +43,7 @@ pub enum BlockUpdateResult {
 #[allow(missing_docs)]
 #[allow(clippy::unwrap_used)]
 impl DB {
+    #[instrument(fields(otel.kind = ?SpanKind::Internal))]
     pub fn open(file_name: &str, start_block: u64, chain_id: u64) -> std::io::Result<Self> {
         let mut file = OpenOptions::new().read(true).append(true).create(true).open(file_name)?;
         file.lock_exclusive()?;
@@ -77,6 +78,7 @@ impl DB {
         Ok(Self { file, start_block: db_start_block, count })
     }
 
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Internal))]
     pub fn get_block(&self, block: u64) -> BlockRef {
         assert!(self.in_range(block));
         let mut data = [0; ITEM_SIZE as usize];
@@ -88,6 +90,7 @@ impl DB {
         }
     }
 
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Internal))]
     pub fn get_block_bytes(&self, from: u64) -> Bytes {
         assert!(self.in_range(from));
         let mut data = vec![0; ((self.next_block() - from) * ITEM_SIZE) as usize];
@@ -108,6 +111,7 @@ impl DB {
         self.file.set_len((self.count + 1) * ITEM_SIZE).unwrap();
     }
 
+    #[instrument(skip(self, metrics), fields(otel.kind = ?SpanKind::Internal))]
     pub fn update_block(
         &mut self,
         header: &Header,

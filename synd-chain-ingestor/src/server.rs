@@ -15,14 +15,14 @@ use jsonrpsee::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json;
-use shared::types::PartialBlock;
+use shared::{tracing::SpanKind, types::PartialBlock};
 use std::{
     collections::{HashSet, VecDeque},
     io::Error,
     sync::{atomic::AtomicBool, Arc, Mutex},
 };
 use tokio::task::JoinHandle;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 
 #[derive(Debug)]
 #[allow(missing_docs)]
@@ -67,6 +67,7 @@ impl<'a> BlockIngestor<'a> {
 
 /// Syncs the database to the latest block.
 #[allow(clippy::cognitive_complexity)]
+#[instrument(skip(provider, metrics), fields(otel.kind = ?SpanKind::Internal))]
 pub async fn sync_db(
     provider: &EthClient,
     db_file: &str,
@@ -106,8 +107,8 @@ pub async fn sync_db(
                             "synced to block {} of {} ({} %)",
                             block.number,
                             latest,
-                            (block.number - start_sync) as f32 * 100.0 /
-                                (latest + 1 - start_sync) as f32
+                            (block.number - start_sync) as f32 * 100.0
+                                / (latest + 1 - start_sync) as f32
                         )
                     }
                 }

@@ -21,14 +21,17 @@ use jsonrpsee::{
     ws_client::{PingConfig, WsClient, WsClientBuilder},
 };
 use serde::de::DeserializeOwned;
-use shared::types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock};
+use shared::{
+    tracing::SpanKind,
+    types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock},
+};
 use std::{
     collections::{HashSet, VecDeque},
     pin::Pin,
     sync::Arc,
     time::Duration,
 };
-use tracing::info;
+use tracing::{info, instrument};
 
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
 /// (timestamp, block hash) data from the db to build partial blocks
@@ -292,19 +295,23 @@ pub trait Provider: Sync {
         unsubscribe_method: &'static str,
     ) -> Result<impl Stream<Item = Result<Notif, serde_json::Error>> + Send + 'static, ClientError>;
 
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
     async fn get_urls(&self) -> Result<Vec<String>, ClientError> {
         self.request("urls", ((),)).await
     }
 
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
     async fn get_block_number(&self) -> Result<u64, ClientError> {
         self.request("eth_blockNumber", ((),)).await
     }
 
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
     async fn get_block(&self, number: u64) -> Result<Option<BlockRef>, ClientError> {
         self.request("block", (number,)).await
     }
 
     // returns partial blocks instead of blocks
+    #[instrument(skip(self, block_builder, client), err, fields(otel.kind = ?SpanKind::Client))]
     async fn get_blocks<Block: GetBlockRef + Send + 'static>(
         &self,
         start_block: u64,
