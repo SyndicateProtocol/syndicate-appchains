@@ -71,8 +71,8 @@ pub async fn run(
             .db
             .as_mut()
             .ok_or_else(|| eyre::eyre!("Database not initialized"))?
-            .update_block(&block, metrics)
-            != BlockUpdateResult::Added
+            .update_block(&block, metrics) !=
+            BlockUpdateResult::Added
         {
             continue;
         }
@@ -97,8 +97,8 @@ pub async fn run(
             .db
             .as_mut()
             .ok_or_else(|| eyre::eyre!("Database not initialized"))?
-            .update_block(&block, metrics)
-            == BlockUpdateResult::Reorged
+            .update_block(&block, metrics) ==
+            BlockUpdateResult::Reorged
         {
             continue;
         }
@@ -130,23 +130,22 @@ pub async fn run(
                 .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
                 .subs
                 .retain_mut(|(sink, addrs)| {
-                    !sink.is_closed()
-                        && sink
-                            .try_send(SubscriptionMessage::from(
-                                serde_json::value::to_raw_value(&Message::Block(PartialBlock {
-                                    logs: partial_block
-                                        .logs
-                                        .clone()
-                                        .into_iter()
-                                        .filter(|log| addrs.contains(&log.address))
-                                        .collect(),
-                                    block_ref: partial_block.block_ref.clone(),
-                                    parent_hash: partial_block.parent_hash,
-                                }))
-                                .unwrap(),
-                            ))
-                            .inspect_err(|err| error!("try_send failed: {err}"))
-                            .is_ok()
+                    !sink.is_closed() &&
+                        sink.try_send(SubscriptionMessage::from(
+                            serde_json::value::to_raw_value(&Message::Block(PartialBlock {
+                                logs: partial_block
+                                    .logs
+                                    .clone()
+                                    .into_iter()
+                                    .filter(|log| addrs.contains(&log.address))
+                                    .collect(),
+                                block_ref: partial_block.block_ref.clone(),
+                                parent_hash: partial_block.parent_hash,
+                            }))
+                            .unwrap(),
+                        ))
+                        .inspect_err(|err| error!("try_send failed: {err}"))
+                        .is_ok()
                 });
         }
     }

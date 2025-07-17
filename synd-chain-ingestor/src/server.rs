@@ -107,8 +107,8 @@ pub async fn sync_db(
                             "synced to block {} of {} ({} %)",
                             block.number,
                             latest,
-                            (block.number - start_sync) as f32 * 100.0
-                                / (latest + 1 - start_sync) as f32
+                            (block.number - start_sync) as f32 * 100.0 /
+                                (latest + 1 - start_sync) as f32
                         )
                     }
                 }
