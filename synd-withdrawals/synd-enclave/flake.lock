@@ -20,17 +20,17 @@
     "aws-nitro-enclaves-sdk-bootstrap": {
       "flake": false,
       "locked": {
-        "lastModified": 1740392949,
-        "narHash": "sha256-DmNnH6lqweRz1u8nza6FvgJFvDGPactpHruyq0SYkp8=",
+        "lastModified": 1721807759,
+        "narHash": "sha256-jcdxssY3m/YAMIZSscZtnbPeAdFT5on2evD58YNwyxE=",
         "owner": "aws",
         "repo": "aws-nitro-enclaves-sdk-bootstrap",
-        "rev": "f718dea60a9d9bb8b8682fd852ad793912f3c5db",
+        "rev": "7614f19963e4e956493b3260fda4d62834bb281c",
         "type": "github"
       },
       "original": {
         "owner": "aws",
         "repo": "aws-nitro-enclaves-sdk-bootstrap",
-        "rev": "f718dea60a9d9bb8b8682fd852ad793912f3c5db",
+        "rev": "7614f19963e4e956493b3260fda4d62834bb281c",
         "type": "github"
       }
     },

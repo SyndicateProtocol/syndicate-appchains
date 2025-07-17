@@ -10,9 +10,7 @@
       type = "github";
       owner = "aws";
       repo = "aws-nitro-enclaves-sdk-bootstrap";
-      # commit from Dockerfile doesn't have some Nix-related fixes
-      # rev = "7614f19963e4e956493b3260fda4d62834bb281c";
-      rev = "f718dea60a9d9bb8b8682fd852ad793912f3c5db";
+      rev = "7614f19963e4e956493b3260fda4d62834bb281c";
       flake = false;
     };
 
@@ -38,13 +36,13 @@
   }:
     flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
       systems = import systems;
-      perSystem = {pkgs, ...}: let
-        enclaves-sdk = (import aws-nitro-enclaves-sdk-bootstrap) {inherit pkgs;};
-      in {
+      perSystem = {pkgs, ...}: {
         packages = {
-          enclaves-sdk-init = enclaves-sdk.init;
-          enclaves-sdk-kernel = enclaves-sdk.kernel;
-          linuxkit = enclaves-sdk.linuxkit;
+          enclaves-sdk-init =
+            (import "${aws-nitro-enclaves-sdk-bootstrap}/init/init.nix") {inherit pkgs;};
+          enclaves-sdk-kernel = (import "${aws-nitro-enclaves-sdk-bootstrap}/kernel/kernel.nix") {inherit pkgs;};
+          linuxkit = (import "${aws-nitro-enclaves-sdk-bootstrap}/linuxkit/linuxkit.nix") {inherit pkgs;};
+
           eif-build = pkgs.rustPlatform.buildRustPackage {
             pname = "eif_build";
             version = "0.2.0";
