@@ -304,8 +304,17 @@ func (p *Proposer) Prove(
 		}
 
 		// get merkle proof
-		accSlot := common.BigToHash(new(big.Int).Add(enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE, big.NewInt(int64(endBatchCount))))
-		if err := p.EthereumClient.Client().CallContext(ctx, &proof, "eth_getProof", p.Config.EnclaveConfig.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
+		accSlot := common.BigToHash(new(big.Int).Add(
+			enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE,
+			big.NewInt(int64(endBatchCount)),
+		))
+		if err := p.EthereumClient.Client().CallContext(ctx,
+			&proof,
+			"eth_getProof",
+			p.Config.EnclaveConfig.SequencingBridgeAddress,
+			[]common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot},
+			common.Hash(trustedInput.L1EndHash),
+		); err != nil {
 			return nil, fmt.Errorf("failed to get proof: %v", err)
 		}
 	}
