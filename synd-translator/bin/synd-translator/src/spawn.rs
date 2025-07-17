@@ -4,7 +4,10 @@ use crate::{
 };
 use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
-use shared::service_start_utils::{start_http_server_with_aux_handlers, MetricsState};
+use shared::{
+    service_start_utils::{start_http_server_with_aux_handlers, MetricsState},
+    tracing::SpanKind,
+};
 use std::sync::Arc;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
@@ -12,9 +15,10 @@ use synd_chain_ingestor::{
     eth_client::EthClient,
 };
 use synd_mchain::client::{MProvider, Provider};
-use tracing::{error, log::info};
+use tracing::{error, instrument, log::info};
 
 /// Entry point for the async runtime
+#[instrument(err, fields(otel.kind = ?SpanKind::Internal))]
 pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
     info!("Initializing Syndicate Translator components");
 
@@ -36,6 +40,7 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
     }
 }
 
+#[instrument(skip(metrics), err, fields(otel.kind = ?SpanKind::Internal))]
 async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -> Result<()> {
     let mchain = MProvider::new(&config.block_builder.mchain_ws_url)
         .await
