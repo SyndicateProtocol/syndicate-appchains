@@ -1,7 +1,7 @@
 [
   {
     "chain-name": "burrata",
-    "parent-chain-id": 510,
+    "parent-chain-id": 511000,
     "parent-chain-is-arbitrum": false,
     "sequencer-url": "",
     "secondary-forwarding-target": "",
@@ -39,9 +39,9 @@
       }
     },
     "rollup": {
-      "bridge": "0x0000000000000000000000000000000000000510",
+      "bridge": "0x0000000000000000000000000000000000511000",
       "inbox": "0x0000000000000000000000000000000000000000",
-      "sequencer-inbox": "0x0000000000000000000000000000000000000510",
+      "sequencer-inbox": "0x0000000000000000000000000000000000511000",
       "deployed-at": 1,
       "rollup": "0x0000000000000000000000000000000000000000",
       "native-token": "0x0000000000000000000000000000000000000000",
