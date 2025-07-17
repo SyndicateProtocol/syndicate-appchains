@@ -15,6 +15,14 @@
       rev = "f718dea60a9d9bb8b8682fd852ad793912f3c5db";
       flake = false;
     };
+
+    aws-nitro-enclaves-image-format = {
+      type = "github";
+      owner = "aws";
+      repo = "aws-nitro-enclaves-image-format";
+      rev = "483114f1da3bad913ad1fb7d5c00dadacc6cbae6";
+      flake = false;
+    };
   };
 
   nixConfig = {
@@ -25,6 +33,7 @@
     systems,
     flake-parts,
     aws-nitro-enclaves-sdk-bootstrap,
+    aws-nitro-enclaves-image-format,
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
@@ -36,6 +45,16 @@
           enclaves-sdk-init = enclaves-sdk.init;
           enclaves-sdk-kernel = enclaves-sdk.kernel;
           linuxkit = enclaves-sdk.linuxkit;
+          eif-build = pkgs.rustPlatform.buildRustPackage {
+            pname = "eif_build";
+            version = "0.2.0";
+            src = aws-nitro-enclaves-image-format;
+            buildAndTestSubdir = "eif_build";
+            cargoHash = "sha256-mQGxBZFWQ3xW4R4j13LCt4NtAYQyO09uigLwXgOWDVE=";
+            cargoPatches = [./0001-eif-build-add-cargo-lock.patch];
+            nativeBuildInputs = [pkgs.pkg-config];
+            buildInputs = [pkgs.openssl];
+          };
         };
       };
     });
