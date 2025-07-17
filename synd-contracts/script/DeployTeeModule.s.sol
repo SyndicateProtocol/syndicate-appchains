@@ -39,10 +39,17 @@ contract DeployTeeModule is Script {
         // 2. Deploy the key manager
         TeeKeyManager keyManager = new TeeKeyManager(attestationDocVerifier);
 
-        // 3. Deploy the assertion poster & configure it
-        IRollup rollup = IRollup(vm.envAddress("ROLLUP_CONTRACT_ADDRESS"));
-        AssertionPoster poster = new AssertionPoster(rollup);
-        poster.configure();
+        // 3. Deploy the assertion poster
+        address assertionPosterAddress = vm.envOr("ASSERTION_POSTER_ADDRESS", address(0));
+        AssertionPoster poster;
+        if (assertionPosterAddress != address(0)) {
+            console2.log("Assertion poster already deployed to:", assertionPosterAddress);
+            poster = AssertionPoster(assertionPosterAddress);
+        } else {
+            console2.log("Deploying assertion poster...");
+            IRollup rollup = IRollup(vm.envAddress("ROLLUP_CONTRACT_ADDRESS"));
+            poster = new AssertionPoster(rollup);
+        }
 
         // 4. Deploy the tee module
         IBridge bridge = IBridge(vm.envAddress("APPCHAIN_BRIDGE_ADDRESS"));

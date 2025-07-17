@@ -56,7 +56,7 @@ func main() {
 				}
 			}()
 
-			proposer := pkg.NewProposer(config)
+			proposer := pkg.NewProposer(ctx, config)
 			proposer.Run(ctx)
 			log.Println("Synd-proposer service stopped.")
 			return nil
