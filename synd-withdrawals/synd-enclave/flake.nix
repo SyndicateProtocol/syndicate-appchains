@@ -36,8 +36,12 @@
   }:
     flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
       systems = import systems;
-      perSystem = {pkgs, ...}: {
-        packages = {
+      perSystem = {
+        pkgs,
+        system,
+        ...
+      }: {
+        packages = rec {
           enclaves-sdk-init = (import "${enclaves-sdk-bootstrap}/init/init.nix") {inherit pkgs;};
           enclaves-sdk-kernel = (import "${enclaves-sdk-bootstrap}/kernel/kernel.nix") {inherit pkgs;};
           linuxkit = (import "${enclaves-sdk-bootstrap}/linuxkit/linuxkit.nix") {inherit pkgs;};
@@ -52,6 +56,24 @@
             nativeBuildInputs = [pkgs.pkg-config];
             buildInputs = [pkgs.openssl];
           };
+
+          eif-bin = let
+            targetArch =
+              if system == "x86_64-linux"
+              then "amd64"
+              else if system == "aarch64-linux"
+              then "arm64"
+              else abort "Unsupported architecture '${system}'";
+          in
+            pkgs.runCommand "eif_build-eif.bin" {KERNEL_PATH = enclaves-sdk-kernel;} ''
+              ${eif-build}/bin/eif_build \
+                --kernel $KERNEL_PATH/*Image \
+                --kernel_config $KERNEL_PATH/*Image.config \
+                --cmdline "${builtins.readFile ./eif/cmdline-${targetArch}}" \
+                --ramdisk ${throw "TODO: init-ramdisk-initrd.img"} \
+                --ramdisk ${throw "TODO: user-ramdisk-initrd.img"} \
+                --output $out/eif.bin
+            '';
         };
       };
     });
