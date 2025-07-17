@@ -3,6 +3,8 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    systems.url = "github:nix-systems/default-linux";
+    flake-parts.url = "github:hercules-ci/flake-parts";
 
     aws-nitro-enclaves-sdk-bootstrap = {
       type = "github";
@@ -15,19 +17,26 @@
     };
   };
 
-  outputs = { self, nixpkgs, aws-nitro-enclaves-sdk-bootstrap, ... }:
-  let
-    system = "x86_64-linux";
-    pkgs = import nixpkgs {
-      inherit system;
-    };
-    enclaves-sdk = (import aws-nitro-enclaves-sdk-bootstrap) { inherit pkgs; };
-  in
-  {
-      packages.${system} = {
-        enclaves-sdk-init = enclaves-sdk.init;
-        enclaves-sdk-kernel = enclaves-sdk.kernel;
-        linuxkit = enclaves-sdk.linuxkit;
+  nixConfig = {
+    filter-syscalls = false;
+  };
+
+  outputs = inputs @ {
+    systems,
+    flake-parts,
+    aws-nitro-enclaves-sdk-bootstrap,
+    ...
+  }:
+    flake-parts.lib.mkFlake {inherit inputs;} ({...}: {
+      systems = import systems;
+      perSystem = {pkgs, ...}: let
+        enclaves-sdk = (import aws-nitro-enclaves-sdk-bootstrap) {inherit pkgs;};
+      in {
+        packages = {
+          enclaves-sdk-init = enclaves-sdk.init;
+          enclaves-sdk-kernel = enclaves-sdk.kernel;
+          linuxkit = enclaves-sdk.linuxkit;
+        };
       };
-    };
+    });
 }
