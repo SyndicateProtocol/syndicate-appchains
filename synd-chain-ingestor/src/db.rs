@@ -41,7 +41,7 @@ pub enum BlockUpdateResult {
 }
 
 #[allow(missing_docs)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 impl DB {
     #[instrument(fields(otel.kind = ?SpanKind::Internal))]
     pub fn open(file_name: &str, start_block: u64, chain_id: u64) -> std::io::Result<Self> {
