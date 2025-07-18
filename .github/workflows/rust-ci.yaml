@@ -166,5 +166,8 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
 
+      - name: Install wabt
+        run: sudo apt-get install -y wabt
+
       - name: Run all tests with nextest
         run: cargo build && cargo nextest run --workspace --fail-fast
