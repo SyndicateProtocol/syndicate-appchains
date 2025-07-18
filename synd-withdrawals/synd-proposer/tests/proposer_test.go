@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -37,7 +38,7 @@ func TestInitProposerWithConfig(t *testing.T) {
 			ClientKeyPath:  "/etc/tls/tls.key",
 		},
 	}
-	proposer := pkg.NewProposer(dummyCfg)
+	proposer := pkg.NewProposer(context.Background(), dummyCfg)
 	if proposer.Config != dummyCfg {
 		t.Errorf("Proposer config was not set correctly")
 	}
