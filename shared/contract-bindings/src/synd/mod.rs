@@ -54,6 +54,7 @@ pub mod r#deploy_syndicate_sequencing_chain_plus_setup_with_always_allow_module;
 pub mod r#deploy_syndicate_token_crosschain_direct;
 pub mod r#verify_crosschain_address_consistency;
 pub mod r#deploy_syndicate_factory_direct;
+pub mod r#deploy_tee_module;
 pub mod r#dummy_key_manager;
 pub mod r#dummy_poster;
 pub mod r#ecdsa;

@@ -41,19 +41,19 @@ type Proposer struct {
 	PendingSignature    []byte
 }
 
-func NewProposer(cfg *Config) *Proposer {
-	appchainClient, err := ethclient.Dial(cfg.AppchainRPCURL)
+func NewProposer(ctx context.Context, cfg *Config) *Proposer {
+	appchainClient, err := ethclient.DialContext(ctx, cfg.AppchainRPCURL)
 	if err != nil {
 		log.Fatalf("Failed to create appchain provider: %v", err)
 		return nil
 	}
-	sequencingClient, err := ethclient.Dial(cfg.SequencingRPCURL)
+	sequencingClient, err := ethclient.DialContext(ctx, cfg.SequencingRPCURL)
 	if err != nil {
 		log.Fatalf("Failed to create sequencing provider: %v", err)
 		return nil
 	}
 
-	ethereumClient, err := ethclient.Dial(cfg.EthereumRPCURL)
+	ethereumClient, err := ethclient.DialContext(ctx, cfg.EthereumRPCURL)
 	if err != nil {
 		log.Fatalf("Failed to create ethereum provider: %v", err)
 		return nil
@@ -63,14 +63,14 @@ func NewProposer(cfg *Config) *Proposer {
 	if cfg.EnclaveTLSConfig.Enabled {
 		enclaveClient, err = createTLSClient(&cfg.EnclaveTLSConfig, cfg.EnclaveRPCURL)
 	} else {
-		enclaveClient, err = rpc.Dial(cfg.EnclaveRPCURL)
+		enclaveClient, err = rpc.DialContext(ctx, cfg.EnclaveRPCURL)
 	}
 	if err != nil {
 		log.Fatalf("Failed to create enclave provider: %v", err)
 		return nil
 	}
 
-	settlementClient, err := ethclient.Dial(cfg.SettlementRPCURL)
+	settlementClient, err := ethclient.DialContext(ctx, cfg.SettlementRPCURL)
 	if err != nil {
 		log.Fatalf("Failed to create settlement provider: %v", err)
 		return nil
