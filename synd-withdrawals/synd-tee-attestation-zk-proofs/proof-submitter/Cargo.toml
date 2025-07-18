@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 
 [dependencies]
-alloy                                     = { workspace = true, features = ["contract", "signer-local", "signers"] }
+alloy                                     = { workspace = true, features = ["contract", "provider-ws", "signer-local", "signers"] }
 clap                                      = { workspace = true, features = ["derive"] }
 contract-bindings                         = { workspace = true }
 jsonrpsee                                 = { workspace = true, features = ["http-client"] }
