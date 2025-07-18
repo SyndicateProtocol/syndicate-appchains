@@ -34,6 +34,7 @@ use synd_tee_attestation_zk_proofs_submitter::{
     generate_proof, get_attestation_doc, pem_to_der, GenerateProofResult, ProofSubmitterError,
     ProofSystem, AWS_NITRO_ROOT_CERT_PEM,
 };
+use tracing::info;
 
 /// The arguments for the command.
 #[derive(Parser, Debug)]
@@ -64,10 +65,14 @@ pub struct Args {
     /// (if missing, on-chain submission will be skipped)
     #[arg(long)]
     private_key: Option<String>,
+
+    #[arg(long)]
+    elf_file_path: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
     let args = Args::parse();
     match run(args, generate_proof).await {
         Ok(_) => (),
@@ -78,22 +83,27 @@ async fn main() {
     };
 }
 
+#[allow(clippy::cognitive_complexity)]
 async fn run(
     args: Args,
     generate_proof_fn: impl Fn(
         Vec<u8>,
         Vec<u8>,
         ProofSystem,
+        Option<Vec<u8>>,
     ) -> Result<GenerateProofResult, ProofSubmitterError>,
 ) -> Result<(), ProofSubmitterError> {
     // get attestation doc CBOR
     let attestation_doc_hex = get_attestation_doc(args.enclave_rpc_url).await?;
-    println!("Attestation doc: {attestation_doc_hex}");
+    info!("Attestation doc: {attestation_doc_hex}");
     let cbor_attestation_doc = hex::decode(attestation_doc_hex)?;
 
     // get root certificate DER
     let pem_root_cert = if let Some(root_certificate_path) = args.root_certificate_path {
-        std::fs::read(root_certificate_path)?
+        std::fs::read(root_certificate_path).map_err(|e| {
+            info!("Error reading root certificate: {e}");
+            ProofSubmitterError::ReadRootCertificate(e)
+        })?
     } else {
         AWS_NITRO_ROOT_CERT_PEM.to_vec()
     };
@@ -104,16 +114,33 @@ async fn run(
     verify_aws_nitro_attestation(&cbor_attestation_doc, &der_root_cert)
         .map_err(ProofSubmitterError::InvalidAttestationDocument)?;
 
-    let proof = generate_proof_fn(cbor_attestation_doc, der_root_cert, args.proof_system)?;
-    println!("Proof generated successfully");
+    let custom_elf_bytes = args
+        .elf_file_path
+        .map(|path| {
+            std::fs::read(path).map_err(|e| {
+                info!("Error reading ELF file: {e}");
+                ProofSubmitterError::ReadElfFile(e)
+            })
+        })
+        .transpose()?;
+    let proof = generate_proof_fn(
+        cbor_attestation_doc,
+        der_root_cert,
+        args.proof_system,
+        custom_elf_bytes,
+    )?;
+    info!("Proof generated successfully");
+
+    info!("Public values: 0x{}", hex::encode(&proof.public_values));
+    info!("Proof: 0x{}", hex::encode(&proof.proof));
 
     match (args.chain_rpc_url, args.private_key, args.contract_address) {
         (Some(chain_rpc_url), Some(private_key), Some(contract_address)) => {
             submit_proof_to_chain(chain_rpc_url, contract_address, private_key, proof).await?;
         }
         _ => {
-            println!("Skipping submission to chain");
-            println!("proof: 0x{}", hex::encode(&proof.proof));
+            info!("Skipping submission to chain");
+            info!("proof: 0x{}", hex::encode(&proof.proof));
         }
     }
 
@@ -135,16 +162,35 @@ async fn submit_proof_to_chain(
 
     let contract = TeeKeyManager::new(contract_address, provider);
 
-    let receipt = contract
-        .addKey(proof.public_values.into(), proof.proof.into())
+    let tx = contract.addKey(proof.public_values.into(), proof.proof.into());
+
+    // let gas = tx.estimate_gas().await.map_err(|e| {
+    //     info!("Error estimating gas: {e}");
+    //     ProofSubmitterError::SubmitProofToChain(e.to_string())
+    // })?;
+
+    // let raw_tx = tx.clone().gas(gas).build_raw_transaction(signer.clone()).await.map_err(|e| {
+    //     info!("Error building transaction: {e}");
+    //     ProofSubmitterError::SubmitProofToChain(e.to_string())
+    // })?;
+
+    // info!("Raw tx: 0x{}", hex::encode(&raw_tx));
+
+    let receipt = tx
         .send()
         .await
-        .map_err(|e| ProofSubmitterError::SubmitProofToChain(e.to_string()))?
-        .watch()
+        .map_err(|e| {
+            info!("Error sending transaction: {e}");
+            ProofSubmitterError::SubmitProofToChain(e.to_string())
+        })?
+        .get_receipt()
         .await
-        .map_err(ProofSubmitterError::WaitForPendingTransaction)?;
+        .map_err(|e| {
+            info!("Error getting receipt: {e}");
+            ProofSubmitterError::SubmitProofToChain(e.to_string())
+        })?;
 
-    println!("Successfully submitted proof to chain. Receipt: {receipt:?}");
+    info!("Successfully submitted proof to chain. Receipt: {receipt:?}");
 
     Ok(())
 }
@@ -267,11 +313,13 @@ mod tests {
             contract_address: Some(*key_mgr_contract.address()),
             chain_rpc_url: Some(chain_info.ws_url.to_string()),
             private_key: Some(PRIVATE_KEY.to_string()),
+            elf_file_path: None,
         };
 
         let mock_generate_proof = |_: Vec<u8>,
                                    _: Vec<u8>,
-                                   _: ProofSystem|
+                                   _: ProofSystem,
+                                   _: Option<Vec<u8>>|
          -> Result<GenerateProofResult, ProofSubmitterError> {
             Ok(GenerateProofResult {
                 proof: proof_bytes.clone(),

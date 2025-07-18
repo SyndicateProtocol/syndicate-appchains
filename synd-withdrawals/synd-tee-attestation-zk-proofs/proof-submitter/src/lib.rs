@@ -12,9 +12,10 @@ use jsonrpsee::{
     core::client::ClientT,
     http_client::{HeaderMap, HeaderValue, HttpClientBuilder},
 };
-use sp1_sdk::{ProverClient, SP1Stdin};
+use sp1_sdk::{HashableKey, ProverClient, SP1Stdin};
 use std::time::Duration;
 use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
+use tracing::info;
 use x509_cert::der::{DecodePem, Encode};
 
 #[allow(missing_docs)]
@@ -27,7 +28,7 @@ pub enum ProofSubmitterError {
     DecodeAttestationDoc(#[from] hex::FromHexError),
 
     #[error("Failed to read root certificate")]
-    ReadRootCertificate(#[from] std::io::Error),
+    ReadRootCertificate(std::io::Error),
 
     #[error("Failed to parse root certificate")]
     ParseRootCertificate(#[from] x509_cert::der::Error),
@@ -49,6 +50,9 @@ pub enum ProofSubmitterError {
 
     #[error("Failed to wait for pending transaction: {0}")]
     WaitForPendingTransaction(#[from] PendingTransactionError),
+
+    #[error("Failed to read ELF file: {0}")]
+    ReadElfFile(std::io::Error),
 }
 
 #[allow(missing_docs)]
@@ -71,11 +75,22 @@ pub fn generate_proof(
     cbor_attestation_doc: Vec<u8>,
     der_root_cert: Vec<u8>,
     proof_system: ProofSystem,
+    custom_elf_bytes: Option<Vec<u8>>,
 ) -> Result<GenerateProofResult, ProofSubmitterError> {
     // Set up the prover client.
     let client = ProverClient::from_env();
 
-    let (pk, _vk) = client.setup(TEE_ATTESTATION_VALIDATION_ELF);
+    let elf_bytes = custom_elf_bytes.map_or_else(
+        || TEE_ATTESTATION_VALIDATION_ELF.into(),
+        |bytes| {
+            info!("Using custom ELF bytes");
+            bytes
+        },
+    );
+
+    let (pk, vk) = client.setup(&elf_bytes);
+    println!("vk: {}", vk.bytes32());
+
     let mut stdin = SP1Stdin::new();
     stdin.write(&cbor_attestation_doc);
     stdin.write(&der_root_cert);
