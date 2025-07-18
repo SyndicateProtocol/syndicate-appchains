@@ -381,6 +381,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg(format!("--ws.port={port}"))
             .arg("--ws.addr=0.0.0.0")
             .arg("--ws.origins=\\*")
+            .arg("--node.parent-chain-reader.old-header-timeout=2540400h")
             .arg(format!("--log-level={log_level}"))
             .args(sequencer_args),
         format!("nitro-{}", args.chain_name).as_str(),
