@@ -207,6 +207,7 @@ impl TestComponents {
                     owner_address,
                     // NOTE: use a different address to post batches to avoid nonce conflicts
                     vec![test_account8().address],
+                    matches!(options.base_chains_type, BaseChainsType::NitroWithEigenda),
                 )
                 .await?;
 
@@ -220,7 +221,6 @@ impl TestComponents {
                         BaseChainsType::Nitro => NitroSequencerMode::Sequencer,
                         BaseChainsType::NitroWithEigenda => NitroSequencerMode::EigenDASequencer(
                             eigenda_proxy_url.as_ref().unwrap().clone(),
-                            l1_info.ws_url.clone(),
                         ),
                         _ => unreachable!(),
                     },
@@ -312,6 +312,7 @@ impl TestComponents {
                     chain_id,
                     owner_address,
                     vec![test_account9().address],
+                    matches!(options.base_chains_type, BaseChainsType::NitroWithEigenda),
                 )
                 .await?;
 
@@ -325,7 +326,6 @@ impl TestComponents {
                         BaseChainsType::Nitro => NitroSequencerMode::Sequencer,
                         BaseChainsType::NitroWithEigenda => NitroSequencerMode::EigenDASequencer(
                             eigenda_proxy_url.as_ref().unwrap().clone(),
-                            l1_info.ws_url.clone(),
                         ),
                         _ => unreachable!(),
                     },
@@ -403,6 +403,7 @@ impl TestComponents {
                     options.appchain_chain_id,
                     options.rollup_owner,
                     vec![],
+                    false,
                 )
                 .await?
             }

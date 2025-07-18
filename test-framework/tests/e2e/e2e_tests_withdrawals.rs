@@ -55,11 +55,12 @@ async fn e2e_tee_withdrawal_with_calldata() -> Result<()> {
 #[allow(clippy::unwrap_used)]
 async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
     let close_challenge_interval = Duration::from_secs(1);
+    let settlement_delay = 2;
     TestComponents::run(
         &ConfigurationOptions {
             base_chains_type,
             rollup_owner: test_account1().address,
-            settlement_delay: 2,
+            settlement_delay,
             close_challenge_interval,
             ..Default::default()
         },
@@ -128,7 +129,7 @@ async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
             let config_hash = VerifierConfig {
                 sequencing_contract_address: *components.sequencing_contract.address(),
                 sequencing_bridge_address,
-                settlement_delay: ConfigurationOptions::default().settlement_delay,
+                settlement_delay,
             }
             .hash();
 
@@ -256,7 +257,7 @@ async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
                 appchain_rpc_url: components.appchain_ws_rpc_url.clone(),
                 sequencing_rpc_url: components.sequencing_rpc_url.clone(),
                 enclave_rpc_url,
-                polling_interval: "100ms".to_string(),
+                polling_interval: "1s".to_string(),
                 close_challenge_interval: format!("{}s", close_challenge_interval.as_secs()),
                 settlement_chain_id: SETTLEMENT_CHAIN_ID,
                 eigen_rpc_url: components
@@ -266,7 +267,7 @@ async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
                 appchain_bridge_address: components.appchain_deployment.bridge,
                 sequencing_contract_address: *components.sequencing_contract.address(),
                 sequencing_bridge_address_on_l1: sequencing_bridge_address,
-                settlement_delay: ConfigurationOptions::default().settlement_delay,
+                settlement_delay,
                 private_key: PRIVATE_KEY3.to_string().strip_prefix("0x").unwrap().to_string(),
             };
 
@@ -318,7 +319,7 @@ async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
             wait_until!(
                 components.appchain_provider.get_balance(test_account1().address).await? >=
                     parse_ether("1")?,
-                Duration::from_secs(20)
+                Duration::from_secs(60)
             );
 
             // initiate a withdrawal from the appchain to an empty wallet

@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -176,6 +175,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				appOutput, err := p.Prove(ctx, trustedInput, settlesToArbitrumRollup)
 				if err != nil {
 					log.Printf("Failed to prove: %v", err)
+					continue
 				}
 
 				p.PendingAssertion = &appOutput.PendingAssertion
@@ -188,7 +188,13 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				log.Printf("Failed to submit assertion: %v", err)
 				continue
 			}
-			log.Println("Submitted assertion: ", transaction.Hash())
+
+			log.Println(
+				"Submitted assertion: ", transaction.Hash(),
+				"seqHash: ", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]),
+				"appHash: ", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]),
+				"l1Acc: ", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]),
+			)
 		}
 	}
 }
@@ -200,11 +206,14 @@ func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, 
 	}
 	trustedInput := enclave.TrustedInput(contractTrustedInput)
 
-	jsonInput, err := json.Marshal(contractTrustedInput)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal trusted input: %v", err)
-	}
-	log.Println("Trusted input: ", string(jsonInput))
+	log.Println("Trusted input: ",
+		"appchainBlockHash", common.BytesToHash(trustedInput.AppStartBlockHash[:]),
+		"seqStartBlockHash", common.BytesToHash(trustedInput.SeqStartBlockHash[:]),
+		"l1StartBatchAcc", common.BytesToHash(trustedInput.L1StartBatchAcc[:]),
+		"l1EndHash", common.BytesToHash(trustedInput.L1EndHash[:]),
+		"setDelayedMessageAcc", common.BytesToHash(trustedInput.SetDelayedMessageAcc[:]),
+		"l1StartBatchAcc", common.BytesToHash(trustedInput.L1StartBatchAcc[:]),
+	)
 	return &trustedInput, nil
 }
 
@@ -343,7 +352,11 @@ func (p *Proposer) Prove(
 
 	// get appchain start block
 	if header, err = p.AppchainClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
-		return nil, fmt.Errorf("failed to get appchain header: %v", err)
+		return nil, fmt.Errorf(
+			"failed to get appchain header, hash: %v, err: %v",
+			common.BytesToHash(trustedInput.AppStartBlockHash[:]),
+			err,
+		)
 	}
 
 	// get delayed messages

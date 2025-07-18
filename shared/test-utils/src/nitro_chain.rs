@@ -27,7 +27,7 @@ pub struct NitroChainInfoArgs {
 
 /// Get the nitro json configuration data for the appchain
 pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
-    let NitroChainInfoArgs { chain_name, parent_chain_id, deployment, .. } = args;
+    let NitroChainInfoArgs { chain_name, parent_chain_id, deployment, use_eigen_da, .. } = args;
     let NitroDeployment {
         bridge,
         inbox,
@@ -41,7 +41,7 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
         ..
     } = deployment;
 
-    let appchain_config = chain_config(args.chain_id, args.chain_owner, args.use_eigen_da);
+    let appchain_config = chain_config(args.chain_id, args.chain_owner, use_eigen_da);
     format!(
         r#"[{{
               "chain-name": "{chain_name}",
@@ -95,10 +95,11 @@ pub fn chain_config(chain_id: u64, chain_owner: Address, use_eigen_da: bool) -> 
           "arbitrum": {{
             "EnableArbOS": true,
             "AllowDebugPrecompiles": false,
-            "DataAvailabilityCommittee": {use_eigen_da},
+            "DataAvailabilityCommittee": false,
             "InitialArbOSVersion": 32,
             "InitialChainOwner": "{chain_owner}",
-            "GenesisBlockNum": 0
+            "GenesisBlockNum": 0,
+            "EigenDA": {use_eigen_da}
           }}
       }}"#
     );
@@ -230,6 +231,7 @@ pub async fn deploy_nitro_rollup(
     rollup_chain_id: u64,
     rollup_owner: Address,
     batch_posters: Vec<Address>,
+    use_eigen_da: bool,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
     let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
@@ -266,8 +268,7 @@ pub async fn deploy_nitro_rollup(
     .await?;
     assert!(status.success(), "Failed to run `yarn build` in nitro contracts");
 
-    let chain_config_json = chain_config(rollup_chain_id, rollup_owner, false);
-    let zero_address = Address::ZERO;
+    let chain_config_json = chain_config(rollup_chain_id, rollup_owner, use_eigen_da);
 
     // setup config.ts (unfortunately, the script expects the config to be in a specific path)
     let config_ts = format!(
@@ -307,7 +308,7 @@ pub async fn deploy_nitro_rollup(
                 }},
             }},
             // validators: [],
-            // batchPosterManager: '{zero_address}',
+            // batchPosterManager: '',
             // batchPosters: []
         }}
     "#
