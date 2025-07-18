@@ -15,6 +15,7 @@ use eyre::Ok;
 use serde::{Deserialize, Serialize};
 use shared::types::{deserialize_address, FilledProvider};
 use tokio::{fs, process::Command};
+use tracing::info;
 
 pub struct NitroChainInfoArgs {
     pub chain_id: u64,
@@ -234,11 +235,12 @@ pub async fn deploy_nitro_rollup(
     use_eigen_da: bool,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
-    let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
+    let nitro_contracts_dir = format!("{project_root}synd-contracts/lib/nitro-contracts");
+    info!("Nitro contracts dir: {nitro_contracts_dir}");
 
     // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
     // apply patch to hardhat.config.ts to add custom network
-    let patch_path = format!("{project_root}/shared/test-utils/src/nitro-hardhat-config.patch");
+    let patch_path = format!("{project_root}shared/test-utils/src/nitro-hardhat-config.patch");
     let status = E2EProcess::new(
         Command::new("git")
             .current_dir(nitro_contracts_dir.clone())
