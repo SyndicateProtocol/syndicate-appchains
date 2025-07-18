@@ -513,11 +513,6 @@ pub async fn start_eigenda_proxy() -> Result<(E2EProcess, String)> {
             .arg("--eigenda.disable-tls=true")
             .arg("--eigenda.response-timeout=60m")
             .arg("--log.level=debug")
-            // TODO not sure if those do anything
-            .arg("--eigenda.response-timeout")
-            .arg("5m")
-            .arg("--eigenda.confirmation-timeout")
-            .arg("10m")
             .arg("--port")
             .arg(port.to_string()),
         "eigenda-proxy",
