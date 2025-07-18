@@ -22,14 +22,22 @@
 //! transactions.
 
 use alloy::{
-    hex, network::EthereumWallet, primitives::Address, providers::ProviderBuilder,
+    hex,
+    network::EthereumWallet,
+    primitives::Address,
+    providers::{Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
 };
 use clap::Parser;
-use contract_bindings::synd::tee_key_manager::TeeKeyManager;
+use contract_bindings::synd::{
+    attestation_doc_verifier::AttestationDocVerifier,
+    tee_key_manager::TeeKeyManager::{self, TeeKeyManagerInstance},
+};
 use shared::parse::parse_address;
+use sp1_sdk::{HashableKey, ProverClient};
 use std::{path::PathBuf, str::FromStr};
 use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
+use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
 use synd_tee_attestation_zk_proofs_submitter::{
     generate_proof, get_attestation_doc, pem_to_der, GenerateProofResult, ProofSubmitterError,
     ProofSystem, AWS_NITRO_ROOT_CERT_PEM,
@@ -90,7 +98,7 @@ async fn run(
         Vec<u8>,
         Vec<u8>,
         ProofSystem,
-        Option<Vec<u8>>,
+        Vec<u8>,
     ) -> Result<GenerateProofResult, ProofSubmitterError>,
 ) -> Result<(), ProofSubmitterError> {
     // get attestation doc CBOR
@@ -123,58 +131,90 @@ async fn run(
             })
         })
         .transpose()?;
-    let proof = generate_proof_fn(
-        cbor_attestation_doc,
-        der_root_cert,
-        args.proof_system,
-        custom_elf_bytes,
-    )?;
-    info!("Proof generated successfully");
 
-    info!("Public values: 0x{}", hex::encode(&proof.public_values));
-    info!("Proof: 0x{}", hex::encode(&proof.proof));
+    let elf_bytes = custom_elf_bytes.map_or_else(
+        || TEE_ATTESTATION_VALIDATION_ELF.into(),
+        |bytes| {
+            info!("Using custom ELF bytes");
+            bytes
+        },
+    );
 
     match (args.chain_rpc_url, args.private_key, args.contract_address) {
         (Some(chain_rpc_url), Some(private_key), Some(contract_address)) => {
-            submit_proof_to_chain(chain_rpc_url, contract_address, private_key, proof).await?;
+            let signer = PrivateKeySigner::from_str(&private_key)?;
+            let provider = ProviderBuilder::new()
+                .wallet(EthereumWallet::from(signer))
+                .connect(chain_rpc_url.as_str())
+                .await?;
+            let contract = TeeKeyManager::new(contract_address, provider);
+
+            #[cfg(not(debug_assertions))]
+            assert_vkey_matches(&elf_bytes, contract.clone()).await?;
+
+            let proof = generate_proof_fn(
+                cbor_attestation_doc,
+                der_root_cert,
+                args.proof_system,
+                elf_bytes,
+            )?;
+
+            info!("Public values: 0x{}", hex::encode(&proof.public_values));
+            info!("Proof: 0x{}", hex::encode(&proof.proof));
+
+            submit_proof_to_chain(contract, proof).await?;
         }
         _ => {
             info!("Skipping submission to chain");
-            info!("proof: 0x{}", hex::encode(&proof.proof));
+
+            let proof = generate_proof_fn(
+                cbor_attestation_doc,
+                der_root_cert,
+                args.proof_system,
+                elf_bytes,
+            )?;
+            info!("Public values: 0x{}", hex::encode(&proof.public_values));
+            info!("Proof: 0x{}", hex::encode(&proof.proof));
         }
     }
+
+    // assert our ELF file matches the contract's vkey before generating the proof
 
     Ok(())
 }
 
-async fn submit_proof_to_chain(
-    chain_rpc_url: String,
-    contract_address: Address,
-    private_key: String,
+#[cfg(not(debug_assertions))]
+async fn assert_vkey_matches<P: Provider>(
+    elf_bytes: &[u8],
+    contract: TeeKeyManagerInstance<P>,
+) -> Result<(), ProofSubmitterError> {
+    let (_, vk) = ProverClient::from_env().setup(elf_bytes);
+    info!("using vkey: {}", vk.bytes32());
+
+    let att_doc_verifier_address = contract.attestationDocVerifier().call().await.map_err(|e| {
+        info!("Error getting attestation doc verifier address: {e}");
+        ProofSubmitterError::GetAttestationDocVerifierAddress(e)
+    })?;
+    let att_doc_verifier_contract =
+        AttestationDocVerifier::new(att_doc_verifier_address, contract.provider());
+
+    let att_doc_verifier_vkey =
+        att_doc_verifier_contract.attestationDocVerifierVKey().call().await.map_err(|e| {
+            info!("Error getting attestation doc verifier vkey hash: {e}");
+            ProofSubmitterError::GetAttestationDocVerifierVKeyHash(e)
+        })?;
+
+    if vk.bytes32_raw() != att_doc_verifier_vkey {
+        return Err(ProofSubmitterError::VkeyMismatch);
+    }
+    Ok(())
+}
+
+async fn submit_proof_to_chain<P: Provider>(
+    contract: TeeKeyManagerInstance<P>,
     proof: GenerateProofResult,
 ) -> Result<(), ProofSubmitterError> {
-    let signer = PrivateKeySigner::from_str(&private_key)?;
-
-    let provider = ProviderBuilder::new()
-        .wallet(EthereumWallet::from(signer))
-        .connect(chain_rpc_url.as_str())
-        .await?;
-
-    let contract = TeeKeyManager::new(contract_address, provider);
-
     let tx = contract.addKey(proof.public_values.into(), proof.proof.into());
-
-    // let gas = tx.estimate_gas().await.map_err(|e| {
-    //     info!("Error estimating gas: {e}");
-    //     ProofSubmitterError::SubmitProofToChain(e.to_string())
-    // })?;
-
-    // let raw_tx = tx.clone().gas(gas).build_raw_transaction(signer.clone()).await.map_err(|e| {
-    //     info!("Error building transaction: {e}");
-    //     ProofSubmitterError::SubmitProofToChain(e.to_string())
-    // })?;
-
-    // info!("Raw tx: 0x{}", hex::encode(&raw_tx));
 
     let receipt = tx
         .send()
@@ -319,7 +359,7 @@ mod tests {
         let mock_generate_proof = |_: Vec<u8>,
                                    _: Vec<u8>,
                                    _: ProofSystem,
-                                   _: Option<Vec<u8>>|
+                                   _: Vec<u8>|
          -> Result<GenerateProofResult, ProofSubmitterError> {
             Ok(GenerateProofResult {
                 proof: proof_bytes.clone(),
