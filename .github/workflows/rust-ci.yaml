@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       # Install taplo using cargo
       - name: Install Taplo
@@ -158,7 +160,8 @@ jobs:
         run: |
           docker pull ghcr.io/syndicateprotocol/generate_batch
           docker pull valkey/valkey:latest
-          docker pull offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
+          docker pull ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
+          docker pull ghcr.io/layr-labs/eigenda-proxy:latest@sha256:dc5564dc557e3d349e38bdcb48cad2b31a16f185216e9e3f25796a5b966de5e9
 
       - name: Install nextest
         uses: taiki-e/install-action@nextest
