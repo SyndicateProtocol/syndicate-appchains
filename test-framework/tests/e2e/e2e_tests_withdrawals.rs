@@ -42,18 +42,19 @@ fn init() {
     shared::tracing::setup_global_logging();
 }
 
+// NOTE run the tests in sequence
+//(the current nitro-contracts deployments will conflict if they run in parallel)
 #[tokio::test]
-async fn e2e_tee_withdrawal_with_eigenda() -> Result<()> {
-    e2e_tee_withdrawal(BaseChainsType::NitroWithEigenda).await
-}
-
-#[tokio::test]
-async fn e2e_tee_withdrawal_with_calldata() -> Result<()> {
-    e2e_tee_withdrawal(BaseChainsType::Nitro).await
+async fn e2e_tee_withdrawal() -> Result<()> {
+    // use eigenda
+    e2e_tee_withdrawal_basic_flow(BaseChainsType::NitroWithEigenda).await?;
+    // use calldata
+    e2e_tee_withdrawal_basic_flow(BaseChainsType::Nitro).await?;
+    Ok(())
 }
 
 #[allow(clippy::unwrap_used)]
-async fn e2e_tee_withdrawal(base_chains_type: BaseChainsType) -> Result<()> {
+async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Result<()> {
     let close_challenge_interval = Duration::from_secs(1);
     let settlement_delay = 2;
     TestComponents::run(
