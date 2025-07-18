@@ -127,6 +127,7 @@ async fn ensure_nitro_node_deps() -> Result<()> {
     while (entries.next_entry().await?).is_some() {
         count += 1;
         if count > 1 {
+            info!("nitro node-deps already installed");
             return Ok(());
         }
     }
