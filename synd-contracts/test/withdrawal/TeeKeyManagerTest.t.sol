@@ -182,7 +182,8 @@ contract TeeKeyManagerTest is Test {
         vm.stopPrank();
 
         assertEq(address(keyManager.attestationDocVerifier()), address(0), "Verifier should be zero address");
-        assertFalse(keyManager.isKeyValid(teeKey1), "teeKey1 should be invalid after update");
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey1));
+        keyManager.isKeyValid(teeKey1);
     }
 
     function test_UpdateAttestationDocVerifier_StateCleanup() public {
@@ -203,8 +204,11 @@ contract TeeKeyManagerTest is Test {
         vm.stopPrank();
 
         // All keys should be revoked
-        assertFalse(keyManager.isKeyValid(teeKey1), "teeKey1 should be invalid after update");
-        assertFalse(keyManager.isKeyValid(teeKey2), "teeKey2 should be invalid after update");
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey1));
+        keyManager.isKeyValid(teeKey1);
+
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey2));
+        keyManager.isKeyValid(teeKey2);
 
         // Should be able to add new keys with new verifier
         address newTeeKey = vm.addr(6);
@@ -281,7 +285,8 @@ contract TeeKeyManagerTest is Test {
 
         // Verify all keys are revoked
         for (uint256 i = 0; i < keys.length; i++) {
-            assertFalse(keyManager.isKeyValid(keys[i]), "Key should be invalid after revoke");
+            vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, keys[i]));
+            keyManager.isKeyValid(keys[i]);
         }
     }
 
@@ -292,14 +297,20 @@ contract TeeKeyManagerTest is Test {
         vm.stopPrank();
 
         assertEq(address(keyManagerWithZero.attestationDocVerifier()), address(0), "Verifier should be zero address");
-        assertFalse(keyManagerWithZero.isKeyValid(teeKey1), "No keys should be valid initially");
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey1));
+        keyManagerWithZero.isKeyValid(teeKey1);
     }
 
     function test_isKeyValid_NonExistentKey() public {
         // Test checking validity of keys that were never added
-        assertFalse(keyManager.isKeyValid(teeKey1), "Non-existent key should not be valid");
-        assertFalse(keyManager.isKeyValid(address(0)), "Zero address should not be valid");
-        assertFalse(keyManager.isKeyValid(address(this)), "Contract address should not be valid");
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, teeKey1));
+        keyManager.isKeyValid(teeKey1);
+
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, address(0)));
+        keyManager.isKeyValid(address(0));
+
+        vm.expectRevert(abi.encodeWithSelector(TeeKeyManager.InvalidPublicKey.selector, address(this)));
+        keyManager.isKeyValid(address(this));
     }
 
     function test_AddKey_EdgeCaseAddresses() public {
