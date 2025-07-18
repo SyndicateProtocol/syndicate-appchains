@@ -9,9 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/metrics"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/config"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestInitProposerWithConfig(t *testing.T) {
@@ -19,7 +23,7 @@ func TestInitProposerWithConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse private key: %v", err)
 	}
-	dummyCfg := &pkg.Config{
+	dummyCfg := &config.Config{
 		EthereumRPCURL:           "http://localhost:8545",
 		SettlementRPCURL:         "http://localhost:8546",
 		SequencingRPCURL:         "http://localhost:8547",
@@ -32,13 +36,15 @@ func TestInitProposerWithConfig(t *testing.T) {
 		CloseChallengeInterval:   5 * time.Second,
 		Port:                     9292,
 		SettlementChainID:        9999,
-		EnclaveTLSConfig: pkg.TLSConfig{
+		EnclaveTLSConfig: tls.TLSConfig{
 			Enabled:        false,
 			ClientCertPath: "/etc/tls/tls.crt",
 			ClientKeyPath:  "/etc/tls/tls.key",
 		},
 	}
-	proposer := pkg.NewProposer(context.Background(), dummyCfg)
+    registry := prometheus.NewRegistry()
+	dummyMetrics := metrics.NewMetrics(registry)
+	proposer := pkg.NewProposer(context.Background(), dummyCfg, dummyMetrics)
 	if proposer.Config != dummyCfg {
 		t.Errorf("Proposer config was not set correctly")
 	}

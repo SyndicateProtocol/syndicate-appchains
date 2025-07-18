@@ -3,7 +3,6 @@ package pkg
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"maps"
 	"math/big"
@@ -24,6 +23,7 @@ import (
 	"github.com/offchainlabs/nitro/daprovider"
 	"github.com/offchainlabs/nitro/execution"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
+	"github.com/pkg/errors"
 )
 
 // keep in sync with the nitro node

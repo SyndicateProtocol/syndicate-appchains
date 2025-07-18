@@ -1,16 +1,16 @@
-package pkg
+package tls
 
 import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type TLSConfig struct {
@@ -19,7 +19,7 @@ type TLSConfig struct {
 	ClientKeyPath  string
 }
 
-func createTLSClient(cfg *TLSConfig, rpcURL string) (*rpc.Client, error) {
+func CreateTLSClient(cfg *TLSConfig, rpcURL string) (*rpc.Client, error) {
 	if cfg.ClientCertPath == "" || cfg.ClientKeyPath == "" {
 		return nil, fmt.Errorf("TLS client certificate and key paths are required")
 	}
@@ -76,11 +76,11 @@ func isTLSErr(err error) bool {
 	return false
 }
 
-func handleTLSErr(err error) error {
+func HandleTLSErr(err error) error {
 	if isTLSErr(err) {
 		// If the error is related to TLS, exit the program so k8s can restart it. That will automatically fix any cert expiry issues.
-		log.Fatalf("TLS handshake / certificate error; exiting so k8s can rotate pod: %v", err)
+		log.Fatal().Err(err).Msg("TLS handshake / certificate error; exiting so k8s can rotate pod")
 	}
 
-	return fmt.Errorf("failed to call enclave: %v", err)
+	return errors.Wrap(err, "failed to call enclave")
 }

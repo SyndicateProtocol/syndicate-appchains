@@ -1,4 +1,4 @@
-package pkg
+package config
 
 import (
 	"crypto/ecdsa"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/pflag"
@@ -35,7 +36,7 @@ type Config struct {
 	IsL1Chain bool
 
 	EnclaveConfig    enclave.Config
-	EnclaveTLSConfig TLSConfig
+	EnclaveTLSConfig tls.TLSConfig
 }
 
 var ConfigKeys = map[string]struct {
@@ -121,7 +122,7 @@ func LoadConfig() (*Config, error) {
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
 		},
-		EnclaveTLSConfig: TLSConfig{
+		EnclaveTLSConfig: tls.TLSConfig{
 			Enabled:        viper.GetBool("mtls-enabled-enclave"),
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
@@ -135,4 +136,8 @@ func mustAtoi(s string, fallback int) int {
 		return fallback
 	}
 	return i
+}
+
+func Get(env string) string {
+	return viper.GetString(env)
 }
