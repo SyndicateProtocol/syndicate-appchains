@@ -8,7 +8,10 @@ use alloy::{
     transports::{RpcError, TransportErrorKind},
 };
 use clap::ValueEnum;
-use jsonrpsee::{core::client::ClientT, http_client::HttpClientBuilder};
+use jsonrpsee::{
+    core::client::ClientT,
+    http_client::{HeaderMap, HeaderValue, HttpClientBuilder},
+};
 use sp1_sdk::{ProverClient, SP1Stdin};
 use std::time::Duration;
 use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
@@ -88,8 +91,12 @@ pub fn generate_proof(
 
 /// Get the TEE attestation document from the enclave RPC server
 pub async fn get_attestation_doc(enclave_rpc_url: String) -> Result<String, ProofSubmitterError> {
+    let mut headers = HeaderMap::new();
+    headers.insert("User-Agent", HeaderValue::from_static("synd-withdrawals/proof-submitter"));
+
     let client = HttpClientBuilder::default()
         .request_timeout(Duration::from_secs(10))
+        .set_headers(headers)
         .build(enclave_rpc_url)?;
 
     Ok(client.request::<String, [(); 0]>("enclave_signerAttestation", []).await?)
@@ -97,6 +104,9 @@ pub async fn get_attestation_doc(enclave_rpc_url: String) -> Result<String, Proo
 
 /// Gets the public key from the TEE, no attestation. Used for testing only
 pub async fn get_signer_public_key(enclave_rpc_url: String) -> Result<String, ProofSubmitterError> {
+    let mut headers = HeaderMap::new();
+    headers.insert("User-Agent", HeaderValue::from_static("synd-withdrawals/proof-submitter"));
+
     let client = HttpClientBuilder::default()
         .request_timeout(Duration::from_secs(10))
         .build(enclave_rpc_url)?;

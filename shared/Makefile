@@ -36,7 +36,7 @@ create-withdrawal-contract-bindings-go:
 		--abi=contract-bindings/src/withdrawals-go/TeeModule.abi \
 		--bin=contract-bindings/src/withdrawals-go/TeeModule.bin \
 		--pkg=teemodule \
-		--out=../synd-withdrawals/synd-proposer/teemodule/TeeModule.go
+		--out=../synd-withdrawals/synd-enclave/teemodule/teeModule.go
 
 	# 5) Clean up
 	rm -rf contract-bindings/src/withdrawals-go

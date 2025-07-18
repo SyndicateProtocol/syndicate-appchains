@@ -26,7 +26,7 @@ type Config struct {
 	PrivateKey             *ecdsa.PrivateKey
 	PollingInterval        time.Duration
 	CloseChallengeInterval time.Duration
-	MetricsPort            int
+	Port                   int
 
 	TeeModuleContractAddress common.Address
 
@@ -55,7 +55,7 @@ var ConfigKeys = map[string]struct {
 	"private-key":                 {"Private Key", "", true},
 	"polling-interval":            {"Polling interval", "10m", false},
 	"close-challenge-interval":    {"Close challenge interval", "5m", false},
-	"metrics-port":                {"Metrics port", "9292", false},
+	"port":                        {"Server port", "9292", false},
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
 	"settlement-delay":            {"Settlement Delay", "60", false},
@@ -67,7 +67,7 @@ var ConfigKeys = map[string]struct {
 func BindFlags(flags *pflag.FlagSet) {
 	for key, meta := range ConfigKeys {
 		switch key {
-		case "metrics-port":
+		case "port":
 			flags.Int(key, mustAtoi(meta.Default, 9292), meta.Description)
 		default:
 			flags.String(key, meta.Default, meta.Description)
@@ -95,7 +95,7 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("invalid close-challenge-interval: %v", err)
 	}
 
-	metricsPort := viper.GetInt("metrics-port")
+	port := viper.GetInt("port")
 
 	privateKey, err := crypto.HexToECDSA(viper.GetString("private-key"))
 	if err != nil {
@@ -115,7 +115,7 @@ func LoadConfig() (*Config, error) {
 		PrivateKey:               privateKey,
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
-		MetricsPort:              metricsPort,
+		Port:                     port,
 		EnclaveConfig: enclave.Config{
 			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
