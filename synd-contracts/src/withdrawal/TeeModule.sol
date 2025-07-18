@@ -246,4 +246,8 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
         }
         revert("assertion not found");
     }
+
+    function transferAssertionPosterOwner(address newOwner) public onlyOwner {
+        Ownable(address(poster)).transferOwnership(newOwner);
+    }
 }
