@@ -100,7 +100,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
-          save-if: 'false' # skip saving this cache, only save the one in `tests`
+          save-if: "false" # skip saving this cache, only save the one in `tests`
 
       - name: Install SP1 toolchain
         run: |
@@ -136,14 +136,14 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
-          save-if: 'true' # do save this one
+          save-if: "true" # do save this one
 
       # Install Foundry (required for Anvil, a local Ethereum node simulator)
       # Anvil is a critical dependency for tests
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Install SP1 toolchain
         run: |
