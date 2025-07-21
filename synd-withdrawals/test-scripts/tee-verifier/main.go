@@ -24,14 +24,19 @@ func main() {
 	eigenUrl := flag.String("eigenda-url", "https://risa-testnet-eigenda-mirror.rollups.alchemy.com", "eigenda proxy url")
 	l1Url := flag.String("l1-url", "https://eth-sepolia.g.alchemy.com/v2/xZF7o-Vl3z94HOqwaQtrZP06swu4_E15", "l1 rpc url")
 	setUrl := flag.String("set-url", "https://base-sepolia.g.alchemy.com/v2/FFOCYExawZ3K46YRNHqaUEo3pbqS5F1F", "settlement rpc url")
-	seqUrl := flag.String("seq-url", "http://localhost:8545", "sequencing chain rpc url")
-	enclaveUrl := flag.String("enclave-url", "http://localhost:1234", "enclave rpc url")
-	appUrl := flag.String("app-url", "http://localhost:8546", "appchain rpc url")
+	seqUrl := flag.String("seq-url", "https://risa-testnet.us-central1.gcp.testnet.syndicate.io", "sequencing chain rpc url")
+	enclaveUrl := flag.String("enclave-url", "https://verifier.direct.us-east-2.aws.testnet.syndicate.io", "enclave rpc url")
+	appUrl := flag.String("app-url", "https://rpc.testnet.manchego.syndicate.io", "appchain rpc url")
 
-	// config flags - optional. addrs
-	seqContractFlag := flag.String("seq-contract", "0x7f389b0827d38D047c98fAbBfbf004a966dB8Dc1", "sequencing contract address for appchain")
+	// config flags - for risa testnet
+	seqContractFlag := flag.String("seq-contract", "0x1e491B3C0A53492F72dBE5A48C6cd6ffe19b643E", "sequencing contract address for appchain")
 	seqBridgeFlag := flag.String("seq-bridge", "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA", "sequencing chain bridge contract address")
-	appBridgeFlag := flag.String("app-bridge", "0x509e8942e6C1626dA3d45060aB39B86e8F246E98", "appchain bridge address")
+	appBridgeFlag := flag.String("app-bridge", "0x646eD51Ef2daD941733b004961d9ceC2B32BACF8", "appchain bridge address")
+
+	// config flags - for risa devnet
+	// seqContractFlag := flag.String("seq-contract", "0xb89D1d2E9bc9A14855e6C8509dd5435422CcDd8f", "sequencing contract address for appchain")
+	// seqBridgeFlag := flag.String("seq-bridge", "0x765E6EC7f3A8c8A2712EA230754E5968E45E124b", "sequencing chain bridge contract address")
+	// appBridgeFlag := flag.String("app-bridge", "0xC5432874Fe53da9185a34eCdf48A3a2a2A8Bd241", "appchain bridge address")
 
 	// config flags - optional. settlement
 	setMsgs := flag.Uint64("set-msg-count", 0, "settlement delayed message count")
@@ -68,7 +73,7 @@ func main() {
 		PrivateKey:               privateKey,
 		PollingInterval:          1000,
 		CloseChallengeInterval:   1000,
-		MetricsPort:              8080,
+		Port:                     8080,
 		EnclaveConfig: enclave.Config{
 			SequencingContractAddress: seqContractAddress,
 			SequencingBridgeAddress:   seqBridgeAddress,
@@ -76,7 +81,7 @@ func main() {
 		},
 	}
 
-	proposer := pkg.NewProposer(proposerConfig)
+	proposer := pkg.NewProposer(ctx, proposerConfig)
 
 	// normally this comes from the tee contract instead
 	var startMetadata arbnode.BatchMetadata
@@ -128,18 +133,16 @@ func main() {
 		L1EndHash:            header.Hash(),
 	}
 
-	trustedInputJson, err := json.Marshal(trustedInput)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Trusted input: ", string(trustedInputJson))
+	fmt.Println("Trusted input SeqStartBlockHash: ", common.Hash(trustedInput.SeqStartBlockHash))
+	fmt.Println("Trusted input AppStartBlockHash: ", common.Hash(trustedInput.AppStartBlockHash))
+	fmt.Println("Trusted input L1StartBatchAcc: ", common.Hash(trustedInput.L1StartBatchAcc))
 	fmt.Println("ready in", time.Since(now))
 	now = time.Now()
-	appOutput, err := proposer.Prove(ctx, trustedInput)
+	proveOutput, err := proposer.Prove(ctx, trustedInput)
 	if err != nil {
 		panic(err)
 	}
-	out, err := json.Marshal(appOutput)
+	out, err := json.Marshal(proveOutput)
 	if err != nil {
 		panic(err)
 	}
@@ -156,4 +159,19 @@ func main() {
 	}
 	println("Verify output: ", string(out))
 	fmt.Println("verify took", time.Since(now))
+
+	if verifyOutput.PendingAssertion.AppBlockHash != proveOutput.PendingAssertion.AppBlockHash {
+		panic("appchain block hash mismatch")
+	}
+	if verifyOutput.PendingAssertion.AppSendRoot != proveOutput.PendingAssertion.AppSendRoot {
+		panic("appchain send root mismatch")
+	}
+	if verifyOutput.PendingAssertion.SeqBlockHash != proveOutput.PendingAssertion.SeqBlockHash {
+		panic("sequencing block hash mismatch")
+	}
+	if verifyOutput.PendingAssertion.L1BatchAcc != proveOutput.PendingAssertion.L1BatchAcc {
+		panic("l1 batch acc mismatch")
+	}
+
+	println("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅ All good! 🎉")
 }

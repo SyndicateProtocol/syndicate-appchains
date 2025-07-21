@@ -26,6 +26,7 @@ serde_json          = { workspace = true }
 shared              = { workspace = true }
 synd-chain-ingestor = { workspace = true }
 tokio               = { workspace = true, features = ["signal"] }
+tower               = { workspace = true }
 tracing             = { workspace = true }
 
 [dev-dependencies]

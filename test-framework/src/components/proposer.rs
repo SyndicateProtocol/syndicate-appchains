@@ -20,7 +20,7 @@ pub struct ProposerConfig {
     pub sequencer_inbox_address: Address,
     pub polling_interval: String,
     pub close_challenge_interval: String,
-    pub metrics_port: u16,
+    pub port: u16,
 }
 
 impl ProposerConfig {
@@ -50,8 +50,8 @@ impl ProposerConfig {
             self.polling_interval.to_string(),
             "--close-challenge-interval".to_string(),
             self.close_challenge_interval.to_string(),
-            "--metrics-port".to_string(),
-            self.metrics_port.to_string(),
+            "--port".to_string(),
+            self.port.to_string(),
             "--settlement-chain-id".to_string(),
             self.settlement_chain_id.to_string(),
         ]

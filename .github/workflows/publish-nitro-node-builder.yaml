@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "synd-withdrawals/synd-enclave/nitro/**"
+      - "synd-withdrawals/synd-enclave/nitro"
   workflow_dispatch:
 
 env:

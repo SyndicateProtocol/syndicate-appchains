@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func TestInitProposerWithConfig(t *testing.T) {
 		PrivateKey:               privateKey,
 		PollingInterval:          10 * time.Second,
 		CloseChallengeInterval:   5 * time.Second,
-		MetricsPort:              9292,
+		Port:                     9292,
 		SettlementChainID:        9999,
 		EnclaveTLSConfig: pkg.TLSConfig{
 			Enabled:        false,
@@ -38,7 +39,7 @@ func TestInitProposerWithConfig(t *testing.T) {
 			ClientKeyPath:  "/etc/tls/tls.key",
 		},
 	}
-	proposer := pkg.NewProposer(dummyCfg)
+	proposer := pkg.NewProposer(context.Background(), dummyCfg)
 	if proposer.Config != dummyCfg {
 		t.Errorf("Proposer config was not set correctly")
 	}

@@ -41,7 +41,7 @@ contract SyndicateTokenTest is Test {
         assertEq(token.symbol(), "SYND");
         assertEq(token.decimals(), 18);
         assertEq(token.TOTAL_SUPPLY(), 1_000_000_000 * 10 ** 18);
-        assertEq(token.INITIAL_MINT_SUPPLY(), 900_000_000 * 10 ** 18);
+        assertEq(token.INITIAL_MINT_SUPPLY(), 920_000_000 * 10 ** 18);
     }
 
     function test_Constructor_RoleAssignment() public view {
@@ -91,14 +91,16 @@ contract SyndicateTokenTest is Test {
     }
 
     function test_Mint_ToTotalSupply() public {
-        uint256 remainingSupply = token.getRemainingEmissions();
+        uint256 remainingSupply = token.TOTAL_SUPPLY() - token.totalSupply();
 
         vm.prank(emissionMinter);
         token.mint(user, remainingSupply);
 
         assertEq(token.balanceOf(user), remainingSupply);
         assertEq(token.totalSupply(), token.TOTAL_SUPPLY());
-        assertEq(token.getRemainingEmissions(), 0);
+
+        uint256 remainingSupplyAfter = token.TOTAL_SUPPLY() - token.totalSupply();
+        assertEq(remainingSupplyAfter, 0);
     }
 
     function test_RevertWhen_Mint_NotMinter() public {
@@ -125,7 +127,7 @@ contract SyndicateTokenTest is Test {
     }
 
     function test_RevertWhen_Mint_ExceedsTotalSupply() public {
-        uint256 exceedingAmount = token.getRemainingEmissions() + 1;
+        uint256 exceedingAmount = (token.TOTAL_SUPPLY() - token.totalSupply()) + 1;
 
         vm.prank(emissionMinter);
         vm.expectRevert(SyndicateToken.ExceedsTotalSupply.selector);
@@ -135,17 +137,19 @@ contract SyndicateTokenTest is Test {
     // ============ VIEW FUNCTION TESTS ============
 
     function test_GetRemainingEmissions_Initial() public view {
-        assertEq(token.getRemainingEmissions(), token.TOTAL_SUPPLY() - token.INITIAL_MINT_SUPPLY());
+        uint256 remainingEmissions = token.TOTAL_SUPPLY() - token.totalSupply();
+        assertEq(remainingEmissions, token.TOTAL_SUPPLY() - token.INITIAL_MINT_SUPPLY());
     }
 
     function test_GetRemainingEmissions_AfterMinting() public {
         uint256 mintedAmount = 10_000_000 * 10 ** 18;
-        uint256 initialRemaining = token.getRemainingEmissions();
+        uint256 initialRemaining = token.TOTAL_SUPPLY() - token.totalSupply();
 
         vm.prank(emissionMinter);
         token.mint(user, mintedAmount);
 
-        assertEq(token.getRemainingEmissions(), initialRemaining - mintedAmount);
+        uint256 remainingEmissions = token.TOTAL_SUPPLY() - token.totalSupply();
+        assertEq(remainingEmissions, initialRemaining - mintedAmount);
     }
 
     // ============ GOVERNANCE FUNCTIONALITY TESTS ============
@@ -264,7 +268,8 @@ contract SyndicateTokenTest is Test {
     // ============ FUZZ TESTS ============
 
     function testFuzz_Mint_ValidAmounts(uint256 amount) public {
-        amount = bound(amount, 1, token.getRemainingEmissions());
+        uint256 remainingEmissions = token.TOTAL_SUPPLY() - token.totalSupply();
+        amount = bound(amount, 1, remainingEmissions);
 
         vm.prank(emissionMinter);
         token.mint(user, amount);
@@ -298,18 +303,19 @@ contract SyndicateTokenTest is Test {
     function test_Invariant_RemainingEmissionsConsistency() public {
         uint256 mint1 = 5_000_000 * 10 ** 18;
         uint256 mint2 = 3_000_000 * 10 ** 18;
-        uint256 initialRemaining = token.getRemainingEmissions();
+        uint256 initialRemaining = token.TOTAL_SUPPLY() - token.totalSupply();
 
         vm.startPrank(emissionMinter);
         token.mint(user, mint1);
         token.mint(syndTreasuryAddress, mint2);
         vm.stopPrank();
 
-        assertEq(token.getRemainingEmissions(), initialRemaining - (mint1 + mint2));
+        uint256 remainingEmissions = token.TOTAL_SUPPLY() - token.totalSupply();
+        assertEq(remainingEmissions, initialRemaining - (mint1 + mint2));
     }
 
     function test_Invariant_CannotExceedSupplyLimits() public {
-        uint256 maxMint = token.getRemainingEmissions();
+        uint256 maxMint = token.TOTAL_SUPPLY() - token.totalSupply();
 
         vm.prank(emissionMinter);
         token.mint(user, maxMint);

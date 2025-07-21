@@ -29,13 +29,13 @@ func main() {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 			log.Printf("Config: %+v\n", config)
-			log.Printf("Health server will listen on /health at port %d", config.MetricsPort)
+			log.Printf("Health server will listen on /health at port %d", config.Port)
 
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 
 			healthSrv := &http.Server{
-				Addr: fmt.Sprintf(":%d", config.MetricsPort),
+				Addr: fmt.Sprintf(":%d", config.Port),
 				Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					if r.URL.Path == "/health" {
 						w.Header().Set("Content-Type", "application/json")
@@ -56,7 +56,7 @@ func main() {
 				}
 			}()
 
-			proposer := pkg.NewProposer(config)
+			proposer := pkg.NewProposer(ctx, config)
 			proposer.Run(ctx)
 			log.Println("Synd-proposer service stopped.")
 			return nil

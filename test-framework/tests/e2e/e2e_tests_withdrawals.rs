@@ -167,7 +167,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
                 inbox_address: components.appchain_deployment.inbox,
                 sequencer_inbox_address: components.appchain_deployment.sequencer_inbox,
                 settlement_rpc_url: components.settlement_rpc_url.clone(),
-                metrics_port: PortManager::instance().next_port().await,
+                port: PortManager::instance().next_port().await,
                 appchain_rpc_url: components.appchain_ws_rpc_url.clone(),
                 sequencing_rpc_url: components.sequencing_rpc_url.clone(),
                 enclave_rpc_url,
@@ -178,7 +178,7 @@ async fn e2e_tee_withdrawal() -> Result<()> {
 
             let mut proposer_instance = start_component(
                 "synd-proposer",
-                proposer_config.metrics_port,
+                proposer_config.port,
                 proposer_config.cli_args(),
                 Default::default(),
             )
@@ -396,7 +396,7 @@ sol! {
 /// Configuration for the verifier
 #[derive(Clone, Debug, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
-pub struct VerifierConfig {
+struct VerifierConfig {
     /// Sequencing contract address on the sequencing chain
     pub sequencing_contract_address: Address,
 
@@ -410,7 +410,7 @@ pub struct VerifierConfig {
 impl VerifierConfig {
     /// Hash the verifier config
     #[allow(clippy::unwrap_used)]
-    pub fn hash(&self) -> B256 {
+    fn hash(&self) -> B256 {
         keccak256(
             (
                 self.sequencing_contract_address,
