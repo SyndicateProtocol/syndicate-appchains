@@ -75,7 +75,6 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         require(publicValues.pcr_0 == pcr0, "PCR0 mismatch");
         require(publicValues.pcr_1 == pcr1, "PCR1 mismatch");
         require(publicValues.pcr_2 == pcr2, "PCR2 mismatch");
-        require(publicValues.pcr_8 == pcr8, "PCR8 mismatch");
 
         ISP1Verifier(verifier).verifyProof(attestationDocVerifierVKey, _publicValues, _proofBytes);
 

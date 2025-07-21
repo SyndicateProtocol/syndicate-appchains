@@ -187,13 +187,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         modifiedPublicValues = abi.encode(publicValues);
         vm.expectRevert("PCR2 mismatch");
         attestationDocVerifier.verifyAttestationDocProof(modifiedPublicValues, fixture.proof);
-
-        // Reset and test PCR8 mismatch
-        publicValues = abi.decode(fixture.publicValues, (PublicValuesStruct));
-        publicValues.pcr_8 = bytes32(uint256(0xdeadbeef));
-        modifiedPublicValues = abi.encode(publicValues);
-        vm.expectRevert("PCR8 mismatch");
-        attestationDocVerifier.verifyAttestationDocProof(modifiedPublicValues, fixture.proof);
     }
 
     function testConstructorWithZeroExpirationTolerance() public virtual {
