@@ -235,7 +235,7 @@ contract TeeModuleTest is Test {
         vm.deal(address(teeModule), 10 ether);
     }
 
-    function testConstructor() public {
+    function testConstructor() public view {
         assertEq(address(teeModule.poster()), address(mockPoster));
         assertEq(address(teeModule.bridge()), address(mockBridge));
         assertEq(address(teeModule.teeKeyManager()), address(mockTeeKeyManager));

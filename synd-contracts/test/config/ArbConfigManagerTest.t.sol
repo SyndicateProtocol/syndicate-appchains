@@ -300,6 +300,38 @@ contract ArbConfigManagerTest is Test {
         vm.stopPrank();
     }
 
+    function testRevert_UpgradeImplementationToEOA() public {
+        vm.startPrank(owner);
+
+        // Try to upgrade to an EOA (Externally Owned Account)
+        address eoa = address(0x999);
+
+        // Verify EOA has no code
+        assertEq(eoa.code.length, 0, "EOA should have no code");
+
+        // This should now revert with the new validation
+        vm.expectRevert("Implementation must be a contract");
+        configManager.upgradeImplementation(eoa);
+
+        vm.stopPrank();
+    }
+
+    function testRevert_UpgradeImplementationToNonContract() public {
+        vm.startPrank(owner);
+
+        // Create an address that definitely has no contract deployed
+        address nonContract = address(uint160(uint256(keccak256("some_random_address"))));
+
+        // Verify the address has no code
+        assertEq(nonContract.code.length, 0, "Non-contract address should have no code");
+
+        // This should now revert with the new validation
+        vm.expectRevert("Implementation must be a contract");
+        configManager.upgradeImplementation(nonContract);
+
+        vm.stopPrank();
+    }
+
     function testChangeImplementation() public {
         vm.startPrank(owner);
 

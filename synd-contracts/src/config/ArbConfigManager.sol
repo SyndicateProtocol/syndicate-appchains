@@ -138,6 +138,7 @@ contract ArbConfigManager is Ownable {
      */
     function upgradeImplementation(address newImplementation) external onlyOwner {
         require(newImplementation != address(0), "New implementation cannot be zero address");
+        require(newImplementation.code.length > 0, "Implementation must be a contract");
 
         // Update the implementation in the beacon
         // This will automatically update all proxies
