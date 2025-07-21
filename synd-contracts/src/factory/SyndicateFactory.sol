@@ -6,7 +6,6 @@ import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts
@@ -23,14 +22,19 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Emitted when a chain ID is manually marked as used
     event ChainIdManuallyMarked(uint256 indexed chainId);
 
+    /// @notice Emitted when ID upper bound is updated
+    event IdUpperBoundUpdated(uint256 oldBound, uint256 newBound);
+
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     error ZeroAddress();
     error ChainIdAlreadyExists();
+    error IdOverflow();
 
     // Namespace configuration - made public for frontend access
     uint256 public namespacePrefix;
     uint256 public nextAutoChainId;
+    uint256 public idUpperBound;
     mapping(uint256 => bool) public usedChainIds;
 
     constructor(address admin) {
@@ -41,6 +45,7 @@ contract SyndicateFactory is AccessControl, Pausable {
 
         namespacePrefix = 510;
         nextAutoChainId = 1;
+        idUpperBound = 10; // Default upper bound for ID generation - enables format like 5101, 5102
     }
 
     /// @notice Creates a new SyndicateSequencingChain contract
@@ -103,18 +108,15 @@ contract SyndicateFactory is AccessControl, Pausable {
     }
 
     /// @notice Get the next auto-generated chain ID
-    /// @dev Chain ID calculation: concatenates namespacePrefix with nextAutoChainId
-    /// @dev Example: with namespacePrefix=510 and nextAutoChainId=1, result is 5101
-    /// @dev Example: with namespacePrefix=510 and nextAutoChainId=1000, result is 5101000
+    /// @dev Chain ID calculation: (namespacePrefix * idUpperBound) + nextAutoChainId
+    /// @dev Example: with namespacePrefix=510, idUpperBound=10, nextAutoChainId=1, result is 5101
+    /// @dev This approach prevents collisions by ensuring each namespace has a dedicated range
     /// @return The next available chain ID in the namespace
     function getNextChainId() public view returns (uint256) {
-        // Concatenate namespace prefix with auto chain ID
-        // This ensures we always stay within the 510 namespace
-        string memory prefixStr = Strings.toString(namespacePrefix);
-        string memory chainIdStr = Strings.toString(nextAutoChainId);
-        //#olympix-ignore-abi-encode-packed-dynamic-types
-        string memory combined = string(abi.encodePacked(prefixStr, chainIdStr));
-        return Strings.parseUint(combined);
+        // Ensure the auto-incrementing ID does not exceed its reserved space
+        if (nextAutoChainId >= idUpperBound) revert IdOverflow();
+        
+        return (namespacePrefix * idUpperBound) + nextAutoChainId;
     }
 
     /// @notice Check if a chain ID has been used
@@ -141,6 +143,18 @@ contract SyndicateFactory is AccessControl, Pausable {
         uint256 oldPrefix = namespacePrefix;
         namespacePrefix = newPrefix;
         emit NamespaceConfigUpdated(oldPrefix, newPrefix);
+    }
+
+    /// @notice Update ID upper bound configuration (manager only)
+    /// @param newBound The new upper bound for auto-incrementing IDs
+    /// @dev This defines the maximum value for nextAutoChainId and determines namespace ranges
+    function updateIdUpperBound(uint256 newBound) external onlyRole(MANAGER_ROLE) {
+        require(newBound > 0, "Upper bound must be greater than 0");
+        require(newBound > nextAutoChainId, "Upper bound must be greater than current auto chain ID");
+
+        uint256 oldBound = idUpperBound;
+        idUpperBound = newBound;
+        emit IdUpperBoundUpdated(oldBound, newBound);
     }
 
     /// @notice Pause the factory (admin only)
