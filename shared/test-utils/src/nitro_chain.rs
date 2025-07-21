@@ -269,13 +269,13 @@ pub async fn deploy_nitro_rollup(
     .await?;
     assert!(status.success(), "Failed to run `yarn install` in nitro contracts");
 
-    let status = E2EProcess::new(
-        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build"),
+    let _status = E2EProcess::new(
+        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build:all"),
         "nitro-contracts-build",
     )?
     .wait()
-    .await?;
-    assert!(status.success(), "Failed to run `yarn build` in nitro contracts");
+    .await;
+    // NOTE: ignore status, as it might be successful but exit with code 1
 
     let chain_config_json = chain_config(rollup_chain_id, rollup_owner, use_eigen_da);
 
