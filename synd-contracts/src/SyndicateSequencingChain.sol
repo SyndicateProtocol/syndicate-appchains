@@ -4,14 +4,38 @@ pragma solidity 0.8.28;
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 
 /// @title SyndicateSequencingChain
-/// @notice The core contract for sequencing transactions using a modular permission architecture
+/// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
+///
+/// @dev ARCHITECTURAL DESIGN - tx.origin USAGE BY DESIGN:
+/// This contract intentionally uses tx.origin alongside msg.sender to enable sophisticated middleware patterns:
+///
+/// USE CASES ENABLED:
+/// • ATOMIC CROSS-CHAIN SEQUENCING: AtomicSequencer coordinating multiple chains
+/// • TRUSTED MIDDLEWARE: Third-party contracts adding logic layers
+/// • BATCH PROCESSING: Routing contracts that aggregate transactions
+/// • COMPLEX AUTHORIZATION: Modules that consider both caller and originator
+///
+/// SECURITY MODEL - "SECURE BY MODULE DESIGN":
+/// Security is NOT enforced by this contract, but by developer-implemented permission modules:
+///
+/// ┌─────────────────────────────────────────────────────────────────────────┐
+/// │ RESPONSIBILITY DISTRIBUTION:                                            │
+/// ├─────────────────────────────────────────────────────────────────────────┤
+/// │ SyndicateSequencingChain: Routes to permission modules                 │
+/// │ PermissionModule (Dev): Implements authorization logic                  │
+/// │ Module Developer: MUST validate both msg.sender and tx.origin properly │
+/// └─────────────────────────────────────────────────────────────────────────┘
+///
 /// @dev Transaction Lifecycle:
-/// 1. Transaction is submitted via processTransaction, processTransactionUncompressed, or processTransactionsBulk methods
-/// 2. onlyWhenAllowed modifier checks if the sender and transaction are allowed via SequencingModuleChecker
-/// 3. SequencingModuleChecker delegates to the configured permissionRequirementModule (RequireAll/RequireAny)
-/// 4. If allowed, a TransactionProcessed event is emitted with the sender and data
-/// 5. External systems observe these events to process the transactions on the application chain
-/// This design uses events rather than state changes for scalability and gas efficiency
+/// 1. Transaction is submitted via processTransaction, processTransactionUncompressed, or processTransactionsBulk
+/// 2. onlyWhenAllowed modifier passes both msg.sender AND tx.origin to SequencingModuleChecker
+/// 3. SequencingModuleChecker delegates to the configured permissionRequirementModule
+/// 4. Permission module evaluates BOTH addresses using custom logic (developer responsibility)
+/// 5. If allowed, TransactionProcessed event is emitted for off-chain processing
+/// 6. External systems observe events to execute transactions on the application chain
+///
+/// This event-based design provides scalability and gas efficiency while maintaining security
+/// through modular, developer-controlled permission systems.
 contract SyndicateSequencingChain is SequencingModuleChecker {
     // Maximum number of transactions that can be processed in a single bulk call to prevent DoS attacks
     uint256 public constant MAX_BULK_TRANSACTIONS = 100;

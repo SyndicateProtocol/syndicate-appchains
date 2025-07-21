@@ -5,8 +5,30 @@ import {AtomicSequencerImplementation} from "./AtomicSequencerImplementation.sol
 import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
 
 /// @title AtomicSequencer
-/// @notice A wrapper contract that sequences transactions on two SyndicateChain contracts atomically.
-/// Uses DELEGATECALL to maintain the original msg.sender context.
+/// @notice A middleware contract for atomic cross-chain transaction sequencing in the Syndicate protocol
+///
+/// @dev ARCHITECTURAL DESIGN - "SECURE BY MODULE DESIGN":
+/// This contract intentionally has NO access control modifiers because it follows the
+/// Syndicate protocol's "secure by module design" architecture where:
+///
+/// 1. TRANSACTION ROUTING: AtomicSequencer acts as a transaction coordinator/router
+/// 2. SECURITY ENFORCEMENT: Each SyndicateSequencingChain enforces security via custom modules
+/// 3. DEVELOPER RESPONSIBILITY: Module developers implement authorization logic for their use cases
+///
+/// SECURITY FLOW:
+/// User → AtomicSequencer → SyndicateSequencingChain → PermissionModule
+///                                ↓
+///                        Module evaluates both:
+///                        - msg.sender (AtomicSequencer address)
+///                        - tx.origin (actual user address)
+///                                ↓
+///                        Custom logic approves/rejects transaction
+///
+/// This design enables sophisticated middleware patterns while maintaining security through
+/// modular permission systems. Module developers must implement proper tx.origin + msg.sender
+/// validation to support trusted middleware contracts like this AtomicSequencer.
+///
+/// @dev Uses DELEGATECALL proxy pattern to preserve msg.sender context in the implementation
 contract AtomicSequencer is Proxy {
     /// @notice The implementation contract containing the sequencing logic
     address public immutable implementation;

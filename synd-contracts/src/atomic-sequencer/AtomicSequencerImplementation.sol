@@ -4,9 +4,53 @@ pragma solidity 0.8.28;
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 
 /// @title AtomicSequencerImplementation
-/// @notice Implementation contract containing the logic for atomic sequencing
-// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
-// as the contract uses standard unit tests and integration tests. Parameter validation is handled through array length checks.
+/// @notice Implementation contract for atomic cross-chain transaction coordination
+///
+/// @dev SECURITY MODEL - NO ACCESS CONTROL BY DESIGN:
+/// This contract intentionally lacks access control modifiers (onlyAuthorized, onlyOwner, etc.)
+/// because it implements the Syndicate protocol's "secure by module design" architecture:
+///
+/// DESIGN PRINCIPLES:
+/// • SEPARATION OF CONCERNS: AtomicSequencer coordinates, SyndicateSequencingChains authorize
+/// • MODULAR SECURITY: Permission logic is delegated to customizable modules per chain
+/// • MIDDLEWARE SUPPORT: Enables trusted routing contracts without breaking authorization
+/// • DEVELOPER CONTROL: Module authors define who can use their chains and how
+///
+/// SECURITY RESPONSIBILITY DISTRIBUTION:
+/// ┌─────────────────┬─────────────────────────────────────────────────────────┐
+/// │ Component       │ Responsibility                                          │
+/// ├─────────────────┼─────────────────────────────────────────────────────────┤
+/// │ AtomicSequencer │ • Transaction routing and coordination                  │
+/// │                 │ • Input validation (array lengths, size limits)        │
+/// │                 │ • DoS attack prevention (MAX_ATOMIC_* constants)       │
+/// ├─────────────────┼─────────────────────────────────────────────────────────┤
+/// │ SequencingChain │ • Delegate to permission modules                       │
+/// │                 │ • Emit transaction events                              │
+/// ├─────────────────┼─────────────────────────────────────────────────────────┤
+/// │ PermissionModule│ • Authorization logic (who can transact)               │
+/// │ (Developer)     │ • Middleware validation (which routers to trust)       │
+/// │                 │ • tx.origin + msg.sender evaluation                    │
+/// └─────────────────┴─────────────────────────────────────────────────────────┘
+///
+/// EXAMPLE MODULE IMPLEMENTATION FOR ATOMIC SEQUENCER SUPPORT:
+/// ```solidity
+/// contract AtomicSequencerAwareModule is IPermissionModule {
+///     mapping(address => bool) public trustedMiddleware;
+///     mapping(address => bool) public authorizedUsers;
+///
+///     function isAllowed(address msgSender, address txOrigin, bytes calldata data)
+///         external view returns (bool) {
+///         // Direct calls: msg.sender == tx.origin
+///         if (msgSender == txOrigin) {
+///             return authorizedUsers[msgSender];
+///         }
+///         // Middleware calls: validate both router and user
+///         return trustedMiddleware[msgSender] && authorizedUsers[txOrigin];
+///     }
+/// }
+/// ```
+///
+/// @dev DoS Protection: MAX_ATOMIC_* constants prevent resource exhaustion attacks
 contract AtomicSequencerImplementation {
     // Maximum number of chains that can be processed atomically to prevent DoS attacks
     uint256 public constant MAX_ATOMIC_CHAINS = 20;
@@ -20,10 +64,16 @@ contract AtomicSequencerImplementation {
     /// @dev Thrown when transaction array exceeds maximum size for atomic bulk processing
     error TransactionArrayExceedsMaximum();
 
-    /// @notice Processes transactions on multiple Syndicate chains atomically.
-    /// @param chains Array of Syndicate chains
-    /// @param transactions Array of transactions corresponding to each chain
-    /// @param isRaw Array indicating whether each transaction should use raw processing
+    /// @notice Processes transactions on multiple Syndicate chains atomically
+    ///
+    /// @dev SECURITY: This function has NO access control by design. Security is enforced by:
+    /// • Each SyndicateSequencingChain's permission module evaluating both msg.sender and tx.origin
+    /// • Module developers implementing logic to trust/reject middleware contracts
+    /// • Chain-level authorization prevents unauthorized transaction processing
+    ///
+    /// @param chains Array of SyndicateSequencingChain contracts to process transactions on
+    /// @param transactions Array of transaction data corresponding to each chain
+    /// @param isRaw Array indicating whether each transaction uses compressed (true) or uncompressed (false) processing
     function processTransactionsAtomically(
         SyndicateSequencingChain[] calldata chains,
         bytes[] calldata transactions,
@@ -44,9 +94,15 @@ contract AtomicSequencerImplementation {
         }
     }
 
-    /// @notice Processes bulk transactions on multiple Syndicate chains atomically. Only used with encoded transactions.
-    /// @param chains Array of Syndicate chains
-    /// @param transactions Array of transaction arrays corresponding to each chain
+    /// @notice Processes bulk transactions on multiple Syndicate chains atomically
+    ///
+    /// @dev SECURITY: This function has NO access control by design. Security is enforced by:
+    /// • Each SyndicateSequencingChain's permission module evaluating both msg.sender and tx.origin
+    /// • Module developers implementing logic to trust/reject middleware contracts
+    /// • Chain-level authorization prevents unauthorized bulk transaction processing
+    ///
+    /// @param chains Array of SyndicateSequencingChain contracts to process bulk transactions on
+    /// @param transactions Array of transaction arrays corresponding to each chain (compressed format only)
     function processTransactionsBulkAtomically(
         SyndicateSequencingChain[] calldata chains,
         bytes[][] calldata transactions
