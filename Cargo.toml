@@ -58,6 +58,7 @@ synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-
 synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }
 synd-tee-attestation-zk-proofs-submitter  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter" }
 synd-translator                           = { path = "synd-translator/bin/synd-translator" }
+test-framework                            = { path = "test-framework" }
 test-utils                                = { path = "shared/test-utils" }
 
 # dependencies
