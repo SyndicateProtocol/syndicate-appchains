@@ -28,6 +28,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use tokio::task::JoinHandle;
 use tracing::info;
 
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
@@ -35,34 +36,26 @@ use tracing::info;
 #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 async fn build_partial_blocks(
     start_block: u64,
-    data: &Bytes,
+    end_block: u64,
+    data: &InitBytes,
     client: &EthClient,
     addrs: Vec<Address>,
 ) -> eyre::Result<Vec<PartialBlock>> {
-    assert_eq!(data.len() as u64 % ITEM_SIZE, 0);
-    assert!(!data.is_empty());
-    let count = data.len() as u64 / ITEM_SIZE - 1;
+    let count = data.count();
     let mut blocks = Vec::default();
     if count == 0 {
         return Ok(blocks);
     }
-    let mut parent_hash = B256::from_slice(data[4..ITEM_SIZE as usize].into());
+    let mut parent_hash = data.get_item(0)?.1;
     for i in start_block..start_block + count {
-        let offset = ((i + 1 - start_block) * ITEM_SIZE) as usize;
-        let hash = B256::from_slice(data[offset + 4..offset + ITEM_SIZE as usize].into());
+        let (timestamp, hash) = data.get_item(i - start_block)?;
         blocks.push(PartialBlock {
-            block_ref: BlockRef {
-                number: i,
-                timestamp: u32::from_be_bytes(data[offset..offset + 4].try_into()?) as u64,
-                hash,
-            },
+            block_ref: BlockRef { number: i, timestamp, hash },
             parent_hash,
             logs: Default::default(),
         });
         parent_hash = hash;
     }
-
-    let end_block = start_block + count - 1;
 
     let mut safe_block = client.get_block_header(BlockNumberOrTag::Latest).await.number;
     if safe_block < start_block {
@@ -159,6 +152,7 @@ struct BlockStream<
     block_builder: Arc<B>,
     indexed_block_number: u64,
     init_data: Option<(EthClient, Vec<Address>)>,
+    init_requests: VecDeque<JoinHandle<Vec<Result<Message, serde_json::Error>>>>,
 }
 
 #[allow(missing_docs)]
@@ -180,6 +174,7 @@ impl<
             buffer: Default::default(),
             indexed_block_number: start_block,
             init_data: Some(init_data),
+            init_requests: Default::default(),
         }
     }
 }
@@ -193,6 +188,8 @@ pub trait BlockStreamT<Block> {
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block>;
 }
 
+const MAX_INIT_BLOCKS: u64 = 10;
+
 #[async_trait]
 impl<
         S: Stream<Item = Result<Message, serde_json::Error>> + 'static + Send,
@@ -203,22 +200,59 @@ impl<
     #[allow(clippy::unwrap_used)]
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
         let mut blocks = vec![];
+
         let init_data = self.init_data.take();
         if init_data.is_some() || self.stream.as_mut().peek().now_or_never().is_some() {
-            blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
+            // fetch initial blocks from the stream
+            let mut init_blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
             if let Some((client, addrs)) = init_data {
-                blocks.rotate_left(1);
-                let init = blocks.pop().unwrap()?.init();
-                let mut partials: Vec<_> =
-                    build_partial_blocks(self.indexed_block_number, &init, &client, addrs)
-                        .await?
+                // remove the first block from the stream, which is a special init message
+                init_blocks.rotate_left(1);
+                let mut init = init_blocks.pop().unwrap()?.init();
+
+                // get start and end blocks for batching
+                let mut start_block = self.indexed_block_number;
+                let final_block = start_block + init.count() - 1;
+
+                while start_block < final_block {
+                    let (init_batch, remaining) = init.split_at(MAX_INIT_BLOCKS)?;
+                    let end_block = if remaining.count() > 0 {
+                        start_block + MAX_INIT_BLOCKS - 1
+                    } else {
+                        final_block
+                    };
+
+                    let client_clone = client.clone();
+                    let addrs_clone = addrs.clone();
+
+                    self.init_requests.push_back(tokio::spawn(async move {
+                        build_partial_blocks(
+                            start_block,
+                            end_block,
+                            &init_batch,
+                            &client_clone,
+                            addrs_clone,
+                        )
+                        .await
+                        .unwrap()
                         .into_iter()
                         .map(|x| Ok(Message::Block(x)))
-                        .collect();
-                partials.append(&mut blocks);
-                blocks = partials;
+                        .collect()
+                    }));
+                    init = remaining;
+                    start_block = end_block + 1;
+                }
+
+                // make sure we don't drop any blocks from the stream
+                let left_over_handle = tokio::spawn(async move { init_blocks });
+                self.init_requests.push_back(left_over_handle);
             }
         }
+
+        if !self.init_requests.is_empty() {
+            blocks.append(&mut self.init_requests.pop_front().unwrap().await.unwrap());
+        }
+
         loop {
             for partial_block in blocks {
                 let block = self.block_builder.build_block(&partial_block?.block())?;
@@ -259,9 +293,9 @@ impl<
 }
 
 impl Message {
-    fn init(self) -> Bytes {
+    fn init(self) -> InitBytes {
         match self {
-            Self::Init(x) => x,
+            Self::Init(x) => InitBytes::new(x),
             x => panic!("expected init message type, found {x:?}"),
         }
     }
@@ -270,6 +304,48 @@ impl Message {
             Self::Block(x) => x,
             x => panic!("expected block message type, found {x:?}"),
         }
+    }
+}
+
+// Wrapper around a byte slice that represents a list of (timestamp, block hash) pairs.
+struct InitBytes {
+    data: Bytes,
+    count: u64,
+}
+
+impl InitBytes {
+    // Create a new `InitBytes` from a byte slice and validate that it is a valid list of
+    // (timestamp, block hash) pairs
+    fn new(data: Bytes) -> Self {
+        let length = data.len() as u64;
+        assert!(length % ITEM_SIZE == 0);
+        assert!(length > 0);
+        let count = length / ITEM_SIZE - 1;
+        Self { data, count }
+    }
+
+    // Get the number of items in the `InitBytes`
+    const fn count(&self) -> u64 {
+        self.count
+    }
+
+    // Get the (timestamp, block hash) pair at the given index
+    fn get_item(&self, index: u64) -> Result<(u64, B256), eyre::Error> {
+        if index >= self.count {
+            return Err(eyre!("index out of bound"));
+        }
+        let offset = (index * ITEM_SIZE) as usize;
+        let timestamp = u32::from_be_bytes(self.data[offset..offset + 4].try_into()?) as u64;
+        let hash = B256::from_slice(self.data[offset + 4..offset + ITEM_SIZE as usize].into());
+        Ok((timestamp, hash))
+    }
+
+    // Split the `InitBytes` at the given index into two `InitBytes`
+    fn split_at(&self, index: u64) -> Result<(Self, Self), eyre::Error> {
+        let count = index / ITEM_SIZE;
+        let data = self.data.slice(0..(count * ITEM_SIZE) as usize);
+        let remaining = self.data.slice((count * ITEM_SIZE) as usize..);
+        Ok((Self { data, count }, Self { data: remaining, count: self.count - count }))
     }
 }
 
