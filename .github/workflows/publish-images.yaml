@@ -128,4 +128,5 @@ jobs:
             --tag ${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/synd-enclave-test:$TAG \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
-            ./synd-withdrawals/synd-enclave/Dockerfile
+            -f ./synd-withdrawals/synd-enclave/Dockerfile \
+            ./synd-withdrawals/synd-enclave/
