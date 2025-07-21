@@ -3,8 +3,7 @@
 use alloy::primitives::address;
 use common::types::SequencingBlock;
 use shared::types::{BlockBuilder, PartialBlock};
-use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use synd_chain_ingestor::{
     client::{BlockStreamT, IngestorProvider, Provider},
     eth_client::EthClient,
