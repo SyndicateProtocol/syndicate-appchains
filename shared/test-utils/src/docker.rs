@@ -454,31 +454,42 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
     let enclave_path =
         Path::new(project_root).join("synd-withdrawals/synd-enclave").to_string_lossy().to_string();
-    let image_name = "ghcr.io/syndicateprotocol/enclave-server:local-dev".to_string();
 
-    info!("building enclave server docker image - NOTE: this may take a while");
-    let build_status = E2EProcess::new(
-        Command::new("docker")
-            .arg("buildx")
-            .arg("build")
-            .arg("--load")
-            .arg(&enclave_path)
-            .arg("--tag")
-            .arg(&image_name)
-            .arg("--target")
-            .arg("local-dev"),
-        "building-enclave-server",
-    )?
-    .wait()
-    .await?;
+    let mut needs_build = false;
+    let tag = match env::var("SYND_ENCLAVE_TAG") {
+        Ok(tag) => tag,
+        Err(_) => {
+            needs_build = true;
+            "local-dev".to_string()
+        }
+    };
+    let image_name = format!("ghcr.io/syndicateprotocol/synd-enclave-test:{tag}");
 
-    if !build_status.success() {
-        return Err(eyre::eyre!(
-            "failed to build enclave-server docker image. Exit status: {}",
-            build_status
-        ));
+    if needs_build {
+        info!("building enclave server docker image - NOTE: this may take a while");
+        let build_status = E2EProcess::new(
+            Command::new("docker")
+                .arg("buildx")
+                .arg("build")
+                .arg("--load")
+                .arg(&enclave_path)
+                .arg("--tag")
+                .arg(&image_name)
+                .arg("--target")
+                .arg("test-image"),
+            "building-enclave-server",
+        )?
+        .wait()
+        .await?;
+
+        if !build_status.success() {
+            return Err(eyre::eyre!(
+                "failed to build enclave-server docker image. Exit status: {}",
+                build_status
+            ));
+        }
+        info!("enclave server docker image built successfully");
     }
-    info!("enclave server docker image built successfully");
 
     let port = PortManager::instance().next_port().await;
     let docker = E2EProcess::new(
