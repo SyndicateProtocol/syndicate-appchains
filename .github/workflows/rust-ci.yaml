@@ -166,8 +166,10 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
 
-      - name: Install wabt
-        run: sudo apt-get install -y wabt
+      - name: Install withdrawals e2e tests dependencies
+        run: |
+          sudo apt-get install -y wabt
+          cargo install --force cbindgen
 
       - name: Run all tests with nextest
         run: cargo build && cargo nextest run --workspace --fail-fast

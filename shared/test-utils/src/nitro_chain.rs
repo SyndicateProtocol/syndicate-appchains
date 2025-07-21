@@ -241,7 +241,7 @@ pub async fn deploy_nitro_rollup(
     // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
     // apply patch to hardhat.config.ts to add custom network
     let patch_path = format!("{project_root}shared/test-utils/src/nitro-hardhat-config.patch");
-    let _status = E2EProcess::new(
+    let status = E2EProcess::new(
         Command::new("git")
             .current_dir(nitro_contracts_dir.clone())
             .arg("apply")
@@ -250,8 +250,8 @@ pub async fn deploy_nitro_rollup(
         "patch-nitro-contracts",
     )?
     .wait()
-    .await;
-    // assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
+    .await?;
+    assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
 
     // install and build dependencies
     let status = E2EProcess::new(
