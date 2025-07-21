@@ -76,27 +76,35 @@
           enclaves-sdk-kernel = (import "${enclaves-sdk-bootstrap}/kernel/kernel.nix") {inherit pkgs;};
           linuxkit = (import "${enclaves-sdk-bootstrap}/linuxkit/linuxkit.nix") {inherit pkgs;};
 
-          brotli-wasm = pkgs.stdenv.mkDerivation {
-            pname = "brotli-wasm";
+          brotli-lib = pkgs.stdenv.mkDerivation {
+            pname = "brotli";
             version = "1.0.9";
             src = "${nitro}/brotli";
-            nativeBuildInputs = with pkgs; [cmake coreutils emscripten];
+            nativeBuildInputs = with pkgs; [cmake];
             preConfigure = ''
               export HOME=$(mktemp -d)
             '';
             cmakeFlags = with pkgs; [
                 (lib.cmakeFeature "CMAKE_POLICY_VERSION_MINIMUM" "3.5")
                 (lib.cmakeFeature "CMAKE_BUILD_TYPE" "Release")
+                (lib.cmakeFeature "CMAKE_INSTALL_PREFIX" "$out")
+            ];
+          };
+
+          brotli-wasm = brotli-lib.overrideAttrs (prev: {
+            pname = prev.pname + "-wasm";
+            nativeBuildInputs = with pkgs; prev.nativeBuildInputs
+            ++ [coreutils emscripten];
+            cmakeFlags = with pkgs; prev.cmakeFlags ++ [
                 (lib.cmakeFeature "CMAKE_C_COMPILER" "${emscripten}/bin/emcc")
                 (lib.cmakeFeature "CMAKE_C_FLAGS" "-fPIC")
-                (lib.cmakeFeature "CMAKE_INSTALL_PREFIX" "$out")
                 (lib.cmakeFeature "CMAKE_AR" "${emscripten}/bin/emar")
                 (lib.cmakeFeature "CMAKE_RANLIB" "${coreutils}/bin/touch")
             ];
             postInstall = ''
               mv $out/lib $out/lib-wasm
             '';
-          };
+          });
 
           init-ramdisk = build-ramdisk {
             name = "init";
