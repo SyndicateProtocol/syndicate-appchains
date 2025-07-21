@@ -31,7 +31,6 @@ contract DeployTeeModule is Script {
                 keccak256(vm.envBytes("PCR_0")),
                 keccak256(vm.envBytes("PCR_1")),
                 keccak256(vm.envBytes("PCR_2")),
-                keccak256(vm.envBytes("PCR_8")),
                 uint64(vm.envUint("EXPIRATION_TOLERANCE")) // Arbitrary value, usually 24h
             );
             console2.log("Attestation doc verifier deployed to:", address(attestationDocVerifier));

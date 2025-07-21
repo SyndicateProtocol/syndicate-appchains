@@ -17,7 +17,6 @@ struct SP1ProofFixtureJson {
     bytes32 pcr0;
     bytes32 pcr1;
     bytes32 pcr2;
-    bytes32 pcr8;
 }
 
 abstract contract BaseAttestationDocVerifierTest is Test {
@@ -39,7 +38,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         fixture.pcr0 = json.readBytes32(".pcr0");
         fixture.pcr1 = json.readBytes32(".pcr1");
         fixture.pcr2 = json.readBytes32(".pcr2");
-        fixture.pcr8 = json.readBytes32(".pcr8");
 
         return fixture;
     }
@@ -64,7 +62,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            fixture.pcr8,
             0
         );
     }
@@ -200,7 +197,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            fixture.pcr8,
             0 // zero expiration tolerance
         );
 
@@ -230,7 +226,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            fixture.pcr8,
             largeExpiration
         );
 
