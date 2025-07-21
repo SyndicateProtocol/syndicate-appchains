@@ -18,6 +18,8 @@ contract TeeKeyManager is ITeeKeyManager, Ownable {
     event KeyAdded(address indexed key);
     event KeysRevoked();
 
+    error InvalidPublicKey(address publicKey);
+
     IAttestationDocVerifier public attestationDocVerifier;
 
     EnumerableSet.AddressSet internal validKeys;
@@ -33,7 +35,10 @@ contract TeeKeyManager is ITeeKeyManager, Ownable {
      * @return True if the key is valid (i.e., marked as valid in `keyValidity`), false otherwise.
      */
     function isKeyValid(address publicKey) external view override returns (bool) {
-        return validKeys.contains(publicKey);
+        if (!validKeys.contains(publicKey)) {
+            revert InvalidPublicKey(publicKey);
+        }
+        return true;
     }
 
     /**

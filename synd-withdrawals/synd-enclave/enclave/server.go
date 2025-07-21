@@ -44,9 +44,7 @@ const (
 	DefaultCARootsSHA256 = "8cf60e2b2efca96c6a9e71e851d00c1b6991cc09eadbe64a6a1d1b1eb9faff7c"
 )
 
-var (
-	defaultRoot = createAWSNitroRoot()
-)
+var defaultRoot = createAWSNitroRoot()
 
 func createAWSNitroRoot() *x509.CertPool {
 	roots, err := base64.StdEncoding.DecodeString(DefaultCARoots)
@@ -243,14 +241,18 @@ var BATCH_ACCUMULATOR_STORAGE_SLOT = common.BigToHash(big.NewInt(7))
 // Storage slot of the first element in the batch accumulator array
 // Dynamic types are stored starting at the keccak256 of the original storage slot plus an offset
 // This value is Keccak256("0x7")
-var BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT = crypto.Keccak256Hash(BATCH_ACCUMULATOR_STORAGE_SLOT[:]).Big()
-var BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE = new(big.Int).Sub(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, common.Big1)
+var (
+	BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT           = crypto.Keccak256Hash(BATCH_ACCUMULATOR_STORAGE_SLOT[:]).Big()
+	BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE = new(big.Int).Sub(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, common.Big1)
+)
 
 // field offsets into the serialized arbostypes.L1IncomingMessage struct
-const DelayedMessageSenderOffset = 13
-const DelayedMessageTimestampOffset = 41
-const DelayedMessageRequestIdOffset = 49
-const DelayedMessageDataOffset = 113
+const (
+	DelayedMessageSenderOffset    = 13
+	DelayedMessageTimestampOffset = 41
+	DelayedMessageRequestIdOffset = 49
+	DelayedMessageDataOffset      = 113
+)
 
 type KVDB map[common.Hash][]byte
 
@@ -492,7 +494,8 @@ func buildArbBatch(afterDelayedMessagesRead uint64, data []byte) []byte {
 
 	// Set header values
 	for _, value := range []uint64{
-		0, math.MaxUint64, 0, math.MaxUint64, afterDelayedMessagesRead} {
+		0, math.MaxUint64, 0, math.MaxUint64, afterDelayedMessagesRead,
+	} {
 		var buffer [8]byte
 		binary.BigEndian.PutUint64(buffer[:], value)
 		msg = append(msg, buffer[:]...)
@@ -518,6 +521,10 @@ func parseAppBatches(input *VerifyAppchainInput) ([][]byte, error) {
 	if len(input.DelayedMessages) == 0 {
 		return nil, errors.New("must include at least one delayed message")
 	}
+
+	fmt.Println("input.DelayedMessage length", len(input.DelayedMessages))
+	// fmt.Println("input.DelayedMessages", input.DelayedMessages)
+	fmt.Println("input.StartDelayedMessagesAccumulator", input.StartDelayedMessagesAccumulator)
 
 	// verify delayed messages
 	startIndex, err := validateDelayedMessages(input.DelayedMessages)
