@@ -45,7 +45,6 @@ fn init() {
 // NOTE run the tests in sequence
 //(the current nitro-contracts deployments will conflict if they run in parallel)
 #[tokio::test]
-#[ignore] // TODO SEQ-1107: do not run in CI until we have public docker images for proposer + enclave
 async fn e2e_tee_withdrawal() -> Result<()> {
     // use eigenda
     e2e_tee_withdrawal_basic_flow(BaseChainsType::NitroWithEigenda).await?;

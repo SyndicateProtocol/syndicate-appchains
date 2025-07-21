@@ -124,6 +124,11 @@ jobs:
     name: Tests
     runs-on: shared-large-02
     timeout-minutes: 45
+    env:
+      # Use latest Docker images for withdrawals e2e tests instead of building from source
+      SYND_ENCLAVE_TAG: latest
+      SYND_PROPOSER_TAG: latest
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -165,6 +170,8 @@ jobs:
           docker pull valkey/valkey:latest
           docker pull ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
           docker pull ghcr.io/layr-labs/eigenda-proxy:latest@sha256:dc5564dc557e3d349e38bdcb48cad2b31a16f185216e9e3f25796a5b966de5e9
+          docker pull ghcr.io/syndicateprotocol/synd-enclave-test:latest
+          docker pull ghcr.io/syndicateprotocol/synd-proposer:latest
 
       - name: Install nextest
         uses: taiki-e/install-action@nextest
