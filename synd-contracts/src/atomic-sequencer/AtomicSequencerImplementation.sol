@@ -53,9 +53,9 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 /// @dev DoS Protection: MAX_ATOMIC_* constants prevent resource exhaustion attacks
 contract AtomicSequencerImplementation {
     // Maximum number of chains that can be processed atomically to prevent DoS attacks
-    uint256 public constant MAX_ATOMIC_CHAINS = 20;
+    uint256 public constant MAX_ATOMIC_CHAINS = 40;
     // Maximum number of transactions per chain in bulk atomic operations to prevent DoS attacks
-    uint256 public constant MAX_ATOMIC_BULK_TRANSACTIONS = 50;
+    uint256 public constant MAX_ATOMIC_BULK_TRANSACTIONS = 100;
 
     /// @dev Thrown when input array lengths don't match or are invalid
     error InputLengthMismatchError();

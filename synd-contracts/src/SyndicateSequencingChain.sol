@@ -38,7 +38,7 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 /// through modular, developer-controlled permission systems.
 contract SyndicateSequencingChain is SequencingModuleChecker {
     // Maximum number of transactions that can be processed in a single bulk call to prevent DoS attacks
-    uint256 public constant MAX_BULK_TRANSACTIONS = 100;
+    uint256 public constant MAX_BULK_TRANSACTIONS = 200;
 
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;

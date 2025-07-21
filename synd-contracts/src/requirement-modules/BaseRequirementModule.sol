@@ -12,7 +12,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  */
 abstract contract BaseRequirementModule is IRequirementModule, Ownable {
     // Maximum number of permission checks allowed to prevent DoS attacks via unbounded loops
-    uint256 public constant MAX_PERMISSION_CHECKS = 10;
+    uint256 public constant MAX_PERMISSION_CHECKS = 40;
 
     /// @notice List of permission checks addresses
     AddressStructuredLinkedList.List internal permissionChecks;
