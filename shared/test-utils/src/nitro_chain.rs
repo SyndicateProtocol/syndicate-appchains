@@ -14,6 +14,7 @@ use contract_bindings::synd::{
 use eyre::Ok;
 use serde::{Deserialize, Serialize};
 use shared::types::{deserialize_address, FilledProvider};
+use std::path::Path;
 use tokio::{fs, process::Command};
 use tracing::info;
 
@@ -235,12 +236,18 @@ pub async fn deploy_nitro_rollup(
     use_eigen_da: bool,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
-    let nitro_contracts_dir = format!("{project_root}synd-contracts/lib/nitro-contracts");
+    let nitro_contracts_dir = Path::new(project_root)
+        .join("synd-contracts/lib/nitro-contracts")
+        .to_string_lossy()
+        .to_string();
     info!("Nitro contracts dir: {nitro_contracts_dir}");
 
     // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
     // apply patch to hardhat.config.ts to add custom network
-    let patch_path = format!("{project_root}shared/test-utils/src/nitro-hardhat-config.patch");
+    let patch_path = Path::new(project_root)
+        .join("shared/test-utils/src/nitro-hardhat-config.patch")
+        .to_string_lossy()
+        .to_string();
     let status = E2EProcess::new(
         Command::new("git")
             .current_dir(nitro_contracts_dir.clone())
@@ -263,7 +270,7 @@ pub async fn deploy_nitro_rollup(
     assert!(status.success(), "Failed to run `yarn install` in nitro contracts");
 
     let status = E2EProcess::new(
-        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build:all"),
+        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build"),
         "nitro-contracts-build",
     )?
     .wait()

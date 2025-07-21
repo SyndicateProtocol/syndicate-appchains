@@ -19,6 +19,7 @@ use redis::aio::ConnectionManager;
 use std::{
     env,
     future::Future,
+    path::Path,
     process::{ExitStatus, Stdio},
     time::Duration,
 };
@@ -119,7 +120,10 @@ impl Drop for E2EProcess {
 
 async fn ensure_nitro_node_deps() -> Result<()> {
     let workspace_dir = env!("CARGO_WORKSPACE_DIR");
-    let nitro_solgen_dir = format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro/solgen");
+    let nitro_solgen_dir = Path::new(workspace_dir)
+        .join("synd-withdrawals/synd-enclave/nitro/solgen")
+        .to_string_lossy()
+        .to_string();
 
     // consider deps installed if there is more than 1 file (`gen.go`) in the solgen directory
     let mut entries = fs::read_dir(&nitro_solgen_dir).await?;
@@ -177,51 +181,112 @@ pub async fn start_component(
 ) -> Result<E2EProcess> {
     info!("launching {}", executable_name);
     let needs_rocksdb = executable_name == "synd-mchain";
-    let mut docker = if let Ok(tag) =
-        env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG")
-    {
-        E2EProcess::new(
-            Command::new("docker")
-                .arg("run")
-                .arg("--init")
-                .arg("--rm")
-                .arg("--net=host")
-                .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
-                .args(args),
-            executable_name,
-        )
-    } else if executable_name == "synd-proposer" {
-        ensure_nitro_node_deps().await?;
-        // Synd-proposer is a Go service, so we need to use the Go command to run it
-        let mut cmd = Command::new("go");
-        cmd.current_dir(format!("{}/synd-withdrawals/synd-proposer", env!("CARGO_WORKSPACE_DIR")));
-        cmd.arg("run").arg("./cmd/synd-proposer");
-        cmd.args(args);
-        E2EProcess::new(&mut cmd, executable_name)
-    } else {
-        let mut cmd = Command::new("cargo");
-        // ring has a custom build.rs script that rebuilds whenever certain environment
-        // vars change
-        cmd.env_remove("CARGO_MANIFEST_DIR")
-            .env_remove("CARGO_PKG_NAME")
-            .env_remove("CARGO_PKG_VERSION_MAJOR")
-            .env_remove("CARGO_PKG_VERSION_MINOR")
-            .env_remove("CARGO_PKG_VERSION_PATCH")
-            .env_remove("CARGO_PKG_VERSION_PRE")
-            .env_remove("CARGO_MANIFEST_LINKS")
-            .current_dir(env!("CARGO_WORKSPACE_DIR"))
-            .arg("run");
+    let mut docker =
+        if let Ok(tag) = env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG") {
+            E2EProcess::new(
+                Command::new("docker")
+                    .arg("run")
+                    .arg("--init")
+                    .arg("--rm")
+                    .arg("--net=host")
+                    .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
+                    .args(args),
+                executable_name,
+            )
+        } else if executable_name == "synd-proposer" {
+            launch_proposer(args, ProposerMode::Docker).await
+        } else {
+            let mut cmd = Command::new("cargo");
+            // ring has a custom build.rs script that rebuilds whenever certain environment
+            // vars change
+            cmd.env_remove("CARGO_MANIFEST_DIR")
+                .env_remove("CARGO_PKG_NAME")
+                .env_remove("CARGO_PKG_VERSION_MAJOR")
+                .env_remove("CARGO_PKG_VERSION_MINOR")
+                .env_remove("CARGO_PKG_VERSION_PATCH")
+                .env_remove("CARGO_PKG_VERSION_PRE")
+                .env_remove("CARGO_MANIFEST_LINKS")
+                .current_dir(env!("CARGO_WORKSPACE_DIR"))
+                .arg("run");
 
-        if needs_rocksdb {
-            cmd.arg("--features").arg("rocksdb");
-        }
+            if needs_rocksdb {
+                cmd.arg("--features").arg("rocksdb");
+            }
 
-        cmd.arg("--bin").arg(executable_name).arg("--").args(args).args(cargs);
-        E2EProcess::new(&mut cmd, executable_name)
-    }?;
+            cmd.arg("--bin").arg(executable_name).arg("--").args(args).args(cargs);
+            E2EProcess::new(&mut cmd, executable_name)
+        }?;
 
     health_check(executable_name, api_port, &mut docker).await;
     Ok(docker)
+}
+
+pub enum ProposerMode {
+    Go,
+    Docker,
+}
+
+pub async fn launch_proposer(args: Vec<String>, mode: ProposerMode) -> Result<E2EProcess> {
+    match mode {
+        ProposerMode::Go => {
+            ensure_nitro_node_deps().await?;
+            // Synd-proposer is a Go service, so we need to use the Go command to run it
+            let mut cmd = Command::new("go");
+            let project_root = env!("CARGO_WORKSPACE_DIR");
+            let proposer_dir = Path::new(project_root)
+                .join("synd-withdrawals/synd-proposer")
+                .to_string_lossy()
+                .to_string();
+            cmd.current_dir(proposer_dir);
+            cmd.arg("run").arg("./cmd/synd-proposer");
+            cmd.args(args);
+            E2EProcess::new(&mut cmd, "synd-proposer")
+        }
+        ProposerMode::Docker => {
+            // TODO this can be simplified once we publish a public docker image for the proposer
+            let project_root = env!("CARGO_WORKSPACE_DIR");
+            let image_name = "ghcr.io/syndicateprotocol/synd-proposer:local-dev".to_string();
+
+            info!("building synd-proposer docker image - NOTE: this may take a while");
+            let status = E2EProcess::new(
+                Command::new("docker")
+                    .arg("buildx")
+                    .arg("build")
+                    .arg("--platform")
+                    .arg("linux/amd64")
+                    .arg("--load")
+                    .arg(project_root)
+                    .arg("--tag")
+                    .arg(&image_name)
+                    .arg("--target")
+                    .arg("synd-proposer"),
+                "building-synd-proposer",
+            )?
+            .wait()
+            .await?;
+
+            if !status.success() {
+                return Err(eyre::eyre!(
+                    "failed to build synd-proposer docker image. Exit status: {}",
+                    status
+                ));
+            }
+            info!("synd-proposer docker image built successfully");
+
+            E2EProcess::new(
+                Command::new("docker")
+                    .arg("run")
+                    .arg("--init")
+                    .arg("--rm")
+                    // NOTE: use network host to allow proposer to connect to other services
+                    // (localhost ports are passed in the config args)
+                    .arg("--net=host")
+                    .arg(image_name)
+                    .args(args),
+                "synd-proposer",
+            )
+        }
+    }
 }
 
 pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2EProcess) {
@@ -435,16 +500,16 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     info!("launching enclave server");
 
     let project_root = env!("CARGO_WORKSPACE_DIR");
-    let enclave_path = format!("{project_root}/synd-withdrawals/synd-enclave");
+    let enclave_path =
+        Path::new(project_root).join("synd-withdrawals/synd-enclave").to_string_lossy().to_string();
     let image_name = "ghcr.io/syndicateprotocol/enclave-server:local-dev".to_string();
 
     info!("building enclave server docker image - NOTE: this may take a while");
-    let status = E2EProcess::new(
+    let build_status = E2EProcess::new(
         Command::new("docker")
             .arg("buildx")
             .arg("build")
             .arg("--load")
-            .arg("--progress=plain")
             .arg(&enclave_path)
             .arg("--tag")
             .arg(&image_name)
@@ -455,10 +520,10 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     .wait()
     .await?;
 
-    if !status.success() {
+    if !build_status.success() {
         return Err(eyre::eyre!(
             "failed to build enclave-server docker image. Exit status: {}",
-            status
+            build_status
         ));
     }
     info!("enclave server docker image built successfully");
