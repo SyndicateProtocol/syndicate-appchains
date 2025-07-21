@@ -42,7 +42,8 @@ use synd_tee_attestation_zk_proofs_submitter::{
     generate_proof, get_attestation_doc, pem_to_der, GenerateProofResult, ProofSubmitterError,
     ProofSystem, AWS_NITRO_ROOT_CERT_PEM,
 };
-use tracing::info;
+use tracing::{info, level_filters::LevelFilter};
+use tracing_subscriber::EnvFilter;
 
 /// The arguments for the command.
 #[derive(Parser, Debug)]
@@ -59,7 +60,7 @@ pub struct Args {
     #[arg(long, value_enum, default_value = "groth16")]
     proof_system: ProofSystem,
 
-    /// The address of the contract to submit the proof to
+    /// The address of the `TeeKeyManager` contract to submit the proof to
     /// (if missing, on-chain submission will be skipped)
     #[arg(long, value_parser = parse_address)]
     contract_address: Option<Address>,
@@ -80,7 +81,12 @@ pub struct Args {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    // setup tracing subscriber, default to INFO level
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::builder().with_default_directive(LevelFilter::INFO.into()).from_env_lossy(),
+        )
+        .init();
     let args = Args::parse();
     match run(args, generate_proof).await {
         Ok(_) => (),
@@ -149,6 +155,7 @@ async fn run(
                 .await?;
             let contract = TeeKeyManager::new(contract_address, provider);
 
+            // assert our ELF file matches the contract's vkey before generating the proof
             #[cfg(not(debug_assertions))]
             assert_vkey_matches(&elf_bytes, contract.clone()).await?;
 
@@ -178,11 +185,10 @@ async fn run(
         }
     }
 
-    // assert our ELF file matches the contract's vkey before generating the proof
-
     Ok(())
 }
 
+/// (this can only run on release builds, otherwise ProviderClient setup will fail)
 #[cfg(not(debug_assertions))]
 async fn assert_vkey_matches<P: Provider>(
     elf_bytes: &[u8],
