@@ -75,6 +75,11 @@ event TeeInput(TeeTrustedInput input);
  * @title TeeModule Contract
  */
 contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
+    // Maximum number of pending assertions allowed to prevent DoS attacks via unbounded array growth.
+    // Set to 2 because: (1) normal operation expects 0-1 assertions, (2) 2 assertions triggers TEE hack
+    // detection logic, and (3) closeChallengeWindow() requires length == 0 or 1 for processing.
+    uint256 public constant MAX_PENDING_ASSERTIONS = 2;
+    
     // Immutable state variables
     IAssertionPoster public immutable poster;
     IBridge public immutable bridge;
@@ -207,6 +212,7 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
         external
         nonReentrant
     {
+        require(pendingAssertions.length < MAX_PENDING_ASSERTIONS, "TeeModule: Too many pending assertions");
         require(rewardAddr != address(0), "reward address cannot be zero");
         require(signature.length == 65, "invalid signature length");
         bytes32 assertionHash = hash_object(assertion);

@@ -372,6 +372,24 @@ contract TeeModuleTest is Test {
         teeModule.submitAssertion(assertion, signature, user1);
     }
 
+    function testRevert_SubmitAssertionTooManyPendingAssertions() public {
+        // Submit first assertion
+        PendingAssertion memory assertion1 = _createAssertion(100);
+        bytes memory signature1 = _createValidSignature(assertion1);
+        teeModule.submitAssertion(assertion1, signature1, user1);
+
+        // Submit second assertion (should reach MAX_PENDING_ASSERTIONS = 2)
+        PendingAssertion memory assertion2 = _createAssertion(200);
+        bytes memory signature2 = _createValidSignature(assertion2);
+        teeModule.submitAssertion(assertion2, signature2, user1);
+
+        // Try to submit third assertion (should revert due to limit)
+        PendingAssertion memory assertion3 = _createAssertion(300);
+        bytes memory signature3 = _createValidSignature(assertion3);
+        vm.expectRevert("TeeModule: Too many pending assertions");
+        teeModule.submitAssertion(assertion3, signature3, user1);
+    }
+
     function testTeeHackDetection() public {
         // Submit first assertion
         PendingAssertion memory assertion1 = _createAssertion(100);
