@@ -56,13 +56,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         gateway.addRoute(sp1Verifier);
 
         attestationDocVerifier = new AttestationDocVerifier(
-            address(gateway),
-            fixture.vkey,
-            fixture.rootCertHash,
-            fixture.pcr0,
-            fixture.pcr1,
-            fixture.pcr2,
-            0
+            address(gateway), fixture.vkey, fixture.rootCertHash, fixture.pcr0, fixture.pcr1, fixture.pcr2, 0
         );
     }
 
