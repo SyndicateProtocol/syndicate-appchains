@@ -49,20 +49,19 @@ type Proposer struct {
 func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metrics) *Proposer {
 	appchainClient, err := ethclient.DialContext(ctx, cfg.AppchainRPCURL)
 	if err != nil {
-		err, msg := wrapErrorWithMsg(err, "Failed to create appchain provider")
-		log.Fatal().Stack().Err(err).Msg(msg)
+		msg, wrappedErr := wrapErrorWithMsg("Failed to create appchain provider", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 	sequencingClient, err := ethclient.DialContext(ctx, cfg.SequencingRPCURL)
 	if err != nil {
-		err, msg := wrapErrorWithMsg(err, "Failed to create sequencing provider")
-		log.Fatal().Stack().Err(err).Msg(msg)
+		msg, wrappedErr := wrapErrorWithMsg("Failed to create sequencing provider", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 
 	ethereumClient, err := ethclient.DialContext(ctx, cfg.EthereumRPCURL)
 	if err != nil {
-		err, msg := wrapErrorWithMsg(err, "Failed to create ethereum provider")
-		log.Fatal().Stack().Err(err).Msg(msg)
-		return nil
+		msg, wrappedErr := wrapErrorWithMsg("Failed to create ethereum provider", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 
 	var enclaveClient *rpc.Client
@@ -72,38 +71,33 @@ func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metri
 		enclaveClient, err = rpc.DialContext(ctx, cfg.EnclaveRPCURL)
 	}
 	if err != nil {
-		err, msg := wrapErrorWithMsg(err, "Failed to create enclave provider")
-		log.Fatal().Stack().Err(err).Msg(msg)
-		return nil
+		msg, wrappedErr := wrapErrorWithMsg("Failed to create enclave provider", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 
 	settlementClient, err := ethclient.DialContext(ctx, cfg.SettlementRPCURL)
 	if err != nil {
-		err, msg := wrapErrorWithMsg(err, "Failed to create settlement provider")
-		log.Fatal().Stack().Err(err).Msg(msg)
-		return nil
+		msg, wrappedErr := wrapErrorWithMsg("Failed to create settlement provider", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 	eigenClient, err := eigenda.NewEigenDA(&eigenda.EigenDAConfig{
 		Enable: true,
 		Rpc:    cfg.EigenRPCUrl,
 	})
 	if err != nil {
-		err, msg := wrapErrorWithMsg(err, "Failed to create Eigen provider")
-		log.Fatal().Stack().Err(err).Msg(msg)
-		return nil
+		msg, wrappedErr := wrapErrorWithMsg("Failed to create Eigen provider", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 
 	settlementAuth, err := bind.NewKeyedTransactorWithChainID(cfg.PrivateKey, big.NewInt(int64(cfg.SettlementChainID)))
 	if err != nil {
-		err, msg := wrapErrorWithMsg(err, "Failed to create settlement transactor")
-		log.Fatal().Stack().Err(err).Msg(msg)
-		return nil
+		msg, wrappedErr := wrapErrorWithMsg("Failed to create settlement transactor", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 	teeModule, err := teemodule.NewTeemodule(cfg.TeeModuleContractAddress, settlementClient)
 	if err != nil {
-		err, msg := wrapErrorWithMsg(err, "Failed to create TEE module")
-		log.Fatal().Stack().Err(err).Msg(msg)
-		return nil
+		msg, wrappedErr := wrapErrorWithMsg("Failed to create TEE module", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 
 	return &Proposer{
@@ -182,8 +176,8 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 			trustedInput, err := p.getTrustedInput(ctx)
 			if err != nil {
-				err, msg := wrapErrorWithMsg(err, "Failed to get trusted input")
-				log.Error().Stack().Err(err).Msg(msg)
+				msg, wrappedErr := wrapErrorWithMsg("Failed to get trusted input", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
 				continue
 			}
 
@@ -191,8 +185,8 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				log.Info().Msg("Proving new assertion...")
 				appOutput, err := p.Prove(ctx, trustedInput, settlesToArbitrumRollup)
 				if err != nil {
-					err, msg := wrapErrorWithMsg(err, "Failed to prove")
-					log.Error().Stack().Err(err).Msg(msg)
+					msg, wrappedErr := wrapErrorWithMsg("Failed to prove", err)
+					log.Error().Stack().Err(wrappedErr).Msg(msg)
 					continue
 				}
 				p.PendingAssertion = &appOutput.PendingAssertion
@@ -206,8 +200,8 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			submissionTimer := metrics.NewTimer()
 			transaction, err := p.TeeModule.SubmitAssertion(p.SettlementAuth, *p.PendingAssertion, p.PendingSignature, crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
 			if err != nil {
-				err, msg := wrapErrorWithMsg(err, "Failed to submit assertion")
-				log.Error().Stack().Err(err).Msg(msg)
+				msg, wrappedErr := wrapErrorWithMsg("Failed to submit assertion", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
 				continue
 			}
 			p.Metrics.AssertionSubmissions.Inc()
@@ -225,10 +219,9 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 }
 
 func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, error) {
-	// Start measuring trusted input fetch duration
-	timer := metrics.NewTimer()
+	trustedInputFetchTimer := metrics.NewTimer()
 	defer func() {
-		timer.ObserveHistogram(p.Metrics.TrustedInputFetchDuration)
+		trustedInputFetchTimer.ObserveHistogram(p.Metrics.TrustedInputFetchDuration)
 	}()
 
 	p.Metrics.TrustedInputFetches.Inc()
@@ -409,8 +402,8 @@ func (p *Proposer) Prove(
 
 	// get appchain start block
 	if header, err = p.AppchainClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
-		err, msg := wrapErrorWithMsg(fmt.Sprintf("failed to get appchain header, hash: %v", common.BytesToHash(trustedInput.AppStartBlockHash[:])))
-		return nil, errors.Wrap(err, msg)
+		msg, wrappedErr := wrapErrorWithMsg(fmt.Sprintf("failed to get appchain header, hash: %v", common.BytesToHash(trustedInput.AppStartBlockHash[:]).Hex()), err)
+		return nil, errors.Wrap(wrappedErr, msg)
 	}
 
 	// get delayed messages
@@ -456,7 +449,7 @@ func (p *Proposer) Prove(
 	}); err != nil {
 		return nil, errors.Wrap(err, "failed to verify appchain")
 	}
-	log.Debug().Dur("duration", appchainTimer.Duration()).Msg("Appchain verification completed")
+	log.Debug().Dur("appchainVerificationDuration", appchainTimer.Duration()).Msg("Appchain verification completed")
 
 	return &appOutput, nil
 }
@@ -517,13 +510,11 @@ func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInpu
 }
 
 func (p *Proposer) handleEnclaveCall(output interface{}, method string, input interface{}) error {
-	// Start measuring enclave call duration
 	timer := metrics.NewTimer()
 	defer func() {
 		timer.ObserveHistogramVec(p.Metrics.EnclaveCallDuration.WithLabelValues(method))
 	}()
 
-	// Record the call
 	p.Metrics.EnclaveCalls.WithLabelValues(method).Inc()
 
 	if err := p.EnclaveClient.Call(output, method, input); err != nil {
@@ -532,9 +523,9 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 	return nil
 }
 
-// Need to wrap stdlib errors into `pkg/errors` to get the stack trace in logger
-func wrapErrorWithMsg(err error, msg string) (error, string) {
-	return errors.Wrap(err, msg), msg
+// Need to wrap std lib errors into `pkg/errors` to get the stack trace in logger
+func wrapErrorWithMsg(msg string, err error) (string, error) {
+	return msg, errors.Wrap(err, msg)
 }
 
 // ToHex converts TeeTrustedInput to hex-encoded version
