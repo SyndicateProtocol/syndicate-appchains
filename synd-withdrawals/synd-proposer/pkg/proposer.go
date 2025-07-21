@@ -3,7 +3,6 @@ package pkg
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"math/big"
@@ -47,7 +46,7 @@ type Proposer struct {
 	Metrics             *metrics.Metrics
 }
 
-func NewProposer(ctx context.Context, cfg *Config, metrics *metrics.Metrics) *Proposer {
+func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metrics) *Proposer {
 	appchainClient, err := ethclient.DialContext(ctx, cfg.AppchainRPCURL)
 	if err != nil {
 		err, msg := wrapErrorWithMsg(err, "Failed to create appchain provider")
@@ -179,8 +178,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 		case <-ticker.C:
 			log.Info().Msg("Polling loop tick...")
 
-			// Start measuring polling loop duration
-			timer := metrics.NewTimer()
+			pollingLoopTimer := metrics.NewTimer()
 
 			trustedInput, err := p.getTrustedInput(ctx)
 			if err != nil {
@@ -212,16 +210,16 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				log.Error().Stack().Err(err).Msg(msg)
 				continue
 			}
-            p.Metrics.AssertionSubmissions.Inc()
-            submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
-            //TODO me
-			log.Println(
-				"Submitted assertion: ", transaction.Hash(),
-				"seqHash: ", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]),
-				"appHash: ", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]),
-				"l1Acc: ", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]),
-			)
-            timer.ObserveHistogram(p.Metrics.PollingLoopDuration)
+			p.Metrics.AssertionSubmissions.Inc()
+			submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
+
+			log.Debug().
+				Str("transactionHash", transaction.Hash().Hex()).
+				Str("seqHash", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]).Hex()).
+				Str("appHash", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]).Hex()).
+				Str("l1Acc", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]).Hex()).
+				Msg("Submitted assertion")
+			pollingLoopTimer.ObserveHistogram(p.Metrics.PollingLoopDuration)
 		}
 	}
 }
@@ -267,12 +265,11 @@ func (p *Proposer) Prove(
 	trustedInput *enclave.TrustedInput,
 	settlesToArbitrumRollup bool,
 ) (*enclave.VerifyAppchainOutput, error) {
-    proveTimer := metrics.NewTimer()
-    defer func() {
-        proveTimer.ObserveHistogram(p.Metrics.ProveDuration)
-    }()
-
-    p.Metrics.ProveTotal.Inc()
+	proveTimer := metrics.NewTimer()
+	defer func() {
+		proveTimer.ObserveHistogram(p.Metrics.ProveDuration)
+	}()
+	p.Metrics.ProveTotal.Inc()
 
 	// get trusted input
 	if trustedInput == nil {
@@ -412,12 +409,8 @@ func (p *Proposer) Prove(
 
 	// get appchain start block
 	if header, err = p.AppchainClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
-		// TODO this one
-		return nil, errors.Wrap(err, "failed to get appchain header")
-// 			"failed to get appchain header, hash: %v, err: %v",
-// 			common.BytesToHash(trustedInput.AppStartBlockHash[:]),
-// 			err,
-// 		)
+		err, msg := wrapErrorWithMsg(fmt.Sprintf("failed to get appchain header, hash: %v", common.BytesToHash(trustedInput.AppStartBlockHash[:])))
+		return nil, errors.Wrap(err, msg)
 	}
 
 	// get delayed messages

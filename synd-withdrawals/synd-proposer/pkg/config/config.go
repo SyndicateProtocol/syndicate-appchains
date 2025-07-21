@@ -56,7 +56,7 @@ var ConfigKeys = map[string]struct {
 	"private-key":                 {"Private Key", "", true},
 	"polling-interval":            {"Polling interval", "10m", false},
 	"close-challenge-interval":    {"Close challenge interval", "5m", false},
-	"port":                        {"health and metrics port", "9292", false},
+	"port":                        {"Server port", "9292", false},
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
 	"settlement-delay":            {"Settlement Delay", "60", false},
@@ -138,6 +138,7 @@ func mustAtoi(s string, fallback int) int {
 	return i
 }
 
+// `Get“ is a helper to get a config value from the `viper` instance - typically an ENV var
 func Get(env string) string {
 	return viper.GetString(env)
 }
