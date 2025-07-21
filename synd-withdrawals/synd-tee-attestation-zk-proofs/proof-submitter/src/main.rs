@@ -29,11 +29,11 @@ use alloy::{
     signers::local::PrivateKeySigner,
 };
 use clap::Parser;
-use contract_bindings::synd::{
-    attestation_doc_verifier::AttestationDocVerifier,
-    tee_key_manager::TeeKeyManager::{self, TeeKeyManagerInstance},
-};
+#[cfg(not(debug_assertions))]
+use contract_bindings::synd::attestation_doc_verifier::AttestationDocVerifier;
+use contract_bindings::synd::tee_key_manager::TeeKeyManager::{self, TeeKeyManagerInstance};
 use shared::parse::parse_address;
+#[cfg(not(debug_assertions))]
 use sp1_sdk::{HashableKey, ProverClient};
 use std::{path::PathBuf, str::FromStr};
 use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
