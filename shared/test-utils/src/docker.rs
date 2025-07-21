@@ -69,21 +69,20 @@ impl E2EProcess {
     pub fn try_wait(&mut self) -> std::io::Result<Option<ExitStatus>> {
         self.0.try_wait()
     }
-}
 
-impl Drop for E2EProcess {
-    fn drop(&mut self) {
+    /// Explicitly kill the process
+    pub fn kill(&mut self) {
         if self.0.try_wait().is_ok_and(|status| status.is_some()) {
-            info!("process for Drop already exited or was not running.");
+            info!("process already exited or was not running.");
             return;
         }
 
         let Some(pid) = self.0.id() else {
-            info!("process for Drop had no PID, likely already exited or failed to start.");
+            info!("process had no PID, likely already exited or failed to start.");
             return;
         };
 
-        info!("Attempting to stop process (PID: {}) via Drop", pid);
+        info!("Attempting to stop process (PID: {})", pid);
         let kill_proc = match std::process::Command::new("kill")
             .arg(pid.to_string())
             .stdout(Stdio::piped())
@@ -115,6 +114,12 @@ impl Drop for E2EProcess {
                 warn!("Failed to wait for kill command for PID {}: {}", pid, e);
             }
         }
+    }
+}
+
+impl Drop for E2EProcess {
+    fn drop(&mut self) {
+        self.kill();
     }
 }
 
@@ -252,10 +257,10 @@ pub async fn launch_proposer(args: Vec<String>, mode: ProposerMode) -> Result<E2
                 Command::new("docker")
                     .arg("buildx")
                     .arg("build")
-                    .arg("--platform")
-                    .arg("linux/amd64")
                     .arg("--load")
                     .arg(project_root)
+                    .arg("--platform")
+                    .arg("linux/amd64")
                     .arg("--tag")
                     .arg(&image_name)
                     .arg("--target")

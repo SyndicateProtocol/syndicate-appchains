@@ -303,16 +303,6 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             )
             .await?;
 
-            // Catch if the services die (NOTE: this won't kill the test, just log it)
-            tokio::spawn(async move {
-                tokio::select! {
-                    e = proposer_instance.wait() => {
-                        panic!("synd-proposer died: {e:#?}")
-                    },
-                    e = enclave_server_instance.wait() => panic!("enclave server died: {e:#?}"),
-                }
-            });
-
             // send a dummy tx so that the sequencing chain progresses and the deposit is
             // slotted in
             components.sequence_tx(b"dummy_tx", 0, false).await?;
@@ -367,6 +357,10 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             // Assert new balance is equal to withdrawal amount
             let balance_after = components.settlement_provider.get_balance(to_address).await?;
             assert_eq!(balance_after, withdrawal_value);
+
+            // Cleanup: kill the instances
+            proposer_instance.kill();
+            enclave_server_instance.kill();
 
             Ok(())
         },
