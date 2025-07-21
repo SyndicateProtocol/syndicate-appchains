@@ -12,7 +12,7 @@ contract AtomicSequencerImplementation {
     uint256 public constant MAX_ATOMIC_CHAINS = 20;
     // Maximum number of transactions per chain in bulk atomic operations to prevent DoS attacks
     uint256 public constant MAX_ATOMIC_BULK_TRANSACTIONS = 50;
-    
+
     /// @dev Thrown when input array lengths don't match or are invalid
     error InputLengthMismatchError();
     /// @dev Thrown when too many chains are provided for atomic processing
@@ -55,7 +55,7 @@ contract AtomicSequencerImplementation {
             revert InputLengthMismatchError();
         }
         if (chains.length > MAX_ATOMIC_CHAINS) revert TooManyAtomicChains();
-        
+
         // Check individual transaction arrays don't exceed bulk limits
         for (uint256 i = 0; i < transactions.length; i++) {
             if (transactions[i].length > MAX_ATOMIC_BULK_TRANSACTIONS) {

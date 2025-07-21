@@ -115,7 +115,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     function getNextChainId() public view returns (uint256) {
         // Ensure the auto-incrementing ID does not exceed its reserved space
         if (nextAutoChainId >= idUpperBound) revert IdOverflow();
-        
+
         return (namespacePrefix * idUpperBound) + nextAutoChainId;
     }
 

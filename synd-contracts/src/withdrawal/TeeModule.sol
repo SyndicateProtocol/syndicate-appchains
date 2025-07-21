@@ -79,7 +79,7 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
     // Set to 2 because: (1) normal operation expects 0-1 assertions, (2) 2 assertions triggers TEE hack
     // detection logic, and (3) closeChallengeWindow() requires length == 0 or 1 for processing.
     uint256 public constant MAX_PENDING_ASSERTIONS = 2;
-    
+
     // Immutable state variables
     IAssertionPoster public immutable poster;
     IBridge public immutable bridge;

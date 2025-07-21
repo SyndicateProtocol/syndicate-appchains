@@ -612,7 +612,7 @@ contract SyndicateFactoryTest is Test {
         assertEq(sequencingChainAddress, factory.computeSequencingChainAddress(salt, appchainId));
     }
 
-    function testNewChainIdGenerationFormat() public {
+    function testNewChainIdGenerationFormat() public view {
         uint256 namespacePrefix = factory.namespacePrefix();
         uint256 idUpperBound = factory.idUpperBound();
         uint256 nextAutoChainId = factory.nextAutoChainId();
@@ -757,7 +757,12 @@ contract SyndicateFactoryTest is Test {
         }
     }
 
-    function testFuzz_NoCollisionsAcrossNamespaces(uint256 namespace1, uint256 namespace2, uint256 autoId1, uint256 autoId2) public {
+    function testFuzz_NoCollisionsAcrossNamespaces(
+        uint256 namespace1,
+        uint256 namespace2,
+        uint256 autoId1,
+        uint256 autoId2
+    ) public pure {
         // Ensure different namespaces
         namespace1 = bound(namespace1, 1, 500);
         namespace2 = bound(namespace2, 501, 1000);

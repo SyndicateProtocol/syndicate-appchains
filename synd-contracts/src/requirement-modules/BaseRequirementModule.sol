@@ -13,7 +13,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 abstract contract BaseRequirementModule is IRequirementModule, Ownable {
     // Maximum number of permission checks allowed to prevent DoS attacks via unbounded loops
     uint256 public constant MAX_PERMISSION_CHECKS = 10;
-    
+
     /// @notice List of permission checks addresses
     AddressStructuredLinkedList.List internal permissionChecks;
 
@@ -35,7 +35,7 @@ abstract contract BaseRequirementModule is IRequirementModule, Ownable {
 
     /// @notice Thrown when attempting to remove an address that doesn't exist
     error AddressDoesNotExist();
-    
+
     /// @notice Thrown when attempting to add more permission checks than the maximum allowed
     error TooManyPermissionChecks();
 
