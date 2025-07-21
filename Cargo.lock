@@ -6971,6 +6971,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "clap",
+ "common",
  "ctor",
  "eyre",
  "fs2",
@@ -6981,6 +6982,8 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
+ "test-framework",
+ "test-utils",
  "tokio",
  "tower 0.5.2",
  "tracing",

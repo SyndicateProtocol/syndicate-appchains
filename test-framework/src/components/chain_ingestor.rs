@@ -1,16 +1,16 @@
 //! Chain ingestor for the integration tests
 
 #[derive(Debug, Default)]
-pub(super) struct ChainIngestorConfig {
-    pub(crate) ws_urls: Vec<String>,
-    pub(crate) db_file: String,
-    pub(crate) start_block: u64,
-    pub(crate) port: u16,
-    pub(crate) metrics_port: u16,
+pub struct ChainIngestorConfig {
+    pub ws_urls: Vec<String>,
+    pub db_file: String,
+    pub start_block: u64,
+    pub port: u16,
+    pub metrics_port: u16,
 }
 
 impl ChainIngestorConfig {
-    pub(crate) fn cli_args(&self) -> Vec<String> {
+    pub fn cli_args(&self) -> Vec<String> {
         vec![
             "--ws-urls".to_string(),
             self.ws_urls.join(","),
