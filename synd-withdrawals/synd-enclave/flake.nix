@@ -3,6 +3,15 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs-2505.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs-foundry100 = {
+      type = "github";
+      owner = "NixOS";
+      repo = "nixpkgs";
+      rev = "6a0960ad4b3d13bff34bd78e9fcefc4310507707";
+      flake = false;
+    };
+
     systems.url = "github:nix-systems/default-linux";
     flake-parts.url = "github:hercules-ci/flake-parts";
 
@@ -36,6 +45,8 @@
   };
 
   outputs = inputs @ {
+    nixpkgs-foundry100,
+    nixpkgs-2505,
     systems,
     flake-parts,
     nitro,
@@ -50,26 +61,33 @@
         system,
         ...
       }: let
-      build-ramdisk = {name, init, kernel, linuxkit}: pkgs.stdenv.mkDerivation {
-        name = "${name}-ramdisk";
-        buildPhase = ''
-          mkdir -p ./bootstrap
-          cp ${init}/* ./bootstrap/
-          cp ${kernel}/* ./bootstrap/
+        pkgs-foundry100 = import nixpkgs-foundry100 {inherit system;};
+        pkgs-2505 = import nixpkgs-2505 {inherit system;};
+        build-ramdisk = {
+          name,
+          init,
+          kernel,
+          linuxkit,
+        }:
+          pkgs.stdenv.mkDerivation {
+            name = "${name}-ramdisk";
+            buildPhase = ''
+              mkdir -p ./bootstrap
+              cp ${init}/* ./bootstrap/
+              cp ${kernel}/* ./bootstrap/
 
-          HOME=$PWD ${linuxkit}/bin/linuxkit build \
-          --format kernel+initrd \
-          --no-sbom \
-          --name ${name}-ramdisk \
-          ${./eif/${name}-ramdisk.yaml}
-        '';
-        installPhase = ''
-          mkdir -p $out
-          cp ${name}-ramdisk-initrd.img $out
-        '';
-        nativeBuildInputs = [ linuxkit ];
-      };
-
+              HOME=$PWD ${linuxkit}/bin/linuxkit build \
+              --format kernel+initrd \
+              --no-sbom \
+              --name ${name}-ramdisk \
+              ${./eif/${name}-ramdisk.yaml}
+            '';
+            installPhase = ''
+              mkdir -p $out
+              cp ${name}-ramdisk-initrd.img $out
+            '';
+            nativeBuildInputs = [linuxkit];
+          };
       in {
         packages = rec {
           enclaves-sdk-init = (import "${enclaves-sdk-bootstrap}/init/init.nix") {inherit pkgs;};
@@ -85,26 +103,53 @@
               export HOME=$(mktemp -d)
             '';
             cmakeFlags = with pkgs; [
-                (lib.cmakeFeature "CMAKE_POLICY_VERSION_MINIMUM" "3.5")
-                (lib.cmakeFeature "CMAKE_BUILD_TYPE" "Release")
-                (lib.cmakeFeature "CMAKE_INSTALL_PREFIX" "$out")
+              (lib.cmakeFeature "CMAKE_POLICY_VERSION_MINIMUM" "3.5")
+              (lib.cmakeFeature "CMAKE_BUILD_TYPE" "Release")
+              (lib.cmakeFeature "CMAKE_INSTALL_PREFIX" "$out")
             ];
           };
 
           brotli-wasm = brotli-lib.overrideAttrs (prev: {
             pname = prev.pname + "-wasm";
-            nativeBuildInputs = with pkgs; prev.nativeBuildInputs
-            ++ [coreutils emscripten];
-            cmakeFlags = with pkgs; prev.cmakeFlags ++ [
+            nativeBuildInputs = with pkgs;
+              prev.nativeBuildInputs
+              ++ [coreutils emscripten];
+            cmakeFlags = with pkgs;
+              prev.cmakeFlags
+              ++ [
                 (lib.cmakeFeature "CMAKE_C_COMPILER" "${emscripten}/bin/emcc")
                 (lib.cmakeFeature "CMAKE_C_FLAGS" "-fPIC")
                 (lib.cmakeFeature "CMAKE_AR" "${emscripten}/bin/emar")
                 (lib.cmakeFeature "CMAKE_RANLIB" "${coreutils}/bin/touch")
-            ];
+              ];
             postInstall = ''
               mv $out/lib $out/lib-wasm
             '';
           });
+
+          nitro-contracts = with pkgs-2505;
+            stdenv.mkDerivation (final: {
+              name = "nitro-contracts";
+              src = "${nitro}/contracts";
+              nativeBuildInputs = [
+                pkgs-foundry100.foundry
+                pkgs-foundry100.solc
+                yarnConfigHook
+                writableTmpDirAsHomeHook
+                yarnInstallHook
+                nodejs
+              ];
+              buildPhase = ''
+                runHook preBuild
+                yarn --offline build
+                yarn --offline build:forge:yul
+                runHook postBuild
+              '';
+              offlineCache = fetchYarnDeps {
+                yarnLock = final.src + "/yarn.lock";
+                hash = "sha256-tg8Mk0c+x3gLOSNY+y1fBdQ0I95PAgG07qFQ/d64wIU=";
+              };
+            });
 
           init-ramdisk = build-ramdisk {
             name = "init";
@@ -138,7 +183,7 @@
               else if system == "aarch64-linux"
               then "arm64"
               else abort "Unsupported architecture '${system}'";
-              cmdline = builtins.readFile ./eif/cmdline-${targetArch};
+            cmdline = builtins.readFile ./eif/cmdline-${targetArch};
           in
             pkgs.runCommand "eif.bin" {} ''
               ${eif-build}/bin/eif_build \
