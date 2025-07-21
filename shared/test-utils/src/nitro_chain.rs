@@ -274,8 +274,8 @@ pub async fn deploy_nitro_rollup(
         "nitro-contracts-build",
     )?
     .wait()
-    .await;
-    // NOTE: ignore status, as it might be successful but exit with code 1
+    .await?;
+    // NOTE: ignore `status` here, as it might be successful but exit with code 1
 
     let chain_config_json = chain_config(rollup_chain_id, rollup_owner, use_eigen_da);
 
