@@ -76,8 +76,12 @@ event TeeInput(TeeTrustedInput input);
  */
 contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
     // Maximum number of pending assertions allowed to prevent DoS attacks via unbounded array growth.
-    // Set to 2 because: (1) normal operation expects 0-1 assertions, (2) 2 assertions triggers TEE hack
-    // detection logic, and (3) closeChallengeWindow() requires length == 0 or 1 for processing.
+    // The value is set to 2 based on the following considerations:
+    // 1. Normal operation expects 0-1 pending assertions at any given time, ensuring efficient processing.
+    // 2. A limit of 2 enables the detection of potential TEE hacks, as the presence of exactly 2 assertions
+    //    triggers the TEE hack detection logic, which is a critical security feature of the system.
+    // 3. The closeChallengeWindow() function requires the number of pending assertions to be either 0 or 1
+    //    for proper processing. A higher limit would complicate this logic and potentially introduce errors.
     uint256 public constant MAX_PENDING_ASSERTIONS = 2;
 
     // Immutable state variables
