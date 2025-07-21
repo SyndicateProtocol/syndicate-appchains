@@ -191,6 +191,76 @@ contract AtomicSequencerTest is Test {
         assertEq(errorSelector, AtomicSequencerImplementation.InputLengthMismatchError.selector);
     }
 
+    function testRevert_TooManyAtomicChains() public {
+        // Create implementation instance to access constants
+        AtomicSequencerImplementation impl = new AtomicSequencerImplementation();
+        uint256 maxAtomicChains = impl.MAX_ATOMIC_CHAINS();
+        
+        // Create array exceeding MAX_ATOMIC_CHAINS
+        SyndicateSequencingChain[] memory tooManyChains = new SyndicateSequencingChain[](maxAtomicChains + 1);
+        for (uint256 i = 0; i < tooManyChains.length; i++) {
+            tooManyChains[i] = chainA; // Reuse same chain
+        }
+
+        bytes[] memory txns = new bytes[](maxAtomicChains + 1);
+        for (uint256 i = 0; i < txns.length; i++) {
+            txns[i] = abi.encode("transaction", i);
+        }
+
+        bool[] memory isRaw = new bool[](maxAtomicChains + 1);
+        for (uint256 i = 0; i < isRaw.length; i++) {
+            isRaw[i] = true;
+        }
+
+        bytes memory callData =
+            abi.encodeWithSignature("processTransactionsAtomically(address[],bytes[],bool[])", tooManyChains, txns, isRaw);
+
+        vm.prank(originalCaller);
+        (bool success, bytes memory returnData) = address(atomicSequencer).call(callData);
+        assertFalse(success);
+
+        bytes4 errorSelector;
+        assembly {
+            errorSelector := mload(add(returnData, 0x20))
+        }
+        assertEq(errorSelector, AtomicSequencerImplementation.TooManyAtomicChains.selector);
+    }
+
+    function testRevert_TransactionArrayExceedsMaximum() public {
+        // Create implementation instance to access constants
+        AtomicSequencerImplementation impl = new AtomicSequencerImplementation();
+        uint256 maxAtomicBulkTransactions = impl.MAX_ATOMIC_BULK_TRANSACTIONS();
+        
+        SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](2);
+        chains[0] = chainA;
+        chains[1] = chainB;
+
+        // Create arrays where first has valid size, second exceeds MAX_ATOMIC_BULK_TRANSACTIONS
+        bytes[][] memory transactions = new bytes[][](2);
+        transactions[0] = new bytes[](10); // Valid size
+        transactions[1] = new bytes[](maxAtomicBulkTransactions + 1); // Exceeds limit
+        
+        for (uint256 i = 0; i < transactions[0].length; i++) {
+            transactions[0][i] = abi.encode("tx", i);
+        }
+        for (uint256 i = 0; i < transactions[1].length; i++) {
+            transactions[1][i] = abi.encode("tx", i);
+        }
+
+        bytes memory callData =
+            abi.encodeWithSignature("processTransactionsBulkAtomically(address[],bytes[][])", chains, transactions);
+
+        vm.prank(originalCaller);
+        (bool success, bytes memory returnData) = address(atomicSequencer).call(callData);
+        assertFalse(success);
+
+        bytes4 errorSelector;
+        assembly {
+            errorSelector := mload(add(returnData, 0x20))
+        }
+        assertEq(errorSelector, AtomicSequencerImplementation.TransactionArrayExceedsMaximum.selector);
+    }
+
     function testMixedRawProcessing() public {
         SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](3);
         chains[0] = chainA;

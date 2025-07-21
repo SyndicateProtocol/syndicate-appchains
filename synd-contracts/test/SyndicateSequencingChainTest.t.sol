@@ -247,6 +247,18 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         assertEq(validEventCount, expectedValidEventCount, "Wrong amount of valid transaction events emitted");
     }
 
+    function testRevert_ProcessTransactionsBulkExceedsMaximum() public {
+        // Fetch MAX_BULK_TRANSACTIONS dynamically and create array that exceeds it
+        uint256 maxBulkTransactions = chain.MAX_BULK_TRANSACTIONS();
+        bytes[] memory largeBatch = new bytes[](maxBulkTransactions + 1);
+        for (uint256 i = 0; i < largeBatch.length; i++) {
+            largeBatch[i] = abi.encode("transaction", i);
+        }
+
+        vm.expectRevert(SequencingModuleChecker.BatchSizeExceedsMaximum.selector);
+        chain.processTransactionsBulk(largeBatch);
+    }
+
     function testOnlyWhenAllowedModifierBranches() public {
         // Deploy a module we can directly control
         DirectMockModule directMock = new DirectMockModule();

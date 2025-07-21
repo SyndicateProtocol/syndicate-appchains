@@ -21,6 +21,7 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     error InvalidModuleAddress();
     error TransactionOrSenderNotAllowed();
     error AlreadyInitialized();
+    error BatchSizeExceedsMaximum();
 
     bool internal hasBeenInitialized = false;
 

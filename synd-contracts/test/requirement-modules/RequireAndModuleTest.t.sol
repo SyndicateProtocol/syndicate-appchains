@@ -160,4 +160,22 @@ contract RequireAndModuleTest is Test {
         module.removePermissionCheck(address(0));
         vm.stopPrank();
     }
+
+    function testRevert_TooManyPermissionChecks() public {
+        vm.startPrank(admin);
+        
+        // Fetch MAX_PERMISSION_CHECKS dynamically and add that many checks
+        uint256 maxPermissionChecks = module.MAX_PERMISSION_CHECKS();
+        for (uint256 i = 0; i < maxPermissionChecks; i++) {
+            address dummyModule = address(uint160(i + 1)); // Non-zero addresses
+            module.addPermissionCheck(dummyModule, true);
+        }
+        
+        // Try to add one more - should revert
+        address extraModule = address(uint160(maxPermissionChecks + 1));
+        vm.expectRevert(BaseRequirementModule.TooManyPermissionChecks.selector);
+        module.addPermissionCheck(extraModule, true);
+        
+        vm.stopPrank();
+    }
 }

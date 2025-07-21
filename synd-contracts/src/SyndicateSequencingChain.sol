@@ -13,6 +13,9 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 /// 5. External systems observe these events to process the transactions on the application chain
 /// This design uses events rather than state changes for scalability and gas efficiency
 contract SyndicateSequencingChain is SequencingModuleChecker {
+    // Maximum number of transactions that can be processed in a single bulk call to prevent DoS attacks
+    uint256 public constant MAX_BULK_TRANSACTIONS = 100;
+    
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
 
@@ -52,6 +55,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @param data An array of transaction data.
     //#olympix-ignore
     function processTransactionsBulk(bytes[] calldata data) external {
+        if (data.length > MAX_BULK_TRANSACTIONS) revert BatchSizeExceedsMaximum();
         uint256 dataCount = data.length;
 
         // Process all transactions
