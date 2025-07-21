@@ -6,6 +6,14 @@
     systems.url = "github:nix-systems/default-linux";
     flake-parts.url = "github:hercules-ci/flake-parts";
 
+    nitro = {
+      type = "git";
+      url = "https://github.com/Layr-Labs/nitro.git";
+      rev = "5b41a2dcf81c2b6f4798ecb472c27002a6af9bab";
+      flake = false;
+      submodules = true;
+    };
+
     enclaves-sdk-bootstrap = {
       type = "github";
       owner = "aws";
@@ -30,6 +38,7 @@
   outputs = inputs @ {
     systems,
     flake-parts,
+    nitro,
     enclaves-sdk-bootstrap,
     enclaves-image-format,
     ...
@@ -40,11 +49,68 @@
         pkgs,
         system,
         ...
-      }: {
+      }: let
+      build-ramdisk = {name, init, kernel, linuxkit}: pkgs.stdenv.mkDerivation {
+        name = "${name}-ramdisk";
+        buildPhase = ''
+          mkdir -p ./bootstrap
+          cp ${init}/* ./bootstrap/
+          cp ${kernel}/* ./bootstrap/
+
+          HOME=$PWD ${linuxkit}/bin/linuxkit build \
+          --format kernel+initrd \
+          --no-sbom \
+          --name ${name}-ramdisk \
+          ${./eif/${name}-ramdisk.yaml}
+        '';
+        installPhase = ''
+          mkdir -p $out
+          cp ${name}-ramdisk-initrd.img $out
+        '';
+        nativeBuildInputs = [ linuxkit ];
+      };
+
+      in {
         packages = rec {
           enclaves-sdk-init = (import "${enclaves-sdk-bootstrap}/init/init.nix") {inherit pkgs;};
           enclaves-sdk-kernel = (import "${enclaves-sdk-bootstrap}/kernel/kernel.nix") {inherit pkgs;};
           linuxkit = (import "${enclaves-sdk-bootstrap}/linuxkit/linuxkit.nix") {inherit pkgs;};
+
+          brotli-wasm = pkgs.stdenv.mkDerivation {
+            pname = "brotli-wasm";
+            version = "1.0.9";
+            src = "${nitro}/brotli";
+            nativeBuildInputs = with pkgs; [cmake coreutils emscripten];
+            preConfigure = ''
+              export HOME=$(mktemp -d)
+            '';
+            cmakeFlags = with pkgs; [
+                (lib.cmakeFeature "CMAKE_POLICY_VERSION_MINIMUM" "3.5")
+                (lib.cmakeFeature "CMAKE_BUILD_TYPE" "Release")
+                (lib.cmakeFeature "CMAKE_C_COMPILER" "${emscripten}/bin/emcc")
+                (lib.cmakeFeature "CMAKE_C_FLAGS" "-fPIC")
+                (lib.cmakeFeature "CMAKE_INSTALL_PREFIX" "$out")
+                (lib.cmakeFeature "CMAKE_AR" "${emscripten}/bin/emar")
+                (lib.cmakeFeature "CMAKE_RANLIB" "${coreutils}/bin/touch")
+            ];
+            postInstall = ''
+              mv $out/lib $out/lib-wasm
+            '';
+          };
+
+          init-ramdisk = build-ramdisk {
+            name = "init";
+            init = enclaves-sdk-init;
+            kernel = enclaves-sdk-kernel;
+            inherit linuxkit;
+          };
+
+          user-ramdisk = build-ramdisk {
+            name = "user";
+            init = enclaves-sdk-init;
+            kernel = enclaves-sdk-kernel;
+            inherit linuxkit;
+          };
 
           eif-build = pkgs.rustPlatform.buildRustPackage {
             pname = "eif_build";
@@ -57,20 +123,6 @@
             buildInputs = [pkgs.openssl];
           };
 
-          build-ramdisk = name:
-            pkgs.runCommand "build-ramdisk-${name}" {} ''
-                mkdir -p ./bootstrap
-                cp ${enclaves-sdk-init}/* ./bootstrap/
-                cp ${enclaves-sdk-kernel}/* ./bootstrap/
-
-                HOME=$PWD ${linuxkit}/bin/linuxkit build \
-                --format kernel+initrd \
-                --no-sbom \
-                --name ${name}-ramdisk \
-                ${./eif/${name}-ramdisk.yaml}
-              cp ${name}-ramdisk-initrd.img $out
-            '';
-
           eif-bin = let
             targetArch =
               if system == "x86_64-linux"
@@ -78,15 +130,15 @@
               else if system == "aarch64-linux"
               then "arm64"
               else abort "Unsupported architecture '${system}'";
-            cmdline = builtins.readFile ./eif/cmdline-${targetArch};
+              cmdline = builtins.readFile ./eif/cmdline-${targetArch};
           in
             pkgs.runCommand "eif.bin" {} ''
               ${eif-build}/bin/eif_build \
                 --kernel ${enclaves-sdk-kernel}/*Image \
                 --kernel_config ${enclaves-sdk-kernel}/*Image.config \
                 --cmdline "${cmdline}" \
-                --ramdisk ${build-ramdisk "init"} \
-                --ramdisk ${build-ramdisk "user"} \
+                --ramdisk "${init-ramdisk}/init-ramdisk-initrd.img" \
+                --ramdisk "${user-ramdisk}/user-ramdisk-initrd.img" \
                 --output $out
             '';
         };

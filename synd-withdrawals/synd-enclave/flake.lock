@@ -52,6 +52,25 @@
         "type": "github"
       }
     },
+    "nitro": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1746549093,
+        "narHash": "sha256-DqE1MBz1DgqtSRVglk3Z4VrCHnxyPGYXQmI7L3ncjhQ=",
+        "ref": "refs/heads/eigenda-v3.6.4",
+        "rev": "5b41a2dcf81c2b6f4798ecb472c27002a6af9bab",
+        "revCount": 18269,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/Layr-Labs/nitro.git"
+      },
+      "original": {
+        "rev": "5b41a2dcf81c2b6f4798ecb472c27002a6af9bab",
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/Layr-Labs/nitro.git"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1735563628,
@@ -88,6 +107,7 @@
         "enclaves-image-format": "enclaves-image-format",
         "enclaves-sdk-bootstrap": "enclaves-sdk-bootstrap",
         "flake-parts": "flake-parts",
+        "nitro": "nitro",
         "nixpkgs": "nixpkgs",
         "systems": "systems"
       }
