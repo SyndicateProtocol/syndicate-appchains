@@ -3,21 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/logger"
-	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/metrics"
-	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/config"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/server"
 	"github.com/rs/zerolog/log"
 )
 
@@ -40,55 +36,16 @@ func main() {
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 
-			registry := prometheus.NewRegistry()
+			// Initialize server
+			server := server.InitServer(config.Port)
 
-			mux := http.NewServeMux()
-
-			// Health endpoint
-			mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"status":"ok"}`))
-			})
-
-			// Metrics endpoint - use the custom registry
-			mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-				EnableOpenMetrics: true,
-			}))
-
-			// TODO(SEQ-1077) should we just remove this?
-			// Default handler for unknown paths
-			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/" {
-					http.NotFound(w, r)
-					return
-				}
-				w.Header().Set("Content-Type", "text/plain")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("Syndicate Proposer\nAvailable endpoints:\n- /health\n- /metrics\n"))
-			})
-
-			server := &http.Server{
-				Addr:    fmt.Sprintf(":%d", config.Port),
-				Handler: mux,
+			// Start the server
+			if err := server.Start(ctx); err != nil {
+				return fmt.Errorf("failed to start server: %w", err)
 			}
 
-			go func() {
-				<-ctx.Done()
-				server.Shutdown(context.Background())
-			}()
-			go func() {
-				if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					log.Error().Err(err).Msg("health server error")
-				}
-			}()
-			log.Info().Int("port", config.Port).Msg("Server listening on /health and /metrics")
-
-			metrics := metrics.NewMetrics(registry)
-			proposer := pkg.NewProposer(ctx, config, metrics)
-			proposer.Run(ctx)
-			log.Info().Msg("Synd-proposer service stopped.")
-			return nil
+			// Run proposer with server
+			return server.RunProposer(ctx, config, server)
 		},
 	}
 
