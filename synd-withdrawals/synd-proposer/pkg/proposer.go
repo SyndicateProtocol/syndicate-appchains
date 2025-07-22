@@ -183,6 +183,17 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				p.PendingSignature = appOutput.Signature
 			}
 
+			abi, err := teemodule.TeemoduleMetaData.GetAbi()
+			if err != nil {
+				log.Printf("Failed to get abi: %v", err)
+				continue
+			}
+			calldata, err := abi.Pack("submitAssertion", *p.PendingAssertion, p.PendingSignature, crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
+			if err != nil {
+				log.Printf("Failed to pack calldata: %v", err)
+				continue
+			}
+			log.Printf("Calldata: %v", calldata)
 			transaction, err := p.TeeModule.SubmitAssertion(p.SettlementAuth, *p.PendingAssertion, p.PendingSignature, crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
 			if err != nil {
 				log.Printf("Failed to submit assertion: %v", err)
@@ -194,6 +205,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				"seqHash: ", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]),
 				"appHash: ", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]),
 				"l1Acc: ", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]),
+				"sendRoot: ", common.BytesToHash(p.PendingAssertion.AppSendRoot[:]),
 			)
 		}
 	}

@@ -138,7 +138,7 @@ func main() {
 	fmt.Println("Trusted input L1StartBatchAcc: ", common.Hash(trustedInput.L1StartBatchAcc))
 	fmt.Println("ready in", time.Since(now))
 	now = time.Now()
-	proveOutput, err := proposer.Prove(ctx, trustedInput)
+	proveOutput, err := proposer.Prove(ctx, trustedInput, true)
 	if err != nil {
 		panic(err)
 	}
