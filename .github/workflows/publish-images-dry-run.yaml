@@ -19,5 +19,5 @@ jobs:
       dry_run: false #TODO - change me back
       runner_label: shared-large-01
       service: "" # all services
-      tags: '["SEQ-1151-test-n01", "SEQ-1151-test-n01-other-tag]'
+      tags: '["SEQ-1151-test-n01", "SEQ-1151-test-n01-other-tag"]'
     secrets: inherit
