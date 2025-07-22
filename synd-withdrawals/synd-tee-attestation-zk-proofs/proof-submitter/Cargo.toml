@@ -30,6 +30,7 @@ tokio                                     = { workspace = true, features = ["mac
 tracing                                   = { workspace = true }
 tracing-subscriber                        = { workspace = true }
 x509-cert                                 = { workspace = true }
+zeroize                                   = { workspace = true }
 
 [dev-dependencies]
 mockito    = { workspace = true }
