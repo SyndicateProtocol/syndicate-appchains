@@ -84,16 +84,14 @@ jobs:
             TAGS_INPUT='["latest"]'
           fi
           
+          echo "Raw tags input: $TAGS_INPUT"
+          
           # Parse JSON array and convert to bash array
-          TAGS_JSON=$(echo "$TAGS_INPUT" | jq -r '.[]')
+          # Use printf to handle the input properly and avoid quote issues
           TAGS_ARRAY=()
           while IFS= read -r tag; do
-            TAGS_ARRAY+=("$tag")
-          done <<< "$TAGS_JSON"
-          
-          # Export for use in subsequent steps
-          printf '%s\n' "${TAGS_ARRAY[@]}" > /tmp/tags_array
-          echo "Parsed tags: ${TAGS_ARRAY[*]}"
+            if [ -n "$tag" ]; then
+              TAGS
 
       - name: Build and push services
         run: |
