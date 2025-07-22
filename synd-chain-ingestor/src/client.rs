@@ -22,13 +22,13 @@ use jsonrpsee::{
 };
 use serde::de::DeserializeOwned;
 use shared::types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock};
+use std::future::Future;
 use std::{
     collections::{HashSet, VecDeque},
     pin::Pin,
     sync::Arc,
     time::Duration,
 };
-use tokio::task::JoinHandle;
 use tracing::info;
 
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
@@ -36,7 +36,6 @@ use tracing::info;
 #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 async fn build_partial_blocks(
     start_block: u64,
-    end_block: u64,
     data: &InitBytes,
     client: &EthClient,
     addrs: Vec<Address>,
@@ -56,6 +55,8 @@ async fn build_partial_blocks(
         });
         parent_hash = hash;
     }
+
+    let end_block = start_block + count - 1;
 
     let mut safe_block = client.get_block_header(BlockNumberOrTag::Latest).await.number;
     if safe_block < start_block {
@@ -141,7 +142,6 @@ async fn build_partial_blocks(
     Ok(blocks)
 }
 
-#[derive(Debug)]
 struct BlockStream<
     S: Stream<Item = Result<Message, serde_json::Error>>,
     Block: GetBlockRef,
@@ -151,8 +151,9 @@ struct BlockStream<
     buffer: VecDeque<Block>,
     block_builder: Arc<B>,
     indexed_block_number: u64,
-    init_data: Option<(EthClient, Vec<Address>)>,
-    init_requests: VecDeque<JoinHandle<Vec<Result<Message, serde_json::Error>>>>,
+    init_data: Option<(EthClient, Vec<Address>, u64)>,
+    init_requests:
+        VecDeque<Pin<Box<dyn Future<Output = Vec<Result<Message, serde_json::Error>>> + Send>>>,
 }
 
 #[allow(missing_docs)]
@@ -166,14 +167,14 @@ impl<
         stream: S,
         block_builder: Arc<B>,
         start_block: u64,
-        init_data: (EthClient, Vec<Address>),
+        init_data: (EthClient, Vec<Address>, Option<u64>),
     ) -> Self {
         Self {
             stream: Box::pin(stream.ready_chunks(1024).peekable()),
             block_builder,
             buffer: Default::default(),
             indexed_block_number: start_block,
-            init_data: Some(init_data),
+            init_data: Some((init_data.0, init_data.1, init_data.2.unwrap_or(100))),
             init_requests: Default::default(),
         }
     }
@@ -187,8 +188,6 @@ pub trait BlockStreamT<Block> {
     /// provided one has arrived.
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block>;
 }
-
-const MAX_INIT_BLOCKS: u64 = 10;
 
 #[async_trait]
 impl<
@@ -205,7 +204,7 @@ impl<
         if init_data.is_some() || self.stream.as_mut().peek().now_or_never().is_some() {
             // fetch initial blocks from the stream
             let mut init_blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
-            if let Some((client, addrs)) = init_data {
+            if let Some((client, addrs, max_blocks_per_request)) = init_data {
                 // remove the first block from the stream, which is a special init message
                 init_blocks.rotate_left(1);
                 let mut init = init_blocks.pop().unwrap()?.init();
@@ -215,42 +214,32 @@ impl<
                 let final_block = start_block + init.count() - 1;
 
                 while start_block < final_block {
-                    let (init_batch, remaining) = init.split_at(MAX_INIT_BLOCKS)?;
-                    let end_block = if remaining.count() > 0 {
-                        start_block + MAX_INIT_BLOCKS - 1
-                    } else {
-                        final_block
-                    };
+                    let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
 
                     let client_clone = client.clone();
                     let addrs_clone = addrs.clone();
 
-                    self.init_requests.push_back(tokio::spawn(async move {
-                        build_partial_blocks(
-                            start_block,
-                            end_block,
-                            &init_batch,
-                            &client_clone,
-                            addrs_clone,
-                        )
-                        .await
-                        .unwrap()
-                        .into_iter()
-                        .map(|x| Ok(Message::Block(x)))
-                        .collect()
+                    self.init_requests.push_back(Box::pin(async move {
+                        build_partial_blocks(start_block, &init_batch, &client_clone, addrs_clone)
+                            .await
+                            .unwrap()
+                            .into_iter()
+                            .map(|x| Ok(Message::Block(x)))
+                            .collect()
                     }));
+                    start_block += max_blocks_per_request;
                     init = remaining;
-                    start_block = end_block + 1;
                 }
 
                 // make sure we don't drop any blocks from the stream
-                let left_over_handle = tokio::spawn(async move { init_blocks });
-                self.init_requests.push_back(left_over_handle);
+                if !init_blocks.is_empty() {
+                    self.init_requests.push_back(Box::pin(async move { init_blocks }));
+                }
             }
         }
 
-        if !self.init_requests.is_empty() {
-            blocks.append(&mut self.init_requests.pop_front().unwrap().await.unwrap());
+        if !self.init_requests.is_empty() && self.buffer.is_empty() {
+            blocks.append(&mut self.init_requests.pop_front().unwrap().await);
         }
 
         loop {
@@ -308,6 +297,7 @@ impl Message {
 }
 
 // Wrapper around a byte slice that represents a list of (timestamp, block hash) pairs.
+#[derive(Debug, Clone, Default)]
 struct InitBytes {
     data: Bytes,
     count: u64,
@@ -342,10 +332,12 @@ impl InitBytes {
 
     // Split the `InitBytes` at the given index into two `InitBytes`
     fn split_at(&self, index: u64) -> Result<(Self, Self), eyre::Error> {
-        let count = index / ITEM_SIZE;
-        let data = self.data.slice(0..(count * ITEM_SIZE) as usize);
-        let remaining = self.data.slice((count * ITEM_SIZE) as usize..);
-        Ok((Self { data, count }, Self { data: remaining, count: self.count - count }))
+        if index > self.count {
+            return Ok((self.clone(), Self::default()));
+        }
+        let data = self.data.slice(0..(index * ITEM_SIZE) as usize);
+        let remaining = self.data.slice((index * ITEM_SIZE) as usize..);
+        Ok((Self { data, count: index }, Self { data: remaining, count: self.count - index }))
     }
 }
 
@@ -397,7 +389,7 @@ pub trait Provider: Sync {
             .await?,
             block_builder,
             start_block,
-            (client, addresses),
+            (client, addresses, None),
         ))
     }
 }

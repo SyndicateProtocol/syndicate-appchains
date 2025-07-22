@@ -20,6 +20,8 @@ pub struct Config {
     pub channel_size: usize,
     #[arg(long, env = "PARALLEL_SYNC_REQUESTS", default_value_t = 190)]
     pub parallel_sync_requests: u64,
+    #[arg(long, env = "MAX_BLOCKS_PER_REQUEST", default_value_t = 100)]
+    pub max_blocks_per_request: u64,
     #[arg(long, env = "PORT", default_value_t = 8545)]
     pub port: u16,
     #[arg(long, env = "METRICS_PORT", default_value_t = 8546)]

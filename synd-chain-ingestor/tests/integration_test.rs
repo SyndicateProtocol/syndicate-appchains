@@ -1,6 +1,5 @@
 //! Integration tests for the synd-chain-ingestor service
 
-use alloy::primitives::address;
 use common::types::SequencingBlock;
 use shared::types::{BlockBuilder, PartialBlock};
 use std::{sync::Arc, time::Duration};
@@ -98,13 +97,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_ingestor_get_blocks() -> eyre::Result<()> {
+        let loop_count = 10;
         let (anvil, _ingestor, ingestor_ws_url) = setup(None).await?;
         let anvil = anvil.unwrap();
 
         let client = IngestorProvider::new(&ingestor_ws_url, Duration::from_secs(10)).await;
 
-        let _ = mine_block(&anvil.provider, 1).await?;
-        let _ = mine_block(&anvil.provider, 1).await?;
+        for _ in 0..loop_count {
+            let _ = mine_block(&anvil.provider, 1).await?;
+        }
 
         let eth_client = EthClient::new(
             vec![anvil.ws_url.clone()],
@@ -118,45 +119,10 @@ mod tests {
         let mut block_stream =
             client.get_blocks(1, vec![], Arc::new(MockBlockBuilder), eth_client).await?;
 
-        let block = block_stream.recv(0).await?;
-        assert_eq!(block.block_ref.number, 1);
-        let block = block_stream.recv(0).await?;
-        assert_eq!(block.block_ref.number, 2);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn test_live_huge_block_stream() -> eyre::Result<()> {
-        let real_rpc_url = ""; // Put real rpc url here when running test
-        let start_block = 87801;
-
-        let (_, _ingestor, ingestor_ws_url) =
-            setup(Some((real_rpc_url.to_string(), start_block))).await?;
-
-        let client = IngestorProvider::new(&ingestor_ws_url, Duration::from_secs(10)).await;
-
-        sleep(Duration::from_secs(10)).await;
-
-        let eth_client = EthClient::new(
-            vec![real_rpc_url.to_string()],
-            Duration::from_secs(10),
-            Duration::from_secs(100),
-            1024,
-            Duration::from_secs(1),
-        )
-        .await;
-
-        let seq_address = address!("0xC54425843485f460EDcD45fB6B7b9b84966C0A20");
-
-        let mut block_stream = client
-            .get_blocks(start_block, vec![seq_address], Arc::new(MockBlockBuilder), eth_client)
-            .await?;
-
-        let block = tokio::time::timeout(Duration::from_secs(60), block_stream.recv(0)).await??;
-
-        assert_ne!(block.block_ref.number, start_block);
+        for i in 1..=loop_count {
+            let block = block_stream.recv(0).await?;
+            assert_eq!(block.block_ref.number, i);
+        }
 
         Ok(())
     }
