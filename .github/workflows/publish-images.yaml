@@ -5,6 +5,9 @@
 name: Publish Service Images
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       service:
@@ -96,8 +99,8 @@ jobs:
               --push=${{ !inputs.dry_run }} \
               --target "$service" \
               --tag "${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$TAG" \
-              --cache-from type=gha \
-              --cache-to type=gha,mode=max \
+              --cache-from type=gha,scope=$service \
+              --cache-to type=gha,mode=max,scope=$service \
               .
           done
 
@@ -117,7 +120,7 @@ jobs:
             --push=${{ !inputs.dry_run }} \
             --target test-image \
             --tag ${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/synd-enclave-test:$TAG \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
+            --cache-from type=gha,scope=synd-enclave-test \
+            --cache-to type=gha,mode=max,scope=synd-enclave-test \
             -f ./synd-withdrawals/synd-enclave/Dockerfile \
             ./synd-withdrawals/synd-enclave/
