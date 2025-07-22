@@ -126,7 +126,8 @@ jobs:
     timeout-minutes: 45
     env:
       # Use latest Docker images for withdrawals e2e tests instead of building from source
-      SYND_ENCLAVE_TAG: latest
+      # TODO change to latest
+      SYND_ENCLAVE_TAG: v0.10.6-dev.1
       SYND_PROPOSER_TAG: latest
 
     steps:
@@ -173,9 +174,9 @@ jobs:
           docker pull ghcr.io/syndicateprotocol/generate_batch
           docker pull valkey/valkey:latest
           docker pull ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
-          docker pull ghcr.io/layr-labs/eigenda-proxy:latest@sha256:dc5564dc557e3d349e38bdcb48cad2b31a16f185216e9e3f25796a5b966de5e9
-          docker pull ghcr.io/syndicateprotocol/synd-enclave-test:latest
-          docker pull ghcr.io/syndicateprotocol/synd-proposer:latest
+          docker pull ghcr.io/layr-labs/eigenda-proxy:2.1.0-rc.2@sha256:ed208a7cb8e31e5dd0f5c2340b6a6f9b9570f065da2659813b207c1206c65ce8
+          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:latest
+          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-enclave-test:v0.10.6-dev.1
 
       - name: Install nextest
         uses: taiki-e/install-action@nextest

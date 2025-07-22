@@ -463,7 +463,8 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
             "local-dev".to_string()
         }
     };
-    let image_name = format!("ghcr.io/syndicateprotocol/synd-enclave-test:{tag}");
+    let image_name =
+        format!("ghcr.io/syndicateprotocol/syndicate-appchains/synd-enclave-test:{tag}");
 
     if needs_build {
         info!("building enclave server docker image - NOTE: this may take a while");
@@ -538,7 +539,7 @@ pub async fn start_eigenda_proxy() -> Result<(E2EProcess, String)> {
             .arg("--rm")
             .arg("-p")
             .arg(format!("{port}:{port}"))
-            .arg("ghcr.io/layr-labs/eigenda-proxy:latest@sha256:dc5564dc557e3d349e38bdcb48cad2b31a16f185216e9e3f25796a5b966de5e9")
+            .arg("ghcr.io/layr-labs/eigenda-proxy:2.1.0-rc.2@sha256:ed208a7cb8e31e5dd0f5c2340b6a6f9b9570f065da2659813b207c1206c65ce8")
             .arg("--memstore.enabled")
             .arg("--eigenda.disable-tls=true")
             .arg("--eigenda.response-timeout=60m")
