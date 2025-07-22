@@ -128,7 +128,7 @@ jobs:
       # Use latest Docker images for withdrawals e2e tests instead of building from source
       # TODO change to latest
       SYND_ENCLAVE_TAG: v0.10.6-dev.1
-      SYND_PROPOSER_TAG: latest
+      SYND_PROPOSER_TAG: v0.10.6-dev.1
 
     steps:
       - uses: actions/checkout@v4
