@@ -1,5 +1,5 @@
 # This workflow runs on PRs to `main` to confirm that all Docker images will build successfully. It does not actually push the images to the registry.
-# It does not actually publish the images anywhere.
+# It does NOT publish the images anywhere.
 
 name: Publish Service Images (Dry Run)
 
@@ -16,7 +16,8 @@ jobs:
   docker:
     uses: ./.github/workflows/publish-images.yaml
     with:
-      dry_run: true
+      dry_run: false #TODO - change me back
       runner_label: shared-large-01
       service: "" # all services
+      tags: "['SEQ-1151-test-n01']"
     secrets: inherit

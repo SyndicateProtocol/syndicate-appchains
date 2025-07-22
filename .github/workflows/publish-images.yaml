@@ -1,13 +1,10 @@
 # This workflow builds and publishes all Docker images to our container registry.
-# By default it publishes the `latest` tag, but you can specify a different tag to use.
+# By default it publishes the `latest` tag, but you can specify different tags to use.
 # You can also specify a service to build and publish, or leave blank to build and publish all services.
 
 name: Publish Service Images
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       service:
@@ -24,11 +21,11 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
-      tag:
-        description: "Tag to use for the image"
+      tags:
+        description: "Tags to use (string of JSON array)"
         required: false
         type: string
-        default: "latest"
+        default: "['latest']"
   workflow_call:
     inputs:
       service:
@@ -43,11 +40,11 @@ on:
         type: string
         default: "ubuntu-latest"
         description: "Which runner label(s) to use"
-      tag:
+      tags:
         required: false
         type: string
-        default: "latest"
-        description: "Tag to use for the image"
+        default: "['latest']"
+        description: "Tags to use (JSON array)"
 
 env:
   GITHUB_REGISTRY: ghcr.io
@@ -79,6 +76,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Parse image tags
+        id: parse_tags
+        run: |
+          TAGS_INPUT='${{ inputs.tags }}'
+          if [ -z "$TAGS_INPUT" ] || [ "$TAGS_INPUT" = "null" ]; then
+            TAGS_INPUT='["latest"]'
+          fi
+          
+          # Parse JSON array and convert to bash array
+          TAGS_JSON=$(echo "$TAGS_INPUT" | jq -r '.[]')
+          TAGS_ARRAY=()
+          while IFS= read -r tag; do
+            TAGS_ARRAY+=("$tag")
+          done <<< "$TAGS_JSON"
+          
+          # Export for use in subsequent steps
+          printf '%s\n' "${TAGS_ARRAY[@]}" > /tmp/tags_array
+          echo "Parsed tags: ${TAGS_ARRAY[*]}"
+
       - name: Build and push services
         run: |
           if [ -z "${{ inputs.service }}" ]; then
@@ -87,18 +103,23 @@ jobs:
             SERVICES=("${{ inputs.service }}")
           fi
 
-          TAG="${{ inputs.tag }}"
-          if [ -z "$TAG" ]; then
-            TAG="latest"
-          fi
+          # Read tags from file
+          readarray -t TAGS < /tmp/tags_array
 
           for service in "${SERVICES[@]}"; do
-            echo "Building $service..."
+            echo "Building $service with tags: ${TAGS[*]}"
+          
+            # Build tag arguments for docker buildx
+            TAG_ARGS=""
+            for tag in "${TAGS[@]}"; do
+              TAG_ARGS="$TAG_ARGS --tag ${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$tag"
+            done
+
             docker buildx build \
               --platform linux/amd64 \
               --push=${{ !inputs.dry_run }} \
               --target "$service" \
-              --tag "${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$TAG" \
+              $TAG_ARGS \
               --cache-from type=gha \
               --cache-to type=gha,mode=max \
               .
