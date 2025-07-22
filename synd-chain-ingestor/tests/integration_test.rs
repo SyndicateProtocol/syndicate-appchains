@@ -118,9 +118,9 @@ mod tests {
         .await;
 
         let mut block_stream =
-            client.get_blocks(1, vec![], Arc::new(MockBlockBuilder), eth_client).await?;
+            client.get_blocks(5, vec![], Arc::new(MockBlockBuilder), eth_client).await?;
 
-        for i in 1..=loop_count {
+        for i in 5..=loop_count {
             let block = block_stream.recv(0).await?;
             assert_eq!(block.block_ref.number, i);
         }

@@ -47,7 +47,7 @@ async fn build_partial_blocks(
     }
     let mut parent_hash = data.get_item(0)?.1;
     for i in start_block..start_block + count {
-        let (timestamp, hash) = data.get_item(i - start_block)?;
+        let (timestamp, hash) = data.get_item(i + 1 - start_block)?;
         blocks.push(PartialBlock {
             block_ref: BlockRef { number: i, timestamp, hash },
             parent_hash,
@@ -157,6 +157,8 @@ struct BlockStream<
         VecDeque<Pin<Box<dyn Future<Output = Vec<Result<Message, serde_json::Error>>> + Send>>>,
 }
 
+const DEFAULT_MAX_BLOCKS_PER_REQUEST: u64 = 10;
+
 #[allow(missing_docs)]
 impl<
         S: Stream<Item = Result<Message, serde_json::Error>> + Send + 'static,
@@ -175,7 +177,11 @@ impl<
             block_builder,
             buffer: Default::default(),
             indexed_block_number: start_block,
-            init_data: Some((init_data.0, init_data.1, init_data.2.unwrap_or(100))),
+            init_data: Some((
+                init_data.0,
+                init_data.1,
+                init_data.2.unwrap_or(DEFAULT_MAX_BLOCKS_PER_REQUEST),
+            )),
             init_requests: Default::default(),
         }
     }
@@ -322,7 +328,7 @@ impl InitBytes {
 
     // Get the (timestamp, block hash) pair at the given index
     fn get_item(&self, index: u64) -> Result<(u64, B256), eyre::Error> {
-        if index >= self.count {
+        if index > self.count {
             return Err(eyre!("index out of bound"));
         }
         let offset = (index * ITEM_SIZE) as usize;
@@ -333,12 +339,12 @@ impl InitBytes {
 
     // Split the `InitBytes` at the given index into two `InitBytes`
     fn split_at(&self, index: u64) -> Result<(Self, Self), eyre::Error> {
-        if index > self.count {
+        if index >= self.count {
             return Ok((self.clone(), Self::default()));
         }
-        let data = self.data.slice(0..(index * ITEM_SIZE) as usize);
+        let data = self.data.slice(0..((index + 1) * ITEM_SIZE) as usize);
         let remaining = self.data.slice((index * ITEM_SIZE) as usize..);
-        Ok((Self { data, count: index }, Self { data: remaining, count: self.count - index }))
+        Ok((Self::new(data), Self::new(remaining)))
     }
 }
 
