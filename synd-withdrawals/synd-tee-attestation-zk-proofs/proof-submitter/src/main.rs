@@ -44,6 +44,7 @@ use synd_tee_attestation_zk_proofs_submitter::{
 };
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
+use zeroize::{Zeroize, Zeroizing};
 
 /// The arguments for the command.
 #[derive(Parser, Debug)]
@@ -73,7 +74,7 @@ pub struct Args {
     /// The private key to submit the proof
     /// (if missing, on-chain submission will be skipped)
     #[arg(long)]
-    private_key: Option<String>,
+    private_key: Option<Zeroizing<String>>,
 
     #[arg(long)]
     elf_file_path: Option<PathBuf>,
@@ -147,12 +148,13 @@ async fn run(
     );
 
     match (args.chain_rpc_url, args.private_key, args.contract_address) {
-        (Some(chain_rpc_url), Some(private_key), Some(contract_address)) => {
+        (Some(chain_rpc_url), Some(mut private_key), Some(contract_address)) => {
             let signer = PrivateKeySigner::from_str(&private_key)?;
             let provider = ProviderBuilder::new()
                 .wallet(EthereumWallet::from(signer))
                 .connect(chain_rpc_url.as_str())
                 .await?;
+            private_key.zeroize(); // zeroize the private key after use
             let contract = TeeKeyManager::new(contract_address, provider);
 
             // assert our ELF file matches the contract's vkey before generating the proof
@@ -355,7 +357,7 @@ mod tests {
             proof_system: ProofSystem::Groth16,
             contract_address: Some(*key_mgr_contract.address()),
             chain_rpc_url: Some(chain_info.ws_url.to_string()),
-            private_key: Some(PRIVATE_KEY.to_string()),
+            private_key: Some(Zeroizing::new(PRIVATE_KEY.to_string())),
             elf_file_path: None,
         };
 
