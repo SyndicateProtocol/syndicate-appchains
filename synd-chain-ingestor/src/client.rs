@@ -22,9 +22,9 @@ use jsonrpsee::{
 };
 use serde::de::DeserializeOwned;
 use shared::types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock};
-use std::future::Future;
 use std::{
     collections::{HashSet, VecDeque},
+    future::Future,
     pin::Pin,
     sync::Arc,
     time::Duration,
@@ -152,6 +152,7 @@ struct BlockStream<
     block_builder: Arc<B>,
     indexed_block_number: u64,
     init_data: Option<(EthClient, Vec<Address>, u64)>,
+    #[allow(clippy::type_complexity)]
     init_requests:
         VecDeque<Pin<Box<dyn Future<Output = Vec<Result<Message, serde_json::Error>>> + Send>>>,
 }

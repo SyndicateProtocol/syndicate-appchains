@@ -38,6 +38,7 @@ mod tests {
         shared::tracing::setup_global_logging();
     }
 
+    #[allow(clippy::cognitive_complexity)]
     async fn setup(
         chain_rpc_url: Option<(String, u64)>,
     ) -> eyre::Result<(Option<ChainInfo>, E2EProcess, String)> {
@@ -104,7 +105,7 @@ mod tests {
         let client = IngestorProvider::new(&ingestor_ws_url, Duration::from_secs(10)).await;
 
         for _ in 0..loop_count {
-            let _ = mine_block(&anvil.provider, 1).await?;
+            mine_block(&anvil.provider, 1).await?;
         }
 
         let eth_client = EthClient::new(
