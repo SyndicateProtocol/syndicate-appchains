@@ -194,7 +194,9 @@ pub async fn start_component(
                     .arg("--init")
                     .arg("--rm")
                     .arg("--net=host")
-                    .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
+                    .arg(format!(
+                        "ghcr.io/syndicateprotocol/syndicate-appchains/{executable_name}:{tag}"
+                    ))
                     .args(args),
                 executable_name,
             )
