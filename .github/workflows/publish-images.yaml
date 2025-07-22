@@ -86,12 +86,21 @@ jobs:
           
           echo "Raw tags input: $TAGS_INPUT"
           
+          # Convert single quotes to double quotes for valid JSON if needed
+          TAGS_JSON_FIXED=$(echo "$TAGS_INPUT" | sed "s/'/\"/g")
+          echo "Fixed JSON: $TAGS_JSON_FIXED"
+          
           # Parse JSON array and convert to bash array
-          # Use printf to handle the input properly and avoid quote issues
           TAGS_ARRAY=()
           while IFS= read -r tag; do
             if [ -n "$tag" ]; then
-              TAGS
+              TAGS_ARRAY+=("$tag")
+            fi
+          done <<< "$(echo "$TAGS_JSON_FIXED" | jq -r '.[]')"
+          
+          # Export for use in subsequent steps
+          printf '%s\n' "${TAGS_ARRAY[@]}" > /tmp/tags_array
+          echo "Parsed tags: ${TAGS_ARRAY[*]}"
 
       - name: Build and push services
         run: |
