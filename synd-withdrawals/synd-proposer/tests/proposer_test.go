@@ -84,10 +84,9 @@ func TestServerEndpoints(t *testing.T) {
 	err = server.Start(ctx)
 	require.NoError(t, err)
 
-	// Run proposer with server, allow it to fail
+	// Run proposer with server, allow connections to fail
 	go server.RunProposer(ctx, dummyCfg, server)
 
-	// Wait for server to be ready
 	baseURL := fmt.Sprintf("http://localhost:%d", dummyCfg.Port)
 
 	tests := []struct {
