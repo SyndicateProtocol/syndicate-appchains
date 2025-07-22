@@ -25,7 +25,7 @@ on:
         description: "Tags to use (string of JSON array)"
         required: false
         type: string
-        default: "['latest']"
+        default: '["latest"]'
   workflow_call:
     inputs:
       service:
@@ -43,7 +43,7 @@ on:
       tags:
         required: false
         type: string
-        default: "['latest']"
+        default: '["latest"]'
         description: "Tags to use (JSON array)"
 
 env:
