@@ -201,7 +201,9 @@ pub async fn start_component(
                 executable_name,
             )
         } else if executable_name == "synd-proposer" {
-            launch_proposer(args).await
+            let proposer_mode =
+                if cfg!(target_os = "macos") { ProposerMode::Go } else { ProposerMode::Docker };
+            launch_proposer(args, proposer_mode).await
         } else {
             let mut cmd = Command::new("cargo");
             // ring has a custom build.rs script that rebuilds whenever certain environment
@@ -228,19 +230,66 @@ pub async fn start_component(
     Ok(docker)
 }
 
-pub async fn launch_proposer(args: Vec<String>) -> Result<E2EProcess> {
-    ensure_nitro_node_deps().await?;
-    // Synd-proposer is a Go service, so we need to use the Go command to run it
-    let mut cmd = Command::new("go");
-    let project_root = env!("CARGO_WORKSPACE_DIR");
-    let proposer_dir = Path::new(project_root)
-        .join("synd-withdrawals/synd-proposer")
-        .to_string_lossy()
-        .to_string();
-    cmd.current_dir(proposer_dir);
-    cmd.arg("run").arg("./cmd/synd-proposer");
-    cmd.args(args);
-    E2EProcess::new(&mut cmd, "synd-proposer")
+pub enum ProposerMode {
+    Docker,
+    Go,
+}
+
+pub async fn launch_proposer(args: Vec<String>, mode: ProposerMode) -> Result<E2EProcess> {
+    match mode {
+        ProposerMode::Docker => {
+            let image_name =
+                "ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:dev".to_string();
+            let project_root = env!("CARGO_WORKSPACE_DIR");
+            let build_status = E2EProcess::new(
+                Command::new("docker")
+                    .arg("buildx")
+                    .arg("build")
+                    .arg("--load")
+                    .arg(project_root)
+                    .arg("--tag")
+                    .arg(&image_name)
+                    .arg("--platform=linux/amd64")
+                    .arg("--target")
+                    .arg("synd-proposer"),
+                "building-synd-proposer",
+            )?
+            .wait()
+            .await?;
+
+            if !build_status.success() {
+                return Err(eyre::eyre!(
+                    "failed to build synd-proposer docker image. Exit status: {}",
+                    build_status
+                ));
+            };
+
+            E2EProcess::new(
+                Command::new("docker")
+                    .arg("run")
+                    .arg("--init")
+                    .arg("--rm")
+                    .arg("--net=host")
+                    .arg(&image_name)
+                    .args(args),
+                "synd-proposer",
+            )
+        }
+        ProposerMode::Go => {
+            ensure_nitro_node_deps().await?;
+            // Synd-proposer is a Go service, so we need to use the Go command to run it
+            let mut cmd = Command::new("go");
+            let project_root = env!("CARGO_WORKSPACE_DIR");
+            let proposer_dir = Path::new(project_root)
+                .join("synd-withdrawals/synd-proposer")
+                .to_string_lossy()
+                .to_string();
+            cmd.current_dir(proposer_dir);
+            cmd.arg("run").arg("./cmd/synd-proposer");
+            cmd.args(args);
+            E2EProcess::new(&mut cmd, "synd-proposer")
+        }
+    }
 }
 
 pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2EProcess) {
