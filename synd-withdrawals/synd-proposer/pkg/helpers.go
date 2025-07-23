@@ -117,7 +117,6 @@ func getBatchPreimageData(
 	batch []byte,
 	dapReaders []daprovider.Reader,
 	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
-	settlesToArbitrumRollup bool,
 ) error {
 	if len(batch) > 40 {
 		for _, dapReader := range dapReaders {
