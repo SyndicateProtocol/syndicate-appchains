@@ -104,20 +104,3 @@ jobs:
           echo "Pruning buildx and system..."
           docker buildx prune --all --force
           docker system prune --all --volumes --force
-
-      - name: Build and push enclave test image
-        run: |
-          TAG="${{ inputs.tag }}"
-          if [ -z "$TAG" ]; then
-            TAG="latest"
-          fi
-
-          docker buildx build \
-            --platform linux/amd64 \
-            --push=${{ !inputs.dry_run }} \
-            --target test-image \
-            --tag ${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/synd-enclave-test:$TAG \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            -f ./synd-withdrawals/synd-enclave/Dockerfile \
-            ./synd-withdrawals/synd-enclave/
