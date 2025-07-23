@@ -28,16 +28,16 @@ contract DeployTeeModule is Script {
                 vm.envAddress("SP1_VERIFIER_ADDRESS"), // https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/deployments/84532.json
                 vm.envBytes32("ATTESTATION_DOC_VERIFIER_V_KEY"), // cargo run --release --bin vkey
                 vm.envBytes32("ROOT_CERT_HASH"), // https://github.com/SyndicateProtocol/syndicate-appchains/blob/7e148d3b7118786f30ae0b1d22339b888edaf8e9/synd-contracts/test/withdrawal/fixtures/groth16-fixture.json
-                keccak256(vm.envBytes("PCR_0")), // Get from TEE
-                keccak256(vm.envBytes("PCR_1")), // Get from TEE
-                keccak256(vm.envBytes("PCR_2")), // Get from TEE
-                keccak256(vm.envBytes("PCR_8")), // Get from TEE
+                keccak256(vm.envBytes("PCR_0")),
+                keccak256(vm.envBytes("PCR_1")),
+                keccak256(vm.envBytes("PCR_2")),
                 uint64(vm.envUint("EXPIRATION_TOLERANCE")) // Arbitrary value, usually 24h
             );
             console2.log("Attestation doc verifier deployed to:", address(attestationDocVerifier));
         }
         // 2. Deploy the key manager
         TeeKeyManager keyManager = new TeeKeyManager(attestationDocVerifier);
+        console2.log("Key manager deployed to:", address(keyManager));
 
         // 3. Deploy the assertion poster
         address assertionPosterAddress = vm.envOr("ASSERTION_POSTER_ADDRESS", address(0));
@@ -49,6 +49,7 @@ contract DeployTeeModule is Script {
             console2.log("Deploying assertion poster...");
             IRollup rollup = IRollup(vm.envAddress("ROLLUP_CONTRACT_ADDRESS"));
             poster = new AssertionPoster(rollup);
+            console2.log("Assertion poster deployed to:", address(poster));
         }
 
         // 4. Deploy the tee module

@@ -17,7 +17,6 @@ struct SP1ProofFixtureJson {
     bytes32 pcr0;
     bytes32 pcr1;
     bytes32 pcr2;
-    bytes32 pcr8;
 }
 
 abstract contract BaseAttestationDocVerifierTest is Test {
@@ -39,7 +38,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         fixture.pcr0 = json.readBytes32(".pcr0");
         fixture.pcr1 = json.readBytes32(".pcr1");
         fixture.pcr2 = json.readBytes32(".pcr2");
-        fixture.pcr8 = json.readBytes32(".pcr8");
 
         return fixture;
     }
@@ -58,14 +56,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         gateway.addRoute(sp1Verifier);
 
         attestationDocVerifier = new AttestationDocVerifier(
-            address(gateway),
-            fixture.vkey,
-            fixture.rootCertHash,
-            fixture.pcr0,
-            fixture.pcr1,
-            fixture.pcr2,
-            fixture.pcr8,
-            0
+            address(gateway), fixture.vkey, fixture.rootCertHash, fixture.pcr0, fixture.pcr1, fixture.pcr2, 0
         );
     }
 
@@ -187,13 +178,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         modifiedPublicValues = abi.encode(publicValues);
         vm.expectRevert("PCR2 mismatch");
         attestationDocVerifier.verifyAttestationDocProof(modifiedPublicValues, fixture.proof);
-
-        // Reset and test PCR8 mismatch
-        publicValues = abi.decode(fixture.publicValues, (PublicValuesStruct));
-        publicValues.pcr_8 = bytes32(uint256(0xdeadbeef));
-        modifiedPublicValues = abi.encode(publicValues);
-        vm.expectRevert("PCR8 mismatch");
-        attestationDocVerifier.verifyAttestationDocProof(modifiedPublicValues, fixture.proof);
     }
 
     function testConstructorWithZeroExpirationTolerance() public virtual {
@@ -207,7 +191,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            fixture.pcr8,
             0 // zero expiration tolerance
         );
 
@@ -237,7 +220,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            fixture.pcr8,
             largeExpiration
         );
 

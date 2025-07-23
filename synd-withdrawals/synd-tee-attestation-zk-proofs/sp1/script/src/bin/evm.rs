@@ -44,7 +44,6 @@ struct SP1x509ProofFixture {
     pcr_0: String,
     pcr_1: String,
     pcr_2: String,
-    pcr_8: String,
 }
 
 fn main() {
@@ -101,7 +100,6 @@ fn create_proof_fixture(
         pcr_0: format!("0x{}", hex::encode(pub_values.pcr_0)),
         pcr_1: format!("0x{}", hex::encode(pub_values.pcr_1)),
         pcr_2: format!("0x{}", hex::encode(pub_values.pcr_2)),
-        pcr_8: format!("0x{}", hex::encode(pub_values.pcr_8)),
     };
 
     // The verification key is used to verify that the proof corresponds to the execution of the

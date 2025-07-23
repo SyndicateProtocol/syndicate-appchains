@@ -294,7 +294,6 @@ mod tests {
             pcr0: String,
             pcr1: String,
             pcr2: String,
-            pcr8: String,
         }
 
         let fixture_str = include_str!(
@@ -307,7 +306,6 @@ mod tests {
         let pcr0 = FixedBytes::from_str(&fixture.pcr0).unwrap();
         let pcr1 = FixedBytes::from_str(&fixture.pcr1).unwrap();
         let pcr2 = FixedBytes::from_str(&fixture.pcr2).unwrap();
-        let pcr8 = FixedBytes::from_str(&fixture.pcr8).unwrap();
 
         let proof_bytes =
             hex::decode(fixture.proof.strip_prefix("0x").unwrap_or(&fixture.proof)).unwrap();
@@ -325,7 +323,6 @@ mod tests {
             pcr0,
             pcr1,
             pcr2,
-            pcr8,
             expiration_tolerance,
         )
         .await
