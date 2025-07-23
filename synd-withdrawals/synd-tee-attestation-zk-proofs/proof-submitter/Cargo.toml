@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 
 [dependencies]
-alloy                                     = { workspace = true, features = ["contract", "signer-local", "signers"] }
+alloy                                     = { workspace = true, features = ["contract", "provider-ws", "signer-local", "signers"] }
 clap                                      = { workspace = true, features = ["derive"] }
 contract-bindings                         = { workspace = true }
 jsonrpsee                                 = { workspace = true, features = ["http-client"] }
@@ -27,7 +27,10 @@ synd-tee-attestation-zk-proofs-aws-nitro  = { workspace = true }
 synd-tee-attestation-zk-proofs-sp1-script = { workspace = true }
 thiserror                                 = { workspace = true }
 tokio                                     = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tracing                                   = { workspace = true }
+tracing-subscriber                        = { workspace = true }
 x509-cert                                 = { workspace = true }
+zeroize                                   = { workspace = true }
 
 [dev-dependencies]
 mockito    = { workspace = true }

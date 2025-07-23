@@ -25,7 +25,6 @@ pub fn main() {
         pcr_0,
         pcr_1,
         pcr_2,
-        pcr_8,
     } = verify_aws_nitro_attestation(&cbor_encoded_attestation_document, &der_encoded_root_cert)
         .expect("Invalid attestation document");
 
@@ -38,7 +37,6 @@ pub fn main() {
         pcr_0: keccak256(&pcr_0),
         pcr_1: keccak256(&pcr_1),
         pcr_2: keccak256(&pcr_2),
-        pcr_8: keccak256(&pcr_8),
     });
 
     // Commit to the public values of the program. The final proof will have a commitment to all the

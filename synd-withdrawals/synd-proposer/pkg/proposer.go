@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -145,10 +144,19 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 	}
 }
 
+var ARB_SYS_PRECOMPILE_ADDRESS = common.HexToAddress("0x0000000000000000000000000000000000000064")
+
 // PollingLoop runs the polling background process.
 func (p *Proposer) pollingLoop(ctx context.Context) {
 	ticker := time.NewTicker(p.Config.PollingInterval)
-	defer ticker.Stop()
+	// check if the appchain settles to an arbitrum rollup by querying the code at ArbSys precompile address
+	code, err := p.SettlementClient.CodeAt(ctx, ARB_SYS_PRECOMPILE_ADDRESS, nil)
+	if err != nil {
+		log.Printf("Failed to get code at ArbSys precompile address: %v", err)
+	}
+	settlesToArbitrumRollup := len(code) > 0
+	log.Printf("settlesToArbitrumRollup: %v", settlesToArbitrumRollup)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -164,9 +172,10 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 			if p.PendingTeeInputHash != trustedInput.Hash() {
 				log.Println("Proving new assertion...")
-				appOutput, err := p.Prove(ctx, trustedInput)
+				appOutput, err := p.Prove(ctx, trustedInput, settlesToArbitrumRollup)
 				if err != nil {
 					log.Printf("Failed to prove: %v", err)
+					continue
 				}
 
 				p.PendingAssertion = &appOutput.PendingAssertion
@@ -179,7 +188,13 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				log.Printf("Failed to submit assertion: %v", err)
 				continue
 			}
-			log.Println("Submitted assertion: ", transaction.Hash())
+
+			log.Println(
+				"Submitted assertion: ", transaction.Hash(),
+				"seqHash: ", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]),
+				"appHash: ", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]),
+				"l1Acc: ", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]),
+			)
 		}
 	}
 }
@@ -191,11 +206,14 @@ func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, 
 	}
 	trustedInput := enclave.TrustedInput(contractTrustedInput)
 
-	jsonInput, err := json.Marshal(contractTrustedInput)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal trusted input: %v", err)
-	}
-	log.Println("Trusted input: ", string(jsonInput))
+	log.Println("Trusted input: ",
+		"appchainBlockHash", common.BytesToHash(trustedInput.AppStartBlockHash[:]),
+		"seqStartBlockHash", common.BytesToHash(trustedInput.SeqStartBlockHash[:]),
+		"l1StartBatchAcc", common.BytesToHash(trustedInput.L1StartBatchAcc[:]),
+		"l1EndHash", common.BytesToHash(trustedInput.L1EndHash[:]),
+		"setDelayedMessageAcc", common.BytesToHash(trustedInput.SetDelayedMessageAcc[:]),
+		"l1StartBatchAcc", common.BytesToHash(trustedInput.L1StartBatchAcc[:]),
+	)
 	return &trustedInput, nil
 }
 
@@ -218,7 +236,11 @@ func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint6
 	return batchCount, nil
 }
 
-func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput) (*enclave.VerifyAppchainOutput, error) {
+func (p *Proposer) Prove(
+	ctx context.Context,
+	trustedInput *enclave.TrustedInput,
+	settlesToArbitrumRollup bool,
+) (*enclave.VerifyAppchainOutput, error) {
 	// get trusted input
 	if trustedInput == nil {
 		var err error
@@ -276,7 +298,7 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 		}
 		// update preimages
 		for _, batch := range batches {
-			if err := getBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
+			if err := getBatchPreimageData(ctx, batch, p.DapReaders, preimages, settlesToArbitrumRollup); err != nil {
 				return nil, fmt.Errorf("failed to get batch preimage data: %v", err)
 			}
 		}
@@ -291,8 +313,17 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 		}
 
 		// get merkle proof
-		accSlot := common.BigToHash(new(big.Int).Add(enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE, big.NewInt(int64(endBatchCount))))
-		if err := p.EthereumClient.Client().CallContext(ctx, &proof, "eth_getProof", p.Config.EnclaveConfig.SequencingBridgeAddress, []common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot}, trustedInput.L1EndHash); err != nil {
+		accSlot := common.BigToHash(new(big.Int).Add(
+			enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE,
+			big.NewInt(int64(endBatchCount)),
+		))
+		if err := p.EthereumClient.Client().CallContext(ctx,
+			&proof,
+			"eth_getProof",
+			p.Config.EnclaveConfig.SequencingBridgeAddress,
+			[]common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot},
+			common.Hash(trustedInput.L1EndHash),
+		); err != nil {
 			return nil, fmt.Errorf("failed to get proof: %v", err)
 		}
 	}
@@ -321,11 +352,22 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 
 	// get appchain start block
 	if header, err = p.AppchainClient.HeaderByHash(ctx, trustedInput.AppStartBlockHash); err != nil {
-		return nil, fmt.Errorf("failed to get appchain header: %v", err)
+		return nil, fmt.Errorf(
+			"failed to get appchain header, hash: %v, err: %v",
+			common.BytesToHash(trustedInput.AppStartBlockHash[:]),
+			err,
+		)
 	}
 
 	// get delayed messages
-	startAcc, msgs, isDummy, err := GetDelayedMessages(ctx, p.SettlementClient, p.Config.AppchainBridgeAddress, header.Nonce.Uint64(), trustedInput.SetDelayedMessageAcc)
+	startAcc, msgs, isDummy, err := GetDelayedMessages(
+		ctx,
+		p.SettlementClient,
+		p.Config.AppchainBridgeAddress,
+		header.Nonce.Uint64(),
+		trustedInput.SetDelayedMessageAcc,
+		settlesToArbitrumRollup,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get delayed messages: %v", err)
 	}
@@ -354,7 +396,8 @@ func (p *Proposer) Prove(ctx context.Context, trustedInput *enclave.TrustedInput
 		VerifySequencingChainOutput:     seqOutput,
 		AppStartBlockHeader:             *header,
 		PreimageData: map[arbutil.PreimageType][][]byte{
-			arbutil.Keccak256PreimageType: appPreimages},
+			arbutil.Keccak256PreimageType: appPreimages,
+		},
 	}); err != nil {
 		return nil, fmt.Errorf("failed to verify appchain: %v", err)
 	}

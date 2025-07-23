@@ -44,12 +44,12 @@ use synd_mchain::{
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args},
     chain_info::{
-        test_account1, test_account2, test_account3, ChainInfo, ProcessInstance, PRIVATE_KEY,
-        PRIVATE_KEY2, PRIVATE_KEY3,
+        test_account1, test_account3, test_account8, test_account9, ChainInfo, ProcessInstance,
+        PRIVATE_KEY, PRIVATE_KEY8, PRIVATE_KEY9,
     },
     docker::{
-        launch_nitro_node, start_component, start_mchain, start_valkey, E2EProcess, NitroNodeArgs,
-        NitroSequencerMode,
+        launch_nitro_node, start_component, start_eigenda_proxy, start_mchain, start_valkey,
+        E2EProcess, NitroNodeArgs, NitroSequencerMode,
     },
     nitro_chain::{deploy_nitro_rollup, NitroDeployment},
     port_manager::PortManager,
@@ -71,6 +71,7 @@ struct ComponentHandles {
     translator: E2EProcess,
     sequencing_chain_ingestor: E2EProcess,
     settlement_chain_ingestor: E2EProcess,
+    eigenda_proxy: Option<E2EProcess>,
 
     // Write loop
     batch_sequencer: Option<E2EProcess>,
@@ -90,11 +91,13 @@ pub struct TestComponents {
 
     /// Sequencing
     pub sequencing_provider: FilledProvider,
+    pub sequencing_ingestor_rpc_url: String,
     pub sequencing_rpc_url: String,
     pub sequencing_contract: SyndicateSequencingChainInstance<FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
+    pub settlement_ingestor_rpc_url: String,
     pub settlement_rpc_url: String,
     pub assertion_poster_address: Address,
 
@@ -115,6 +118,8 @@ pub struct TestComponents {
 
     #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
+
+    pub eigenda_proxy_url: Option<String>,
 }
 
 pub const SEQUENCING_CHAIN_ID: u64 = 15;
@@ -135,6 +140,7 @@ impl TestComponents {
             e = handles.sequencing_chain_ingestor.wait() => panic!("sequencing ingestor died: {:#?}", e),
             e = handles.settlement_chain_ingestor.wait() => panic!("settlement ingestor died: {:#?}", e),
             e = handles.mchain.wait() => panic!("synd-mchain died: {:#?}", e),
+            e = async {handles.eigenda_proxy.as_mut().unwrap().wait().await}, if handles.eigenda_proxy.is_some() => panic!("eigenda proxy died: {:#?}", e),
             e = async {handles.l1_chain.as_mut().unwrap().wait().await}, if handles.l1_chain.is_some() => panic!("l1 chain died: {:#?}", e),
             e = handles.seq_chain.wait() => panic!("sequencing chain died: {:#?}", e),
             e = handles.set_chain.wait() => panic!("settlement chain died: {:#?}", e),
@@ -155,7 +161,7 @@ impl TestComponents {
 
         let l1_info = match options.base_chains_type {
             BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => None,
-            BaseChainsType::Nitro => {
+            BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let info = start_anvil(1).await?;
                 // avoid "latest L1 block is old" error log from nitro
                 let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
@@ -165,6 +171,17 @@ impl TestComponents {
                 Some(info)
             }
         };
+
+        let (eigenda_proxy_instance, eigenda_proxy_url) =
+            if options.base_chains_type == BaseChainsType::NitroWithEigenda {
+                let (instance, url) = start_eigenda_proxy().await?;
+                (Some(instance), Some(url))
+            } else {
+                (None, None)
+            };
+
+        // TODO SEQ-1099: deploying the rollups (in Nitro mode) can take a while, we could
+        // potentially parallelize this with different chain owners
 
         // Launch mock sequencing chain and deploy contracts
         info!("Starting sequencing chain...");
@@ -178,15 +195,21 @@ impl TestComponents {
             BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
                 start_anvil(SEQUENCING_CHAIN_ID).await?
             }
-            BaseChainsType::Nitro => {
+            BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let chain_id = SEQUENCING_CHAIN_ID;
                 let l1_info = l1_info.as_ref().unwrap();
 
-                // NOTE: use a different address to post batches to avoid nonce conflicts
-                let owner_address = test_account2().address;
+                let owner_address = test_account1().address;
 
-                let seq_deployment =
-                    deploy_nitro_rollup(&l1_info.http_url, chain_id, owner_address).await?;
+                let seq_deployment = deploy_nitro_rollup(
+                    &l1_info.http_url,
+                    chain_id,
+                    owner_address,
+                    // NOTE: use a different address to post batches to avoid nonce conflicts
+                    vec![test_account8().address],
+                    matches!(options.base_chains_type, BaseChainsType::NitroWithEigenda),
+                )
+                .await?;
 
                 info!("Starting sequencing chain's nitro node...");
                 let seq_chain_info = launch_nitro_node(NitroNodeArgs {
@@ -194,10 +217,16 @@ impl TestComponents {
                     chain_owner: owner_address,
                     parent_chain_url: l1_info.ws_url.clone(),
                     parent_chain_id: l1_info.provider.get_chain_id().await?,
-                    sequencer_mode: NitroSequencerMode::Sequencer,
+                    sequencer_mode: match options.base_chains_type {
+                        BaseChainsType::Nitro => NitroSequencerMode::Sequencer,
+                        BaseChainsType::NitroWithEigenda => NitroSequencerMode::EigenDASequencer(
+                            eigenda_proxy_url.as_ref().unwrap().clone(),
+                        ),
+                        _ => unreachable!(),
+                    },
                     chain_name: "sequencing".to_string(),
                     deployment: seq_deployment.clone(),
-                    sequencer_private_key: Some(PRIVATE_KEY2.to_string()),
+                    sequencer_private_key: Some(PRIVATE_KEY8.to_string()),
                 })
                 .await?;
 
@@ -238,9 +267,12 @@ impl TestComponents {
             .send()
             .await?;
 
-        if options.base_chains_type != BaseChainsType::Nitro {
-            mine_block(&seq_provider, 0).await?;
-        }
+        match options.base_chains_type {
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+                mine_block(&seq_provider, 0).await?;
+            }
+            _ => {}
+        };
 
         // Launch mock settlement chain
         info!("Starting settlement chain...");
@@ -268,15 +300,21 @@ impl TestComponents {
                 mine_block(&chain_info.provider, 0).await?;
                 chain_info
             }
-            BaseChainsType::Nitro => {
+            BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let chain_id = SETTLEMENT_CHAIN_ID;
                 let l1_info = l1_info.as_ref().unwrap();
 
                 // NOTE: use a different address to post batches to avoid nonce conflicts
                 let owner_address = test_account3().address;
 
-                let set_deployment =
-                    deploy_nitro_rollup(&l1_info.http_url, chain_id, owner_address).await?;
+                let set_deployment = deploy_nitro_rollup(
+                    &l1_info.http_url,
+                    chain_id,
+                    owner_address,
+                    vec![test_account9().address],
+                    matches!(options.base_chains_type, BaseChainsType::NitroWithEigenda),
+                )
+                .await?;
 
                 info!("Starting settlement chain's nitro node...");
                 let set_chain_info = launch_nitro_node(NitroNodeArgs {
@@ -284,10 +322,16 @@ impl TestComponents {
                     chain_owner: owner_address,
                     parent_chain_url: l1_info.ws_url.clone(),
                     parent_chain_id: l1_info.provider.get_chain_id().await?,
-                    sequencer_mode: NitroSequencerMode::Sequencer,
+                    sequencer_mode: match options.base_chains_type {
+                        BaseChainsType::Nitro => NitroSequencerMode::Sequencer,
+                        BaseChainsType::NitroWithEigenda => NitroSequencerMode::EigenDASequencer(
+                            eigenda_proxy_url.as_ref().unwrap().clone(),
+                        ),
+                        _ => unreachable!(),
+                    },
                     chain_name: "settlement".to_string(),
                     deployment: set_deployment.clone(),
-                    sequencer_private_key: Some(PRIVATE_KEY3.to_string()),
+                    sequencer_private_key: Some(PRIVATE_KEY9.to_string()),
                 })
                 .await?;
 
@@ -308,7 +352,6 @@ impl TestComponents {
                         parse_ether("10")?,
                     Duration::from_secs(10)
                 );
-
                 settlement_deployment = Some(set_deployment);
                 set_chain_info
             }
@@ -354,11 +397,13 @@ impl TestComponents {
                 rollup: get_bridge_address(&version),
                 ..Default::default()
             },
-            BaseChainsType::Nitro => {
+            BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 deploy_nitro_rollup(
                     &set_rpc_http_url,
                     options.appchain_chain_id,
                     options.rollup_owner,
+                    vec![],
+                    false,
                 )
                 .await?
             }
@@ -425,18 +470,18 @@ impl TestComponents {
         )
         .await?;
 
-        let sequencing_rpc_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
-        let settlement_rpc_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
+        let sequencing_ingestor_rpc_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
+        let settlement_ingestor_rpc_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
 
         info!("Starting translator...");
         let translator_config = TranslatorConfig {
-            settlement_ws_url: settlement_rpc_url.clone(),
+            settlement_ws_url: settlement_ingestor_rpc_url.clone(),
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_ws_url: mchain_rpc_url.clone(),
             port: PortManager::instance().next_port().await,
             // Needs to be provided as it needs to be the ingestor's URL
-            sequencing_ws_url: Some(sequencing_rpc_url.clone()),
+            sequencing_ws_url: Some(sequencing_ingestor_rpc_url.clone()),
             // NOTE: do not fill the values that are meant to be filled by the config manager
             // contract
             ..Default::default()
@@ -480,7 +525,7 @@ impl TestComponents {
         let assertion_poster_contract_address = match options.base_chains_type {
             BaseChainsType::Anvil => Address::ZERO,
             BaseChainsType::PreLoaded(version) => get_assertion_poster_address(&version),
-            BaseChainsType::Nitro => {
+            BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let deploy_tx =
                     AssertionPoster::deploy_builder(&set_provider, appchain_deployment.rollup)
                         .gas(100_000_000)
@@ -572,11 +617,13 @@ impl TestComponents {
                 l1_ws_rpc_url,
 
                 sequencing_provider: seq_provider,
-                sequencing_rpc_url,
+                sequencing_ingestor_rpc_url,
+                sequencing_rpc_url: seq_rpc_ws_url,
                 sequencing_contract,
 
                 settlement_provider: set_provider,
-                settlement_rpc_url,
+                settlement_ingestor_rpc_url,
+                settlement_rpc_url: set_rpc_ws_url,
 
                 appchain_provider,
                 appchain_chain_id: options.appchain_chain_id,
@@ -592,6 +639,8 @@ impl TestComponents {
                 sequencing_deployment,
                 settlement_deployment,
                 appchain_deployment,
+
+                eigenda_proxy_url,
             },
             ComponentHandles {
                 l1_chain: l1_instance,
@@ -600,6 +649,7 @@ impl TestComponents {
                 sequencing_chain_ingestor,
                 settlement_chain_ingestor,
                 mchain,
+                eigenda_proxy: eigenda_proxy_instance,
                 appchain_chain: appchain_instance,
                 translator,
                 batch_sequencer,

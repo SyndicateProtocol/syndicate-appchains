@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	var rootCmd = &cobra.Command{
+	rootCmd := &cobra.Command{
 		Use:   "synd-proposer",
 		Short: "Syndicate's proposer service",
 		RunE: func(cmd *cobra.Command, args []string) error {

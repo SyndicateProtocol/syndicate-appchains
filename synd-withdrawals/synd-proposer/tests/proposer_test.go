@@ -2,13 +2,12 @@ package tests
 
 import (
 	"context"
-	"testing"
-	"time"
-
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"testing"
+	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
 	"github.com/ethereum/go-ethereum/common"
