@@ -66,6 +66,26 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             ..Default::default()
         },
         |components| async move {
+            // Simulate L1 block production (this helps to alleviate race
+            // conditions when enclave/proposer are building and on slower machines)
+            let l1_provider = components.l1_provider.as_ref().unwrap();
+            let l1_provider_clone = l1_provider.clone();
+            let _task = tokio::spawn(async move {
+                loop {
+                    l1_provider_clone
+                        .evm_mine(Some(MineOptions::Options { timestamp: None, blocks: Some(1) }))
+                        .await
+                        .unwrap(); // NOTE: this will crash once the test ends that's fine
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            });
+
+            // set the TEE module as the owner for the assertion poster contract
+            let assertion_poster = AssertionPoster::new(
+                components.assertion_poster_address,
+                &components.settlement_provider,
+            );
+
             // deposit funds to the appchain
             let inbox =
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
@@ -134,7 +154,6 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             }
             .hash();
 
-            let l1_provider = components.l1_provider.as_ref().unwrap();
             let sequencing_bridge = IBridge::new(sequencing_bridge_address, l1_provider);
 
             let l1_start_batch_acc =
@@ -161,7 +180,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             wait_until!(
                 components.settlement_provider.get_balance(test_account2().address).await? >=
                     parse_ether("10")?,
-                Duration::from_secs(20)
+                Duration::from_secs(60)
             );
 
             let oracle_settlement_provider = ProviderBuilder::new()
@@ -183,7 +202,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     .call()
                     .await? >
                     0,
-                Duration::from_secs(20)
+                Duration::from_secs(60)
             );
 
             let tee_module_addr = deploy_on_settlement_chain(
@@ -204,36 +223,6 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 &signer,
             )
             .await?;
-
-            // Simulate L1 block production (this helps to alleviate race
-            // conditions when enclave/proposer are building and on slower machines)
-            let l1_provider_clone = l1_provider.clone();
-            // let mut block_timestamp = l1_provider_clone
-            //     .get_block_by_number(BlockNumberOrTag::Latest)
-            //     .await?
-            //     .unwrap()
-            //     .header
-            //     .timestamp;
-            let _task = tokio::spawn(async move {
-                loop {
-                    // block_timestamp += 5;
-                    l1_provider_clone
-                        .evm_mine(Some(MineOptions::Options {
-                            // timestamp: Some(block_timestamp),
-                            timestamp: None,
-                            blocks: Some(1),
-                        }))
-                        .await
-                        .unwrap(); // NOTE: this will crash once the test ends that's fine
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-            });
-
-            // set the TEE module as the owner for the assertion poster contract
-            let assertion_poster = AssertionPoster::new(
-                components.assertion_poster_address,
-                &components.settlement_provider,
-            );
 
             // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = assertion_poster
