@@ -80,10 +80,6 @@ jobs:
         id: parse_tags
         run: |
           TAGS_INPUT='${{ inputs.tags }}'
-          if [ -z "$TAGS_INPUT" ] || [ "$TAGS_INPUT" = "null" ]; then
-            TAGS_INPUT='["latest"]'
-          fi
-          
           echo "Raw tags input: $TAGS_INPUT"
           
           # Convert single quotes to double quotes for valid JSON if needed
