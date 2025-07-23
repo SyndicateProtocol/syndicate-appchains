@@ -205,6 +205,7 @@ impl<
 {
     #[allow(clippy::unwrap_used)]
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
+        info!("recv called, timestamp: {timestamp}");
         let mut blocks = vec![];
 
         let init_data = self.init_data.take();
@@ -240,14 +241,18 @@ impl<
 
                 // make sure we don't drop any blocks from the stream
                 if !init_blocks.is_empty() {
+                    info!("init_blocks: {init_blocks:?}");
                     self.init_requests.push_back(Box::pin(async move { init_blocks }));
                 }
+
+                info!("init_requests length: {:?}", self.init_requests.len());
 
                 blocks = self.init_requests.pop_front().unwrap().await;
             }
         }
 
         loop {
+            info!("blocks: {:?}", blocks);
             for partial_block in blocks {
                 let block = self.block_builder.build_block(&partial_block?.block())?;
                 let block_number = block.block_ref().number;
@@ -283,8 +288,10 @@ impl<
             }
 
             blocks = if self.init_requests.is_empty() {
+                info!("popping from stream");
                 self.stream.next().await.ok_or_eyre("stream closed")?
             } else {
+                info!("popping from init_requests, length: {:?}", self.init_requests.len());
                 self.init_requests.pop_front().unwrap().await
             }
         }

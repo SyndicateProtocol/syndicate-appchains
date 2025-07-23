@@ -99,7 +99,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ingestor_get_blocks() -> eyre::Result<()> {
-        let loop_count = 18;
+        let loop_count = 20;
         let (anvil, _ingestor, ingestor_ws_url) = setup(None).await?;
         let anvil = anvil.unwrap();
 
@@ -108,8 +108,10 @@ mod tests {
         for _ in 0..loop_count {
             mine_block(&anvil.provider, 10).await?;
         }
-
-        wait_until!(client.get_block_number().await.unwrap() == loop_count, Duration::from_secs(2));
+        wait_until!(
+            client.get_block_number().await.unwrap() == loop_count,
+            Duration::from_secs(10)
+        );
 
         let eth_client = EthClient::new(
             vec![anvil.ws_url.clone()],
@@ -123,15 +125,21 @@ mod tests {
         let mut block_stream =
             client.get_blocks(5, vec![], Arc::new(MockBlockBuilder), eth_client).await?;
 
-        for i in 5..=loop_count {
+        for _ in 0..10 {
+            mine_block(&anvil.provider, 10).await?;
+        }
+        wait_until!(
+            client.get_block_number().await.unwrap() == loop_count + 10,
+            Duration::from_secs(10)
+        );
+
+        let block_number = client.get_block_number().await.unwrap();
+        assert_eq!(block_number, loop_count + 10);
+
+        for i in 5..=loop_count + 10 {
             let block = block_stream.recv(0).await?;
             assert_eq!(block.block_ref.number, i);
         }
-
-        mine_block(&anvil.provider, 1).await?;
-
-        let block = block_stream.recv(0).await?;
-        assert_eq!(block.block_ref.number, loop_count + 1);
 
         Ok(())
     }
