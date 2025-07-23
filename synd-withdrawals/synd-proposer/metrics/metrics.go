@@ -12,7 +12,6 @@ type Metrics struct {
 	PollingLoopDuration prometheus.Histogram
 
 	// Prove function metrics
-	ProveDuration   prometheus.Histogram
 	ProveTotal      prometheus.Counter
 	ProveBatchCount prometheus.Gauge
 
@@ -23,17 +22,6 @@ type Metrics struct {
 	// Enclave call metrics
 	EnclaveCalls        *prometheus.CounterVec
 	EnclaveCallDuration *prometheus.HistogramVec
-
-	// Trusted input metrics
-	TrustedInputFetches       prometheus.Counter
-	TrustedInputFetchDuration prometheus.Histogram
-
-	// Batch processing metrics
-	BatchCountFetches      prometheus.Counter
-	BatchCountValue        prometheus.Gauge
-	BatchRetrieval         prometheus.Counter
-	BatchRetrievalDuration prometheus.Histogram
-	BatchDataSize          prometheus.Histogram
 }
 
 // NewMetrics creates and registers all Prometheus metrics
@@ -46,11 +34,6 @@ func NewMetrics(registry *prometheus.Registry) *Metrics {
 			Buckets: prometheus.DefBuckets,
 		}),
 		// Prove function metrics
-		ProveDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name:    "synd_proposer_prove_duration_seconds",
-			Help:    "Duration of proof generation",
-			Buckets: []float64{1, 5, 10, 30, 60, 120, 300, 600},
-		}),
 		ProveTotal: prometheus.NewCounter(prometheus.CounterOpts{
 			Name: "synd_proposer_prove_total",
 			Help: "Total number of proofs generated",
@@ -81,58 +64,17 @@ func NewMetrics(registry *prometheus.Registry) *Metrics {
 			Help:    "Duration of enclave calls",
 			Buckets: []float64{0.1, 0.5, 1, 5, 10, 30, 60, 120},
 		}, []string{"method"}),
-
-		// Trusted input metrics
-		TrustedInputFetches: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "synd_proposer_trusted_input_fetches_total",
-			Help: "Total number of trusted input fetches",
-		}),
-		TrustedInputFetchDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name: "synd_proposer_trusted_input_fetch_duration_seconds",
-			Help: "Duration of trusted input fetches",
-		}),
-
-		// Batch processing metrics
-		BatchCountFetches: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "synd_proposer_batch_count_fetches_total",
-			Help: "Total number of batch count fetches",
-		}),
-		BatchCountValue: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "synd_proposer_batch_count_value",
-			Help: "Current batch count value",
-		}),
-		BatchRetrieval: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "synd_proposer_batch_retrieval_total",
-			Help: "Total number of batch retrievals",
-		}),
-		BatchRetrievalDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name: "synd_proposer_batch_retrieval_duration_seconds",
-			Help: "Duration of batch retrieval operations",
-		}),
-		BatchDataSize: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name:    "synd_proposer_batch_data_size_bytes",
-			Help:    "Size of batch data in bytes",
-			Buckets: []float64{1024, 10240, 102400, 1024000, 10240000},
-		}),
 	}
 
 	// Register all metrics
 	registry.MustRegister(
 		metrics.PollingLoopDuration,
-		metrics.ProveDuration,
 		metrics.ProveTotal,
 		metrics.ProveBatchCount,
 		metrics.AssertionSubmissions,
 		metrics.AssertionSubmissionDuration,
 		metrics.EnclaveCalls,
 		metrics.EnclaveCallDuration,
-		metrics.TrustedInputFetches,
-		metrics.TrustedInputFetchDuration,
-		metrics.BatchCountFetches,
-		metrics.BatchCountValue,
-		metrics.BatchRetrieval,
-		metrics.BatchRetrievalDuration,
-		metrics.BatchDataSize,
 	)
 
 	return metrics

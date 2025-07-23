@@ -137,8 +137,3 @@ func mustAtoi(s string, fallback int) int {
 	}
 	return i
 }
-
-// `Get“ is a helper to get a config value from the `viper` instance - typically an ENV var
-func Get(env string) string {
-	return viper.GetString(env)
-}

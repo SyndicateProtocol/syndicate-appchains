@@ -219,13 +219,6 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 }
 
 func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, error) {
-	trustedInputFetchTimer := metrics.NewTimer()
-	defer func() {
-		trustedInputFetchTimer.ObserveHistogram(p.Metrics.TrustedInputFetchDuration)
-	}()
-
-	p.Metrics.TrustedInputFetches.Inc()
-
 	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return nil, err
@@ -258,10 +251,6 @@ func (p *Proposer) Prove(
 	trustedInput *enclave.TrustedInput,
 	settlesToArbitrumRollup bool,
 ) (*enclave.VerifyAppchainOutput, error) {
-	proveTimer := metrics.NewTimer()
-	defer func() {
-		proveTimer.ObserveHistogram(p.Metrics.ProveDuration)
-	}()
 	p.Metrics.ProveTotal.Inc()
 
 	// get trusted input
@@ -278,8 +267,6 @@ func (p *Proposer) Prove(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get batch count")
 	}
-	p.Metrics.BatchCountFetches.Inc()
-	p.Metrics.BatchCountValue.Set(float64(endBatchCount))
 
 	// get the start block
 	header, err := p.SequencingClient.HeaderByHash(ctx, trustedInput.SeqStartBlockHash)
@@ -306,7 +293,6 @@ func (p *Proposer) Prove(
 
 	// get batches
 	log.Debug().Msg("Getting batches...")
-	batchRetrievalTimer := metrics.NewTimer()
 	var batches [][]byte
 	if valData.BatchEndIndex >= valData.BatchStartIndex {
 		ibridge, err := bridgegen.NewIBridgeCaller(p.Config.EnclaveConfig.SequencingBridgeAddress, p.EthereumClient)
@@ -328,21 +314,7 @@ func (p *Proposer) Prove(
 		}
 
 		// Record batch metrics
-		p.Metrics.BatchRetrieval.Inc()
-		batchRetrievalTimer.ObserveHistogram(p.Metrics.BatchRetrievalDuration)
 		p.Metrics.ProveBatchCount.Set(float64(len(batches)))
-
-		// TODO(SEQ-1077): Confirm that we need this
-		// Calculate total batch data size
-		totalBatchSize := 0
-		for _, batch := range batches {
-			totalBatchSize += len(batch)
-			p.Metrics.BatchDataSize.Observe(float64(len(batch)))
-		}
-		log.Debug().
-			Int("batch_count", len(batches)).
-			Int("total_batch_size", totalBatchSize).
-			Msg("Retrieved batches")
 
 		// update preimages
 		for _, batch := range batches {
