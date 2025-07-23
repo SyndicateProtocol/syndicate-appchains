@@ -310,7 +310,7 @@ pub fn verify_aws_nitro_attestation(
 
     Ok(ValidationResult {
         // exclude the leading 0x04 byte prefix
-        tee_signing_key: Address::from_raw_public_key(&pub_key[..64]),
+        tee_signing_key: Address::from_raw_public_key(&pub_key[1..]),
         validity_window_start,
         validity_window_end,
         pcr_0: doc.pcrs.get(&0).unwrap().to_vec(),
@@ -347,9 +347,10 @@ mod tests {
         let trusted_root_cert_der = der_from_pem(include_bytes!("testdata/aws_nitro_root.pem"));
 
         let res = verify_aws_nitro_attestation(&doc_cbor, &trusted_root_cert_der).unwrap();
+        let pub_key = &hex::decode("040697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb36").unwrap();
         assert_eq!(
             res.tee_signing_key,
-            alloy::primitives::Address::from_raw_public_key(&hex::decode("040697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb").unwrap())
+            alloy::primitives::Address::from_raw_public_key(&pub_key[1..])
         );
         assert_eq!(res.validity_window_start, 1748509950);
         assert_eq!(res.validity_window_end, 1748520753);
