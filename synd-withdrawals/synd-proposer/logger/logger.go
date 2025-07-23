@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -31,4 +32,9 @@ func Init() {
 	if viper.GetString("DEPLOY_ENV") == "development" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Caller().Stack().Logger()
 	}
+}
+
+// Need to wrap std lib errors into `pkg/errors` to get the stack trace in logger
+func WrapErrorWithMsg(msg string, err error) (string, error) {
+	return msg, errors.Wrap(err, msg)
 }

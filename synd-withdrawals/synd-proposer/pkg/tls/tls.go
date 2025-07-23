@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/logger"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -65,12 +66,14 @@ func isTLSErr(err error) bool {
 	var certInvalid x509.CertificateInvalidError
 	var unknownAuth x509.UnknownAuthorityError
 	if errors.As(urlErr.Err, &certInvalid) || errors.As(urlErr.Err, &unknownAuth) {
-		log.Printf("TLS handshake / certificate error: %v", err)
+		msg, wrappedErr := logger.WrapErrorWithMsg("TLS handshake / certificate error", err)
+		log.Warn().Stack().Err(wrappedErr).Msg(msg)
 		return true
 	}
 	// Any lower‐level TLS record error
 	if _, ok := urlErr.Err.(tls.RecordHeaderError); ok {
-		log.Printf("TLS record header error: %v", err)
+		msg, wrappedErr := logger.WrapErrorWithMsg("TLS record header error", err)
+		log.Warn().Stack().Err(wrappedErr).Msg(msg)
 		return true
 	}
 	return false
