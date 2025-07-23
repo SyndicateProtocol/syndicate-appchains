@@ -80,12 +80,6 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 }
             });
 
-            // set the TEE module as the owner for the assertion poster contract
-            let assertion_poster = AssertionPoster::new(
-                components.assertion_poster_address,
-                &components.settlement_provider,
-            );
-
             // deposit funds to the appchain
             let inbox =
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
@@ -223,6 +217,12 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 &signer,
             )
             .await?;
+
+            // set the TEE module as the owner for the assertion poster contract
+            let assertion_poster = AssertionPoster::new(
+                components.assertion_poster_address,
+                &components.settlement_provider,
+            );
 
             // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = assertion_poster
