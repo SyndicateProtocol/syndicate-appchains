@@ -86,19 +86,19 @@ jobs:
           TAGS_JSON_FIXED=$(echo "$TAGS_INPUT" | sed "s/'/\"/g")
           echo "Fixed JSON: $TAGS_JSON_FIXED"
           
-          # Parse JSON array and convert to bash array
-          TAGS_ARRAY=()
-          while IFS= read -r tag; do
-            if [ -n "$tag" ]; then
-              TAGS_ARRAY+=("$tag")
-            fi
-          done <<< "$(echo "$TAGS_JSON_FIXED" | jq -r '.[]')"
+          # Validate that it's proper JSON
+          if ! echo "$TAGS_JSON_FIXED" | jq empty 2>/dev/null; then
+            echo "Error: Invalid JSON format in tags input"
+            exit 1
+          fi
           
-          # Export for use in subsequent steps
-          printf '%s\n' "${TAGS_ARRAY[@]}" > /tmp/tags_array
-          echo "Parsed tags: ${TAGS_ARRAY[*]}"
+          # Set output for use in later steps
+          echo "tags_json=$TAGS_JSON_FIXED" >> "$GITHUB_OUTPUT"
+          echo "Tags JSON validated and set as output"
 
       - name: Build and push services
+        env:
+          TAGS_JSON: ${{ steps.parse_tags.outputs.tags_json }}
         run: |
           if [ -z "${{ inputs.service }}" ]; then
             SERVICES=("synd-translator" "synd-proposer" "synd-maestro" "synd-mchain" "synd-batch-sequencer" "synd-chain-ingestor")
@@ -106,15 +106,20 @@ jobs:
             SERVICES=("${{ inputs.service }}")
           fi
 
-          # Read tags from file
-          readarray -t TAGS < /tmp/tags_array
+          # Parse JSON to array
+          TAGS_ARRAY=()
+          while IFS= read -r tag; do
+            if [ -n "$tag" ]; then
+              TAGS_ARRAY+=("$tag")
+            fi
+          done <<< "$(echo "$TAGS_JSON" | jq -r '.[]')"
 
           for service in "${SERVICES[@]}"; do
-            echo "Building $service with tags: ${TAGS[*]}"
+            echo "Building $service with tags: ${TAGS_ARRAY[*]}"
           
             # Build tag arguments for docker buildx
             TAG_ARGS=""
-            for tag in "${TAGS[@]}"; do
+            for tag in "${TAGS_ARRAY[@]}"; do
               TAG_ARGS="$TAG_ARGS --tag ${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$tag"
             done
 
