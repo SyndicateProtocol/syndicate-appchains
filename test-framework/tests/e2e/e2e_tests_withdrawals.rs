@@ -205,6 +205,30 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             )
             .await?;
 
+            // Simulate L1 block production (this helps to alleviate race
+            // conditions when enclave/proposer are building and on slower machines)
+            let l1_provider_clone = l1_provider.clone();
+            // let mut block_timestamp = l1_provider_clone
+            //     .get_block_by_number(BlockNumberOrTag::Latest)
+            //     .await?
+            //     .unwrap()
+            //     .header
+            //     .timestamp;
+            let _task = tokio::spawn(async move {
+                loop {
+                    // block_timestamp += 5;
+                    l1_provider_clone
+                        .evm_mine(Some(MineOptions::Options {
+                            // timestamp: Some(block_timestamp),
+                            timestamp: None,
+                            blocks: Some(1),
+                        }))
+                        .await
+                        .unwrap(); // NOTE: this will crash once the test ends that's fine
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            });
+
             // set the TEE module as the owner for the assertion poster contract
             let assertion_poster = AssertionPoster::new(
                 components.assertion_poster_address,
@@ -341,7 +365,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     .await?
                     .iter()
                     .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
-                Duration::from_secs(120)
+                Duration::from_secs(5 * 60)
             );
 
             // finish the withdrawal on the settlement chain
