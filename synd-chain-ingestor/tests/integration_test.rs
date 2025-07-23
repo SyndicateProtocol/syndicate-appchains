@@ -98,7 +98,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ingestor_get_blocks() -> eyre::Result<()> {
-        let loop_count = 10;
+        let loop_count = 18;
         let (anvil, _ingestor, ingestor_ws_url) = setup(None).await?;
         let anvil = anvil.unwrap();
 
@@ -124,6 +124,11 @@ mod tests {
             let block = block_stream.recv(0).await?;
             assert_eq!(block.block_ref.number, i);
         }
+
+        mine_block(&anvil.provider, 1).await?;
+
+        let block = block_stream.recv(0).await?;
+        assert_eq!(block.block_ref.number, loop_count + 1);
 
         Ok(())
     }

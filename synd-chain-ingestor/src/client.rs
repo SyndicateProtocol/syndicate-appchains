@@ -157,7 +157,7 @@ struct BlockStream<
         VecDeque<Pin<Box<dyn Future<Output = Vec<Result<Message, serde_json::Error>>> + Send>>>,
 }
 
-const DEFAULT_MAX_BLOCKS_PER_REQUEST: u64 = 10;
+const DEFAULT_MAX_BLOCKS_PER_REQUEST: u64 = 5;
 
 #[allow(missing_docs)]
 impl<
@@ -242,11 +242,9 @@ impl<
                 if !init_blocks.is_empty() {
                     self.init_requests.push_back(Box::pin(async move { init_blocks }));
                 }
-            }
-        }
 
-        if !self.init_requests.is_empty() && self.buffer.is_empty() {
-            blocks.append(&mut self.init_requests.pop_front().unwrap().await);
+                blocks = self.init_requests.pop_front().unwrap().await;
+            }
         }
 
         loop {
@@ -283,7 +281,12 @@ impl<
             if self.buffer.front().map_or(false, |x| x.block_ref().timestamp >= timestamp) {
                 return Ok(self.buffer.pop_back().unwrap());
             }
-            blocks = self.stream.next().await.ok_or_eyre("stream closed")?
+
+            blocks = if self.init_requests.is_empty() {
+                self.stream.next().await.ok_or_eyre("stream closed")?
+            } else {
+                self.init_requests.pop_front().unwrap().await
+            }
         }
     }
 }
