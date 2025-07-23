@@ -160,18 +160,10 @@ jobs:
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
           $HOME/.sp1/bin/cargo-prove prove build
 
-        # NOTE: this is just a workaround and should be removed as soon as the repo/packages are made public
-      - name: Login to GitHub Container Registry
-        run: echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u jorgemmsilva --password-stdin
-
       - name: Pre-download docker test docker images
         run: |
           docker pull ghcr.io/syndicateprotocol/generate_batch
           docker pull valkey/valkey:latest
-          docker pull ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
-          docker pull ghcr.io/layr-labs/eigenda-proxy:2.1.0-rc.2@sha256:ed208a7cb8e31e5dd0f5c2340b6a6f9b9570f065da2659813b207c1206c65ce8
-          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:latest
-          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-enclave-test:v0.10.6-dev.1
 
       - name: Install nextest
         uses: taiki-e/install-action@nextest
@@ -181,5 +173,62 @@ jobs:
           sudo apt-get install -y wabt
           cargo install --force cbindgen
 
-      - name: Run all tests with nextest
-        run: cargo build && cargo nextest run --workspace --fail-fast
+      - name: Run all tests with nextest (excluding e2e withdrawals)
+        run: cargo build && cargo nextest run --workspace --fail-fast -E 'not test(e2e_tee_withdrawal)'
+
+  e2e-withdrawals:
+    name: E2E Withdrawal Tests (Optional)
+    runs-on: shared-large-02
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
+          save-if: "false" # reuse cache from main test job
+
+      # Install Foundry (required for Anvil, a local Ethereum node simulator)
+      # Anvil is a critical dependency for tests
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          $HOME/.sp1/bin/sp1up
+          $HOME/.sp1/bin/cargo-prove prove --version
+
+      - name: Build SP1 ELF program
+        run: |
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+          $HOME/.sp1/bin/cargo-prove prove build
+
+        # NOTE: this is just a workaround and should be removed as soon as the repo/packages are made public
+      - name: Login to GitHub Container Registry
+        run: echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u jorgemmsilva --password-stdin
+
+      - name: Pre-download docker test docker images
+        run: |
+          docker pull ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
+          docker pull ghcr.io/layr-labs/eigenda-proxy:2.1.0-rc.2@sha256:ed208a7cb8e31e5dd0f5c2340b6a6f9b9570f065da2659813b207c1206c65ce8
+          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:latest
+          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-enclave-test:v0.10.6-dev.1
+
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Run E2E withdrawal tests
+        run: cargo build && cargo nextest run --workspace -E 'test(e2e_tee_withdrawal)' --test-threads=1
