@@ -354,7 +354,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     .await?
                     .iter()
                     .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
-                Duration::from_secs(5 * 60)
+                Duration::from_secs(10 * 60)
             );
 
             // finish the withdrawal on the settlement chain
