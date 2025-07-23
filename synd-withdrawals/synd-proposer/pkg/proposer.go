@@ -13,6 +13,7 @@ import (
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -193,7 +194,15 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				log.Printf("Failed to pack calldata: %v", err)
 				continue
 			}
-			log.Printf("Calldata: %v", calldata)
+			log.Printf("Calldata: %v", common.Bytes2Hex(calldata))
+			resEstimateGas, err := p.SettlementClient.EstimateGas(ctx, ethereum.CallMsg{
+				To:   &p.Config.TeeModuleContractAddress,
+				Data: calldata,
+			})
+			if err != nil {
+				log.Printf("Failed to estimate gas: %v, res: %v", err, resEstimateGas)
+				continue
+			}
 			transaction, err := p.TeeModule.SubmitAssertion(p.SettlementAuth, *p.PendingAssertion, p.PendingSignature, crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
 			if err != nil {
 				log.Printf("Failed to submit assertion: %v", err)
