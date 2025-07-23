@@ -14,6 +14,7 @@ use test_utils::{
     docker::{start_component, E2EProcess},
     port_manager::PortManager,
     utils::test_path,
+    wait_until,
 };
 use tokio::time::sleep;
 use tracing::info;
@@ -105,8 +106,10 @@ mod tests {
         let client = IngestorProvider::new(&ingestor_ws_url, Duration::from_secs(10)).await;
 
         for _ in 0..loop_count {
-            mine_block(&anvil.provider, 1).await?;
+            mine_block(&anvil.provider, 10).await?;
         }
+
+        wait_until!(client.get_block_number().await.unwrap() == loop_count, Duration::from_secs(2));
 
         let eth_client = EthClient::new(
             vec![anvil.ws_url.clone()],

@@ -157,7 +157,7 @@ struct BlockStream<
         VecDeque<Pin<Box<dyn Future<Output = Vec<Result<Message, serde_json::Error>>> + Send>>>,
 }
 
-const DEFAULT_MAX_BLOCKS_PER_REQUEST: u64 = 5;
+const DEFAULT_MAX_BLOCKS_PER_REQUEST: u64 = 10_000;
 
 #[allow(missing_docs)]
 impl<
