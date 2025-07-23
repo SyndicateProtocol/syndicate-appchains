@@ -91,25 +91,36 @@ jobs:
           if [ -z "$TAG" ]; then
             TAG="latest"
           fi
-          
-          # Build all targets in a single command
-          TARGETS=""
-          TAGS=""
+
           for service in "${SERVICES[@]}"; do
-            TARGETS="$TARGETS --target $service"
-            TAGS="$TAGS --tag ${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$TAG"
+            echo "Building $service..."
+            docker buildx build \
+              --platform linux/amd64 \
+              --push=${{ !inputs.dry_run }} \
+              --target "$service" \
+              --tag "${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$TAG" \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
+              .
           done
 
-          echo "Building all service images in parallel..."
-          docker buildx build \
-            --platform linux/amd64 \
-            --push=${{ !inputs.dry_run }} \
-            $TARGETS \
-            $TAGS \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            .
-          
           echo "Pruning buildx and system..."
           docker buildx prune --all --force
           docker system prune --all --volumes --force
+
+      - name: Build and push enclave test image
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="latest"
+          fi
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --push=${{ !inputs.dry_run }} \
+            --target test-image \
+            --tag ${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/synd-enclave-test:$TAG \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            -f ./synd-withdrawals/synd-enclave/Dockerfile \
+            ./synd-withdrawals/synd-enclave/

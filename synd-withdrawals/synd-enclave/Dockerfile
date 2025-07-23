@@ -212,8 +212,8 @@ RUN ./target/release/eif_build \
 FROM scratch AS eif-bin
 COPY --from=eif /build/eif.bin .
 
-# custom target for local development
-FROM scratch AS local-dev
+# custom target for testing
+FROM scratch AS test-image
 WORKDIR /app
 COPY --from=builder /build/bin/enclave .
 ENTRYPOINT ["/app/enclave"]

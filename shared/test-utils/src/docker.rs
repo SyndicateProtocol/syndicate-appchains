@@ -19,11 +19,13 @@ use redis::aio::ConnectionManager;
 use std::{
     env,
     future::Future,
+    path::Path,
     process::{ExitStatus, Stdio},
     time::Duration,
 };
 use synd_mchain::client::MProvider;
 use tokio::{
+    fs,
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
 };
@@ -67,21 +69,20 @@ impl E2EProcess {
     pub fn try_wait(&mut self) -> std::io::Result<Option<ExitStatus>> {
         self.0.try_wait()
     }
-}
 
-impl Drop for E2EProcess {
-    fn drop(&mut self) {
+    /// Explicitly kill the process
+    pub fn kill(&mut self) {
         if self.0.try_wait().is_ok_and(|status| status.is_some()) {
-            info!("process for Drop already exited or was not running.");
+            info!("process already exited or was not running.");
             return;
         }
 
         let Some(pid) = self.0.id() else {
-            info!("process for Drop had no PID, likely already exited or failed to start.");
+            info!("process had no PID, likely already exited or failed to start.");
             return;
         };
 
-        info!("Attempting to stop process (PID: {}) via Drop", pid);
+        info!("Attempting to stop process (PID: {})", pid);
         let kill_proc = match std::process::Command::new("kill")
             .arg(pid.to_string())
             .stdout(Stdio::piped())
@@ -116,6 +117,67 @@ impl Drop for E2EProcess {
     }
 }
 
+impl Drop for E2EProcess {
+    fn drop(&mut self) {
+        self.kill();
+    }
+}
+
+async fn ensure_nitro_node_deps() -> Result<()> {
+    let workspace_dir = env!("CARGO_WORKSPACE_DIR");
+    let nitro_solgen_dir = Path::new(workspace_dir)
+        .join("synd-withdrawals/synd-enclave/nitro/solgen")
+        .to_string_lossy()
+        .to_string();
+
+    // consider deps installed if there is more than 1 file (`gen.go`) in the solgen directory
+    let mut entries = fs::read_dir(&nitro_solgen_dir).await?;
+    let mut count = 0;
+    while (entries.next_entry().await?).is_some() {
+        count += 1;
+        if count > 1 {
+            info!("nitro node-deps already installed");
+            return Ok(());
+        }
+    }
+    warn!("building nitro node-deps... (this can take a long time");
+
+    // fist run `yarn install --ignore-engines` in the`safe-smart-account` dir to circumvent
+    // NodeJS version error
+    let status = E2EProcess::new(
+        Command::new("yarn")
+            .current_dir(format!(
+                "{workspace_dir}/synd-withdrawals/synd-enclave/nitro/safe-smart-account"
+            ))
+            .arg("install")
+            .arg("--ignore-engines"),
+        "yarn-install-safe-smart-account",
+    )?
+    .wait()
+    .await?;
+    if !status.success() {
+        return Err(eyre::eyre!(
+            "Failed to run yarn install in safe-smart-account. Exit status: {}",
+            status
+        ));
+    }
+
+    let status = E2EProcess::new(
+        Command::new("make")
+            .current_dir(format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro"))
+            .arg("build-node-deps"),
+        "build-node-deps",
+    )?
+    .wait()
+    .await?;
+    if !status.success() {
+        return Err(eyre::eyre!("Failed to build nitro node-deps. Exit status: {}", status));
+    }
+
+    info!("nitro node-deps built successfully");
+    Ok(())
+}
+
 pub async fn start_component(
     executable_name: &str,
     api_port: u16,
@@ -124,50 +186,59 @@ pub async fn start_component(
 ) -> Result<E2EProcess> {
     info!("launching {}", executable_name);
     let needs_rocksdb = executable_name == "synd-mchain";
-    let mut docker = if let Ok(tag) =
-        env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG")
-    {
-        E2EProcess::new(
-            Command::new("docker")
-                .arg("run")
-                .arg("--init")
-                .arg("--rm")
-                .arg("--net=host")
-                .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
-                .args(args),
-            executable_name,
-        )
-    } else if executable_name == "synd-proposer" {
-        // Synd-proposer is a Go service, so we need to use the Go command to run it
-        let mut cmd = Command::new("go");
-        cmd.current_dir(format!("{}/synd-withdrawals/synd-proposer", env!("CARGO_WORKSPACE_DIR")));
-        cmd.arg("run").arg("./cmd/synd-proposer");
-        cmd.args(args);
-        E2EProcess::new(&mut cmd, executable_name)
-    } else {
-        let mut cmd = Command::new("cargo");
-        // ring has a custom build.rs script that rebuilds whenever certain environment
-        // vars change
-        cmd.env_remove("CARGO_MANIFEST_DIR")
-            .env_remove("CARGO_PKG_NAME")
-            .env_remove("CARGO_PKG_VERSION_MAJOR")
-            .env_remove("CARGO_PKG_VERSION_MINOR")
-            .env_remove("CARGO_PKG_VERSION_PATCH")
-            .env_remove("CARGO_PKG_VERSION_PRE")
-            .env_remove("CARGO_MANIFEST_LINKS")
-            .current_dir(env!("CARGO_WORKSPACE_DIR"))
-            .arg("run");
+    let mut docker =
+        if let Ok(tag) = env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG") {
+            E2EProcess::new(
+                Command::new("docker")
+                    .arg("run")
+                    .arg("--init")
+                    .arg("--rm")
+                    .arg("--net=host")
+                    .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
+                    .args(args),
+                executable_name,
+            )
+        } else if executable_name == "synd-proposer" {
+            launch_proposer(args).await
+        } else {
+            let mut cmd = Command::new("cargo");
+            // ring has a custom build.rs script that rebuilds whenever certain environment
+            // vars change
+            cmd.env_remove("CARGO_MANIFEST_DIR")
+                .env_remove("CARGO_PKG_NAME")
+                .env_remove("CARGO_PKG_VERSION_MAJOR")
+                .env_remove("CARGO_PKG_VERSION_MINOR")
+                .env_remove("CARGO_PKG_VERSION_PATCH")
+                .env_remove("CARGO_PKG_VERSION_PRE")
+                .env_remove("CARGO_MANIFEST_LINKS")
+                .current_dir(env!("CARGO_WORKSPACE_DIR"))
+                .arg("run");
 
-        if needs_rocksdb {
-            cmd.arg("--features").arg("rocksdb");
-        }
+            if needs_rocksdb {
+                cmd.arg("--features").arg("rocksdb");
+            }
 
-        cmd.arg("--bin").arg(executable_name).arg("--").args(args).args(cargs);
-        E2EProcess::new(&mut cmd, executable_name)
-    }?;
+            cmd.arg("--bin").arg(executable_name).arg("--").args(args).args(cargs);
+            E2EProcess::new(&mut cmd, executable_name)
+        }?;
 
     health_check(executable_name, api_port, &mut docker).await;
     Ok(docker)
+}
+
+pub async fn launch_proposer(args: Vec<String>) -> Result<E2EProcess> {
+    ensure_nitro_node_deps().await?;
+    // Synd-proposer is a Go service, so we need to use the Go command to run it
+    let mut cmd = Command::new("go");
+    let project_root = env!("CARGO_WORKSPACE_DIR");
+    let proposer_dir = Path::new(project_root)
+        .join("synd-withdrawals/synd-proposer")
+        .to_string_lossy()
+        .to_string();
+    cmd.current_dir(proposer_dir);
+    cmd.arg("run").arg("./cmd/synd-proposer");
+    cmd.args(args);
+    E2EProcess::new(&mut cmd, "synd-proposer")
 }
 
 pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2EProcess) {
@@ -212,6 +283,7 @@ pub async fn start_mchain(
     Ok((url, docker, mchain))
 }
 
+#[derive(Clone)]
 pub enum NitroSequencerMode {
     // No sequencer mode - used for the appchain that will simply derive the state
     None,
@@ -220,7 +292,9 @@ pub enum NitroSequencerMode {
     // Sequencer mode - used for base chains when E2E's Nitro mode is enabled, these chains will
     // post batch data to L1
     Sequencer,
-    // TODO SEQ-1032: add EigenDA mode
+    // EigenDA sequencer mode - used for base chains when E2E's NitroWithEigenda mode is enabled,
+    // requires the URL of the eigenDA disperser (mock proxy in this case)
+    EigenDASequencer(String),
 }
 
 pub struct NitroNodeArgs {
@@ -236,7 +310,7 @@ pub struct NitroNodeArgs {
 
 /// Starts nitro instance
 pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
-    let tag = env::var("NITRO_TAG").unwrap_or("v3.6.2-5b41a2d-slim".to_string());
+    let tag = env::var("NITRO_TAG").unwrap_or("eigenda-v3.6.4-dev.4".to_string());
     let port = PortManager::instance().next_port().await;
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
@@ -246,8 +320,8 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
         NitroSequencerMode::Forwarding(port) => {
             vec![format!("--execution.forwarding-target=http://localhost:{port}")]
         }
-        NitroSequencerMode::Sequencer => {
-            vec![
+        NitroSequencerMode::Sequencer | NitroSequencerMode::EigenDASequencer(_) => {
+            let mut cmd_args = vec![
                 "--node.sequencer=true".to_string(),
                 "--node.batch-poster.enable=true".to_string(),
                 "--execution.sequencer.enable=true".to_string(),
@@ -275,7 +349,17 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
                     .to_string(),
                 "--node.batch-poster.max-delay=1s".to_string(),
                 "--node.batch-poster.wait-for-max-delay=false".to_string(),
-            ]
+            ];
+
+            if let NitroSequencerMode::EigenDASequencer(eigen_da_url) = &args.sequencer_mode {
+                let eigen_config = format!(
+                    r#"{{"node":{{"eigen-da":{{"enable":true,"rpc":"{eigen_da_url}"}}}}}}"#
+                );
+                cmd_args.push(format!("--conf.string={eigen_config}"));
+
+                cmd_args.push("--node.data-availability.enable=false".to_string());
+            }
+            cmd_args
         }
     };
 
@@ -285,7 +369,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg("--init")
             .arg("--rm")
             .arg("--net=host")
-            .arg(format!("offchainlabs/nitro-node:{tag}"))
+            .arg(format!("ghcr.io/syndicateprotocol/nitro/nitro:{tag}"))
             .arg(format!("--parent-chain.connection.url={}", args.parent_chain_url))
             .arg("--node.dangerous.disable-blob-reader")
             .arg("--node.inbox-reader.check-delay=100ms")
@@ -301,15 +385,21 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
                     chain_owner: args.chain_owner,
                     chain_name: args.chain_name.clone(),
                     deployment: args.deployment,
+                    use_eigen_da: matches!(
+                        args.sequencer_mode,
+                        NitroSequencerMode::EigenDASequencer(_)
+                    ),
                 })
             ))
             .arg("--http.addr=0.0.0.0")
-            .arg("--http.api=net,web3,eth,debug,trace")
+            .arg("--http.api=net,web3,eth,debug,trace,synd")
+            .arg("--ws.api=net,web3,eth,debug,trace,synd")
             .arg(format!("--http.port={port}"))
             .arg("--ws.expose-all")
             .arg(format!("--ws.port={port}"))
             .arg("--ws.addr=0.0.0.0")
             .arg("--ws.origins=\\*")
+            .arg("--node.parent-chain-reader.old-header-timeout=2540400h")
             .arg(format!("--log-level={log_level}"))
             .args(sequencer_args),
         format!("nitro-{}", args.chain_name).as_str(),
@@ -362,33 +452,44 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     info!("launching enclave server");
 
     let project_root = env!("CARGO_WORKSPACE_DIR");
-    let enclave_path = format!("{project_root}/synd-withdrawals/synd-enclave");
-    let image_name = "ghcr.io/syndicateprotocol/enclave-server:local-dev".to_string();
+    let enclave_path =
+        Path::new(project_root).join("synd-withdrawals/synd-enclave").to_string_lossy().to_string();
 
-    info!("building enclave server docker image - NOTE: this may take a while");
-    let status = E2EProcess::new(
-        Command::new("docker")
-            .arg("buildx")
-            .arg("build")
-            .arg("--load")
-            .arg("--progress=plain")
-            .arg(&enclave_path)
-            .arg("--tag")
-            .arg(&image_name)
-            .arg("--target")
-            .arg("local-dev"),
-        "building-enclave-server",
-    )?
-    .wait()
-    .await?;
+    let mut needs_build = false;
+    let tag = match env::var("SYND_ENCLAVE_TAG") {
+        Ok(tag) => tag,
+        Err(_) => {
+            needs_build = true;
+            "local-dev".to_string()
+        }
+    };
+    let image_name = format!("ghcr.io/syndicateprotocol/synd-enclave-test:{tag}");
 
-    if !status.success() {
-        return Err(eyre::eyre!(
-            "failed to build enclave-server docker image. Exit status: {}",
-            status
-        ));
+    if needs_build {
+        info!("building enclave server docker image - NOTE: this may take a while");
+        let build_status = E2EProcess::new(
+            Command::new("docker")
+                .arg("buildx")
+                .arg("build")
+                .arg("--load")
+                .arg(&enclave_path)
+                .arg("--tag")
+                .arg(&image_name)
+                .arg("--target")
+                .arg("test-image"),
+            "building-enclave-server",
+        )?
+        .wait()
+        .await?;
+
+        if !build_status.success() {
+            return Err(eyre::eyre!(
+                "failed to build enclave-server docker image. Exit status: {}",
+                build_status
+            ));
+        }
+        info!("enclave server docker image built successfully");
     }
-    info!("enclave server docker image built successfully");
 
     let port = PortManager::instance().next_port().await;
     let docker = E2EProcess::new(
@@ -411,8 +512,9 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     // NOTE: in theory we we should get the attestation doc instead, but it's hard to get that
     // function to work outside the AWS enclave. We'll just use the public key for now.
     let signer_pub_key_hex = get_signer_public_key(enclave_rpc_url.clone()).await?;
+    println!("signer_pub_key_hex: {signer_pub_key_hex}");
     let signer_pub_key_bytes = hex::decode(signer_pub_key_hex).unwrap();
-    let signer_address = Address::from_raw_public_key(&signer_pub_key_bytes[..64]);
+    let signer_address = Address::from_raw_public_key(&signer_pub_key_bytes[1..]); // skip the first byte (0x04)
 
     Ok((docker, enclave_rpc_url, signer_address))
 }
@@ -426,4 +528,40 @@ async fn get_signer_public_key(enclave_rpc_url: String) -> Result<String> {
         .build(enclave_rpc_url)?;
 
     Ok(client.request::<String, [(); 0]>("enclave_signerPublicKey", []).await?)
+}
+
+pub async fn start_eigenda_proxy() -> Result<(E2EProcess, String)> {
+    let port = PortManager::instance().next_port().await;
+    let mut eigenda_proxy = E2EProcess::new(
+        Command::new("docker")
+            .arg("run")
+            .arg("--rm")
+            .arg("-p")
+            .arg(format!("{port}:{port}"))
+            .arg("ghcr.io/layr-labs/eigenda-proxy:latest@sha256:dc5564dc557e3d349e38bdcb48cad2b31a16f185216e9e3f25796a5b966de5e9")
+            .arg("--memstore.enabled")
+            .arg("--eigenda.disable-tls=true")
+            .arg("--eigenda.response-timeout=60m")
+            .arg("--log.level=debug")
+            .arg("--port")
+            .arg(port.to_string()),
+        "eigenda-proxy",
+    )?;
+
+    let eigenda_proxy_url = format!("http://localhost:{port}");
+
+    let client = Client::new();
+    wait_until!(
+        if let Some(status) = eigenda_proxy.try_wait()? {
+            panic!("eigenda-proxy exited with {status}");
+        };
+        client
+            .get(format!("{eigenda_proxy_url}/health"))
+            .send()
+            .await
+            .is_ok_and(|x| x.status().is_success()),
+        Duration::from_secs(5 * 60) // give it time to download the image if necessary
+    );
+
+    Ok((eigenda_proxy, eigenda_proxy_url))
 }

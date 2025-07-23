@@ -63,11 +63,9 @@ pub fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, Error> {
     if data.is_empty() {
         return Err(Error::new(ErrorKind::InvalidData, "Empty compressed data"));
     }
-    // Check for valid CM bits
-    if !is_valid_zlib_cm_bits(data[0]) {
-        return Err(Error::new(ErrorKind::InvalidData, "Invalid CM bits in compressed data"));
-    }
-    // Decompress using zlib
+    // Check for valid CM bits (CM8 only)
+    is_valid_cm_bits_8_only(data)?;
+
     let mut decoder = ZlibDecoder::new(data);
     let mut decoded_bytes = Vec::new();
     decoder.read_to_end(&mut decoded_bytes)?;
@@ -166,11 +164,11 @@ mod tests {
 
     // Pulled random txns from Base Sepolia explorer
     // https://sepolia.basescan.org/tx/0x517f3cda3ec255651839794d633c54843cb07ee54d18dfd6a7797a1d96ec4ffe
-    const _SAMPLE_TX_2: [u8; 132] = hex!("cdb554ea000000000000000000000000b8b904c73d2fb4d8c173298a51c27fab70222c320000000000000000000000000000000000000000000000000000000000568936000000000000000000000000b8b904c73d2fb4d8c173298a51c27fab70222c32000000000000000000000000000000000000000000000000000000000059bd0d");
+    const SAMPLE_TX_2: [u8; 132] = hex!("cdb554ea000000000000000000000000b8b904c73d2fb4d8c173298a51c27fab70222c320000000000000000000000000000000000000000000000000000000000568936000000000000000000000000b8b904c73d2fb4d8c173298a51c27fab70222c32000000000000000000000000000000000000000000000000000000000059bd0d");
     // https://sepolia.basescan.org/tx/0xdcef8686e15d1e163482d27658b4f1260a8dc07a7e5f6bce81df27a8f2127b81
-    const _SAMPLE_TX_3: [u8; 68] = hex!("39509351000000000000000000000000dd2da9ba748722faea8629a215ea47dd15e852f90000000000000000000000000000000000000000000000000429d069189e0000");
+    const SAMPLE_TX_3: [u8; 68] = hex!("39509351000000000000000000000000dd2da9ba748722faea8629a215ea47dd15e852f90000000000000000000000000000000000000000000000000429d069189e0000");
     // https://sepolia.basescan.org/tx/0x5de957de7b67999cc14099b7b40919afb0592de64c20a658c6cd296624b34ba9
-    const _SAMPLE_TX_4: [u8; 132] = hex!("81813c8b0000000000000000000000000000000000000000000000000000000001026afc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000671834d8");
+    const SAMPLE_TX_4: [u8; 132] = hex!("81813c8b0000000000000000000000000000000000000000000000000000000001026afc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000671834d8");
 
     #[test]
     fn test_single_tx_compression() {
@@ -275,5 +273,63 @@ mod tests {
             &compress_transactions(&[Bytes::copy_from_slice(&SAMPLE_TX_1)]).unwrap()[0..5],
         );
         assert!(decompress_transactions(&truncated).is_ok_and(|x| x.is_empty()));
+    }
+
+    #[test]
+    fn test_batch_multiple_txs() {
+        // Test batch compression with multiple transactions
+        let txs = vec![
+            Bytes::copy_from_slice(&SAMPLE_TX_1),
+            Bytes::copy_from_slice(&SAMPLE_TX_2),
+            Bytes::copy_from_slice(&SAMPLE_TX_3),
+            Bytes::copy_from_slice(&SAMPLE_TX_4),
+        ];
+        let compressed = compress_transactions(&txs).unwrap();
+        let decompressed = decompress_transactions(&compressed).unwrap();
+        assert_eq!(txs, decompressed);
+    }
+
+    #[test]
+    fn test_disallow_cm15() {
+        // Test batch compression with multiple transactions
+        let txs = vec![
+            Bytes::copy_from_slice(&SAMPLE_TX_1),
+            Bytes::copy_from_slice(&SAMPLE_TX_2),
+            Bytes::copy_from_slice(&SAMPLE_TX_3),
+            Bytes::copy_from_slice(&SAMPLE_TX_4),
+        ];
+
+        let mut compressed = compress_transactions(&txs).unwrap().to_vec();
+        compressed[0] = CM_BITS_MASK | ZLIB_CM15;
+        assert_eq!(compressed[0] & CM_BITS_MASK, ZLIB_CM15);
+        assert_eq!(
+            decompress_transactions(&compressed).err().unwrap().to_string(),
+            "Invalid CM bits in compressed data, expected ZLIB_CM8"
+        );
+    }
+
+    #[test]
+    fn test_malicious_zlib_header_with_valid_cm_bits() {
+        // Test attack scenario: valid CM bits but invalid zlib header checksum
+        //
+        // Zlib header format:
+        // Byte 0 (CMF): bits 0-3 = CM (compression method), bits 4-7 = CINFO
+        // Byte 1 (FLG): includes FCHECK field that must satisfy (CMF*256 + FLG) % 31 == 0
+        //
+        // Attack: Use CMF=0x78 (CM=8, valid) but FLG=0x00 (invalid checksum)
+        let malicious_data = vec![
+            0x78, // CMF: CM=8 (valid), CINFO=7
+            0x00, // FLG: Invalid because (0x78*256 + 0x00) % 31 = 6 ≠ 0
+            0x01, 0x02, 0x03, // Some payload data
+        ];
+
+        // Verify CM bits are valid (this would pass initial validation)
+        assert_eq!(malicious_data[0] & CM_BITS_MASK, ZLIB_CM8);
+        assert!(is_valid_cm_bits_8_only(&malicious_data).is_ok());
+
+        // But decompression should fail due to invalid header checksum
+        let result = decompress_transactions(&malicious_data);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "corrupt deflate stream")
     }
 }

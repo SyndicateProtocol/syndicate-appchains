@@ -25,7 +25,6 @@ sol! {
       bytes32 pcr_0;
       bytes32 pcr_1;
       bytes32 pcr_2;
-      bytes32 pcr_8;
       address tee_signing_key;
   }
 }
@@ -264,7 +263,6 @@ pub struct ValidationResult {
     pub pcr_0: Vec<u8>,
     pub pcr_1: Vec<u8>,
     pub pcr_2: Vec<u8>,
-    pub pcr_8: Vec<u8>,
 }
 
 /// https://github.com/aws/aws-nitro-enclaves-nsm-api/blob/main/docs/attestation_process.md#32-syntactical-validation
@@ -318,7 +316,6 @@ pub fn verify_aws_nitro_attestation(
         pcr_0: doc.pcrs.get(&0).unwrap().to_vec(),
         pcr_1: doc.pcrs.get(&1).unwrap().to_vec(),
         pcr_2: doc.pcrs.get(&2).unwrap().to_vec(),
-        pcr_8: doc.pcrs.get(&8).unwrap().to_vec(),
     })
 }
 

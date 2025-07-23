@@ -134,9 +134,6 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
                 IBridge(l1BlockOrBridge).sequencerMessageCount() > 0, "sequencing chain must have at least one batch"
             );
         } else {
-            // require(
-            //     l1BlockOrBridge == address(0x4200000000000000000000000000000000000015), "unexpected l1 block address"
-            // );
             require(
                 IL1Block(l1BlockOrBridge).timestamp() > 0 && IL1Block(l1BlockOrBridge).hash() > 0,
                 "l1 block contract invalid"

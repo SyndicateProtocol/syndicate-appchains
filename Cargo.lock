@@ -7128,7 +7128,10 @@ dependencies = [
  "test-utils",
  "thiserror 2.0.12",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "x509-cert",
+ "zeroize",
 ]
 
 [[package]]

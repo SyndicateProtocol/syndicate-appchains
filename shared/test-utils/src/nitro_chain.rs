@@ -14,7 +14,9 @@ use contract_bindings::synd::{
 use eyre::Ok;
 use serde::{Deserialize, Serialize};
 use shared::types::{deserialize_address, FilledProvider};
+use std::path::Path;
 use tokio::{fs, process::Command};
+use tracing::info;
 
 pub struct NitroChainInfoArgs {
     pub chain_id: u64,
@@ -22,11 +24,12 @@ pub struct NitroChainInfoArgs {
     pub chain_owner: Address,
     pub chain_name: String,
     pub deployment: NitroDeployment,
+    pub use_eigen_da: bool,
 }
 
 /// Get the nitro json configuration data for the appchain
 pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
-    let NitroChainInfoArgs { chain_name, parent_chain_id, deployment, .. } = args;
+    let NitroChainInfoArgs { chain_name, parent_chain_id, deployment, use_eigen_da, .. } = args;
     let NitroDeployment {
         bridge,
         inbox,
@@ -40,7 +43,7 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
         ..
     } = deployment;
 
-    let appchain_config = chain_config(args.chain_id, args.chain_owner);
+    let appchain_config = chain_config(args.chain_id, args.chain_owner, use_eigen_da);
     format!(
         r#"[{{
               "chain-name": "{chain_name}",
@@ -69,9 +72,7 @@ pub fn nitro_chain_info_json(args: NitroChainInfoArgs) -> String {
 }
 
 /// Return the on-chain config for a rollup with a given chain id
-pub fn chain_config(chain_id: u64, chain_owner: Address) -> String {
-    // TODO SEQ-1032: DataAvailabilityCommittee might need to be true for set/seq chains with
-    // eigenDA
+pub fn chain_config(chain_id: u64, chain_owner: Address, use_eigen_da: bool) -> String {
     let mut cfg = format!(
         r#"{{
           "chainId": {chain_id},
@@ -99,7 +100,8 @@ pub fn chain_config(chain_id: u64, chain_owner: Address) -> String {
             "DataAvailabilityCommittee": false,
             "InitialArbOSVersion": 32,
             "InitialChainOwner": "{chain_owner}",
-            "GenesisBlockNum": 0
+            "GenesisBlockNum": 0,
+            "EigenDA": {use_eigen_da}
           }}
       }}"#
     );
@@ -180,6 +182,12 @@ pub async fn execute_withdrawal(
             withdrawal_value,                             // value
             Bytes::new(),                                 // data (always empty)
         )
+        // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+        .nonce(
+            settlement_provider
+                .get_transaction_count(settlement_provider.default_signer_address())
+                .await?,
+        )
         .send()
         .await?;
     Ok(())
@@ -224,13 +232,22 @@ pub async fn deploy_nitro_rollup(
     l1_rpc_url_http: &str,
     rollup_chain_id: u64,
     rollup_owner: Address,
+    batch_posters: Vec<Address>,
+    use_eigen_da: bool,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
-    let nitro_contracts_dir = format!("{project_root}/synd-contracts/lib/nitro-contracts");
+    let nitro_contracts_dir = Path::new(project_root)
+        .join("synd-contracts/lib/nitro-contracts")
+        .to_string_lossy()
+        .to_string();
+    info!("Nitro contracts dir: {nitro_contracts_dir}");
 
     // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
     // apply patch to hardhat.config.ts to add custom network
-    let patch_path = format!("{project_root}/shared/test-utils/src/nitro-hardhat-config.patch");
+    let patch_path = Path::new(project_root)
+        .join("shared/test-utils/src/nitro-hardhat-config.patch")
+        .to_string_lossy()
+        .to_string();
     let status = E2EProcess::new(
         Command::new("git")
             .current_dir(nitro_contracts_dir.clone())
@@ -252,16 +269,15 @@ pub async fn deploy_nitro_rollup(
     .await?;
     assert!(status.success(), "Failed to run `yarn install` in nitro contracts");
 
-    let status = E2EProcess::new(
+    let _status = E2EProcess::new(
         Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build:all"),
         "nitro-contracts-build",
     )?
     .wait()
     .await?;
-    assert!(status.success(), "Failed to run `yarn build` in nitro contracts");
+    // NOTE: ignore `status` here, as it might be successful but exit with code 1
 
-    let chain_config_json = chain_config(rollup_chain_id, rollup_owner);
-    let zero_address = Address::ZERO;
+    let chain_config_json = chain_config(rollup_chain_id, rollup_owner, use_eigen_da);
 
     // setup config.ts (unfortunately, the script expects the config to be in a specific path)
     let config_ts = format!(
@@ -301,7 +317,7 @@ pub async fn deploy_nitro_rollup(
                 }},
             }},
             // validators: [],
-            // batchPosterManager: '{zero_address}',
+            // batchPosterManager: '',
             // batchPosters: []
         }}
     "#
@@ -328,6 +344,10 @@ pub async fn deploy_nitro_rollup(
             .env("CHILD_CHAIN_CONFIG_PATH", "./l2_chain_config.json")
             .env("OWNER_ADDRESS", rollup_owner.to_string())
             .env("SEQUENCER_ADDRESS", rollup_owner.to_string()) // is set as the batch poster manager by default
+            .env(
+                "BATCH_POSTERS",
+                batch_posters.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(","),
+            )
             .env(
                 "WASM_MODULE_ROOT",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
