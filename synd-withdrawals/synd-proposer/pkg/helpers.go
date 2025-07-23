@@ -3,7 +3,6 @@ package pkg
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"maps"
 	"math/big"
@@ -24,6 +23,7 @@ import (
 	"github.com/offchainlabs/nitro/daprovider"
 	"github.com/offchainlabs/nitro/execution"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
+	"github.com/pkg/errors"
 )
 
 // keep in sync with the nitro node
@@ -117,7 +117,6 @@ func getBatchPreimageData(
 	batch []byte,
 	dapReaders []daprovider.Reader,
 	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
-	settlesToArbitrumRollup bool,
 ) error {
 	if len(batch) > 40 {
 		for _, dapReader := range dapReaders {
