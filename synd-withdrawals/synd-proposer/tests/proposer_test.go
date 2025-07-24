@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func dummyCfg(privateKey *ecdsa.PrivateKey) *config.Config {
-	dummyCfg := &config.Config{
+func dummyConfig(privateKey *ecdsa.PrivateKey) *config.Config {
+	cfg := &config.Config{
 		EthereumRPCURL:           "http://localhost:8545",
 		SettlementRPCURL:         "http://localhost:8546",
 		SequencingRPCURL:         "http://localhost:8547",
@@ -35,13 +35,14 @@ func dummyCfg(privateKey *ecdsa.PrivateKey) *config.Config {
 		CloseChallengeInterval:   5 * time.Second,
 		Port:                     9292,
 		SettlementChainID:        9999,
-		EnclaveTLSConfig: tls.TLSConfig{
+		EnclaveTLSConfig: tls.Config{
 			Enabled:        false,
 			ClientCertPath: "/etc/tls/tls.crt",
 			ClientKeyPath:  "/etc/tls/tls.key",
 		},
 	}
-	return dummyCfg
+
+	return cfg
 }
 
 func TestInitProposerWithConfig(t *testing.T) {
@@ -49,7 +50,7 @@ func TestInitProposerWithConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse private key: %v", err)
 	}
-	dummyCfg := dummyCfg(privateKey)
+	dummyCfg := dummyConfig(privateKey)
 	registry := prometheus.NewRegistry()
 	dummyMetrics := metrics.NewMetrics(registry)
 	proposer := pkg.NewProposer(context.Background(), dummyCfg, dummyMetrics)
@@ -61,12 +62,12 @@ func TestInitProposerWithConfig(t *testing.T) {
 func TestServerInit(t *testing.T) {
 	// Test server initialization
 	port := 18080
-	server := server.InitServer(port)
+	testServer := server.InitServer(port)
 
-	assert.NotNil(t, server)
-	assert.NotNil(t, server.Server)
-	assert.NotNil(t, server.Registry)
-	assert.Equal(t, fmt.Sprintf(":%d", port), server.Addr)
+	assert.NotNil(t, testServer)
+	assert.NotNil(t, testServer.Server)
+	assert.NotNil(t, testServer.Registry)
+	assert.Equal(t, fmt.Sprintf(":%d", port), testServer.Addr)
 }
 
 func TestServerEndpoints(t *testing.T) {
@@ -74,18 +75,19 @@ func TestServerEndpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse private key: %v", err)
 	}
-	dummyCfg := dummyCfg(privateKey)
+	dummyCfg := dummyConfig(privateKey)
 
-	server := server.InitServer(dummyCfg.Port)
+	testServer := server.InitServer(dummyCfg.Port)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Start server
-	err = server.Start(ctx)
+	err = testServer.Start(ctx)
 	require.NoError(t, err)
 
 	// Run proposer with server, allow connections to fail
-	go server.RunProposer(ctx, dummyCfg, server)
+	go testServer.RunProposer(ctx, dummyCfg)
+	time.Sleep(1 * time.Second)
 
 	baseURL := fmt.Sprintf("http://localhost:%d", dummyCfg.Port)
 
