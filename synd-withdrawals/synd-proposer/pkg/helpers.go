@@ -141,7 +141,7 @@ func getBatchPreimageData(
 	dapReaders []daprovider.Reader,
 	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
 ) error {
-	// TODO(SEQ-944) what is this magic number? can we doc it?
+	// byte 40 is a flag byte that determines if the batch uses alt-DA
 	if len(batch) > 40 {
 		for _, dapReader := range dapReaders {
 			if dapReader != nil && dapReader.IsValidHeaderByte(ctx, batch[40]) {
