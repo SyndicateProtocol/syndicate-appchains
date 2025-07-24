@@ -35,7 +35,7 @@ use contract_bindings::synd::{
 };
 use shared::parse::parse_address;
 use sp1_sdk::{HashableKey, ProverClient};
-use std::{path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr, time::Duration};
 use synd_tee_attestation_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, ValidationResult};
 use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
 use synd_tee_attestation_zk_proofs_submitter::{
@@ -73,8 +73,8 @@ pub struct Args {
 
     /// The expiration tolerance to be used if a new contract is deployed
     /// (default is 24 hours)
-    #[arg(long, default_value = "86400")]
-    deploy_expiration_tolerance: u64,
+    #[arg(long, default_value = "24h",  value_parser = humantime::parse_duration )]
+    deploy_expiration_tolerance: Duration,
 
     /// The URL of the chain RPC server
     /// (if missing, on-chain submission will be skipped)
@@ -177,7 +177,7 @@ async fn run(
                 keccak256(&attestation_result.pcr_0),
                 keccak256(&attestation_result.pcr_1),
                 keccak256(&attestation_result.pcr_2),
-                args.deploy_expiration_tolerance,
+                args.deploy_expiration_tolerance.as_secs(),
             )
             .await
             .map_err(|e| {
@@ -449,7 +449,7 @@ mod tests {
             proof_system: ProofSystem::Groth16,
             contract_address: Some(*key_mgr_contract.address()),
             deploy_new_contract_with_sp1_verifier: None,
-            deploy_expiration_tolerance: 3600,
+            deploy_expiration_tolerance: Duration::from_secs(3600),
             chain_rpc_url: Some(chain_info.ws_url.to_string()),
             private_key: Some(Zeroizing::new(PRIVATE_KEY.to_string())),
             elf_file_path: None,
