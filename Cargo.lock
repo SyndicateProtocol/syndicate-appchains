@@ -7117,6 +7117,7 @@ dependencies = [
  "alloy",
  "clap",
  "contract-bindings",
+ "humantime",
  "jsonrpsee",
  "mockito",
  "serde",
