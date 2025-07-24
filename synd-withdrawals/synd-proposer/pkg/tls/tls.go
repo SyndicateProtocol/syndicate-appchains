@@ -58,7 +58,6 @@ func CreateTLSClient(cfg *Config, rpcURL string) (*rpc.Client, error) {
 
 // IsTLSErr returns true if err came from a failed TLS handshake / cert validation.
 func IsTLSErr(err error) bool {
-	// pointer type
 	var urlErr *url.Error
 	if !errors.As(err, &urlErr) {
 		return false

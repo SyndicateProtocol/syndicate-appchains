@@ -157,8 +157,6 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 	}
 }
 
-var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
-
 // PollingLoop runs the polling background process.
 func (p *Proposer) pollingLoop(ctx context.Context) {
 	ticker := time.NewTicker(p.Config.PollingInterval)
@@ -505,7 +503,7 @@ func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInpu
 			SeqBlockHash: sequencingBlockHash,
 			L1BatchAcc:   metadata.Accumulator,
 		},
-		// TODO(SEQ-944) - confirm this should be unset
+		// Intentionally unset
 		Signature: nil,
 	}, nil
 }

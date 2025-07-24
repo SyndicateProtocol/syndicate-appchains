@@ -45,6 +45,8 @@ var (
 	inboxMessageDeliveredID common.Hash
 )
 
+var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
+
 func init() {
 	parsedIBridgeABI, err := bridgegen.IBridgeMetaData.GetAbi()
 	if err != nil {
@@ -122,9 +124,9 @@ func getBatches(
 	for _, batch := range batches {
 		if batch.SequenceNumber >= start && batch.SequenceNumber <= end {
 			// TODO (SEQ-1064): can this be sped up? probably not since the tx receipt needs to be fetched in general
-			raw, err2 := batch.Serialize(ctx, c)
-			if err2 != nil {
-				return nil, err2
+			raw, err := batch.Serialize(ctx, c)
+			if err != nil {
+				return nil, err
 			}
 			data = append(data, raw)
 		}
@@ -179,7 +181,7 @@ func getBatchPreimageData(
 
 // GetMessageAcc if count is zero, attempt to fetch
 func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Address, count uint64) (common.Hash, uint64, error) {
-	// TODO(SEQ-944) doc this magic number
+	// Memory slot in contract is 6
 	slot := common.BigToHash(big.NewInt(6))
 	if count == 0 {
 		countBytes, err := c.StorageAt(ctx, bridge, slot, nil)

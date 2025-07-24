@@ -39,7 +39,7 @@ type Config struct {
 	EnclaveTLSConfig tls.Config
 }
 
-var CfgKeys = map[string]struct {
+var Keys = map[string]struct {
 	Description string
 	Default     string
 	Required    bool
@@ -67,7 +67,7 @@ var CfgKeys = map[string]struct {
 }
 
 func BindFlags(flags *pflag.FlagSet) {
-	for key, meta := range CfgKeys {
+	for key, meta := range Keys {
 		switch key {
 		case "port":
 			flags.Int(key, mustAtoi(meta.Default, 9292), meta.Description)
@@ -81,7 +81,7 @@ func BindFlags(flags *pflag.FlagSet) {
 }
 
 func LoadConfig() (*Config, error) {
-	for key, meta := range CfgKeys {
+	for key, meta := range Keys {
 		if meta.Required && (!viper.IsSet(key) || viper.GetString(key) == "") {
 			return nil, fmt.Errorf("missing required config: --%s", key)
 		}
