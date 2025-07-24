@@ -216,9 +216,13 @@ jobs:
           cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
           $HOME/.sp1/bin/cargo-prove prove build
 
-        # NOTE: this is just a workaround and should be removed as soon as the repo/packages are made public
+      # NOTE: this is just a workaround and should be removed as soon as the repo/packages are made public
       - name: Login to GitHub Container Registry
-        run: echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u jorgemmsilva --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: jorgemmsilva
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Pre-download docker test docker images
         run: |
