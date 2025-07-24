@@ -60,6 +60,15 @@ pub enum ProofSubmitterError {
 
     #[error("Vkey mismatch")]
     VkeyMismatch,
+
+    #[error("Pcr0 mismatch")]
+    Pcr0Mismatch,
+
+    #[error("Pcr1 mismatch")]
+    Pcr1Mismatch,
+
+    #[error("Pcr2 mismatch")]
+    Pcr2Mismatch,
 }
 
 #[allow(missing_docs)]

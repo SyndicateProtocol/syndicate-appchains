@@ -21,6 +21,8 @@
 //! enclave URL, chain RPC URL, contract address, and the private key for on-chain
 //! transactions.
 
+#[cfg(not(debug_assertions))]
+use alloy::primitives::keccak256;
 use alloy::{
     hex,
     network::EthereumWallet,
@@ -37,6 +39,8 @@ use shared::parse::parse_address;
 use sp1_sdk::{HashableKey, ProverClient};
 use std::{path::PathBuf, str::FromStr};
 use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
+#[cfg(not(debug_assertions))]
+use synd_tee_attestation_zk_proofs_aws_nitro::ValidationResult;
 use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
 use synd_tee_attestation_zk_proofs_submitter::{
     generate_proof, get_attestation_doc, pem_to_der, GenerateProofResult, ProofSubmitterError,
@@ -126,8 +130,9 @@ async fn run(
     let der_root_cert = pem_to_der(&pem_root_cert)?;
 
     // make sure the attestation is vaild for the provided root certificate
-    verify_aws_nitro_attestation(&cbor_attestation_doc, &der_root_cert)
+    let attestation_result = verify_aws_nitro_attestation(&cbor_attestation_doc, &der_root_cert)
         .map_err(ProofSubmitterError::InvalidAttestationDocument)?;
+    info!("Attestation valid. Signing key: {}", attestation_result.tee_signing_key);
 
     let custom_elf_bytes = args
         .elf_file_path
@@ -159,7 +164,8 @@ async fn run(
 
             // assert our ELF file matches the contract's vkey before generating the proof
             #[cfg(not(debug_assertions))]
-            assert_vkey_matches(&elf_bytes, contract.clone()).await?;
+            assert_vkey_and_prc_values_match(&elf_bytes, attestation_result, contract.clone())
+                .await?;
 
             let proof = generate_proof_fn(
                 cbor_attestation_doc,
@@ -192,8 +198,9 @@ async fn run(
 
 /// (this can only run on release builds, otherwise ProviderClient setup will fail)
 #[cfg(not(debug_assertions))]
-async fn assert_vkey_matches<P: Provider>(
+async fn assert_vkey_and_prc_values_match<P: Provider>(
     elf_bytes: &[u8],
+    attestation_result: ValidationResult,
     contract: TeeKeyManagerInstance<P>,
 ) -> Result<(), ProofSubmitterError> {
     let (_, vk) = ProverClient::from_env().setup(elf_bytes);
@@ -212,9 +219,37 @@ async fn assert_vkey_matches<P: Provider>(
             ProofSubmitterError::GetAttestationDocVerifierVKeyHash(e)
         })?;
 
+    //match vkey
     if vk.bytes32_raw() != att_doc_verifier_vkey {
         return Err(ProofSubmitterError::VkeyMismatch);
     }
+
+    //match pcr values
+    if keccak256(attestation_result.pcr_0) !=
+        att_doc_verifier_contract.pcr0().call().await.map_err(|e| {
+            info!("Error getting pcr0: {e}");
+            ProofSubmitterError::Pcr0Mismatch
+        })?
+    {
+        return Err(ProofSubmitterError::Pcr0Mismatch);
+    }
+    if keccak256(attestation_result.pcr_1) !=
+        att_doc_verifier_contract.pcr1().call().await.map_err(|e| {
+            info!("Error getting pcr1: {e}");
+            ProofSubmitterError::Pcr1Mismatch
+        })?
+    {
+        return Err(ProofSubmitterError::Pcr1Mismatch);
+    }
+    if keccak256(attestation_result.pcr_2) !=
+        att_doc_verifier_contract.pcr2().call().await.map_err(|e| {
+            info!("Error getting pcr2: {e}");
+            ProofSubmitterError::Pcr2Mismatch
+        })?
+    {
+        return Err(ProofSubmitterError::Pcr2Mismatch);
+    }
+
     Ok(())
 }
 
