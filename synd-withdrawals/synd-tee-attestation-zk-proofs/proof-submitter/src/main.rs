@@ -21,26 +21,22 @@
 //! enclave URL, chain RPC URL, contract address, and the private key for on-chain
 //! transactions.
 
-#[cfg(not(debug_assertions))]
-use alloy::primitives::keccak256;
 use alloy::{
     hex,
     network::EthereumWallet,
-    primitives::Address,
+    primitives::{keccak256, Address},
     providers::{Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
 };
 use clap::Parser;
-#[cfg(not(debug_assertions))]
-use contract_bindings::synd::attestation_doc_verifier::AttestationDocVerifier;
-use contract_bindings::synd::tee_key_manager::TeeKeyManager::{self, TeeKeyManagerInstance};
+use contract_bindings::synd::{
+    attestation_doc_verifier::AttestationDocVerifier,
+    tee_key_manager::TeeKeyManager::{self, TeeKeyManagerInstance},
+};
 use shared::parse::parse_address;
-#[cfg(not(debug_assertions))]
 use sp1_sdk::{HashableKey, ProverClient};
 use std::{path::PathBuf, str::FromStr};
-use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
-#[cfg(not(debug_assertions))]
-use synd_tee_attestation_zk_proofs_aws_nitro::ValidationResult;
+use synd_tee_attestation_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, ValidationResult};
 use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
 use synd_tee_attestation_zk_proofs_submitter::{
     generate_proof, get_attestation_doc, pem_to_der, GenerateProofResult, ProofSubmitterError,
@@ -69,6 +65,16 @@ pub struct Args {
     /// (if missing, on-chain submission will be skipped)
     #[arg(long, value_parser = parse_address)]
     contract_address: Option<Address>,
+
+    /// If passed, a new `TeeKeyManager` contract with a respective new `AttestationDocVerifier`
+    /// contract will be deployed
+    #[arg(long, value_parser = parse_address)]
+    deploy_new_contract_with_sp1_verifier: Option<Address>,
+
+    /// The expiration tolerance to be used if a new contract is deployed
+    /// (default is 24 hours)
+    #[arg(long, default_value = "86400")]
+    deploy_expiration_tolerance: u64,
 
     /// The URL of the chain RPC server
     /// (if missing, on-chain submission will be skipped)
@@ -118,24 +124,106 @@ async fn run(
     let cbor_attestation_doc = hex::decode(attestation_doc_hex)?;
 
     // get root certificate DER
-    let pem_root_cert = if let Some(root_certificate_path) = args.root_certificate_path {
-        std::fs::read(root_certificate_path).map_err(|e| {
-            info!("Error reading root certificate: {e}");
-            ProofSubmitterError::ReadRootCertificate(e)
-        })?
-    } else {
-        AWS_NITRO_ROOT_CERT_PEM.to_vec()
-    };
-
-    let der_root_cert = pem_to_der(&pem_root_cert)?;
+    let der_root_cert = get_der_root_cert(args.root_certificate_path).await?;
 
     // make sure the attestation is vaild for the provided root certificate
     let attestation_result = verify_aws_nitro_attestation(&cbor_attestation_doc, &der_root_cert)
         .map_err(ProofSubmitterError::InvalidAttestationDocument)?;
     info!("Attestation valid. Signing key: {}", attestation_result.tee_signing_key);
 
-    let custom_elf_bytes = args
-        .elf_file_path
+    let elf_bytes = get_elf_bytes(args.elf_file_path).await?;
+
+    if args.chain_rpc_url.is_none() {
+        info!("Skipping submission to chain");
+
+        let proof =
+            generate_proof_fn(cbor_attestation_doc, der_root_cert, args.proof_system, elf_bytes)?;
+        info!("Public values: 0x{}", hex::encode(&proof.public_values));
+        info!("Proof: 0x{}", hex::encode(&proof.proof));
+        return Ok(());
+    }
+
+    // on chain submission
+    #[allow(clippy::unwrap_used)] // checked above
+    let chain_rpc_url = args.chain_rpc_url.unwrap();
+    let mut private_key = args.private_key.ok_or(ProofSubmitterError::PrivateKeyRequired)?;
+    let signer = PrivateKeySigner::from_str(&private_key)?;
+    let provider = ProviderBuilder::new()
+        .wallet(EthereumWallet::from(signer))
+        .connect(chain_rpc_url.as_str())
+        .await?;
+    private_key.zeroize(); // zeroize the private key after use
+
+    let vk_bytes = if cfg!(not(debug_assertions)) {
+        // only in release builds, otherwise `ProviderClient` setup will fail
+        let (_, vk) = ProverClient::from_env().setup(&elf_bytes);
+        info!("using vkey: {}", vk.bytes32());
+        vk.bytes32_raw()
+    } else {
+        [0u8; 32]
+    };
+
+    let contract_address = match (args.contract_address, args.deploy_new_contract_with_sp1_verifier)
+    {
+        (Some(contract_address), None) => contract_address,
+        (None, Some(verifier_address)) => {
+            info!("Deploying new attestation doc verifier contract");
+
+            let attestation_doc_verifier_contract = AttestationDocVerifier::deploy(
+                provider.clone(),
+                verifier_address,
+                vk_bytes.into(),
+                keccak256(&der_root_cert),
+                keccak256(&attestation_result.pcr_0),
+                keccak256(&attestation_result.pcr_1),
+                keccak256(&attestation_result.pcr_2),
+                args.deploy_expiration_tolerance,
+            )
+            .await
+            .map_err(|e| {
+                info!("Error deploying attestation doc verifier contract: {e}");
+                ProofSubmitterError::DeployNewContract(e)
+            })?;
+            info!(
+                "Attestation doc verifier contract deployed to: {}",
+                attestation_doc_verifier_contract.address()
+            );
+
+            let contract = TeeKeyManager::deploy(
+                provider.clone(),
+                *attestation_doc_verifier_contract.address(),
+            )
+            .await
+            .map_err(|e| {
+                info!("Error deploying tee key manager contract: {e}");
+                ProofSubmitterError::DeployNewContract(e)
+            })?;
+            info!("Tee key manager contract deployed to: {}", contract.address());
+            *contract.address()
+        }
+        (None, None) => return Err(ProofSubmitterError::ContractAddressRequired),
+        (Some(_), Some(_)) => {
+            return Err(ProofSubmitterError::ContractAddressAndDeployAreMutuallyExclusive)
+        }
+    };
+
+    let contract = TeeKeyManager::new(contract_address, provider);
+
+    // assert our ELF file matches the contract's vkey before generating the proof
+    assert_vkey_and_prc_values_match(&vk_bytes, attestation_result, contract.clone()).await?;
+
+    let proof =
+        generate_proof_fn(cbor_attestation_doc, der_root_cert, args.proof_system, elf_bytes)?;
+
+    info!("Public values: 0x{}", hex::encode(&proof.public_values));
+    info!("Proof: 0x{}", hex::encode(&proof.proof));
+
+    submit_proof_to_chain(contract, proof).await?;
+    Ok(())
+}
+
+async fn get_elf_bytes(elf_file_path: Option<PathBuf>) -> Result<Vec<u8>, ProofSubmitterError> {
+    let custom_elf_bytes = elf_file_path
         .map(|path| {
             std::fs::read(path).map_err(|e| {
                 info!("Error reading ELF file: {e}");
@@ -152,60 +240,29 @@ async fn run(
         },
     );
 
-    match (args.chain_rpc_url, args.private_key, args.contract_address) {
-        (Some(chain_rpc_url), Some(mut private_key), Some(contract_address)) => {
-            let signer = PrivateKeySigner::from_str(&private_key)?;
-            let provider = ProviderBuilder::new()
-                .wallet(EthereumWallet::from(signer))
-                .connect(chain_rpc_url.as_str())
-                .await?;
-            private_key.zeroize(); // zeroize the private key after use
-            let contract = TeeKeyManager::new(contract_address, provider);
-
-            // assert our ELF file matches the contract's vkey before generating the proof
-            #[cfg(not(debug_assertions))]
-            assert_vkey_and_prc_values_match(&elf_bytes, attestation_result, contract.clone())
-                .await?;
-
-            let proof = generate_proof_fn(
-                cbor_attestation_doc,
-                der_root_cert,
-                args.proof_system,
-                elf_bytes,
-            )?;
-
-            info!("Public values: 0x{}", hex::encode(&proof.public_values));
-            info!("Proof: 0x{}", hex::encode(&proof.proof));
-
-            submit_proof_to_chain(contract, proof).await?;
-        }
-        _ => {
-            info!("Skipping submission to chain");
-
-            let proof = generate_proof_fn(
-                cbor_attestation_doc,
-                der_root_cert,
-                args.proof_system,
-                elf_bytes,
-            )?;
-            info!("Public values: 0x{}", hex::encode(&proof.public_values));
-            info!("Proof: 0x{}", hex::encode(&proof.proof));
-        }
-    }
-
-    Ok(())
+    Ok(elf_bytes)
 }
 
-/// (this can only run on release builds, otherwise ProviderClient setup will fail)
-#[cfg(not(debug_assertions))]
+async fn get_der_root_cert(
+    root_certificate_path: Option<PathBuf>,
+) -> Result<Vec<u8>, ProofSubmitterError> {
+    let pem_root_cert = if let Some(root_certificate_path) = root_certificate_path {
+        std::fs::read(root_certificate_path).map_err(|e| {
+            info!("Error reading root certificate: {e}");
+            ProofSubmitterError::ReadRootCertificate(e)
+        })?
+    } else {
+        AWS_NITRO_ROOT_CERT_PEM.to_vec()
+    };
+
+    pem_to_der(&pem_root_cert)
+}
+
 async fn assert_vkey_and_prc_values_match<P: Provider>(
-    elf_bytes: &[u8],
+    vkey: &[u8; 32],
     attestation_result: ValidationResult,
     contract: TeeKeyManagerInstance<P>,
 ) -> Result<(), ProofSubmitterError> {
-    let (_, vk) = ProverClient::from_env().setup(elf_bytes);
-    info!("using vkey: {}", vk.bytes32());
-
     let att_doc_verifier_address = contract.attestationDocVerifier().call().await.map_err(|e| {
         info!("Error getting attestation doc verifier address: {e}");
         ProofSubmitterError::GetAttestationDocVerifierAddress(e)
@@ -219,8 +276,8 @@ async fn assert_vkey_and_prc_values_match<P: Provider>(
             ProofSubmitterError::GetAttestationDocVerifierVKeyHash(e)
         })?;
 
-    //match vkey
-    if vk.bytes32_raw() != att_doc_verifier_vkey {
+    //match vkey (only in release builds)
+    if cfg!(not(debug_assertions)) && vkey != att_doc_verifier_vkey {
         return Err(ProofSubmitterError::VkeyMismatch);
     }
 
@@ -391,6 +448,8 @@ mod tests {
             root_certificate_path: None,
             proof_system: ProofSystem::Groth16,
             contract_address: Some(*key_mgr_contract.address()),
+            deploy_new_contract_with_sp1_verifier: None,
+            deploy_expiration_tolerance: 3600,
             chain_rpc_url: Some(chain_info.ws_url.to_string()),
             private_key: Some(Zeroizing::new(PRIVATE_KEY.to_string())),
             elf_file_path: None,
