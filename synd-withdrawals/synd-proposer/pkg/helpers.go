@@ -402,9 +402,9 @@ func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay ui
 	i := 0
 	for _, b := range batches {
 		hasMsg := false
-		msgTimestamp := binary.BigEndian.Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset:enclave.
+		dmsgTimestamp := binary.BigEndian.Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset:enclave.
 			DelayedMessageTimestampOffset+8]) + setDelay
-		for i < len(dmsgs) && msgTimestamp <= b.Timestamp {
+		for i < len(dmsgs) && dmsgTimestamp <= b.Timestamp {
 			i++
 			hasMsg = true
 		}
