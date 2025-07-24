@@ -36,10 +36,10 @@ type Config struct {
 	IsL1Chain bool
 
 	EnclaveConfig    enclave.Config
-	EnclaveTLSConfig tls.TLSConfig
+	EnclaveTLSConfig tls.Config
 }
 
-var ConfigKeys = map[string]struct {
+var CfgKeys = map[string]struct {
 	Description string
 	Default     string
 	Required    bool
@@ -63,10 +63,12 @@ var ConfigKeys = map[string]struct {
 	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
+	// TODO(SEQ-944) - confirm this was missing
+	"is-l1-chain": {"Is L1 Chain", "false", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
-	for key, meta := range ConfigKeys {
+	for key, meta := range CfgKeys {
 		switch key {
 		case "port":
 			flags.Int(key, mustAtoi(meta.Default, 9292), meta.Description)
@@ -80,7 +82,7 @@ func BindFlags(flags *pflag.FlagSet) {
 }
 
 func LoadConfig() (*Config, error) {
-	for key, meta := range ConfigKeys {
+	for key, meta := range CfgKeys {
 		if meta.Required && (!viper.IsSet(key) || viper.GetString(key) == "") {
 			return nil, fmt.Errorf("missing required config: --%s", key)
 		}
@@ -88,19 +90,19 @@ func LoadConfig() (*Config, error) {
 
 	pollingInterval, err := time.ParseDuration(viper.GetString("polling-interval"))
 	if err != nil {
-		return nil, fmt.Errorf("invalid polling-interval: %v", err)
+		return nil, fmt.Errorf("invalid polling-interval: %w", err)
 	}
 
 	closeChallengeInterval, err := time.ParseDuration(viper.GetString("close-challenge-interval"))
 	if err != nil {
-		return nil, fmt.Errorf("invalid close-challenge-interval: %v", err)
+		return nil, fmt.Errorf("invalid close-challenge-interval: %w", err)
 	}
 
 	port := viper.GetInt("port")
 
 	privateKey, err := crypto.HexToECDSA(viper.GetString("private-key"))
 	if err != nil {
-		return nil, fmt.Errorf("invalid private-key: %v", err)
+		return nil, fmt.Errorf("invalid private-key: %w", err)
 	}
 
 	return &Config{
@@ -122,11 +124,12 @@ func LoadConfig() (*Config, error) {
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
 		},
-		EnclaveTLSConfig: tls.TLSConfig{
+		EnclaveTLSConfig: tls.Config{
 			Enabled:        viper.GetBool("mtls-enabled-enclave"),
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
+		IsL1Chain: viper.GetBool("is-l1-chain"),
 	}, nil
 }
 
@@ -135,5 +138,6 @@ func mustAtoi(s string, fallback int) int {
 	if err != nil || i == 0 {
 		return fallback
 	}
+
 	return i
 }

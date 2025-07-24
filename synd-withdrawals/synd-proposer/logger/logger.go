@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Init starts the default JSON structured logger
 // NOTE: For .Stack() to work we need to use `github.com/pkg/errors` everywhere instead of the standard `errors` package
 // https://github.com/rs/zerolog#error-logging-with-stacktrace
 func Init() {
@@ -34,7 +35,8 @@ func Init() {
 	}
 }
 
-// Need to wrap std lib errors into `pkg/errors` to get the stack trace in logger
+// WrapErrorWithMsg util function
+// Need to wrap std lib errors into `pkg/errors` to get the stack trace in `zerolog` logger
 func WrapErrorWithMsg(msg string, err error) (string, error) {
 	return msg, errors.Wrap(err, msg)
 }

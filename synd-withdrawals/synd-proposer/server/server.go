@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -56,12 +57,12 @@ func InitServer(port int) *Server {
 	}
 }
 
-// `Start` begins listening on the configured port
+// Start begins listening on the configured port
 func (s *Server) Start(ctx context.Context) error {
 	errCh := make(chan error, 1)
 
 	go func() {
-		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
 	}()
@@ -80,13 +81,13 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 }
 
-// `RunProposer` runs the proposer with the given configuration and server
-func (s *Server) RunProposer(ctx context.Context, config *config.Config, server *Server) error {
-	log.Info().Int("port", config.Port).Msg("Server listening on /health and /metrics")
+// RunProposer runs the `synd-proposer` service with the given configuration
+func (s *Server) RunProposer(ctx context.Context, cfg *config.Config) error {
+	log.Info().Int("port", cfg.Port).Msg("Server listening on /health and /metrics")
 
 	// Create metrics and proposer
-	metrics := metrics.NewMetrics(server.Registry)
-	proposer := pkg.NewProposer(ctx, config, metrics)
+	m := metrics.NewMetrics(s.Registry)
+	proposer := pkg.NewProposer(ctx, cfg, m)
 
 	// Run the proposer
 	proposer.Run(ctx)

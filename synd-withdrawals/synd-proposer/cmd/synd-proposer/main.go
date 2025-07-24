@@ -27,25 +27,25 @@ func main() {
 			viper.AutomaticEnv()
 			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
-			config, err := config.LoadConfig()
+			cfg, err := config.LoadConfig()
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			log.Info().Msgf("Config: %+v", config)
+			log.Info().Msgf("Config: %+v", cfg)
 
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 
 			// Initialize server
-			server := server.InitServer(config.Port)
+			proposerServer := server.InitServer(cfg.Port)
 
 			// Start the server
-			if err := server.Start(ctx); err != nil {
+			if err := proposerServer.Start(ctx); err != nil {
 				return fmt.Errorf("failed to start server: %w", err)
 			}
 
 			// Run proposer with server
-			return server.RunProposer(ctx, config, server)
+			return proposerServer.RunProposer(ctx, cfg)
 		},
 	}
 
