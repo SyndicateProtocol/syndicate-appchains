@@ -8,15 +8,28 @@ use alloy::{
     transports::{RpcError, TransportErrorKind},
 };
 use clap::ValueEnum;
-use jsonrpsee::{core::client::ClientT, http_client::HttpClientBuilder};
+use jsonrpsee::{
+    core::client::ClientT,
+    http_client::{HeaderMap, HeaderValue, HttpClientBuilder},
+};
 use sp1_sdk::{ProverClient, SP1Stdin};
 use std::time::Duration;
-use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF;
 use x509_cert::der::{DecodePem, Encode};
 
 #[allow(missing_docs)]
 #[derive(Debug, thiserror::Error)]
 pub enum ProofSubmitterError {
+    #[error("RPC URL was provided, but Private key is missing")]
+    PrivateKeyRequired,
+
+    #[error("RPC URL was provided, but contract address is missing. You can use `--deploy-new-contract-with-sp1-verifier` to deploy a new instance")]
+    ContractAddressRequired,
+
+    #[error(
+        "`--contract-address` and `--deploy-new-contract-with-sp1-verifier` are mutually exclusive"
+    )]
+    ContractAddressAndDeployAreMutuallyExclusive,
+
     #[error("Failed to get attestation doc")]
     GetAttestationDoc(#[from] jsonrpsee::core::client::Error),
 
@@ -24,7 +37,7 @@ pub enum ProofSubmitterError {
     DecodeAttestationDoc(#[from] hex::FromHexError),
 
     #[error("Failed to read root certificate")]
-    ReadRootCertificate(#[from] std::io::Error),
+    ReadRootCertificate(std::io::Error),
 
     #[error("Failed to parse root certificate")]
     ParseRootCertificate(#[from] x509_cert::der::Error),
@@ -46,6 +59,30 @@ pub enum ProofSubmitterError {
 
     #[error("Failed to wait for pending transaction: {0}")]
     WaitForPendingTransaction(#[from] PendingTransactionError),
+
+    #[error("Failed to read ELF file: {0}")]
+    ReadElfFile(std::io::Error),
+
+    #[error("Failed to get attestation doc verifier address")]
+    GetAttestationDocVerifierAddress(alloy::contract::Error),
+
+    #[error("Failed to get attestation doc verifier vkey hash")]
+    GetAttestationDocVerifierVKeyHash(alloy::contract::Error),
+
+    #[error("Vkey mismatch")]
+    VkeyMismatch,
+
+    #[error("Pcr0 mismatch")]
+    Pcr0Mismatch,
+
+    #[error("Pcr1 mismatch")]
+    Pcr1Mismatch,
+
+    #[error("Pcr2 mismatch")]
+    Pcr2Mismatch,
+
+    #[error("Failed to deploy new contracts: {0}")]
+    DeployNewContract(alloy::contract::Error),
 }
 
 #[allow(missing_docs)]
@@ -68,11 +105,13 @@ pub fn generate_proof(
     cbor_attestation_doc: Vec<u8>,
     der_root_cert: Vec<u8>,
     proof_system: ProofSystem,
+    elf_bytes: Vec<u8>,
 ) -> Result<GenerateProofResult, ProofSubmitterError> {
     // Set up the prover client.
     let client = ProverClient::from_env();
 
-    let (pk, _vk) = client.setup(TEE_ATTESTATION_VALIDATION_ELF);
+    let (pk, _) = client.setup(&elf_bytes);
+
     let mut stdin = SP1Stdin::new();
     stdin.write(&cbor_attestation_doc);
     stdin.write(&der_root_cert);
@@ -88,8 +127,12 @@ pub fn generate_proof(
 
 /// Get the TEE attestation document from the enclave RPC server
 pub async fn get_attestation_doc(enclave_rpc_url: String) -> Result<String, ProofSubmitterError> {
+    let mut headers = HeaderMap::new();
+    headers.insert("User-Agent", HeaderValue::from_static("synd-withdrawals/proof-submitter"));
+
     let client = HttpClientBuilder::default()
         .request_timeout(Duration::from_secs(10))
+        .set_headers(headers)
         .build(enclave_rpc_url)?;
 
     Ok(client.request::<String, [(); 0]>("enclave_signerAttestation", []).await?)
@@ -97,6 +140,9 @@ pub async fn get_attestation_doc(enclave_rpc_url: String) -> Result<String, Proo
 
 /// Gets the public key from the TEE, no attestation. Used for testing only
 pub async fn get_signer_public_key(enclave_rpc_url: String) -> Result<String, ProofSubmitterError> {
+    let mut headers = HeaderMap::new();
+    headers.insert("User-Agent", HeaderValue::from_static("synd-withdrawals/proof-submitter"));
+
     let client = HttpClientBuilder::default()
         .request_timeout(Duration::from_secs(10))
         .build(enclave_rpc_url)?;

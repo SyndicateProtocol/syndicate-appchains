@@ -13,26 +13,24 @@ use alloy::{
     signers::local::PrivateKeySigner,
     transports::{layers::RetryBackoffLayer, TransportError},
 };
-use axum::{
-    http::StatusCode,
-    response::Json,
-    routing::{get, MethodRouter},
-};
 use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use redis::{aio::ConnectionManager, AsyncCommands, Client as ValkeyClient};
+use redis::{aio::ConnectionManager, Client as ValkeyClient};
 use shared::{
-    service_start_utils::{start_metrics_and_health, MetricsState},
+    service_start_utils::{
+        cache_health_check_handler, start_http_server_with_aux_handlers, MetricsState,
+    },
     tracing::SpanKind,
     types::FilledProvider,
 };
 use std::{
     collections::VecDeque,
     str::FromStr,
+    sync::Arc,
     time::{Duration, Instant},
 };
-use synd_maestro::valkey::streams::consumer::StreamConsumer;
+use synd_maestro::valkey::{streams::consumer::StreamConsumer, valkey_metrics::ValkeyMetrics};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, instrument, trace, warn};
 
@@ -80,20 +78,29 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let conn = ConnectionManager::new(client).await.map_err(|e| {
         eyre!("Failed to get Valkey connection: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
-    let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
 
     // Start metrics and health endpoints
     let mut metrics_state = MetricsState::default();
-    let metrics = BatcherMetrics::new(&mut metrics_state.registry);
-    let health_handler = health_handler(conn);
-    tokio::spawn(start_metrics_and_health(
+    let registry = &mut metrics_state.registry;
+    let metrics = BatcherMetrics::new(registry);
+    let valkey_metrics = ValkeyMetrics::new(registry);
+
+    let cache_health_handler = cache_health_check_handler(conn.clone());
+    tokio::spawn(start_http_server_with_aux_handlers(
         metrics_state,
-        config.metrics_port,
-        Some(health_handler),
+        config.port,
+        Some(cache_health_handler.clone()),
+        Some(cache_health_handler), // same /ready behavior as /health
     ));
 
     let sequencing_contract_instance = create_sequencing_contract_instance(config).await?;
 
+    let stream_consumer = StreamConsumer::new(
+        conn.clone(),
+        config.chain_id,
+        "0-0".to_string(),
+        Arc::new(valkey_metrics),
+    );
     let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics);
 
     let handle = tokio::spawn({
@@ -109,40 +116,6 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     });
     info!("Batcher job started");
     Ok(handle)
-}
-
-/// Checks if the cache connection is healthy
-/// This method attempts to ping the cache connection to check if it is healthy.
-fn health_handler(valkey_conn: ConnectionManager) -> MethodRouter<std::sync::Arc<MetricsState>> {
-    let mut conn = valkey_conn;
-    get(move || async move {
-        // Add timeout to prevent hanging when valkey is down
-        let health = tokio::time::timeout(Duration::from_secs(2), conn.ping::<String>()).await;
-
-        match health {
-            Ok(Ok(_)) => (StatusCode::OK, Json(serde_json::json!({ "health": true }))),
-            Ok(Err(e)) => {
-                error!("Cache connection is not healthy: {:?}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({
-                        "health": false,
-                        "message": "Cache connection is not healthy"
-                    })),
-                )
-            }
-            Err(_) => {
-                error!("Cache connection ping timed out");
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({
-                        "health": false,
-                        "message": "Cache connection ping timed out"
-                    })),
-                )
-            }
-        }
-    })
 }
 
 async fn create_sequencing_contract_instance(
@@ -258,7 +231,7 @@ impl Batcher {
                 if proposed_batch.len() > self.max_batch_size {
                     // If the current txs vector is empty, that means the transaction we are trying
                     // to add is too large to fit in a single batch by itself.
-                    // We need to discard it or this loop will get stuck trying
+                    // We need to discard it, or this loop will get stuck trying
                     // to add the same transaction over and over.
                     if txs.is_empty() {
                         let bad_tx = pending_txs.pop_front().unwrap_or_default();
@@ -369,9 +342,11 @@ mod tests {
     };
     use prometheus_client::registry::Registry;
     use reqwest;
+    use std::sync::Arc;
     use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
     use test_utils::{docker::start_valkey, port_manager::PortManager, wait_until};
     use url::Url;
+
     // Create a mock provider that always succeeds
     async fn create_mock_contract(
         anvil: Option<&AnvilInstance>,
@@ -429,7 +404,9 @@ mod tests {
             .await
             .unwrap();
         let chain_id = 1;
-        let stream_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
+        let stream_consumer =
+            StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string(), valkey_metrics);
         let producer = StreamProducer::new(
             conn,
             chain_id,
@@ -437,6 +414,7 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 
@@ -460,12 +438,14 @@ mod tests {
         config.compression_enabled = false;
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
 
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
         let chain_id = 1;
-        let stream_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
+        let stream_consumer =
+            StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string(), valkey_metrics);
         let producer = StreamProducer::new(
             conn,
             chain_id,
@@ -473,6 +453,7 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 
@@ -495,11 +476,13 @@ mod tests {
         let mut config = test_config();
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
 
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
-        let stream_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+        let stream_consumer =
+            StreamConsumer::new(conn, config.chain_id, "0-0".to_string(), valkey_metrics);
 
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
@@ -518,11 +501,13 @@ mod tests {
         let mut config = test_config();
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
 
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
-        let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
+        let stream_consumer =
+            StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string(), valkey_metrics);
         let producer = StreamProducer::new(
             conn,
             config.chain_id,
@@ -530,6 +515,7 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 
@@ -573,11 +559,13 @@ mod tests {
 
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
 
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
-        let stream_consumer = StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string());
+        let stream_consumer =
+            StreamConsumer::new(conn.clone(), config.chain_id, "0-0".to_string(), valkey_metrics);
         let producer = StreamProducer::new(
             conn,
             config.chain_id,
@@ -585,6 +573,7 @@ mod tests {
             Duration::from_secs(60),
             0,
             |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 
@@ -633,14 +622,14 @@ mod tests {
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             rpc_max_retries: 10,
-            metrics_port: PortManager::instance().next_port().await,
+            port: PortManager::instance().next_port().await,
             sequencing_address: Address::ZERO,
             ..Default::default()
         };
 
         let _handle = run_batcher(&config).await.unwrap();
 
-        let url = format!("http://0.0.0.0:{}/health", config.metrics_port);
+        let url = format!("http://0.0.0.0:{}/health", config.port);
 
         let client = reqwest::Client::new();
 

@@ -1,6 +1,6 @@
 # Global build arguments
 ARG BUILD_PROFILE=release
-ARG FEATURES="rocksdb" 
+ARG FEATURES="rocksdb"
 
 # Stage 1: Base image with Rust
 FROM rust:slim-bookworm AS builder
@@ -19,31 +19,18 @@ RUN --mount=type=cache,target=/var/cache/apt \
 FROM builder AS build
 COPY . .
 
-# Install SP1 toolchain using official installer
-RUN curl -L https://sp1up.succinct.xyz | bash
-ENV PATH="/root/.sp1/bin:${PATH}"
-RUN sp1up
-
-# Verify SP1 installation (optional)
-RUN cargo prove --version && \
-    rustup toolchain list | grep succinct
-
-# Build SP1 ELF program
-RUN cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program && \
-    cargo prove build && \
-    cd /app
-
-# Perform cargo build with cached Cargo and target directories
+# Perform `cargo build` only with packages that we want images for. Avoid heavy ZK deps
 RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
-    cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked
+    cargo build --package synd-batch-sequencer --package synd-chain-ingestor --package synd-maestro --package synd-mchain --features ${FEATURES} --package synd-translator --profile ${BUILD_PROFILE}
 
 # --- Go build stage for synd-proposer ---
 FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro
 
-FROM golang:1.23.0 AS synd-proposer-build
+FROM golang:1.24.2 AS synd-proposer-build
 WORKDIR /
 COPY --from=nitro /workspace ./synd-enclave/nitro
 COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
+COPY ./synd-withdrawals/synd-enclave/teemodule ./synd-enclave/teemodule
 COPY ./synd-withdrawals/synd-enclave/go.mod ./synd-enclave/go.mod
 COPY ./synd-withdrawals/synd-enclave/go.sum ./synd-enclave/go.sum
 COPY ./synd-withdrawals/synd-proposer ./synd-proposer

@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,57 +11,45 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/logger"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/config"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/server"
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	var rootCmd = &cobra.Command{
+	logger.Init()
+
+	rootCmd := &cobra.Command{
 		Use:   "synd-proposer",
-		Short: "Syndicate's proposer service",
+		Short: "Syndicate's Proposer service",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			viper.AutomaticEnv()
 			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
-			config, err := pkg.LoadConfig()
+			cfg, err := config.LoadConfig()
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			log.Printf("Config: %+v\n", config)
-			log.Printf("Health server will listen on /health at port %d", config.MetricsPort)
+			log.Info().Msgf("Config: %+v", cfg)
 
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 
-			healthSrv := &http.Server{
-				Addr: fmt.Sprintf(":%d", config.MetricsPort),
-				Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if r.URL.Path == "/health" {
-						w.Header().Set("Content-Type", "application/json")
-						w.WriteHeader(http.StatusOK)
-						w.Write([]byte(`{"status":"ok"}`))
-						return
-					}
-					http.NotFound(w, r)
-				}),
-			}
-			go func() {
-				<-ctx.Done()
-				healthSrv.Shutdown(context.Background())
-			}()
-			go func() {
-				if err := healthSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					log.Printf("health server error: %v", err)
-				}
-			}()
+			// Initialize server
+			proposerServer := server.InitServer(cfg.Port)
 
-			proposer := pkg.NewProposer(config)
-			proposer.Run(ctx)
-			log.Println("Synd-proposer service stopped.")
-			return nil
+			// Start the server
+			if err := proposerServer.Start(ctx); err != nil {
+				return fmt.Errorf("failed to start server: %w", err)
+			}
+
+			// Run proposer with server
+			return proposerServer.RunProposer(ctx, cfg)
 		},
 	}
 
-	pkg.BindFlags(rootCmd.Flags())
+	config.BindFlags(rootCmd.Flags())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

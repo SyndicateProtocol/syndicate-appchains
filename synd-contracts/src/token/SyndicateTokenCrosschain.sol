@@ -139,12 +139,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
 
         // Handle allowance if caller is not the token owner and there is an allowance
         if (msg.sender != from) {
-            uint256 currentAllowance = allowance(from, msg.sender);
-            if (currentAllowance != 0) {
-                // If there's an allowance, consume it
-                _spendAllowance(from, msg.sender, amount);
-            }
-            // If no allowance, trusted bridges can still burn (this is the crosschain bridge pattern)
+            _spendAllowance(from, msg.sender, amount);
         }
 
         // Burn tokens

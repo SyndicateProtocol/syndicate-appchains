@@ -1,4 +1,4 @@
-package pkg
+package config
 
 import (
 	"crypto/ecdsa"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/pflag"
@@ -26,7 +27,7 @@ type Config struct {
 	PrivateKey             *ecdsa.PrivateKey
 	PollingInterval        time.Duration
 	CloseChallengeInterval time.Duration
-	MetricsPort            int
+	Port                   int
 
 	TeeModuleContractAddress common.Address
 
@@ -35,10 +36,10 @@ type Config struct {
 	IsL1Chain bool
 
 	EnclaveConfig    enclave.Config
-	EnclaveTLSConfig TLSConfig
+	EnclaveTLSConfig tls.Config
 }
 
-var ConfigKeys = map[string]struct {
+var Keys = map[string]struct {
 	Description string
 	Default     string
 	Required    bool
@@ -55,19 +56,20 @@ var ConfigKeys = map[string]struct {
 	"private-key":                 {"Private Key", "", true},
 	"polling-interval":            {"Polling interval", "10m", false},
 	"close-challenge-interval":    {"Close challenge interval", "5m", false},
-	"metrics-port":                {"Metrics port", "9292", false},
+	"port":                        {"Server port", "9292", false},
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
 	"settlement-delay":            {"Settlement Delay", "60", false},
 	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
+	"is-l1-chain":                 {"Is L1 Chain", "false", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
-	for key, meta := range ConfigKeys {
+	for key, meta := range Keys {
 		switch key {
-		case "metrics-port":
+		case "port":
 			flags.Int(key, mustAtoi(meta.Default, 9292), meta.Description)
 		default:
 			flags.String(key, meta.Default, meta.Description)
@@ -79,7 +81,7 @@ func BindFlags(flags *pflag.FlagSet) {
 }
 
 func LoadConfig() (*Config, error) {
-	for key, meta := range ConfigKeys {
+	for key, meta := range Keys {
 		if meta.Required && (!viper.IsSet(key) || viper.GetString(key) == "") {
 			return nil, fmt.Errorf("missing required config: --%s", key)
 		}
@@ -87,19 +89,19 @@ func LoadConfig() (*Config, error) {
 
 	pollingInterval, err := time.ParseDuration(viper.GetString("polling-interval"))
 	if err != nil {
-		return nil, fmt.Errorf("invalid polling-interval: %v", err)
+		return nil, fmt.Errorf("invalid polling-interval: %w", err)
 	}
 
 	closeChallengeInterval, err := time.ParseDuration(viper.GetString("close-challenge-interval"))
 	if err != nil {
-		return nil, fmt.Errorf("invalid close-challenge-interval: %v", err)
+		return nil, fmt.Errorf("invalid close-challenge-interval: %w", err)
 	}
 
-	metricsPort := viper.GetInt("metrics-port")
+	port := viper.GetInt("port")
 
 	privateKey, err := crypto.HexToECDSA(viper.GetString("private-key"))
 	if err != nil {
-		return nil, fmt.Errorf("invalid private-key: %v", err)
+		return nil, fmt.Errorf("invalid private-key: %w", err)
 	}
 
 	return &Config{
@@ -115,17 +117,18 @@ func LoadConfig() (*Config, error) {
 		PrivateKey:               privateKey,
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
-		MetricsPort:              metricsPort,
+		Port:                     port,
 		EnclaveConfig: enclave.Config{
 			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
 		},
-		EnclaveTLSConfig: TLSConfig{
+		EnclaveTLSConfig: tls.Config{
 			Enabled:        viper.GetBool("mtls-enabled-enclave"),
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
+		IsL1Chain: viper.GetBool("is-l1-chain"),
 	}, nil
 }
 
@@ -134,5 +137,6 @@ func mustAtoi(s string, fallback int) int {
 	if err != nil || i == 0 {
 		return fallback
 	}
+
 	return i
 }

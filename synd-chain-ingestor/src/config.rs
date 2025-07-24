@@ -1,7 +1,7 @@
 //! Configuration module for the chain ingestor service
 
 use crate::eth_client::EthClient;
-use clap::{command, Parser};
+use clap::Parser;
 use humantime::parse_duration;
 use std::time::Duration;
 
@@ -10,7 +10,7 @@ use std::time::Duration;
 #[command(version, about)]
 #[allow(missing_docs)]
 pub struct Config {
-    #[arg(long, env = "WS_URLS")]
+    #[arg(long, env = "WS_URLS", value_delimiter = ',')]
     pub ws_urls: Vec<String>,
     #[arg(long, env = "DB_FILE")]
     pub db_file: String,

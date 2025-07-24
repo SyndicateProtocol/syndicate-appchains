@@ -228,9 +228,12 @@ func fillInBatchGasCost(wavm *wavmio.Wavm, msg *arbostypes.L1IncomingMessage) er
 	return nil
 }
 
-func Verify(data wavmio.ValidationInput, processor interface {
-	ProcessBlock(*types.Block, types.Receipts) error
-}) (_ *execution.MessageResult, err error) {
+func Verify(
+	data wavmio.ValidationInput,
+	processor interface {
+		ProcessBlock(*types.Block, types.Receipts) error
+	},
+) (_ *execution.MessageResult, err error) {
 	if data.BlockHash == (common.Hash{}) {
 		return nil, errors.New("genesis block verification unsupported")
 	}
@@ -248,7 +251,8 @@ func Verify(data wavmio.ValidationInput, processor interface {
 	gethhook.RequireHookedGeth()
 
 	glogger := log.NewGlogHandler(
-		log.NewTerminalHandler(io.Writer(os.Stderr), false))
+		log.NewTerminalHandler(io.Writer(os.Stderr), false),
+	)
 	glogger.Verbosity(log.LevelError)
 	log.SetDefault(log.NewLogger(glogger))
 
@@ -263,6 +267,15 @@ func Verify(data wavmio.ValidationInput, processor interface {
 
 	db := state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), nil), nil)
 	for wavm.GetInboxPosition() < batchCount {
+
+		fmt.Println(
+			"wavm.GetInboxPosition:", wavm.GetInboxPosition(),
+			"batchCount:", batchCount,
+			"header.Number:", header.Number.Uint64(),
+			"header.Hash():", header.Hash(),
+			"data.BlockHash:", data.BlockHash,
+		)
+
 		statedb, err := state.NewDeterministic(header.Root, db)
 		if err != nil {
 			return nil, fmt.Errorf("Error opening state db for block %s: %v", header.Hash(), err.Error())
@@ -284,7 +297,7 @@ func Verify(data wavmio.ValidationInput, processor interface {
 				eigenDAReader = &EigenDAPreimageReader{wavm}
 			}
 			backend := WavmInbox{wavm}
-			var keysetValidationMode = daprovider.KeysetPanicIfInvalid
+			keysetValidationMode := daprovider.KeysetPanicIfInvalid
 			if backend.GetPositionWithinMessage() > 0 {
 				keysetValidationMode = daprovider.KeysetDontValidate
 			}

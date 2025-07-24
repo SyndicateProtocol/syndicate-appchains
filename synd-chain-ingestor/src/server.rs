@@ -18,7 +18,8 @@ use serde_json;
 use shared::types::PartialBlock;
 use std::{
     collections::{HashSet, VecDeque},
-    sync::{Arc, Mutex},
+    io::Error,
+    sync::{atomic::AtomicBool, Arc, Mutex},
 };
 use tokio::task::JoinHandle;
 use tracing::{error, info};
@@ -26,7 +27,7 @@ use tracing::{error, info};
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct Context {
-    pub db: DB,
+    pub db: Option<DB>,
     pub subs: Vec<(SubscriptionSink, HashSet<Address>)>,
 }
 
@@ -44,6 +45,7 @@ struct BlockIngestor<'a> {
     handles: VecDeque<JoinHandle<alloy::rpc::types::Header>>,
     request_limit: u64,
 }
+
 impl<'a> BlockIngestor<'a> {
     fn new(start_block: u64, end_block: u64, request_limit: u64, provider: &'a EthClient) -> Self {
         Self { block: start_block, end_block, provider, request_limit, handles: Default::default() }
@@ -63,18 +65,17 @@ impl<'a> BlockIngestor<'a> {
     }
 }
 
-#[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
-#[allow(missing_docs)]
+/// Syncs the database to the latest block.
 #[allow(clippy::cognitive_complexity)]
-pub async fn start(
+pub async fn sync_db(
     provider: &EthClient,
-    ws_urls: Vec<String>,
-    db_name: &str,
+    db_file: &str,
     start_block: u64,
+    chain_id: u64,
     parallel_sync_requests: u64,
     metrics: &ChainIngestorMetrics,
-) -> eyre::Result<(RpcModule<Mutex<Context>>, Arc<Mutex<Context>>)> {
-    let mut db = DB::open(db_name, start_block, provider.get_chain_id().await)?;
+) -> Result<DB, Error> {
+    let mut db = DB::open(db_file, start_block, chain_id)?;
 
     // reorg db if necessary.
     info!("checking for reorgs");
@@ -116,8 +117,7 @@ pub async fn start(
     }
     info!("synced to latest block");
 
-    let ctx = Arc::new(Mutex::new(Context { db, subs: Default::default() }));
-    Ok((create_module(ctx.clone(), ws_urls), ctx))
+    Ok(db)
 }
 
 #[allow(clippy::unwrap_used)]
@@ -127,25 +127,36 @@ fn handle_subscription(
     start_block: u64,
     addresses: Vec<Address>,
 ) -> Result<(), SubscriptionError> {
-    let mut lock = ctx.lock().unwrap();
-    if start_block <= lock.db.start_block {
+    let mut lock = ctx.lock()?;
+
+    // Check if DB is ready
+    let db = match &lock.db {
+        Some(db) => db,
+        None => {
+            return Err(eyre!("Chain ingestor is still syncing").into());
+        }
+    };
+
+    if start_block <= db.start_block {
         return Err(eyre!(
             "start block {} not after chain ingestor start block {}",
             start_block,
-            lock.db.start_block
+            db.start_block
         )
         .into());
     }
-    let next_block = lock.db.next_block();
+
+    let next_block = db.next_block();
     if start_block > next_block {
         return Err(eyre!("start block {} after next db block {}", start_block, next_block).into());
     }
+
     let mut addrs = HashSet::new();
     for addr in addresses {
         addrs.insert(addr);
     }
 
-    let message = Message::Init(lock.db.get_block_bytes(start_block - 1));
+    let message = Message::Init(db.get_block_bytes(start_block - 1));
     sink.try_send(SubscriptionMessage::from(serde_json::value::to_raw_value(&message).unwrap()))?;
 
     lock.subs.push((sink, addrs));
@@ -153,14 +164,53 @@ fn handle_subscription(
     Ok(())
 }
 
-#[allow(clippy::unwrap_used)]
-fn create_module(ctx: Arc<Mutex<Context>>, ws_urls: Vec<String>) -> RpcModule<Mutex<Context>> {
+/// The code for the "resource-unavailable" JSON-RPC error.
+pub const RESOURCE_UNAVAILABLE_CODE: i32 = -32002;
+
+/// Returns an error object indicating that the chain ingestor is still syncing.
+pub fn error_still_syncing() -> ErrorObjectOwned {
+    ErrorObjectOwned::owned(
+        RESOURCE_UNAVAILABLE_CODE,
+        "Chain ingestor is still syncing",
+        None::<()>,
+    )
+}
+
+/// Creates a new `RpcModule` that handles JSON-RPC requests.
+#[allow(clippy::unwrap_used, clippy::option_if_let_else)]
+pub fn create_module(
+    ctx: Arc<Mutex<Context>>,
+    ws_urls: Vec<String>,
+    is_ready: Arc<AtomicBool>,
+) -> RpcModule<Mutex<Context>> {
     let mut module = RpcModule::from_arc(ctx);
 
+    module
+        .register_method("health", |_, _, _| {
+            Ok::<_, ErrorObjectOwned>(serde_json::json!({
+                "status": "ok"
+            }))
+        })
+        .unwrap();
+
+    module
+        .register_method("ready", move |_, _, _| {
+            let ready = is_ready.load(std::sync::atomic::Ordering::SeqCst);
+            Ok::<_, ErrorObjectOwned>(serde_json::json!({
+                "ready": ready,
+            }))
+        })
+        .unwrap();
+
     module.register_method("urls", move |_, _, _| ws_urls.clone()).unwrap();
+
     module
         .register_method("eth_blockNumber", move |_, ctx, _| {
-            ctx.lock().unwrap().db.next_block() - 1
+            let lock = ctx.lock().unwrap();
+            match &lock.db {
+                Some(db) => Ok(db.next_block() - 1),
+                None => Err(error_still_syncing()),
+            }
         })
         .unwrap();
 
@@ -168,9 +218,10 @@ fn create_module(ctx: Arc<Mutex<Context>>, ws_urls: Vec<String>) -> RpcModule<Mu
         .register_method("block", |p, ctx, _| {
             let (block_number,): (u64,) = p.parse()?;
             let data = ctx.lock().unwrap();
-            Ok::<_, ErrorObjectOwned>(
-                data.db.in_range(block_number).then(|| data.db.get_block(block_number)),
-            )
+            match &data.db {
+                Some(db) => Ok(db.in_range(block_number).then(|| db.get_block(block_number))),
+                None => Err(error_still_syncing()),
+            }
         })
         .unwrap();
 
@@ -181,6 +232,17 @@ fn create_module(ctx: Arc<Mutex<Context>>, ws_urls: Vec<String>) -> RpcModule<Mu
             "unsubscribe_blocks",
             move |p, pending, ctx, _| async move {
                 let (start_block, addresses): (u64, Vec<Address>) = p.parse()?;
+
+                // Check if we're ready before accepting the subscription
+                {
+                    let lock = ctx.lock().unwrap();
+                    if lock.db.is_none() {
+                        return Err(SubscriptionError::from(eyre!(
+                            "Chain ingestor is still syncing"
+                        )));
+                    }
+                }
+
                 let sink = pending.accept().await?;
                 handle_subscription(sink.clone(), ctx.as_ref(), start_block, addresses)
                     .inspect_err(|e| error!("ws connection error: {:?}", e))?;

@@ -14,7 +14,7 @@ import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Vo
  *      Emissions are handled by a separate SyndicateTokenEmissionScheduler contract.
  *
  * Key Features:
- * - ERC20 token with 1B total supply (900M initial + 100M emissions)
+ * - ERC20 token with 1B total supply (920M initial + 80M emissions)
  * - Voting functionality via ERC20Votes for governance
  * - Permit functionality for gasless approvals
  * - Controlled minting for emissions (only by emission scheduler)
@@ -23,8 +23,8 @@ import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Vo
  * - Comprehensive access controls
  *
  * Supply Distribution:
- * - 900M tokens (90%): Initial mint to foundation
- * - 100M tokens (10%): Available for emissions via emission scheduler
+ * - 920M tokens (92%): Initial mint to foundation
+ * - 80M tokens (8%): Available for emissions via emission scheduler
  *
  * @author Syndicate Protocol
  * @custom:security-contact security@syndicate.io
@@ -72,11 +72,11 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /// @notice Total token supply: 1 billion tokens
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000 * 10 ** 18;
 
-    /// @notice Initial mint to foundation: 900 million tokens (90%)
-    uint256 public constant INITIAL_MINT_SUPPLY = 900_000_000 * 10 ** 18;
+    /// @notice Initial mint to foundation: 920 million tokens (92%)
+    uint256 public constant INITIAL_MINT_SUPPLY = 920_000_000 * 10 ** 18;
 
-    /// @notice Maximum lock duration: 90 days
-    uint256 public constant MAX_LOCK_DURATION = 90 days;
+    /// @notice Maximum lock duration: 120 days
+    uint256 public constant MAX_LOCK_DURATION = 120 days;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -216,14 +216,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     /*//////////////////////////////////////////////////////////////
                               VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Get remaining tokens that can be minted
-     * @return The amount of tokens still available to mint to reach TOTAL_SUPPLY
-     */
-    function getRemainingEmissions() external view returns (uint256) {
-        return TOTAL_SUPPLY - totalSupply();
-    }
 
     /**
      * @notice Check if transfers are currently locked

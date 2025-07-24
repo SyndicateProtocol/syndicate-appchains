@@ -75,7 +75,7 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
     address public recipient = address(0x3333);
     uint32 public l2Gas = 200000;
     uint256 public maxSingleTransfer = 200_000_000 * 10 ** 18;
-    uint256 public dailyLimit = 100_000_000 * 10 ** 18;
+    uint256 public dailyLimit = 80_000_000 * 10 ** 18;
 
     // Events
     event EmissionsStarted(uint256 startTime);
@@ -238,7 +238,7 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
 
         vm.warp(block.timestamp + 30 days + 1);
 
-        uint256 expectedAmount = 6_780_550 * 10 ** 18;
+        uint256 expectedAmount = 5_424_440 * 10 ** 18;
         uint256 initialSupply = token.totalSupply();
 
         vm.expectEmit(false, false, false, true);
@@ -265,7 +265,7 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
 
         vm.warp(block.timestamp + 90 days + 1); // 3 epochs
 
-        uint256 expectedAmount = 6_780_550 * 10 ** 18 * 3;
+        uint256 expectedAmount = 5_424_440 * 10 ** 18 * 3;
         vm.prank(emissionsManager);
         emissionScheduler.mintEmission();
 
@@ -333,7 +333,7 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
 
         assertEq(epoch, 0);
         assertEq(nextEmissionTime, block.timestamp + 30 days);
-        assertEq(nextEmissionAmount, 6_780_550 * 10 ** 18);
+        assertEq(nextEmissionAmount, 5_424_440 * 10 ** 18);
         assertFalse(canMint);
     }
 
@@ -344,7 +344,7 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
 
         (,, uint256 nextEmissionAmount, bool canMint) = emissionScheduler.getCurrentEpochInfo();
 
-        assertEq(nextEmissionAmount, 6_780_550 * 10 ** 18);
+        assertEq(nextEmissionAmount, 5_424_440 * 10 ** 18);
         assertTrue(canMint);
     }
 
@@ -365,9 +365,9 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
         uint256[48] memory schedule = emissionScheduler.getEmissionSchedule();
 
         // Check first epoch
-        assertEq(schedule[0], 6_780_550 * 10 ** 18);
+        assertEq(schedule[0], 5_424_440 * 10 ** 18);
         // Check last epoch
-        assertEq(schedule[47], 189_810 * 10 ** 18);
+        assertEq(schedule[47], 151_848 * 10 ** 18);
     }
 
     function test_GetNextEmissionTime() public {
@@ -466,7 +466,7 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
 
         MockOptimismBridge.BridgeCall memory call = mockBridge.getLastBridgeCall();
         assertEq(call.l1Token, address(token));
-        assertEq(call.amount, 6_780_550 * 10 ** 18);
+        assertEq(call.amount, 5_424_440 * 10 ** 18);
         assertEq(call.l2Token, l2Token);
         assertEq(call.to, recipient);
     }
@@ -480,8 +480,8 @@ contract SyndicateTokenEmissionSchedulerTest is Test {
             total += schedule[i];
         }
 
-        // Verify that the schedule is reasonable (should be around 100M tokens)
-        uint256 expectedTotal = 100_000_000 * 10 ** 18;
+        // Verify that the schedule is reasonable (should be around 80M tokens)
+        uint256 expectedTotal = 80_000_000 * 10 ** 18;
         uint256 tolerance = 1_000_000 * 10 ** 18; // 1M token tolerance
         assertTrue(
             total > expectedTotal - tolerance && total < expectedTotal + tolerance,

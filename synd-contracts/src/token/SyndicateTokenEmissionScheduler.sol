@@ -376,17 +376,17 @@ contract SyndicateTokenEmissionScheduler is AccessControl, Pausable, ReentrancyG
      */
     function _initializeEmissionSchedule() private {
         // Define emission amounts per period (6 epochs each)
-        // These amounts are designed to distribute 100M tokens over 48 epochs
+        // These amounts are designed to distribute 80M tokens over 48 epochs
         // with a decreasing pattern to incentivize early adoption
         uint256[8] memory emissionAmounts = [
-            uint256(6_780_550 * 10 ** 18), // Epochs 1-6: Highest emissions
-            uint256(4_068_330 * 10 ** 18), // Epochs 7-12
-            uint256(2_441_000 * 10 ** 18), // Epochs 13-18
-            uint256(1_464_600 * 10 ** 18), // Epochs 19-24
-            uint256(878_760 * 10 ** 18), // Epochs 25-30
-            uint256(527_260 * 10 ** 18), // Epochs 31-36
-            uint256(316_350 * 10 ** 18), // Epochs 37-42
-            uint256(189_810 * 10 ** 18) // Epochs 43-48: Lowest emissions
+            uint256(5_424_440 * 10 ** 18), // Epochs 1-6: Highest emissions (80% of 6_780_550)
+            uint256(3_254_664 * 10 ** 18), // Epochs 7-12 (80% of 4_068_330)
+            uint256(1_952_800 * 10 ** 18), // Epochs 13-18 (80% of 2_441_000)
+            uint256(1_171_680 * 10 ** 18), // Epochs 19-24 (80% of 1_464_600)
+            uint256(703_008 * 10 ** 18), // Epochs 25-30 (80% of 878_760)
+            uint256(421_808 * 10 ** 18), // Epochs 31-36 (80% of 527_260)
+            uint256(253_080 * 10 ** 18), // Epochs 37-42 (80% of 316_350)
+            uint256(151_848 * 10 ** 18) // Epochs 43-48: Lowest emissions (80% of 189_810)
         ];
 
         // Fill the emission schedule array

@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
 
+use crate::valkey::valkey_metrics::ValkeyMetrics;
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 use std::time::Duration;
 
@@ -12,6 +13,7 @@ pub struct MaestroMetrics {
     maestro_waiting_transactions_total: Gauge,
     maestro_successful_transactions_total: Gauge,
     maestro_resubmitted_transactions_total: Gauge,
+    pub valkey: ValkeyMetrics,
 }
 
 impl MaestroMetrics {
@@ -24,6 +26,7 @@ impl MaestroMetrics {
             maestro_waiting_transactions_total: Gauge::default(),
             maestro_successful_transactions_total: Gauge::default(),
             maestro_resubmitted_transactions_total: Gauge::default(),
+            valkey: ValkeyMetrics::new(registry),
         };
 
         registry.register(
