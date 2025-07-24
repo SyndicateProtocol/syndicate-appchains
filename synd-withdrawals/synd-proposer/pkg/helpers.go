@@ -29,7 +29,8 @@ import (
 
 // ValidationData
 //
-// Need to keep this in sync with the nitro node
+// Need to keep this in sync with the nitro node's version
+// https://github.com/SyndicateProtocol/nitro/blob/49f053e12ab56055473a1a7c68f57590df63bb5b/arbnode/synd_api.go#L23
 type ValidationData struct {
 	BatchStartBlockNum uint64
 	BatchEndBlockNum   uint64
@@ -401,9 +402,9 @@ func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay ui
 	i := 0
 	for _, b := range batches {
 		hasMsg := false
-		for i < len(dmsgs) &&
-			// TODO(SEQ-944) this specific logic could use documentation or a separate function
-			binary.BigEndian.Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset:enclave.DelayedMessageTimestampOffset+8])+setDelay <= b.Timestamp {
+		msgTimestamp := binary.BigEndian.Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset:enclave.
+			DelayedMessageTimestampOffset+8]) + setDelay
+		for i < len(dmsgs) && msgTimestamp <= b.Timestamp {
 			i++
 			hasMsg = true
 		}
