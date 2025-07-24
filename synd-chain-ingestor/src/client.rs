@@ -205,54 +205,54 @@ impl<
 {
     #[allow(clippy::unwrap_used)]
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
-        info!("recv called, timestamp: {timestamp}");
         let mut blocks = vec![];
 
+        // If there is init data, handle the initial message
         let init_data = self.init_data.take();
-        if init_data.is_some() || self.stream.as_mut().peek().now_or_never().is_some() {
+        if let Some((client, addrs, max_blocks_per_request)) = init_data {
             // fetch initial blocks from the stream
             let mut init_blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
-            if let Some((client, addrs, max_blocks_per_request)) = init_data {
-                // remove the first block from the stream, which is a special init message
-                init_blocks.rotate_left(1);
-                let mut init = init_blocks.pop().unwrap()?.init();
+            // remove the first block from the stream, which is a special init message
+            init_blocks.rotate_left(1);
+            let mut init = init_blocks.pop().unwrap()?.init();
 
-                // get start and end blocks for batching
-                let mut start_block = self.indexed_block_number;
-                let final_block = start_block + init.count() - 1;
+            // get start and end blocks for batching
+            let mut start_block = self.indexed_block_number;
+            let final_block = start_block + init.count() - 1;
 
-                while start_block < final_block {
-                    let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
+            while start_block < final_block {
+                let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
 
-                    let client_clone = client.clone();
-                    let addrs_clone = addrs.clone();
+                let client_clone = client.clone();
+                let addrs_clone = addrs.clone();
 
-                    self.init_requests.push_back(Box::pin(async move {
-                        build_partial_blocks(start_block, &init_batch, &client_clone, addrs_clone)
-                            .await
-                            .unwrap()
-                            .into_iter()
-                            .map(|x| Ok(Message::Block(x)))
-                            .collect()
-                    }));
-                    start_block += max_blocks_per_request;
-                    init = remaining;
-                }
+                self.init_requests.push_back(Box::pin(async move {
+                    build_partial_blocks(start_block, &init_batch, &client_clone, addrs_clone)
+                        .await
+                        .unwrap()
+                        .into_iter()
+                        .map(|x| Ok(Message::Block(x)))
+                        .collect()
+                }));
+                start_block += max_blocks_per_request;
+                init = remaining;
+            }
 
-                // make sure we don't drop any blocks from the stream
-                if !init_blocks.is_empty() {
-                    info!("init_blocks: {init_blocks:?}");
-                    self.init_requests.push_back(Box::pin(async move { init_blocks }));
-                }
-
-                info!("init_requests length: {:?}", self.init_requests.len());
-
-                blocks = self.init_requests.pop_front().unwrap().await;
+            // make sure we don't drop any blocks from the stream
+            if !init_blocks.is_empty() {
+                self.init_requests.push_back(Box::pin(async move { init_blocks }));
             }
         }
 
+        if !self.init_requests.is_empty() {
+            blocks = self.init_requests.pop_front().unwrap().await;
+        } else if self.stream.as_mut().peek().now_or_never().is_some() {
+            // If there are no init requests, and there is data in the stream, pop it off
+            // This is to try to catch any reorgs ASAP
+            blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
+        }
+
         loop {
-            info!("blocks: {:?}", blocks);
             for partial_block in blocks {
                 let block = self.block_builder.build_block(&partial_block?.block())?;
                 let block_number = block.block_ref().number;
@@ -283,17 +283,13 @@ impl<
                     }
                 }
             }
+
             if self.buffer.front().map_or(false, |x| x.block_ref().timestamp >= timestamp) {
                 return Ok(self.buffer.pop_back().unwrap());
             }
 
-            blocks = if self.init_requests.is_empty() {
-                info!("popping from stream");
-                self.stream.next().await.ok_or_eyre("stream closed")?
-            } else {
-                info!("popping from init_requests, length: {:?}", self.init_requests.len());
-                self.init_requests.pop_front().unwrap().await
-            }
+            // If there are no valid blocks in the buffer, await the next block from the stream
+            blocks = self.stream.next().await.ok_or_eyre("stream closed")?
         }
     }
 }
