@@ -41,6 +41,7 @@ func dummyConfig(privateKey *ecdsa.PrivateKey) *config.Config {
 			ClientKeyPath:  "/etc/tls/tls.key",
 		},
 	}
+
 	return cfg
 }
 
@@ -86,6 +87,7 @@ func TestServerEndpoints(t *testing.T) {
 
 	// Run proposer with server, allow connections to fail
 	go testServer.RunProposer(ctx, dummyCfg)
+	time.Sleep(1 * time.Second)
 
 	baseURL := fmt.Sprintf("http://localhost:%d", dummyCfg.Port)
 

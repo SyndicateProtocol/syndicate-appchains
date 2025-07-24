@@ -3,6 +3,7 @@ package pkg
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"maps"
 	"math/big"
@@ -80,7 +81,7 @@ func getLogs(
 		return logs, nil
 	}
 	if startBlock == endBlock {
-		return nil, errors.Wrap(err, "start block cannot reach end block")
+		return nil, errors.Wrap(err, "start block == end block, cannot bisect further")
 	}
 	mid := (startBlock + endBlock) / 2
 	logs, err = getLogs(ctx, c, mid+1, endBlock, addresses, topics, maxQty)
@@ -151,8 +152,9 @@ func getBatchPreimageData(
 						daprovider.IsDASMessageHeaderByte(batch[40]) {
 						log.Error(err.Error())
 					} else {
-						// TODO(SEQ-944): better error msg, confirm what I wrote is accurate
-						return errors.Wrap(err, "failed to recover preimage data")
+						batchHex := hex.EncodeToString(batch)
+
+						return errors.Wrap(err, "failed to recover payload from batch - "+batchHex)
 					}
 				}
 
@@ -171,11 +173,11 @@ func getBatchPreimageData(
 			log.Error("No DAS Reader configured, but sequencer message found with DAS header")
 		}
 	}
+
 	return nil
 }
 
-// TODO(SEQ-944) this comment isn't accurate, func instead returns an error. Update it
-// GetMessageAcc if count is zero, fetches the count instead
+// GetMessageAcc if count is zero, attempt to fetch
 func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Address, count uint64) (common.Hash, uint64, error) {
 	// TODO(SEQ-944) doc this magic number
 	slot := common.BigToHash(big.NewInt(6))

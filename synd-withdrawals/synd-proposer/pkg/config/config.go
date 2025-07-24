@@ -63,8 +63,7 @@ var CfgKeys = map[string]struct {
 	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
-	// TODO(SEQ-944) - confirm this was missing
-	"is-l1-chain": {"Is L1 Chain", "false", false},
+	"is-l1-chain":                 {"Is L1 Chain", "false", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {

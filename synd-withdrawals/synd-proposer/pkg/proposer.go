@@ -138,6 +138,129 @@ func (p *Proposer) Run(ctx context.Context) {
 	wg.Wait()
 }
 
+// CloseChallengeLoop runs the close challenge background process.
+func (p *Proposer) closeChallengeLoop(ctx context.Context) {
+	ticker := time.NewTicker(p.Config.CloseChallengeInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info().Msg("Close challenge loop shutting down...")
+
+			return
+		case <-ticker.C:
+			log.Info().Msg("Close challenge loop tick...")
+			if _, err := p.TeeModule.CloseChallengeWindow(p.SettlementAuth); err != nil {
+				log.Error().Err(err).Msg("Failed to close challenge window")
+			}
+		}
+	}
+}
+
+var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
+
+// PollingLoop runs the polling background process.
+func (p *Proposer) pollingLoop(ctx context.Context) {
+	ticker := time.NewTicker(p.Config.PollingInterval)
+	// check if the appchain settles to an arbitrum rollup by querying the code at ArbSys precompile address
+	code, err := p.SettlementClient.CodeAt(ctx, ArbSysPrecompileAddress, nil)
+	if err != nil {
+		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get code at ArbSys precompile address", err)
+		log.Warn().Stack().Err(wrappedErr).Msg(msg)
+	}
+	settlesToArbitrumRollup := len(code) > 0
+	log.Info().Bool("settlesToArbitrumRollup", settlesToArbitrumRollup).Msg("Settles to Arbitrum Rollup")
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info().Msg("Polling loop shutting down...")
+
+			return
+		case <-ticker.C:
+			log.Info().Msg("Polling loop tick...")
+
+			pollingLoopTimer := metrics.NewTimer()
+
+			trustedInput, err := p.getTrustedInput(ctx)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get trusted input", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+
+				continue
+			}
+
+			if p.PendingTeeInputHash != trustedInput.Hash() {
+				log.Info().Msg("Proving new assertion...")
+				appOutput, err := p.Prove(ctx, trustedInput, settlesToArbitrumRollup)
+				if err != nil {
+					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to prove", err)
+					log.Error().Stack().Err(wrappedErr).Msg(msg)
+
+					continue
+				}
+				p.PendingAssertion = &appOutput.PendingAssertion
+
+				p.PendingTeeInputHash = trustedInput.Hash()
+				p.PendingSignature = appOutput.Signature
+				log.Debug().Msgf("Trusted input: %v", ToHexForLogsTrustedInput(*trustedInput))
+				log.Debug().Msgf("Pending assertion: %v", ToHexForLogsPendingAssertion(*p.PendingAssertion))
+			}
+
+			submissionTimer := metrics.NewTimer()
+			transaction, err := p.TeeModule.SubmitAssertion(p.SettlementAuth, *p.PendingAssertion, p.PendingSignature,
+				crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+
+				continue
+			}
+			p.Metrics.AssertionSubmissions.Inc()
+			submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
+
+			log.Debug().
+				Str("transactionHash", transaction.Hash().Hex()).
+				Str("seqHash", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]).Hex()).
+				Str("appHash", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]).Hex()).
+				Str("l1Acc", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]).Hex()).
+				Msg("Submitted assertion")
+			pollingLoopTimer.ObserveHistogram(p.Metrics.PollingLoopDuration)
+		}
+	}
+}
+
+func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, error) {
+	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get trusted input from contract")
+	}
+	trustedInput := enclave.TrustedInput(contractTrustedInput)
+
+	return &trustedInput, nil
+}
+
+func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint64, error) {
+	var batchCount uint64
+	if p.Config.IsL1Chain {
+		if err := p.SequencingClient.Client().CallContext(ctx, &batchCount, "synd_batchFromAcc", l1Hash); err != nil {
+			return 0, errors.Wrap(err, "failed to get batch from seq acc")
+		}
+	} else {
+		count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress,
+			enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, l1Hash)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to get batch count from l1")
+		}
+		batchCount = common.BytesToHash(count).Big().Uint64()
+	}
+	if batchCount == 0 {
+		return 0, errors.New("end batch count is 0")
+	}
+
+	return batchCount, nil
+}
+
 func (p *Proposer) Prove(
 	ctx context.Context,
 	trustedInput *enclave.TrustedInput,
@@ -385,128 +508,6 @@ func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInpu
 		// TODO(SEQ-944) - confirm this should be unset
 		Signature: nil,
 	}, nil
-}
-
-// CloseChallengeLoop runs the close challenge background process.
-func (p *Proposer) closeChallengeLoop(ctx context.Context) {
-	ticker := time.NewTicker(p.Config.CloseChallengeInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info().Msg("Close challenge loop shutting down...")
-
-			return
-		case <-ticker.C:
-			log.Info().Msg("Close challenge loop tick...")
-			if _, err := p.TeeModule.CloseChallengeWindow(p.SettlementAuth); err != nil {
-				log.Error().Err(err).Msg("Failed to close challenge window")
-			}
-		}
-	}
-}
-
-var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
-
-// PollingLoop runs the polling background process.
-func (p *Proposer) pollingLoop(ctx context.Context) {
-	ticker := time.NewTicker(p.Config.PollingInterval)
-	// check if the appchain settles to an arbitrum rollup by querying the code at ArbSys precompile address
-	code, err := p.SettlementClient.CodeAt(ctx, ArbSysPrecompileAddress, nil)
-	if err != nil {
-		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get code at ArbSys precompile address", err)
-		log.Warn().Stack().Err(wrappedErr).Msg(msg)
-	}
-	settlesToArbitrumRollup := len(code) > 0
-	log.Info().Bool("settlesToArbitrumRollup", settlesToArbitrumRollup).Msg("Settles to Arbitrum Rollup")
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info().Msg("Polling loop shutting down...")
-
-			return
-		case <-ticker.C:
-			log.Info().Msg("Polling loop tick...")
-
-			pollingLoopTimer := metrics.NewTimer()
-
-			trustedInput, err := p.getTrustedInput(ctx)
-			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get trusted input", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
-
-				continue
-			}
-
-			if p.PendingTeeInputHash != trustedInput.Hash() {
-				log.Info().Msg("Proving new assertion...")
-				appOutput, err := p.Prove(ctx, trustedInput, settlesToArbitrumRollup)
-				if err != nil {
-					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to prove", err)
-					log.Error().Stack().Err(wrappedErr).Msg(msg)
-
-					continue
-				}
-				p.PendingAssertion = &appOutput.PendingAssertion
-
-				p.PendingTeeInputHash = trustedInput.Hash()
-				p.PendingSignature = appOutput.Signature
-				log.Debug().Msgf("Trusted input: %v", ToHexForLogsTrustedInput(*trustedInput))
-				log.Debug().Msgf("Pending assertion: %v", ToHexForLogsPendingAssertion(*p.PendingAssertion))
-			}
-
-			submissionTimer := metrics.NewTimer()
-			transaction, err := p.TeeModule.SubmitAssertion(p.SettlementAuth, *p.PendingAssertion, p.PendingSignature,
-				crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
-			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
-				continue
-			}
-			p.Metrics.AssertionSubmissions.Inc()
-			submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
-
-			log.Debug().
-				Str("transactionHash", transaction.Hash().Hex()).
-				Str("seqHash", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]).Hex()).
-				Str("appHash", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]).Hex()).
-				Str("l1Acc", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]).Hex()).
-				Msg("Submitted assertion")
-			pollingLoopTimer.ObserveHistogram(p.Metrics.PollingLoopDuration)
-		}
-	}
-}
-
-func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, error) {
-	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(&bind.CallOpts{Context: ctx})
-	if err != nil {
-		return nil, err
-	}
-	trustedInput := enclave.TrustedInput(contractTrustedInput)
-
-	return &trustedInput, nil
-}
-
-func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint64, error) {
-	var batchCount uint64
-	if p.Config.IsL1Chain {
-		if err := p.SequencingClient.Client().CallContext(ctx, &batchCount, "synd_batchFromAcc", l1Hash); err != nil {
-			return 0, err
-		}
-	} else {
-		count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress,
-			enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, l1Hash)
-		if err != nil {
-			return 0, err
-		}
-		batchCount = common.BytesToHash(count).Big().Uint64()
-	}
-	if batchCount == 0 {
-		return 0, errors.New("end batch count is 0")
-	}
-
-	return batchCount, nil
 }
 
 func (p *Proposer) handleEnclaveCall(output interface{}, method string, input interface{}) error {
