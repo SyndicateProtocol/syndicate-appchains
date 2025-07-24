@@ -194,12 +194,16 @@ pub async fn start_component(
                     .arg("--init")
                     .arg("--rm")
                     .arg("--net=host")
-                    .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
+                    .arg(format!(
+                        "ghcr.io/syndicateprotocol/syndicate-appchains/{executable_name}:{tag}"
+                    ))
                     .args(args),
                 executable_name,
             )
         } else if executable_name == "synd-proposer" {
-            launch_proposer(args).await
+            let proposer_mode =
+                if cfg!(target_os = "macos") { ProposerMode::Go } else { ProposerMode::Docker };
+            launch_proposer(args, proposer_mode).await
         } else {
             let mut cmd = Command::new("cargo");
             // ring has a custom build.rs script that rebuilds whenever certain environment
@@ -226,19 +230,66 @@ pub async fn start_component(
     Ok(docker)
 }
 
-pub async fn launch_proposer(args: Vec<String>) -> Result<E2EProcess> {
-    ensure_nitro_node_deps().await?;
-    // Synd-proposer is a Go service, so we need to use the Go command to run it
-    let mut cmd = Command::new("go");
-    let project_root = env!("CARGO_WORKSPACE_DIR");
-    let proposer_dir = Path::new(project_root)
-        .join("synd-withdrawals/synd-proposer")
-        .to_string_lossy()
-        .to_string();
-    cmd.current_dir(proposer_dir);
-    cmd.arg("run").arg("./cmd/synd-proposer");
-    cmd.args(args);
-    E2EProcess::new(&mut cmd, "synd-proposer")
+pub enum ProposerMode {
+    Docker,
+    Go,
+}
+
+pub async fn launch_proposer(args: Vec<String>, mode: ProposerMode) -> Result<E2EProcess> {
+    match mode {
+        ProposerMode::Docker => {
+            let image_name =
+                "ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:dev".to_string();
+            let project_root = env!("CARGO_WORKSPACE_DIR");
+            let build_status = E2EProcess::new(
+                Command::new("docker")
+                    .arg("buildx")
+                    .arg("build")
+                    .arg("--load")
+                    .arg(project_root)
+                    .arg("--tag")
+                    .arg(&image_name)
+                    .arg("--platform=linux/amd64")
+                    .arg("--target")
+                    .arg("synd-proposer"),
+                "building-synd-proposer",
+            )?
+            .wait()
+            .await?;
+
+            if !build_status.success() {
+                return Err(eyre::eyre!(
+                    "failed to build synd-proposer docker image. Exit status: {}",
+                    build_status
+                ));
+            };
+
+            E2EProcess::new(
+                Command::new("docker")
+                    .arg("run")
+                    .arg("--init")
+                    .arg("--rm")
+                    .arg("--net=host")
+                    .arg(&image_name)
+                    .args(args),
+                "synd-proposer",
+            )
+        }
+        ProposerMode::Go => {
+            ensure_nitro_node_deps().await?;
+            // Synd-proposer is a Go service, so we need to use the Go command to run it
+            let mut cmd = Command::new("go");
+            let project_root = env!("CARGO_WORKSPACE_DIR");
+            let proposer_dir = Path::new(project_root)
+                .join("synd-withdrawals/synd-proposer")
+                .to_string_lossy()
+                .to_string();
+            cmd.current_dir(proposer_dir);
+            cmd.arg("run").arg("./cmd/synd-proposer");
+            cmd.args(args);
+            E2EProcess::new(&mut cmd, "synd-proposer")
+        }
+    }
 }
 
 pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2EProcess) {
@@ -463,7 +514,8 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
             "local-dev".to_string()
         }
     };
-    let image_name = format!("ghcr.io/syndicateprotocol/synd-enclave-test:{tag}");
+    let image_name =
+        format!("ghcr.io/syndicateprotocol/syndicate-appchains/synd-enclave-test:{tag}");
 
     if needs_build {
         info!("building enclave server docker image - NOTE: this may take a while");
@@ -538,7 +590,7 @@ pub async fn start_eigenda_proxy() -> Result<(E2EProcess, String)> {
             .arg("--rm")
             .arg("-p")
             .arg(format!("{port}:{port}"))
-            .arg("ghcr.io/layr-labs/eigenda-proxy:latest@sha256:dc5564dc557e3d349e38bdcb48cad2b31a16f185216e9e3f25796a5b966de5e9")
+            .arg("ghcr.io/layr-labs/eigenda-proxy:2.1.0-rc.2@sha256:ed208a7cb8e31e5dd0f5c2340b6a6f9b9570f065da2659813b207c1206c65ce8")
             .arg("--memstore.enabled")
             .arg("--eigenda.disable-tls=true")
             .arg("--eigenda.response-timeout=60m")

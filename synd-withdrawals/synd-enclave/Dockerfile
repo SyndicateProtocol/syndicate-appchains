@@ -217,3 +217,19 @@ FROM scratch AS test-image
 WORKDIR /app
 COPY --from=builder /build/bin/enclave .
 ENTRYPOINT ["/app/enclave"]
+
+# custom target for testing (uses the pre-built node-builder image for faster CI)
+FROM --platform=linux/amd64 ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro-node-builder
+
+FROM --platform=linux/amd64 golang:1.24.2-bookworm as test-image-2
+WORKDIR /
+COPY --from=nitro-node-builder /workspace ./nitro
+COPY --parents **/go.mod **/go.sum .
+RUN go mod download
+COPY cmd/enclave/main.go cmd/enclave/main.go
+COPY cmd/enclave/g1.point cmd/enclave/g1.point
+COPY enclave enclave
+COPY teemodule teemodule
+RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/enclave ./cmd/enclave
+ENTRYPOINT ["/bin/enclave"]
+
