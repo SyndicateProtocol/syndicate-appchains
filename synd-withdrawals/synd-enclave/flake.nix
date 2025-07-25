@@ -179,7 +179,15 @@
               # forward_stub.wasm -> forward.wasm
               sed -i 's#../../../target/machines/latest/forward_stub.wasm#${nitro-arbitrator-forward-wasm}#' prover/src/{machine,test}.rs
             '';
+	    postInstall = ''
+	      mkdir -p $out/include
+	      ${pkgs.rust-cbindgen}/bin/cbindgen --config stylus/cbindgen.toml --crate stylus --output $out/include/arbitrator.h
+	    '';
           };
+	  
+	  nitro-arbitrator-prover-header = pkgs.runCommandLocal "arbitrator.h" {} ''
+	    cp ${nitro-arbitrator-stylus-lib}/include/arbitrator.h $out
+	  '';
 
           # TODO: stylus.overrideAttrs or DRY function
           nitro-arbitrator-prover = pkgs.rustPlatform.buildRustPackage {
@@ -213,14 +221,6 @@
               sed -i 's#../../../target/machines/latest/forward_stub.wasm#${nitro-arbitrator-forward-wasm}#' prover/src/{machine,test}.rs
             '';
           };
-
-          nitro-arbitrator-prover-header = pkgs.runCommand "arbitrator.h" {} ''
-            ${pkgs-2505.rust-cbindgen}/bin/cbindgen \
-              --config ${nitro}/arbitrator/stylus/cbindgen.toml \
-              --metadata ${./patches/stylus-cargo-metadata.json} \
-              --output $out \
-              ${nitro}/arbitrator/stylus
-          '';
 
           synd-enclave = pkgs-2505.buildGoModule {
             pname = "synd-enclave";
