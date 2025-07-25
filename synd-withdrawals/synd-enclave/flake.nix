@@ -179,15 +179,15 @@
               # forward_stub.wasm -> forward.wasm
               sed -i 's#../../../target/machines/latest/forward_stub.wasm#${nitro-arbitrator-forward-wasm}#' prover/src/{machine,test}.rs
             '';
-	    postInstall = ''
-	      mkdir -p $out/include
-	      ${pkgs.rust-cbindgen}/bin/cbindgen --config stylus/cbindgen.toml --crate stylus --output $out/include/arbitrator.h
-	    '';
+            postInstall = ''
+              mkdir -p $out/include
+              ${pkgs.rust-cbindgen}/bin/cbindgen --config stylus/cbindgen.toml --crate stylus --output $out/include/arbitrator.h
+            '';
           };
-	  
-	  nitro-arbitrator-prover-header = pkgs.runCommandLocal "arbitrator.h" {} ''
-	    cp ${nitro-arbitrator-stylus-lib}/include/arbitrator.h $out
-	  '';
+
+          nitro-arbitrator-prover-header = pkgs.runCommandLocal "arbitrator.h" {} ''
+            cp ${nitro-arbitrator-stylus-lib}/include/arbitrator.h $out
+          '';
 
           # TODO: stylus.overrideAttrs or DRY function
           nitro-arbitrator-prover = pkgs.rustPlatform.buildRustPackage {
@@ -227,7 +227,7 @@
             version = "0.1.0";
             src = ./.;
             vendorHash = pkgs.lib.fakeHash;
-            subPackages = [ "cmd/enclave" "enclave" ];
+            subPackages = ["cmd/enclave" "enclave"];
             ldFlags = [
               "-linkmode external"
               "-extldflags"
