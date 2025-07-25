@@ -99,17 +99,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_ingestor_get_blocks() -> eyre::Result<()> {
-        let loop_count = 20;
+        let initial_blocks = 20;
+        let start_block = 5;
+        let post_init_blocks = 10;
+
         let (anvil, _ingestor, ingestor_ws_url) = setup(None).await?;
         let anvil = anvil.unwrap();
 
         let client = IngestorProvider::new(&ingestor_ws_url, Duration::from_secs(10)).await;
 
-        for _ in 0..loop_count {
+        for _ in 0..initial_blocks {
             mine_block(&anvil.provider, 10).await?;
         }
         wait_until!(
-            client.get_block_number().await.unwrap() == loop_count,
+            client.get_block_number().await.unwrap() == initial_blocks,
             Duration::from_secs(10)
         );
 
@@ -122,21 +125,75 @@ mod tests {
         )
         .await;
 
-        let mut block_stream =
-            client.get_blocks(5, vec![], Arc::new(MockBlockBuilder), eth_client).await?;
+        let mut block_stream = client
+            .get_blocks(start_block, vec![], Arc::new(MockBlockBuilder), eth_client, None)
+            .await?;
 
-        for _ in 0..10 {
+        for _ in 0..post_init_blocks {
             mine_block(&anvil.provider, 10).await?;
         }
         wait_until!(
-            client.get_block_number().await.unwrap() == loop_count + 10,
+            client.get_block_number().await.unwrap() == initial_blocks + post_init_blocks,
             Duration::from_secs(10)
         );
 
         let block_number = client.get_block_number().await.unwrap();
-        assert_eq!(block_number, loop_count + 10);
+        assert_eq!(block_number, initial_blocks + post_init_blocks);
 
-        for i in 5..=loop_count + 10 {
+        for i in start_block..=initial_blocks + post_init_blocks {
+            let block = block_stream.recv(0).await?;
+            assert_eq!(block.block_ref.number, i);
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ingestor_get_blocks_with_max_blocks_per_request() -> eyre::Result<()> {
+        let initial_blocks = 20;
+        let start_block = 5;
+        let post_init_blocks = 10;
+
+        let (anvil, _ingestor, ingestor_ws_url) = setup(None).await?;
+        let anvil = anvil.unwrap();
+
+        let client = IngestorProvider::new(&ingestor_ws_url, Duration::from_secs(10)).await;
+
+        for _ in 0..initial_blocks {
+            mine_block(&anvil.provider, 10).await?;
+        }
+        wait_until!(
+            client.get_block_number().await.unwrap() == initial_blocks,
+            Duration::from_secs(10)
+        );
+        let block_number = client.get_block_number().await.unwrap();
+        assert_eq!(block_number, initial_blocks);
+
+        let eth_client = EthClient::new(
+            vec![anvil.ws_url.clone()],
+            Duration::from_secs(10),
+            Duration::from_secs(10),
+            100,
+            Duration::from_secs(1),
+        )
+        .await;
+
+        let mut block_stream = client
+            .get_blocks(start_block, vec![], Arc::new(MockBlockBuilder), eth_client, Some(5))
+            .await?;
+
+        for _ in 0..post_init_blocks {
+            mine_block(&anvil.provider, 10).await?;
+        }
+        wait_until!(
+            client.get_block_number().await.unwrap() == initial_blocks + post_init_blocks,
+            Duration::from_secs(10)
+        );
+
+        let block_number = client.get_block_number().await.unwrap();
+        assert_eq!(block_number, initial_blocks + post_init_blocks);
+
+        for i in start_block..=initial_blocks + post_init_blocks {
             let block = block_stream.recv(0).await?;
             assert_eq!(block.block_ref.number, i);
         }

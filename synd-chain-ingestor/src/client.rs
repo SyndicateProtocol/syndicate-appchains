@@ -151,13 +151,11 @@ struct BlockStream<
     buffer: VecDeque<Block>,
     block_builder: Arc<B>,
     indexed_block_number: u64,
-    init_data: Option<(EthClient, Vec<Address>, u64)>,
+    init_data: Option<(EthClient, Vec<Address>, Option<u64>)>,
     #[allow(clippy::type_complexity)]
     init_requests:
         VecDeque<Pin<Box<dyn Future<Output = Vec<Result<Message, serde_json::Error>>> + Send>>>,
 }
-
-const DEFAULT_MAX_BLOCKS_PER_REQUEST: u64 = 10_000;
 
 #[allow(missing_docs)]
 impl<
@@ -177,11 +175,7 @@ impl<
             block_builder,
             buffer: Default::default(),
             indexed_block_number: start_block,
-            init_data: Some((
-                init_data.0,
-                init_data.1,
-                init_data.2.unwrap_or(DEFAULT_MAX_BLOCKS_PER_REQUEST),
-            )),
+            init_data: Some(init_data),
             init_requests: Default::default(),
         }
     }
@@ -218,25 +212,44 @@ impl<
 
             // get start and end blocks for batching
             let mut start_block = self.indexed_block_number;
-            let final_block = start_block + init.count() - 1;
 
-            while start_block < final_block {
-                let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
+            match max_blocks_per_request {
+                Some(max_blocks_per_request) => {
+                    let final_block = start_block + init.count() - 1;
+                    while start_block < final_block {
+                        let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
 
-                let client_clone = client.clone();
-                let addrs_clone = addrs.clone();
+                        let client_clone = client.clone();
+                        let addrs_clone = addrs.clone();
 
-                self.init_requests.push_back(Box::pin(async move {
-                    build_partial_blocks(start_block, &init_batch, &client_clone, addrs_clone)
-                        .await
-                        .unwrap()
-                        .into_iter()
-                        .map(|x| Ok(Message::Block(x)))
-                        .collect()
-                }));
-                start_block += max_blocks_per_request;
-                init = remaining;
-            }
+                        self.init_requests.push_back(Box::pin(async move {
+                            build_partial_blocks(
+                                start_block,
+                                &init_batch,
+                                &client_clone,
+                                addrs_clone,
+                            )
+                            .await
+                            .unwrap()
+                            .into_iter()
+                            .map(|x| Ok(Message::Block(x)))
+                            .collect()
+                        }));
+                        start_block += max_blocks_per_request;
+                        init = remaining;
+                    }
+                }
+                None => {
+                    self.init_requests.push_back(Box::pin(async move {
+                        build_partial_blocks(start_block, &init, &client, addrs)
+                            .await
+                            .unwrap()
+                            .into_iter()
+                            .map(|x| Ok(Message::Block(x)))
+                            .collect()
+                    }));
+                }
+            };
 
             // make sure we don't drop any blocks from the stream
             if !init_blocks.is_empty() {
@@ -392,6 +405,7 @@ pub trait Provider: Sync {
         addresses: Vec<Address>,
         block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
         client: EthClient,
+        max_blocks_per_request: Option<u64>,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
         Ok(BlockStream::new(
             self.subscribe::<_, Message>(
@@ -402,7 +416,7 @@ pub trait Provider: Sync {
             .await?,
             block_builder,
             start_block,
-            (client, addresses, None),
+            (client, addresses, max_blocks_per_request),
         ))
     }
 }

@@ -101,6 +101,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
             adapter.sequencer_addresses(),
             adapter,
             seq_client,
+            None,
         )
         .await?;
 
@@ -118,6 +119,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
             arbitrum_adapter.settlement_addresses(),
             arbitrum_adapter,
             set_client,
+            None,
         )
         .await?;
 
