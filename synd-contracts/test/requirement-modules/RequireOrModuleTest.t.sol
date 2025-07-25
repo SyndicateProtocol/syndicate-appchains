@@ -80,7 +80,9 @@ contract RequireOrModuleTest is Test {
         vm.stopPrank();
 
         // Should fail if all checks fail
-        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(
+            abi.encodeWithSelector(RequireOrModule.AllOrPermissionChecksFailed.selector, address(this), emptyData)
+        );
         module.isAllowed(address(this), address(0), emptyData);
     }
 
@@ -232,7 +234,9 @@ contract RequireOrModuleTest is Test {
         // 2. Both fail: False only
         module.addPermissionCheck(permissionFalse, true);
 
-        vm.expectRevert(abi.encodeWithSelector(RequireOrModule.CheckFailed.selector, address(this)));
+        vm.expectRevert(
+            abi.encodeWithSelector(RequireOrModule.AllOrPermissionChecksFailed.selector, address(this), emptyData)
+        );
         module.isAllowed(address(this), address(0), emptyData);
 
         vm.stopPrank();

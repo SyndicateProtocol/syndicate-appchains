@@ -1,5 +1,5 @@
 # SyndicateSequencingChainWithDecayingPriority
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/extensions/SyndicateSequencingChainWithDecayingPriority.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/extensions/SyndicateSequencingChainWithDecayingPriority.sol)
 
 **Inherits:**
 [SyndicateSequencingChain](/src/SyndicateSequencingChain.sol/contract.SyndicateSequencingChain.md)
@@ -95,7 +95,7 @@ Calculate the effective priority after decay based on time elapsed
 
 ```solidity
 function calculateEffectivePriority(uint256 originalPriority, uint256 submittedTimestamp, uint256 currentTimestamp)
-    public
+    external
     pure
     returns (uint256);
 ```

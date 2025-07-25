@@ -66,7 +66,6 @@ fn main() {
             pcr_0,
             pcr_1,
             pcr_2,
-            pcr_8,
         } = PublicValuesStruct::abi_decode_validate(output.as_slice()).unwrap();
         println!("root_cert_hash: {root_cert_hash}");
         println!("validity_window_start: {validity_window_start}");
@@ -76,7 +75,6 @@ fn main() {
         println!("pcr_0: {}", hex::encode(pcr_0));
         println!("pcr_1: {}", hex::encode(pcr_1));
         println!("pcr_2: {}", hex::encode(pcr_2));
-        println!("pcr_8: {}", hex::encode(pcr_8));
 
         let expected = verify_aws_nitro_attestation(
             &cbor_encoded_attestation_document,
@@ -90,7 +88,6 @@ fn main() {
         assert_eq!(pcr_0, keccak256(expected.pcr_0));
         assert_eq!(pcr_1, keccak256(expected.pcr_1));
         assert_eq!(pcr_2, keccak256(expected.pcr_2));
-        assert_eq!(pcr_8, keccak256(expected.pcr_8));
 
         println!("Values are correct!");
 

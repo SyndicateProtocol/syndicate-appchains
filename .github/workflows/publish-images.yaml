@@ -1,13 +1,10 @@
 # This workflow builds and publishes all Docker images to our container registry.
-# By default it publishes the `latest` tag, but you can specify a different tag to use.
+# By default it publishes the `latest` tag, but you can specify different tags to use.
 # You can also specify a service to build and publish, or leave blank to build and publish all services.
 
 name: Publish Service Images
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       service:
@@ -24,11 +21,11 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
-      tag:
-        description: "Tag to use for the image"
+      tags:
+        description: "Tags to use (string of JSON array)"
         required: false
         type: string
-        default: "latest"
+        default: '["latest"]'
   workflow_call:
     inputs:
       service:
@@ -43,11 +40,11 @@ on:
         type: string
         default: "ubuntu-latest"
         description: "Which runner label(s) to use"
-      tag:
+      tags:
         required: false
         type: string
-        default: "latest"
-        description: "Tag to use for the image"
+        default: '["latest"]'
+        description: "Tags to use (JSON array)"
 
 env:
   GITHUB_REGISTRY: ghcr.io
@@ -79,7 +76,29 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Parse image tags
+        id: parse_tags
+        run: |
+          TAGS_INPUT='${{ inputs.tags }}'
+          echo "Raw tags input: $TAGS_INPUT"
+          
+          # Convert single quotes to double quotes for valid JSON if needed
+          TAGS_JSON_FIXED=$(echo "$TAGS_INPUT" | sed "s/'/\"/g")
+          echo "Fixed JSON: $TAGS_JSON_FIXED"
+          
+          # Validate that it's proper JSON
+          if ! echo "$TAGS_JSON_FIXED" | jq empty 2>/dev/null; then
+            echo "Error: Invalid JSON format in tags input"
+            exit 1
+          fi
+          
+          # Set output for use in later steps
+          echo "tags_json=$TAGS_JSON_FIXED" >> "$GITHUB_OUTPUT"
+          echo "Tags JSON validated and set as output"
+
       - name: Build and push services
+        env:
+          TAGS_JSON: ${{ steps.parse_tags.outputs.tags_json }}
         run: |
           if [ -z "${{ inputs.service }}" ]; then
             SERVICES=("synd-translator" "synd-proposer" "synd-maestro" "synd-mchain" "synd-batch-sequencer" "synd-chain-ingestor")
@@ -87,19 +106,33 @@ jobs:
             SERVICES=("${{ inputs.service }}")
           fi
 
-          TAG="${{ inputs.tag }}"
-          if [ -z "$TAG" ]; then
-            TAG="latest"
-          fi
+          # Parse JSON to array
+          TAGS_ARRAY=()
+          while IFS= read -r tag; do
+            if [ -n "$tag" ]; then
+              TAGS_ARRAY+=("$tag")
+            fi
+          done <<< "$(echo "$TAGS_JSON" | jq -r '.[]')"
 
           for service in "${SERVICES[@]}"; do
-            echo "Building $service..."
+            echo "Building $service with tags: ${TAGS_ARRAY[*]}"
+          
+            # Build tag arguments for docker buildx
+            TAG_ARGS=""
+            for tag in "${TAGS_ARRAY[@]}"; do
+              TAG_ARGS="$TAG_ARGS --tag ${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$tag"
+            done
+
             docker buildx build \
               --platform linux/amd64 \
               --push=${{ !inputs.dry_run }} \
               --target "$service" \
-              --tag "${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$TAG" \
+              $TAG_ARGS \
               --cache-from type=gha \
               --cache-to type=gha,mode=max \
               .
           done
+
+          echo "Pruning buildx and system..."
+          docker buildx prune --all --force
+          docker system prune --all --volumes --force

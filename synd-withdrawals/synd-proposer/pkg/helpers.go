@@ -3,26 +3,34 @@ package pkg
 import (
 	"context"
 	"encoding/binary"
-	"errors"
+	"encoding/hex"
 	"fmt"
+	"maps"
 	"math/big"
+	"strings"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/offchainlabs/nitro/arbnode"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
-	"github.com/offchainlabs/nitro/arbstate/daprovider"
 	"github.com/offchainlabs/nitro/arbutil"
+	"github.com/offchainlabs/nitro/daprovider"
 	"github.com/offchainlabs/nitro/execution"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
+	"github.com/pkg/errors"
 )
 
-// keep in sync with the nitro node
+// ValidationData
+//
+// Need to keep this in sync with the nitro node's version
+// https://github.com/SyndicateProtocol/nitro/blob/49f053e12ab56055473a1a7c68f57590df63bb5b/arbnode/synd_api.go#L23
 type ValidationData struct {
 	BatchStartBlockNum uint64
 	BatchEndBlockNum   uint64
@@ -33,8 +41,12 @@ type ValidationData struct {
 	PreimageData       [][]byte
 }
 
-var messageDeliveredID common.Hash
-var inboxMessageDeliveredID common.Hash
+var (
+	messageDeliveredID      common.Hash
+	inboxMessageDeliveredID common.Hash
+)
+
+var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
 
 func init() {
 	parsedIBridgeABI, err := bridgegen.IBridgeMetaData.GetAbi()
@@ -49,7 +61,15 @@ func init() {
 	inboxMessageDeliveredID = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
 }
 
-func getLogs(ctx context.Context, c *ethclient.Client, startBlock uint64, endBlock uint64, addresses []common.Address, topics [][]common.Hash, maxQty uint64) ([]types.Log, error) {
+func getLogs(
+	ctx context.Context,
+	c *ethclient.Client,
+	startBlock uint64,
+	endBlock uint64,
+	addresses []common.Address,
+	topics [][]common.Hash,
+	maxQty uint64,
+) ([]types.Log, error) {
 	if startBlock > endBlock {
 		return nil, errors.New("start block > end block")
 	}
@@ -64,7 +84,7 @@ func getLogs(ctx context.Context, c *ethclient.Client, startBlock uint64, endBlo
 		return logs, nil
 	}
 	if startBlock == endBlock {
-		return nil, err
+		return nil, errors.Wrap(err, "start block == end block, cannot bisect further")
 	}
 	mid := (startBlock + endBlock) / 2
 	logs, err = getLogs(ctx, c, mid+1, endBlock, addresses, topics, maxQty)
@@ -79,10 +99,19 @@ func getLogs(ctx context.Context, c *ethclient.Client, startBlock uint64, endBlo
 		return nil, err
 	}
 	prevLogs = append(prevLogs, logs...)
+
 	return prevLogs, nil
 }
 
-func getBatches(ctx context.Context, c *ethclient.Client, sequencerInbox common.Address, start uint64, end uint64, startBlock uint64, endBlock uint64) ([][]byte, error) {
+func getBatches(
+	ctx context.Context,
+	c *ethclient.Client,
+	sequencerInbox common.Address,
+	start uint64,
+	end uint64,
+	startBlock uint64,
+	endBlock uint64,
+) ([][]byte, error) {
 	inbox, err := arbnode.NewSequencerInbox(c, sequencerInbox, 0)
 	if err != nil {
 		return nil, err
@@ -103,26 +132,43 @@ func getBatches(ctx context.Context, c *ethclient.Client, sequencerInbox common.
 			data = append(data, raw)
 		}
 	}
+
 	return data, nil
 }
-func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprovider.Reader, preimages map[common.Hash][]byte) error {
+
+func getBatchPreimageData(
+	ctx context.Context,
+	batch []byte,
+	dapReaders []daprovider.Reader,
+	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
+) error {
+	// byte 40 is a flag byte that determines if the batch uses alt-DA
 	if len(batch) > 40 {
 		for _, dapReader := range dapReaders {
-			if dapReader != nil && dapReader.IsValidHeaderByte(batch[40]) {
-				preimageRecorder := func(key common.Hash, value []byte, _ arbutil.PreimageType) {
-					preimages[key] = value
-				}
+			if dapReader != nil && dapReader.IsValidHeaderByte(ctx, batch[40]) {
 				// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
-				_, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, preimageRecorder, true)
+				_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, nil, true)
 				if err != nil {
-					// Matches the way keyset validation was done inside DAS readers i.e logging the error
-					//  But other daproviders might just want to return the error
-					if errors.Is(err, daprovider.ErrSeqMsgValidation) && daprovider.IsDASMessageHeaderByte(batch[40]) {
+					// Matches the way keyset validation was done inside DAS readers i.e. logging the error
+					// But other DA providers might just want to return the error
+					if strings.Contains(err.Error(), daprovider.ErrSeqMsgValidation.Error()) &&
+						daprovider.IsDASMessageHeaderByte(batch[40]) {
 						log.Error(err.Error())
 					} else {
-						return err
+						batchHex := hex.EncodeToString(batch)
+
+						return errors.Wrap(err, "failed to recover payload from batch - "+batchHex)
 					}
 				}
+
+				for ty, images := range preimagesRecorded {
+					if preimages[ty] == nil {
+						preimages[ty] = images
+					} else {
+						maps.Copy(preimages[ty], images)
+					}
+				}
+
 				return nil
 			}
 		}
@@ -130,17 +176,20 @@ func getBatchPreimageData(ctx context.Context, batch []byte, dapReaders []daprov
 			log.Error("No DAS Reader configured, but sequencer message found with DAS header")
 		}
 	}
+
 	return nil
 }
 
-// if count is zero, fetches the count instead
+// GetMessageAcc if count is zero, attempt to fetch
 func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Address, count uint64) (common.Hash, uint64, error) {
+	// Memory slot in contract is 6
 	slot := common.BigToHash(big.NewInt(6))
 	if count == 0 {
 		countBytes, err := c.StorageAt(ctx, bridge, slot, nil)
 		if err != nil {
-			return common.Hash{}, 0, err
+			return common.Hash{}, 0, errors.Wrap(err, "failed to fetch account data")
 		}
+
 		count = common.Hash(countBytes).Big().Uint64()
 	}
 	if count == 0 {
@@ -149,26 +198,41 @@ func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Addre
 	slot = common.BigToHash(new(big.Int).Add(crypto.Keccak256Hash(slot[:]).Big(), big.NewInt(int64(count-1))))
 	acc, err := c.StorageAt(ctx, bridge, slot, nil)
 	if err != nil {
-		return common.Hash{}, 0, err
+		return common.Hash{}, 0, errors.Wrap(err, "failed to get account from storage")
 	}
 	if common.Hash(acc).Cmp(common.Hash{}) == 0 {
 		return common.Hash{}, 0, errors.New("acc value of zero found")
 	}
+
 	return common.Hash(acc), count - 1, nil
 }
 
-func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.Address, inbox common.Address, start uint64, endAcc common.Hash) (common.Hash, [][]byte, bool, error) {
+func GetDelayedMessages(
+	ctx context.Context,
+	c *ethclient.Client,
+	bridge common.Address,
+	start uint64,
+	endAcc common.Hash,
+	settlesToArbitrumRollup bool,
+) (common.Hash, [][]byte, bool, error) {
 	endBlock, err := c.BlockNumber(ctx)
 	if err != nil {
-		return common.Hash{}, nil, false, err
+		return common.Hash{}, nil, false, errors.Wrap(err, "failed to get block number")
 	}
 	acc, end, err := GetMessageAcc(ctx, c, bridge, 0)
 	if err != nil {
-		return common.Hash{}, nil, false, err
+		return common.Hash{}, nil, false, errors.Wrap(err, "failed to get message account data")
 	}
 
 	if acc != endAcc {
-		logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{[]common.Hash{messageDeliveredID}, nil, []common.Hash{endAcc}}, 1)
+		logs, err := getLogs(
+			ctx,
+			c,
+			0,
+			endBlock,
+			[]common.Address{bridge},
+			[][]common.Hash{{messageDeliveredID}, nil, {endAcc}},
+			1)
 		if err != nil {
 			return common.Hash{}, nil, false, err
 		}
@@ -196,30 +260,71 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 			indexes = append(indexes, common.BigToHash(big.NewInt(int64(start))))
 		}
 	}
-	logs, err := getLogs(ctx, c, 0, endBlock, []common.Address{bridge}, [][]common.Hash{[]common.Hash{messageDeliveredID}, indexes}, uint64(len(indexes)))
+	logs, err := getLogs(
+		ctx,
+		c,
+		0,
+		endBlock,
+		[]common.Address{bridge},
+		[][]common.Hash{{messageDeliveredID}, indexes},
+		uint64(len(indexes)))
 	if err != nil {
 		return common.Hash{}, nil, false, err
 	}
 	if len(logs) != len(indexes) {
-		return common.Hash{}, nil, false, fmt.Errorf("unexpected number of logs found: got %d, expected %d", len(logs), len(indexes))
+		return common.Hash{}, nil, false,
+			fmt.Errorf("unexpected number of logs found: got %d, expected %d", len(logs), len(indexes))
 	}
 
-	logs, _ = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
-		[]common.Address{bridge, inbox},
+	ibridge, err := bridgegen.NewBridge(bridge, c)
+	if err != nil {
+		return common.Hash{}, nil, false, err
+	}
+
+	seqInbox, err := ibridge.SequencerInbox(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return common.Hash{}, nil, false, err
+	}
+
+	addrs := []common.Address{bridge, seqInbox}
+
+	var i int64
+	for {
+		inbox, err := ibridge.AllowedDelayedInboxList(&bind.CallOpts{Context: ctx}, big.NewInt(i))
+		if err != nil {
+			if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+				break
+			}
+
+			return common.Hash{}, nil, false, err
+		}
+		addrs = append(addrs, inbox)
+		i++
+	}
+	if i == 0 {
+		return common.Hash{}, nil, false, errors.New("no inbox addresses found")
+	}
+
+	logs, err = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
+		addrs,
 		[][]common.Hash{
-			[]common.Hash{messageDeliveredID, inboxMessageDeliveredID},
+			{messageDeliveredID, inboxMessageDeliveredID},
 		}, 0)
+	if err != nil {
+		return common.Hash{}, nil, false, err
+	}
 
-	ibridge, err := bridgegen.NewIBridge(bridge, c)
-	if err != nil {
-		return common.Hash{}, nil, false, err
-	}
-	iinbox, err := bridgegen.NewIDelayedMessageProvider(inbox, c)
-	if err != nil {
-		return common.Hash{}, nil, false, err
-	}
 	if len(logs)%2 != 0 {
-		return common.Hash{}, nil, false, errors.New("even number of logs expected")
+		for _, log := range logs {
+			fmt.Println("LOG: ", log.Topics[0], log.TxHash, log.Address, log.Topics[1].Big().Uint64())
+		}
+
+		return common.Hash{}, nil, false, fmt.Errorf("even number of logs expected: got %d", len(logs))
+	}
+
+	iinbox, err := bridgegen.NewIDelayedMessageProvider(common.Address{}, c)
+	if err != nil {
+		return common.Hash{}, nil, false, err
 	}
 
 	var msgs [][]byte
@@ -227,11 +332,11 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 	for i := 0; i < len(logs); i += 2 {
 		log, err := ibridge.ParseMessageDelivered(logs[i])
 		if err != nil {
-			return common.Hash{}, nil, false, err
+			return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
 		}
 		dataLog, err := iinbox.ParseInboxMessageDelivered(logs[i+1])
 		if err != nil {
-			return common.Hash{}, nil, false, err
+			return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
 		}
 		if log.MessageIndex.Cmp(dataLog.MessageNum) != 0 {
 			return common.Hash{}, nil, false, errors.New("event log msg index mismatch")
@@ -253,6 +358,7 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 			prevAcc = &hash
 		}
 		requestId := common.BigToHash(log.MessageIndex)
+
 		msg := arbostypes.L1IncomingMessage{
 			Header: &arbostypes.L1IncomingMessageHeader{
 				Kind:        log.Kind,
@@ -264,15 +370,30 @@ func getDelayedMessages(ctx context.Context, c *ethclient.Client, bridge common.
 			},
 			L2msg: dataLog.Data,
 		}
+
+		if settlesToArbitrumRollup {
+			block, err := c.BlockByHash(ctx, log.Raw.BlockHash)
+			if err != nil {
+				return common.Hash{}, nil, false, errors.Wrap(err, "failed to get block by hash")
+			}
+
+			// Override the block number with the L1 block number
+			// It is used during contract execution in nitro rollups
+			l1BlockNum := types.DeserializeHeaderExtraInformation(block.Header()).L1BlockNumber
+			msg.Header.BlockNumber = l1BlockNum
+		}
+
 		data, err := msg.Serialize()
 		if err != nil {
 			return common.Hash{}, nil, false, err
 		}
+
 		msgs = append(msgs, data)
 	}
 	if start != end+1 || prevAcc == nil {
 		return common.Hash{}, nil, false, fmt.Errorf("missing message: got %d, expected %d", start, end+1)
 	}
+
 	return *prevAcc, msgs, dummy, nil
 }
 
@@ -281,7 +402,9 @@ func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay ui
 	i := 0
 	for _, b := range batches {
 		hasMsg := false
-		for i < len(dmsgs) && binary.BigEndian.Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset:enclave.DelayedMessageTimestampOffset+8])+setDelay <= b.Timestamp {
+		dmsgTimestamp := binary.BigEndian.
+			Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset : enclave.DelayedMessageTimestampOffset+8])
+		for i < len(dmsgs) && dmsgTimestamp+setDelay <= b.Timestamp {
 			i++
 			hasMsg = true
 		}
@@ -289,11 +412,17 @@ func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay ui
 			batchCount++
 		}
 	}
+
 	return batchCount
 }
 
-// find the last block <= l1 number. return an error if start is greater than l1 number.
-func FindBlock(ctx context.Context, c *ethclient.Client, start uint64, l1Number uint64) (*execution.MessageResult, error) {
+// FindBlock finds the last block <= L1 number. return an error if start is greater than L1 number.
+func FindBlock(
+	ctx context.Context,
+	c *ethclient.Client,
+	start uint64,
+	l1Number uint64,
+) (*execution.MessageResult, error) {
 	end, err := c.BlockNumber(ctx)
 	if err != nil {
 		return nil, err
@@ -304,7 +433,7 @@ func FindBlock(ctx context.Context, c *ethclient.Client, start uint64, l1Number 
 		mid := (start + end) / 2
 		header, err := c.HeaderByNumber(ctx, big.NewInt(int64(mid)))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to get block header by number")
 		}
 		extraInfo = types.DeserializeHeaderExtraInformation(header)
 		if extraInfo.L1BlockNumber <= l1Number {
@@ -316,11 +445,12 @@ func FindBlock(ctx context.Context, c *ethclient.Client, start uint64, l1Number 
 
 	header, err := c.HeaderByNumber(ctx, big.NewInt(int64(start)))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get block header by number")
 	}
 	extraInfo = types.DeserializeHeaderExtraInformation(header)
 	if extraInfo.L1BlockNumber > l1Number {
 		return nil, errors.New("block not found")
 	}
+
 	return &execution.MessageResult{BlockHash: header.Hash(), SendRoot: extraInfo.SendRoot}, nil
 }

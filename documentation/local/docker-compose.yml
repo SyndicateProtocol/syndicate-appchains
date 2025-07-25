@@ -21,7 +21,7 @@ services:
     volumes:
       - ./:/chains
     environment:
-      - DB_FILE=/chains/1205614516323464.db
+      - DB_FILE=/chains/${SEQUENCING_CHAIN_ID}.db
       - START_BLOCK=0
       - WS_URLS=${SEQUENCING_WS_URL}
 

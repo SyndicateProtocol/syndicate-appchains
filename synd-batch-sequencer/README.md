@@ -6,13 +6,13 @@ The Batch Sequencer is a Rust-based service responsible for reading transactions
 
 ```
 cargo run -p synd-batch-sequencer -- \
-  --valkey-url redis://127.0.0.1:6379 \
+  --valkey-url valkey://127.0.0.1:6379 \
   --chain-id 11155111 \
   --max-batch-size 90KB \
   --private-key <hex-private-key> \
   --wallet-pool-address 0x1111... \
   --sequencing-contract-address 0x2222... \
-  --sequencing-ws-url http://localhost:8545
+  --sequencing-rpc-url http://localhost:8545
 ```
 
 ## Notes:

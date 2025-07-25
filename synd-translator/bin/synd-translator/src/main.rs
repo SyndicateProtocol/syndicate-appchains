@@ -1,6 +1,6 @@
 use eyre::Result;
 use shared::tracing::setup_global_logging;
-use synd_translator::{config::TranslatorConfig, config_manager::with_onchain_config, spawn::run};
+use synd_translator::{config::TranslatorConfig, config_manager::with_onchain_config};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{error, info};
 
@@ -38,8 +38,7 @@ async fn main() -> Result<()> {
     let config = with_onchain_config(&base_config).await;
     config.validate_strict()?;
 
-    // Run the async process
-    run(&config).await?;
+    synd_translator::spawn::run(&config).await?;
 
     Ok(())
 }

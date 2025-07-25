@@ -81,6 +81,21 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     ));
 
     // -------------------------------------------------
+    // observability methods
+    // -------------------------------------------------
+    #[allow(clippy::expect_used)]
+    module
+        .register_async_method(
+            "health",
+            |_, _, _| async move { serde_json::json!({"health": true}) },
+        )
+        .expect("/health failed");
+    #[allow(clippy::expect_used)]
+    module
+        .register_async_method("ready", |_, _, _| async move { serde_json::json!({"ready": true}) })
+        .expect("/ready failed");
+
+    // -------------------------------------------------
     // mchain methods
     // -------------------------------------------------
     module.register_method("mchain_addBatch", add_batch).unwrap();

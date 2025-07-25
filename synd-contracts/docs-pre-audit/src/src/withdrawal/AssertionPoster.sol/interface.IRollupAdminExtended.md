@@ -1,5 +1,5 @@
 # IRollupAdminExtended
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/withdrawal/AssertionPoster.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/withdrawal/AssertionPoster.sol)
 
 **Inherits:**
 IRollupAdmin
@@ -22,4 +22,18 @@ function paused() external view returns (bool);
 |----|----|-----------|
 |`<none>`|`bool`|True if the rollup contract is paused|
 
+
+### setValidatorAfkBlocks
+
+
+```solidity
+function setValidatorAfkBlocks(uint64 newAfkBlocks) external;
+```
+
+### setAnyTrustFastConfirmer
+
+
+```solidity
+function setAnyTrustFastConfirmer(address _anyTrustFastConfirmer) external;
+```
 

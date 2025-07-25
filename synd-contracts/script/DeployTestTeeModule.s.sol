@@ -14,9 +14,9 @@ contract DeployTestTeeModule is Script {
     function run() public {
         // Start broadcasting transactions
         vm.startBroadcast();
-        IBridge bridge = IBridge(vm.envAddress("APP_BRIDGE"));
-        address seqContract = vm.envAddress("SEQ_CONTRACT");
-        address seqBridge = vm.envAddress("SEQ_BRIDGE");
+        IBridge bridge = IBridge(vm.envAddress("APPCHAIN_BRIDGE_ADDRESS"));
+        address seqContract = vm.envAddress("SEQUENCING_CONTRACT_ADDRESS");
+        address seqBridge = vm.envAddress("SEQUENCING_BRIDGE_ADDRESS");
         uint64 setDelay = uint64(vm.envUint("SET_DELAY"));
         bytes32 appBlockHash = vm.envBytes32("APP_BLOCK_HASH");
         bytes32 seqBlockHash = vm.envBytes32("SEQ_BLOCK_HASH");

@@ -12,28 +12,30 @@ import (
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 
 	"github.com/offchainlabs/nitro/arbutil"
 )
 
 type PreimageDb struct {
-	wavm *wavmio.Wavm
+	wavm  *wavmio.Wavm
+	memDb *memorydb.Database
 }
 
-func (db PreimageDb) Has(key []byte) (bool, error) {
-	if len(key) != 32 {
-		return false, nil
-	}
+func (db *PreimageDb) Has(key []byte) (bool, error) {
 	return false, errors.New("preimage DB doesn't support Has")
 }
 
-func (db PreimageDb) DeleteRange(start, end []byte) error {
+func (db *PreimageDb) DeleteRange(start, end []byte) error {
 	return errors.New("preimage DB doesn't support DeleteRange")
 }
 
-func (db PreimageDb) Get(key []byte) ([]byte, error) {
+func (db *PreimageDb) Get(key []byte) ([]byte, error) {
+	res, err := db.memDb.Get(key)
+	if err == nil {
+		return res, nil
+	}
 	var hash [32]byte
-	copy(hash[:], key)
 	if len(key) == 32 {
 		copy(hash[:], key)
 	} else if len(key) == len(rawdb.CodePrefix)+32 && bytes.HasPrefix(key, rawdb.CodePrefix) {
@@ -45,75 +47,34 @@ func (db PreimageDb) Get(key []byte) ([]byte, error) {
 	return db.wavm.ResolveTypedPreimage(arbutil.Keccak256PreimageType, hash)
 }
 
-func (db PreimageDb) Put(key []byte, value []byte) error {
+func (db *PreimageDb) Put(key []byte, value []byte) error {
 	return errors.New("preimage DB doesn't support Put")
 }
 
-func (db PreimageDb) Delete(key []byte) error {
+func (db *PreimageDb) Delete(key []byte) error {
 	return errors.New("preimage DB doesn't support Delete")
 }
 
-func (db PreimageDb) NewBatch() ethdb.Batch {
-	return NopBatcher{db}
+func (db *PreimageDb) NewBatch() ethdb.Batch {
+	return db.memDb.NewBatch()
 }
 
-func (db PreimageDb) NewBatchWithSize(size int) ethdb.Batch {
-	return NopBatcher{db}
+func (db *PreimageDb) NewBatchWithSize(size int) ethdb.Batch {
+	return db.memDb.NewBatchWithSize(size)
 }
 
-func (db PreimageDb) NewIterator(prefix []byte, start []byte) ethdb.Iterator {
-	return ErrorIterator{}
+func (db *PreimageDb) NewIterator(prefix []byte, start []byte) ethdb.Iterator {
+	panic("recording KV doesn't support NewIterator")
 }
 
-func (db PreimageDb) Stat() (string, error) {
+func (db *PreimageDb) Stat() (string, error) {
 	return "", errors.New("preimage DB doesn't support Stat")
 }
 
-func (db PreimageDb) Compact(start []byte, limit []byte) error {
+func (db *PreimageDb) Compact(start []byte, limit []byte) error {
 	return nil
 }
 
-func (db PreimageDb) Close() error {
-	return nil
+func (db *PreimageDb) Close() error {
+	return db.memDb.Close()
 }
-
-func (db PreimageDb) Release() {
-}
-
-type NopBatcher struct {
-	ethdb.KeyValueStore
-}
-
-func (b NopBatcher) ValueSize() int {
-	return 0
-}
-
-func (b NopBatcher) Write() error {
-	return nil
-}
-
-func (b NopBatcher) Reset() {}
-
-func (b NopBatcher) Replay(w ethdb.KeyValueWriter) error {
-	return nil
-}
-
-type ErrorIterator struct{}
-
-func (i ErrorIterator) Next() bool {
-	return false
-}
-
-func (i ErrorIterator) Error() error {
-	return errors.New("preimage DB doesn't support iterators")
-}
-
-func (i ErrorIterator) Key() []byte {
-	return []byte{}
-}
-
-func (i ErrorIterator) Value() []byte {
-	return []byte{}
-}
-
-func (i ErrorIterator) Release() {}

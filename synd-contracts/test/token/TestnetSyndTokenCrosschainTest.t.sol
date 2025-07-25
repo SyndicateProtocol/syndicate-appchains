@@ -42,8 +42,8 @@ contract TestnetSyndTokenCrosschainTest is Test {
         assertEq(token.name(), "Testnet Syndicate");
         assertEq(token.symbol(), "TestnetSYND");
         assertEq(token.decimals(), 18);
-        assertEq(token.totalSupply(), 900_000_000 * 10 ** 18); // Inherits initial supply from base contract
-        assertEq(token.balanceOf(admin), 900_000_000 * 10 ** 18); // Admin receives initial supply
+        assertEq(token.totalSupply(), 920_000_000 * 10 ** 18); // Inherits initial supply from base contract
+        assertEq(token.balanceOf(admin), 920_000_000 * 10 ** 18); // Admin receives initial supply
     }
 
     function test_RoleSetup() public view {
@@ -166,6 +166,10 @@ contract TestnetSyndTokenCrosschainTest is Test {
         // First mint tokens via minter
         vm.prank(minter);
         token.mint(user, mintAmount);
+
+        // user allow bridge to use tokens
+        vm.prank(user);
+        token.approve(bridge1, mintAmount);
 
         uint256 initialSupply = token.totalSupply();
 
@@ -291,8 +295,8 @@ contract TestnetSyndTokenCrosschainTest is Test {
         TestnetSyndTokenCrosschain newToken = new TestnetSyndTokenCrosschain{salt: salt}(admin, minter);
 
         assertTrue(address(newToken) != address(0));
-        assertEq(newToken.totalSupply(), 900_000_000 * 10 ** 18); // Inherits initial supply
-        assertEq(newToken.balanceOf(admin), 900_000_000 * 10 ** 18); // Admin receives initial supply
+        assertEq(newToken.totalSupply(), 920_000_000 * 10 ** 18); // Inherits initial supply
+        assertEq(newToken.balanceOf(admin), 920_000_000 * 10 ** 18); // Admin receives initial supply
         assertTrue(newToken.hasRole(newToken.DEFAULT_ADMIN_ROLE(), admin));
         assertTrue(newToken.hasRole(newToken.MINTER_ROLE(), minter));
     }

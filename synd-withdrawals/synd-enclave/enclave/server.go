@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -43,9 +44,7 @@ const (
 	DefaultCARootsSHA256 = "8cf60e2b2efca96c6a9e71e851d00c1b6991cc09eadbe64a6a1d1b1eb9faff7c"
 )
 
-var (
-	defaultRoot = createAWSNitroRoot()
-)
+var defaultRoot = createAWSNitroRoot()
 
 func createAWSNitroRoot() *x509.CertPool {
 	roots, err := base64.StdEncoding.DecodeString(DefaultCARoots)
@@ -242,14 +241,18 @@ var BATCH_ACCUMULATOR_STORAGE_SLOT = common.BigToHash(big.NewInt(7))
 // Storage slot of the first element in the batch accumulator array
 // Dynamic types are stored starting at the keccak256 of the original storage slot plus an offset
 // This value is Keccak256("0x7")
-var BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT = crypto.Keccak256Hash(BATCH_ACCUMULATOR_STORAGE_SLOT[:]).Big()
-var BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE = new(big.Int).Sub(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, common.Big1)
+var (
+	BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT           = crypto.Keccak256Hash(BATCH_ACCUMULATOR_STORAGE_SLOT[:]).Big()
+	BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE = new(big.Int).Sub(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, common.Big1)
+)
 
 // field offsets into the serialized arbostypes.L1IncomingMessage struct
-const DelayedMessageSenderOffset = 13
-const DelayedMessageTimestampOffset = 41
-const DelayedMessageRequestIdOffset = 49
-const DelayedMessageDataOffset = 113
+const (
+	DelayedMessageSenderOffset    = 13
+	DelayedMessageTimestampOffset = 41
+	DelayedMessageRequestIdOffset = 49
+	DelayedMessageDataOffset      = 113
+)
 
 type KVDB map[common.Hash][]byte
 
@@ -387,13 +390,15 @@ func parseSeqBatches(input VerifySequencingChainInput) (SyndicateAccumulator, co
 		if len(batch) < 40 {
 			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch %d too short", j)
 		}
-		afterDelayedMessagesRead := binary.BigEndian.Uint64(batch[32:40])
-		if afterDelayedMessagesRead > msgCount+startIndex {
-			return SyndicateAccumulator{}, common.Hash{}, errors.New("missing delayed messages")
-		}
-		for i+startIndex < afterDelayedMessagesRead {
-			delayedAcc = delayedMessageAccumulate(delayedAcc, input.DelayedMessages[i])
-			i++
+		if msgCount > 0 {
+			afterDelayedMessagesRead := binary.BigEndian.Uint64(batch[32:40])
+			if afterDelayedMessagesRead > msgCount+startIndex {
+				return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("missing delayed messages: have %d, need %d", msgCount, afterDelayedMessagesRead-startIndex)
+			}
+			for i+startIndex < afterDelayedMessagesRead {
+				delayedAcc = delayedMessageAccumulate(delayedAcc, input.DelayedMessages[i])
+				i++
+			}
 		}
 		acc = crypto.Keccak256Hash(acc[:], crypto.Keccak256(batch), delayedAcc[:])
 	}
@@ -465,7 +470,6 @@ var allowedMsgs = map[byte]struct{}{
 	arbostypes.L1MessageType_L2Message:          {},
 	arbostypes.L1MessageType_L2FundedByL1:       {},
 	arbostypes.L1MessageType_SubmitRetryable:    {},
-	arbostypes.L1MessageType_Initialize:         {},
 	arbostypes.L1MessageType_EthDeposit:         {},
 	arbostypes.L1MessageType_BatchPostingReport: {},
 }
@@ -490,7 +494,8 @@ func buildArbBatch(afterDelayedMessagesRead uint64, data []byte) []byte {
 
 	// Set header values
 	for _, value := range []uint64{
-		0, math.MaxUint64, 0, math.MaxUint64, afterDelayedMessagesRead} {
+		0, math.MaxUint64, 0, math.MaxUint64, afterDelayedMessagesRead,
+	} {
 		var buffer [8]byte
 		binary.BigEndian.PutUint64(buffer[:], value)
 		msg = append(msg, buffer[:]...)
@@ -517,6 +522,10 @@ func parseAppBatches(input *VerifyAppchainInput) ([][]byte, error) {
 		return nil, errors.New("must include at least one delayed message")
 	}
 
+	fmt.Println("input.DelayedMessage length", len(input.DelayedMessages))
+	// fmt.Println("input.DelayedMessages", input.DelayedMessages)
+	fmt.Println("input.StartDelayedMessagesAccumulator", input.StartDelayedMessagesAccumulator)
+
 	// verify delayed messages
 	startIndex, err := validateDelayedMessages(input.DelayedMessages)
 	if err != nil {
@@ -529,7 +538,7 @@ func parseAppBatches(input *VerifyAppchainInput) ([][]byte, error) {
 		acc = delayedMessageAccumulate(acc, msg)
 	}
 	if acc != input.TrustedInput.SetDelayedMessageAcc {
-		return nil, fmt.Errorf("delayed message accumulator mismatch: got %s, expected %s", common.Bytes2Hex(acc.Bytes()), common.Bytes2Hex(input.TrustedInput.SetDelayedMessageAcc.Bytes()))
+		return nil, fmt.Errorf("delayed message accumulator mismatch: got %s, expected %s", common.Bytes2Hex(acc.Bytes()), common.Bytes2Hex(input.TrustedInput.SetDelayedMessageAcc[:]))
 	}
 
 	// remove dummy delayed message used to verify the count of the accumulator
@@ -597,10 +606,12 @@ func (s *Server) VerifyAppchain(ctx context.Context, input VerifyAppchainInput) 
 		}
 	}
 	output := VerifyAppchainOutput{
-		L1BatchAcc:          input.VerifySequencingChainOutput.L1BatchAcc,
-		SequencingBlockHash: input.VerifySequencingChainOutput.SequencingBlockHash,
-		AppchainBlockHash:   result.BlockHash,
-		AppchainSendRoot:    result.SendRoot,
+		PendingAssertion: teemodule.PendingAssertion{
+			AppBlockHash: result.BlockHash,
+			AppSendRoot:  result.SendRoot,
+			SeqBlockHash: input.VerifySequencingChainOutput.SequencingBlockHash,
+			L1BatchAcc:   input.VerifySequencingChainOutput.L1BatchAcc,
+		},
 	}
 	if err := output.sign(&input.TrustedInput, s.signerKey); err != nil {
 		return nil, err
@@ -620,9 +631,9 @@ func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppc
 	if input.Inputs[0].ConfigHash != input.Inputs[1].ConfigHash || input.Config.Hash() != input.Inputs[0].ConfigHash {
 		return nil, errors.New("config hash mismatch")
 	}
-	if input.Outputs[0].SequencingBlockHash != input.Inputs[1].SeqStartBlockHash ||
-		input.Outputs[0].AppchainBlockHash != input.Inputs[1].AppStartBlockHash ||
-		input.Outputs[0].L1BatchAcc != input.Inputs[1].L1StartBatchAcc {
+	if input.Outputs[0].PendingAssertion.SeqBlockHash != input.Inputs[1].SeqStartBlockHash ||
+		input.Outputs[0].PendingAssertion.AppBlockHash != input.Inputs[1].AppStartBlockHash ||
+		input.Outputs[0].PendingAssertion.L1BatchAcc != input.Inputs[1].L1StartBatchAcc {
 		return nil, errors.New("input output mismatch")
 	}
 
@@ -642,7 +653,7 @@ func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppc
 		if input.SeqFirstEndBlockHeader == nil {
 			return nil, errors.New("missing seq first end block header")
 		}
-		if input.SeqFirstEndBlockHeader.Hash() != input.Outputs[0].SequencingBlockHash {
+		if input.SeqFirstEndBlockHeader.Hash() != input.Outputs[0].PendingAssertion.SeqBlockHash {
 			return nil, errors.New("seq first end block header hash mismatch")
 		}
 		if timestamp+input.Config.SettlementDelay <= input.SeqFirstEndBlockHeader.Time {

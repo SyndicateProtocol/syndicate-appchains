@@ -7,7 +7,6 @@ use alloy::primitives::Address;
 use clap::Parser;
 use common::types::Chain;
 use eyre::Result;
-use metrics::config::MetricsConfig;
 use shared::parse::parse_address;
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::config::BlockBuilderConfig;
@@ -79,9 +78,6 @@ pub enum ConfigError {
 
     #[error("Ingestor chain configuration error: {0}")]
     Ingestor(#[from] IngestorConfigError),
-
-    #[error("Metrics configuration error: {0}")]
-    Metrics(#[from] metrics::config::ConfigError),
 }
 
 // Due to `clap` not supporting prefixes, we need to redefine the SequencingChainConfig and
@@ -173,8 +169,8 @@ pub struct TranslatorConfig {
     #[command(flatten)]
     pub settlement: SettlementChainConfig,
 
-    #[command(flatten)]
-    pub metrics: MetricsConfig,
+    #[arg(long, env = "PORT", default_value_t = 9090)]
+    pub port: u16,
 
     /// The delay to be applied to settlement chain blocks (expressed in seconds)
     #[arg(long, env = "SETTLEMENT_DELAY")]
@@ -220,7 +216,6 @@ impl TranslatorConfig {
     pub fn validate(&self) -> Result<(), ConfigError> {
         self.sequencing.validate().map_err(ConfigError::Ingestor)?;
         self.settlement.validate().map_err(ConfigError::Ingestor)?;
-        self.metrics.validate().map_err(ConfigError::Metrics)?;
         Ok(())
     }
 
@@ -251,7 +246,6 @@ impl TranslatorConfig {
         add_fields::<BlockBuilderConfig>(&mut cmd);
         add_fields::<SequencingChainConfig>(&mut cmd);
         add_fields::<SettlementChainConfig>(&mut cmd);
-        add_fields::<MetricsConfig>(&mut cmd);
 
         // Remove the trailing slash and newline
         cmd.truncate(cmd.len() - 2);
