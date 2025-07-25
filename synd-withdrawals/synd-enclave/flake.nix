@@ -151,6 +151,93 @@
               };
             });
 
+          nitro-arbitrator-wasm-forward-bin = pkgs-2505.rustPlatform.buildRustPackage {
+            pname = "forward";
+            version = "0.1.0";
+            src = "${nitro}/arbitrator/wasm-libraries/forward";
+            cargoHash = "sha256-KVpxO0/VuNGM1LT5ReFyf6+Qd7JYXGDjzpLWab46P4o=";
+            cargoPatches = [./patches/wasm-libraries-forward-cargo-lock.patch];
+          };
+
+          nitro-arbitrator-forward-wasm = pkgs.runCommand "forward.wasm" {} ''
+            ${nitro-arbitrator-wasm-forward-bin}/bin/forward --path forward.wat
+            ${pkgs.wabt}/bin/wat2wasm forward.wat -o $out
+          '';
+
+          nitro-arbitrator-stylus-lib = pkgs.rustPlatform.buildRustPackage {
+            pname = "stylus";
+            version = "0.1.0";
+            src = "${nitro}/arbitrator";
+            buildAndTestSubdir = "stylus";
+            cargoHash = "sha256-/57DFSr9nxNVpIyNBdFai6zKCrA/RHCoX69Cj29p1pI=";
+            doCheck = false;
+            preBuild = ''
+              mkdir -p ../target
+              cp -r ${brotli-lib}/{include,lib} ../target/
+              cp -r ${brotli-wasm}/lib-wasm ../target/
+
+              # forward_stub.wasm -> forward.wasm
+              sed -i 's#../../../target/machines/latest/forward_stub.wasm#${nitro-arbitrator-forward-wasm}#' prover/src/{machine,test}.rs
+            '';
+          };
+
+          # TODO: stylus.overrideAttrs or DRY function
+          nitro-arbitrator-prover = pkgs.rustPlatform.buildRustPackage {
+            pname = "prover";
+            version = "0.1.0";
+            src = "${nitro}/arbitrator";
+            buildAndTestSubdir = "prover";
+            cargoHash = "sha256-ah/bZj4X40Q1l2O9vLpGE0E0AHi2CMpKTBFj8HyE66k=";
+            preBuild = ''
+              mkdir -p ../target
+              cp -r ${brotli-lib}/{include,lib} ../target/
+              cp -r ${brotli-wasm}/lib-wasm ../target/
+
+              # forward_stub.wasm -> forward.wasm
+              sed -i 's#../../../target/machines/latest/forward_stub.wasm#${nitro-arbitrator-forward-wasm}#' prover/src/{machine,test}.rs
+            '';
+          };
+
+          nitro-arbitrator-jit = pkgs.rustPlatform.buildRustPackage {
+            pname = "jit";
+            version = "0.1.0";
+            src = "${nitro}/arbitrator";
+            buildAndTestSubdir = "jit";
+            cargoHash = "sha256-CsbZhKxa6lf+VbeSw7CBFYOKcHkzvvtOTK/F+lsbty4=";
+            preBuild = ''
+              mkdir -p ../target
+              cp -r ${brotli-lib}/{include,lib} ../target/
+              cp -r ${brotli-wasm}/lib-wasm ../target/
+
+              # forward_stub.wasm -> forward.wasm
+              sed -i 's#../../../target/machines/latest/forward_stub.wasm#${nitro-arbitrator-forward-wasm}#' prover/src/{machine,test}.rs
+            '';
+          };
+
+          nitro-arbitrator-prover-header = pkgs.runCommand "arbitrator.h" {} ''
+            ${pkgs-2505.rust-cbindgen}/bin/cbindgen \
+              --config ${nitro}/arbitrator/stylus/cbindgen.toml \
+              --metadata ${./patches/stylus-cargo-metadata.json} \
+              --output $out \
+              ${nitro}/arbitrator/stylus
+          '';
+
+          synd-enclave = pkgs-2505.buildGoModule {
+            pname = "synd-enclave";
+            version = "0.1.0";
+            src = ./.;
+            vendorHash = pkgs.lib.fakeHash;
+            subPackages = [ "cmd/enclave" "enclave" ];
+            ldFlags = [
+              "-linkmode external"
+              "-extldflags"
+              "-static"
+            ];
+            preBuild = ''
+              ln -s ${nitro} ./nitro
+            '';
+          };
+
           init-ramdisk = build-ramdisk {
             name = "init";
             init = enclaves-sdk-init;
@@ -171,7 +258,7 @@
             src = enclaves-image-format;
             buildAndTestSubdir = "eif_build";
             cargoHash = "sha256-mQGxBZFWQ3xW4R4j13LCt4NtAYQyO09uigLwXgOWDVE=";
-            cargoPatches = [./0001-eif-build-add-cargo-lock.patch];
+            cargoPatches = [./patches/eif-build-cargo-lock.patch];
             nativeBuildInputs = [pkgs.pkg-config];
             buildInputs = [pkgs.openssl];
           };
