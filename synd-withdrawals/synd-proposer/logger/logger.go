@@ -2,6 +2,7 @@ package logger
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -23,9 +24,17 @@ func Init() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	// If used before config initialization, then these settings will not be changed
-	if viper.GetString("LOG_LEVEL") == "debug" {
+	logLevel := viper.GetString("LOG_LEVEL")
+	switch strings.ToLower(logLevel) {
+	case "debug":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
+	case "info":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	case "warn":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
