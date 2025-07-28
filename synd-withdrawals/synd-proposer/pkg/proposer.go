@@ -517,7 +517,7 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 	p.Metrics.EnclaveCalls.WithLabelValues(method).Inc()
 
 	if err := p.EnclaveClient.Call(output, method, input); err != nil {
-		return errors.Wrap(tls.HandleTLSErr(err), "tls error")
+		return errors.Wrap(tls.HandleTLSErr(err), "enclave error")
 	}
 
 	return nil
