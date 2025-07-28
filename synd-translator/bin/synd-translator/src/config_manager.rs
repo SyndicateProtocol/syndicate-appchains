@@ -172,6 +172,7 @@ async fn get_config<T: Provider + Clone>(
 
 /// representation of the chain configuration that lives on-chain
 #[allow(missing_docs)]
+#[derive(Debug)]
 struct ChainConfig {
     arbitrum_bridge_address: Address,
     arbitrum_inbox_address: Address,
@@ -184,7 +185,7 @@ struct ChainConfig {
 
 #[cfg(test)]
 mod test {
-    use super::{override_with_onchain_config, ChainConfig, TranslatorConfig};
+    use super::*;
     use alloy::primitives::{address, U256};
 
     #[test]
