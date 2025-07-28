@@ -200,7 +200,7 @@ pub struct TranslatorConfig {
     #[arg(long, env = "WS_MAX_BUFFER_CAPACITY_PER_SUBSCRIPTION")]
     pub max_buffer_capacity_per_subscription: Option<usize>,
 
-    /// Manually override maximum response size (default: 4 GB).
+    /// Manually override maximum response size (default: u32::MAX or ~4GB).
     /// For default implementation see
     /// [`IngestorProviderConfig`](synd_chain_ingestor::client::IngestorProvider::new).
     #[arg(long, env = "WS_MAX_RESPONSE_SIZE")]

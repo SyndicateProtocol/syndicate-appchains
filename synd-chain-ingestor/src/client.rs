@@ -335,7 +335,7 @@ pub struct IngestorProviderConfig {
     pub timeout: Duration,
     /// The maximum buffer capacity per subscription (default: 1024)
     pub max_buffer_capacity_per_subscription: Option<usize>,
-    /// The maximum response size (default: 4 GB)
+    /// The maximum response size (default: u32::MAX or ~4GB)
     pub max_response_size: Option<u32>,
 }
 
@@ -349,7 +349,7 @@ impl IngestorProvider {
         match tokio::time::timeout(
             config.timeout,
             WsClientBuilder::new()
-                .max_response_size(config.max_response_size.unwrap_or(4 * 1024 * 1024 * 1024)) // 4 GB
+                .max_response_size(config.max_response_size.unwrap_or(u32::MAX)) // ~4GB
                 .max_buffer_capacity_per_subscription(
                     config.max_buffer_capacity_per_subscription.unwrap_or(1024),
                 )
