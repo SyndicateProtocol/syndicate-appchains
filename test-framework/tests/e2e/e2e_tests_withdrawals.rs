@@ -76,7 +76,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                         .evm_mine(Some(MineOptions::Options { timestamp: None, blocks: Some(1) }))
                         .await
                         .unwrap(); // NOTE: this will crash once the test ends that's fine
-                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    tokio::time::sleep(Duration::from_secs(5)).await;
                 }
             });
 
