@@ -77,6 +77,7 @@ func createAWSNitroRoot() *x509.CertPool {
 }
 
 type Server struct {
+	// https://docs.aws.amazon.com/enclaves/latest/user/set-up-attestation.html lists the pcr values
 	pcrs          [3][]byte
 	signerKey     *ecdsa.PrivateKey
 	decryptionKey *rsa.PrivateKey
