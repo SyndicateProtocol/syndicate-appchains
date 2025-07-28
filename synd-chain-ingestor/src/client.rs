@@ -335,7 +335,7 @@ pub struct IngestorProviderConfig {
     pub timeout: Duration,
     /// The maximum buffer capacity per subscription (default: 1024)
     pub max_buffer_capacity_per_subscription: Option<usize>,
-    /// The maximum response size (default: u32::MAX or ~4GB)
+    /// The maximum response size (default: `u32::MAX` or ~4GB)
     pub max_response_size: Option<u32>,
 }
 
