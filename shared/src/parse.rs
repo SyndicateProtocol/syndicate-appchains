@@ -171,6 +171,15 @@ mod tests {
     }
 
     #[test]
+    fn parse_address_empty() {
+        let empty_input = "   ";
+        match parse_address(empty_input) {
+            Err(Error::EthereumAddress(_)) => {}
+            _ => panic!("Expected EthereumAddress error for: {empty_input}"),
+        }
+    }
+
+    #[test]
     fn test_parse_map_empty() {
         // Test with empty JSON object
         let result = parse_map("{}");
