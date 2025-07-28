@@ -194,6 +194,18 @@ pub struct TranslatorConfig {
     #[arg(long, env = "WS_REQUEST_TIMEOUT", value_parser=humantime::parse_duration, default_value="10s")]
     pub ws_request_timeout: Duration,
 
+    /// Manually override maximum buffer capacity per subscription (default: 1024).
+    /// For default implementation see
+    /// [`IngestorProviderConfig`](synd_chain_ingestor::client::IngestorProvider::new).
+    #[arg(long, env = "WS_MAX_BUFFER_CAPACITY_PER_SUBSCRIPTION")]
+    pub max_buffer_capacity_per_subscription: Option<usize>,
+
+    /// Manually override maximum response size (default: 4 GB).
+    /// For default implementation see
+    /// [`IngestorProviderConfig`](synd_chain_ingestor::client::IngestorProvider::new).
+    #[arg(long, env = "WS_MAX_RESPONSE_SIZE")]
+    pub max_response_size: Option<u32>,
+
     #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
     pub get_logs_timeout: Duration,
 

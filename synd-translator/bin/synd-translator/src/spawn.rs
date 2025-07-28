@@ -8,7 +8,7 @@ use shared::service_start_utils::{start_http_server_with_aux_handlers, MetricsSt
 use std::sync::Arc;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
-    client::{IngestorProvider, Provider as IProvider},
+    client::{IngestorProvider, IngestorProviderConfig, Provider as IProvider},
     eth_client::EthClient,
 };
 use synd_mchain::client::{MProvider, Provider};
@@ -41,15 +41,19 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         .await
         .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {e}")))?;
 
-    let sequencing_client = IngestorProvider::new(
-        config.sequencing.sequencing_ws_url.as_ref().unwrap(),
-        config.ws_request_timeout,
-    )
+    let sequencing_client = IngestorProvider::new(IngestorProviderConfig {
+        url: config.sequencing.sequencing_ws_url.as_ref().unwrap().to_string(),
+        timeout: config.ws_request_timeout,
+        ..Default::default()
+    })
     .await;
 
-    let settlement_client =
-        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
-            .await;
+    let settlement_client = IngestorProvider::new(IngestorProviderConfig {
+        url: config.settlement.settlement_ws_url.clone(),
+        timeout: config.ws_request_timeout,
+        ..Default::default()
+    })
+    .await;
 
     let safe_state =
         mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
