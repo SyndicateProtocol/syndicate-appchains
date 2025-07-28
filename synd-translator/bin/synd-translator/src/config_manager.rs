@@ -102,11 +102,14 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
         }
     };
 
-    let ingestor_provider = IngestorProvider::new(IngestorProviderConfig {
-        url: config.settlement.settlement_ws_url.clone(),
-        timeout: config.ws_request_timeout,
-        ..Default::default()
-    })
+    let ingestor_provider = IngestorProvider::new(
+        config.settlement.settlement_ws_url.as_ref(),
+        IngestorProviderConfig {
+            timeout: config.ws_request_timeout,
+            max_buffer_capacity_per_subscription: config.max_buffer_capacity_per_subscription,
+            max_response_size: config.max_response_size,
+        },
+    )
     .await;
 
     let urls = ingestor_provider.get_urls().await.unwrap();

@@ -327,16 +327,24 @@ pub trait Provider: Sync {
 }
 
 /// Configuration for the ingestor provider
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct IngestorProviderConfig {
-    /// The URL of the websocket server
-    pub url: String,
-    /// The timeout for the websocket connection
+    /// The timeout for the websocket connection (default: 10s)
     pub timeout: Duration,
     /// The maximum buffer capacity per subscription (default: 1024)
-    pub max_buffer_capacity_per_subscription: Option<usize>,
+    pub max_buffer_capacity_per_subscription: usize,
     /// The maximum response size (default: `u32::MAX` or ~4GB)
-    pub max_response_size: Option<u32>,
+    pub max_response_size: u32,
+}
+
+impl Default for IngestorProviderConfig {
+    fn default() -> Self {
+        Self {
+            timeout: Duration::from_secs(10),
+            max_buffer_capacity_per_subscription: 1024,
+            max_response_size: u32::MAX,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -345,27 +353,25 @@ pub struct IngestorProvider(Arc<WsClient>);
 
 #[allow(missing_docs)]
 impl IngestorProvider {
-    pub async fn new(config: IngestorProviderConfig) -> Self {
+    pub async fn new(url: &str, config: IngestorProviderConfig) -> Self {
         match tokio::time::timeout(
             config.timeout,
             WsClientBuilder::new()
-                .max_response_size(config.max_response_size.unwrap_or(u32::MAX)) // ~4GB
-                .max_buffer_capacity_per_subscription(
-                    config.max_buffer_capacity_per_subscription.unwrap_or(1024),
-                )
+                .max_response_size(config.max_response_size)
+                .max_buffer_capacity_per_subscription(config.max_buffer_capacity_per_subscription)
                 .request_timeout(config.timeout)
                 .enable_ws_ping(PingConfig::default())
-                .build(config.url.clone()),
+                .build(url),
         )
         .await
         {
             Err(_) => {
                 panic!(
                     "timed out connecting to websocket: timeout={:?}, url={}",
-                    config.timeout, config.url
+                    config.timeout, url
                 );
             }
-            Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={}", config.url),
+            Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
             Ok(Ok(client)) => Self(Arc::new(client)),
         }
     }

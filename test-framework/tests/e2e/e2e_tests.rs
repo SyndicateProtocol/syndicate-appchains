@@ -588,17 +588,15 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
 
         // assert that restarting and rolling back here will not make synd-mchain go back to
         // block 1
-        let seq_mchain_client = IngestorProvider::new(IngestorProviderConfig {
-            url: components.sequencing_ingestor_rpc_url.clone(),
-            timeout: Duration::from_secs(1),
-            ..Default::default()
-        })
+        let seq_mchain_client = IngestorProvider::new(
+            components.sequencing_ingestor_rpc_url.as_ref(),
+            IngestorProviderConfig { timeout: Duration::from_secs(1), ..Default::default() },
+        )
         .await;
-        let settlement_client = IngestorProvider::new(IngestorProviderConfig {
-            url: components.settlement_ingestor_rpc_url.clone(),
-            timeout: Duration::from_secs(1),
-            ..Default::default()
-        })
+        let settlement_client = IngestorProvider::new(
+            components.settlement_ingestor_rpc_url.as_ref(),
+            IngestorProviderConfig { timeout: Duration::from_secs(1), ..Default::default() },
+        )
         .await;
 
         components

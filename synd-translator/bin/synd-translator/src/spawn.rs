@@ -41,18 +41,24 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         .await
         .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {e}")))?;
 
-    let sequencing_client = IngestorProvider::new(IngestorProviderConfig {
-        url: config.sequencing.sequencing_ws_url.as_ref().unwrap().to_string(),
-        timeout: config.ws_request_timeout,
-        ..Default::default()
-    })
+    let sequencing_client = IngestorProvider::new(
+        config.sequencing.sequencing_ws_url.as_ref().unwrap(),
+        IngestorProviderConfig {
+            timeout: config.ws_request_timeout,
+            max_buffer_capacity_per_subscription: config.max_buffer_capacity_per_subscription,
+            max_response_size: config.max_response_size,
+        },
+    )
     .await;
 
-    let settlement_client = IngestorProvider::new(IngestorProviderConfig {
-        url: config.settlement.settlement_ws_url.clone(),
-        timeout: config.ws_request_timeout,
-        ..Default::default()
-    })
+    let settlement_client = IngestorProvider::new(
+        config.settlement.settlement_ws_url.as_ref(),
+        IngestorProviderConfig {
+            timeout: config.ws_request_timeout,
+            max_buffer_capacity_per_subscription: config.max_buffer_capacity_per_subscription,
+            max_response_size: config.max_response_size,
+        },
+    )
     .await;
 
     let safe_state =
