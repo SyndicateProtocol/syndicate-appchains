@@ -2,7 +2,7 @@
 //! transaction
 
 use crate::json_rpc::{
-    InvalidInputError::{ChainIdMissing, TransactionTooLarge, UnableToRLPDecode},
+    InvalidInputError::{ChainIdMissing, TransactionTooLarge},
     Rejection::FeeTooHigh,
     RpcError,
     RpcError::{InvalidInput, TransactionRejected},
@@ -18,11 +18,7 @@ use tracing::{debug, instrument};
 /// Convert a raw transaction from [`&Bytes`] to [`TxEnvelope`]
 pub fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
     let mut slice: &[u8] = raw_tx.as_ref();
-    TxEnvelope::decode(&mut slice).map_err(|_| {
-        let error = InvalidInput(UnableToRLPDecode);
-        debug!(error = %error, "Transaction decoding failed");
-        error
-    })
+    Ok(TxEnvelope::decode(&mut slice)?)
 }
 
 fn check_chain_id(tx: &TxEnvelope) -> Result<(), RpcError> {
@@ -109,6 +105,7 @@ pub fn validate_transaction(raw_tx: &Bytes) -> Result<(TxEnvelope, Address), Rpc
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::json_rpc::InvalidInputError::UnableToRLPDecode;
     use alloy::{
         consensus::{Signed, TxEip1559, TxLegacy},
         primitives::{b256, Bytes, Signature},
@@ -140,7 +137,11 @@ mod tests {
         // Invalid transaction
         let invalid_tx = Bytes::from_str("0x1234").unwrap();
         let result = decode_transaction(&invalid_tx);
-        assert!(matches!(result, Err(InvalidInput(UnableToRLPDecode))));
+        println!("result: {result:?}");
+        assert!(matches!(
+            result,
+            Err(InvalidInput(UnableToRLPDecode(alloy::rlp::Error::Custom("unexpected tx type"))))
+        ));
     }
 
     fn wrap_txn_legacy(tx: TxLegacy) -> TxEnvelope {
