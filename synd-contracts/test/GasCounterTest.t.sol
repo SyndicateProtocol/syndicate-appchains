@@ -33,6 +33,8 @@ contract GasCounterTest is Test {
 
     function setUp() public {
         gasCounter = new TestGasCounter();
+        // Set a default gas price for gas cost calculations
+        vm.txGasPrice(1e9); // 1 gwei
     }
 
     // ============ INITIALIZATION TESTS ============

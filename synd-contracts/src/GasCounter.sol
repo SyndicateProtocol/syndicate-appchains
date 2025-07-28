@@ -114,7 +114,13 @@ abstract contract GasCounter {
         _advancePeriodIfNeeded();
 
         // Calculate gas cost using current transaction gas price
-        uint256 gasCost = gasUsed * tx.gasprice;
+        uint256 gasPrice = tx.gasprice;
+
+        // WORKAROUND: estimate gas will give a wrong value when called with tx.gasprice 0
+        if (gasPrice == 0) {
+            gasPrice = 1;
+        }
+        uint256 gasCost = gasUsed * gasPrice;
 
         // Add gas and cost to current period
         periods[currentPeriodIndex].totalGasUsed += gasUsed;
