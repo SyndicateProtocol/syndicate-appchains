@@ -24,7 +24,7 @@ pub fn parse_url(value: &str) -> Result<Url, Error> {
 
 /// Parse a string into an Ethereum `Address`.
 pub fn parse_address(value: &str) -> Result<Address, Error> {
-    Address::from_str(value).map_err(|_| Error::EthereumAddress(value.to_string()))
+    Address::from_str(value.trim()).map_err(|_| Error::EthereumAddress(value.to_string()))
 }
 
 /// Parse comma-separated addresses, e.g. "0x123,0x456"
@@ -177,6 +177,19 @@ mod tests {
             Err(Error::EthereumAddress(_)) => {}
             _ => panic!("Expected EthereumAddress error for: {empty_input}"),
         }
+    }
+
+    #[test]
+    fn parse_address_whitespace() {
+        let whitespace_input = "  0x742d35cc6634c0532925a3b844bc454e4438f44e   ";
+        let result = parse_address(whitespace_input);
+
+        // Ensure no error and the address matches
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Address::from_str("0x742d35cc6634c0532925a3b844bc454e4438f44e").unwrap()
+        );
     }
 
     #[test]
