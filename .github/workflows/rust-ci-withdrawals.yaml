@@ -1,4 +1,4 @@
-name: Rust Workspace CI
+name: Rust CI - Withdrawals-specific
 
 on:
   # Mandatory checks - must run on all PRs
