@@ -199,7 +199,7 @@ pub struct TranslatorConfig {
     pub max_buffer_capacity_per_subscription: usize,
 
     /// Manually override maximum response size
-    #[arg(long, env = "WS_MAX_RESPONSE_SIZE", default_value = "u32::MAX")]
+    #[arg(long, env = "WS_MAX_RESPONSE_SIZE", default_value = "4294967295")] // u32::MAX
     pub max_response_size: u32,
 
     #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
