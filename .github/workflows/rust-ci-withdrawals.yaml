@@ -1,4 +1,4 @@
-name: Rust CI - Withdrawals-specific
+name: Rust CI - Withdrawals-only
 
 on:
   # Mandatory checks - must run on all PRs
