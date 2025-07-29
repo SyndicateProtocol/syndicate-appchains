@@ -120,7 +120,8 @@ fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), Error> 
 
 /// Validates that version byte is either 8 or 15
 pub const fn is_valid_zlib_cm_bits(version_byte: u8) -> bool {
-    version_byte & CM_BITS_MASK == ZLIB_CM8 || version_byte & CM_BITS_MASK == ZLIB_CM15
+    let cm_bits = version_byte & CM_BITS_MASK;
+    cm_bits == ZLIB_CM8 || cm_bits == ZLIB_CM15
 }
 
 #[cfg(test)]
