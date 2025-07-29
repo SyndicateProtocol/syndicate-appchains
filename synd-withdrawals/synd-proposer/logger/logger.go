@@ -1,10 +1,15 @@
 package logger
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
+
+	"github.com/ethereum/go-ethereum/common"
 	glog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -53,4 +58,50 @@ func Init() {
 // Need to wrap std lib errors into `pkg/errors` to get the stack trace in `zerolog` logger
 func WrapErrorWithMsg(msg string, err error) (string, error) {
 	return msg, errors.Wrap(err, msg)
+}
+
+// ToHexForLogsPendingAssertion converts Pending assertion to a hex-encoded version
+func ToHexForLogsPendingAssertion(t teemodule.PendingAssertion) string {
+	hexInput := PendingAssertionHex{
+		AppBlockHash: common.Hash(t.AppBlockHash).Hex(),
+		AppSendRoot:  common.Hash(t.AppSendRoot).Hex(),
+		SeqBlockHash: common.Hash(t.SeqBlockHash).Hex(),
+		L1BatchAcc:   common.Hash(t.L1BatchAcc).Hex(),
+	}
+	jsonInput, _ := json.Marshal(hexInput)
+
+	return string(jsonInput)
+}
+
+// ToHexForLogsTrustedInput  converts TeeTrustedInput to a hex-encoded version
+func ToHexForLogsTrustedInput(t enclave.TrustedInput) string {
+	hexInput := TeeTrustedInputHex{
+		ConfigHash:           common.Hash(t.ConfigHash).Hex(),
+		AppStartBlockHash:    common.Hash(t.AppStartBlockHash).Hex(),
+		SeqStartBlockHash:    common.Hash(t.SeqStartBlockHash).Hex(),
+		SetDelayedMessageAcc: common.Hash(t.SetDelayedMessageAcc).Hex(),
+		L1StartBatchAcc:      common.Hash(t.L1StartBatchAcc).Hex(),
+		L1EndHash:            common.Hash(t.L1EndHash).Hex(),
+	}
+	jsonInput, _ := json.Marshal(hexInput)
+
+	return string(jsonInput)
+}
+
+// PendingAssertionHex is a hex-encoded version for logging
+type PendingAssertionHex struct {
+	AppBlockHash string `json:"appBlockHash"`
+	AppSendRoot  string `json:"appSendRoot"`
+	SeqBlockHash string `json:"seqBlockHash"`
+	L1BatchAcc   string `json:"l1BatchAcc"`
+}
+
+// TeeTrustedInputHex is a hex-encoded version for logging
+type TeeTrustedInputHex struct {
+	ConfigHash           string `json:"configHash"`
+	AppStartBlockHash    string `json:"appStartBlockHash"`
+	SeqStartBlockHash    string `json:"seqStartBlockHash"`
+	SetDelayedMessageAcc string `json:"setDelayedMessageAcc"`
+	L1StartBatchAcc      string `json:"l1StartBatchAcc"`
+	L1EndHash            string `json:"l1EndHash"`
 }
