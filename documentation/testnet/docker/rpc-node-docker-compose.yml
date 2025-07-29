@@ -37,7 +37,7 @@ services:
     restart: always
     command:
       - "--parent-chain.connection.url=ws://mchain:8545"
-      - "--http.api=arb,eth,net,web3,txpool,arbdebug,arbtrace,debug,synd"
+      - "--http.api=arb,eth,net,web3,txpool,arbtrace,synd"
       - "--node.dangerous.disable-blob-reader=true"
       - "--node.inbox-reader.check-delay=100ms"
       - "--node.staker.enable=false"
