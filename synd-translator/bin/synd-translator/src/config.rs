@@ -194,6 +194,14 @@ pub struct TranslatorConfig {
     #[arg(long, env = "WS_REQUEST_TIMEOUT", value_parser=humantime::parse_duration, default_value="10s")]
     pub ws_request_timeout: Duration,
 
+    /// Manually override maximum message buffer capacity per WebSocket subscription
+    #[arg(long, env = "WS_MAX_BUFFER_CAPACITY_PER_SUBSCRIPTION", default_value = "1024")]
+    pub max_buffer_capacity_per_subscription: usize,
+
+    /// Manually override maximum response size for memory safety (default: 4GB)
+    #[arg(long, env = "WS_MAX_RESPONSE_SIZE", default_value = "4294967295")] // u32::MAX
+    pub max_response_size: u32,
+
     #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
     pub get_logs_timeout: Duration,
 

@@ -8,7 +8,7 @@ use shared::service_start_utils::{start_http_server_with_aux_handlers, MetricsSt
 use std::sync::Arc;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
-    client::{IngestorProvider, Provider as IProvider},
+    client::{IngestorProvider, IngestorProviderConfig, Provider as IProvider},
     eth_client::EthClient,
 };
 use synd_mchain::client::{MProvider, Provider};
@@ -43,13 +43,23 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 
     let sequencing_client = IngestorProvider::new(
         config.sequencing.sequencing_ws_url.as_ref().unwrap(),
-        config.ws_request_timeout,
+        IngestorProviderConfig {
+            timeout: config.ws_request_timeout,
+            max_buffer_capacity_per_subscription: config.max_buffer_capacity_per_subscription,
+            max_response_size: config.max_response_size,
+        },
     )
     .await;
 
-    let settlement_client =
-        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
-            .await;
+    let settlement_client = IngestorProvider::new(
+        config.settlement.settlement_ws_url.as_ref(),
+        IngestorProviderConfig {
+            timeout: config.ws_request_timeout,
+            max_buffer_capacity_per_subscription: config.max_buffer_capacity_per_subscription,
+            max_response_size: config.max_response_size,
+        },
+    )
+    .await;
 
     let safe_state =
         mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;

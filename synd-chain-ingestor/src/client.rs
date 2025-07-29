@@ -326,26 +326,50 @@ pub trait Provider: Sync {
     }
 }
 
+/// Configuration for the ingestor provider
+#[derive(Debug, Clone)]
+pub struct IngestorProviderConfig {
+    /// The timeout for the websocket connection (default: 10s)
+    pub timeout: Duration,
+    /// The maximum buffer capacity per subscription (default: 1024)
+    pub max_buffer_capacity_per_subscription: usize,
+    /// The maximum response size (default: `u32::MAX` or ~4GB)
+    pub max_response_size: u32,
+}
+
+impl Default for IngestorProviderConfig {
+    fn default() -> Self {
+        Self {
+            timeout: Duration::from_secs(10),
+            max_buffer_capacity_per_subscription: 1024,
+            max_response_size: u32::MAX,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct IngestorProvider(Arc<WsClient>);
 
 #[allow(missing_docs)]
 impl IngestorProvider {
-    pub async fn new(url: &str, timeout: Duration) -> Self {
+    pub async fn new(url: &str, config: IngestorProviderConfig) -> Self {
         match tokio::time::timeout(
-            timeout,
+            config.timeout,
             WsClientBuilder::new()
-                .max_response_size(u32::MAX)
-                .max_buffer_capacity_per_subscription(1024)
-                .request_timeout(timeout)
+                .max_response_size(config.max_response_size)
+                .max_buffer_capacity_per_subscription(config.max_buffer_capacity_per_subscription)
+                .request_timeout(config.timeout)
                 .enable_ws_ping(PingConfig::default())
                 .build(url),
         )
         .await
         {
             Err(_) => {
-                panic!("timed out connecting to websocket: timeout={timeout:?}, url={url}");
+                panic!(
+                    "timed out connecting to websocket: timeout={:?}, url={}",
+                    config.timeout, url
+                );
             }
             Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
             Ok(Ok(client)) => Self(Arc::new(client)),
