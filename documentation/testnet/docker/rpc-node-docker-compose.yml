@@ -7,11 +7,8 @@ services:
       - RUST_LOG=warn
       - APPCHAIN_CHAIN_ID={{ chain_id }}
       - DATADIR=/datadir
-      - PORT=8050
-      - METRICS_PORT=8051
     ports:
-      - "8050"
-      - "8051"
+      - "8545"
     volumes:
       - {{ translator_data_mount_point }}:/datadir
     networks:
@@ -26,43 +23,34 @@ services:
       - APPCHAIN_CHAIN_ID={{ chain_id }}
       - SETTLEMENT_WS_URL={{ settlement_rpc_ws_url }}
       - SEQUENCING_WS_URL={{ sequencing_rpc_ws_url }}
-      - SEQUENCING_START_BLOCK={{ sequencing_start_block }}
-      - SETTLEMENT_START_BLOCK={{ settlement_start_block }}
-      - SEQUENCING_CONTRACT_ADDRESS={{ sequencing_contract_address }}
-      - ARBITRUM_BRIDGE_ADDRESS={{ bridge_address }}
-      - ARBITRUM_INBOX_ADDRESS={{ inbox_address }}
-      - MCHAIN_WS_URL=ws://mchain:8050
-      - SETTLEMENT_DELAY=60
-      - METRICS_PORT=9090
-    ports:
-      - "9090"
+      - CONFIG_MANAGER_ADDRESS={{ config_manager_address }}
+      - MCHAIN_WS_URL=ws://mchain:8545
     networks:
       - appchains-network
     depends_on:
       - mchain
 
   nitro:
-    image: offchainlabs/nitro-node:v3.6.7-a7c9f1e
+    image: ghcr.io/syndicateprotocol/nitro/nitro:{{ nitro_image_tag }}
     container_name: nitro
     init: true
     restart: always
     command:
-      - "--parent-chain.connection.url=ws://mchain:8050" # mchain is the "parent chain"
-      - "--execution.parent-chain-reader.poll-interval=100ms"
-      - "--node.dangerous.disable-blob-reader"
-      - "--execution.caching.archive"
-      - "--execution.parent-chain-reader.old-header-timeout=1000h"
+      - "--parent-chain.connection.url=ws://mchain:8545"
+      - "--http.api=arb,eth,net,web3,txpool,arbdebug,arbtrace,debug,synd"
+      - "--node.dangerous.disable-blob-reader=true"
       - "--node.inbox-reader.check-delay=100ms"
       - "--node.staker.enable=false"
+      - "--node.parent-chain-reader.poll-interval=100ms"
+      - "--node.parent-chain-reader.old-header-timeout=2540400h"
+      - "--execution.parent-chain-reader.old-header-timeout=2540400h"
+      - "--execution.caching.archive=true"
       - "--ensure-rollup-deployment=false"
       - "--chain.info-files=/config/chain_info.json"
-      - "--http.addr=0.0.0.0"
-      - "--http.port=8449"
       - "--metrics"
-      - "--metrics-server.addr=0.0.0.0"
-      - "--metrics-server.port=6070"
+      - "--log-level=error"
     ports:
-      - "8449"
+      - "8547"
       - "6070"
     volumes:
       - {{ chain_config_file }}:/config/chain_info.json:ro
