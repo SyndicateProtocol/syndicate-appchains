@@ -25,12 +25,12 @@ func main() {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			viper.AutomaticEnv()
 			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+			logger.Init()
 
 			cfg, err := config.LoadConfig()
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			logger.Init()
 			log.Info().Msgf("Config: %+v", cfg)
 
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
