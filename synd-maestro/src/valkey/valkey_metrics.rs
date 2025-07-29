@@ -667,7 +667,7 @@ macro_rules! with_cache_metrics {
         use std::time::Instant;
 
         let start = Instant::now();
-        let func_name = $crate::valkey::valkey_metrics::extract_func_name(stringify!($operation_expr));
+        let (func_name, _) = $crate::valkey::valkey_metrics::extract_func_and_method_name(stringify!($operation_expr));
         let result = $operation_expr.await;
         let duration = start.elapsed();
 
@@ -723,24 +723,38 @@ macro_rules! with_cache_metrics {
     }};
 }
 
-/// Extract the function name from an expression string.
+/// Extract the function name and method from an expression string.
 /// For example, "`conn.set_wallet_nonce(chain_id, signer, rpc_nonce, ttl)`"
-/// returns "`conn.set_wallet_nonce`"
-pub fn extract_func_name(expr_str: &str) -> String {
+/// returns "(`conn.set_wallet_nonce`, `set_wallet_name`)"
+pub fn extract_func_and_method_name(expr_str: &str) -> (String, String) {
     // Split by '(' to get everything before the opening parenthesis
-    expr_str.split('(').next().unwrap_or_else(|| {
-        warn!("Unable to extract a function name from expr_str: {}", expr_str);
-        "unknown_func"
-    }).to_string()
+    let func_name = expr_str
+        .split('(')
+        .next()
+        .unwrap_or_else(|| {
+            warn!("Unable to extract a function name from expr_str: {}", expr_str);
+            "unknown_func"
+        })
+        .to_string();
+
+    let method_name = func_name
+        .split('.')
+        .next_back()
+        .unwrap_or_else(|| {
+            warn!("Unable to extract a method name from expr_str: {}", expr_str);
+            "unknown_method"
+        })
+        .to_string();
+
+    (func_name, method_name)
 }
 
 /// Helper function to detect the operation type from the method name. This relies on method naming
 /// consistency within the `synd-maestro` package.
 pub fn detect_operation_and_cache_type(expr_str: &str) -> (Operation, CacheType) {
-    let func_name = extract_func_name(expr_str);
-    let func_name = func_name.as_str();
+    let (_, method_name) = extract_func_and_method_name(expr_str);
 
-    let op = match func_name {
+    let op = match method_name.clone() {
         // Read operations
         name if name.starts_with("get") => Operation::Read,
         name if name.starts_with("xread") => Operation::StreamRead,
@@ -766,7 +780,8 @@ pub fn detect_operation_and_cache_type(expr_str: &str) -> (Operation, CacheType)
             Operation::Other
         }
     };
-    let cache = match func_name {
+
+    let cache = match method_name {
         name if name.starts_with('x') => CacheType::ValkeyStream,
         _ => CacheType::ValkeyCache,
     };
@@ -929,20 +944,43 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_method_name() {
-        assert_eq!(extract_func_name("conn.get_wallet_nonce(chain_id, address)"), "conn.get_wallet_nonce");
-        assert_eq!(extract_func_name("conn.get(key)"), "conn.get");
-        assert_eq!(extract_func_name("self.conn.get_wallet_nonce(a, b)"), "self.conn.get_wallet_nonce");
-        assert_eq!(extract_func_name("conn.xread_options(&keys, &ids, &opts)"), "conn.xread_options");
-        assert_eq!(extract_func_name("producer_conn.xdel::<_, _, usize>(&stream_key, &ids)"), "producer_conn.xdel::<_, _, usize>");
-        assert_eq!(extract_func_name("self.conn.xread_options(&[self.stream_key.as_str()], &[self.last_id.as_str()], &opts)"), "self.conn.xread_options");
-        assert_eq!(extract_func_name("conn.set_wallet_nonce(
+    fn test_extract_func_and_method_name() {
+        assert_eq!(
+            extract_func_and_method_name("conn.get_wallet_nonce(chain_id, address)"),
+            ("conn.get_wallet_nonce".to_string(), "get_wallet_nonce".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name("conn.get(key)"),
+            ("conn.get".to_string(), "get".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name("self.conn.get_wallet_nonce(a, b)"),
+            ("self.conn.get_wallet_nonce".to_string(), "get_wallet_nonce".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name("conn.xread_options(&keys, &ids, &opts)"),
+            ("conn.xread_options".to_string(), "xread_options".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name("producer_conn.xdel::<_, _, usize>(&stream_key, &ids)"),
+            ("producer_conn.xdel::<_, _, usize>".to_string(), "xdel::<_, _, usize>".to_string())
+        );
+        assert_eq!(extract_func_and_method_name("self.conn.xread_options(&[self.stream_key.as_str()], &[self.last_id.as_str()], &opts)"),
+                   ("self.conn.xread_options".to_string(), "xread_options".to_string()));
+        assert_eq!(
+            extract_func_and_method_name(
+                "conn.set_wallet_nonce(
                 chain_id,
                 wallet_address,
                 desired_nonce,
                 self.config.wallet_nonce_ttl
-            )"), "conn.set_wallet_nonce");
-        assert_eq!(extract_func_name("producer_conn.xadd(
+            )"
+            ),
+            ("conn.set_wallet_nonce".to_string(), "set_wallet_nonce".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name(
+                "producer_conn.xadd(
             stream_key,
             \"*\",
                 &[
@@ -950,7 +988,10 @@ mod tests {
                     (\"retries\", retries.to_string().as_bytes()),
                     (\"traceparent\", Vec::from(traceparent).as_slice()),
                 ],
-            )"), "producer_conn.xadd");
+            )"
+            ),
+            ("producer_conn.xadd".to_string(), "xadd".to_string())
+        );
     }
 
     #[test]
