@@ -233,8 +233,10 @@ mod tests {
         println!("Compressed data first byte: 0x{:02x}", compressed_transactions[0]);
         println!("CM bits: 0x{:02x}", compressed_transactions[0] & 0x0F);
 
-        println!("Input structure: [0x{:02x} (compression indicator)][0x{:02x}... (zlib data)]",
-                 compressed_transactions[0], compressed_transactions[1]);
+        println!(
+            "Input structure: [0x{:02x} (compression indicator)][0x{:02x}... (zlib data)]",
+            compressed_transactions[0], compressed_transactions[1]
+        );
 
         let result = SequencingTransactionParser::decode_event_data(&compressed_transactions);
 
@@ -280,7 +282,7 @@ mod tests {
             SequencingParserError::DecompressionError(_) => {
                 // This is expected - should fail during decompression
             }
-            other => panic!("Expected DecompressionError, got {:?}", other),
+            other => panic!("Expected DecompressionError, got {other:?}"),
         }
     }
 
@@ -301,7 +303,7 @@ mod tests {
             SequencingParserError::DecompressionError(_) => {
                 // Expected - should fail due to invalid zlib header checksum
             }
-            other => panic!("Expected DecompressionError, got {:?}", other),
+            other => panic!("Expected DecompressionError, got {other:?}"),
         }
     }
 
