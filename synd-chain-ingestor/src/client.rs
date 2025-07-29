@@ -215,8 +215,7 @@ impl<
 
             match max_blocks_per_request {
                 Some(max_blocks_per_request) => {
-                    let final_block = start_block + init.count() - 1;
-                    while start_block < final_block {
+                    while init.count() > 0 {
                         let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
 
                         let client_clone = client.clone();
@@ -405,7 +404,6 @@ pub trait Provider: Sync {
         addresses: Vec<Address>,
         block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
         client: EthClient,
-        max_blocks_per_request: Option<u64>,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
         Ok(BlockStream::new(
             self.subscribe::<_, Message>(
@@ -416,7 +414,7 @@ pub trait Provider: Sync {
             .await?,
             block_builder,
             start_block,
-            (client, addresses, max_blocks_per_request),
+            (client, addresses, None),
         ))
     }
 }
@@ -430,6 +428,8 @@ pub struct IngestorProviderConfig {
     pub max_buffer_capacity_per_subscription: usize,
     /// The maximum response size (default: `u32::MAX` or ~4GB)
     pub max_response_size: u32,
+    /// The maximum number of blocks to fetch per request (default: None, which means no batching)
+    pub max_blocks_per_request: Option<u64>,
 }
 
 impl Default for IngestorProviderConfig {
@@ -438,13 +438,14 @@ impl Default for IngestorProviderConfig {
             timeout: Duration::from_secs(10),
             max_buffer_capacity_per_subscription: 1024,
             max_response_size: u32::MAX,
+            max_blocks_per_request: None,
         }
     }
 }
 
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
-pub struct IngestorProvider(Arc<WsClient>);
+pub struct IngestorProvider(Arc<WsClient>, Option<u64>);
 
 #[allow(missing_docs)]
 impl IngestorProvider {
@@ -467,7 +468,7 @@ impl IngestorProvider {
                 );
             }
             Ok(Err(err)) => panic!("failed to connect to websocket: {err}, url={url}"),
-            Ok(Ok(client)) => Self(Arc::new(client)),
+            Ok(Ok(client)) => Self(Arc::new(client), config.max_blocks_per_request),
         }
     }
 }
@@ -491,11 +492,31 @@ impl Provider for IngestorProvider {
     {
         self.0.subscribe::<Notif, _>(method, params, unsubscribe_method).await
     }
+
+    async fn get_blocks<Block: GetBlockRef + Send + 'static>(
+        &self,
+        start_block: u64,
+        addresses: Vec<Address>,
+        block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
+        client: EthClient,
+    ) -> Result<impl BlockStreamT<Block>, ClientError> {
+        Ok(BlockStream::new(
+            self.subscribe::<_, Message>(
+                "subscribe_blocks",
+                (start_block, addresses.clone()),
+                "unsubscribe_blocks",
+            )
+            .await?,
+            block_builder,
+            start_block,
+            (client, addresses, self.1),
+        ))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Provider, Stream};
+    use super::*;
     use jsonrpsee::{
         core::{async_trait, traits::ToRpcParams, ClientError},
         types::{Id, Request, SubscriptionResponse},
