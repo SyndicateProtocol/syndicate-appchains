@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"math/big"
@@ -150,8 +149,14 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			log.Info().Msg("Close challenge loop tick...")
-			if _, err := p.TeeModule.CloseChallengeWindow(p.SettlementAuth); err != nil {
-				log.Error().Err(err).Msg("Failed to close challenge window")
+			opts, err := p.makeTransactOptsCopy(ctx)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to make transact opts copy", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+			}
+			if _, err := p.TeeModule.CloseChallengeWindow(opts); err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to close challenge window", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
 			}
 		}
 	}
@@ -201,12 +206,17 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 				p.PendingTeeInputHash = trustedInput.Hash()
 				p.PendingSignature = appOutput.Signature
-				log.Debug().Msgf("Trusted input: %v", ToHexForLogsTrustedInput(*trustedInput))
-				log.Debug().Msgf("Pending assertion: %v", ToHexForLogsPendingAssertion(*p.PendingAssertion))
+				log.Debug().Msgf("Trusted input: %v", logger.ToHexForLogsTrustedInput(*trustedInput))
+				log.Debug().Msgf("Pending assertion: %v", logger.ToHexForLogsPendingAssertion(*p.PendingAssertion))
 			}
 
+			opts, err := p.makeTransactOptsCopy(ctx)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to make transact opts copy", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+			}
 			submissionTimer := metrics.NewTimer()
-			transaction, err := p.TeeModule.SubmitAssertion(p.SettlementAuth, *p.PendingAssertion, p.PendingSignature,
+			transaction, err := p.TeeModule.SubmitAssertion(opts, *p.PendingAssertion, p.PendingSignature,
 				crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
 			if err != nil {
 				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
@@ -523,48 +533,13 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 	return nil
 }
 
-// ToHexForLogsTrustedInput  converts TeeTrustedInput to a hex-encoded version
-func ToHexForLogsTrustedInput(t enclave.TrustedInput) string {
-	hexInput := TeeTrustedInputHex{
-		ConfigHash:           common.Hash(t.ConfigHash).Hex(),
-		AppStartBlockHash:    common.Hash(t.AppStartBlockHash).Hex(),
-		SeqStartBlockHash:    common.Hash(t.SeqStartBlockHash).Hex(),
-		SetDelayedMessageAcc: common.Hash(t.SetDelayedMessageAcc).Hex(),
-		L1StartBatchAcc:      common.Hash(t.L1StartBatchAcc).Hex(),
-		L1EndHash:            common.Hash(t.L1EndHash).Hex(),
+// makeTransactOptsCopy creates a new TransactOpts with a fresh context and nonce
+func (p *Proposer) makeTransactOptsCopy(ctx context.Context) (*bind.TransactOpts, error) {
+	if p.SettlementAuth == nil {
+		return nil, errors.New("SettlementAuth is nil")
 	}
-	jsonInput, _ := json.Marshal(hexInput)
-
-	return string(jsonInput)
-}
-
-// ToHexForLogsPendingAssertion converts Pending assertion to a hex-encoded version
-func ToHexForLogsPendingAssertion(t teemodule.PendingAssertion) string {
-	hexInput := PendingAssertionHex{
-		AppBlockHash: common.Hash(t.AppBlockHash).Hex(),
-		AppSendRoot:  common.Hash(t.AppSendRoot).Hex(),
-		SeqBlockHash: common.Hash(t.SeqBlockHash).Hex(),
-		L1BatchAcc:   common.Hash(t.L1BatchAcc).Hex(),
-	}
-	jsonInput, _ := json.Marshal(hexInput)
-
-	return string(jsonInput)
-}
-
-// PendingAssertionHex is a hex-encoded version for logging
-type PendingAssertionHex struct {
-	AppBlockHash string `json:"appBlockHash"`
-	AppSendRoot  string `json:"appSendRoot"`
-	SeqBlockHash string `json:"seqBlockHash"`
-	L1BatchAcc   string `json:"l1BatchAcc"`
-}
-
-// TeeTrustedInputHex is a hex-encoded version for logging
-type TeeTrustedInputHex struct {
-	ConfigHash           string `json:"configHash"`
-	AppStartBlockHash    string `json:"appStartBlockHash"`
-	SeqStartBlockHash    string `json:"seqStartBlockHash"`
-	SetDelayedMessageAcc string `json:"setDelayedMessageAcc"`
-	L1StartBatchAcc      string `json:"l1StartBatchAcc"`
-	L1EndHash            string `json:"l1EndHash"`
+	copy := *p.SettlementAuth // shallow copy
+	copy.Context = ctx        // ensure context is set fresh
+	copy.Nonce = nil          // ensure fresh nonce lookup
+	return &copy, nil
 }
