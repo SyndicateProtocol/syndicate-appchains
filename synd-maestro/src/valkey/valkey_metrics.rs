@@ -728,7 +728,10 @@ macro_rules! with_cache_metrics {
 /// returns "`conn.set_wallet_nonce`"
 pub fn extract_func_name(expr_str: &str) -> String {
     // Split by '(' to get everything before the opening parenthesis
-    expr_str.split('(').next().unwrap_or_else(|| &format!("unknown_func-{}", expr_str)).to_string()
+    expr_str.split('(').next().unwrap_or_else(|| {
+        warn!("Unable to extract a function name from expr_str: {}", expr_str);
+        "unknown_func"
+    }).to_string()
 }
 
 /// Helper function to detect the operation type from the method name. This relies on method naming
