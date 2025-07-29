@@ -33,6 +33,13 @@ pub struct Config {
     pub request_timeout: Duration,
     #[arg(
         long,
+        env = "GET_LOGS_TIMEOUT",
+        default_value = "300s",
+        value_parser = parse_duration
+    )]
+    pub get_logs_timeout: Duration,
+    #[arg(
+        long,
         env = "RPC_RETRY_INTERVAL",
         default_value = "1s",
         value_parser = parse_duration
@@ -46,7 +53,7 @@ impl Config {
         EthClient::new(
             self.ws_urls.clone(),
             self.request_timeout,
-            Duration::from_secs(300),
+            self.get_logs_timeout,
             self.channel_size,
             self.rpc_retry_interval,
         )
