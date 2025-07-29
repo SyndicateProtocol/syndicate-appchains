@@ -30,7 +30,7 @@ func main() {
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 		req, err := io.ReadAll(r.Body)
