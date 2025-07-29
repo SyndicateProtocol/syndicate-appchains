@@ -1,15 +1,13 @@
 name: Rust CI - Withdrawals-only
 
 on:
-  # Mandatory checks - must run on all PRs
+  # run only when there are changes related to withdrawals
   pull_request:
     paths:
       - "synd-withdrawals/**"
       - "synd-contracts/src/withdrawal/**"
-  workflow_run:
-    workflows: ["Publish Service Images"] # Run on `main` pushes only AFTER `publish-images` workflow completes successfully
-    types:
-      - completed
+      - "test-framework/tests/e2e/e2e_tests_withdrawals.rs"
+      - "shared/test-utils/src/docker.rs"
     branches:
       - main
 
