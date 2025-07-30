@@ -12,9 +12,14 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/metrics"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/config"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/nitro/arbnode"
+	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func main() {
@@ -60,7 +65,7 @@ func main() {
 		panic(err)
 	}
 
-	proposerConfig := &pkg.Config{
+	proposerConfig := &config.Config{
 		EthereumRPCURL:           *l1Url,
 		SettlementRPCURL:         *setUrl,
 		SettlementChainID:        85432,
@@ -81,7 +86,25 @@ func main() {
 		},
 	}
 
-	proposer := pkg.NewProposer(ctx, proposerConfig)
+	proposer := pkg.NewProposer(ctx, proposerConfig, metrics.NewMetrics(prometheus.NewRegistry()))
+
+	if *l1EndBatch == 0 {
+		ibridge, err := bridgegen.NewBridge(seqBridgeAddress, proposer.EthereumClient)
+		if err != nil {
+			panic(err)
+		}
+		count, err := ibridge.SequencerMessageCount(&bind.CallOpts{Context: ctx})
+		if err != nil {
+			panic(err)
+		}
+		if !count.IsUint64() {
+			panic("sequencer message count is not a uint64")
+		}
+		if count.Sign() == 0 {
+			panic("sequencer message count is zero")
+		}
+		*l1EndBatch = count.Uint64() - 1
+	}
 
 	// normally this comes from the tee contract instead
 	var startMetadata arbnode.BatchMetadata
@@ -138,7 +161,7 @@ func main() {
 	fmt.Println("Trusted input L1StartBatchAcc: ", common.Hash(trustedInput.L1StartBatchAcc))
 	fmt.Println("ready in", time.Since(now))
 	now = time.Now()
-	proveOutput, err := proposer.Prove(ctx, trustedInput)
+	proveOutput, err := proposer.Prove(ctx, trustedInput, false)
 	if err != nil {
 		panic(err)
 	}

@@ -180,7 +180,7 @@ func getBatchPreimageData(
 	return nil
 }
 
-// GetMessageAcc if count is zero, attempt to fetch
+// if count is zero, get the latest delayed message accumulator
 func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Address, count uint64) (common.Hash, uint64, error) {
 	// Memory slot in contract is 6
 	slot := common.BigToHash(big.NewInt(6))

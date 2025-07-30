@@ -36,7 +36,7 @@ type Proposer struct {
 	SequencingClient    *ethclient.Client
 	EthereumClient      *ethclient.Client
 	SettlementClient    *ethclient.Client
-	SettlementAuth      *bind.TransactOpts
+	SettlementAuth      bind.TransactOpts
 	EnclaveClient       *rpc.Client
 	DapReaders          []daprovider.Reader
 	TeeModule           *teemodule.Teemodule
@@ -107,7 +107,7 @@ func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metri
 		EthereumClient:   ethereumClient,
 		EnclaveClient:    enclaveClient,
 		SettlementClient: settlementClient,
-		SettlementAuth:   settlementAuth,
+		SettlementAuth:   *settlementAuth,
 		DapReaders:       []daprovider.Reader{eigenda.NewReaderForEigenDA(eigenClient)},
 		TeeModule:        teeModule,
 		Metrics:          metrics,
@@ -149,12 +149,14 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			log.Info().Msg("Close challenge loop tick...")
-			opts, err := p.makeTransactOptsCopy(ctx)
-			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to make transact opts copy", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
+			if ok, err := p.TeeModule.CanCloseChallengeWindow(&bind.CallOpts{Context: ctx}); err != nil || !ok {
+				if err != nil {
+					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to call canCloseChallengeWindow", err)
+					log.Error().Stack().Err(wrappedErr).Msg(msg)
+				}
+				continue
 			}
-			if _, err := p.TeeModule.CloseChallengeWindow(opts); err != nil {
+			if _, err := p.TeeModule.CloseChallengeWindow(p.makeTransactOptsCopy(ctx)); err != nil {
 				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to close challenge window", err)
 				log.Error().Stack().Err(wrappedErr).Msg(msg)
 			}
@@ -210,13 +212,16 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				log.Debug().Msgf("Pending assertion: %v", logger.ToHexForLogsPendingAssertion(*p.PendingAssertion))
 			}
 
-			opts, err := p.makeTransactOptsCopy(ctx)
-			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to make transact opts copy", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
-			}
 			submissionTimer := metrics.NewTimer()
-			transaction, err := p.TeeModule.SubmitAssertion(opts, *p.PendingAssertion, p.PendingSignature,
+			pendingAssertionHash := crypto.Keccak256Hash(p.PendingAssertion.AppBlockHash[:], p.PendingAssertion.AppSendRoot[:], p.PendingAssertion.SeqBlockHash[:], p.PendingAssertion.L1BatchAcc[:])
+			if ok, err := p.TeeModule.CanSubmitAssertion(&bind.CallOpts{Context: ctx}, p.PendingTeeInputHash, pendingAssertionHash); err != nil || !ok {
+				if err != nil {
+					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to call canSubmitAssertion", err)
+					log.Error().Stack().Err(wrappedErr).Msg(msg)
+				}
+				continue
+			}
+			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature,
 				crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
 			if err != nil {
 				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
@@ -534,12 +539,9 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 }
 
 // makeTransactOptsCopy creates a new TransactOpts with a fresh context and nonce
-func (p *Proposer) makeTransactOptsCopy(ctx context.Context) (*bind.TransactOpts, error) {
-	if p.SettlementAuth == nil {
-		return nil, errors.New("SettlementAuth is nil")
-	}
-	copy := *p.SettlementAuth // shallow copy
-	copy.Context = ctx        // ensure context is set fresh
-	copy.Nonce = nil          // ensure fresh nonce lookup
-	return &copy, nil
+func (p *Proposer) makeTransactOptsCopy(ctx context.Context) *bind.TransactOpts {
+	copy := p.SettlementAuth // shallow copy
+	copy.Context = ctx       // ensure context is set fresh
+	copy.Nonce = nil         // ensure fresh nonce lookup
+	return &copy
 }
