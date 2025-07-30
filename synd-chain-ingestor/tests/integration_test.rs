@@ -160,7 +160,7 @@ mod tests {
 
         let client = IngestorProvider::new(
             &ingestor_ws_url,
-            IngestorProviderConfig { max_blocks_per_request: Some(5), ..Default::default() },
+            IngestorProviderConfig { max_blocks_per_request: 5, ..Default::default() },
         )
         .await;
 

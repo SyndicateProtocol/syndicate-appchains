@@ -36,7 +36,7 @@ use tracing::info;
 #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 async fn build_partial_blocks(
     start_block: u64,
-    data: &InitBytes,
+    data: &IndexedBlockData,
     client: &EthClient,
     addrs: Vec<Address>,
 ) -> eyre::Result<Vec<PartialBlock>> {
@@ -45,6 +45,7 @@ async fn build_partial_blocks(
     if count == 0 {
         return Ok(blocks);
     }
+    // The first item is always just used to get the parent hash, so we skip it
     let mut parent_hash = data.get_item(0)?.1;
     for i in start_block..start_block + count {
         let (timestamp, hash) = data.get_item(i + 1 - start_block)?;
@@ -151,7 +152,7 @@ struct BlockStream<
     buffer: VecDeque<Block>,
     block_builder: Arc<B>,
     indexed_block_number: u64,
-    init_data: Option<(EthClient, Vec<Address>, Option<u64>)>,
+    init_data: Option<(EthClient, Vec<Address>, u64)>,
     #[allow(clippy::type_complexity)]
     init_requests: VecDeque<
         Pin<
@@ -174,7 +175,7 @@ impl<
         stream: S,
         block_builder: Arc<B>,
         start_block: u64,
-        init_data: (EthClient, Vec<Address>, Option<u64>),
+        init_data: (EthClient, Vec<Address>, u64),
     ) -> Self {
         Self {
             stream: Box::pin(stream.ready_chunks(1024).peekable()),
@@ -184,6 +185,62 @@ impl<
             init_data: Some(init_data),
             init_requests: Default::default(),
         }
+    }
+
+    /// Process the init message into initial requests to be processed later
+    #[allow(clippy::unwrap_used)]
+    async fn process_init_message(&mut self) -> eyre::Result<(), eyre::Error> {
+        if let Some((client, addrs, max_blocks_per_request)) = self.init_data.take() {
+            // fetch initial blocks from the stream
+            let mut init_blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
+            // remove the first block from the stream, which is a special init message
+            init_blocks.rotate_left(1);
+            let mut init: IndexedBlockData = init_blocks.pop().unwrap()?.init();
+
+            // get start and end blocks for batching
+            let mut start_block = self.indexed_block_number;
+
+            if max_blocks_per_request == 0 {
+                self.init_requests.push_back(Box::pin(async move {
+                    let blocks = build_partial_blocks(start_block, &init, &client, addrs)
+                        .await?
+                        .into_iter()
+                        .map(|x| Ok(Message::Block(x)))
+                        .collect();
+                    Ok(blocks)
+                }));
+            } else {
+                while init.count() > 0 {
+                    let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
+
+                    let client_clone = client.clone();
+                    let addrs_clone = addrs.clone();
+
+                    self.init_requests.push_back(Box::pin(async move {
+                        let blocks = build_partial_blocks(
+                            start_block,
+                            &init_batch,
+                            &client_clone,
+                            addrs_clone,
+                        )
+                        .await?
+                        .into_iter()
+                        .map(|x| Ok(Message::Block(x)))
+                        .collect();
+                        Ok(blocks)
+                    }));
+                    start_block += max_blocks_per_request;
+                    init = remaining;
+                }
+            };
+
+            // make sure we don't drop any blocks from the stream
+            if !init_blocks.is_empty() {
+                self.init_requests.push_back(Box::pin(async move { Ok(init_blocks) }));
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -208,58 +265,9 @@ impl<
         let mut blocks = vec![];
 
         // If there is init data, handle the initial message
-        let init_data = self.init_data.take();
-        if let Some((client, addrs, max_blocks_per_request)) = init_data {
-            // fetch initial blocks from the stream
-            let mut init_blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
-            // remove the first block from the stream, which is a special init message
-            init_blocks.rotate_left(1);
-            let mut init = init_blocks.pop().unwrap()?.init();
-
-            // get start and end blocks for batching
-            let mut start_block = self.indexed_block_number;
-
-            match max_blocks_per_request {
-                Some(max_blocks_per_request) => {
-                    while init.count() > 0 {
-                        let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
-
-                        let client_clone = client.clone();
-                        let addrs_clone = addrs.clone();
-
-                        self.init_requests.push_back(Box::pin(async move {
-                            let blocks = build_partial_blocks(
-                                start_block,
-                                &init_batch,
-                                &client_clone,
-                                addrs_clone,
-                            )
-                            .await?
-                            .into_iter()
-                            .map(|x| Ok(Message::Block(x)))
-                            .collect();
-                            Ok(blocks)
-                        }));
-                        start_block += max_blocks_per_request;
-                        init = remaining;
-                    }
-                }
-                None => {
-                    self.init_requests.push_back(Box::pin(async move {
-                        let blocks = build_partial_blocks(start_block, &init, &client, addrs)
-                            .await?
-                            .into_iter()
-                            .map(|x| Ok(Message::Block(x)))
-                            .collect();
-                        Ok(blocks)
-                    }));
-                }
-            };
-
-            // make sure we don't drop any blocks from the stream
-            if !init_blocks.is_empty() {
-                self.init_requests.push_back(Box::pin(async move { Ok(init_blocks) }));
-            }
+        // This happens only once, the first time this function is called
+        if self.init_data.is_some() {
+            self.process_init_message().await?;
         }
 
         if !self.init_requests.is_empty() {
@@ -313,9 +321,9 @@ impl<
 }
 
 impl Message {
-    fn init(self) -> InitBytes {
+    fn init(self) -> IndexedBlockData {
         match self {
-            Self::Init(x) => InitBytes::new(x),
+            Self::Init(x) => IndexedBlockData::new(x),
             x => panic!("expected init message type, found {x:?}"),
         }
     }
@@ -327,16 +335,23 @@ impl Message {
     }
 }
 
-// Wrapper around a byte slice that represents a list of (timestamp, block hash) pairs.
+/// Wrapper around a byte slice that represents a list of (timestamp, block hash) pairs.
+/// The raw byte layout is as follows:
+/// [`block_0_timestamp` (4 bytes), `block_0_hash` (32 bytes)]
+/// [`block_1_timestamp` (4 bytes), `block_1_hash` (32 bytes)]
+/// [`block_2_timestamp` (4 bytes), `block_2_hash` (32 bytes)]
+/// ...
+/// Because the first item in the list is just used to get the parent hash,
+/// the count is `(data.len() / ITEM_SIZE) - 1`.
 #[derive(Debug, Clone, Default)]
-struct InitBytes {
+struct IndexedBlockData {
     data: Bytes,
     count: u64,
 }
 
-impl InitBytes {
-    // Create a new `InitBytes` from a byte slice and validate that it is a valid list of
-    // (timestamp, block hash) pairs
+impl IndexedBlockData {
+    /// Create a new `IndexedBlockData` from a byte slice and validate that it is a valid list of
+    /// (timestamp, block hash) pairs
     fn new(data: Bytes) -> Self {
         let length = data.len() as u64;
         assert!(length % ITEM_SIZE == 0);
@@ -345,12 +360,12 @@ impl InitBytes {
         Self { data, count }
     }
 
-    // Get the number of items in the `InitBytes`
+    /// Get the number of meaningful items in the `IndexedBlockData`
     const fn count(&self) -> u64 {
         self.count
     }
 
-    // Get the (timestamp, block hash) pair at the given index
+    /// Get the (timestamp, block hash) pair at the given index
     fn get_item(&self, index: u64) -> Result<(u64, B256), eyre::Error> {
         if index > self.count {
             return Err(eyre!("index out of bound"));
@@ -361,7 +376,7 @@ impl InitBytes {
         Ok((timestamp, hash))
     }
 
-    // Split the `InitBytes` at the given index into two `InitBytes`
+    /// Split the `IndexedBlockData` at the given index into two `IndexedBlockData`
     fn split_at(&self, index: u64) -> Result<(Self, Self), eyre::Error> {
         if index >= self.count {
             return Ok((self.clone(), Self::default()));
@@ -420,7 +435,7 @@ pub trait Provider: Sync {
             .await?,
             block_builder,
             start_block,
-            (client, addresses, None),
+            (client, addresses, 0),
         ))
     }
 }
@@ -434,8 +449,8 @@ pub struct IngestorProviderConfig {
     pub max_buffer_capacity_per_subscription: usize,
     /// The maximum response size (default: `u32::MAX` or ~4GB)
     pub max_response_size: u32,
-    /// The maximum number of blocks to fetch per request (default: None, which means no batching)
-    pub max_blocks_per_request: Option<u64>,
+    /// The maximum number of blocks to fetch per request, 0 means no batching (default: 0)
+    pub max_blocks_per_request: u64,
 }
 
 impl Default for IngestorProviderConfig {
@@ -444,14 +459,14 @@ impl Default for IngestorProviderConfig {
             timeout: Duration::from_secs(10),
             max_buffer_capacity_per_subscription: 1024,
             max_response_size: u32::MAX,
-            max_blocks_per_request: None,
+            max_blocks_per_request: 0,
         }
     }
 }
 
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
-pub struct IngestorProvider(Arc<WsClient>, Option<u64>);
+pub struct IngestorProvider(Arc<WsClient>, u64);
 
 #[allow(missing_docs)]
 impl IngestorProvider {
