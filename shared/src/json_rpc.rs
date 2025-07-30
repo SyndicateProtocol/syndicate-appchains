@@ -155,9 +155,6 @@ impl From<RpcError> for ErrorObjectOwned {
 /// Reasons for transaction rejection
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum Rejection {
-    /// Transaction fee is too high
-    #[error("transaction fee too high")]
-    FeeTooHigh,
     /// Transaction nonce is too low
     #[error("transaction nonce too low: expected {0}, got {1}")]
     NonceTooLow(u64, u64),
