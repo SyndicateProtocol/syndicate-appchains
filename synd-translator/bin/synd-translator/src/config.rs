@@ -200,7 +200,10 @@ pub struct TranslatorConfig {
     #[arg(long, env = "WS_MAX_RESPONSE_SIZE", default_value = "4294967295")] // u32::MAX
     pub max_response_size: u32,
 
-    /// The timeout for eth_getLogs RPC requests
+    /// The maximum number of blocks to fetch per request (default: 0, which means no batching)
+    #[arg(long, env = "GET_LOGS_MAX_BLOCKS_PER_REQUEST", default_value = "0")]
+    pub get_logs_max_blocks_per_request: u64,
+
     #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
     pub get_logs_timeout: Duration,
 

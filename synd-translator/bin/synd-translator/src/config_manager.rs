@@ -108,6 +108,7 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
             timeout: config.ws_request_timeout,
             max_buffer_capacity_per_subscription: config.max_buffer_capacity_per_subscription,
             max_response_size: config.max_response_size,
+            max_blocks_per_request: config.get_logs_max_blocks_per_request,
         },
     )
     .await;
