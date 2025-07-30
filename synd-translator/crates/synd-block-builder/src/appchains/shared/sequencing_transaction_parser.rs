@@ -209,7 +209,7 @@ mod tests {
     fn test_protocol_data_structure() {
         // Test that demonstrates the correct protocol data structure for each compression case
 
-        // Case 1: No compression - leading compression byte
+        // Case 1: No compression, so there's a leading compression byte
         let raw_data = b"raw_transaction_data".to_vec();
         let no_compression_input = Bytes::from([vec![0x00], raw_data.clone()].concat());
 
