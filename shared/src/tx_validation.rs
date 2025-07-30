@@ -48,21 +48,6 @@ pub fn check_signature(tx: &TxEnvelope) -> Result<Address, RpcError> {
     Ok(signer)
 }
 
-fn check_gas_price(tx: &TxEnvelope) -> Result<(), RpcError> {
-    //TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
-    // RPCTxFeeCap for equivalent skip check if unset
-    let tx_fee_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
-
-    let gas_price = U256::try_from(tx.max_fee_per_gas())?;
-    let gas = U256::try_from(tx.gas_limit())?;
-    let fee_wei = gas_price.saturating_mul(gas);
-
-    if fee_wei > tx_fee_cap_in_wei {
-        return Err(TransactionRejected(FeeTooHigh));
-    }
-    Ok(())
-}
-
 fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), RpcError> {
     let limit_size = limit.as_u128() as usize;
 
@@ -95,9 +80,6 @@ pub fn validate_transaction(raw_tx: &Bytes) -> Result<(TxEnvelope, Address), Rpc
 
     // Check signature
     let signer = check_signature(&tx)?;
-
-    // Check gas price
-    check_gas_price(&tx)?;
 
     Ok((tx, signer))
 }
@@ -189,35 +171,6 @@ mod tests {
             Default::default(),
         ));
         assert!(check_signature(&invalid_tx).is_err());
-    }
-
-    #[test]
-    fn test_check_gas_price() {
-        // Valid transaction with acceptable gas price
-        let valid_tx = wrap_txn_legacy(TxLegacy::default());
-        assert!(check_gas_price(&valid_tx).is_ok());
-
-        // Legacy transaction with extremely high gas price should fail
-        let invalid_legacy_tx = wrap_txn_legacy(TxLegacy {
-            gas_limit: 2u64,
-            gas_price: 1_000_000_000_000_000_000u128,
-            ..Default::default()
-        });
-        assert!(matches!(
-            check_gas_price(&invalid_legacy_tx),
-            Err(TransactionRejected(FeeTooHigh))
-        ));
-
-        // EIP-1559 transaction with extremely high gas price should fail
-        let invalid_eip1559_tx = wrap_txn_eip1559(TxEip1559 {
-            gas_limit: 2u64,
-            max_fee_per_gas: 1_000_000_000_000_000_000u128,
-            ..Default::default()
-        });
-        assert!(matches!(
-            check_gas_price(&invalid_eip1559_tx),
-            Err(TransactionRejected(FeeTooHigh))
-        ));
     }
 
     #[test]
