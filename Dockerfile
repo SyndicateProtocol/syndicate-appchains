@@ -64,8 +64,8 @@ FROM gcr.io/distroless/cc:nonroot AS runtime-base
 FROM runtime-base AS synd-translator
 ARG BUILD_PROFILE
 COPY --from=build /app/target/${BUILD_PROFILE}/synd-translator /usr/local/bin/synd-translator
-COPY --from=foundry /root/.foundry /root/.foundry
-ENV PATH="/root/.foundry/bin:${PATH}"
+COPY --from=foundry /root/.foundry /usr/local/foundry
+ENV PATH="/usr/local/foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
 LABEL service=synd-translator
