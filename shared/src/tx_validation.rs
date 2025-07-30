@@ -3,13 +3,12 @@
 
 use crate::json_rpc::{
     InvalidInputError::{ChainIdMissing, TransactionTooLarge},
-    Rejection::FeeTooHigh,
     RpcError,
-    RpcError::{InvalidInput, TransactionRejected},
+    RpcError::InvalidInput,
 };
 use alloy::{
     consensus::{transaction::SignerRecoverable, Transaction, TxEnvelope},
-    primitives::{Address, Bytes, U256},
+    primitives::{Address, Bytes},
     rlp::Decodable,
 };
 use byte_unit::Unit;
@@ -134,7 +133,7 @@ mod tests {
         ))
     }
 
-    fn wrap_txn_eip1559(tx: TxEip1559) -> TxEnvelope {
+    fn _wrap_txn_eip1559(tx: TxEip1559) -> TxEnvelope {
         TxEnvelope::Eip1559(Signed::new_unchecked(
             tx,
             Signature::test_signature(),
