@@ -57,7 +57,11 @@ pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, Error> {
     Ok(Bytes::from(compressed))
 }
 
-/// Decompresses zlib compressed Ethereum transactions back into their original form
+/// Decompresses `zlib`-compressed Ethereum transactions back into their original form
+///
+/// NOTE: The `flate2` lib expects the `zlib_header` bytes to be present in the input data. That’s
+/// why we need to pass the entire data object — including the headers — for decompression to work
+/// correctly
 pub fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, Error> {
     // Check for empty data first
     if data.is_empty() {
@@ -120,7 +124,8 @@ fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), Error> 
 
 /// Validates that version byte is either 8 or 15
 pub const fn is_valid_zlib_cm_bits(version_byte: u8) -> bool {
-    version_byte & CM_BITS_MASK == ZLIB_CM8 || version_byte & CM_BITS_MASK == ZLIB_CM15
+    let cm_bits = version_byte & CM_BITS_MASK;
+    cm_bits == ZLIB_CM8 || cm_bits == ZLIB_CM15
 }
 
 #[cfg(test)]
