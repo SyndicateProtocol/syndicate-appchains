@@ -188,10 +188,6 @@ pub struct TranslatorConfig {
     )]
     pub config_manager_address: Option<Address>,
 
-    /// The URL of the Appchain block explorer
-    #[arg(long, env = "APPCHAIN_BLOCK_EXPLORER_URL")]
-    pub appchain_block_explorer_url: Option<String>,
-
     /// The timeout for WebSocket requests
     #[arg(long, env = "WS_REQUEST_TIMEOUT", value_parser=humantime::parse_duration, default_value="10s")]
     pub ws_request_timeout: Duration,
