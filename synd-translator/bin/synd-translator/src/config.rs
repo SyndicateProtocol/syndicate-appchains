@@ -188,9 +188,7 @@ pub struct TranslatorConfig {
     )]
     pub config_manager_address: Option<Address>,
 
-    #[arg(long, env = "APPCHAIN_BLOCK_EXPLORER_URL")]
-    pub appchain_block_explorer_url: Option<String>,
-
+    /// The timeout for WebSocket requests
     #[arg(long, env = "WS_REQUEST_TIMEOUT", value_parser=humantime::parse_duration, default_value="10s")]
     pub ws_request_timeout: Duration,
 
@@ -202,9 +200,11 @@ pub struct TranslatorConfig {
     #[arg(long, env = "WS_MAX_RESPONSE_SIZE", default_value = "4294967295")] // u32::MAX
     pub max_response_size: u32,
 
+    /// The timeout for eth_getLogs RPC requests
     #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
     pub get_logs_timeout: Duration,
 
+    /// The interval to retry RPC requests
     #[arg(
         long,
         env = "RPC_RETRY_INTERVAL",
@@ -212,6 +212,10 @@ pub struct TranslatorConfig {
         value_parser = humantime::parse_duration
     )]
     pub rpc_retry_interval: Duration,
+
+    /// The interval to wait for the ingestors to be ready if not ready yet
+    #[arg(long, env = "INGESTOR_READY_CHECK_INTERVAL", value_parser=humantime::parse_duration, default_value="1s")]
+    pub ingestor_ready_check_interval: Duration,
 }
 
 impl TranslatorConfig {

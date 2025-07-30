@@ -5,7 +5,7 @@ use crate::{
 use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
 use shared::service_start_utils::{start_http_server_with_aux_handlers, MetricsState};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
     client::{IngestorProvider, IngestorProviderConfig, Provider as IProvider},
@@ -60,6 +60,13 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         },
     )
     .await;
+
+    wait_until_ingestors_are_ready(
+        &sequencing_client,
+        &settlement_client,
+        config.ingestor_ready_check_interval,
+    )
+    .await?;
 
     let safe_state =
         mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
@@ -125,4 +132,22 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         &metrics.slotter,
     )
     .await?)
+}
+
+async fn wait_until_ingestors_are_ready(
+    sequencing_client: &IngestorProvider,
+    settlement_client: &IngestorProvider,
+    ingestor_ready_check_interval: Duration,
+) -> Result<()> {
+    let interval_str = humantime::format_duration(ingestor_ready_check_interval);
+    while sequencing_client.get_block_number().await.is_err() {
+        info!("Sequencing ingestor is not ready yet - waiting for {interval_str}");
+        tokio::time::sleep(ingestor_ready_check_interval).await;
+    }
+    while settlement_client.get_block_number().await.is_err() {
+        info!("Settlement ingestor is not ready yet - waiting for {interval_str}",);
+        tokio::time::sleep(ingestor_ready_check_interval).await;
+    }
+    info!("Ingestors are ready");
+    Ok(())
 }
