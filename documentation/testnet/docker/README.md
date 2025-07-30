@@ -36,6 +36,8 @@ Obtain the Appchain's `chain_info` config from Syndicate. It should look somethi
 
 This chain config file will be mounted into the `nitro` container in the next step.
 
+> **Note**: The container images run as non-root users. Ensure that any mounted directories have appropriate permissions for the container user to read/write.
+
 ## Docker Compose
 
 Run all of the components together in Docker, using the provided `./rpc-node-docker-compose.yml` file. Replace all of the templated values. Some of the values come from the chain config above, some will be your own values, and the rest should come from Syndicate.
