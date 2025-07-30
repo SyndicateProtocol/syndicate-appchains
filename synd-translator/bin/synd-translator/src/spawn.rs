@@ -64,7 +64,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     wait_until_ingestors_are_ready(
         &sequencing_client,
         &settlement_client,
-        config.wait_for_ingestor_retry_interval,
+        config.ingestor_ready_check_interval,
     )
     .await?;
 
@@ -137,16 +137,16 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 async fn wait_until_ingestors_are_ready(
     sequencing_client: &IngestorProvider,
     settlement_client: &IngestorProvider,
-    wait_for_ingestor_retry_interval: Duration,
+    ingestor_ready_check_interval: Duration,
 ) -> Result<()> {
-    let interval_str = humantime::format_duration(wait_for_ingestor_retry_interval);
+    let interval_str = humantime::format_duration(ingestor_ready_check_interval);
     while sequencing_client.get_block_number().await.is_err() {
         info!("Sequencing ingestor is not ready yet - waiting for {interval_str}");
-        tokio::time::sleep(wait_for_ingestor_retry_interval).await;
+        tokio::time::sleep(ingestor_ready_check_interval).await;
     }
     while settlement_client.get_block_number().await.is_err() {
         info!("Settlement ingestor is not ready yet - waiting for {interval_str}",);
-        tokio::time::sleep(wait_for_ingestor_retry_interval).await;
+        tokio::time::sleep(ingestor_ready_check_interval).await;
     }
     info!("Ingestors are ready");
     Ok(())

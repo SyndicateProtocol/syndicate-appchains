@@ -214,8 +214,8 @@ pub struct TranslatorConfig {
     pub rpc_retry_interval: Duration,
 
     /// The interval to wait for the ingestors to be ready if not ready yet
-    #[arg(long, env = "WAIT_FOR_INGESTOR_RETRY_INTERVAL", value_parser=humantime::parse_duration, default_value="1s")]
-    pub wait_for_ingestor_retry_interval: Duration,
+    #[arg(long, env = "INGESTOR_READY_CHECK_INTERVAL", value_parser=humantime::parse_duration, default_value="1s")]
+    pub ingestor_ready_check_interval: Duration,
 }
 
 impl TranslatorConfig {
