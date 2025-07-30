@@ -18,7 +18,6 @@ import (
 )
 
 func main() {
-	logger.Init()
 
 	rootCmd := &cobra.Command{
 		Use:   "synd-proposer",
@@ -26,6 +25,7 @@ func main() {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			viper.AutomaticEnv()
 			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+			logger.Init()
 
 			cfg, err := config.LoadConfig()
 			if err != nil {

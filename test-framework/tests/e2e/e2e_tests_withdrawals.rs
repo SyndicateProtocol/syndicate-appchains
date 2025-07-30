@@ -72,11 +72,21 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             let l1_provider_clone = l1_provider.clone();
             let _task = tokio::spawn(async move {
                 loop {
+                    let ts = l1_provider_clone
+                        .get_block_by_number(BlockNumberOrTag::Latest)
+                        .await
+                        .unwrap()
+                        .unwrap()
+                        .header
+                        .timestamp;
                     l1_provider_clone
-                        .evm_mine(Some(MineOptions::Options { timestamp: None, blocks: Some(1) }))
+                        .evm_mine(Some(MineOptions::Options {
+                            timestamp: Some(ts + 10),
+                            blocks: Some(1),
+                        }))
                         .await
                         .unwrap(); // NOTE: this will crash once the test ends that's fine
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    tokio::time::sleep(Duration::from_secs(10)).await;
                 }
             });
 

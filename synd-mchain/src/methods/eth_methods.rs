@@ -234,6 +234,8 @@ pub fn eth_get_block_by_number(
     })
 }
 
+const MAX_DATA_SIZE: u64 = 117964;
+
 /// `eth_call`
 pub fn eth_call(
     p: Params<'_>,
@@ -247,7 +249,7 @@ pub fn eth_call(
     let input = input.input.input.ok_or_else(|| err("missing calldata"))?;
     let selector = input.get(0..4).ok_or_else(|| err("missing selector"))?;
     match TryInto::<[u8; 4]>::try_into(selector).map_err(to_err)? {
-        IInboxBase::maxDataSizeCall::SELECTOR => Ok(117964.abi_encode().into()),
+        IInboxBase::maxDataSizeCall::SELECTOR => Ok(MAX_DATA_SIZE.abi_encode().into()),
         IBridge::delayedMessageCountCall::SELECTOR => {
             Ok(db.get_state().message_count.abi_encode().into())
         }
@@ -396,6 +398,6 @@ mod tests {
 
         assert!(result.is_ok());
         let response = result.unwrap();
-        assert_eq!(response, Bytes::from(117964u64.abi_encode()));
+        assert_eq!(response, Bytes::from(MAX_DATA_SIZE.abi_encode()));
     }
 }

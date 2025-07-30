@@ -116,9 +116,6 @@ pub struct TestComponents {
     pub maestro_url: String,
     pub valkey_url: String,
 
-    #[allow(dead_code)]
-    pub appchain_block_explorer_url: String,
-
     pub eigenda_proxy_url: Option<String>,
 }
 
@@ -423,15 +420,14 @@ impl TestComponents {
             start_mchain(options.appchain_chain_id, options.finality_delay).await?;
 
         // Setup config manager and get chain config address
-        let appchain_block_explorer_url = "https://example.com/explorer".to_string();
         let config_manager_address = setup_config_manager(
             &set_provider,
             &options,
             sequencing_contract_address,
             appchain_deployment.bridge,
             appchain_deployment.inbox,
-            &seq_rpc_ws_url,
-            &appchain_block_explorer_url,
+            seq_rpc_ws_url.clone(),
+            "https://example.com/explorer".to_string(),
         )
         .await?;
 
@@ -634,7 +630,6 @@ impl TestComponents {
                 mchain_provider,
                 maestro_url,
                 valkey_url: valkey_url_init,
-                appchain_block_explorer_url,
 
                 sequencing_deployment,
                 settlement_deployment,

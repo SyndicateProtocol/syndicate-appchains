@@ -187,6 +187,9 @@ pub enum InvalidParamsError {
     /// String is not hex encoded
     #[error("not a hex encoded string")]
     NotHexEncoded,
+    /// Invalid Params string
+    #[error("invalid params string")]
+    InvalidParamsString,
 }
 
 /// Invalid input errors that can occur during request processing
@@ -202,12 +205,12 @@ pub enum InvalidInputError {
     #[error("invalid transaction signature")]
     InvalidTransactionSignature,
     /// Failed to decode RLP data
-    #[error("unable to RLP decode")]
-    UnableToRLPDecode,
+    #[error("unable to RLP decode: {0}")]
+    UnableToRLPDecode(rlp::Error),
     /// Chain ID is missing
     #[error("missing chain ID")]
     ChainIdMissing,
-    /// Chain ID is missing
+    /// Chain ID mismatch
     #[error("chain ID mismatch: expected {0} got {1}")]
     ChainIdMismatched(String, String),
     /// Unsupported Chain ID
@@ -231,8 +234,8 @@ impl From<hex::FromHexError> for RpcError {
 }
 
 impl From<rlp::Error> for RpcError {
-    fn from(_: rlp::Error) -> Self {
-        Self::InvalidInput(InvalidInputError::UnableToRLPDecode)
+    fn from(error: rlp::Error) -> Self {
+        Self::InvalidInput(InvalidInputError::UnableToRLPDecode(error))
     }
 }
 
