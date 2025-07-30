@@ -234,6 +234,4 @@ mod tests {
         println!("- No compression: [0x00][raw_data]");
         println!("- Zlib compression: [zlib_header (e.g., 0x78)][zlib_payload]");
     }
-
-
 }
