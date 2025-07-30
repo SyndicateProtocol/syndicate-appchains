@@ -88,7 +88,7 @@ mod tests {
     use super::*;
     use crate::json_rpc::InvalidInputError::UnableToRLPDecode;
     use alloy::{
-        consensus::{Signed, TxEip1559, TxLegacy},
+        consensus::{Signed, TxLegacy},
         primitives::{b256, Bytes, Signature},
     };
     use byte_unit::Byte;
