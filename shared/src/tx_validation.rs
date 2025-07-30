@@ -133,14 +133,6 @@ mod tests {
         ))
     }
 
-    fn _wrap_txn_eip1559(tx: TxEip1559) -> TxEnvelope {
-        TxEnvelope::Eip1559(Signed::new_unchecked(
-            tx,
-            Signature::test_signature(),
-            Default::default(),
-        ))
-    }
-
     #[test]
     fn test_check_chain_id() {
         // Valid legacy transaction
