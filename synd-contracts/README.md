@@ -166,8 +166,8 @@ $ make deploy-syndicate-factory
 ### Base Sepolia
 | Contract Name                 | Address                                                                                                                                               |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ArbConfigManagerFactory       | [0xff82F81c66F144cAb9160A4900f7D0D92C94dd97](https://sepolia.basescan.org/address/0xff82F81c66F144cAb9160A4900f7D0D92C94dd97)                         |
-| ArbConfigManager              | [0xbD6b5264de6d3e65ce6e4Cf3E0071E30D01b509C](https://sepolia.basescan.org/address/0xbD6b5264de6d3e65ce6e4Cf3E0071E30D01b509C)                         |
+| ArbConfigManagerFactory       | [0xcf733FD99A9E7052F126C01bf033159775bEcF0B](https://sepolia.basescan.org/address/0xcf733FD99A9E7052F126C01bf033159775bEcF0B)                         |
+| ArbConfigManager              | [0x647e0da79BBEF0e3B076a59cfB3a42429273CE52](https://sepolia.basescan.org/address/0x647e0da79BBEF0e3B076a59cfB3a42429273CE52)                         |
 
 ### Risa
 

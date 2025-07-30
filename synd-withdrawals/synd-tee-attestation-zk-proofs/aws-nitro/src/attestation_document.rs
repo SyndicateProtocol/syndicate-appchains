@@ -45,7 +45,6 @@ pub enum VerificationError {
     BadPCRsLen,
     BadPCRIndex,
     BadPCRValue,
-    BadCABundleLen,
     BadCABundleItemLen,
     BadPublicKeyLen,
     BadUserDataLen,
@@ -106,27 +105,18 @@ impl AwsNitroAttestationDocument<'_> {
             return Err(VerificationError::BadDigest);
         }
 
-        if doc.timestamp < 1 {
-            return Err(VerificationError::BadTimestamp);
-        }
-
-        if doc.pcrs.is_empty() || doc.pcrs.len() > MAX_PCR_COUNT {
+        if doc.pcrs.len() > MAX_PCR_COUNT {
             return Err(VerificationError::BadPCRsLen);
         }
 
         for (key, value) in &doc.pcrs {
             if *key > 31 {
-                // u8 key cannot be < 0
                 return Err(VerificationError::BadPCRIndex);
             }
 
             if value.is_empty() || !(value.len() == 32 || value.len() == 48 || value.len() == 64) {
                 return Err(VerificationError::BadPCRValue);
             }
-        }
-
-        if doc.cabundle.is_empty() {
-            return Err(VerificationError::BadCABundleLen);
         }
 
         for item in &doc.cabundle {

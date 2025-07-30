@@ -64,6 +64,7 @@ var Keys = map[string]struct {
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
 	"is-l1-chain":                 {"Is L1 Chain", "false", false},
+	"log-level":                   {"Log Level", "info", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {

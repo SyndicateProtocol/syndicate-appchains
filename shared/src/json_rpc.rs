@@ -210,7 +210,7 @@ pub enum InvalidInputError {
     /// Chain ID is missing
     #[error("missing chain ID")]
     ChainIdMissing,
-    /// Chain ID is missing
+    /// Chain ID mismatch
     #[error("chain ID mismatch: expected {0} got {1}")]
     ChainIdMismatched(String, String),
     /// Unsupported Chain ID
