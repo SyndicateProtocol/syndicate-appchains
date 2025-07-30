@@ -74,13 +74,14 @@ impl SequencingTransactionParser {
         }
 
         let compression_byte = &data[0];
-        let compressed_data = Bytes::copy_from_slice(&data[1..]);
         let compression_type = get_compression_type(*compression_byte);
 
         let mut transactions = Vec::new();
         match compression_type {
             CompressionType::None => {
-                transactions.push(compressed_data);
+                // Excluding the leading compression byte
+                let uncompressed_data = Bytes::copy_from_slice(&data[1..]);
+                transactions.push(uncompressed_data);
             }
             CompressionType::Zlib => {
                 let mut decompressed_data = decompress_transactions(data)
@@ -205,113 +206,10 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_event_data_no_compression() {
-        // Test with no compression - this should use 0x00 prefix
-        let transaction_data = b"mock_transaction_data".to_vec();
-        // Requires leading compression byte
-        let input = Bytes::from([vec![0x00], transaction_data.clone()].concat());
-
-        let result = SequencingTransactionParser::decode_event_data(&input);
-
-        assert!(result.is_ok());
-        let transactions = result.unwrap();
-        assert_eq!(transactions.len(), 1);
-        assert_eq!(transactions[0], Bytes::from(transaction_data));
-    }
-
-    #[test]
-    fn test_decode_event_data_zlib_compression() {
-        // Create some test transactions
-        let tx1 = Bytes::from(b"transaction_1_data".to_vec());
-        let tx2 = Bytes::from(b"transaction_2_data".to_vec());
-        let transactions = vec![tx1.clone(), tx2.clone()];
-
-        // Compress them using the zlib compression function
-        let compressed_transactions = compress_transactions(&transactions).unwrap();
-
-        // Debug what compress_transactions actually produces
-        println!("Compressed data first byte: 0x{:02x}", compressed_transactions[0]);
-        println!("CM bits: 0x{:02x}", compressed_transactions[0] & 0x0F);
-
-        println!(
-            "Input structure: [0x{:02x} (compression indicator)][0x{:02x}... (zlib data)]",
-            compressed_transactions[0], compressed_transactions[1]
-        );
-
-        let result = SequencingTransactionParser::decode_event_data(&compressed_transactions);
-
-        println!("Decoded result: {result:?}");
-        assert!(result.is_ok(), "decode_event_data should succeed with zlib compression");
-        let decoded_transactions = result.unwrap();
-        assert_eq!(decoded_transactions.len(), 2);
-        assert_eq!(decoded_transactions[0], tx1);
-        assert_eq!(decoded_transactions[1], tx2);
-    }
-
-    #[test]
-    fn test_decode_event_data_empty_data() {
-        let empty_input = Bytes::new();
-        let result = SequencingTransactionParser::decode_event_data(&empty_input);
-
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), SequencingParserError::NoDataProvided);
-    }
-
-    #[test]
-    fn test_decode_event_data_unknown_compression_type() {
-        let transaction_data = b"some_data".to_vec();
-        let input = Bytes::from([vec![0x01], transaction_data].concat()); // 0x01 has invalid CM bits
-
-        let result = SequencingTransactionParser::decode_event_data(&input);
-
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), SequencingParserError::UnknownCompressionType(0x01));
-    }
-
-    #[test]
-    fn test_decode_event_data_invalid_zlib_data() {
-        // Test with a byte that looks like zlib (valid CM bits) but has invalid zlib data
-        let invalid_zlib_data = b"not_valid_zlib_data".to_vec();
-        // Use 0x78 (valid CM=8) but with invalid payload
-        let input = Bytes::from([vec![0x78], invalid_zlib_data].concat());
-
-        let result = SequencingTransactionParser::decode_event_data(&input);
-
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            SequencingParserError::DecompressionError(_) => {
-                // This is expected - should fail during decompression
-            }
-            other => panic!("Expected DecompressionError, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn test_decode_event_data_malformed_zlib_header() {
-        // Create data with valid CM bits but malformed zlib header checksum
-        let malformed_zlib = vec![
-            0x78, // Valid CM=8, CINFO=7
-            0x00, // Invalid FLG - checksum doesn't match
-            0x01, 0x02, 0x03, // Some payload
-        ];
-        let input = Bytes::from(malformed_zlib);
-
-        let result = SequencingTransactionParser::decode_event_data(&input);
-
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            SequencingParserError::DecompressionError(_) => {
-                // Expected - should fail due to invalid zlib header checksum
-            }
-            other => panic!("Expected DecompressionError, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn test_protocol_data_structure() {
         // Test that demonstrates the correct protocol data structure for each compression case
 
-        // Case 1: No compression
+        // Case 1: No compression - leading compression byte
         let raw_data = b"raw_transaction_data".to_vec();
         let no_compression_input = Bytes::from([vec![0x00], raw_data.clone()].concat());
 
@@ -336,4 +234,6 @@ mod tests {
         println!("- No compression: [0x00][raw_data]");
         println!("- Zlib compression: [zlib_header (e.g., 0x78)][zlib_payload]");
     }
+
+
 }

@@ -57,7 +57,11 @@ pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, Error> {
     Ok(Bytes::from(compressed))
 }
 
-/// Decompresses zlib compressed Ethereum transactions back into their original form
+/// Decompresses `zlib`-compressed Ethereum transactions back into their original form
+///
+/// NOTE: The `flate2` lib expects the `zlib_header` bytes to be present in the input data. That’s
+/// why we need to pass the entire data object — including the headers — for decompression to work
+/// correctly
 pub fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, Error> {
     // Check for empty data first
     if data.is_empty() {
