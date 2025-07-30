@@ -153,8 +153,14 @@ struct BlockStream<
     indexed_block_number: u64,
     init_data: Option<(EthClient, Vec<Address>, Option<u64>)>,
     #[allow(clippy::type_complexity)]
-    init_requests:
-        VecDeque<Pin<Box<dyn Future<Output = Vec<Result<Message, serde_json::Error>>> + Send>>>,
+    init_requests: VecDeque<
+        Pin<
+            Box<
+                dyn Future<Output = Result<Vec<Result<Message, serde_json::Error>>, eyre::Error>>
+                    + Send,
+            >,
+        >,
+    >,
 }
 
 #[allow(missing_docs)]
@@ -222,17 +228,17 @@ impl<
                         let addrs_clone = addrs.clone();
 
                         self.init_requests.push_back(Box::pin(async move {
-                            build_partial_blocks(
+                            let blocks = build_partial_blocks(
                                 start_block,
                                 &init_batch,
                                 &client_clone,
                                 addrs_clone,
                             )
-                            .await
-                            .unwrap()
+                            .await?
                             .into_iter()
                             .map(|x| Ok(Message::Block(x)))
-                            .collect()
+                            .collect();
+                            Ok(blocks)
                         }));
                         start_block += max_blocks_per_request;
                         init = remaining;
@@ -240,24 +246,24 @@ impl<
                 }
                 None => {
                     self.init_requests.push_back(Box::pin(async move {
-                        build_partial_blocks(start_block, &init, &client, addrs)
-                            .await
-                            .unwrap()
+                        let blocks = build_partial_blocks(start_block, &init, &client, addrs)
+                            .await?
                             .into_iter()
                             .map(|x| Ok(Message::Block(x)))
-                            .collect()
+                            .collect();
+                        Ok(blocks)
                     }));
                 }
             };
 
             // make sure we don't drop any blocks from the stream
             if !init_blocks.is_empty() {
-                self.init_requests.push_back(Box::pin(async move { init_blocks }));
+                self.init_requests.push_back(Box::pin(async move { Ok(init_blocks) }));
             }
         }
 
         if !self.init_requests.is_empty() {
-            blocks = self.init_requests.pop_front().unwrap().await;
+            blocks = self.init_requests.pop_front().unwrap().await?;
         } else if self.stream.as_mut().peek().now_or_never().is_some() {
             // If there are no init requests, and there is data in the stream, pop it off
             // This is to try to catch any reorgs ASAP
