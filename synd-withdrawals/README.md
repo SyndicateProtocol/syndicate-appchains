@@ -119,77 +119,56 @@ sequenceDiagram
     POSTER->>POSTER: Update rollup state<br/>Enable withdrawals
 ```
 
-### Key Components
-
-#### Source Chains
-
-- **L1 Chain**: Provides batch accumulators and bridge state
-- **Sequencing Chain**: Contains batch data and validation inputs
-- **Settlement Chain**: Contains delayed messages and bridge logs
-- **Appchain**: Provides block headers and send roots
-
-#### Synd-Proposer
-
-- **Data Aggregation**: Collects data from all source chains
-- **Trusted Input Construction**: Builds secure input for TEE verification
-- **Assertion Management**: Orchestrates the complete withdrawal flow
-- **Polling Loop**: Monitors chain state and triggers verification
-
-#### Synd-Enclave
-
-- **Secure Verification**: Performs cryptographic verification in TEE
-- **Sequencing Chain Verification**: Validates batch data and accumulators
-- **Appchain Verification**: Validates block headers and send roots
-- **Signature Generation**: Creates cryptographically signed assertions
-
-#### On-Chain Contracts
-
-- **TeeModule**: Manages assertion lifecycle and challenge system
-- **TeeKeyManager**: Validates TEE signatures and public keys
-- **AssertionPoster**: Posts verified assertions to rollups
-
-### Security Features
-
-1. **TEE-Based Verification**: All critical verification happens in secure enclave
-2. **Cryptographic Signatures**: All assertions are signed by verified TEE instances
-3. **Challenge System**: Disputes can be raised during challenge windows
-4. **Hack Detection**: Multiple conflicting assertions trigger security measures
-5. **Attestation Verification**: TEE attestation documents are cryptographically verified
-
-### Data Flow
-
-1. **Data Collection** → **Trusted Input** → **TEE Verification**
-2. **Sequencing Verification** → **Appchain Verification** → **Assertion Creation**
-3. **Signature Validation** → **Challenge Window** → **State Update**
-
 This architecture ensures secure, verifiable withdrawals while maintaining decentralization and trustlessness through cryptographic proofs and TEE-based verification.
 
 ---
 
 ## 🧩 Overview of Components
 
+### 🔹 Source Chains
+
+**Role:** Provide the raw data needed for withdrawal verification.
+
+- **L1 Chain**: Provides batch accumulators and bridge state via `eth_getProof`
+- **Sequencing Chain**: Contains batch data and validation inputs via `eth_getBlockByNumber`, `eth_getLogs`, `eth_getProof`, `arbdebug_validationInputsAt`
+- **Settlement Chain**: Contains delayed messages and bridge logs via `eth_getLogs`
+- **Appchain**: Provides block headers and send roots via `arbdebug_validationInputsAt`
+
 ### 🔹 `Synd-Proposer`
 
 **Role:** Orchestrates the full withdrawal flow.  
 **Main responsibilities:**
 
-- **Data aggregation** from multiple sources:
+- **Data Aggregation**: Collects data from all source chains
+- **Trusted Input Construction**: Builds secure input for TEE verification
+- **Assertion Management**: Orchestrates the complete withdrawal flow
+- **Polling Loop**: Monitors chain state and triggers verification
 
-  - **L1 node:** `eth_getProof`
-  - **Settlement node:** `eth_getLogs`
-  - **Sequencing node:** `eth_getBlockByNumber`, `eth_getLogs`, `eth_getProof`, `arbdebug_validationInputsAt`
-  - **Appchain node:** `arbdebug_validationInputsAt`
+**Data aggregation** from multiple sources:
 
-- **Workflow:**
-  1. Constructs a `PendingAssertion` using collected data.
-  2. Invokes the secure TEE module to verify the assertion.
-  3. Submits the verified assertion on-chain via:
-     - `submitPendingAssertion` → `TEEModule.sol`
+- **L1 node:** `eth_getProof`
+- **Settlement node:** `eth_getLogs`
+- **Sequencing node:** `eth_getBlockByNumber`, `eth_getLogs`, `eth_getProof`, `arbdebug_validationInputsAt`
+- **Appchain node:** `arbdebug_validationInputsAt`
+
+**Workflow:**
+
+1. Constructs a `PendingAssertion` using collected data.
+2. Invokes the secure TEE module to verify the assertion.
+3. Submits the verified assertion on-chain via:
+   - `submitPendingAssertion` → `TEEModule.sol`
 
 ### 🔹 `Synd-Enclave`
 
 **Role:** Secure enclave runtime that performs the core logic for withdrawal proof validation.  
 **Codebase:** Forked from [base/op-enclave](https://github.com/base/op-enclave)
+
+**Main responsibilities:**
+
+- **Secure Verification**: Performs cryptographic verification in TEE
+- **Sequencing Chain Verification**: Validates batch data and accumulators
+- **Appchain Verification**: Validates block headers and send roots
+- **Signature Generation**: Creates cryptographically signed assertions
 
 #### 🚀 Running the Enclave
 
@@ -206,9 +185,45 @@ There are two supported execution modes:
    ./cmd/enclave/enclave [--local]
    ```
 
+### 🔹 On-Chain Contracts
+
+**Role:** Manage the assertion lifecycle and provide security guarantees.
+
+#### `TeeModule`
+
+- **Assertion Management**: Manages assertion lifecycle and challenge system
+- **Challenge System**: Handles disputes during challenge windows
+- **State Transitions**: Manages trusted input updates and state transitions
+
+#### `TeeKeyManager`
+
+- **TEE Key Validation**: Validates TEE signatures and public keys
+- **Public Key Management**: Manages authorized TEE public keys
+- **Attestation Verification**: Verifies TEE attestation documents
+
+#### `AssertionPoster`
+
+- **Assertion Posting**: Posts verified assertions to rollups
+- **Rollup Integration**: Integrates with Arbitrum rollup contracts
+- **State Updates**: Updates rollup state to enable withdrawals
+
 ### 🔹 `Synd-Tee-Attestation-ZK-Proofs`
 
 **Role:** Handles generation and verification of zk-SNARKs for attestation documents produced by `synd-enclave`.
+
+### Security Features
+
+1. **TEE-Based Verification**: All critical verification happens in secure enclave
+2. **Cryptographic Signatures**: All assertions are signed by verified TEE instances
+3. **Challenge System**: Disputes can be raised during challenge windows
+4. **Hack Detection**: Multiple conflicting assertions trigger security measures
+5. **Attestation Verification**: TEE attestation documents are cryptographically verified
+
+### Data Flow
+
+1. **Data Collection** → **Trusted Input** → **TEE Verification**
+2. **Sequencing Verification** → **Appchain Verification** → **Assertion Creation**
+3. **Signature Validation** → **Challenge Window** → **State Update**
 
 ---
 
