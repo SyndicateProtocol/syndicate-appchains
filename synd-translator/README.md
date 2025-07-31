@@ -40,7 +40,7 @@ graph TB
         DB[(RocksDB<br/>- Stores blocks<br/>- Maintains accumulators<br/>- Tracks state)]
     end
 
-    %% Appchain Node
+    %% Appchain
     subgraph "Appchain node"
         APPCHAIN[Appchain Node<br/>- Reads from MChain<br/>- Executes transactions<br/>- Maintains appchain state]
     end
@@ -57,12 +57,12 @@ graph TB
     MCHAIN --> DB
     MCHAIN --> APPCHAIN
 
-    %% Styling
-    classDef sourceChain fill:#e1f5fe
-    classDef ingestor fill:#f3e5f5
-    classDef translator fill:#e8f5e8
-    classDef mchain fill:#fff3e0
-    classDef appchain fill:#fce4ec
+    %% Styling - High contrast for dark mode
+    classDef sourceChain fill:#1e3a8a,stroke:#1e40af,color:#ffffff
+    classDef ingestor fill:#7c3aed,stroke:#8b5cf6,color:#ffffff
+    classDef translator fill:#059669,stroke:#10b981,color:#ffffff
+    classDef mchain fill:#dc2626,stroke:#ef4444,color:#ffffff
+    classDef appchain fill:#ea580c,stroke:#f97316,color:#ffffff
 
     class SEQ,SET sourceChain
     class SEQ_ING,SET_ING ingestor

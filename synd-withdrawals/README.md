@@ -53,11 +53,11 @@ graph TB
     TEE_MODULE --> KEY_MGR
     TEE_MODULE --> ASSERTION_POSTER
 
-    %% Styling
-    classDef sourceChain fill:#e1f5fe
-    classDef proposer fill:#f3e5f5
-    classDef enclave fill:#e8f5e8
-    classDef contracts fill:#fff3e0
+    %% Styling - High contrast for dark mode
+    classDef sourceChain fill:#1e3a8a,stroke:#1e40af,color:#ffffff
+    classDef proposer fill:#7c3aed,stroke:#8b5cf6,color:#ffffff
+    classDef enclave fill:#059669,stroke:#10b981,color:#ffffff
+    classDef contracts fill:#dc2626,stroke:#ef4444,color:#ffffff
 
     class L1,SEQ,SET,APP sourceChain
     class PROPOSER,POLLING proposer
