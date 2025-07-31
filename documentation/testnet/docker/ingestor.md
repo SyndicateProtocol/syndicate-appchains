@@ -21,7 +21,7 @@ Other:
 
 ## Docker Compose
 
-Run your ingestors in Docker, using the provided `./docker/ingestor-docker-compose.yml` file. Replace all of the templated values. Some of the values come from Syndicate, others will be your own values.
+Run your ingestors in Docker, using the provided `./docker/ingestor-docker-compose.yml` file. Replace all of the templated values. Up-to-date chain config values can be found in the [helm values overrides files](https://github.com/SyndicateProtocol/helm/blob/main/charts/apps/values/testnet/values.yaml).
 
 > **Note**: The container images run as non-root users. Ensure that any mounted directories have appropriate permissions for the container user to read/write.
 
