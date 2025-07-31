@@ -8,10 +8,10 @@ use alloy::{
     rpc::types::{Filter, FilterBlockOption, Header},
     transports::{ws::WebSocketConfig, RpcError, TransportErrorKind},
 };
-use shared::types::Receipt;
+use shared::{tracing::SpanKind, types::Receipt};
 use std::time::Duration;
 use tokio::time::timeout;
-use tracing::{error, info, warn};
+use tracing::{error, info, instrument, warn};
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
@@ -74,6 +74,7 @@ impl EthClient {
 impl EthClient {
     /// Retrieves a block by its number with a timeout. Retries indefinitely until the request
     /// succeeds.
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Client))]
     pub async fn get_block_header(&self, block_identifier: BlockNumberOrTag) -> Header {
         loop {
             match timeout(self.timeout, self.client.get_block_by_number(block_identifier)).await {
@@ -99,6 +100,7 @@ impl EthClient {
 
     /// Retrieves the transaction receipts for a given block hash with a timeout. Retries
     /// indefinitely until the request succeeds.
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Client))]
     pub async fn get_block_receipts(&self, number: u64) -> Vec<Receipt> {
         loop {
             match timeout(
@@ -124,6 +126,7 @@ impl EthClient {
 
     /// Subscribes to blocks over the websocket connection with a timeout. Retries indefinitely
     /// until the request succeeds.
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Consumer))]
     pub async fn subscribe_blocks(&self) -> Subscription<Header> {
         loop {
             match timeout(self.timeout, self.client.subscribe_blocks()).await {
@@ -140,6 +143,7 @@ impl EthClient {
     }
 
     /// Gets the chain id. Retries indefinitely until the request succeeds.
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Client))]
     pub async fn get_chain_id(&self) -> u64 {
         loop {
             match timeout(self.timeout, self.client.get_chain_id()).await {
@@ -157,6 +161,7 @@ impl EthClient {
 
     /// Get logs, splitting the range in half if the request fails.
     #[allow(clippy::cognitive_complexity)]
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Client))]
     pub async fn get_logs(
         &self,
         filter: &Filter,
