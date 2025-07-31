@@ -59,7 +59,10 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         let db_init = &db.get_block(1).unwrap().messages[0].0;
         if db_init != &init_msg {
             error!("init message does not match - are the cli arguments correct?");
-            assert_eq!(db_init, &init_msg);
+            assert_eq!(
+                db_init, &init_msg,
+                "Database init message doesn't match expected init message"
+            );
         }
         // search for the finalized head. store unfinalized timestamps in a queue.
         finalized_block = db.get_state().batch_count;
@@ -73,7 +76,14 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             pending_ts.push_front(block_ts);
         }
     }
-    assert_eq!(finalized_block + pending_ts.len() as u64, db.get_state().batch_count);
+    assert_eq!(
+        finalized_block + pending_ts.len() as u64,
+        db.get_state().batch_count,
+        "Finalized block count ({}) + pending timestamps ({}) doesn't equal total batch count ({})",
+        finalized_block,
+        pending_ts.len(),
+        db.get_state().batch_count
+    );
     let mut module = RpcModule::new((
         db,
         metrics,

@@ -8,10 +8,10 @@ use shared::{
     service_start_utils::{start_http_server_with_aux_handlers, MetricsState},
     tracing::SpanKind,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
-    client::{IngestorProvider, Provider as IProvider},
+    client::{IngestorProvider, IngestorProviderConfig, Provider as IProvider},
     eth_client::EthClient,
 };
 use synd_mchain::client::{MProvider, Provider};
@@ -48,13 +48,32 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 
     let sequencing_client = IngestorProvider::new(
         config.sequencing.sequencing_ws_url.as_ref().unwrap(),
-        config.ws_request_timeout,
+        IngestorProviderConfig {
+            timeout: config.ws_request_timeout,
+            max_buffer_capacity_per_subscription: config.max_buffer_capacity_per_subscription,
+            max_response_size: config.max_response_size,
+            max_blocks_per_request: config.get_logs_max_blocks_per_request,
+        },
     )
     .await;
 
-    let settlement_client =
-        IngestorProvider::new(&config.settlement.settlement_ws_url, config.ws_request_timeout)
-            .await;
+    let settlement_client = IngestorProvider::new(
+        config.settlement.settlement_ws_url.as_ref(),
+        IngestorProviderConfig {
+            timeout: config.ws_request_timeout,
+            max_buffer_capacity_per_subscription: config.max_buffer_capacity_per_subscription,
+            max_response_size: config.max_response_size,
+            max_blocks_per_request: config.get_logs_max_blocks_per_request,
+        },
+    )
+    .await;
+
+    wait_until_ingestors_are_ready(
+        &sequencing_client,
+        &settlement_client,
+        config.ingestor_ready_check_interval,
+    )
+    .await?;
 
     let safe_state =
         mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
@@ -120,4 +139,22 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         &metrics.slotter,
     )
     .await?)
+}
+
+async fn wait_until_ingestors_are_ready(
+    sequencing_client: &IngestorProvider,
+    settlement_client: &IngestorProvider,
+    ingestor_ready_check_interval: Duration,
+) -> Result<()> {
+    let interval_str = humantime::format_duration(ingestor_ready_check_interval);
+    while sequencing_client.get_block_number().await.is_err() {
+        info!("Sequencing ingestor is not ready yet - waiting for {interval_str}");
+        tokio::time::sleep(ingestor_ready_check_interval).await;
+    }
+    while settlement_client.get_block_number().await.is_err() {
+        info!("Settlement ingestor is not ready yet - waiting for {interval_str}",);
+        tokio::time::sleep(ingestor_ready_check_interval).await;
+    }
+    info!("Ingestors are ready");
+    Ok(())
 }

@@ -8,6 +8,7 @@ use alloy::primitives::Bytes;
 use async_trait::async_trait;
 use shared::types::PartialBlock;
 use std::marker::{Send, Sync};
+use tracing::warn;
 
 /// Trait for rollup-specific block builders that construct batches from sequencer transactions
 /// and delayed messages from settlement ones.
@@ -27,7 +28,13 @@ pub trait RollupAdapter: Send + Sync {
         input
             .logs
             .iter()
-            .filter_map(|log| self.transaction_parser().get_event_transactions(log).ok())
+            .filter_map(|log| match self.transaction_parser().get_event_transactions(log) {
+                Ok(txs) => Some(txs),
+                Err(e) => {
+                    warn!("Failed to get event transactions from log: {:?}, error: {:?}", log, e);
+                    None
+                }
+            })
             .flatten()
             .collect()
     }

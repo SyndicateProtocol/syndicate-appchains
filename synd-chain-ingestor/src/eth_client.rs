@@ -22,7 +22,7 @@ pub struct EthClient {
     /// The underlying client for the Ethereum-like chains
     pub client: RootProvider,
     timeout: Duration,
-    log_timeout: Duration,
+    get_logs_timeout: Duration,
     retry_interval: Duration,
 }
 
@@ -39,7 +39,7 @@ impl EthClient {
     pub async fn new(
         ws_urls: Vec<String>,
         timeout: Duration,
-        log_timeout: Duration,
+        get_logs_timeout: Duration,
         channel_size: usize,
         retry_interval: Duration,
     ) -> Self {
@@ -62,7 +62,7 @@ impl EthClient {
                     }
                     Ok(Ok(client)) => {
                         client.client().expect_pubsub_frontend().set_channel_size(channel_size);
-                        return Self { client, timeout, log_timeout, retry_interval };
+                        return Self { client, timeout, get_logs_timeout, retry_interval };
                     }
                 }
             }
@@ -166,7 +166,7 @@ impl EthClient {
         &self,
         filter: &Filter,
     ) -> Result<Vec<alloy::rpc::types::Log>, RpcError<TransportErrorKind>> {
-        match timeout(self.log_timeout, self.client.get_logs(filter)).await {
+        match timeout(self.get_logs_timeout, self.client.get_logs(filter)).await {
             Err(_) => {
                 warn!("eth_getLogs request timed out. Attempting to split range: {:?}", filter);
                 self.handle_split_range(

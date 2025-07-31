@@ -8,7 +8,7 @@ Below are the _minimum_ hardware requirements to run an RPC node.
 
 CPU/Memory:
 
-- 4 vCPUs
+- 8 vCPUs
 - 16GB memory
 
 Storage:
@@ -21,9 +21,13 @@ Storage:
 Other:
 
 - Kubernetes cluster (version 1.25+) and Helm
+- Access to pull private Syndicate Docker images. Contact Syndicate for access instructions.
+  - `ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain`
+  - `ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator`
+  - `ghcr.io/syndicateprotocol/nitro/nitro`
 - Access to pull private Syndicate Helm charts. Contact Syndicate for access instructions.
   - repoURL: `https://github.com/SyndicateProtocol/helm`
-  - path: `charts/rpc`
+  - path: `charts/syndicate-rpc`
   - targetRevision: `HEAD`
 - Access to Syndicate's sequencing JSON-RPC API, in order to forward `eth_sendRawTransaction` requests there
 - Websocket URLs for the Settlement and Sequencing chains
@@ -36,8 +40,14 @@ Obtain the Appchain's `chain_info` config from Syndicate. It should look somethi
 
 This chain config file will injected into the `nitro` Helm chart in the next step.
 
+> **Note**: The container images run as non-root users. Ensure that any mounted directories have appropriate permissions for the container user to read/write.
+
 ## Helm
 
-Run all of the components together via Helm, using the provided values files. Replace all of the templated values. Some of the values come from the chain config above, some will be your own values, and the rest should come from Syndicate.
+Run all of the components together via Helm, using the appropriate [values](https://github.com/SyndicateProtocol/helm/blob/main/charts/appchains/values/testnet/values.yaml) for your chain.
 
-Once the Kubernetes resources are running, use the `slotter_last_processed_block` metric (with `settlement` and `sequencing` tags) from the `synd-translator` container to monitor the node's syncing progress. If that number is increasing over time, then the node is successfully syncing. Once it syncs up to the settlement/sequencing chain heads, you can begin sending transactions to this RPC node.
+Confirm the RPC node is ready for use by testing the rpc endpoint:
+
+```bash
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["latest", true],"id":1}' http://<service>.<namespace>.svc.cluster.local:<port>/rpc
+```

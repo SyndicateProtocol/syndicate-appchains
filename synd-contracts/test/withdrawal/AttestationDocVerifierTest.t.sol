@@ -17,7 +17,6 @@ struct SP1ProofFixtureJson {
     bytes32 pcr0;
     bytes32 pcr1;
     bytes32 pcr2;
-    bytes32 pcr8;
 }
 
 abstract contract BaseAttestationDocVerifierTest is Test {
@@ -39,7 +38,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         fixture.pcr0 = json.readBytes32(".pcr0");
         fixture.pcr1 = json.readBytes32(".pcr1");
         fixture.pcr2 = json.readBytes32(".pcr2");
-        fixture.pcr8 = json.readBytes32(".pcr8");
 
         return fixture;
     }
@@ -58,14 +56,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         gateway.addRoute(sp1Verifier);
 
         attestationDocVerifier = new AttestationDocVerifier(
-            address(gateway),
-            fixture.vkey,
-            fixture.rootCertHash,
-            fixture.pcr0,
-            fixture.pcr1,
-            fixture.pcr2,
-            fixture.pcr8,
-            0
+            address(gateway), fixture.vkey, fixture.rootCertHash, fixture.pcr0, fixture.pcr1, fixture.pcr2, 0
         );
     }
 
@@ -77,7 +68,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(fixture.publicValues, proof);
 
         assertEq(
-            publicKey, address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E), "Public key does not match expected value"
+            publicKey, address(0x498e5737cB53434430e55D8fD49be974267DFEba), "Public key does not match expected value"
         );
     }
 
@@ -127,7 +118,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         // This should still work due to expiration tolerance
         address publicKey = attestationDocVerifier.verifyAttestationDocProof(fixture.publicValues, fixture.proof);
         assertEq(
-            publicKey, address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E), "Public key does not match expected value"
+            publicKey, address(0x498e5737cB53434430e55D8fD49be974267DFEba), "Public key does not match expected value"
         );
 
         // But one second later should fail
@@ -187,13 +178,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         modifiedPublicValues = abi.encode(publicValues);
         vm.expectRevert("PCR2 mismatch");
         attestationDocVerifier.verifyAttestationDocProof(modifiedPublicValues, fixture.proof);
-
-        // Reset and test PCR8 mismatch
-        publicValues = abi.decode(fixture.publicValues, (PublicValuesStruct));
-        publicValues.pcr_8 = bytes32(uint256(0xdeadbeef));
-        modifiedPublicValues = abi.encode(publicValues);
-        vm.expectRevert("PCR8 mismatch");
-        attestationDocVerifier.verifyAttestationDocProof(modifiedPublicValues, fixture.proof);
     }
 
     function testConstructorWithZeroExpirationTolerance() public virtual {
@@ -207,7 +191,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            fixture.pcr8,
             0 // zero expiration tolerance
         );
 
@@ -215,7 +198,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         vm.warp(1748509951);
         address publicKey = strictVerifier.verifyAttestationDocProof(fixture.publicValues, fixture.proof);
         assertEq(
-            publicKey, address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E), "Public key does not match expected value"
+            publicKey, address(0x498e5737cB53434430e55D8fD49be974267DFEba), "Public key does not match expected value"
         );
 
         // Verify it fails immediately after validity window
@@ -237,7 +220,6 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            fixture.pcr8,
             largeExpiration
         );
 
@@ -247,7 +229,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
 
         address publicKey = lenientVerifier.verifyAttestationDocProof(fixture.publicValues, fixture.proof);
         assertEq(
-            publicKey, address(0x0BD6f0f44257D315C16E3d67835F8d41BD11377E), "Public key does not match expected value"
+            publicKey, address(0x498e5737cB53434430e55D8fD49be974267DFEba), "Public key does not match expected value"
         );
 
         // But should still fail beyond the tolerance

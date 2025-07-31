@@ -31,7 +31,7 @@ create-withdrawal-contract-bindings-go:
 	    > ../shared/contract-bindings/src/withdrawals-go/TeeModule.bin
 
 	# 4) generate Go bindings from those artifacts
-	# You need to install abigen: `go install github.com/ethereum/go-ethereum/cmd/abigen@latest`
+	# You need to install abigen: `go install github.com/ethereum/go-ethereum/cmd/abigen@latest` and add to your PATH
 	abigen \
 		--abi=contract-bindings/src/withdrawals-go/TeeModule.abi \
 		--bin=contract-bindings/src/withdrawals-go/TeeModule.bin \

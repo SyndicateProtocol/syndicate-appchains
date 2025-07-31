@@ -81,7 +81,7 @@ pub fn uncompressed_batch(txs: &[Bytes], tx: &Bytes) -> SequencingBatch {
 ///
 /// ```
 /// use alloy::primitives::Bytes;
-/// use batcher::sequencing_batch::compress_batch;
+/// use synd_batch_sequencer::sequencing_batch::compress_batch;
 ///
 /// let existing_txs = [Bytes::from(vec![1, 2, 3])];
 /// let new_tx = Bytes::from(vec![4, 5, 6]);

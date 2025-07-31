@@ -44,7 +44,6 @@ jobs:
         run: |
           cd synd-withdrawals/synd-enclave
           docker build --target eif-bin .
-          docker build --target local-dev .
 
   proposer-test:
     name: test synd-proposer

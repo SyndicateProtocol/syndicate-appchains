@@ -15,8 +15,8 @@ use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
 pub enum BaseChainsType {
     Anvil,
     PreLoaded(ContractVersion),
-    /// auto-mine enabled
-    Nitro,
+    Nitro,            // auto-mine enabled
+    NitroWithEigenda, // auto-mine enabled
 }
 
 /// Arbitrum Nitro contract version on the settlement chain used for testing
@@ -65,45 +65,48 @@ pub(super) async fn setup_config_manager(
     sequencing_contract_address: Address,
     arbitrum_bridge_address: Address,
     arbitrum_inbox_address: Address,
-    sequencing_rpc_url: &str,
-    appchain_block_explorer_url: &str,
+    sequencing_rpc_url: String,
+    appchain_block_explorer_url: String,
 ) -> Result<Address> {
     // Deploy config manager
     let config_manager_owner = set_provider.default_signer_address();
     let config_manager_tx =
         ArbConfigManager::deploy_builder(set_provider, config_manager_owner).send().await?;
 
-    if options.base_chains_type != BaseChainsType::Nitro {
-        mine_block(set_provider, 0).await?;
-    }
+    match options.base_chains_type {
+        BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+            mine_block(set_provider, 0).await?;
+        }
+        _ => {}
+    };
 
     let config_manager_address = config_manager_tx.get_receipt().await?.contract_address.unwrap();
     let config_manager = ArbConfigManager::new(config_manager_address, set_provider.clone());
 
-    let options_clone = options.clone();
-    let sequencing_rpc_url_clone = sequencing_rpc_url.to_string();
-    let appchain_block_explorer_url_clone = appchain_block_explorer_url.to_string();
-
     let create_chain_config_tx = config_manager
         .createArbChainConfig(
             config_manager_owner,
-            options_clone.appchain_chain_id.try_into().unwrap(),
+            options.appchain_chain_id.try_into().unwrap(),
             U256::from(SEQUENCING_CHAIN_ID),
             arbitrum_bridge_address,
             arbitrum_inbox_address,
-            options_clone.settlement_delay.try_into().unwrap(),
-            options_clone.settlement_start_block.try_into().unwrap(),
+            options.settlement_delay.try_into().unwrap(),
+            options.settlement_start_block.try_into().unwrap(),
             sequencing_contract_address,
-            options_clone.sequencing_start_block.try_into().unwrap(),
-            options_clone.rollup_owner,
-            sequencing_rpc_url_clone,
-            appchain_block_explorer_url_clone,
+            options.sequencing_start_block.try_into().unwrap(),
+            options.rollup_owner,
+            sequencing_rpc_url,
+            appchain_block_explorer_url,
         )
         .send()
         .await?;
-    if options.base_chains_type != BaseChainsType::Nitro {
-        mine_block(set_provider, 0).await?;
-    }
+
+    match options.base_chains_type {
+        BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+            mine_block(set_provider, 0).await?;
+        }
+        _ => {}
+    };
 
     assert!(create_chain_config_tx.get_receipt().await?.status());
 

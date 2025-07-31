@@ -25,7 +25,10 @@ tower             = { workspace = true }
 tracing           = { workspace = true }
 
 [dev-dependencies]
-ctor = { workspace = true }
+common         = { workspace = true }
+ctor           = { workspace = true }
+test-framework = { workspace = true }
+test-utils     = { workspace = true }
 
 [lints]
 workspace = true
