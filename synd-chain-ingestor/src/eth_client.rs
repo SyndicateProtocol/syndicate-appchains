@@ -29,8 +29,7 @@ pub struct EthClient {
 fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
     error!("{}: {}", name, err);
     if let RpcError::Transport(err) = err {
-        // TODO(SEQ-1055): Revisit `recoverable()` usage if necessary
-        assert!(err.recoverable(), "{}: {}: {}", name, "fatal transport error", err);
+        assert!(err.is_retry_err(), "{}: {}: {}", name, "fatal transport error", err);
     }
 }
 
