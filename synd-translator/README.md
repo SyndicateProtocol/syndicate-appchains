@@ -175,35 +175,38 @@ This architecture enables cost-effective sequencing while maintaining security a
 The mockchain has chain id 511000 and a genesis timestamp of 0.
 
 The rollup precompile is installed at 0x5FbDB2315678afecb367f032d93F642f64180aa3 with the following on-chain configuration:
+
+```
 {
-"chainId": 13331370,
-"homesteadBlock": 0,
-"daoForkBlock": null,
-"daoForkSupport": true,
-"eip150Block": 0,
-"eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-"eip155Block": 0,
-"eip158Block": 0,
-"byzantiumBlock": 0,
-"constantinopleBlock": 0,
-"petersburgBlock": 0,
-"istanbulBlock": 0,
-"muirGlacierBlock": 0,
-"berlinBlock": 0,
-"londonBlock": 0,
-"clique": {
-"period": 0,
-"epoch": 0
-},
-"arbitrum": {
-"EnableArbOS": true,
-"AllowDebugPrecompiles": false,
-"DataAvailabilityCommittee": false,
-"InitialArbOSVersion": 32,
-"InitialChainOwner": "0x0000000000000000000000000000000000000000",
-"GenesisBlockNum": 0
+   "chainId": 13331370,
+   "homesteadBlock": 0,
+   "daoForkBlock": null,
+   "daoForkSupport": true,
+   "eip150Block": 0,
+   "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "eip155Block": 0,
+   "eip158Block": 0,
+   "byzantiumBlock": 0,
+   "constantinopleBlock": 0,
+   "petersburgBlock": 0,
+   "istanbulBlock": 0,
+   "muirGlacierBlock": 0,
+   "berlinBlock": 0,
+   "londonBlock": 0,
+   "clique": {
+      "period": 0,
+      "epoch": 0
+   },
+   "arbitrum": {
+      "EnableArbOS": true,
+      "AllowDebugPrecompiles": false,
+      "DataAvailabilityCommittee": false,
+      "InitialArbOSVersion": 32,
+      "InitialChainOwner": "0x0000000000000000000000000000000000000000",
+      "GenesisBlockNum": 0
+   }
 }
-}
+```
 
 ## Rust configuration
 
