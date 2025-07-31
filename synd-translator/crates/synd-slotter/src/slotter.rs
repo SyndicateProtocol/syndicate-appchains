@@ -3,19 +3,24 @@
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::{FixedBytes, B256};
 use common::types::{Chain, SequencingBlock, SettlementBlock};
-use shared::types::BlockRef;
+use shared::{tracing::SpanKind, types::BlockRef};
 use synd_chain_ingestor::client::BlockStreamT;
 use synd_mchain::{
     client::{KnownState, Provider},
     db::{ArbitrumBatch, MBlock, Slot},
 };
 use thiserror::Error;
-use tracing::{error, info, trace};
+use tracing::{error, info, instrument, trace};
 
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
 /// slots to the slot processor to generate `synd-mchain` blocks.
 #[allow(clippy::expect_used)]
 #[allow(clippy::cognitive_complexity)]
+#[instrument(
+    skip_all,
+    err,
+    fields(otel.kind = ?SpanKind::Internal),
+)]
 pub async fn run(
     settlement_delay: u64,
     known_state: Option<KnownState>,
@@ -128,6 +133,11 @@ pub async fn run(
 
 // TODO(SEQ-847): move this reorg checking logic to the ingestors instead.
 #[allow(clippy::result_large_err)]
+#[instrument(
+    skip(metrics),
+    err,
+    fields(otel.kind = ?SpanKind::Internal),
+)]
 fn validate_block(
     latest: &mut Option<BlockRef>,
     block: &BlockRef,

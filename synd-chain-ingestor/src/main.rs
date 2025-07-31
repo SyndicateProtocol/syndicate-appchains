@@ -6,7 +6,7 @@ use jsonrpsee::server::{
 };
 use shared::{
     service_start_utils::{start_http_server_with_metrics_only, MetricsState},
-    tracing::setup_global_logging,
+    tracing::{setup_global_tracing, ServiceTracingConfig},
 };
 use std::{
     sync::{
@@ -30,7 +30,10 @@ use tracing::{error, info, trace};
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     // Initialize logging
-    setup_global_logging()?;
+    setup_global_tracing(ServiceTracingConfig::from_env(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION"),
+    ))?;
 
     let cfg = Config::parse();
     let mut provider = cfg.new_provider().await;
