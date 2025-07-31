@@ -123,6 +123,50 @@ This architecture ensures secure, verifiable withdrawals while maintaining decen
 
 ---
 
+## 🔒 System Guarantees & Assumptions
+
+### **TEE Requirements**
+
+- **Hardware Security**: All critical verification must be performed within a Trusted Execution Environment (TEE)
+- **Attestation**: TEE instances provide cryptographic attestation documents
+- **Key Management**: TEE instances securely manage private keys for signing assertions
+
+### **Supported Platforms**
+
+- **AWS Nitro Enclaves**: Currently the only supported TEE platform
+- **Future Support**: Additional TEE platforms (Azure, GCP, etc.) are planned
+
+### **Challenge System**
+
+- **Challenge Window**: Configurable time period during which disputes can be raised
+- **Multiple Assertions**: If conflicting assertions are submitted during the challenge window:
+  - The system detects the conflict and increments `teeHackCount`
+  - Honest participants are rewarded
+  - Malicious behavior is penalized
+- **Single Assertion**: If only one assertion is submitted, it's finalized after the challenge window
+
+### **Security Assumptions**
+
+- **TEE Integrity**: The TEE hardware and firmware are trusted and secure
+- **Network Security**: Communication between components is secure (TLS for enclave communication)
+- **Key Compromise**: If TEE keys are compromised, the system can detect and respond
+- **Chain Reorgs**: The system handles chain reorganizations through reorg detection
+
+### **Performance Characteristics**
+
+- **Verification Time**: TEE verification adds latency but ensures security
+- **Challenge Duration**: Configurable challenge windows (typically 10 mins)
+- **Gas Costs**: On-chain operations incur gas costs for assertion submission
+- **Throughput**: Limited by TEE verification speed and on-chain gas limits
+
+### **User Considerations**
+
+- **Withdrawal Timing**: Withdrawals require waiting for challenge window completion
+- **TEE Dependency**: System availability depends on TEE infrastructure
+- **Cross-Chain**: Withdrawals involve multiple chains (L1, sequencing, settlement, appchain)
+
+---
+
 ## 🧩 Overview of Components
 
 ### 🔹 Source Chains

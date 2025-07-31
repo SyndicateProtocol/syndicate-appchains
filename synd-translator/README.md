@@ -30,19 +30,19 @@ graph TB
 
     %% Translator Components
     subgraph "Synd-Translator"
-        SLOTTER[Slotter<br/>- Combines seq & set blocks<br/>- Creates time-based slots<br/>- Handles settlement delay]
-        BLOCK_BUILDER[Block Builder<br/>- Parses sequencing events<br/>- Processes delayed messages<br/>- Builds Arbitrum batches]
+        SLOTTER(("Slotter<br/>- Combines seq & set blocks<br/>- Creates time-based slots<br/>- Handles settlement delay"))
+        BLOCK_BUILDER(("Block Builder<br/>- Parses sequencing events<br/>- Processes delayed messages<br/>- Builds Arbitrum batches"))
     end
 
     %% MChain
     subgraph "Synd-MChain"
-        MCHAIN[MChain Server<br/>- Receives MBlocks<br/>- Builds final blocks<br/>- Maintains state]
+        MCHAIN((MChain<br/>- Receives MBlocks<br/>- Builds final blocks<br/>- Maintains state))
         DB[(RocksDB<br/>- Stores blocks<br/>- Maintains accumulators<br/>- Tracks state)]
     end
 
     %% Appchain
-    subgraph "Appchain node"
-        APPCHAIN[Appchain Node<br/>- Reads from MChain<br/>- Executes transactions<br/>- Maintains appchain state]
+    subgraph "Appchain"
+        APPCHAIN(("Appchain Node<br/>- Reads from MChain<br/>- Executes transactions<br/>- Maintains appchain state"))
     end
 
     %% Data Flow
@@ -60,7 +60,7 @@ graph TB
     %% Styling - High contrast for dark mode
     classDef sourceChain fill:#1e3a8a,stroke:#1e40af,color:#ffffff
     classDef ingestor fill:#7c3aed,stroke:#8b5cf6,color:#ffffff
-    classDef translator fill:#059669,stroke:#10b981,color:#ffffff
+    classDef translator fill:#059669,stroke:#10b981,color:#ffffff,stroke-dasharray: 5 5
     classDef mchain fill:#dc2626,stroke:#ef4444,color:#ffffff
     classDef appchain fill:#ea580c,stroke:#f97316,color:#ffffff
 
@@ -80,7 +80,7 @@ sequenceDiagram
     participant ING as Chain Ingestors
     participant SLOT as Slotter
     participant BUILDER as Block Builder
-    participant MCHAIN as MChain Server
+    participant MCHAIN as MChain
     participant DB as RocksDB
     participant APP as Appchain Node
 
