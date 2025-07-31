@@ -55,12 +55,13 @@ pub fn test_path(prefix: &str) -> String {
 /// }
 /// ```
 #[macro_export]
-macro_rules! wait_until {    // With setup code
-    ($setup:stmt; $condition:expr, $timeout:expr) => {{
+macro_rules! wait_until {
+    // With setup code and custom interval
+    ($setup:stmt; $condition:expr, $timeout:expr, $interval:expr) => {{
         match tokio::time::timeout($timeout,
             async {
                 while {$setup !$condition} {
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                    tokio::time::sleep($interval).await;
                 }
                 eyre::Ok(())
             }
@@ -73,8 +74,18 @@ macro_rules! wait_until {    // With setup code
         };
     }};
 
-    // Without setup, just condition
+    // Without setup, just condition and custom interval
+    ($condition:expr, $timeout:expr, $interval:expr) => {
+        $crate::wait_until!({}; $condition, $timeout, $interval)
+    };
+
+    // With setup code (default 50ms interval)
+    ($setup:stmt; $condition:expr, $timeout:expr) => {
+        $crate::wait_until!($setup; $condition, $timeout, std::time::Duration::from_millis(50))
+    };
+
+    // Without setup, just condition (default 50ms interval)
     ($condition:expr, $timeout:expr) => {
-        $crate::wait_until!({}; $condition, $timeout)
+        $crate::wait_until!($condition, $timeout, std::time::Duration::from_millis(50))
     };
 }

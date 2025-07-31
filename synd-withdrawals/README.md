@@ -31,7 +31,7 @@ This system manages the validation and submission of withdrawal proofs through a
 
 #### 🚀 Running the Enclave
 
-\*\*There are two supported execution modes:
+There are two supported execution modes:
 
 ##### ➤ Local Execution (Development Mode)
 

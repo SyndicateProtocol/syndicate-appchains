@@ -10,7 +10,7 @@ use std::time::Duration;
 #[command(version, about)]
 #[allow(missing_docs)]
 pub struct Config {
-    #[arg(long, env = "WS_URLS")]
+    #[arg(long, env = "WS_URLS", value_delimiter = ',')]
     pub ws_urls: Vec<String>,
     #[arg(long, env = "DB_FILE")]
     pub db_file: String,
@@ -20,6 +20,8 @@ pub struct Config {
     pub channel_size: usize,
     #[arg(long, env = "PARALLEL_SYNC_REQUESTS", default_value_t = 190)]
     pub parallel_sync_requests: u64,
+    #[arg(long, env = "MAX_BLOCKS_PER_REQUEST", default_value_t = 100)]
+    pub max_blocks_per_request: u64,
     #[arg(long, env = "PORT", default_value_t = 8545)]
     pub port: u16,
     #[arg(long, env = "METRICS_PORT", default_value_t = 8546)]
@@ -31,6 +33,13 @@ pub struct Config {
         value_parser = parse_duration
     )]
     pub request_timeout: Duration,
+    #[arg(
+        long,
+        env = "GET_LOGS_TIMEOUT",
+        default_value = "300s",
+        value_parser = parse_duration
+    )]
+    pub get_logs_timeout: Duration,
     #[arg(
         long,
         env = "RPC_RETRY_INTERVAL",
@@ -46,7 +55,7 @@ impl Config {
         EthClient::new(
             self.ws_urls.clone(),
             self.request_timeout,
-            Duration::from_secs(300),
+            self.get_logs_timeout,
             self.channel_size,
             self.rpc_retry_interval,
         )

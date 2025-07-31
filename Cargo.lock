@@ -6983,6 +6983,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "clap",
+ "common",
  "ctor",
  "eyre",
  "fs2",
@@ -6993,6 +6994,8 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
+ "test-framework",
+ "test-utils",
  "tokio",
  "tower 0.5.2",
  "tracing",
@@ -7117,6 +7120,7 @@ dependencies = [
  "alloy",
  "clap",
  "contract-bindings",
+ "humantime",
  "jsonrpsee",
  "mockito",
  "serde",
@@ -7128,7 +7132,10 @@ dependencies = [
  "test-utils",
  "thiserror 2.0.12",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "x509-cert",
+ "zeroize",
 ]
 
 [[package]]

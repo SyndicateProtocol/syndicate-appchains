@@ -58,6 +58,7 @@ synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-
 synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }
 synd-tee-attestation-zk-proofs-submitter  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter" }
 synd-translator                           = { path = "synd-translator/bin/synd-translator" }
+test-framework                            = { path = "test-framework" }
 test-utils                                = { path = "shared/test-utils" }
 
 # dependencies
@@ -123,6 +124,7 @@ tracing-subscriber                 = "0.3.19"
 url                                = { version = "2.5.4" }
 wiremock                           = "0.6.3"
 x509-cert                          = "0.2.5"
+zeroize                            = "1.8.1"
 
 # dev dependencies
 const_format = "0.2"

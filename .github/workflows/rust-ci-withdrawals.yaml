@@ -1,0 +1,136 @@
+name: Rust CI - Withdrawals-only
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Make sure CI fails on all warnings, including Clippy lints
+  RUSTFLAGS: "-Dwarnings"
+  # Use a shared cache key for all jobs in the same PR/run. Note the usage of `../Cargo.lock` in invocations
+  # below to check for any changed deps
+  CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}"
+  # Rust version for consistency across jobs
+  RUST_VERSION: "1.88.0"
+  # GitHub Container Registry
+  GITHUB_REGISTRY: ghcr.io
+
+jobs:
+  e2e-withdrawals:
+    name: E2E Withdrawal Tests
+    runs-on: shared-large-02
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for full diff detection
+          submodules: recursive
+
+      - name: Determine whether to run Withdrawals tests
+        id: diff
+        run: |
+          echo "Fetching base ref..."
+          git fetch origin ${{ github.base_ref }}
+
+          echo "Collecting changed files..."
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "$CHANGED_FILES"
+
+          echo "Checking for matches against relevant paths..."
+          PATHS=(
+            "synd-withdrawals/"
+            "synd-contracts/src/withdrawal/"
+            "test-framework/tests/e2e/e2e_tests_withdrawals.rs"
+            "shared/"
+          )
+
+          run_tests=false
+          for path in "${PATHS[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "^$path"; then
+              echo "Match found: $path"
+              run_tests=true
+              break
+            fi
+          done
+
+          echo "run_tests=$run_tests" >> "$GITHUB_OUTPUT"
+
+      - name: Skip notice
+        if: steps.diff.outputs.run_tests == 'false'
+        run: echo "No relevant files changed — skipping E2E withdrawal tests."
+
+      # All remaining steps are conditional on whether the withdrawals related files were modified
+
+      - name: Install Rust toolchain
+        if: steps.diff.outputs.run_tests == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
+
+      - name: Cache dependencies
+        if: steps.diff.outputs.run_tests == 'true'
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/Cargo.toml') }}
+          save-if: "false"
+
+      - name: Install Foundry
+        if: steps.diff.outputs.run_tests == 'true'
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install SP1 toolchain
+        if: steps.diff.outputs.run_tests == 'true'
+        run: |
+          set -e
+           for i in {1..3}; do
+             echo "Attempt $i to install SP1 toolchain..."
+             {
+               curl -L https://sp1.succinct.xyz | bash &&
+               $HOME/.sp1/bin/sp1up &&
+               $HOME/.sp1/bin/cargo-prove prove --version
+             } && break || {
+               echo "Attempt $i failed. Retrying in 5 seconds..."
+               sleep 5
+             }
+           done
+
+      - name: Build SP1 ELF program
+        if: steps.diff.outputs.run_tests == 'true'
+        run: |
+          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
+          $HOME/.sp1/bin/cargo-prove prove build
+
+      # NOTE: this is just a workaround and should be removed as soon as the repo/packages are made public
+      - name: Login to GitHub Container Registry
+        if: steps.diff.outputs.run_tests == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pre-download docker test docker images
+        if: steps.diff.outputs.run_tests == 'true'
+        run: |
+          docker pull ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
+          docker pull ghcr.io/layr-labs/eigenda-proxy:2.1.0-rc.2@sha256:ed208a7cb8e31e5dd0f5c2340b6a6f9b9570f065da2659813b207c1206c65ce8
+          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:latest
+          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-enclave-test:v0.10.6-dev.1
+
+      - name: Install nextest
+        if: steps.diff.outputs.run_tests == 'true'
+        uses: taiki-e/install-action@nextest
+
+      - name: Run E2E withdrawal tests
+        if: steps.diff.outputs.run_tests == 'true'
+        run: cargo build && cargo nextest run --workspace -E 'test(e2e_tee_withdrawal)' --test-threads=1

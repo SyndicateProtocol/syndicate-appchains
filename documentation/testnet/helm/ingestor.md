@@ -8,7 +8,7 @@ This guide explains how to run ingestor(s) for your Syndicate Appchain RPC node 
 
 Below are the _minimum_ hardware requirements to run an ingestor.
 
-- CPU: 0.5 cores
+- CPU: 1 core
 - Memory: 256 MB
 - Storage: 10 GB
 
@@ -17,6 +17,7 @@ Below are the _minimum_ hardware requirements to run an ingestor.
 Other:
 
 - Kubernetes cluster (version 1.25+) and Helm
+- Access to pull the `ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor` private image. Contact Syndicate for access instructions.
 - Access to pull private Syndicate Helm charts. Contact Syndicate for access instructions.
   - repoURL: `https://github.com/SyndicateProtocol/helm`
   - path: `charts/ingestor`
@@ -24,9 +25,15 @@ Other:
 
 ## Helm
 
-Run your ingestors in Kubernetes, using Helm and the provided values files. Replace all of the templated values. Some of the values come from Syndicate, others will be your own values.
+Run your ingestors in Kubernetes, using Helm and the appropriate [values](https://github.com/SyndicateProtocol/helm/blob/main/charts/apps/values/testnet/values.yaml) for your chain.
 
-Once the Ingestor statefulsets are running, the `/ready` endpoint will indicate when the websocket is ready to use.
+> **Note**: The container images run as non-root users. Ensure that any mounted directories have appropriate permissions for the container user to read/write.
+
+Confirm the ingestor is ready for use by testing the websocket:
+
+```bash
+websocat -1 ws://your-ingestor:your-ingestor-port '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}'
+```
 
 ## Configuring RPC Node(s)
 
