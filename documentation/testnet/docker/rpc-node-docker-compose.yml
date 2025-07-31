@@ -10,7 +10,7 @@ services:
     ports:
       - "8545"
     volumes:
-      - {{ translator_data_mount_point }}:/datadir
+      - ./datadir:/datadir
     networks:
       - appchains-network
 
@@ -53,8 +53,8 @@ services:
       - "8547"
       - "6070"
     volumes:
-      - {{ chain_config_file }}:/config/chain_info.json:ro
-      - {{ nitro_data_mount_point }}:/home/user/.arbitrum
+      - ./config/chain_info.json:/config/chain_info.json:ro
+      - ./data:/home/user/.arbitrum
     depends_on:
       - translator
     networks:

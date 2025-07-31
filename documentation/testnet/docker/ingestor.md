@@ -21,12 +21,14 @@ Other:
 
 ## Docker Compose
 
-Run your ingestors in Docker, using the provided `./docker/ingestor-docker-compose.yml` file. Replace all of the templated values. Some of the values come from Syndicate, others will be your own values.
+Run your ingestors in Docker, using the provided `./docker/ingestor-docker-compose.yml` file. Replace all of the templated values. Up-to-date chain config values can be found in the [helm values overrides files](https://github.com/SyndicateProtocol/helm/blob/main/charts/apps/values/testnet/values.yaml).
+
+> **Note**: The container images run as non-root users. Ensure that any mounted directories have appropriate permissions for the container user to read/write.
 
 After running that Docker Compose file, the INFO-level container logs will track the ingesting progress and indicate when the websocket is ready to use. You can also confirm the ingestor is ready for use by testing the websocket:
 
 ```bash
-$ websocat -1 ws://your-ingestor:your-ingestor-port '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}'
+websocat -1 ws://your-ingestor:your-ingestor-port '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}'
 ```
 
 ## Configuring RPC Node(s)

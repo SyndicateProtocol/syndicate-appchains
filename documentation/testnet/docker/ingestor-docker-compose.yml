@@ -12,7 +12,7 @@ services:
     ports:
       - "8080"
     volumes:
-      - {{ settlement_data_mount_point }}:/datadir
+      - ./datadir:/datadir
 
   sequencing:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:{{ image_tag }}
@@ -26,4 +26,4 @@ services:
     ports:
       - "8080"
     volumes:
-      - {{ sequencing_data_mount_point }}:/datadir
+      - ./datadir:/datadir
