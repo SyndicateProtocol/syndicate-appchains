@@ -15,8 +15,10 @@ import (
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/metrics"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/config"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/nitro/arbnode"
+	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -80,6 +82,24 @@ func main() {
 	}
 
 	proposer := pkg.NewProposer(ctx, proposerConfig, metrics.NewMetrics(prometheus.NewRegistry()))
+
+	if *l1EndBatch == 0 {
+		ibridge, err := bridgegen.NewBridge(seqBridgeAddress, proposer.EthereumClient)
+		if err != nil {
+			panic(err)
+		}
+		count, err := ibridge.SequencerMessageCount(&bind.CallOpts{Context: ctx})
+		if err != nil {
+			panic(err)
+		}
+		if !count.IsUint64() {
+			panic("sequencer message count is not a uint64")
+		}
+		if count.Sign() == 0 {
+			panic("sequencer message count is zero")
+		}
+		*l1EndBatch = count.Uint64() - 1
+	}
 
 	// normally this comes from the tee contract instead
 	var startMetadata arbnode.BatchMetadata

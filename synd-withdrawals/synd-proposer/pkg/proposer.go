@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -27,6 +29,7 @@ import (
 	"github.com/offchainlabs/nitro/eigenda"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,7 +39,7 @@ type Proposer struct {
 	SequencingClient    *ethclient.Client
 	EthereumClient      *ethclient.Client
 	SettlementClient    *ethclient.Client
-	SettlementAuth      *bind.TransactOpts
+	SettlementAuth      bind.TransactOpts
 	EnclaveClient       *rpc.Client
 	DapReaders          []daprovider.Reader
 	TeeModule           *teemodule.Teemodule
@@ -107,7 +110,7 @@ func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metri
 		EthereumClient:   ethereumClient,
 		EnclaveClient:    enclaveClient,
 		SettlementClient: settlementClient,
-		SettlementAuth:   settlementAuth,
+		SettlementAuth:   *settlementAuth,
 		DapReaders:       []daprovider.Reader{eigenda.NewReaderForEigenDA(eigenClient)},
 		TeeModule:        teeModule,
 		Metrics:          metrics,
@@ -149,14 +152,18 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			log.Info().Msg("Close challenge loop tick...")
-			opts, err := p.makeTransactOptsCopy(ctx)
-			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to make transact opts copy", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
-			}
-			if _, err := p.TeeModule.CloseChallengeWindow(opts); err != nil {
+			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
+			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
+			// for more info.
+			if _, err := p.TeeModule.CloseChallengeWindow(p.makeTransactOptsCopy(ctx)); err != nil {
+				var event *zerolog.Event
+				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+					event = log.Debug()
+				} else {
+					event = log.Error()
+				}
 				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to close challenge window", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				event.Stack().Err(wrappedErr).Msg(msg)
 			}
 		}
 	}
@@ -210,17 +217,22 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				log.Debug().Msgf("Pending assertion: %v", logger.ToHexForLogsPendingAssertion(*p.PendingAssertion))
 			}
 
-			opts, err := p.makeTransactOptsCopy(ctx)
-			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to make transact opts copy", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
-			}
 			submissionTimer := metrics.NewTimer()
+
 			keyAddress := crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey)
-			transaction, err := p.TeeModule.SubmitAssertion(opts, *p.PendingAssertion, p.PendingSignature, keyAddress)
+			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
+			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
+			// for more info.
+			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature, keyAddress)
 			if err != nil {
+				var event *zerolog.Event
+				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+					event = log.Debug()
+				} else {
+					event = log.Error()
+				}
 				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				event.Stack().Err(wrappedErr).Msg(msg)
 
 				continue
 			}
@@ -563,12 +575,9 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 }
 
 // makeTransactOptsCopy creates a new TransactOpts with a fresh context and nonce
-func (p *Proposer) makeTransactOptsCopy(ctx context.Context) (*bind.TransactOpts, error) {
-	if p.SettlementAuth == nil {
-		return nil, errors.New("SettlementAuth is nil")
-	}
-	copy := *p.SettlementAuth // shallow copy
-	copy.Context = ctx        // ensure context is set fresh
-	copy.Nonce = nil          // ensure fresh nonce lookup
-	return &copy, nil
+func (p *Proposer) makeTransactOptsCopy(ctx context.Context) *bind.TransactOpts {
+	copy := p.SettlementAuth // shallow copy
+	copy.Context = ctx       // ensure context is set fresh
+	copy.Nonce = nil         // ensure fresh nonce lookup
+	return &copy
 }
