@@ -2,7 +2,7 @@
 //! validates them before submission into the transaction processing pipeline.
 
 use crate::{
-    config::{Config, RpcProvider},
+    config::Config,
     errors::{
         InternalErrorType::{
             Other, RpcFailedToFetchWalletBalance, RpcFailedToFetchWalletNonce, RpcMissing,
@@ -28,12 +28,12 @@ use alloy::{
     consensus::{Transaction, TxEnvelope},
     hex,
     primitives::{keccak256, utils::format_ether, Address, Bytes, ChainId, B256, U256},
-    providers::Provider,
 };
 use derivative::Derivative;
 use redis::{aio::ConnectionManager, AsyncCommands};
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
+    multi_rpc_provider::MultiRpcProvider,
     tracing::SpanKind,
     tx_validation::{check_signature, decode_transaction},
 };
@@ -50,7 +50,7 @@ pub struct MaestroService {
     // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
-    rpc_providers: HashMap<ChainId, RpcProvider>,
+    rpc_providers: HashMap<ChainId, MultiRpcProvider>,
     config: Config,
     pub(crate) metrics: MaestroMetrics,
 }
@@ -117,8 +117,11 @@ impl MaestroService {
         locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
     }
 
-    /// Checks if a given `chain_id` has a corresponding [`RpcProvider`] configured
-    pub fn get_rpc_provider(&self, chain_id: &ChainId) -> Result<&RpcProvider, MaestroRpcError> {
+    /// Checks if a given `chain_id` has a corresponding [`MultiRpcProvider`] configured
+    pub fn get_rpc_provider(
+        &self,
+        chain_id: &ChainId,
+    ) -> Result<&MultiRpcProvider, MaestroRpcError> {
         self.rpc_providers
             .get(chain_id)
             .map_or_else(|| Err(InternalError(RpcMissing(*chain_id))), Ok)
@@ -127,7 +130,7 @@ impl MaestroService {
     #[allow(clippy::cognitive_complexity)]
     async fn handle_finalization(
         raw_tx: Vec<u8>,
-        provider: &RpcProvider,
+        provider: &MultiRpcProvider,
         metrics: &MaestroMetrics,
     ) -> CheckFinalizationResult {
         let tx_hash = keccak256(raw_tx.clone());
@@ -885,8 +888,8 @@ mod tests {
 
         // Create chain RPC URLs map
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
-        chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
+        chain_rpc_urls.insert(4, vec![mock_rpc_server_4.uri()]);
+        chain_rpc_urls.insert(5, vec![mock_rpc_server_5.uri()]);
 
         // Create cache connection
         let client = redis::Client::open(valkey_url.as_str()).unwrap();

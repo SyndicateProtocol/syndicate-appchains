@@ -9,10 +9,11 @@ use alloy::{
     primitives::ChainId,
     providers::{
         fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},
-        Identity, Provider, ProviderBuilder, RootProvider,
+        Identity, RootProvider,
     },
 };
 use clap::Parser;
+use shared::multi_rpc_provider::MultiRpcProvider;
 use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
 
@@ -35,7 +36,7 @@ pub struct Config {
     pub valkey_url: String,
 
     /// Chain ID to RPC URL mappings as a JSON string object
-    /// Example: '{"1": "https://example.com", "2": "https://another.com"}'
+    /// Example: '{"1": ["https://example.com"], "2": ["https://another.com", "https://backup.com"]}'
     #[arg(
         short = 'c',
         long,
@@ -43,7 +44,7 @@ pub struct Config {
         default_value = "{}",
         value_parser = parse_chain_rpc_urls_map
     )]
-    pub chain_rpc_urls: HashMap<u64, String>,
+    pub chain_rpc_urls: HashMap<u64, Vec<String>>,
 
     /// Timeout in seconds for connection validation
     #[arg(long, env = "VALIDATION_TIMEOUT", default_value = "5s",
@@ -84,8 +85,8 @@ pub struct Config {
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
-fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<u64, String>, ConfigError> {
-    let map: HashMap<u64, String> =
+fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<u64, Vec<String>>, ConfigError> {
+    let map: HashMap<u64, Vec<String>> =
         serde_json::from_str(s).map_err(|e| RpcUrlInvalidAddress(e.to_string()))?;
     Ok(map)
 }
@@ -106,7 +107,7 @@ impl Config {
     }
 
     /// Validates the configuration
-    pub async fn validate(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
+    pub async fn validate(&self) -> Result<HashMap<ChainId, MultiRpcProvider>, ConfigError> {
         // Skip validation if requested
         if self.skip_validation {
             debug!("Skipping config validation");
@@ -126,42 +127,32 @@ impl Config {
 
     /// Checks that all RPC URLs are accessible by making a test connection. Return usable providers
     #[allow(clippy::cognitive_complexity)]
-    async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
+    async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, MultiRpcProvider>, ConfigError> {
         // Validate RPC URLs by trying to connect to each one
-        let mut provider_map: HashMap<ChainId, RpcProvider> = HashMap::new();
+        let mut provider_map: HashMap<ChainId, MultiRpcProvider> = HashMap::new();
 
         if self.chain_rpc_urls.is_empty() {
             return Ok(provider_map);
         }
 
-        for (chain_id, url) in &self.chain_rpc_urls {
-            debug!(%chain_id, %url, "Sending test JSON-RPC request");
+        for (chain_id, urls) in &self.chain_rpc_urls {
+            if urls.is_empty() {
+                debug!(%chain_id, "No RPC URLs configured for chain, skipping");
+                continue;
+            }
 
-            let provider = match ProviderBuilder::new().connect(url).await {
-                Ok(provider) => provider,
-                Err(e) => {
-                    error!(%chain_id, %url, %e, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
-                    continue; // create other providers
-                }
-            };
+            debug!(%chain_id, url_count = urls.len(), "Creating MultiRpcProvider for chain");
 
-            match provider.get_chain_id().await {
-                Ok(resp_chain_id) => {
-                    if resp_chain_id != *chain_id {
-                        return Err(ConfigError::RpcUrlInvalidChainId(
-                            url.to_string(),
-                            chain_id.to_string(),
-                            resp_chain_id.to_string(),
-                        ));
-                    }
+            match MultiRpcProvider::new(urls.clone(), *chain_id).await {
+                Ok(multi_provider) => {
+                    debug!(%chain_id, working_providers = multi_provider.provider_count(), "Successfully created MultiRpcProvider for chain");
+                    provider_map.insert(*chain_id, multi_provider);
                 }
                 Err(e) => {
-                    error!(%e, %chain_id, %url, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
+                    error!(%chain_id, %e, "Failed to create MultiRpcProvider for chain");
+                    // Continue with other chains rather than failing completely
                 }
-            };
-
-            debug!(%chain_id, %url, "Successful JSON-RPC request to RPC provider");
-            provider_map.insert(*chain_id, provider);
+            }
         }
         Ok(provider_map)
     }
