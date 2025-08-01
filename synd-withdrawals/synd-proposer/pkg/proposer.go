@@ -236,18 +236,21 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			// Update Metrics
 			p.Metrics.AssertionSubmissions.Inc()
 			submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
+			pollingLoopTimer.ObserveHistogram(p.Metrics.PollingLoopDuration)
 
 			appchainHeader, err := p.AppchainClient.HeaderByHash(ctx, appHash)
 			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.Sprintf("Failed to get appchain block header, hash: %v", appHash.Hex()), err)
+				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.Sprintf("Failed to get appchain block header, skipping metrics update, hash: %v", appHash.Hex()), err)
 				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
 			}
 			p.Metrics.LastAssertedAppchainBlockNumber.Set(float64(appchainHeader.Number.Uint64()))
 
 			seqchainHeader, err := p.SequencingClient.HeaderByHash(ctx, seqHash)
 			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.Sprintf("Failed to get seqchain block header, hash: %v", seqHash.Hex()), err)
+				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.Sprintf("Failed to get seqchain block header, skipping metrics update, hash: %v", seqHash.Hex()), err)
 				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
 			}
 			p.Metrics.LastAssertedSeqchainBlockNumber.Set(float64(seqchainHeader.Number.Uint64()))
 			p.Metrics.LastAssertedSeqchainBlockTimestamp.Set(float64(seqchainHeader.Time))
@@ -255,12 +258,11 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			balance, err := p.SettlementClient.BalanceAt(ctx, keyAddress, nil)
 			if err != nil {
 				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.
-					Sprintf("Failed to get key's wallet balance on settlement chain, address: %v", keyAddress.Hex()), err)
+					Sprintf("Failed to get key's wallet balance on settlement chain, skipping metrics update, address: %v", keyAddress.Hex()), err)
 				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
 			}
 			p.Metrics.WalletBalance.Set(float64(balance.Uint64()))
-
-			pollingLoopTimer.ObserveHistogram(p.Metrics.PollingLoopDuration)
 		}
 	}
 }
