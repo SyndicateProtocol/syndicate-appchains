@@ -114,5 +114,5 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_COLOR: "danger"
-          SLACK_MESSAGE: ":x: `${{github.action}}` failed on `main` branch. View failure information here: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-          SLACK_TITLE: "*${{github.action}}* failed on `main` branch. Notify the author of the latest PR merged to `main`"
+          SLACK_MESSAGE: ":x: `${{github.workflow}}` failed on `main` branch. View failure information here: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+          SLACK_TITLE: "*${{github.workflow}}* failed on `main` branch. Notify the author of the latest PR merged to `main`"
