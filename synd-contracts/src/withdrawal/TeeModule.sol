@@ -239,7 +239,15 @@ contract TeeModule is Ownable(msg.sender) {
         emit ChallengeResolved(assertion);
     }
 
-    function transferAssertionPosterOwner(address newOwner) public onlyOwner {
+    function transferAssertionPosterOwner(address newOwner) external onlyOwner {
         Ownable(address(poster)).transferOwnership(newOwner);
+    }
+
+    function transferFunds(address dest) external onlyOwner {
+        require(dest != address(0), "destination address is zero");
+
+        //#olympix-ignore-low-level-call-params-verified
+        (bool success,) = payable(dest).call{value: address(this).balance}("");
+        require(success, "payment failed");
     }
 }
