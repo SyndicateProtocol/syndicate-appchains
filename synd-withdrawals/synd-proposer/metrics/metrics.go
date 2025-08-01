@@ -16,8 +16,12 @@ type Metrics struct {
 	ProveBatchCount prometheus.Gauge
 
 	// Assertion submission metrics
-	AssertionSubmissions        prometheus.Counter
-	AssertionSubmissionDuration prometheus.Histogram
+	AssertionSubmissions               prometheus.Counter
+	AssertionSubmissionDuration        prometheus.Histogram
+	LastAssertedAppchainBlockNumber    prometheus.Gauge
+	LastAssertedSeqchainBlockNumber    prometheus.Gauge
+	LastAssertedSeqchainBlockTimestamp prometheus.Gauge
+	WalletBalance                      prometheus.Gauge
 
 	// Enclave call metrics
 	EnclaveCalls        *prometheus.CounterVec
@@ -29,38 +33,54 @@ func NewMetrics(registry *prometheus.Registry) *Metrics {
 	metrics := &Metrics{
 		// Polling loop metrics
 		PollingLoopDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name:    "synd_proposer_polling_loop_duration_seconds",
+			Name:    "polling_loop_duration_seconds",
 			Help:    "Duration of polling loop iterations",
 			Buckets: prometheus.DefBuckets,
 		}),
 		// Prove function metrics
 		ProveTotal: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "synd_proposer_prove_total",
+			Name: "prove_total",
 			Help: "Total number of proofs generated",
 		}),
 		ProveBatchCount: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "synd_proposer_prove_batch_count",
+			Name: "prove_batch_count",
 			Help: "Number of batches processed in last proof",
 		}),
 
 		// Assertion submission metrics
 		AssertionSubmissions: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "synd_proposer_assertion_submissions_total",
+			Name: "assertion_submissions_total",
 			Help: "Total number of assertion submissions",
 		}),
 		AssertionSubmissionDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name:    "synd_proposer_assertion_submission_duration_seconds",
+			Name:    "assertion_submission_duration_seconds",
 			Help:    "Duration of assertion submissions",
 			Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30},
+		}),
+		LastAssertedAppchainBlockNumber: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "last_asserted_appchain_block_number",
+			Help: "Last asserted appchain block number",
+		}),
+		LastAssertedSeqchainBlockNumber: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "last_asserted_seqchain_block_number",
+			Help: "Last asserted sequencing chain block number",
+		}),
+		LastAssertedSeqchainBlockTimestamp: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "last_asserted_seqchain_block_timestamp",
+			Help: "Last asserted sequencing chain block timestamp",
+		}),
+		WalletBalance: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "wallet_balance",
+			Help: "Wallet balance",
 		}),
 
 		// Enclave call metrics
 		EnclaveCalls: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "synd_proposer_enclave_calls_total",
+			Name: "enclave_calls_total",
 			Help: "Total number of enclave calls",
 		}, []string{"method"}),
 		EnclaveCallDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "synd_proposer_enclave_call_duration_seconds",
+			Name:    "enclave_call_duration_seconds",
 			Help:    "Duration of enclave calls",
 			Buckets: []float64{0.1, 0.5, 1, 5, 10, 30, 60, 120},
 		}, []string{"method"}),
@@ -73,6 +93,10 @@ func NewMetrics(registry *prometheus.Registry) *Metrics {
 		metrics.ProveBatchCount,
 		metrics.AssertionSubmissions,
 		metrics.AssertionSubmissionDuration,
+		metrics.LastAssertedAppchainBlockNumber,
+		metrics.LastAssertedSeqchainBlockNumber,
+		metrics.LastAssertedSeqchainBlockTimestamp,
+		metrics.WalletBalance,
 		metrics.EnclaveCalls,
 		metrics.EnclaveCallDuration,
 	)

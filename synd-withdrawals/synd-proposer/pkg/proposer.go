@@ -214,11 +214,11 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 			submissionTimer := metrics.NewTimer()
 
+			keyAddress := crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey)
 			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
 			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
 			// for more info.
-			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature,
-				crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
+			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature, keyAddress)
 			if err != nil {
 				if !strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
 					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
@@ -227,16 +227,45 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 				continue
 			}
-			p.Metrics.AssertionSubmissions.Inc()
-			submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
-
+			seqHash := common.BytesToHash(p.PendingAssertion.SeqBlockHash[:])
+			appHash := common.BytesToHash(p.PendingAssertion.AppBlockHash[:])
 			log.Debug().
 				Str("transactionHash", transaction.Hash().Hex()).
-				Str("seqHash", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]).Hex()).
-				Str("appHash", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]).Hex()).
+				Str("seqHash", seqHash.Hex()).
+				Str("appHash", appHash.Hex()).
 				Str("l1Acc", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]).Hex()).
 				Msg("Submitted assertion")
+
+			// Update Metrics
+			p.Metrics.AssertionSubmissions.Inc()
+			submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
 			pollingLoopTimer.ObserveHistogram(p.Metrics.PollingLoopDuration)
+
+			appchainHeader, err := p.AppchainClient.HeaderByHash(ctx, appHash)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.Sprintf("Failed to get appchain block header, skipping metrics update, hash: %v", appHash.Hex()), err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
+			}
+			p.Metrics.LastAssertedAppchainBlockNumber.Set(float64(appchainHeader.Number.Uint64()))
+
+			seqchainHeader, err := p.SequencingClient.HeaderByHash(ctx, seqHash)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.Sprintf("Failed to get seqchain block header, skipping metrics update, hash: %v", seqHash.Hex()), err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
+			}
+			p.Metrics.LastAssertedSeqchainBlockNumber.Set(float64(seqchainHeader.Number.Uint64()))
+			p.Metrics.LastAssertedSeqchainBlockTimestamp.Set(float64(seqchainHeader.Time))
+
+			balance, err := p.SettlementClient.BalanceAt(ctx, keyAddress, nil)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.
+					Sprintf("Failed to get key's wallet balance on settlement chain, skipping metrics update, address: %v", keyAddress.Hex()), err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
+			}
+			p.Metrics.WalletBalance.Set(float64(balance.Uint64()))
 		}
 	}
 }
