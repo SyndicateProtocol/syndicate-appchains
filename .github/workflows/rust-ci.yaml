@@ -184,3 +184,14 @@ jobs:
 
       - name: Run all tests with nextest (excluding e2e withdrawals)
         run: cargo build && cargo nextest run --workspace --fail-fast -E 'not test(e2e_tee_withdrawal)'
+
+      # Needs to be the last job step
+      - name: Notify Slack on Failure
+        # Only notify for workflow_run failures on main branch (not PRs)
+        if: failure() && github.event_name == 'workflow_run' && github.ref_name == 'main'
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_COLOR: "danger"
+          SLACK_MESSAGE: ":x: `${{github.action}}` failed on `main` branch. View failure information here: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+          SLACK_TITLE: "*${{github.action}}* failed on `main` branch. Notify the author of the latest PR merged to `main`"
