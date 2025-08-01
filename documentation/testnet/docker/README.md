@@ -36,9 +36,11 @@ Obtain the Appchain's `chain_info` config from Syndicate. It should look somethi
 
 This chain config file will be mounted into the `nitro` container in the next step.
 
+> **Note**: The container images run as non-root users. Ensure that any mounted directories have appropriate permissions for the container user to read/write.
+
 ## Docker Compose
 
-Run all of the components together in Docker, using the provided `./rpc-node-docker-compose.yml` file. Replace all of the templated values. Some of the values come from the chain config above, some will be your own values, and the rest should come from Syndicate.
+Run all of the components together in Docker, using the provided `./rpc-node-docker-compose.yml` file. Replace all of the templated values. Up-to-date chain config values can be found in the [helm values overrides files](https://github.com/SyndicateProtocol/helm/blob/main/charts/appchains/values/testnet/values.yaml).
 
 After running that Docker Compose file, use the `slotter_last_processed_block` metric (with `settlement` and `sequencing` tags) from the `synd-translator` container to monitor the node's syncing progress. If that number is increasing over time, then the node is successfully syncing. Once it syncs up to the settlement/sequencing chain heads, you can begin sending transactions to this RPC node.
 

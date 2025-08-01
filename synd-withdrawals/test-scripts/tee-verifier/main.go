@@ -34,14 +34,9 @@ func main() {
 	appUrl := flag.String("app-url", "https://rpc.testnet.manchego.syndicate.io", "appchain rpc url")
 
 	// config flags - for risa testnet
-	seqContractFlag := flag.String("seq-contract", "0x1e491B3C0A53492F72dBE5A48C6cd6ffe19b643E", "sequencing contract address for appchain")
+	seqContractFlag := flag.String("seq-contract", "0xAdB61DB12cDB6ED6bFF18A7D76C4DA2a8c12F767", "sequencing contract address for appchain")
 	seqBridgeFlag := flag.String("seq-bridge", "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA", "sequencing chain bridge contract address")
-	appBridgeFlag := flag.String("app-bridge", "0x646eD51Ef2daD941733b004961d9ceC2B32BACF8", "appchain bridge address")
-
-	// config flags - for risa devnet
-	// seqContractFlag := flag.String("seq-contract", "0xb89D1d2E9bc9A14855e6C8509dd5435422CcDd8f", "sequencing contract address for appchain")
-	// seqBridgeFlag := flag.String("seq-bridge", "0x765E6EC7f3A8c8A2712EA230754E5968E45E124b", "sequencing chain bridge contract address")
-	// appBridgeFlag := flag.String("app-bridge", "0xC5432874Fe53da9185a34eCdf48A3a2a2A8Bd241", "appchain bridge address")
+	appBridgeFlag := flag.String("app-bridge", "0xD006E3c249d8A496EbD54DfE8749a13825813e79", "appchain bridge address")
 
 	// config flags - optional. settlement
 	setMsgs := flag.Uint64("set-msg-count", 0, "settlement delayed message count")
