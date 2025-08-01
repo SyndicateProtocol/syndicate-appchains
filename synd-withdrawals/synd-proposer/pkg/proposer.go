@@ -29,6 +29,7 @@ import (
 	"github.com/offchainlabs/nitro/eigenda"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -155,10 +156,14 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
 			// for more info.
 			if _, err := p.TeeModule.CloseChallengeWindow(p.makeTransactOptsCopy(ctx)); err != nil {
-				if !strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
-					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to close challenge window", err)
-					log.Error().Stack().Err(wrappedErr).Msg(msg)
+				var event *zerolog.Event
+				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+					event = log.Debug()
+				} else {
+					event = log.Error()
 				}
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to close challenge window", err)
+				event.Stack().Err(wrappedErr).Msg(msg)
 			}
 		}
 	}
@@ -220,10 +225,14 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			// for more info.
 			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature, keyAddress)
 			if err != nil {
-				if !strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
-					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
-					log.Error().Stack().Err(wrappedErr).Msg(msg)
+				var event *zerolog.Event
+				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+					event = log.Debug()
+				} else {
+					event = log.Error()
 				}
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
+				event.Stack().Err(wrappedErr).Msg(msg)
 
 				continue
 			}
