@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -149,16 +151,14 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			log.Info().Msg("Close challenge loop tick...")
-			if ok, err := p.TeeModule.CanCloseChallengeWindow(&bind.CallOpts{Context: ctx}); err != nil || !ok {
-				if err != nil {
-					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to call canCloseChallengeWindow", err)
+			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
+			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
+			// for more info.
+			if _, err := p.TeeModule.CloseChallengeWindow(p.makeTransactOptsCopy(ctx)); err != nil {
+				if !strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to close challenge window", err)
 					log.Error().Stack().Err(wrappedErr).Msg(msg)
 				}
-				continue
-			}
-			if _, err := p.TeeModule.CloseChallengeWindow(p.makeTransactOptsCopy(ctx)); err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to close challenge window", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
 			}
 		}
 	}
@@ -213,19 +213,17 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			}
 
 			submissionTimer := metrics.NewTimer()
-			pendingAssertionHash := crypto.Keccak256Hash(p.PendingAssertion.AppBlockHash[:], p.PendingAssertion.AppSendRoot[:], p.PendingAssertion.SeqBlockHash[:], p.PendingAssertion.L1BatchAcc[:])
-			if ok, err := p.TeeModule.CanSubmitAssertion(&bind.CallOpts{Context: ctx}, p.PendingTeeInputHash, pendingAssertionHash); err != nil || !ok {
-				if err != nil {
-					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to call canSubmitAssertion", err)
-					log.Error().Stack().Err(wrappedErr).Msg(msg)
-				}
-				continue
-			}
+
+			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
+			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
+			// for more info.
 			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature,
 				crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
 			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				if !strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
+					log.Error().Stack().Err(wrappedErr).Msg(msg)
+				}
 
 				continue
 			}

@@ -163,19 +163,6 @@ contract TeeModule is Ownable(msg.sender) {
         return pendingAssertions.length;
     }
 
-    function canSubmitAssertion(bytes32 teeTrustedInputHash, bytes32 assertionHash) external view returns (bool) {
-        return teeTrustedInputHash == hash_object(teeTrustedInput)
-            && (
-                pendingAssertions.length == 0
-                    || (pendingAssertions.length == 1 && assertionHash != hash_object(pendingAssertions[0]))
-            );
-    }
-
-    function canCloseChallengeWindow() external view returns (bool) {
-        return pendingAssertions.length <= 1
-            && (isL1Chain ? uint64(block.timestamp) : IL1Block(l1BlockOrBridge).timestamp()) > challengeWindowEnd;
-    }
-
     function closeChallengeWindow() public {
         require(
             (isL1Chain ? uint64(block.timestamp) : IL1Block(l1BlockOrBridge).timestamp()) > challengeWindowEnd,
@@ -244,7 +231,7 @@ contract TeeModule is Ownable(msg.sender) {
     }
 
     function resolveChallenge(PendingAssertion calldata assertion, bytes calldata signature) external onlyOwner {
-        require(pendingAssertions.length == 2, "challenge does not exist");
+        require(pendingAssertions.length > 1, "challenge does not exist");
         delete pendingAssertions;
         submitAssertion(assertion, signature, address(0));
         challengeWindowEnd = 0;
