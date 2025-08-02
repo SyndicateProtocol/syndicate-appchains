@@ -130,7 +130,7 @@ pub async fn send_raw_transaction_handler(
 
     let service = service_arc_arc.as_ref();
     let req_start = Instant::now();
-    service.metrics.increment_transaction_requests (1);
+    service.metrics.increment_transaction_requests(1);
 
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let (tx, signer) = validate_transaction(&raw_tx)?;

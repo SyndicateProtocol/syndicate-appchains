@@ -1257,10 +1257,7 @@ mod tests {
         };
 
         assert_eq!(
-            valkey_metrics
-                .cache_operations
-                .get(&error_operation_labels)
-                .map_or(0, |c| c.get()),
+            valkey_metrics.cache_operations.get(&error_operation_labels).map_or(0, |c| c.get()),
             1
         );
 

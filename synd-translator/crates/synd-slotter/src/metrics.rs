@@ -59,18 +59,9 @@ impl SlotterMetrics {
             blocks_per_slot.clone(),
         );
 
-        registry.register(
-            "last_slot",
-            "Tracks the last slot created",
-            last_slot.clone(),
-        );
+        registry.register("last_slot", "Tracks the last slot created", last_slot.clone());
 
-        Self {
-            last_processed_block,
-            timestamp_lag_ms,
-            blocks_per_slot,
-            last_slot,
-        }
+        Self { last_processed_block, timestamp_lag_ms, blocks_per_slot, last_slot }
     }
 
     /// Records the last block processed by the Slotter.
@@ -93,9 +84,7 @@ impl SlotterMetrics {
         let block_timestamp_ms = block_timestamp * 1000; // Convert seconds to milliseconds
 
         let lag = now.saturating_sub(block_timestamp_ms); // Avoid negative values
-        self.timestamp_lag_ms
-            .get_or_create(&Labels { chain: chain.into() })
-            .set(lag as i64);
+        self.timestamp_lag_ms.get_or_create(&Labels { chain: chain.into() }).set(lag as i64);
     }
 
     /// Records the number of blocks processed per slot.
@@ -121,10 +110,7 @@ mod tests {
         let metrics = SlotterMetrics::new(&mut registry);
 
         assert_eq!(
-            metrics
-                .last_processed_block
-                .get_or_create(&Labels { chain: "sequencing" })
-                .get(),
+            metrics.last_processed_block.get_or_create(&Labels { chain: "sequencing" }).get(),
             0
         );
     }
@@ -136,19 +122,13 @@ mod tests {
 
         metrics.record_last_processed_block(42, Chain::Sequencing);
         assert_eq!(
-            metrics
-                .last_processed_block
-                .get_or_create(&Labels { chain: "sequencing" })
-                .get(),
+            metrics.last_processed_block.get_or_create(&Labels { chain: "sequencing" }).get(),
             42
         );
 
         metrics.record_last_processed_block(84, Chain::Settlement);
         assert_eq!(
-            metrics
-                .last_processed_block
-                .get_or_create(&Labels { chain: "settlement" })
-                .get(),
+            metrics.last_processed_block.get_or_create(&Labels { chain: "settlement" }).get(),
             84
         );
     }
@@ -162,15 +142,13 @@ mod tests {
         let past_timestamp = now - 5; // 5 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Sequencing);
         assert!(
-            metrics.timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get() >=
-                5000
+            metrics.timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get() >= 5000
         );
 
         let past_timestamp = now - 10000; // 10 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Settlement);
         assert!(
-            metrics.timestamp_lag_ms.get_or_create(&Labels { chain: "settlement" }).get() >=
-                10000
+            metrics.timestamp_lag_ms.get_or_create(&Labels { chain: "settlement" }).get() >= 10000
         );
     }
 

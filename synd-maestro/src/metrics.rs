@@ -20,7 +20,7 @@ impl MaestroMetrics {
     /// Create a new `MaestroMetrics` struct
     pub fn new(registry: &mut Registry) -> Self {
         let metrics = Self {
-            transaction_requests : Gauge::default(),
+            transaction_requests: Gauge::default(),
             transaction_requests_duration_ms: Gauge::default(),
             enqueued_transactions: Gauge::default(),
             waiting_transactions: Gauge::default(),
@@ -32,7 +32,7 @@ impl MaestroMetrics {
         registry.register(
             "transaction_requests ",
             "Total number of requests received by maestro",
-            metrics.transaction_requests .clone(),
+            metrics.transaction_requests.clone(),
         );
 
         registry.register(
@@ -68,8 +68,8 @@ impl MaestroMetrics {
         metrics
     }
 
-    pub fn increment_transaction_requests (&self, count: usize) {
-        self.transaction_requests .inc_by(count as i64);
+    pub fn increment_transaction_requests(&self, count: usize) {
+        self.transaction_requests.inc_by(count as i64);
     }
 
     pub fn record_transaction_requests_duration_ms(&self, duration: Duration) {
