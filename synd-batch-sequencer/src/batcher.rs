@@ -83,7 +83,7 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let mut metrics_state = MetricsState::default();
     let registry = &mut metrics_state.registry;
     let metrics = BatcherMetrics::new(registry);
-    let valkey_metrics = ValkeyMetrics::new(registry);
+    let valkey_metrics = metrics.valkey;
 
     let cache_health_handler = cache_health_check_handler(conn.clone());
     tokio::spawn(start_http_server_with_aux_handlers(
@@ -101,7 +101,7 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
         "0-0".to_string(),
         Arc::new(valkey_metrics),
     );
-    let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics);
+    let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics.clone());
 
     let handle = tokio::spawn({
         async move {

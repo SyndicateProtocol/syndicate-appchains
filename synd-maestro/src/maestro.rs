@@ -144,7 +144,7 @@ impl MaestroService {
                     Ok(nonce) => {
                         if nonce <= tx.nonce() {
                             warn!(%tx_hash, "Valid transaction is not finalized, resubmitting");
-                            metrics.increment_maestro_resubmitted_transactions_total(1);
+                            metrics.increment_resubmitted_transactions(1);
                             return CheckFinalizationResult::ReSubmit;
                         }
                         warn!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
@@ -284,7 +284,7 @@ impl MaestroService {
 
                 // 2. enqueue the txn
                 self.enqueue_raw_transaction(&raw_tx, tx.hash(), chain_id).await?;
-                self.metrics.increment_maestro_enqueued_transactions_total(1);
+                self.metrics.increment_enqueued_transactions(1);
 
                 // 3. check cache for waiting txns (background task)
                 let service_clone = self.clone();
@@ -306,7 +306,7 @@ impl MaestroService {
                 debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Caching waiting transaction");
                 self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx, tx.hash())
                     .await?;
-                self.metrics.increment_maestro_waiting_transactions_total(1);
+                self.metrics.increment_waiting_transactions(1);
             }
         }
         Ok(())
