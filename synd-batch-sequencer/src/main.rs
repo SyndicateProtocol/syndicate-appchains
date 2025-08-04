@@ -1,6 +1,7 @@
 //! The Batch Sequencer is a service that pulls transactions off the queue, processes and validates
 //! them, and submits them to the Appchain in batches (can be compressed or not).
 
+use clap::Parser;
 use eyre::Result;
 use shared::tracing::{setup_global_tracing, ServiceTracingConfig};
 use synd_batch_sequencer::{batcher::run_batcher, config::BatcherConfig};
@@ -15,7 +16,7 @@ async fn main() -> Result<()> {
         env!("CARGO_PKG_VERSION"),
     ))?;
 
-    let config = BatcherConfig::initialize();
+    let config = BatcherConfig::parse();
     info!("BatcherConfig: {:?}", config);
 
     let batcher_handle = run_batcher(&config).await?;

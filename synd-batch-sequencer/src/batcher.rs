@@ -136,10 +136,9 @@ async fn create_sequencing_contract_instance(
     );
 
     // Create MultiRpcProvider with wallet functionality and retry configuration
-    let urls = vec![config.sequencing_rpc_url.to_string()];
     let multi_provider = MultiRpcProvider::new_with_wallet_and_retry(
-        urls,
-        config.chain_id,
+        config.sequencing_rpc_urls.clone(),
+        None,
         EthereumWallet::from(signer),
         Some(retry_config),
     )
@@ -222,8 +221,6 @@ impl Batcher {
             // NOTE: If msg count is >1 we need to handle edge cases where not all transactions fit
             // in the batch
             let incoming_txs = self.stream_consumer.recv(1, Duration::from_millis(100)).await?;
-
-            info!("POTATO, {:?}", incoming_txs.len());
 
             // Combine outstanding transactions with incoming transactions
             let mut pending_txs: VecDeque<Bytes> = std::mem::take(&mut self.outstanding_txs)
@@ -376,14 +373,9 @@ mod tests {
             let signer_address =
                 Address::from_str("0x06A85356DCb5b307096726FB86A78c59D38e08ee").unwrap();
 
-            // Give Anvil a moment to start up
-            tokio::time::sleep(Duration::from_millis(100)).await;
-
-            // Create a single-URL MultiRpcProvider for the anvil instance
-            let urls = vec![anvil.http_url.to_string()];
             let multi_provider = MultiRpcProvider::new_with_wallet(
-                urls,
-                anvil.provider.get_chain_id().await.unwrap(),
+                vec![Url::parse(&anvil.http_url).unwrap()],
+                None,
                 EthereumWallet::from(signer.clone()),
             )
             .await
@@ -416,7 +408,7 @@ mod tests {
             timeout: Duration::from_millis(200),
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
-            sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            sequencing_rpc_urls: vec![Url::parse("http://localhost:8545").unwrap()],
             ..Default::default()
         }
     }
@@ -563,6 +555,7 @@ mod tests {
         let metrics_clone = metrics.clone();
 
         let anvil = start_anvil(1).await.unwrap();
+        config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
         let mut batcher =
             Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
@@ -621,6 +614,7 @@ mod tests {
         let metrics_clone = metrics.clone();
 
         let anvil = start_anvil(1).await.unwrap();
+        config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
         let mut batcher =
             Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
@@ -641,9 +635,6 @@ mod tests {
         let (valkey, valkey_url) = start_valkey().await.unwrap();
         let anvil = start_anvil(1).await.unwrap();
 
-        // Give Anvil a moment to start up
-        tokio::time::sleep(Duration::from_millis(100)).await;
-
         let config = BatcherConfig {
             max_batch_size: byte_unit::Byte::from_u64(1024),
             valkey_url,
@@ -652,7 +643,7 @@ mod tests {
             timeout: Duration::from_millis(200),
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
-            sequencing_rpc_url: Url::parse(&anvil.http_url).unwrap(),
+            sequencing_rpc_urls: vec![Url::parse(&anvil.http_url).unwrap()],
             rpc_max_retries: 10,
             port: PortManager::instance().next_port().await,
             sequencing_address: Address::ZERO,

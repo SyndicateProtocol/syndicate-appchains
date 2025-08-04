@@ -866,6 +866,7 @@ mod tests {
         wait_until,
     };
     use tokio::time::sleep;
+    use url::Url;
     use wiremock::{
         matchers::{body_partial_json, method},
         Mock, MockServer, ResponseTemplate,
@@ -889,8 +890,8 @@ mod tests {
 
         // Create chain RPC URLs map
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert(4, vec![mock_rpc_server_4.uri()]);
-        chain_rpc_urls.insert(5, vec![mock_rpc_server_5.uri()]);
+        chain_rpc_urls.insert(4, vec![Url::parse(&mock_rpc_server_4.uri()).unwrap()]);
+        chain_rpc_urls.insert(5, vec![Url::parse(&mock_rpc_server_5.uri()).unwrap()]);
 
         // Create cache connection
         let client = redis::Client::open(valkey_url.as_str()).unwrap();

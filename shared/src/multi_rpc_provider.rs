@@ -6,26 +6,32 @@
 use crate::types::FilledProvider;
 use alloy::{
     consensus::Account,
-    eips::BlockNumberOrTag,
+    eips::{BlockId, BlockNumberOrTag},
     network::{Ethereum, Network},
-    primitives::{Address, Bytes, ChainId, StorageKey, B256, U128, U256, U64},
+    primitives::{Address, BlockHash, Bytes, ChainId, StorageKey, TxHash, B256, U128, U256, U64},
     providers::{
-        Caller, EthCall, EthCallManyParams, EthCallParams, Provider, ProviderBuilder, ProviderCall,
-        RootProvider, RpcWithBlock, WalletProvider,
+        Caller, EthCall, EthCallMany, EthCallManyParams, EthCallParams, EthGetBlock,
+        FilterPollerBuilder, GetSubscription, PendingTransaction, PendingTransactionBuilder,
+        PendingTransactionConfig, PendingTransactionError, Provider, ProviderBuilder, ProviderCall,
+        RootProvider, RpcWithBlock, SendableTx, SubFullBlocks, WalletProvider, WatchBlocks,
     },
     rpc::{
         client::{NoParams, RpcClient},
         json_rpc::{RpcRecv, RpcSend},
         types::{
+            erc4337::TransactionConditional,
+            pubsub::{Params, SubscriptionKind},
             simulate::{SimulatePayload, SimulatedBlock},
-            AccountInfo, Block, EIP1186AccountProofResponse, TransactionReceipt,
-            TransactionRequest,
+            AccountInfo, Block, Bundle, EIP1186AccountProofResponse, EthCallResponse, FeeHistory,
+            Filter, FilterChanges, Index, Log, TransactionReceipt, TransactionRequest,
         },
     },
     transports::{layers::RetryBackoffLayer, RpcError, TransportErrorKind, TransportResult},
 };
 use arc_swap::ArcSwap;
+use serde_json::value::RawValue;
 use std::{
+    borrow::Cow,
     fmt,
     future::Future,
     pin::Pin,
@@ -35,6 +41,7 @@ use std::{
     },
 };
 use tracing::{debug, error, info, warn};
+use url::Url;
 
 /// Multi-RPC provider that handles multiple RPC endpoints with automatic failover
 pub struct MultiRpcProvider {
@@ -106,15 +113,17 @@ pub enum MultiRpcError {
 
     /// No working providers found from the provided URLs during creation
     #[error("No working providers found from URLs: {0:?}")]
-    NoWorkingProviders(Vec<String>),
+    NoWorkingProviders(Vec<Url>),
 }
 
-// TODO implement missing methods from Provider trait
+// TODO revisit the order of the providers, the current way we determine the end of iteration is
+// kinda dumb
 
 impl MultiRpcProvider {
     /// Create a new `MultiRpcProvider` from a list of RPC URLs (backward compatibility)
     /// Note: This creates providers without wallet functionality
-    pub async fn new(urls: Vec<String>, chain_id: ChainId) -> Result<Self, MultiRpcError> {
+    /// Note `ChainID` is optional, if not provided, the provider's chainID will not be verified
+    pub async fn new(urls: Vec<Url>, chain_id: Option<ChainId>) -> Result<Self, MultiRpcError> {
         // Create a dummy wallet for for callers that don't have a wallet
         use alloy::signers::local::PrivateKeySigner;
         let dummy_signer = PrivateKeySigner::random();
@@ -124,9 +133,10 @@ impl MultiRpcProvider {
     }
 
     /// Create a new `MultiRpcProvider` from a list of RPC URLs with wallet functionality
+    /// Note `ChainID` is optional, if not provided, the provider's chainID will not be verified
     pub async fn new_with_wallet(
-        urls: Vec<String>,
-        chain_id: ChainId,
+        urls: Vec<Url>,
+        chain_id: Option<ChainId>,
         wallet: alloy::network::EthereumWallet,
     ) -> Result<Self, MultiRpcError> {
         Self::new_with_wallet_and_retry(urls, chain_id, wallet, None).await
@@ -134,9 +144,10 @@ impl MultiRpcProvider {
 
     /// Create a new `MultiRpcProvider` from a list of RPC URLs with wallet functionality and retry
     /// configuration
+    /// Note `ChainID` is optional, if not provided, the provider's chainID will not be verified
     pub async fn new_with_wallet_and_retry(
-        urls: Vec<String>,
-        chain_id: ChainId,
+        urls: Vec<Url>,
+        chain_id: Option<ChainId>,
         wallet: alloy::network::EthereumWallet,
         retry_config: Option<RetryConfig>,
     ) -> Result<Self, MultiRpcError> {
@@ -166,8 +177,13 @@ impl MultiRpcProvider {
             return Err(MultiRpcError::NoWorkingProviders(urls));
         }
 
-        debug!(chain_id = %chain_id, working_count = providers.len(), total_count = urls.len(), "Created MultiRpcProvider");
-        info!(working_urls = ?working_urls, chain_id = %chain_id, "Working URLs for chain");
+        debug!(
+            chain_id = chain_id,
+            working_count = providers.len(),
+            total_count = urls.len(),
+            "Created MultiRpcProvider"
+        );
+        info!(working_urls = ?working_urls, chain_id = chain_id, "Working URLs for chain");
 
         Ok(Self {
             active_provider: ArcSwap::new(providers[0].clone()),
@@ -180,7 +196,7 @@ impl MultiRpcProvider {
     async fn verify_chain_id<P: Provider>(
         provider: &P,
         expected_chain_id: ChainId,
-        url: &str,
+        url: &Url,
         index: usize,
     ) -> bool {
         match provider.get_chain_id().await {
@@ -208,13 +224,13 @@ impl MultiRpcProvider {
 
     /// Attempt to connect to a single RPC URL with wallet and verify its chain ID
     async fn try_connect_wallet_provider(
-        url: &str,
-        chain_id: ChainId,
+        url: &Url,
+        chain_id: Option<ChainId>,
         wallet: alloy::network::EthereumWallet,
         retry_config: Option<&RetryConfig>,
         index: usize,
     ) -> Option<FilledProvider> {
-        debug!(chain_id = %chain_id, url = %url, index, "Connecting to RPC provider with wallet");
+        debug!(chain_id = chain_id, url = %url, index, "Connecting to RPC provider with wallet");
 
         let result = if let Some(config) = retry_config {
             // Create RPC client with retry layer
@@ -227,21 +243,25 @@ impl MultiRpcProvider {
                 .with_avg_unit_cost(config.avg_request_cost);
                 RpcClient::builder().layer(())
             }
-            .connect(url)
+            .connect(url.as_str())
             .await;
 
             rpc_client.map(|client| ProviderBuilder::new().wallet(wallet).connect_client(client))
         } else {
             // Create provider without retry layer
-            ProviderBuilder::new().wallet(wallet).connect(url).await
+            ProviderBuilder::new().wallet(wallet).connect(url.as_str()).await
         };
 
         match result {
             Ok(provider) => {
-                Self::verify_chain_id(&provider, chain_id, url, index).await.then_some(provider)
+                if let Some(chain_id) = chain_id {
+                    Self::verify_chain_id(&provider, chain_id, url, index).await.then_some(provider)
+                } else {
+                    Some(provider)
+                }
             }
             Err(e) => {
-                warn!(chain_id = %chain_id, url = %url, index, error = %e, "Failed to connect to RPC provider");
+                warn!(chain_id = chain_id, url = %url, index, error = %e, "Failed to connect to RPC provider");
                 None
             }
         }
@@ -339,7 +359,7 @@ impl MultiRpcProvider {
     }
 
     /// Helper method to retry an operation with automatic failover
-    async fn retry_with_fallback<T, F, Fut>(
+    async fn execute_with_provider_failover<T, F, Fut>(
         &self,
         operation: F,
     ) -> Result<T, RpcError<TransportErrorKind>>
@@ -364,7 +384,7 @@ impl MultiRpcProvider {
         }
     }
 
-    fn provider_call_with_retry<Params, Resp, Output, Map, Fut, F>(
+    fn with_failover<Params, Resp, Output, Map, Fut, F>(
         &self,
         operation: F,
     ) -> ProviderCall<Params, Resp, Output, Map>
@@ -378,7 +398,7 @@ impl MultiRpcProvider {
         let multi_provider = self.clone();
         let future: Pin<
             Box<dyn Future<Output = Result<Output, RpcError<TransportErrorKind>>> + Send>,
-        > = Box::pin(async move { multi_provider.retry_with_fallback(operation).await });
+        > = Box::pin(async move { multi_provider.execute_with_provider_failover(operation).await });
         ProviderCall::from(future)
     }
 }
@@ -393,31 +413,34 @@ pub enum ControlFlow {
 
 // Implement Provider trait with REAL failover logic that cycles through providers
 #[allow(clippy::type_complexity)]
+#[cfg_attr(target_family = "wasm", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait::async_trait)]
 impl Provider<Ethereum> for MultiRpcProvider {
     fn root(&self) -> &RootProvider<Ethereum> {
         self.providers[0].root() // TODO can this be improved?
     }
 
+    fn get_accounts(&self) -> ProviderCall<NoParams, Vec<Address>> {
+        self.with_failover(|provider| provider.get_accounts())
+    }
+
+    fn get_blob_base_fee(&self) -> ProviderCall<NoParams, U128, u128> {
+        self.with_failover(|provider| provider.get_blob_base_fee())
+    }
+
     fn get_block_number(&self) -> ProviderCall<NoParams, U64, u64> {
-        self.provider_call_with_retry(|provider| provider.get_block_number())
+        self.with_failover(|provider| provider.get_block_number())
     }
 
     fn call(&self, tx: TransactionRequest) -> EthCall<Ethereum, Bytes> {
         EthCall::call(self.clone(), tx).block(BlockNumberOrTag::Pending.into())
     }
 
-    fn estimate_gas(&self, tx: TransactionRequest) -> EthCall<Ethereum, U64, u64> {
-        EthCall::gas_estimate(self.clone(), tx)
-            .block(BlockNumberOrTag::Pending.into())
-            .map_resp(|r| r.to::<u64>())
-    }
-
-    fn get_transaction_by_hash(
+    fn call_many<'req>(
         &self,
-        hash: B256,
-    ) -> ProviderCall<(B256,), Option<alloy::rpc::types::Transaction>> {
-        let hash_copy = hash;
-        self.provider_call_with_retry(move |provider| provider.get_transaction_by_hash(hash_copy))
+        bundles: &'req [Bundle],
+    ) -> EthCallMany<'req, Ethereum, Vec<Vec<EthCallResponse>>> {
+        EthCallMany::new(self.clone(), bundles)
     }
 
     fn simulate<'req>(
@@ -429,6 +452,10 @@ impl Provider<Ethereum> for MultiRpcProvider {
         self.active_provider().simulate(payload)
     }
 
+    fn get_chain_id(&self) -> ProviderCall<NoParams, U64, u64> {
+        self.with_failover(|provider| provider.get_chain_id())
+    }
+
     fn create_access_list<'a>(
         &self,
         request: &'a TransactionRequest,
@@ -438,68 +465,33 @@ impl Provider<Ethereum> for MultiRpcProvider {
         self.active_provider().create_access_list(request)
     }
 
-    fn get_chain_id(&self) -> ProviderCall<NoParams, U64, u64> {
-        self.provider_call_with_retry(|provider| provider.get_chain_id())
+    fn estimate_gas(&self, tx: TransactionRequest) -> EthCall<Ethereum, U64, u64> {
+        EthCall::gas_estimate(self.clone(), tx)
+            .block(BlockNumberOrTag::Pending.into())
+            .map_resp(|r| r.to::<u64>())
+    }
+
+    async fn get_fee_history(
+        &self,
+        block_count: u64,
+        last_block: BlockNumberOrTag,
+        reward_percentiles: &[f64],
+    ) -> TransportResult<FeeHistory> {
+        self.execute_with_provider_failover(|provider| {
+            let percentiles = reward_percentiles.to_owned();
+            async move { provider.get_fee_history(block_count, last_block, &percentiles).await }
+        })
+        .await
     }
 
     fn get_gas_price(&self) -> ProviderCall<NoParams, U128, u128> {
-        self.provider_call_with_retry(|provider| provider.get_gas_price())
-    }
-
-    fn get_transaction_receipt(
-        &self,
-        hash: B256,
-    ) -> ProviderCall<(B256,), Option<TransactionReceipt>> {
-        let hash_copy = hash;
-        self.provider_call_with_retry(move |provider| provider.get_transaction_receipt(hash_copy))
-    }
-
-    fn get_balance(&self, address: Address) -> RpcWithBlock<Address, U256> {
-        let multi_provider = self.clone();
-        RpcWithBlock::new_provider(move |block_id| {
-            multi_provider.provider_call_with_retry(move |provider| async move {
-                provider.get_balance(address).block_id(block_id).await
-            })
-        })
-    }
-
-    fn get_transaction_count(&self, address: Address) -> RpcWithBlock<Address, U64, u64> {
-        let multi_provider = self.clone();
-        RpcWithBlock::new_provider(move |block_id| {
-            multi_provider.provider_call_with_retry(move |provider| async move {
-                provider.get_transaction_count(address).block_id(block_id).await
-            })
-        })
-    }
-
-    fn get_accounts(&self) -> ProviderCall<NoParams, Vec<Address>> {
-        self.provider_call_with_retry(|provider| provider.get_accounts())
-    }
-
-    fn get_blob_base_fee(&self) -> ProviderCall<NoParams, U128, u128> {
-        self.provider_call_with_retry(|provider| provider.get_blob_base_fee())
-    }
-
-    fn get_max_priority_fee_per_gas(&self) -> ProviderCall<NoParams, U128, u128> {
-        self.provider_call_with_retry(|provider| provider.get_max_priority_fee_per_gas())
-    }
-
-    fn syncing(&self) -> ProviderCall<NoParams, alloy::rpc::types::SyncStatus> {
-        self.provider_call_with_retry(|provider| provider.syncing())
-    }
-
-    fn get_client_version(&self) -> ProviderCall<NoParams, String> {
-        self.provider_call_with_retry(|provider| provider.get_client_version())
-    }
-
-    fn get_net_version(&self) -> ProviderCall<NoParams, U64, u64> {
-        self.provider_call_with_retry(|provider| provider.get_net_version())
+        self.with_failover(|provider| provider.get_gas_price())
     }
 
     fn get_account_info(&self, address: Address) -> RpcWithBlock<Address, AccountInfo> {
         let multi_provider = self.clone();
         RpcWithBlock::new_provider(move |block_id| {
-            multi_provider.provider_call_with_retry(move |provider| async move {
+            multi_provider.with_failover(move |provider| async move {
                 provider.get_account_info(address).block_id(block_id).await
             })
         })
@@ -508,19 +500,153 @@ impl Provider<Ethereum> for MultiRpcProvider {
     fn get_account(&self, address: Address) -> RpcWithBlock<Address, Account> {
         let multi_provider = self.clone();
         RpcWithBlock::new_provider(move |block_id| {
-            multi_provider.provider_call_with_retry(move |provider| async move {
+            multi_provider.with_failover(move |provider| async move {
                 provider.get_account(address).block_id(block_id).await
             })
         })
     }
 
+    fn get_balance(&self, address: Address) -> RpcWithBlock<Address, U256> {
+        let multi_provider = self.clone();
+        RpcWithBlock::new_provider(move |block_id| {
+            multi_provider.with_failover(move |provider| async move {
+                provider.get_balance(address).block_id(block_id).await
+            })
+        })
+    }
+
+    fn get_block(&self, block: BlockId) -> EthGetBlock<<Ethereum as Network>::BlockResponse> {
+        let multi_provider = self.clone();
+        EthGetBlock::new_provider(
+            block,
+            Box::new(move |block_txs_kind| {
+                multi_provider.with_failover(move |provider| async move {
+                    provider.get_block(block).kind(block_txs_kind).await
+                })
+            }),
+        )
+    }
+
+    fn get_block_by_hash(
+        &self,
+        hash: BlockHash,
+    ) -> EthGetBlock<<Ethereum as Network>::BlockResponse> {
+        let multi_provider = self.clone();
+        EthGetBlock::new_provider(
+            BlockId::Hash(hash.into()),
+            Box::new(move |block_txs_kind| {
+                multi_provider.with_failover(move |provider| async move {
+                    provider.get_block_by_hash(hash).kind(block_txs_kind).await
+                })
+            }),
+        )
+    }
+
+    fn get_block_by_number(
+        &self,
+        number: BlockNumberOrTag,
+    ) -> EthGetBlock<<Ethereum as Network>::BlockResponse> {
+        let multi_provider = self.clone();
+        EthGetBlock::new_provider(
+            BlockId::Number(number),
+            Box::new(move |block_txs_kind| {
+                multi_provider.with_failover(move |provider| async move {
+                    provider.get_block_by_number(number).kind(block_txs_kind).await
+                })
+            }),
+        )
+    }
+
+    async fn get_block_transaction_count_by_hash(
+        &self,
+        hash: BlockHash,
+    ) -> TransportResult<Option<u64>> {
+        self.execute_with_provider_failover(|provider| async move {
+            provider.get_block_transaction_count_by_hash(hash).await
+        })
+        .await
+    }
+
+    async fn get_block_transaction_count_by_number(
+        &self,
+        block_number: BlockNumberOrTag,
+    ) -> TransportResult<Option<u64>> {
+        self.execute_with_provider_failover(|provider| async move {
+            provider.get_block_transaction_count_by_number(block_number).await
+        })
+        .await
+    }
+
+    fn get_block_receipts(
+        &self,
+        block: BlockId,
+    ) -> ProviderCall<(BlockId,), Option<Vec<<Ethereum as Network>::ReceiptResponse>>> {
+        self.with_failover(move |provider| provider.get_block_receipts(block))
+    }
+
     fn get_code_at(&self, address: Address) -> RpcWithBlock<Address, Bytes> {
         let multi_provider = self.clone();
         RpcWithBlock::new_provider(move |block_id| {
-            multi_provider.provider_call_with_retry(move |provider| async move {
+            multi_provider.with_failover(move |provider| async move {
                 provider.get_code_at(address).block_id(block_id).await
             })
         })
+    }
+
+    async fn watch_blocks(&self) -> TransportResult<FilterPollerBuilder<B256>> {
+        panic!("not implemented");
+    }
+    async fn watch_full_blocks(
+        &self,
+    ) -> TransportResult<WatchBlocks<<Ethereum as Network>::BlockResponse>> {
+        panic!("not implemented");
+    }
+
+    async fn watch_pending_transactions(&self) -> TransportResult<FilterPollerBuilder<B256>> {
+        panic!("not implemented");
+    }
+    async fn watch_logs(&self, _filter: &Filter) -> TransportResult<FilterPollerBuilder<Log>> {
+        panic!("not implemented");
+    }
+
+    async fn watch_full_pending_transactions(
+        &self,
+    ) -> TransportResult<FilterPollerBuilder<<Ethereum as Network>::TransactionResponse>> {
+        panic!("not implemented");
+    }
+
+    async fn get_filter_changes<R: RpcRecv>(&self, _id: U256) -> TransportResult<Vec<R>>
+    where
+        Self: Sized,
+    {
+        panic!("not implemented");
+    }
+
+    async fn get_filter_changes_dyn(&self, _id: U256) -> TransportResult<FilterChanges> {
+        panic!("not implemented");
+    }
+
+    async fn get_filter_logs(&self, _id: U256) -> TransportResult<Vec<Log>> {
+        panic!("not implemented");
+    }
+
+    async fn uninstall_filter(&self, _id: U256) -> TransportResult<bool> {
+        panic!("not implemented");
+    }
+
+    #[inline]
+    async fn watch_pending_transaction(
+        &self,
+        _config: PendingTransactionConfig,
+    ) -> Result<PendingTransaction, PendingTransactionError> {
+        panic!("not implemented");
+    }
+
+    async fn get_logs(&self, filter: &Filter) -> TransportResult<Vec<Log>> {
+        self.execute_with_provider_failover(
+            |provider| async move { provider.get_logs(filter).await },
+        )
+        .await
     }
 
     fn get_proof(
@@ -531,7 +657,7 @@ impl Provider<Ethereum> for MultiRpcProvider {
         let multi_provider = self.clone();
         RpcWithBlock::new_provider(move |block_id| {
             let keys_clone = keys.clone();
-            multi_provider.provider_call_with_retry(move |provider| {
+            multi_provider.with_failover(move |provider| {
                 let value = keys_clone.clone();
                 async move { provider.get_proof(address, value).block_id(block_id).await }
             })
@@ -541,10 +667,254 @@ impl Provider<Ethereum> for MultiRpcProvider {
     fn get_storage_at(&self, address: Address, key: U256) -> RpcWithBlock<(Address, U256), U256> {
         let multi_provider = self.clone();
         RpcWithBlock::new_provider(move |block_id| {
-            multi_provider.provider_call_with_retry(move |provider| async move {
+            multi_provider.with_failover(move |provider| async move {
                 provider.get_storage_at(address, key).block_id(block_id).await
             })
         })
+    }
+
+    fn get_transaction_by_sender_nonce(
+        &self,
+        sender: Address,
+        nonce: u64,
+    ) -> ProviderCall<(Address, U64), Option<<Ethereum as Network>::TransactionResponse>> {
+        self.with_failover(move |provider| provider.get_transaction_by_sender_nonce(sender, nonce))
+    }
+
+    fn get_transaction_by_hash(
+        &self,
+        hash: TxHash,
+    ) -> ProviderCall<(TxHash,), Option<<Ethereum as Network>::TransactionResponse>> {
+        self.with_failover(move |provider| provider.get_transaction_by_hash(hash))
+    }
+
+    fn get_transaction_by_block_hash_and_index(
+        &self,
+        block_hash: B256,
+        index: usize,
+    ) -> ProviderCall<(B256, Index), Option<<Ethereum as Network>::TransactionResponse>> {
+        self.with_failover(move |provider| {
+            provider.get_transaction_by_block_hash_and_index(block_hash, index)
+        })
+    }
+
+    fn get_raw_transaction_by_block_hash_and_index(
+        &self,
+        block_hash: B256,
+        index: usize,
+    ) -> ProviderCall<(B256, Index), Option<Bytes>> {
+        self.with_failover(move |provider| {
+            provider.get_raw_transaction_by_block_hash_and_index(block_hash, index)
+        })
+    }
+
+    /// Gets a transaction by block number and transaction index position.
+    fn get_transaction_by_block_number_and_index(
+        &self,
+        block_number: BlockNumberOrTag,
+        index: usize,
+    ) -> ProviderCall<(BlockNumberOrTag, Index), Option<<Ethereum as Network>::TransactionResponse>>
+    {
+        self.with_failover(move |provider| {
+            provider.get_transaction_by_block_number_and_index(block_number, index)
+        })
+    }
+
+    /// Gets a raw transaction by block number and transaction index position.
+    fn get_raw_transaction_by_block_number_and_index(
+        &self,
+        block_number: BlockNumberOrTag,
+        index: usize,
+    ) -> ProviderCall<(BlockNumberOrTag, Index), Option<Bytes>> {
+        self.with_failover(move |provider| {
+            provider.get_raw_transaction_by_block_number_and_index(block_number, index)
+        })
+    }
+
+    fn get_raw_transaction_by_hash(&self, hash: TxHash) -> ProviderCall<(TxHash,), Option<Bytes>> {
+        self.with_failover(move |provider| provider.get_raw_transaction_by_hash(hash))
+    }
+
+    fn get_transaction_count(&self, address: Address) -> RpcWithBlock<Address, U64, u64> {
+        let multi_provider = self.clone();
+        RpcWithBlock::new_provider(move |block_id| {
+            multi_provider.with_failover(move |provider| async move {
+                provider.get_transaction_count(address).block_id(block_id).await
+            })
+        })
+    }
+
+    fn get_transaction_receipt(
+        &self,
+        hash: B256,
+    ) -> ProviderCall<(B256,), Option<TransactionReceipt>> {
+        let hash_copy = hash;
+        self.with_failover(move |provider| provider.get_transaction_receipt(hash_copy))
+    }
+
+    async fn get_uncle(
+        &self,
+        _tag: BlockId,
+        _idx: u64,
+    ) -> TransportResult<Option<<Ethereum as Network>::BlockResponse>> {
+        panic!("not implemented");
+    }
+
+    /// Gets the number of uncles for the block specified by the tag [BlockId].
+    async fn get_uncle_count(&self, _tag: BlockId) -> TransportResult<u64> {
+        panic!("not implemented");
+    }
+
+    fn get_max_priority_fee_per_gas(&self) -> ProviderCall<NoParams, U128, u128> {
+        self.with_failover(|provider| provider.get_max_priority_fee_per_gas())
+    }
+
+    async fn new_block_filter(&self) -> TransportResult<U256> {
+        self.execute_with_provider_failover(
+            |provider| async move { provider.new_block_filter().await },
+        )
+        .await
+    }
+
+    async fn new_filter(&self, filter: &Filter) -> TransportResult<U256> {
+        self.execute_with_provider_failover(|provider| {
+            let filter = filter.clone();
+            async move { provider.new_filter(&filter).await }
+        })
+        .await
+    }
+
+    async fn new_pending_transactions_filter(&self, full: bool) -> TransportResult<U256> {
+        self.execute_with_provider_failover(|provider| async move {
+            provider.new_pending_transactions_filter(full).await
+        })
+        .await
+    }
+
+    async fn send_raw_transaction(
+        &self,
+        encoded_tx: &[u8],
+    ) -> TransportResult<PendingTransactionBuilder<Ethereum>> {
+        self.execute_with_provider_failover(|provider| async move {
+            provider.send_raw_transaction(encoded_tx).await
+        })
+        .await
+    }
+
+    async fn send_raw_transaction_conditional(
+        &self,
+        encoded_tx: &[u8],
+        conditional: TransactionConditional,
+    ) -> TransportResult<PendingTransactionBuilder<Ethereum>> {
+        self.execute_with_provider_failover(move |provider| {
+            let conditional = conditional.clone();
+            async move { provider.send_raw_transaction_conditional(encoded_tx, conditional).await }
+        })
+        .await
+    }
+
+    async fn send_transaction_internal(
+        &self,
+        tx: SendableTx<Ethereum>,
+    ) -> TransportResult<PendingTransactionBuilder<Ethereum>> {
+        self.execute_with_provider_failover(move |provider| {
+            let tx = tx.clone();
+            async move { provider.send_transaction_internal(tx).await }
+        })
+        .await
+    }
+
+    async fn sign_transaction(
+        &self,
+        tx: <Ethereum as Network>::TransactionRequest,
+    ) -> TransportResult<Bytes> {
+        self.execute_with_provider_failover(move |provider| {
+            let tx = tx.clone();
+            async move { provider.sign_transaction(tx).await }
+        })
+        .await
+    }
+
+    fn subscribe_blocks(
+        &self,
+    ) -> GetSubscription<(SubscriptionKind,), <Ethereum as Network>::HeaderResponse> {
+        panic!("not implemented")
+    }
+
+    fn subscribe_full_blocks(&self) -> SubFullBlocks<Ethereum> {
+        panic!("not implemented")
+    }
+
+    fn subscribe_pending_transactions(&self) -> GetSubscription<(SubscriptionKind,), B256> {
+        panic!("not implemented")
+    }
+
+    fn subscribe_full_pending_transactions(
+        &self,
+    ) -> GetSubscription<(SubscriptionKind, Params), <Ethereum as Network>::TransactionResponse>
+    {
+        panic!("not implemented")
+    }
+
+    fn subscribe_logs(&self, _filter: &Filter) -> GetSubscription<(SubscriptionKind, Params), Log> {
+        panic!("not implemented")
+    }
+
+    fn subscribe<P, R>(&self, _params: P) -> GetSubscription<P, R>
+    where
+        P: RpcSend,
+        R: RpcRecv,
+        Self: Sized,
+    {
+        panic!("not implemented")
+    }
+
+    /// Cancels a subscription given the subscription ID.
+    async fn unsubscribe(&self, _id: B256) -> TransportResult<()> {
+        panic!("not implemented")
+    }
+
+    fn syncing(&self) -> ProviderCall<NoParams, alloy::rpc::types::SyncStatus> {
+        self.with_failover(|provider| provider.syncing())
+    }
+
+    fn get_client_version(&self) -> ProviderCall<NoParams, String> {
+        self.with_failover(|provider| provider.get_client_version())
+    }
+
+    fn get_sha3(&self, data: &[u8]) -> ProviderCall<(String,), B256> {
+        let data = data.to_owned();
+        self.with_failover(move |provider| provider.get_sha3(&data))
+    }
+
+    fn get_net_version(&self) -> ProviderCall<NoParams, U64, u64> {
+        self.with_failover(|provider| provider.get_net_version())
+    }
+
+    async fn raw_request<P, R>(&self, method: Cow<'static, str>, params: P) -> TransportResult<R>
+    where
+        P: RpcSend,
+        R: RpcRecv,
+        Self: Sized,
+    {
+        self.execute_with_provider_failover(move |provider| {
+            let method = method.clone();
+            let params = params.clone();
+            async move { provider.raw_request(method, params).await }
+        })
+        .await
+    }
+
+    async fn raw_request_dyn(
+        &self,
+        method: Cow<'static, str>,
+        params: &RawValue,
+    ) -> TransportResult<Box<RawValue>> {
+        self.execute_with_provider_failover(move |provider| {
+            let method = method.clone();
+            async move { provider.raw_request_dyn(method, params).await }
+        })
+        .await
     }
 }
 
@@ -557,7 +927,7 @@ where
         &self,
         params: EthCallParams<N>,
     ) -> TransportResult<ProviderCall<EthCallParams<N>, Resp>> {
-        Ok(self.provider_call_with_retry(move |provider| {
+        Ok(self.with_failover(move |provider| {
             let params = params.clone();
             async move {
                 let weak_client = provider.root().weak_client();
@@ -571,10 +941,10 @@ where
         &self,
         params: EthCallParams<N>,
     ) -> TransportResult<ProviderCall<EthCallParams<N>, Resp>> {
-        Ok(self.provider_call_with_retry(move |provider| {
+        Ok(self.with_failover(move |provider| {
             let params = params.clone();
             async move {
-                let weak_client = provider.root().weak_client();
+                let weak_client = provider.weak_client();
                 let call_result = Caller::estimate_gas(&weak_client, params)?;
                 call_result.await
             }
@@ -586,7 +956,7 @@ where
         params: EthCallManyParams<'_>,
     ) -> TransportResult<ProviderCall<EthCallManyParams<'static>, Resp>> {
         let owned_params = params.into_owned();
-        Ok(self.provider_call_with_retry(move |provider| {
+        Ok(self.with_failover(move |provider| {
             let cloned_params = owned_params.clone();
             async move {
                 let weak_client = provider.root().weak_client();
@@ -603,13 +973,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_urls() {
-        let result = MultiRpcProvider::new(vec![], 1).await;
+        let result = MultiRpcProvider::new(vec![], Some(1)).await;
         assert!(matches!(result, Err(MultiRpcError::NoProvidersConfigured)));
     }
 
     #[tokio::test]
     async fn test_invalid_urls() {
-        let result = MultiRpcProvider::new(vec!["invalid://url".to_string()], 1).await;
+        let result =
+            MultiRpcProvider::new(vec![Url::parse("invalid://url").unwrap()], Some(1)).await;
         assert!(matches!(result, Err(MultiRpcError::NoWorkingProviders(_))));
     }
 }

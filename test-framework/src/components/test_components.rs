@@ -584,7 +584,7 @@ impl TestComponents {
             maestro_url = format!("http://localhost:{}", maestro_config.port);
             info!("Starting batch sequencer...");
             let batch_sequencer_config = BatchSequencerConfig {
-                chain_id: SEQUENCING_CHAIN_ID,
+                chain_id: options.appchain_chain_id,
                 valkey_url: valkey_url.clone(),
                 private_key: PRIVATE_KEY.to_string(),
                 sequencing_address: sequencing_contract_address,
