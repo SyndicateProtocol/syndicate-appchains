@@ -50,7 +50,7 @@ pub struct MultiRpcProvider {
     /// Currently active provider
     active_provider: ArcSwap<FilledProvider>,
     /// Index of currently active provider
-    active_provider_index: AtomicUsize,
+    active_provider_index: Arc<AtomicUsize>,
 }
 
 impl Clone for MultiRpcProvider {
@@ -58,9 +58,7 @@ impl Clone for MultiRpcProvider {
         Self {
             providers: self.providers.clone(),
             active_provider: ArcSwap::new(self.active_provider()),
-            active_provider_index: AtomicUsize::new(
-                self.active_provider_index.load(Ordering::Relaxed),
-            ),
+            active_provider_index: Arc::clone(&self.active_provider_index),
         }
     }
 }
@@ -185,7 +183,7 @@ impl MultiRpcProvider {
         Ok(Self {
             active_provider: ArcSwap::new(providers[0].clone()),
             providers,
-            active_provider_index: AtomicUsize::new(0),
+            active_provider_index: Arc::new(AtomicUsize::new(0)),
         })
     }
 
@@ -274,7 +272,7 @@ impl MultiRpcProvider {
         Self {
             active_provider: ArcSwap::new(providers[0].clone()),
             providers,
-            active_provider_index: AtomicUsize::new(0),
+            active_provider_index: Arc::new(AtomicUsize::new(0)),
         }
     }
 
@@ -290,7 +288,7 @@ impl MultiRpcProvider {
 
     /// Try to switch to the next available provider, returns false if we've completed a full cycle
     fn next_provider(&self, start_index: usize) -> bool {
-        let current = self.active_provider_index.load(Ordering::Relaxed);
+        let current = self.active_provider_index.load(Ordering::Acquire);
         let next = (current + 1) % self.providers.len();
 
         // If we've made a full circle back to where we started the iteration, we're done
@@ -298,7 +296,7 @@ impl MultiRpcProvider {
             return false;
         }
 
-        self.active_provider_index.store(next, Ordering::Relaxed);
+        self.active_provider_index.store(next, Ordering::SeqCst);
         self.active_provider.store(self.providers[next].clone());
         debug!(
             from_index = current,
@@ -316,7 +314,7 @@ impl MultiRpcProvider {
     }
 
     /// Determine if an RPC error should trigger a fallback to the next provider
-    const fn should_retry_with_next_provider(error: &RpcError<TransportErrorKind>) -> bool {
+    fn should_failover(error: &RpcError<TransportErrorKind>) -> bool {
         match error {
             // classes of errors that are likely to be provider-specific
             RpcError::Transport(_) |
@@ -327,8 +325,15 @@ impl MultiRpcProvider {
             RpcError::LocalUsageError(_) => true,
 
             // These are legitimate RPC responses/errors - don't retry
-            // Server returned error (e.g., invalid tx, gas estimation failed)
-            RpcError::ErrorResp(_) => false,
+            // (e.g., invalid tx, gas estimation failed)
+            // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
+            RpcError::ErrorResp(error) => ![
+                -32000, // invalid input
+                -32003, // tx rejected
+                -32602, // invalid params
+                -32600, // invalid request
+            ]
+            .contains(&error.code),
         }
     }
 
@@ -336,14 +341,13 @@ impl MultiRpcProvider {
     fn handle_error(&self, error: RpcError<TransportErrorKind>, start_index: usize) -> ControlFlow {
         let current_index = self.active_provider_index.load(Ordering::Relaxed);
 
-        if !Self::should_retry_with_next_provider(&error) {
+        if !Self::should_failover(&error) {
             debug!(
                 provider_index = current_index,
                 error = %error,
                 "RPC error response, returning immediately"
             );
 
-            self.reset_to_initial_provider();
             // Error is related to the RPC call itself, not the provider
             return ControlFlow::Err(error)
         }
@@ -421,7 +425,7 @@ pub enum ControlFlow {
 #[cfg_attr(not(target_family = "wasm"), async_trait::async_trait)]
 impl Provider<Ethereum> for MultiRpcProvider {
     fn root(&self) -> &RootProvider<Ethereum> {
-        self.providers[0].root() // TODO can this be improved?
+        self.providers[self.active_provider_index.load(Ordering::Acquire)].root()
     }
 
     fn get_accounts(&self) -> ProviderCall<NoParams, Vec<Address>> {
@@ -974,6 +978,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tracing::setup_global_logging;
+
+    #[ctor::ctor]
+    fn init() {
+        setup_global_logging();
+    }
 
     #[tokio::test]
     async fn test_empty_urls() {
@@ -988,7 +998,189 @@ mod tests {
         assert!(matches!(result, Err(MultiRpcError::NoWorkingProviders(_))));
     }
 
-    // TODO add a test that test the failover mechanism
-    // case 1 - server eturns some http herror
-    // case 2 - server returns a failed eth_call
+    #[tokio::test]
+    async fn test_individual_provider_failure() {
+        // Test that the failing provider actually fails when called directly
+        let (failing_provider, _server) = create_mock_provider_with_transport_error().await;
+
+        let result = failing_provider.get_block_number().await;
+        println!("Direct call to failing provider result: {result:?}");
+        assert!(result.is_err(), "Expected failing provider to actually fail");
+    }
+
+    #[tokio::test]
+    async fn test_failover_on_transport_error() {
+        // Create mock providers that simulate transport errors
+        let (failing_provider, _failing_server) = create_mock_provider_with_transport_error().await;
+        let (working_provider, _working_server) = create_mock_provider_working().await;
+
+        let multi_provider = MultiRpcProvider::from_providers(vec![
+            Arc::new(failing_provider),
+            Arc::new(working_provider),
+        ]);
+
+        // Verify initial state - should be using first provider (index 0)
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::Relaxed), 0);
+
+        // Make a call that should trigger failover due to transport error
+        let result = multi_provider.get_block_number().await;
+
+        println!("Result: {result:?}");
+        println!(
+            "Active provider index after call: {}",
+            multi_provider.active_provider_index.load(Ordering::Relaxed)
+        );
+
+        // Should succeed after failover
+        if result.is_err() {
+            println!("Error: {:?}", result.as_ref().err());
+        }
+        assert!(result.is_ok(), "Expected result to be Ok after failover, got: {result:?}");
+
+        // Should have switched to second provider (index 1)
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn test_no_failover_on_rpc_error_response() {
+        //1st rpc will return an internal error, should failover (-32603 = internal server error)
+        let (rpc_internal_error_provider, _rpc_server) =
+            create_mock_provider_with_rpc_error(-32603).await;
+        //2nd rpc will return an expected API error, should not failover (-32000 = invalid input)
+        let (rpc_error_provider, _rpc_server) = create_mock_provider_with_rpc_error(-32000).await;
+        // 3rd should never be reached
+        let (working_provider, _working_server) = create_mock_provider_working().await;
+
+        let multi_provider = MultiRpcProvider::from_providers(vec![
+            Arc::new(rpc_internal_error_provider),
+            Arc::new(rpc_error_provider),
+            Arc::new(working_provider),
+        ]);
+
+        // Verify initial state
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::Relaxed), 0);
+
+        // Make a call that should NOT trigger failover due to RPC error response
+        let result = multi_provider.get_block_number().await;
+
+        // Should fail with the RPC error
+        assert!(result.is_err(), "Expected result to be Err after failover, got: {result:?}");
+
+        // index 0 should have failed over to index 1
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn test_all_providers_fail() {
+        // Create multiple failing providers
+        let (failing_provider1, _server1) = create_mock_provider_with_transport_error().await;
+        let (failing_provider2, _server2) = create_mock_provider_with_transport_error().await;
+
+        let multi_provider = MultiRpcProvider::from_providers(vec![
+            Arc::new(failing_provider1),
+            Arc::new(failing_provider2),
+        ]);
+
+        // Make a call - should try all providers and fail
+        let result = multi_provider.get_block_number().await;
+
+        // Should fail after exhausting all providers
+        assert!(result.is_err());
+
+        // Check error message indicates all providers failed
+        if let Err(error) = result {
+            assert!(matches!(error, RpcError::LocalUsageError(_)));
+        }
+    }
+
+    // Helper functions to create test providers
+    async fn create_mock_provider_with_transport_error() -> (FilledProvider, mockito::ServerGuard) {
+        use alloy::signers::local::PrivateKeySigner;
+
+        // Create a provider with an invalid URL to guarantee transport errors
+        let dummy_signer = PrivateKeySigner::random();
+        let dummy_wallet = alloy::network::EthereumWallet::from(dummy_signer);
+
+        // Use a URL that will definitely cause connection errors
+        let provider = ProviderBuilder::new()
+            .wallet(dummy_wallet)
+            .connect("http://127.0.0.1:1") // Port 1 is reserved and typically not available
+            .await
+            .expect("Should connect but fail at runtime");
+
+        // Return a dummy server that's not actually used
+        let server = mockito::Server::new_async().await;
+        (provider, server)
+    }
+
+    async fn create_mock_provider_with_rpc_error(
+        error_code: i64,
+    ) -> (FilledProvider, mockito::ServerGuard) {
+        use alloy::signers::local::PrivateKeySigner;
+        use serde_json::json;
+
+        let mut server = mockito::Server::new_async().await;
+
+        // Mock server returns JSON-RPC error (not transport error)
+        let error_response = json!({
+            "jsonrpc": "2.0",
+            "id": 0,
+            "error": {
+                "code": error_code,
+                "message": "Internal error"
+            }
+        });
+
+        server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(error_response.to_string())
+            .create_async()
+            .await;
+
+        let dummy_signer = PrivateKeySigner::random();
+        let dummy_wallet = alloy::network::EthereumWallet::from(dummy_signer);
+
+        let provider = ProviderBuilder::new()
+            .wallet(dummy_wallet)
+            .connect(&server.url())
+            .await
+            .expect("Should connect to RPC error mock server");
+
+        (provider, server)
+    }
+
+    async fn create_mock_provider_working() -> (FilledProvider, mockito::ServerGuard) {
+        use alloy::signers::local::PrivateKeySigner;
+        use serde_json::json;
+
+        let mut server = mockito::Server::new_async().await;
+
+        // Mock server returns successful JSON-RPC responses
+        let success_response = json!({
+            "jsonrpc": "2.0",
+            "id": 0,
+            "result": "0x1"
+        });
+
+        server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(success_response.to_string())
+            .create_async()
+            .await;
+
+        let dummy_signer = PrivateKeySigner::random();
+        let dummy_wallet = alloy::network::EthereumWallet::from(dummy_signer);
+
+        let provider = ProviderBuilder::new()
+            .wallet(dummy_wallet)
+            .connect(&server.url())
+            .await
+            .expect("Should connect to working mock server");
+
+        (provider, server)
+    }
 }

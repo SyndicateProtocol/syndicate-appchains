@@ -15,6 +15,7 @@ alloy = { workspace = true, features = [
   "json-rpc",
   "k256",
   "providers",
+  "pubsub",
   "reqwest",
   "rlp",
   "rpc-types",
@@ -48,6 +49,9 @@ tracing-opentelemetry              = { workspace = true }
 tracing-subscriber                 = { workspace = true, features = ["env-filter", "json"] }
 url                                = { workspace = true }
 
+[dev-dependencies]
+ctor    = { workspace = true }
+mockito = { workspace = true }
 
 [lints]
 workspace = true

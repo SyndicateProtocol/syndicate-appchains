@@ -343,7 +343,7 @@ mod tests {
     use super::*;
     use alloy::{
         primitives::{Address, U256},
-        providers::{ext::AnvilApi, Provider},
+        providers::ext::AnvilApi,
     };
     use prometheus_client::registry::Registry;
     use reqwest;
@@ -662,8 +662,7 @@ mod tests {
             Duration::from_secs(2)
         );
 
-        // Close Anvil and Valkey containers and test failure
-        drop(anvil);
+        // Close Valkey container and test failure
         drop(valkey);
 
         wait_until!(

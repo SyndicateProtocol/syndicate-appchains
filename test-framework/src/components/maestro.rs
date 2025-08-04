@@ -12,7 +12,6 @@ pub(super) struct MaestroConfig {
 }
 
 impl MaestroConfig {
-    // #[allow(dead_code)]
     #[allow(clippy::unwrap_used)]
     pub(super) fn cli_args(&self) -> Vec<String> {
         let mut args = vec![
