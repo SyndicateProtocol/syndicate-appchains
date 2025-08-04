@@ -30,7 +30,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use synd_maestro::valkey::{streams::consumer::StreamConsumer, valkey_metrics::ValkeyMetrics};
+use synd_maestro::valkey::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, instrument, trace, warn};
 
@@ -83,7 +83,7 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let mut metrics_state = MetricsState::default();
     let registry = &mut metrics_state.registry;
     let metrics = BatcherMetrics::new(registry);
-    let valkey_metrics = ValkeyMetrics::new(registry);
+    let valkey_metrics = metrics.valkey.clone();
 
     let cache_health_handler = cache_health_check_handler(conn.clone());
     tokio::spawn(start_http_server_with_aux_handlers(
@@ -101,7 +101,8 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
         "0-0".to_string(),
         Arc::new(valkey_metrics),
     );
-    let mut batcher = Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics);
+    let mut batcher =
+        Batcher::new(config, stream_consumer, sequencing_contract_instance, metrics.clone());
 
     let handle = tokio::spawn({
         async move {
@@ -343,7 +344,10 @@ mod tests {
     use prometheus_client::registry::Registry;
     use reqwest;
     use std::sync::Arc;
-    use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
+    use synd_maestro::valkey::{
+        streams::producer::{CheckFinalizationResult, StreamProducer},
+        valkey_metrics::ValkeyMetrics,
+    };
     use test_utils::{docker::start_valkey, port_manager::PortManager, wait_until};
     use url::Url;
 

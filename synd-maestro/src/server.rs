@@ -130,7 +130,7 @@ pub async fn send_raw_transaction_handler(
 
     let service = service_arc_arc.as_ref();
     let req_start = Instant::now();
-    service.metrics.increment_maestro_requests_total(1);
+    service.metrics.increment_transaction_requests(1);
 
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let (tx, signer) = validate_transaction(&raw_tx)?;
@@ -153,8 +153,8 @@ pub async fn send_raw_transaction_handler(
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
 
-    service.metrics.record_maestro_requests_duration_ms(req_start.elapsed());
-    service.metrics.increment_maestro_successful_transactions_total(1);
+    service.metrics.record_transaction_requests_duration_ms(req_start.elapsed());
+    service.metrics.increment_successful_transactions(1);
     Ok(tx_hash)
 }
 

@@ -127,7 +127,7 @@ pub async fn run(
             );
         }
         metrics.record_blocks_per_slot(blocks_per_slot);
-        metrics.record_last_slot_created(mblock.slot.seq_block_number);
+        metrics.record_last_slot(mblock.slot.seq_block_number);
     }
 }
 
