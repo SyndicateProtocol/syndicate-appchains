@@ -116,9 +116,6 @@ pub enum MultiRpcError {
     NoWorkingProviders(Vec<Url>),
 }
 
-// TODO revisit the order of the providers, the current way we determine the end of iteration is
-// kinda dumb
-
 impl MultiRpcProvider {
     /// Create a new `MultiRpcProvider` from a list of RPC URLs (backward compatibility)
     /// Note: This creates providers without wallet functionality
@@ -291,19 +288,24 @@ impl MultiRpcProvider {
         (*self.active_provider.load()).clone()
     }
 
-    /// Try to switch to the next available provider, returns false if no more providers are
-    /// available
-    fn next_provider(&self) -> bool {
+    /// Try to switch to the next available provider, returns false if we've completed a full cycle
+    fn next_provider(&self, start_index: usize) -> bool {
         let current = self.active_provider_index.load(Ordering::Relaxed);
-        let next = current + 1;
+        let next = (current + 1) % self.providers.len();
 
-        if next >= self.providers.len() {
+        // If we've made a full circle back to where we started the iteration, we're done
+        if next == start_index {
             return false;
         }
 
         self.active_provider_index.store(next, Ordering::Relaxed);
         self.active_provider.store(self.providers[next].clone());
-        debug!(from_index = current, to_index = next, "Switched to fallback provider");
+        debug!(
+            from_index = current,
+            to_index = next,
+            start_index = start_index,
+            "Switched to fallback provider"
+        );
         true
     }
 
@@ -331,7 +333,7 @@ impl MultiRpcProvider {
     }
 
     /// Handle an error and determine if we should try the next provider
-    fn handle_error(&self, error: RpcError<TransportErrorKind>) -> ControlFlow {
+    fn handle_error(&self, error: RpcError<TransportErrorKind>, start_index: usize) -> ControlFlow {
         let current_index = self.active_provider_index.load(Ordering::Relaxed);
 
         if !Self::should_retry_with_next_provider(&error) {
@@ -351,7 +353,7 @@ impl MultiRpcProvider {
             error = %error,
             "Transport/connectivity error, trying next provider"
         );
-        if self.next_provider() {
+        if self.next_provider(start_index) {
             ControlFlow::RetryWithNextProvider
         } else {
             ControlFlow::ErrAllProvidersFailed
@@ -367,11 +369,13 @@ impl MultiRpcProvider {
         F: Fn(Arc<FilledProvider>) -> Fut + Send,
         Fut: Future<Output = Result<T, RpcError<TransportErrorKind>>>,
     {
+        let start_index = self.active_provider_index.load(Ordering::Relaxed);
+
         loop {
             let provider = self.active_provider();
             match operation(provider).await {
                 Ok(result) => return Ok(result),
-                Err(e) => match self.handle_error(e) {
+                Err(e) => match self.handle_error(e, start_index) {
                     ControlFlow::RetryWithNextProvider => {}
                     ControlFlow::ErrAllProvidersFailed => {
                         return Err(RpcError::LocalUsageError(
@@ -983,4 +987,8 @@ mod tests {
             MultiRpcProvider::new(vec![Url::parse("invalid://url").unwrap()], Some(1)).await;
         assert!(matches!(result, Err(MultiRpcError::NoWorkingProviders(_))));
     }
+
+    // TODO add a test that test the failover mechanism
+    // case 1 - server eturns some http herror
+    // case 2 - server returns a failed eth_call
 }
