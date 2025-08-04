@@ -70,6 +70,8 @@ event ChallengeResolved(PendingAssertion);
 
 event TeeInput(TeeTrustedInput input);
 
+event KeyManagerUpdate(ITeeKeyManager newTeeKeyManager, ITeeKeyManager oldTeeKeyManager);
+
 /**
  * @title TeeModule Contract
  */
@@ -80,9 +82,9 @@ contract TeeModule is Ownable(msg.sender) {
     // the l1 block contract or bridge from the l1 chain to the sequencing chain (when the settlement chain is the same as the l1 chain)
     address public immutable l1BlockOrBridge;
     bool public immutable isL1Chain;
-    ITeeKeyManager public immutable teeKeyManager;
 
     // TEE variables
+    ITeeKeyManager public teeKeyManager;
     TeeTrustedInput public teeTrustedInput;
     PendingAssertion[] public pendingAssertions;
     //#olympix-ignore-uninitialized-state-variable
@@ -249,5 +251,11 @@ contract TeeModule is Ownable(msg.sender) {
         //#olympix-ignore-low-level-call-params-verified
         (bool success,) = payable(dest).call{value: address(this).balance}("");
         require(success, "payment failed");
+    }
+
+    function updateKeyManager(ITeeKeyManager newTeeKeyManager) external onlyOwner {
+        require(address(newTeeKeyManager).code.length > 0, "teeKeyManager address does not have any code");
+        emit KeyManagerUpdate(newTeeKeyManager, teeKeyManager);
+        teeKeyManager = newTeeKeyManager;
     }
 }
