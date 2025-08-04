@@ -139,7 +139,11 @@ jobs:
 
       - name: Run E2E withdrawal tests
         if: steps.diff.outputs.run_tests == 'true'
-        run: cargo build && cargo nextest run --workspace -E 'test(e2e_tee_withdrawal)' --test-threads=1
+        run: |
+          RUST_LOG="common=debug,shared=debug,synd_batch_sequencer=debug,synd_block_builder=debug,synd_chain_ingestor=debug,synd_maestro=debug,synd_mchain=debug,synd_slotter=debug,synd_tee_attestation_zk_proofs_aws_nitro=debug,synd_tee_attestation_zk_proofs_sp1_script=debug,synd_tee_attestation_zk_proofs_submitter=debug,synd_translator=debug,test_framework=debug,test_utils=debug,info" \
+          RUST_LOG_DISABLE_JSON="true" \
+          RUST_LOG_DISABLE_TELEMETRY="true" \
+          cargo build && cargo nextest run --workspace -E 'test(e2e_tee_withdrawal)' --test-threads=1
 
       # Needs to be the last job step
       - name: Notify Slack on Failure
