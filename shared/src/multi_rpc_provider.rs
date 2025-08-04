@@ -4,9 +4,9 @@
 //! multiple RPC endpoints for the same chain.
 
 use alloy::{
-    eips::BlockNumberOrTag, network::Network, primitives::{Address, ChainId, B256, U256}, providers::{
-         Caller, EthCall, EthCallManyParams, EthCallParams, Provider, ProviderBuilder, ProviderCall, RootProvider, WalletProvider 
-    }, rpc::{client::RpcClient, json_rpc::RpcRecv, types::{TransactionReceipt, TransactionRequest}}, transports::{layers::RetryBackoffLayer, RpcError, TransportErrorKind, TransportResult}
+    consensus::Account, eips::BlockNumberOrTag, network::{Ethereum, Network}, primitives::{self, Address, Bytes, ChainId, StorageKey, B256, U128, U256, U64}, providers::{
+          Caller, EthCall, EthCallManyParams, EthCallParams, Provider, ProviderBuilder, ProviderCall, RootProvider, RpcWithBlock 
+    }, rpc::{client::{NoParams, RpcClient}, json_rpc::{RpcRecv, RpcSend}, types::{simulate::{SimulatePayload, SimulatedBlock}, AccountInfo, Block, EIP1186AccountProofResponse, TransactionReceipt, TransactionRequest}}, transports::{layers::RetryBackoffLayer, RpcError, TransportErrorKind, TransportResult}
 };
 use arc_swap::ArcSwap;
 use std::{fmt, future::Future, pin::Pin, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
@@ -315,7 +315,7 @@ impl MultiRpcProvider {
     /// Helper method to retry an operation with automatic failover
     async fn retry_with_fallback<T, F, Fut>(&self, operation: F) -> Result<T, RpcError<TransportErrorKind>>
     where
-        F: Fn(Arc<FilledProvider>) -> Fut,
+        F: Fn(Arc<FilledProvider>) -> Fut + Send,
         Fut: Future<Output = Result<T, RpcError<TransportErrorKind>>>,
     {
         loop {
@@ -332,6 +332,21 @@ impl MultiRpcProvider {
             }
         }
     }
+    
+    fn provider_call_with_retry<Params, Resp, Output, Map, Fut, F>(&self, operation: F) -> ProviderCall<Params, Resp, Output, Map > 
+    where
+        F: Fn(Arc<FilledProvider>) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<Output, RpcError<TransportErrorKind>>> + Send,
+        Params: RpcSend,
+        Resp: RpcRecv,
+        Map: Fn(Resp) -> Output,
+    {
+        let multi_provider = self.clone();
+        let future: Pin<Box<dyn Future<Output = Result<Output, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
+            multi_provider.retry_with_fallback(operation).await
+        });
+        ProviderCall::from(future)
+    }
 }
 
 
@@ -346,43 +361,32 @@ pub enum ControlFlow {
 
 // Implement Provider trait with REAL failover logic that cycles through providers
 #[allow(clippy::type_complexity)]
-impl Provider<alloy::network::Ethereum> for MultiRpcProvider {
-    fn root(&self) -> &RootProvider<alloy::network::Ethereum> {
+impl Provider<Ethereum> for MultiRpcProvider {
+    fn root(&self) -> &RootProvider<Ethereum> {
         self.providers[0].root() // TODO can this be improved?
     }
 
-    fn get_block_number(&self) -> ProviderCall<alloy::rpc::client::NoParams, alloy::primitives::U64, u64> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<u64, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.get_block_number().await.map_err(|e| {
-                RpcError::LocalUsageError(e.to_string().into())
-            })
-        });
-        ProviderCall::from(future)
+    fn get_block_number(&self) -> ProviderCall<NoParams, U64, u64> {
+        self.provider_call_with_retry(|provider| provider.get_block_number())
     }
 
-    // TODO fix this and all the other fns that use active_provider()
-    fn call(&self, tx: TransactionRequest) -> EthCall<alloy::network::Ethereum, alloy::primitives::Bytes> {
+    fn call(&self, tx: TransactionRequest) -> EthCall<Ethereum, Bytes> {
         EthCall::call(self.clone(),tx).block(BlockNumberOrTag::Pending.into())
     }
 
-    fn estimate_gas(&self, tx: TransactionRequest) -> EthCall<alloy::network::Ethereum, alloy::primitives::U64, u64> {
-        // For EthCall, delegate to active provider for now (still better than always first provider)
-        // EthCall has complex construction requirements that would need more work
-        self.active_provider().estimate_gas(tx)
+    fn estimate_gas(&self, tx: TransactionRequest) -> EthCall<Ethereum, U64, u64> {
+        EthCall::gas_estimate(self.clone(),tx).block(BlockNumberOrTag::Pending.into()).map_resp(|r| r.to::<u64>())
     }
 
-
     fn get_transaction_by_hash(&self, hash: B256) -> ProviderCall<(B256,), Option<alloy::rpc::types::Transaction>> {
-        // For now, delegate to active provider (still better than always first provider)
-        // Would need to implement custom failover loop with proper error handling
-        self.active_provider().get_transaction_by_hash(hash)
+        let hash_copy = hash;
+        self.provider_call_with_retry(move |provider| provider.get_transaction_by_hash(hash_copy))
     }
 
     fn simulate<'req>(
         &self,
-        payload: &'req alloy::rpc::types::simulate::SimulatePayload,
-    ) -> alloy::providers::RpcWithBlock<&'req alloy::rpc::types::simulate::SimulatePayload, Vec<alloy::rpc::types::simulate::SimulatedBlock<alloy::rpc::types::Block>>> {
+        payload: &'req SimulatePayload,
+    ) -> RpcWithBlock<&'req SimulatePayload, Vec<SimulatedBlock<Block>>> {
         // For complex RpcWithBlock methods with lifetime parameters, delegate to active provider
         // This is still better than always using the first provider
         self.active_provider().simulate(payload)
@@ -391,57 +395,38 @@ impl Provider<alloy::network::Ethereum> for MultiRpcProvider {
     fn create_access_list<'a>(
         &self,
         request: &'a TransactionRequest,
-    ) -> alloy::providers::RpcWithBlock<&'a TransactionRequest, alloy::rpc::types::AccessListResult> {
+    ) -> RpcWithBlock<&'a TransactionRequest, alloy::rpc::types::AccessListResult> {
         // For complex RpcWithBlock methods with lifetime parameters, delegate to active provider
         // This is still better than always using the first provider
         self.active_provider().create_access_list(request)
     }
 
 
-    fn get_chain_id(&self) -> ProviderCall<alloy::rpc::client::NoParams, alloy::primitives::U64, u64> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<u64, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| provider.get_chain_id()).await
-        });
-        ProviderCall::from(future)
+    fn get_chain_id(&self) -> ProviderCall<NoParams, U64, u64> {
+        self.provider_call_with_retry(|provider| provider.get_chain_id())
     }
 
-    fn get_gas_price(&self) -> ProviderCall<alloy::rpc::client::NoParams, alloy::primitives::U128, u128> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<u128, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| provider.get_gas_price()).await
-        });
-        ProviderCall::from(future)
+    fn get_gas_price(&self) -> ProviderCall<NoParams, U128, u128> {
+        self.provider_call_with_retry(|provider| provider.get_gas_price())
     }
 
     fn get_transaction_receipt(&self, hash: B256) -> ProviderCall<(B256,), Option<TransactionReceipt>> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<Option<TransactionReceipt>, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.get_transaction_receipt(hash).await.map_err(|e| {
-                RpcError::LocalUsageError(e.to_string().into())
-            })
-        });
-        ProviderCall::from(future)
+        let hash_copy = hash;
+        self.provider_call_with_retry(move |provider| provider.get_transaction_receipt(hash_copy))
     }
 
-    fn get_balance(&self, address: Address) -> alloy::providers::RpcWithBlock<Address, U256> {
+    fn get_balance(&self, address: Address) -> RpcWithBlock<Address, U256> {
         let multi_provider = self.clone();
-        alloy::providers::RpcWithBlock::new_provider(move |block_id| {
-            let multi_provider = multi_provider.clone();
-            let future: Pin<Box<dyn Future<Output = Result<U256, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-                multi_provider.retry_with_fallback(|provider| async move {
-                    provider.get_balance(address).block_id(block_id).await
-                }).await.map_err(|e| {
-                    RpcError::LocalUsageError(e.to_string().into())
-                })
-            });
-            ProviderCall::from(future)
+        RpcWithBlock::new_provider(move |block_id| {
+            multi_provider.provider_call_with_retry(move |provider| async move {
+                provider.get_balance(address).block_id(block_id).await
+            })
         })
     }
 
-    fn get_transaction_count(&self, address: Address) -> alloy::providers::RpcWithBlock<Address, alloy::primitives::U64, u64> {
+    fn get_transaction_count(&self, address: Address) -> RpcWithBlock<Address, U64, u64> {
         let multi_provider = self.clone();
-        alloy::providers::RpcWithBlock::new_provider(move |block_id| {
+        RpcWithBlock::new_provider(move |block_id| {
             let multi_provider = multi_provider.clone();
             let future: Pin<Box<dyn Future<Output = Result<u64, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
                 multi_provider.retry_with_fallback(|provider| async move {
@@ -452,114 +437,74 @@ impl Provider<alloy::network::Ethereum> for MultiRpcProvider {
         })
     }
 
-    fn get_accounts(&self) -> ProviderCall<alloy::rpc::client::NoParams, Vec<Address>> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<Vec<Address>, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| provider.get_accounts()).await
-        });
-        ProviderCall::from(future)
+    fn get_accounts(&self) -> ProviderCall<NoParams, Vec<Address>> {
+        self.provider_call_with_retry(|provider| provider.get_accounts())
     }
 
-    fn get_blob_base_fee(&self) -> ProviderCall<alloy::rpc::client::NoParams, alloy::primitives::U128, u128> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<u128, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| provider.get_blob_base_fee()).await
-        });
-        ProviderCall::from(future)
+    fn get_blob_base_fee(&self) -> ProviderCall<NoParams, U128, u128> {
+        self.provider_call_with_retry(|provider| provider.get_blob_base_fee())
     }
 
-    fn get_max_priority_fee_per_gas(&self) -> ProviderCall<alloy::rpc::client::NoParams, alloy::primitives::U128, u128> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<u128, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| provider.get_max_priority_fee_per_gas()).await
-        });
-        ProviderCall::from(future)
+    fn get_max_priority_fee_per_gas(&self) -> ProviderCall<NoParams, U128, u128> {
+        self.provider_call_with_retry(|provider| provider.get_max_priority_fee_per_gas())
     }
 
-    fn syncing(&self) -> ProviderCall<alloy::rpc::client::NoParams, alloy::rpc::types::SyncStatus> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<alloy::rpc::types::SyncStatus, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| provider.syncing()).await
-        });
-        ProviderCall::from(future)
+    fn syncing(&self) -> ProviderCall<NoParams, alloy::rpc::types::SyncStatus> {
+        self.provider_call_with_retry(|provider| provider.syncing())
     }
 
-    fn get_client_version(&self) -> ProviderCall<alloy::rpc::client::NoParams, String> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<String, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| provider.get_client_version()).await
-        });
-        ProviderCall::from(future)
+    fn get_client_version(&self) -> ProviderCall<NoParams, String> {
+        self.provider_call_with_retry(|provider| provider.get_client_version())
     }
 
-    fn get_net_version(&self) -> ProviderCall<alloy::rpc::client::NoParams, alloy::primitives::U64, u64> {
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<u64, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| provider.get_net_version()).await
-        });
-        ProviderCall::from(future)
+    fn get_net_version(&self) -> ProviderCall<NoParams, U64, u64> {
+        self.provider_call_with_retry(|provider| provider.get_net_version())
     }
 
     fn get_account_info(
         &self,
         address: Address,
-    ) -> alloy::providers::RpcWithBlock<Address, alloy::rpc::types::AccountInfo> {
+    ) -> RpcWithBlock<Address, AccountInfo> {
         let multi_provider = self.clone();
-        alloy::providers::RpcWithBlock::new_provider(move |block_id| {
-            let multi_provider = multi_provider.clone();
-            let future: Pin<Box<dyn Future<Output = Result<alloy::rpc::types::AccountInfo, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-                multi_provider.retry_with_fallback(|provider| async move {
-                    provider.get_account_info(address).block_id(block_id).await
-                }).await
-            });
-            ProviderCall::from(future)
+        RpcWithBlock::new_provider(move |block_id| {
+            multi_provider.provider_call_with_retry(move |provider| async move {
+                provider.get_account_info(address).block_id(block_id).await
+            })
         })
     }
 
-    fn get_account(&self, address: Address) -> alloy::providers::RpcWithBlock<Address, alloy::consensus::Account> {
+    fn get_account(&self, address: Address) -> RpcWithBlock<Address, Account> {
         let multi_provider = self.clone();
-        alloy::providers::RpcWithBlock::new_provider(move |block_id| {
-            let multi_provider = multi_provider.clone();
-            let future: Pin<Box<dyn Future<Output = Result<alloy::consensus::Account, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-                multi_provider.retry_with_fallback(|provider| async move {
-                    provider.get_account(address).block_id(block_id).await
-                }).await
-            });
-            ProviderCall::from(future)
+        RpcWithBlock::new_provider(move |block_id| {
+            multi_provider.provider_call_with_retry(move |provider| async move {
+                provider.get_account(address).block_id(block_id).await
+            })
         })
     }
 
-    fn get_code_at(&self, address: Address) -> alloy::providers::RpcWithBlock<Address, alloy::primitives::Bytes> {
+    fn get_code_at(&self, address: Address) -> RpcWithBlock<Address, Bytes> {
         let multi_provider = self.clone();
-        alloy::providers::RpcWithBlock::new_provider(move |block_id| {
-            let multi_provider = multi_provider.clone();
-            let future: Pin<Box<dyn Future<Output = Result<alloy::primitives::Bytes, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-                multi_provider.retry_with_fallback(|provider| async move {
-                    provider.get_code_at(address).block_id(block_id).await
-                }).await
-            });
-            ProviderCall::from(future)
+        RpcWithBlock::new_provider(move |block_id| {
+            multi_provider.provider_call_with_retry(move |provider| async move {
+                provider.get_code_at(address).block_id(block_id).await
+            })
         })
     }
+
 
     fn get_proof(
         &self,
         address: Address,
-        keys: Vec<alloy::primitives::StorageKey>,
-    ) -> alloy::providers::RpcWithBlock<(Address, Vec<alloy::primitives::StorageKey>), alloy::rpc::types::EIP1186AccountProofResponse> {
+        keys: Vec<StorageKey>,
+    ) -> RpcWithBlock<(Address, Vec<StorageKey>), EIP1186AccountProofResponse> {
         let multi_provider = self.clone();
-        alloy::providers::RpcWithBlock::new_provider(move |block_id| {
-            let multi_provider = multi_provider.clone();
-            let keys = keys.clone();
-            let future: Pin<Box<dyn Future<Output = Result<alloy::rpc::types::EIP1186AccountProofResponse, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-                multi_provider.retry_with_fallback(|provider| {
-                    let keys = keys.clone();
-                    async move {
-                        provider.get_proof(address, keys).block_id(block_id).await
-                    }
-                }).await
-            });
-            ProviderCall::from(future)
+        RpcWithBlock::new_provider(move |block_id| {
+            let keys_clone = keys.clone();
+            multi_provider.provider_call_with_retry(move |provider| {
+                let value = keys_clone.clone();
+                async move { provider.get_proof(address, value).block_id(block_id).await }
+                }
+            )    
         })
     }
 
@@ -567,24 +512,16 @@ impl Provider<alloy::network::Ethereum> for MultiRpcProvider {
         &self,
         address: Address,
         key: U256,
-    ) -> alloy::providers::RpcWithBlock<(Address, U256), U256> {
+    ) -> RpcWithBlock<(Address, U256), U256> {
         let multi_provider = self.clone();
-        alloy::providers::RpcWithBlock::new_provider(move |block_id| {
-            let multi_provider = multi_provider.clone();
-            let future: Pin<Box<dyn Future<Output = Result<U256, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-                multi_provider.retry_with_fallback(|provider| async move {
-                    provider.get_storage_at(address, key).block_id(block_id).await
-                }).await
-            });
-            ProviderCall::from(future)
+        RpcWithBlock::new_provider(move |block_id| {
+            multi_provider.provider_call_with_retry(move |provider| async move {
+                provider.get_storage_at(address, key).block_id(block_id).await
+            })
         })
     }
-
-
-    // TODO implement missing methods
 }
 
-// TODO implement this to be able to use it in eth_call, estimate_gas, etc.
 impl<N, Resp> Caller<N, Resp> for MultiRpcProvider 
 where
     N: Network,
@@ -594,21 +531,58 @@ where
         &self,
         params: EthCallParams<N>,
     ) -> TransportResult<ProviderCall<EthCallParams<N>, Resp>>{
-        todo!()
+        let multi_provider = self.clone();
+        let future: Pin<Box<dyn Future<Output = Result<Resp, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
+            multi_provider.retry_with_fallback(|provider| {
+                let params = params.clone();
+                async move {
+                    // Get weak reference to the underlying RPC client
+                    let weak_client = provider.root().weak_client();
+                    let call_result = Caller::call(&weak_client, params)?;
+                    call_result.await
+                }
+            }).await
+        });
+        Ok(ProviderCall::from(future))
     }
 
     fn estimate_gas(
         &self,
         params: EthCallParams<N>,
     ) -> TransportResult<ProviderCall<EthCallParams<N>, Resp>>{
-        todo!()
+        let multi_provider = self.clone();
+        let future: Pin<Box<dyn Future<Output = Result<Resp, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
+            multi_provider.retry_with_fallback(|provider| {
+                let params = params.clone();
+                async move {
+                    // Get weak reference to the underlying RPC client
+                    let weak_client = provider.root().weak_client();
+                    let call_result = Caller::estimate_gas(&weak_client, params)?;
+                    call_result.await
+                }
+            }).await
+        });
+        Ok(ProviderCall::from(future))
     }
 
     fn call_many(
         &self,
         params: EthCallManyParams<'_>,
     ) -> TransportResult<ProviderCall<EthCallManyParams<'static>, Resp>>{
-        todo!()
+        let multi_provider = self.clone();
+        let owned_params = params.into_owned();
+        let future: Pin<Box<dyn Future<Output = Result<Resp, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
+            multi_provider.retry_with_fallback(|provider| {
+                let owned_params = owned_params.clone();
+                async move {
+                    // Get weak reference to the underlying RPC client
+                    let weak_client = provider.root().weak_client();
+                    let call_result = <_ as Caller<N, Resp>>::call_many(&weak_client, owned_params)?;
+                    call_result.await
+                }
+            }).await
+        });
+        Ok(ProviderCall::from(future))
     }
 }
 
