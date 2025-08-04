@@ -12,13 +12,17 @@ version.workspace      = true
 alloy = { workspace = true, features = [
   "consensus",
   "contract",
+  "json-rpc",
   "k256",
   "providers",
   "reqwest",
   "rlp",
   "rpc-types",
+  "signer-local",
+  "signers",
 ] }
 
+arc-swap                           = { workspace = true }
 async-trait                        = { workspace = true }
 axum                               = { workspace = true }
 byte-unit                          = { workspace = true, features = ["default"] }

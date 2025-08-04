@@ -8,21 +8,20 @@ use crate::{
 use alloy::{
     network::EthereumWallet,
     primitives::{keccak256, Bytes},
-    providers::{Provider, ProviderBuilder, WalletProvider},
-    rpc::client::RpcClient,
+    providers::Provider,
     signers::local::PrivateKeySigner,
-    transports::{layers::RetryBackoffLayer, TransportError},
+    transports::TransportError,
 };
 use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::SyndicateSequencingChainInstance;
 use derivative::Derivative;
 use eyre::{eyre, Result};
 use redis::{aio::ConnectionManager, Client as ValkeyClient};
 use shared::{
+    multi_rpc_provider::{MultiRpcProvider, RetryConfig},
     service_start_utils::{
         cache_health_check_handler, start_http_server_with_aux_handlers, MetricsState,
     },
     tracing::SpanKind,
-    types::FilledProvider,
 };
 use std::{
     collections::VecDeque,
@@ -45,7 +44,7 @@ struct Batcher {
     /// The Stream consumer for the batcher
     stream_consumer: StreamConsumer,
     /// The sequencing contract provider for the batcher
-    sequencing_contract_instance: SyndicateSequencingChainInstance<FilledProvider>,
+    sequencing_contract_instance: SyndicateSequencingChainInstance<MultiRpcProvider>,
     /// The chain ID for the batcher
     chain_id: u64,
     /// The timeout for the batcher (default: 200ms)
@@ -121,32 +120,37 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
 
 async fn create_sequencing_contract_instance(
     config: &BatcherConfig,
-) -> Result<SyndicateSequencingChainInstance<FilledProvider>, TransportError> {
+) -> Result<SyndicateSequencingChainInstance<MultiRpcProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
 
-    let rpc_client = {
-        RetryBackoffLayer::new(
-            config.rpc_max_retries,
-            config.rpc_initial_backoff_ms,
-            config.rpc_compute_units_per_second,
-        )
-        .with_avg_unit_cost(config.rpc_compute_units_avg_request_cost);
-        RpcClient::builder().layer(())
-    }
-    .connect(config.sequencing_rpc_url.as_str())
-    .await?;
+    // Create retry configuration for rate limiting and backoff
+    let retry_config = RetryConfig::new(
+        config.rpc_max_retries,
+        config.rpc_initial_backoff_ms,
+        config.rpc_compute_units_per_second,
+        config.rpc_compute_units_avg_request_cost,
+    );
 
-    let sequencing_provider =
-        ProviderBuilder::new().wallet(EthereumWallet::from(signer)).connect_client(rpc_client);
-    Ok(SyndicateSequencingChainInstance::new(config.sequencing_address, sequencing_provider))
+    // Create MultiRpcProvider with wallet functionality and retry configuration
+    let urls = vec![config.sequencing_rpc_url.to_string()];
+    let multi_provider = MultiRpcProvider::new_with_wallet_and_retry(
+        urls,
+        config.chain_id,
+        EthereumWallet::from(signer),
+        Some(retry_config),
+    )
+    .await
+    .map_err(|e| TransportError::local_usage_str(&e.to_string()))?;
+
+    Ok(SyndicateSequencingChainInstance::new(config.sequencing_address, multi_provider))
 }
 
 impl Batcher {
     const fn new(
         config: &BatcherConfig,
         stream_consumer: StreamConsumer,
-        sequencing_contract_instance: SyndicateSequencingChainInstance<FilledProvider>,
+        sequencing_contract_instance: SyndicateSequencingChainInstance<MultiRpcProvider>,
         metrics: BatcherMetrics,
     ) -> Self {
         Self {
@@ -336,10 +340,8 @@ impl Batcher {
 mod tests {
     use super::*;
     use alloy::{
-        node_bindings::{Anvil, AnvilInstance},
         primitives::{Address, U256},
-        providers::ext::AnvilApi,
-        transports::mock::Asserter,
+        providers::{ext::AnvilApi, Provider},
     };
     use prometheus_client::registry::Registry;
     use reqwest;
@@ -348,13 +350,16 @@ mod tests {
         streams::producer::{CheckFinalizationResult, StreamProducer},
         valkey_metrics::ValkeyMetrics,
     };
-    use test_utils::{docker::start_valkey, port_manager::PortManager, wait_until};
+    use test_utils::{
+        anvil::start_anvil, chain_info::ChainInfo, docker::start_valkey, port_manager::PortManager,
+        wait_until,
+    };
     use url::Url;
 
     // Create a mock provider that always succeeds
     async fn create_mock_contract(
-        anvil: Option<&AnvilInstance>,
-    ) -> SyndicateSequencingChainInstance<FilledProvider> {
+        anvil: Option<&ChainInfo>,
+    ) -> SyndicateSequencingChainInstance<MultiRpcProvider> {
         let mock_address = Address::from([0; 20]); // Use a dummy address
 
         let signer = PrivateKeySigner::from_str(
@@ -365,21 +370,35 @@ mod tests {
         let mock_provider = if let Some(anvil) = anvil {
             let signer_address =
                 Address::from_str("0x06A85356DCb5b307096726FB86A78c59D38e08ee").unwrap();
-            let provider = ProviderBuilder::new()
-                .wallet(EthereumWallet::from(signer))
-                .connect(anvil.endpoint_url().as_str())
-                .await
-                .unwrap();
 
-            // Set balance at 100 ETH
+            // Give Anvil a moment to start up
+            tokio::time::sleep(Duration::from_millis(100)).await;
+
+            // Create a single-URL MultiRpcProvider for the anvil instance
+            let urls = vec![anvil.http_url.to_string()];
+            let multi_provider = MultiRpcProvider::new_with_wallet(
+                urls,
+                anvil.provider.get_chain_id().await.unwrap(),
+                EthereumWallet::from(signer.clone()),
+            )
+            .await
+            .unwrap();
+
+            // Set balance at 100 ETH using the underlying provider
+            let provider = multi_provider.active_provider();
             let balance = U256::from(100) * U256::from(10).pow(U256::from(18));
             provider.anvil_set_balance(signer_address, balance).await.unwrap();
-            provider
+            multi_provider
         } else {
+            // For mocked client, create providers directly without network connection
+            use alloy::{providers::ProviderBuilder, transports::mock::Asserter};
             let asserter = Asserter::new();
-            ProviderBuilder::new()
+            let mock_provider = ProviderBuilder::new()
                 .wallet(EthereumWallet::from(signer))
-                .connect_mocked_client(asserter)
+                .connect_mocked_client(asserter);
+
+            let urls = vec!["http://mock".to_string()];
+            MultiRpcProvider::from_providers(vec![Arc::new(mock_provider)])
         };
         SyndicateSequencingChainInstance::new(mock_address, mock_provider)
     }
@@ -539,7 +558,7 @@ mod tests {
         let metrics = BatcherMetrics::new(&mut registry);
         let metrics_clone = metrics.clone();
 
-        let anvil = Anvil::new().spawn();
+        let anvil = start_anvil(1).await.unwrap();
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
         let mut batcher =
             Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
@@ -597,7 +616,7 @@ mod tests {
         let metrics = BatcherMetrics::new(&mut registry);
         let metrics_clone = metrics.clone();
 
-        let anvil = Anvil::new().spawn();
+        let anvil = start_anvil(1).await.unwrap();
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
         let mut batcher =
             Batcher::new(&config, stream_consumer, sequencing_contract_instance, metrics);
@@ -616,6 +635,11 @@ mod tests {
     #[tokio::test]
     async fn test_health_endpoint() {
         let (valkey, valkey_url) = start_valkey().await.unwrap();
+        let anvil = start_anvil(1).await.unwrap();
+
+        // Give Anvil a moment to start up
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
         let config = BatcherConfig {
             max_batch_size: byte_unit::Byte::from_u64(1024),
             valkey_url,
@@ -624,7 +648,7 @@ mod tests {
             timeout: Duration::from_millis(200),
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
-            sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            sequencing_rpc_url: Url::parse(&anvil.http_url).unwrap(),
             rpc_max_retries: 10,
             port: PortManager::instance().next_port().await,
             sequencing_address: Address::ZERO,
@@ -643,7 +667,8 @@ mod tests {
             Duration::from_secs(2)
         );
 
-        // Close Valkey container and test failure
+        // Close Anvil and Valkey containers and test failure
+        drop(anvil);
         drop(valkey);
 
         wait_until!(
