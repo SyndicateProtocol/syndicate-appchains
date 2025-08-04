@@ -3,16 +3,38 @@
 //! This module provides a `MultiRpcProvider` that supports automatic failover between
 //! multiple RPC endpoints for the same chain.
 
+use crate::types::FilledProvider;
 use alloy::{
-    consensus::Account, eips::BlockNumberOrTag, network::{Ethereum, Network}, primitives::{self, Address, Bytes, ChainId, StorageKey, B256, U128, U256, U64}, providers::{
-          Caller, EthCall, EthCallManyParams, EthCallParams, Provider, ProviderBuilder, ProviderCall, RootProvider, RpcWithBlock 
-    }, rpc::{client::{NoParams, RpcClient}, json_rpc::{RpcRecv, RpcSend}, types::{simulate::{SimulatePayload, SimulatedBlock}, AccountInfo, Block, EIP1186AccountProofResponse, TransactionReceipt, TransactionRequest}}, transports::{layers::RetryBackoffLayer, RpcError, TransportErrorKind, TransportResult}
+    consensus::Account,
+    eips::BlockNumberOrTag,
+    network::{Ethereum, Network},
+    primitives::{Address, Bytes, ChainId, StorageKey, B256, U128, U256, U64},
+    providers::{
+        Caller, EthCall, EthCallManyParams, EthCallParams, Provider, ProviderBuilder, ProviderCall,
+        RootProvider, RpcWithBlock, WalletProvider,
+    },
+    rpc::{
+        client::{NoParams, RpcClient},
+        json_rpc::{RpcRecv, RpcSend},
+        types::{
+            simulate::{SimulatePayload, SimulatedBlock},
+            AccountInfo, Block, EIP1186AccountProofResponse, TransactionReceipt,
+            TransactionRequest,
+        },
+    },
+    transports::{layers::RetryBackoffLayer, RpcError, TransportErrorKind, TransportResult},
 };
 use arc_swap::ArcSwap;
-use std::{fmt, future::Future, pin::Pin, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
+use std::{
+    fmt,
+    future::Future,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+};
 use tracing::{debug, error, info, warn};
-
-use crate::types::FilledProvider;
 
 /// Multi-RPC provider that handles multiple RPC endpoints with automatic failover
 pub struct MultiRpcProvider {
@@ -29,16 +51,16 @@ impl Clone for MultiRpcProvider {
         Self {
             providers: self.providers.clone(),
             active_provider: ArcSwap::new(self.active_provider()),
-            active_provider_index: AtomicUsize::new(self.active_provider_index.load(Ordering::Relaxed)),
+            active_provider_index: AtomicUsize::new(
+                self.active_provider_index.load(Ordering::Relaxed),
+            ),
         }
     }
 }
 
 impl fmt::Debug for MultiRpcProvider {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MultiRpcProvider")
-            .field("provider_count", &self.providers.len())
-            .finish()
+        f.debug_struct("MultiRpcProvider").field("provider_count", &self.providers.len()).finish()
     }
 }
 
@@ -57,13 +79,13 @@ pub struct RetryConfig {
 
 impl RetryConfig {
     /// Create a new retry configuration
-    pub const fn new(max_retries: u32, initial_backoff_ms: u64, compute_units_per_second: u64, avg_request_cost: u64) -> Self {
-        Self {
-            max_retries,
-            initial_backoff_ms,
-            compute_units_per_second,
-            avg_request_cost,
-        }
+    pub const fn new(
+        max_retries: u32,
+        initial_backoff_ms: u64,
+        compute_units_per_second: u64,
+        avg_request_cost: u64,
+    ) -> Self {
+        Self { max_retries, initial_backoff_ms, compute_units_per_second, avg_request_cost }
     }
 }
 
@@ -87,7 +109,73 @@ pub enum MultiRpcError {
     NoWorkingProviders(Vec<String>),
 }
 
+// TODO implement missing methods from Provider trait
+
 impl MultiRpcProvider {
+    /// Create a new `MultiRpcProvider` from a list of RPC URLs (backward compatibility)
+    /// Note: This creates providers without wallet functionality
+    pub async fn new(urls: Vec<String>, chain_id: ChainId) -> Result<Self, MultiRpcError> {
+        // Create a dummy wallet for for callers that don't have a wallet
+        use alloy::signers::local::PrivateKeySigner;
+        let dummy_signer = PrivateKeySigner::random();
+        let dummy_wallet = alloy::network::EthereumWallet::from(dummy_signer);
+
+        Self::new_with_wallet(urls, chain_id, dummy_wallet).await
+    }
+
+    /// Create a new `MultiRpcProvider` from a list of RPC URLs with wallet functionality
+    pub async fn new_with_wallet(
+        urls: Vec<String>,
+        chain_id: ChainId,
+        wallet: alloy::network::EthereumWallet,
+    ) -> Result<Self, MultiRpcError> {
+        Self::new_with_wallet_and_retry(urls, chain_id, wallet, None).await
+    }
+
+    /// Create a new `MultiRpcProvider` from a list of RPC URLs with wallet functionality and retry
+    /// configuration
+    pub async fn new_with_wallet_and_retry(
+        urls: Vec<String>,
+        chain_id: ChainId,
+        wallet: alloy::network::EthereumWallet,
+        retry_config: Option<RetryConfig>,
+    ) -> Result<Self, MultiRpcError> {
+        if urls.is_empty() {
+            return Err(MultiRpcError::NoProvidersConfigured);
+        }
+
+        let mut providers = Vec::new();
+        let mut working_urls = Vec::new();
+
+        for (index, url) in urls.iter().enumerate() {
+            if let Some(provider) = Self::try_connect_wallet_provider(
+                url,
+                chain_id,
+                wallet.clone(),
+                retry_config.as_ref(),
+                index,
+            )
+            .await
+            {
+                providers.push(Arc::new(provider));
+                working_urls.push(url.clone());
+            }
+        }
+
+        if providers.is_empty() {
+            return Err(MultiRpcError::NoWorkingProviders(urls));
+        }
+
+        debug!(chain_id = %chain_id, working_count = providers.len(), total_count = urls.len(), "Created MultiRpcProvider");
+        info!(working_urls = ?working_urls, chain_id = %chain_id, "Working URLs for chain");
+
+        Ok(Self {
+            active_provider: ArcSwap::new(providers[0].clone()),
+            providers,
+            active_provider_index: AtomicUsize::new(0),
+        })
+    }
+
     /// Verify that a provider's chain ID matches the expected chain ID
     async fn verify_chain_id<P: Provider>(
         provider: &P,
@@ -135,18 +223,14 @@ impl MultiRpcProvider {
                     config.max_retries,
                     config.initial_backoff_ms,
                     config.compute_units_per_second,
-                ).with_avg_unit_cost(config.avg_request_cost);
-                RpcClient::builder()
-                .layer(())
+                )
+                .with_avg_unit_cost(config.avg_request_cost);
+                RpcClient::builder().layer(())
             }
-                .connect(url)
-                .await;
-                
-                rpc_client.map(|client| {
-                    ProviderBuilder::new()
-                        .wallet(wallet)
-                        .connect_client(client)
-                })
+            .connect(url)
+            .await;
+
+            rpc_client.map(|client| ProviderBuilder::new().wallet(wallet).connect_client(client))
         } else {
             // Create provider without retry layer
             ProviderBuilder::new().wallet(wallet).connect(url).await
@@ -163,68 +247,16 @@ impl MultiRpcProvider {
         }
     }
 
-    /// Create a new `MultiRpcProvider` from a list of RPC URLs (backward compatibility)
-    /// Note: This creates providers without wallet functionality
-    pub async fn new(urls: Vec<String>, chain_id: ChainId) -> Result<Self, MultiRpcError> {
-        // Create a dummy wallet for for callers that don't have a wallet
-        use alloy::signers::local::PrivateKeySigner;
-        let dummy_signer = PrivateKeySigner::random();
-        let dummy_wallet = alloy::network::EthereumWallet::from(dummy_signer);
-        
-        Self::new_with_wallet(urls, chain_id, dummy_wallet).await
-    }
-
-    /// Create a new `MultiRpcProvider` from a list of RPC URLs with wallet functionality
-    pub async fn new_with_wallet(
-        urls: Vec<String>, 
-        chain_id: ChainId,
-        wallet: alloy::network::EthereumWallet,
-    ) -> Result<Self, MultiRpcError> {
-        Self::new_with_wallet_and_retry(urls, chain_id, wallet, None).await
-    }
-
-    /// Create a new `MultiRpcProvider` from a list of RPC URLs with wallet functionality and retry configuration
-    pub async fn new_with_wallet_and_retry(
-        urls: Vec<String>, 
-        chain_id: ChainId,
-        wallet: alloy::network::EthereumWallet,
-        retry_config: Option<RetryConfig>,
-    ) -> Result<Self, MultiRpcError> {
-        if urls.is_empty() {
-            return Err(MultiRpcError::NoProvidersConfigured);
-        }
-
-        let mut providers = Vec::new();
-        let mut working_urls = Vec::new();
-
-        for (index, url) in urls.iter().enumerate() {
-            if let Some(provider) = Self::try_connect_wallet_provider(url, chain_id, wallet.clone(), retry_config.as_ref(), index).await {
-                providers.push(Arc::new(provider));
-                working_urls.push(url.clone());
-            }
-        }
-
-        if providers.is_empty() {
-            return Err(MultiRpcError::NoWorkingProviders(urls));
-        }
-
-        debug!(chain_id = %chain_id, working_count = providers.len(), total_count = urls.len(), "Created MultiRpcProvider");
-        info!(working_urls = ?working_urls, chain_id = %chain_id, "Working URLs for chain");
-
-        Ok(Self { 
-            active_provider: ArcSwap::new(providers[0].clone()),
-            providers, 
-            active_provider_index: AtomicUsize::new(0),
-        })
+    /// Get the default signer address for the active provider
+    pub fn default_signer_address(&self) -> Address {
+        self.active_provider().default_signer_address()
     }
 
     /// Create from already instantiated providers
-    pub fn from_providers(
-        providers: Vec<Arc<FilledProvider>>,
-    ) -> Self {
-        Self { 
+    pub fn from_providers(providers: Vec<Arc<FilledProvider>>) -> Self {
+        Self {
             active_provider: ArcSwap::new(providers[0].clone()),
-            providers, 
+            providers,
             active_provider_index: AtomicUsize::new(0),
         }
     }
@@ -239,22 +271,19 @@ impl MultiRpcProvider {
         (*self.active_provider.load()).clone()
     }
 
-    /// Try to switch to the next available provider, returns false if no more providers are available
+    /// Try to switch to the next available provider, returns false if no more providers are
+    /// available
     fn next_provider(&self) -> bool {
         let current = self.active_provider_index.load(Ordering::Relaxed);
         let next = current + 1;
-        
+
         if next >= self.providers.len() {
             return false;
         }
 
         self.active_provider_index.store(next, Ordering::Relaxed);
         self.active_provider.store(self.providers[next].clone());
-        debug!(
-            from_index = current,
-            to_index = next,
-            "Switched to fallback provider"
-        );
+        debug!(from_index = current, to_index = next, "Switched to fallback provider");
         true
     }
 
@@ -267,25 +296,24 @@ impl MultiRpcProvider {
     /// Determine if an RPC error should trigger a fallback to the next provider
     const fn should_retry_with_next_provider(error: &RpcError<TransportErrorKind>) -> bool {
         match error {
-            // Transport errors indicate connectivity/availability issues - try next provider
+            // classes of errors that are likely to be provider-specific
             RpcError::Transport(_) |
-            // Serialization/deserialization errors could be provider-specific - try next provider
-            RpcError::SerError(_) | 
-            RpcError::DeserError { .. } => true,
-            
+            RpcError::SerError(_) |
+            RpcError::UnsupportedFeature(_) |
+            RpcError::DeserError { .. } |
+            RpcError::NullResp |
+            RpcError::LocalUsageError(_) => true,
+
             // These are legitimate RPC responses/errors - don't retry
-            RpcError::ErrorResp(_) |        // Server returned error (e.g., invalid tx, gas estimation failed)
-            RpcError::NullResp |            // Server returned null response
-            RpcError::UnsupportedFeature(_) | // RPC method not supported
-            RpcError::LocalUsageError(_) => false,  // Local preprocessing error
+            // Server returned error (e.g., invalid tx, gas estimation failed)
+            RpcError::ErrorResp(_) => false,
         }
     }
 
     /// Handle an error and determine if we should try the next provider
-    /// Returns Ok(true) if we switched to next provider, Ok(false) if no more providers, Err if immediate error  
     fn handle_error(&self, error: RpcError<TransportErrorKind>) -> ControlFlow {
         let current_index = self.active_provider_index.load(Ordering::Relaxed);
-        
+
         if !Self::should_retry_with_next_provider(&error) {
             debug!(
                 provider_index = current_index,
@@ -296,8 +324,7 @@ impl MultiRpcProvider {
             self.reset_to_initial_provider();
             // Error is related to the RPC call itself, not the provider
             return ControlFlow::Err(error)
-           
-        } 
+        }
 
         debug!(
             provider_index = current_index,
@@ -311,9 +338,11 @@ impl MultiRpcProvider {
         }
     }
 
-
     /// Helper method to retry an operation with automatic failover
-    async fn retry_with_fallback<T, F, Fut>(&self, operation: F) -> Result<T, RpcError<TransportErrorKind>>
+    async fn retry_with_fallback<T, F, Fut>(
+        &self,
+        operation: F,
+    ) -> Result<T, RpcError<TransportErrorKind>>
     where
         F: Fn(Arc<FilledProvider>) -> Fut + Send,
         Fut: Future<Output = Result<T, RpcError<TransportErrorKind>>>,
@@ -322,18 +351,23 @@ impl MultiRpcProvider {
             let provider = self.active_provider();
             match operation(provider).await {
                 Ok(result) => return Ok(result),
-                Err(e) => {
-                    match self.handle_error(e) {
-                        ControlFlow::RetryWithNextProvider => {},
-                        ControlFlow::ErrAllProvidersFailed => return Err(RpcError::LocalUsageError("All providers failed".to_string().into())),
-                        ControlFlow::Err(e) => return Err(e),
+                Err(e) => match self.handle_error(e) {
+                    ControlFlow::RetryWithNextProvider => {}
+                    ControlFlow::ErrAllProvidersFailed => {
+                        return Err(RpcError::LocalUsageError(
+                            "All providers failed".to_string().into(),
+                        ))
                     }
-                }
+                    ControlFlow::Err(e) => return Err(e),
+                },
             }
         }
     }
-    
-    fn provider_call_with_retry<Params, Resp, Output, Map, Fut, F>(&self, operation: F) -> ProviderCall<Params, Resp, Output, Map > 
+
+    fn provider_call_with_retry<Params, Resp, Output, Map, Fut, F>(
+        &self,
+        operation: F,
+    ) -> ProviderCall<Params, Resp, Output, Map>
     where
         F: Fn(Arc<FilledProvider>) -> Fut + Send + 'static,
         Fut: Future<Output = Result<Output, RpcError<TransportErrorKind>>> + Send,
@@ -342,13 +376,12 @@ impl MultiRpcProvider {
         Map: Fn(Resp) -> Output,
     {
         let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<Output, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(operation).await
-        });
+        let future: Pin<
+            Box<dyn Future<Output = Result<Output, RpcError<TransportErrorKind>>> + Send>,
+        > = Box::pin(async move { multi_provider.retry_with_fallback(operation).await });
         ProviderCall::from(future)
     }
 }
-
 
 #[allow(missing_docs)]
 #[derive(Debug)]
@@ -357,7 +390,6 @@ pub enum ControlFlow {
     ErrAllProvidersFailed,
     Err(RpcError<TransportErrorKind>),
 }
-
 
 // Implement Provider trait with REAL failover logic that cycles through providers
 #[allow(clippy::type_complexity)]
@@ -371,14 +403,19 @@ impl Provider<Ethereum> for MultiRpcProvider {
     }
 
     fn call(&self, tx: TransactionRequest) -> EthCall<Ethereum, Bytes> {
-        EthCall::call(self.clone(),tx).block(BlockNumberOrTag::Pending.into())
+        EthCall::call(self.clone(), tx).block(BlockNumberOrTag::Pending.into())
     }
 
     fn estimate_gas(&self, tx: TransactionRequest) -> EthCall<Ethereum, U64, u64> {
-        EthCall::gas_estimate(self.clone(),tx).block(BlockNumberOrTag::Pending.into()).map_resp(|r| r.to::<u64>())
+        EthCall::gas_estimate(self.clone(), tx)
+            .block(BlockNumberOrTag::Pending.into())
+            .map_resp(|r| r.to::<u64>())
     }
 
-    fn get_transaction_by_hash(&self, hash: B256) -> ProviderCall<(B256,), Option<alloy::rpc::types::Transaction>> {
+    fn get_transaction_by_hash(
+        &self,
+        hash: B256,
+    ) -> ProviderCall<(B256,), Option<alloy::rpc::types::Transaction>> {
         let hash_copy = hash;
         self.provider_call_with_retry(move |provider| provider.get_transaction_by_hash(hash_copy))
     }
@@ -401,7 +438,6 @@ impl Provider<Ethereum> for MultiRpcProvider {
         self.active_provider().create_access_list(request)
     }
 
-
     fn get_chain_id(&self) -> ProviderCall<NoParams, U64, u64> {
         self.provider_call_with_retry(|provider| provider.get_chain_id())
     }
@@ -410,7 +446,10 @@ impl Provider<Ethereum> for MultiRpcProvider {
         self.provider_call_with_retry(|provider| provider.get_gas_price())
     }
 
-    fn get_transaction_receipt(&self, hash: B256) -> ProviderCall<(B256,), Option<TransactionReceipt>> {
+    fn get_transaction_receipt(
+        &self,
+        hash: B256,
+    ) -> ProviderCall<(B256,), Option<TransactionReceipt>> {
         let hash_copy = hash;
         self.provider_call_with_retry(move |provider| provider.get_transaction_receipt(hash_copy))
     }
@@ -427,13 +466,9 @@ impl Provider<Ethereum> for MultiRpcProvider {
     fn get_transaction_count(&self, address: Address) -> RpcWithBlock<Address, U64, u64> {
         let multi_provider = self.clone();
         RpcWithBlock::new_provider(move |block_id| {
-            let multi_provider = multi_provider.clone();
-            let future: Pin<Box<dyn Future<Output = Result<u64, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-                multi_provider.retry_with_fallback(|provider| async move {
-                    provider.get_transaction_count(address).block_id(block_id).await
-                }).await
-            });
-            ProviderCall::from(future)
+            multi_provider.provider_call_with_retry(move |provider| async move {
+                provider.get_transaction_count(address).block_id(block_id).await
+            })
         })
     }
 
@@ -461,10 +496,7 @@ impl Provider<Ethereum> for MultiRpcProvider {
         self.provider_call_with_retry(|provider| provider.get_net_version())
     }
 
-    fn get_account_info(
-        &self,
-        address: Address,
-    ) -> RpcWithBlock<Address, AccountInfo> {
+    fn get_account_info(&self, address: Address) -> RpcWithBlock<Address, AccountInfo> {
         let multi_provider = self.clone();
         RpcWithBlock::new_provider(move |block_id| {
             multi_provider.provider_call_with_retry(move |provider| async move {
@@ -491,7 +523,6 @@ impl Provider<Ethereum> for MultiRpcProvider {
         })
     }
 
-
     fn get_proof(
         &self,
         address: Address,
@@ -503,16 +534,11 @@ impl Provider<Ethereum> for MultiRpcProvider {
             multi_provider.provider_call_with_retry(move |provider| {
                 let value = keys_clone.clone();
                 async move { provider.get_proof(address, value).block_id(block_id).await }
-                }
-            )    
+            })
         })
     }
 
-    fn get_storage_at(
-        &self,
-        address: Address,
-        key: U256,
-    ) -> RpcWithBlock<(Address, U256), U256> {
+    fn get_storage_at(&self, address: Address, key: U256) -> RpcWithBlock<(Address, U256), U256> {
         let multi_provider = self.clone();
         RpcWithBlock::new_provider(move |block_id| {
             multi_provider.provider_call_with_retry(move |provider| async move {
@@ -522,7 +548,7 @@ impl Provider<Ethereum> for MultiRpcProvider {
     }
 }
 
-impl<N, Resp> Caller<N, Resp> for MultiRpcProvider 
+impl<N, Resp> Caller<N, Resp> for MultiRpcProvider
 where
     N: Network,
     Resp: RpcRecv,
@@ -530,62 +556,46 @@ where
     fn call(
         &self,
         params: EthCallParams<N>,
-    ) -> TransportResult<ProviderCall<EthCallParams<N>, Resp>>{
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<Resp, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| {
-                let params = params.clone();
-                async move {
-                    // Get weak reference to the underlying RPC client
-                    let weak_client = provider.root().weak_client();
-                    let call_result = Caller::call(&weak_client, params)?;
-                    call_result.await
-                }
-            }).await
-        });
-        Ok(ProviderCall::from(future))
+    ) -> TransportResult<ProviderCall<EthCallParams<N>, Resp>> {
+        Ok(self.provider_call_with_retry(move |provider| {
+            let params = params.clone();
+            async move {
+                let weak_client = provider.root().weak_client();
+                let call_result = Caller::call(&weak_client, params)?;
+                call_result.await
+            }
+        }))
     }
 
     fn estimate_gas(
         &self,
         params: EthCallParams<N>,
-    ) -> TransportResult<ProviderCall<EthCallParams<N>, Resp>>{
-        let multi_provider = self.clone();
-        let future: Pin<Box<dyn Future<Output = Result<Resp, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| {
-                let params = params.clone();
-                async move {
-                    // Get weak reference to the underlying RPC client
-                    let weak_client = provider.root().weak_client();
-                    let call_result = Caller::estimate_gas(&weak_client, params)?;
-                    call_result.await
-                }
-            }).await
-        });
-        Ok(ProviderCall::from(future))
+    ) -> TransportResult<ProviderCall<EthCallParams<N>, Resp>> {
+        Ok(self.provider_call_with_retry(move |provider| {
+            let params = params.clone();
+            async move {
+                let weak_client = provider.root().weak_client();
+                let call_result = Caller::estimate_gas(&weak_client, params)?;
+                call_result.await
+            }
+        }))
     }
 
     fn call_many(
         &self,
         params: EthCallManyParams<'_>,
-    ) -> TransportResult<ProviderCall<EthCallManyParams<'static>, Resp>>{
-        let multi_provider = self.clone();
+    ) -> TransportResult<ProviderCall<EthCallManyParams<'static>, Resp>> {
         let owned_params = params.into_owned();
-        let future: Pin<Box<dyn Future<Output = Result<Resp, RpcError<TransportErrorKind>>> + Send>> = Box::pin(async move {
-            multi_provider.retry_with_fallback(|provider| {
-                let owned_params = owned_params.clone();
-                async move {
-                    // Get weak reference to the underlying RPC client
-                    let weak_client = provider.root().weak_client();
-                    let call_result = <_ as Caller<N, Resp>>::call_many(&weak_client, owned_params)?;
-                    call_result.await
-                }
-            }).await
-        });
-        Ok(ProviderCall::from(future))
+        Ok(self.provider_call_with_retry(move |provider| {
+            let cloned_params = owned_params.clone();
+            async move {
+                let weak_client = provider.root().weak_client();
+                let call_result = <_ as Caller<N, Resp>>::call_many(&weak_client, cloned_params)?;
+                call_result.await
+            }
+        }))
     }
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -27,7 +27,7 @@ use std::{
     collections::VecDeque,
     str::FromStr,
     sync::Arc,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use synd_maestro::valkey::streams::consumer::StreamConsumer;
 use tokio::task::JoinHandle;
@@ -106,7 +106,10 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let handle = tokio::spawn({
         async move {
             loop {
-                debug!("Batcher reading and batching transactions at time {:?}", Instant::now());
+                debug!(
+                    "Batcher reading and batching transactions at time {}",
+                    humantime::format_rfc3339_millis(SystemTime::now()),
+                );
                 if let Err(e) = batcher.process_transactions().await {
                     error!("Batcher error: {e:?}");
                     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -219,6 +222,8 @@ impl Batcher {
             // NOTE: If msg count is >1 we need to handle edge cases where not all transactions fit
             // in the batch
             let incoming_txs = self.stream_consumer.recv(1, Duration::from_millis(100)).await?;
+
+            info!("POTATO, {:?}", incoming_txs.len());
 
             // Combine outstanding transactions with incoming transactions
             let mut pending_txs: VecDeque<Bytes> = std::mem::take(&mut self.outstanding_txs)
@@ -397,7 +402,6 @@ mod tests {
                 .wallet(EthereumWallet::from(signer))
                 .connect_mocked_client(asserter);
 
-            let urls = vec!["http://mock".to_string()];
             MultiRpcProvider::from_providers(vec![Arc::new(mock_provider)])
         };
         SyndicateSequencingChainInstance::new(mock_address, mock_provider)

@@ -28,6 +28,7 @@ use alloy::{
     consensus::{Transaction, TxEnvelope},
     hex,
     primitives::{keccak256, utils::format_ether, Address, Bytes, ChainId, B256, U256},
+    providers::Provider,
 };
 use derivative::Derivative;
 use redis::{aio::ConnectionManager, AsyncCommands};
