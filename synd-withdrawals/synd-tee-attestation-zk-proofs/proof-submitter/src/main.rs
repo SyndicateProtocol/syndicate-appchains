@@ -67,7 +67,7 @@ pub struct Args {
     contract_address: Option<Address>,
 
     /// If passed, a new `TeeKeyManager` contract with a respective new `AttestationDocVerifier`
-    /// contract will be deployed
+    /// contract will be deployed - see: <https://github.com/succinctlabs/sp1-contracts/tree/main/contracts/deployments>
     #[arg(long, value_parser = parse_address)]
     deploy_new_contract_with_sp1_verifier: Option<Address>,
 
