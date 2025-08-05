@@ -6989,6 +6989,7 @@ dependencies = [
  "clap",
  "common",
  "ctor",
+ "derivative",
  "eyre",
  "fs2",
  "futures-util",
@@ -7003,6 +7004,7 @@ dependencies = [
  "tokio",
  "tower 0.5.2",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -7163,9 +7165,8 @@ dependencies = [
  "temp-env",
  "thiserror 2.0.12",
  "tokio",
- "tower 0.5.2",
- "tower-layer",
  "tracing",
+ "url",
 ]
 
 [[package]]

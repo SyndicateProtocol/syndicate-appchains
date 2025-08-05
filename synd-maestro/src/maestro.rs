@@ -51,6 +51,7 @@ pub struct MaestroService {
     // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
+    #[derivative(Debug = "ignore")]
     rpc_providers: HashMap<ChainId, MultiRpcProvider>,
     config: Config,
     pub(crate) metrics: MaestroMetrics,

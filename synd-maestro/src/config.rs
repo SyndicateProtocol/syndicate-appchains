@@ -13,14 +13,19 @@ use alloy::{
     },
 };
 use clap::Parser;
-use shared::{multi_rpc_provider::MultiRpcProvider, parse::parse_url};
+use derivative::Derivative;
+use shared::{
+    multi_rpc_provider::MultiRpcProvider,
+    parse::{fmt_sanitize_url_for_logging_hashmap, parse_url},
+};
 use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
 use url::Url;
 
 /// Configuration for Maestro
 #[allow(clippy::doc_markdown)]
-#[derive(Parser, Debug, Clone, Default)]
+#[derive(Parser, Derivative, Clone, Default)]
+#[derivative(Debug)]
 #[command(version, about, long_about = None)]
 pub struct Config {
     /// Port to listen on
@@ -39,6 +44,7 @@ pub struct Config {
     /// Chain ID to RPC URL mappings as a JSON string object
     /// providers will be used in order of the array, if one fails, the next one is tried.
     /// Example: '{"1": ["https://example.com"], "2": ["https://another.com", "https://backup.com"]}'
+    #[derivative(Debug(format_with = "fmt_sanitize_url_for_logging_hashmap"))]
     #[arg(
         short = 'c',
         long,

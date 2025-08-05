@@ -5,7 +5,8 @@ use alloy::{
     transports::TransportError,
 };
 use clap::Parser;
-use shared::parse::{parse_address, parse_url};
+use derivative::Derivative;
+use shared::parse::{fmt_sanitize_url_for_logging_vec, parse_address, parse_url};
 use std::{fmt::Debug, time::Duration};
 use thiserror::Error;
 use url::Url;
@@ -23,7 +24,8 @@ pub enum ConfigError {
 
 /// Configuration for Batcher
 #[allow(clippy::doc_markdown)]
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Derivative, Clone)]
+#[derivative(Debug)]
 #[command(version, about, long_about = None)]
 pub struct BatcherConfig {
     /// Valkey address to listen on
@@ -59,6 +61,7 @@ pub struct BatcherConfig {
     /// An array of sequencing chain RPC URLs to use, in priority order. If the first one fails, a
     /// connection will be retried to the next one. E.g. `"rpc.testnet.base.io,
     /// rpc.dev.polygon.com"`
+    #[derivative(Debug(format_with = "fmt_sanitize_url_for_logging_vec"))]
     #[arg(short = 'u', long, env = "SEQUENCING_RPC_URLS", value_parser = parse_url, value_delimiter = ',')]
     pub sequencing_rpc_urls: Vec<Url>,
 

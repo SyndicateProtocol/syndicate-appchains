@@ -3,7 +3,10 @@
 //! This module provides a `MultiRpcProvider` that supports automatic failover between
 //! multiple RPC endpoints for the same chain.
 
-use crate::types::FilledProvider;
+use crate::{
+    parse::{sanitize_url_for_logging, sanitize_url_vec_to_string},
+    types::FilledProvider,
+};
 use alloy::{
     consensus::Account,
     eips::{BlockId, BlockNumberOrTag},
@@ -32,7 +35,6 @@ use arc_swap::ArcSwap;
 use serde_json::value::RawValue;
 use std::{
     borrow::Cow,
-    fmt,
     future::Future,
     pin::Pin,
     sync::{
@@ -44,6 +46,7 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 /// Multi-RPC provider that handles multiple RPC endpoints with automatic failover
+#[allow(missing_debug_implementations)]
 pub struct MultiRpcProvider {
     /// List of RPC providers for this chain, ordered by priority
     providers: Vec<Arc<FilledProvider>>,
@@ -60,12 +63,6 @@ impl Clone for MultiRpcProvider {
             active_provider: ArcSwap::new(self.active_provider()),
             active_provider_index: Arc::clone(&self.active_provider_index),
         }
-    }
-}
-
-impl fmt::Debug for MultiRpcProvider {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MultiRpcProvider").field("provider_count", &self.providers.len()).finish()
     }
 }
 
@@ -119,7 +116,7 @@ impl MultiRpcProvider {
     /// Note: This creates providers without wallet functionality
     /// Note `ChainID` is optional, if not provided, the provider's chainID will not be verified
     pub async fn new(urls: Vec<Url>, chain_id: Option<ChainId>) -> Result<Self, MultiRpcError> {
-        // Create a dummy wallet for for callers that don't have a wallet
+        // Create a dummy wallet for callers that don't have a wallet
         use alloy::signers::local::PrivateKeySigner;
         let dummy_signer = PrivateKeySigner::random();
         let dummy_wallet = alloy::network::EthereumWallet::from(dummy_signer);
@@ -172,13 +169,11 @@ impl MultiRpcProvider {
             return Err(MultiRpcError::NoWorkingProviders(urls));
         }
 
-        debug!(
+        info!(
+            working_urls = ?sanitize_url_vec_to_string(&working_urls),
             chain_id = chain_id,
-            working_count = providers.len(),
-            total_count = urls.len(),
-            "Created MultiRpcProvider"
+            "Working URLs for chain"
         );
-        info!(working_urls = ?working_urls, chain_id = chain_id, "Working URLs for chain");
 
         Ok(Self {
             active_provider: ArcSwap::new(providers[0].clone()),
@@ -197,13 +192,13 @@ impl MultiRpcProvider {
         match provider.get_chain_id().await {
             Ok(provider_chain_id) => {
                 if provider_chain_id == expected_chain_id {
-                    debug!(chain_id = %expected_chain_id, url = %url, index, "Successfully connected to RPC provider");
+                    debug!(chain_id = %expected_chain_id, url = %sanitize_url_for_logging(url), index, "Successfully connected to RPC provider");
                     true
                 } else {
                     warn!(
                         chain_id = %expected_chain_id,
                         provider_chain_id = %provider_chain_id,
-                        url = %url,
+                        url = %sanitize_url_for_logging(url),
                         index,
                         "Chain ID mismatch for RPC provider, url will be ignored"
                     );
@@ -211,7 +206,7 @@ impl MultiRpcProvider {
                 }
             }
             Err(e) => {
-                warn!(chain_id = %expected_chain_id, url = %url, index, error = %e, "Failed to verify chain ID for RPC provider, url will be ignored");
+                warn!(chain_id = %expected_chain_id, url = %sanitize_url_for_logging(url), index, error = %e, "Failed to verify chain ID for RPC provider, url will be ignored");
                 false
             }
         }
@@ -225,7 +220,7 @@ impl MultiRpcProvider {
         retry_config: Option<&RetryConfig>,
         index: usize,
     ) -> Option<FilledProvider> {
-        debug!(chain_id = chain_id, url = %url, index, "Connecting to RPC provider with wallet");
+        debug!(chain_id = chain_id, url = %sanitize_url_for_logging(url), index, "Connecting to RPC provider with wallet");
 
         let result = if let Some(config) = retry_config {
             // Create RPC client with retry layer

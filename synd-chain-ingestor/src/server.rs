@@ -23,6 +23,7 @@ use std::{
 };
 use tokio::task::JoinHandle;
 use tracing::{error, info, instrument};
+use url::Url;
 
 #[derive(Debug)]
 #[allow(missing_docs)]
@@ -181,7 +182,7 @@ pub fn error_still_syncing() -> ErrorObjectOwned {
 #[allow(clippy::unwrap_used, clippy::option_if_let_else)]
 pub fn create_module(
     ctx: Arc<Mutex<Context>>,
-    ws_urls: Vec<String>,
+    ws_urls: Vec<Url>,
     is_ready: Arc<AtomicBool>,
 ) -> RpcModule<Mutex<Context>> {
     let mut module = RpcModule::from_arc(ctx);
@@ -203,7 +204,11 @@ pub fn create_module(
         })
         .unwrap();
 
-    module.register_method("urls", move |_, _, _| ws_urls.clone()).unwrap();
+    module
+        .register_method("urls", move |_, _, _| {
+            ws_urls.iter().map(|url| url.to_string()).collect::<Vec<_>>()
+        })
+        .unwrap();
 
     module
         .register_method("eth_blockNumber", move |_, ctx, _| {
