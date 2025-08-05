@@ -127,7 +127,6 @@ async fn create_sequencing_contract_instance(
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
 
-    // Create retry configuration for rate limiting and backoff
     let retry_config = RetryConfig::new(
         config.rpc_max_retries,
         config.rpc_initial_backoff_ms,
@@ -135,7 +134,6 @@ async fn create_sequencing_contract_instance(
         config.rpc_compute_units_avg_request_cost,
     );
 
-    // Create MultiRpcProvider with wallet functionality and retry configuration
     let multi_provider = MultiRpcProvider::new_with_wallet_and_retry(
         config.sequencing_rpc_urls.clone(),
         None,
@@ -324,7 +322,7 @@ impl Batcher {
         let provider = self.sequencing_contract_instance.provider().clone();
         let metrics = self.metrics.clone();
         tokio::spawn(async move {
-            let wallet_address = provider.default_signer_address();
+            let wallet_address = provider.signer_address();
 
             match provider.get_balance(wallet_address).await {
                 Ok(balance) => {

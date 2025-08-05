@@ -56,7 +56,9 @@ pub struct BatcherConfig {
     #[arg(short = 'k', long, env = "BATCHER_PRIVATE_KEY")]
     pub private_key: String,
 
-    /// URL of the sequencing chain RPC node
+    /// An array of sequencing chain RPC URLs to use, in priority order. If the first one fails, a
+    /// connection will be retried to the next one. E.g. `"rpc.testnet.base.io,
+    /// rpc.dev.polygon.com"`
     #[arg(short = 'u', long, env = "SEQUENCING_RPC_URLS", value_parser = parse_url, value_delimiter = ',')]
     pub sequencing_rpc_urls: Vec<Url>,
 

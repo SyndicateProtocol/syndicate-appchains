@@ -37,6 +37,7 @@ pub struct Config {
     pub valkey_url: String,
 
     /// Chain ID to RPC URL mappings as a JSON string object
+    /// providers will be used in order of the array, if one fails, the next one is tried.
     /// Example: '{"1": ["https://example.com"], "2": ["https://another.com", "https://backup.com"]}'
     #[arg(
         short = 'c',

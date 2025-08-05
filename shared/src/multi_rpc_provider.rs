@@ -229,17 +229,13 @@ impl MultiRpcProvider {
 
         let result = if let Some(config) = retry_config {
             // Create RPC client with retry layer
-            let rpc_client = {
-                RetryBackoffLayer::new(
-                    config.max_retries,
-                    config.initial_backoff_ms,
-                    config.compute_units_per_second,
-                )
-                .with_avg_unit_cost(config.avg_request_cost);
-                RpcClient::builder().layer(())
-            }
-            .connect(url.as_str())
-            .await;
+            let retry_layer = RetryBackoffLayer::new(
+                config.max_retries,
+                config.initial_backoff_ms,
+                config.compute_units_per_second,
+            );
+            // TODO (SEQ-1190): Add avg_unit_cost to retry layer
+            let rpc_client = RpcClient::builder().layer(retry_layer).connect(url.as_str()).await;
 
             rpc_client.map(|client| ProviderBuilder::new().wallet(wallet).connect_client(client))
         } else {
@@ -263,7 +259,7 @@ impl MultiRpcProvider {
     }
 
     /// Get the default signer address for the active provider
-    pub fn default_signer_address(&self) -> Address {
+    pub fn signer_address(&self) -> Address {
         self.active_provider().default_signer_address()
     }
 
@@ -305,12 +301,6 @@ impl MultiRpcProvider {
             "Switched to fallback provider"
         );
         true
-    }
-
-    /// Reset to the primary provider (index 0)
-    pub fn reset_to_initial_provider(&self) {
-        self.active_provider_index.store(0, Ordering::Relaxed);
-        self.active_provider.store(self.providers[0].clone());
     }
 
     /// Determine if an RPC error should trigger a fallback to the next provider
@@ -411,11 +401,35 @@ impl MultiRpcProvider {
     }
 }
 
-#[allow(missing_docs)]
+/// Controls the flow of RPC provider failover logic.
+///
+/// This enum determines how the multi-provider system should handle errors encountered
+/// during RPC operations. It guides whether to retry with another provider, abort due
+/// to exhausted options, or immediately return specific errors.
 #[derive(Debug)]
 pub enum ControlFlow {
+    /// Continue the retry loop by attempting the operation with the next available provider.
+    ///
+    /// This variant is returned when:
+    /// - A transport/connectivity error occurs (e.g., network timeout, connection refused)
+    /// - The error is considered recoverable by trying a different provider
+    /// - There are remaining providers to try in the failover sequence
     RetryWithNextProvider,
+
+    /// Stop retrying and return an "all providers failed" error.
+    ///
+    /// This variant is returned when:
+    /// - A transport/connectivity error occurs
+    /// - All available providers have been exhausted (we've cycled back to the starting provider)
+    /// - No more failover options remain
     ErrAllProvidersFailed,
+
+    /// Immediately return the provided error without attempting failover.
+    ///
+    /// This variant is returned when:
+    /// - The error is related to the RPC call itself, not provider connectivity
+    /// - The error code indicates a client-side issue (invalid request, method not found, etc.)
+    /// - Retrying with a different provider would not resolve the issue
     Err(RpcError<TransportErrorKind>),
 }
 
