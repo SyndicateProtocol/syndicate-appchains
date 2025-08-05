@@ -23,16 +23,30 @@ The script performs the following actions:
 
 ### 1. Prepare environment variables
 
-You can either export them directly or create a `.env` file in your home directory:
+Update the env vars in the `setup-box.sh` script:
 
-```env
+```
 KEY_MANAGER_ADDRESS=0xYourKeyManagerAddress
 PRIVATE_KEY=0xYourPrivateKey
 ```
 
-### 2. Upload files to the box
+PRIVATE_KEY just needs to be any wallet with settlement funds.
 
-You can use scp manually or through a wrapper like provision-box.sh:
+### 2. Generate the file to copy
+
+On your machine, run the following from inside of `syndicate-appchains/synd-withdrawals/synd-tee-attestation-zk-proofs`
+
+```
+curl -L https://sp1.succinct.xyz | bash
+sp1up
+just sp1-generate-vkey
+```
+
+> This should have generated the ../../target/elf-compilation/riscv32im-succinct-zkvm-elf/release/synd-tee-attestation-zk-proofs-sp1-program file. Also the "vkey" which you can probably ignore.
+
+### 3. Upload files to the box
+
+On your machine, run the following from inside of ``syndicate-appchains/synd-withdrawals/`:
 
 ```
 scp setup-box.sh ubuntu@<YOUR_BOX_IP>:~/
