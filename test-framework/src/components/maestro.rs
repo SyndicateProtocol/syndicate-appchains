@@ -1,18 +1,18 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 #[allow(dead_code)]
 #[derive(Debug)]
 pub(super) struct MaestroConfig {
     pub port: u16,
     pub valkey_url: String,
-    pub chain_rpc_urls: String,
+    pub chain_rpc_urls: HashMap<u64, Vec<String>>,
     pub metrics_port: u16,
     pub finalization_duration: Option<Duration>,
     pub finalization_checker_interval: Option<Duration>,
 }
 
 impl MaestroConfig {
-    #[allow(dead_code)]
+    #[allow(clippy::unwrap_used)]
     pub(super) fn cli_args(&self) -> Vec<String> {
         let mut args = vec![
             "--port".to_string(),
@@ -20,7 +20,7 @@ impl MaestroConfig {
             "--valkey-url".to_string(),
             self.valkey_url.to_string(),
             "--chain-rpc-urls".to_string(),
-            self.chain_rpc_urls.to_string(),
+            serde_json::to_string(&self.chain_rpc_urls).unwrap(),
             "--metrics-port".to_string(),
             self.metrics_port.to_string(),
         ];

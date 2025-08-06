@@ -2,16 +2,21 @@
 
 use crate::eth_client::EthClient;
 use clap::Parser;
+use derivative::Derivative;
 use humantime::parse_duration;
+use shared::parse::{fmt_sanitize_url_for_logging_vec, parse_url};
 use std::time::Duration;
+use url::Url;
 
 /// CLI args for the chain ingestor executable
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Derivative, Clone)]
+#[derivative(Debug)]
 #[command(version, about)]
 #[allow(missing_docs)]
 pub struct Config {
-    #[arg(long, env = "WS_URLS", value_delimiter = ',')]
-    pub ws_urls: Vec<String>,
+    #[derivative(Debug(format_with = "fmt_sanitize_url_for_logging_vec"))]
+    #[arg(long, env = "WS_URLS", value_parser = parse_url, value_delimiter = ',')]
+    pub ws_urls: Vec<Url>,
     #[arg(long, env = "DB_FILE")]
     pub db_file: String,
     #[arg(long, env = "START_BLOCK", default_value_t = 0)]

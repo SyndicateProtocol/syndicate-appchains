@@ -21,6 +21,7 @@ use tracing::info;
 
 mod tests {
     use super::*;
+    use url::Url;
 
     struct MockBlockBuilder;
 
@@ -119,7 +120,7 @@ mod tests {
         );
 
         let eth_client = EthClient::new(
-            vec![anvil.ws_url.clone()],
+            vec![Url::parse(&anvil.ws_url).unwrap()],
             Duration::from_secs(10),
             Duration::from_secs(10),
             100,
@@ -175,7 +176,7 @@ mod tests {
         assert_eq!(block_number, initial_blocks);
 
         let eth_client = EthClient::new(
-            vec![anvil.ws_url.clone()],
+            vec![Url::parse(&anvil.ws_url).unwrap()],
             Duration::from_secs(10),
             Duration::from_secs(10),
             100,

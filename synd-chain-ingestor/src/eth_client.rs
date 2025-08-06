@@ -12,6 +12,7 @@ use shared::{tracing::SpanKind, types::Receipt};
 use std::time::Duration;
 use tokio::time::timeout;
 use tracing::{error, info, instrument, warn};
+use url::Url;
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
@@ -36,7 +37,7 @@ fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
 impl EthClient {
     /// Creates a new [`EthClient`] instance. Retries indefinitely until it is able to connect.
     pub async fn new(
-        ws_urls: Vec<String>,
+        ws_urls: Vec<Url>,
         timeout: Duration,
         get_logs_timeout: Duration,
         channel_size: usize,

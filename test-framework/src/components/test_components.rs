@@ -31,6 +31,7 @@ use eyre::Result;
 use serde_json::{json, Value};
 use shared::types::FilledProvider;
 use std::{
+    collections::HashMap,
     env,
     future::Future,
     str::FromStr,
@@ -563,10 +564,10 @@ impl TestComponents {
             let maestro_config = MaestroConfig {
                 port: PortManager::instance().next_port().await,
                 valkey_url: valkey_url.clone(),
-                chain_rpc_urls: format!(
-                    "{{\"{}\":\"{}\"}}",
-                    options.appchain_chain_id, appchain_ws_rpc_url
-                ),
+                chain_rpc_urls: HashMap::from([(
+                    options.appchain_chain_id,
+                    vec![appchain_ws_rpc_url.clone()],
+                )]),
                 metrics_port: PortManager::instance().next_port().await,
                 finalization_duration: options.maestro_finalization_duration,
                 finalization_checker_interval: options.maestro_finalization_checker_interval,

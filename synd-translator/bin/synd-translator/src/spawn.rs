@@ -16,6 +16,7 @@ use synd_chain_ingestor::{
 };
 use synd_mchain::client::{MProvider, Provider};
 use tracing::{error, instrument, log::info};
+use url::Url;
 
 /// Entry point for the async runtime
 #[instrument(err, fields(otel.kind = ?SpanKind::Internal))]
@@ -93,8 +94,15 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 
     let adapter = arbitrum_adapter.clone();
 
+    let seq_urls = sequencing_client
+        .get_urls()
+        .await?
+        .into_iter()
+        .map(|s| Url::parse(&s))
+        .collect::<Result<Vec<_>, _>>()?;
+
     let seq_client = EthClient::new(
-        sequencing_client.get_urls().await?,
+        seq_urls,
         config.ws_request_timeout,
         config.get_logs_timeout,
         1024,
@@ -111,8 +119,15 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         )
         .await?;
 
+    let set_urls = settlement_client
+        .get_urls()
+        .await?
+        .into_iter()
+        .map(|s| Url::parse(&s))
+        .collect::<Result<Vec<_>, _>>()?;
+
     let set_client = EthClient::new(
-        settlement_client.get_urls().await?,
+        set_urls,
         config.ws_request_timeout,
         config.get_logs_timeout,
         1024,
