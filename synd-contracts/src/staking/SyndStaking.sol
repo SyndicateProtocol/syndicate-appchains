@@ -18,20 +18,20 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // Epoch => total amount staked
     mapping(uint256 => uint256) public epochTotal;
     // Epoch => amount staked during the epoch
-    mapping(uint256 => uint256) public epochPartial;
+    mapping(uint256 => uint256) public epochAdditions;
     // Epoch => amount staked during the epoch weighted by time left in the epoch
-    mapping(uint256 => uint256) public epochWeighted;
+    mapping(uint256 => uint256) public epochStakeShare;
     // Last finalized epoch
     uint256 public lastFinalizedEpoch;
 
     // Epoch => user => stake amount
-    mapping(uint256 => mapping(address => uint256)) public epochStake;
+    mapping(uint256 => mapping(address => uint256)) public userTotal;
     // Epoch => user => amount staked during the epoch
-    mapping(uint256 => mapping(address => uint256)) public epochPartialStake;
+    mapping(uint256 => mapping(address => uint256)) public userAdditions;
     // Epoch => user => amount staked during the epoch weighted by time left in the epoch
-    mapping(uint256 => mapping(address => uint256)) public epochWeightedStake;
+    mapping(uint256 => mapping(address => uint256)) public userStakeShare;
     // User => last finalized epoch
-    mapping(address => uint256) public lastFinalizedEpochUser;
+    mapping(address => uint256) public userLastFinalizedEpoch;
 
     event Stake(uint256 epochIndex, address user, uint256 amount);
     event WithdrawalInitialized(uint256 timestamp);
@@ -63,18 +63,18 @@ contract SyndStaking is EpochTracker, ISyndStaking {
             finalizeEpochs();
         }
 
-        if (lastFinalizedEpochUser[msg.sender] < epochIndex) {
+        if (userLastFinalizedEpoch[msg.sender] < epochIndex) {
             finalizeUserEpoch(msg.sender);
         }
 
         uint256 weight = weightStake(msg.value);
 
-        epochPartialStake[epochIndex][msg.sender] += msg.value;
-        epochWeightedStake[epochIndex][msg.sender] += weight;
+        userAdditions[epochIndex][msg.sender] += msg.value;
+        userStakeShare[epochIndex][msg.sender] += weight;
         stake[msg.sender] += msg.value;
 
-        epochPartial[epochIndex] += msg.value;
-        epochWeighted[epochIndex] += weight;
+        epochAdditions[epochIndex] += msg.value;
+        epochStakeShare[epochIndex] += weight;
         totalStaked += msg.value;
 
         emit Stake(epochIndex, msg.sender, msg.value);
@@ -90,18 +90,18 @@ contract SyndStaking is EpochTracker, ISyndStaking {
 
     function finalizeUserEpoch(address user) public {
         uint256 currentEpoch = getCurrentEpoch();
-        uint256 index = lastFinalizedEpochUser[user];
+        uint256 index = userLastFinalizedEpoch[user];
         if (index < currentEpoch) {
-            epochStake[index][user] = stake[user] - epochPartialStake[index][user];
+            userTotal[index][user] = stake[user] - userAdditions[index][user];
             index++;
         }
-        lastFinalizedEpochUser[user] = index;
+        userLastFinalizedEpoch[user] = index;
     }
 
     function finalizeEpochs() public {
         uint256 currentEpoch = getCurrentEpoch();
         while (lastFinalizedEpoch < currentEpoch) {
-            epochTotal[lastFinalizedEpoch] += totalStaked - epochPartial[lastFinalizedEpoch];
+            epochTotal[lastFinalizedEpoch] += totalStaked - epochAdditions[lastFinalizedEpoch];
             lastFinalizedEpoch++;
         }
     }
@@ -150,16 +150,16 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     function getUserStake(uint256 epochIndex, address user) public view returns (uint256) {
         if (withdrawalInitialized[user] != 0 && withdrawalInitialized[user] < epochIndex) {
             return 0;
-        } else if (epochIndex >= lastFinalizedEpochUser[user]) {
-            return stake[user] - epochPartialStake[epochIndex][user];
+        } else if (epochIndex >= userLastFinalizedEpoch[user]) {
+            return stake[user] - userAdditions[epochIndex][user];
         } else {
-            return epochStake[epochIndex][user];
+            return userTotal[epochIndex][user];
         }
     }
 
     function getTotalStake(uint256 epochIndex) public view returns (uint256) {
         if (epochIndex >= lastFinalizedEpoch) {
-            return totalStaked + epochTotal[epochIndex] - epochPartial[epochIndex];
+            return totalStaked + epochTotal[epochIndex] - epochAdditions[epochIndex];
         } else {
             return epochTotal[epochIndex];
         }
@@ -179,8 +179,8 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         returns (uint256 weightedStake, uint256 totalWeightedStake)
     {
         return (
-            getUserStake(epochIndex, user) + epochWeightedStake[epochIndex][user],
-            getTotalStake(epochIndex) + epochWeighted[epochIndex]
+            getUserStake(epochIndex, user) + userStakeShare[epochIndex][user],
+            getTotalStake(epochIndex) + epochStakeShare[epochIndex]
         );
     }
 }
