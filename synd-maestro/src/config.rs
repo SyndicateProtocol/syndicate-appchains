@@ -9,16 +9,23 @@ use alloy::{
     primitives::ChainId,
     providers::{
         fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},
-        Identity, Provider, ProviderBuilder, RootProvider,
+        Identity, RootProvider,
     },
 };
 use clap::Parser;
+use derivative::Derivative;
+use shared::{
+    multi_rpc_provider::MultiRpcProvider,
+    parse::{fmt_sanitize_url_for_logging_hashmap, parse_url},
+};
 use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
+use url::Url;
 
 /// Configuration for Maestro
 #[allow(clippy::doc_markdown)]
-#[derive(Parser, Debug, Clone, Default)]
+#[derive(Parser, Derivative, Clone, Default)]
+#[derivative(Debug)]
 #[command(version, about, long_about = None)]
 pub struct Config {
     /// Port to listen on
@@ -35,7 +42,9 @@ pub struct Config {
     pub valkey_url: String,
 
     /// Chain ID to RPC URL mappings as a JSON string object
-    /// Example: '{"1": "https://example.com", "2": "https://another.com"}'
+    /// providers will be used in order of the array, if one fails, the next one is tried.
+    /// Example: '{"1": ["https://example.com"], "2": ["https://another.com", "https://backup.com"]}'
+    #[derivative(Debug(format_with = "fmt_sanitize_url_for_logging_hashmap"))]
     #[arg(
         short = 'c',
         long,
@@ -43,7 +52,7 @@ pub struct Config {
         default_value = "{}",
         value_parser = parse_chain_rpc_urls_map
     )]
-    pub chain_rpc_urls: HashMap<u64, String>,
+    pub chain_rpc_urls: HashMap<u64, Vec<Url>>,
 
     /// Timeout in seconds for connection validation
     #[arg(long, env = "VALIDATION_TIMEOUT", default_value = "5s",
@@ -84,10 +93,18 @@ pub struct Config {
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
-fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<u64, String>, ConfigError> {
-    let map: HashMap<u64, String> =
+fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<u64, Vec<Url>>, ConfigError> {
+    let map: HashMap<u64, Vec<String>> =
         serde_json::from_str(s).map_err(|e| RpcUrlInvalidAddress(e.to_string()))?;
-    Ok(map)
+
+    map.into_iter()
+        .map(|(k, v)| {
+            v.into_iter()
+                .map(|s| parse_url(&s).map_err(|_| RpcUrlInvalidAddress(s)))
+                .collect::<Result<Vec<_>, _>>()
+                .map(|urls| (k, urls))
+        })
+        .collect()
 }
 
 #[allow(missing_docs)]
@@ -106,7 +123,7 @@ impl Config {
     }
 
     /// Validates the configuration
-    pub async fn validate(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
+    pub async fn validate(&self) -> Result<HashMap<ChainId, MultiRpcProvider>, ConfigError> {
         // Skip validation if requested
         if self.skip_validation {
             debug!("Skipping config validation");
@@ -126,43 +143,83 @@ impl Config {
 
     /// Checks that all RPC URLs are accessible by making a test connection. Return usable providers
     #[allow(clippy::cognitive_complexity)]
-    async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, RpcProvider>, ConfigError> {
+    async fn ping_rpc_urls(&self) -> Result<HashMap<ChainId, MultiRpcProvider>, ConfigError> {
         // Validate RPC URLs by trying to connect to each one
-        let mut provider_map: HashMap<ChainId, RpcProvider> = HashMap::new();
+        let mut provider_map: HashMap<ChainId, MultiRpcProvider> = HashMap::new();
 
         if self.chain_rpc_urls.is_empty() {
             return Ok(provider_map);
         }
 
-        for (chain_id, url) in &self.chain_rpc_urls {
-            debug!(%chain_id, %url, "Sending test JSON-RPC request");
+        for (chain_id, urls) in &self.chain_rpc_urls {
+            if urls.is_empty() {
+                debug!(%chain_id, "No RPC URLs configured for chain, skipping");
+                continue;
+            }
 
-            let provider = match ProviderBuilder::new().connect(url).await {
-                Ok(provider) => provider,
-                Err(e) => {
-                    error!(%chain_id, %url, %e, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
-                    continue; // create other providers
-                }
-            };
+            debug!(%chain_id, url_count = urls.len(), "Creating MultiRpcProvider for chain");
 
-            match provider.get_chain_id().await {
-                Ok(resp_chain_id) => {
-                    if resp_chain_id != *chain_id {
-                        return Err(ConfigError::RpcUrlInvalidChainId(
-                            url.to_string(),
-                            chain_id.to_string(),
-                            resp_chain_id.to_string(),
-                        ));
-                    }
+            match MultiRpcProvider::new(urls.clone(), Some(*chain_id)).await {
+                Ok(multi_provider) => {
+                    debug!(%chain_id, working_providers = multi_provider.provider_count(), "Successfully created MultiRpcProvider for chain");
+                    provider_map.insert(*chain_id, multi_provider);
                 }
                 Err(e) => {
-                    error!(%e, %chain_id, %url, "Unable to connect to configured RPC provider. Transactions on this chain will fail");
+                    error!(%chain_id, %e, "Failed to create MultiRpcProvider for chain");
+                    // Continue with other chains rather than failing completely
                 }
-            };
-
-            debug!(%chain_id, %url, "Successful JSON-RPC request to RPC provider");
-            provider_map.insert(*chain_id, provider);
+            }
         }
         Ok(provider_map)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_chain_rpc_urls_map_valid_single_url() {
+        let input = r#"{"1": ["https://eth-mainnet.g.alchemy.com/v2/demo"]}"#;
+        let result = parse_chain_rpc_urls_map(input).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert!(result.contains_key(&1));
+        assert_eq!(result[&1].len(), 1);
+        assert_eq!(result[&1][0].as_str(), "https://eth-mainnet.g.alchemy.com/v2/demo");
+    }
+
+    #[test]
+    fn test_parse_chain_rpc_urls_map_valid_multiple_urls() {
+        let input = r#"{"1": ["https://eth-mainnet.g.alchemy.com/v2/demo", "https://rpc.ankr.com/eth"], "137": ["https://polygon-mainnet.g.alchemy.com/v2/demo"]}"#;
+        let result = parse_chain_rpc_urls_map(input).unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert!(result.contains_key(&1));
+        assert!(result.contains_key(&137));
+        assert_eq!(result[&1].len(), 2);
+        assert_eq!(result[&137].len(), 1);
+    }
+
+    #[test]
+    fn test_parse_chain_rpc_urls_map_empty_json() {
+        let input = "{}";
+        let result = parse_chain_rpc_urls_map(input).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_parse_chain_rpc_urls_map_invalid_json() {
+        let input = r#"{"1": ["https://example.com""#; // Missing closing bracket
+        let result = parse_chain_rpc_urls_map(input);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RpcUrlInvalidAddress(_)));
+    }
+
+    #[test]
+    fn test_parse_chain_rpc_urls_map_invalid_url() {
+        let input = r#"{"1": ["not-a-valid-url"]}"#;
+        let result = parse_chain_rpc_urls_map(input);
+        assert!(matches!(result.unwrap_err(), RpcUrlInvalidAddress(_)));
     }
 }

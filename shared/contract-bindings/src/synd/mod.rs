@@ -192,6 +192,7 @@ pub mod r#grant_minter_role;
 pub mod r#mint_synd_to_addresses;
 pub mod r#time;
 pub mod r#token_balance_sequencing_module;
+pub mod r#update_attestation_doc_verifier;
 pub mod r#upgradeable_beacon;
 pub mod r#value_lib;
 pub mod r#value_array_lib;

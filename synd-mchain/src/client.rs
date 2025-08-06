@@ -8,8 +8,8 @@ use jsonrpsee::{
     ws_client::{WsClient, WsClientBuilder},
 };
 pub use serde::de::DeserializeOwned;
-use shared::types::BlockRef;
-use tracing::info;
+use shared::{tracing::SpanKind, types::BlockRef};
+use tracing::{info, instrument};
 
 /// Known state of the `synd-mchain`
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -33,6 +33,7 @@ pub trait Provider: Send + Sync {
     ) -> Result<T, ClientError>;
 
     /// Gets the current block number from the chain
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Client))]
     async fn get_block_number(&self) -> u64 {
         let block: alloy::rpc::types::Block =
             self.request("eth_getBlockByNumber", (BlockNumberOrTag::Latest, false)).await.unwrap();
@@ -40,11 +41,13 @@ pub trait Provider: Send + Sync {
     }
 
     /// Adds a new batch to the chain
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
     async fn add_batch(&self, batch: &MBlock) -> eyre::Result<Option<u64>> {
         Ok(self.request("mchain_addBatch", [batch]).await?)
     }
 
     /// Gets the processed blocks from source chains for a given block tag
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
     async fn get_source_chains_processed_blocks(
         &self,
         tag: BlockNumberOrTag,
@@ -53,6 +56,7 @@ pub trait Provider: Send + Sync {
     }
 
     /// Rolls back the chain to a specific block number
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
     async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
@@ -76,6 +80,7 @@ pub trait Provider: Send + Sync {
     /// * `Ok(Some(KnownState))` - The validated state if one was found
     /// * `Ok(None)` - No validated state was found (starting from genesis)
     /// * `Err` - An error occurred during reconciliation
+    #[instrument(skip_all, err, fields(otel.kind = ?SpanKind::Client))]
     async fn reconcile_mchain_with_source_chains(
         &self,
         sequencing_client: &impl synd_chain_ingestor::client::Provider,
@@ -98,6 +103,7 @@ pub trait Provider: Send + Sync {
     /// `get_safe_state` gets the processed blocks from the appchain contract and validates them
     /// against the source chain clients.
     /// The safe `synd-mchain` block number is returned if the chain requires a reorg.
+    #[instrument(skip_all, fields(otel.kind = ?SpanKind::Client))]
     async fn get_safe_state(
         &self,
         sequencing_client: &impl synd_chain_ingestor::client::Provider,

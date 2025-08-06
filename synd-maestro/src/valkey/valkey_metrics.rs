@@ -143,13 +143,13 @@ use tracing::warn;
 #[derive(Debug, Clone)]
 pub struct ValkeyMetrics {
     /// Total cache operations by operation and status
-    cache_operations_total: Family<OperationLabels, Counter>,
+    cache_operations: Family<OperationLabels, Counter>,
     /// Duration of cache operations, in microseconds
     cache_operation_duration_us: Family<DurationLabels, Gauge>,
     /// Cache hit/miss tracking
-    cache_requests_total: Family<RequestLabels, Counter>,
+    cache_requests: Family<RequestLabels, Counter>,
     /// Detailed error tracking
-    cache_errors_total: Family<ErrorLabels, Counter>,
+    cache_errors: Family<ErrorLabels, Counter>,
 }
 
 impl Default for ValkeyMetrics {
@@ -350,16 +350,16 @@ impl ValkeyMetrics {
     /// Create a new `ValkeyMetrics` instance and register all metrics with the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
         let metrics = Self {
-            cache_operations_total: Family::<OperationLabels, Counter>::default(),
+            cache_operations: Family::<OperationLabels, Counter>::default(),
             cache_operation_duration_us: Family::<DurationLabels, Gauge>::default(),
-            cache_requests_total: Family::<RequestLabels, Counter>::default(),
-            cache_errors_total: Family::<ErrorLabels, Counter>::default(),
+            cache_requests: Family::<RequestLabels, Counter>::default(),
+            cache_errors: Family::<ErrorLabels, Counter>::default(),
         };
 
         registry.register(
-            "cache_operations_total",
+            "cache_operations",
             "Total number of cache operations",
-            metrics.cache_operations_total.clone(),
+            metrics.cache_operations.clone(),
         );
 
         registry.register(
@@ -369,15 +369,15 @@ impl ValkeyMetrics {
         );
 
         registry.register(
-            "cache_requests_total",
+            "cache_requests",
             "Total cache requests by result",
-            metrics.cache_requests_total.clone(),
+            metrics.cache_requests.clone(),
         );
 
         registry.register(
-            "cache_errors_total",
+            "cache_errors",
             "Total cache errors by type, operation, and cache type",
-            metrics.cache_errors_total.clone(),
+            metrics.cache_errors.clone(),
         );
 
         metrics
@@ -414,7 +414,7 @@ impl ValkeyMetrics {
 
         match result {
             Ok(value) => {
-                self.cache_operations_total
+                self.cache_operations
                     .get_or_create(&OperationLabels {
                         operation: operation.clone(),
                         status: OperationStatus::Success,
@@ -427,7 +427,7 @@ impl ValkeyMetrics {
                 let status = classify_error_status(&error);
                 let error_type = classify_error_type(&error);
 
-                self.cache_operations_total
+                self.cache_operations
                     .get_or_create(&OperationLabels {
                         operation: operation.clone(),
                         status,
@@ -435,7 +435,7 @@ impl ValkeyMetrics {
                     })
                     .inc();
 
-                self.cache_errors_total
+                self.cache_errors
                     .get_or_create(&ErrorLabels {
                         error_type,
                         operation: operation.clone(),
@@ -454,7 +454,7 @@ impl ValkeyMetrics {
     /// Increments the cache hit counter, which is used to calculate cache hit ratios
     /// for performance monitoring.
     pub fn record_hit(&self) {
-        self.cache_requests_total.get_or_create(&RequestLabels { result: CacheResult::Hit }).inc();
+        self.cache_requests.get_or_create(&RequestLabels { result: CacheResult::Hit }).inc();
     }
 
     /// Record a cache miss.
@@ -462,7 +462,7 @@ impl ValkeyMetrics {
     /// Increments the cache miss counter, which is used to calculate cache hit ratios
     /// for performance monitoring.
     pub fn record_miss(&self) {
-        self.cache_requests_total.get_or_create(&RequestLabels { result: CacheResult::Miss }).inc();
+        self.cache_requests.get_or_create(&RequestLabels { result: CacheResult::Miss }).inc();
     }
 
     /// Increment operation counter with specific labels.
@@ -481,7 +481,7 @@ impl ValkeyMetrics {
         status: OperationStatus,
         func_name: String,
     ) {
-        self.cache_operations_total
+        self.cache_operations
             .get_or_create(&OperationLabels { operation, status, func_name })
             .inc();
     }
@@ -527,7 +527,7 @@ impl ValkeyMetrics {
         cache_type: CacheType,
         func_name: String,
     ) {
-        self.cache_errors_total
+        self.cache_errors
             .get_or_create(&ErrorLabels { error_type, operation, cache_type, func_name })
             .inc();
     }
@@ -667,7 +667,7 @@ macro_rules! with_cache_metrics {
         use std::time::Instant;
 
         let start = Instant::now();
-        let func_name = $crate::valkey::valkey_metrics::extract_func_name(stringify!($operation_expr));
+        let (func_name, _) = $crate::valkey::valkey_metrics::extract_func_and_method_name(stringify!($operation_expr));
         let result = $operation_expr.await;
         let duration = start.elapsed();
 
@@ -723,20 +723,38 @@ macro_rules! with_cache_metrics {
     }};
 }
 
-/// Extract the function name from an expression string.
+/// Extract the function name and method from an expression string.
 /// For example, "`conn.set_wallet_nonce(chain_id, signer, rpc_nonce, ttl)`"
-/// returns "`conn.set_wallet_nonce`"
-pub fn extract_func_name(expr_str: &str) -> String {
-    expr_str.split('(').next().unwrap_or("unknown").trim().to_string()
+/// returns "(`conn.set_wallet_nonce`, `set_wallet_name`)"
+pub fn extract_func_and_method_name(expr_str: &str) -> (String, String) {
+    // Split by '(' to get everything before the opening parenthesis
+    let func_name = expr_str
+        .split('(')
+        .next()
+        .unwrap_or_else(|| {
+            warn!("Unable to extract a function name from expr_str: {}", expr_str);
+            "unknown_func"
+        })
+        .to_string();
+
+    let method_name = func_name
+        .split('.')
+        .next_back()
+        .unwrap_or_else(|| {
+            warn!("Unable to extract a method name from expr_str: {}", expr_str);
+            "unknown_method"
+        })
+        .to_string();
+
+    (func_name, method_name)
 }
 
 /// Helper function to detect the operation type from the method name. This relies on method naming
 /// consistency within the `synd-maestro` package.
 pub fn detect_operation_and_cache_type(expr_str: &str) -> (Operation, CacheType) {
-    // Extract method name from the expression
-    let method_name = expr_str.split('.').next_back().unwrap_or("").split('(').next().unwrap_or("");
+    let (_, method_name) = extract_func_and_method_name(expr_str);
 
-    let op = match method_name {
+    let op = match method_name.clone() {
         // Read operations
         name if name.starts_with("get") => Operation::Read,
         name if name.starts_with("xread") => Operation::StreamRead,
@@ -762,6 +780,7 @@ pub fn detect_operation_and_cache_type(expr_str: &str) -> (Operation, CacheType)
             Operation::Other
         }
     };
+
     let cache = match method_name {
         name if name.starts_with('x') => CacheType::ValkeyStream,
         _ => CacheType::ValkeyCache,
@@ -922,6 +941,57 @@ mod tests {
             ErrorType::UnknownError => "unknown_error",
         };
         assert_eq!(error_type_value, "connection_error");
+    }
+
+    #[test]
+    fn test_extract_func_and_method_name() {
+        assert_eq!(
+            extract_func_and_method_name("conn.get_wallet_nonce(chain_id, address)"),
+            ("conn.get_wallet_nonce".to_string(), "get_wallet_nonce".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name("conn.get(key)"),
+            ("conn.get".to_string(), "get".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name("self.conn.get_wallet_nonce(a, b)"),
+            ("self.conn.get_wallet_nonce".to_string(), "get_wallet_nonce".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name("conn.xread_options(&keys, &ids, &opts)"),
+            ("conn.xread_options".to_string(), "xread_options".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name("producer_conn.xdel::<_, _, usize>(&stream_key, &ids)"),
+            ("producer_conn.xdel::<_, _, usize>".to_string(), "xdel::<_, _, usize>".to_string())
+        );
+        assert_eq!(extract_func_and_method_name("self.conn.xread_options(&[self.stream_key.as_str()], &[self.last_id.as_str()], &opts)"),
+                   ("self.conn.xread_options".to_string(), "xread_options".to_string()));
+        assert_eq!(
+            extract_func_and_method_name(
+                "conn.set_wallet_nonce(
+                chain_id,
+                wallet_address,
+                desired_nonce,
+                self.config.wallet_nonce_ttl
+            )"
+            ),
+            ("conn.set_wallet_nonce".to_string(), "set_wallet_nonce".to_string())
+        );
+        assert_eq!(
+            extract_func_and_method_name(
+                "producer_conn.xadd(
+            stream_key,
+            \"*\",
+                &[
+                    (\"data\", raw_tx),
+                    (\"retries\", retries.to_string().as_bytes()),
+                    (\"traceparent\", Vec::from(traceparent).as_slice()),
+                ],
+            )"
+            ),
+            ("producer_conn.xadd".to_string(), "xadd".to_string())
+        );
     }
 
     #[test]
@@ -1136,7 +1206,7 @@ mod tests {
 
         // Check that the operation counter was incremented
         assert_eq!(
-            valkey_metrics.cache_operations_total.get(&operation_labels).map_or(0, |c| c.get()),
+            valkey_metrics.cache_operations.get(&operation_labels).map_or(0, |c| c.get()),
             1
         );
 
@@ -1147,14 +1217,14 @@ mod tests {
         );
 
         // Check that a cache hit was recorded
-        assert_eq!(valkey_metrics.cache_requests_total.get(&hit_labels).map_or(0, |c| c.get()), 1);
+        assert_eq!(valkey_metrics.cache_requests.get(&hit_labels).map_or(0, |c| c.get()), 1);
 
         // Test cache miss scenario
         valkey_metrics.record_miss();
 
         let miss_labels = RequestLabels { result: CacheResult::Miss };
 
-        assert_eq!(valkey_metrics.cache_requests_total.get(&miss_labels).map_or(0, |c| c.get()), 1);
+        assert_eq!(valkey_metrics.cache_requests.get(&miss_labels).map_or(0, |c| c.get()), 1);
 
         // Test error scenario
         let (error_operation, cache_type) = (Operation::Read, CacheType::ValkeyCache);
@@ -1187,13 +1257,10 @@ mod tests {
         };
 
         assert_eq!(
-            valkey_metrics
-                .cache_operations_total
-                .get(&error_operation_labels)
-                .map_or(0, |c| c.get()),
+            valkey_metrics.cache_operations.get(&error_operation_labels).map_or(0, |c| c.get()),
             1
         );
 
-        assert_eq!(valkey_metrics.cache_errors_total.get(&error_labels).map_or(0, |c| c.get()), 1);
+        assert_eq!(valkey_metrics.cache_errors.get(&error_labels).map_or(0, |c| c.get()), 1);
     }
 }

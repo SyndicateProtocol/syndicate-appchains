@@ -2,12 +2,12 @@ package pkg
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"math/big"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +19,7 @@ import (
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -28,6 +29,7 @@ import (
 	"github.com/offchainlabs/nitro/eigenda"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,7 +39,7 @@ type Proposer struct {
 	SequencingClient    *ethclient.Client
 	EthereumClient      *ethclient.Client
 	SettlementClient    *ethclient.Client
-	SettlementAuth      *bind.TransactOpts
+	SettlementAuth      bind.TransactOpts
 	EnclaveClient       *rpc.Client
 	DapReaders          []daprovider.Reader
 	TeeModule           *teemodule.Teemodule
@@ -108,7 +110,7 @@ func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metri
 		EthereumClient:   ethereumClient,
 		EnclaveClient:    enclaveClient,
 		SettlementClient: settlementClient,
-		SettlementAuth:   settlementAuth,
+		SettlementAuth:   *settlementAuth,
 		DapReaders:       []daprovider.Reader{eigenda.NewReaderForEigenDA(eigenClient)},
 		TeeModule:        teeModule,
 		Metrics:          metrics,
@@ -150,8 +152,18 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			log.Info().Msg("Close challenge loop tick...")
-			if _, err := p.TeeModule.CloseChallengeWindow(p.SettlementAuth); err != nil {
-				log.Error().Err(err).Msg("Failed to close challenge window")
+			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
+			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
+			// for more info.
+			if _, err := p.TeeModule.CloseChallengeWindow(p.makeTransactOptsCopy(ctx)); err != nil {
+				var event *zerolog.Event
+				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+					event = log.Debug()
+				} else {
+					event = log.Error()
+				}
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to close challenge window", err)
+				event.Stack().Err(wrappedErr).Msg(msg)
 			}
 		}
 	}
@@ -201,29 +213,68 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 				p.PendingTeeInputHash = trustedInput.Hash()
 				p.PendingSignature = appOutput.Signature
-				log.Debug().Msgf("Trusted input: %v", ToHexForLogsTrustedInput(*trustedInput))
-				log.Debug().Msgf("Pending assertion: %v", ToHexForLogsPendingAssertion(*p.PendingAssertion))
+				log.Debug().Msgf("Trusted input: %v", logger.ToHexForLogsTrustedInput(*trustedInput))
+				log.Debug().Msgf("Pending assertion: %v", logger.ToHexForLogsPendingAssertion(*p.PendingAssertion))
 			}
 
 			submissionTimer := metrics.NewTimer()
-			transaction, err := p.TeeModule.SubmitAssertion(p.SettlementAuth, *p.PendingAssertion, p.PendingSignature,
-				crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey))
+
+			keyAddress := crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey)
+			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
+			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
+			// for more info.
+			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature, keyAddress)
 			if err != nil {
+				var event *zerolog.Event
+				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+					event = log.Debug()
+				} else {
+					event = log.Error()
+				}
 				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
-				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				event.Stack().Err(wrappedErr).Msg(msg)
 
 				continue
 			}
-			p.Metrics.AssertionSubmissions.Inc()
-			submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
-
+			seqHash := common.BytesToHash(p.PendingAssertion.SeqBlockHash[:])
+			appHash := common.BytesToHash(p.PendingAssertion.AppBlockHash[:])
 			log.Debug().
 				Str("transactionHash", transaction.Hash().Hex()).
-				Str("seqHash", common.BytesToHash(p.PendingAssertion.SeqBlockHash[:]).Hex()).
-				Str("appHash", common.BytesToHash(p.PendingAssertion.AppBlockHash[:]).Hex()).
+				Str("seqHash", seqHash.Hex()).
+				Str("appHash", appHash.Hex()).
 				Str("l1Acc", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]).Hex()).
 				Msg("Submitted assertion")
+
+			// Update Metrics
+			p.Metrics.AssertionSubmissions.Inc()
+			submissionTimer.ObserveHistogram(p.Metrics.AssertionSubmissionDuration)
 			pollingLoopTimer.ObserveHistogram(p.Metrics.PollingLoopDuration)
+
+			appchainHeader, err := p.AppchainClient.HeaderByHash(ctx, appHash)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.Sprintf("Failed to get appchain block header, skipping metrics update, hash: %v", appHash.Hex()), err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
+			}
+			p.Metrics.LastAssertedAppchainBlockNumber.Set(float64(appchainHeader.Number.Uint64()))
+
+			seqchainHeader, err := p.SequencingClient.HeaderByHash(ctx, seqHash)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.Sprintf("Failed to get seqchain block header, skipping metrics update, hash: %v", seqHash.Hex()), err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
+			}
+			p.Metrics.LastAssertedSeqchainBlockNumber.Set(float64(seqchainHeader.Number.Uint64()))
+			p.Metrics.LastAssertedSeqchainBlockTimestamp.Set(float64(seqchainHeader.Time))
+
+			balance, err := p.SettlementClient.BalanceAt(ctx, keyAddress, nil)
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.
+					Sprintf("Failed to get key's wallet balance on settlement chain, skipping metrics update, address: %v", keyAddress.Hex()), err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
+			}
+			p.Metrics.WalletBalance.Set(float64(balance.Uint64()))
 		}
 	}
 }
@@ -517,54 +568,16 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 	p.Metrics.EnclaveCalls.WithLabelValues(method).Inc()
 
 	if err := p.EnclaveClient.Call(output, method, input); err != nil {
-		return errors.Wrap(tls.HandleTLSErr(err), "tls error")
+		return errors.Wrap(tls.HandleTLSErr(err), "enclave error")
 	}
 
 	return nil
 }
 
-// ToHexForLogsTrustedInput  converts TeeTrustedInput to a hex-encoded version
-func ToHexForLogsTrustedInput(t enclave.TrustedInput) string {
-	hexInput := TeeTrustedInputHex{
-		ConfigHash:           common.Hash(t.ConfigHash).Hex(),
-		AppStartBlockHash:    common.Hash(t.AppStartBlockHash).Hex(),
-		SeqStartBlockHash:    common.Hash(t.SeqStartBlockHash).Hex(),
-		SetDelayedMessageAcc: common.Hash(t.SetDelayedMessageAcc).Hex(),
-		L1StartBatchAcc:      common.Hash(t.L1StartBatchAcc).Hex(),
-		L1EndHash:            common.Hash(t.L1EndHash).Hex(),
-	}
-	jsonInput, _ := json.Marshal(hexInput)
-
-	return string(jsonInput)
-}
-
-// ToHexForLogsPendingAssertion converts Pending assertion to a hex-encoded version
-func ToHexForLogsPendingAssertion(t teemodule.PendingAssertion) string {
-	hexInput := PendingAssertionHex{
-		AppBlockHash: common.Hash(t.AppBlockHash).Hex(),
-		AppSendRoot:  common.Hash(t.AppSendRoot).Hex(),
-		SeqBlockHash: common.Hash(t.SeqBlockHash).Hex(),
-		L1BatchAcc:   common.Hash(t.L1BatchAcc).Hex(),
-	}
-	jsonInput, _ := json.Marshal(hexInput)
-
-	return string(jsonInput)
-}
-
-// PendingAssertionHex is a hex-encoded version for logging
-type PendingAssertionHex struct {
-	AppBlockHash string `json:"appBlockHash"`
-	AppSendRoot  string `json:"appSendRoot"`
-	SeqBlockHash string `json:"seqBlockHash"`
-	L1BatchAcc   string `json:"l1BatchAcc"`
-}
-
-// TeeTrustedInputHex is a hex-encoded version for logging
-type TeeTrustedInputHex struct {
-	ConfigHash           string `json:"configHash"`
-	AppStartBlockHash    string `json:"appStartBlockHash"`
-	SeqStartBlockHash    string `json:"seqStartBlockHash"`
-	SetDelayedMessageAcc string `json:"setDelayedMessageAcc"`
-	L1StartBatchAcc      string `json:"l1StartBatchAcc"`
-	L1EndHash            string `json:"l1EndHash"`
+// makeTransactOptsCopy creates a new TransactOpts with a fresh context and nonce
+func (p *Proposer) makeTransactOptsCopy(ctx context.Context) *bind.TransactOpts {
+	copy := p.SettlementAuth // shallow copy
+	copy.Context = ctx       // ensure context is set fresh
+	copy.Nonce = nil         // ensure fresh nonce lookup
+	return &copy
 }

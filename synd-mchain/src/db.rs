@@ -260,22 +260,36 @@ pub trait ArbitrumDB {
         if state.batch_count == 0 && mblock.payload.is_none() {
             return Err(to_err("invalid first batch: must contain a payload"));
         }
-        if state.batch_count > 0 &&
-            (mblock.timestamp < state.timestamp ||
-                (state.slot.seq_block_number > 0 &&
-                    mblock.slot.seq_block_number != state.slot.seq_block_number + 1) ||
-                mblock.slot.seq_block_number <= state.slot.seq_block_number ||
-                mblock.slot.set_block_number < state.slot.set_block_number)
-        {
-            return Err(to_err(format!(
-                "invalid batch: timestamp {} < {} or seq block {} != {} or set block {} < {}",
-                mblock.timestamp,
-                state.timestamp,
-                mblock.slot.seq_block_number,
-                state.slot.seq_block_number + 1,
-                mblock.slot.set_block_number,
-                state.slot.set_block_number
-            )));
+        if state.batch_count > 0 {
+            if mblock.timestamp < state.timestamp {
+                return Err(to_err(format!(
+                    "invalid batch: timestamp cannot go backwards: {} < {}",
+                    mblock.timestamp, state.timestamp
+                )));
+            }
+
+            if mblock.slot.seq_block_number == 0 {
+                return Err(to_err(format!(
+                    "invalid batch: seq block number must be greater than 0: {}",
+                    mblock.slot.seq_block_number
+                )));
+            }
+
+            if state.slot.seq_block_number > 0 &&
+                mblock.slot.seq_block_number != state.slot.seq_block_number + 1
+            {
+                return Err(to_err(format!(
+                    "invalid batch: seq block number must increment by 1: {} != {}",
+                    mblock.slot.seq_block_number,
+                    state.slot.seq_block_number + 1
+                )));
+            }
+            if mblock.slot.set_block_number < state.slot.set_block_number {
+                return Err(to_err(format!(
+                    "invalid batch: set block number cannot go backwards: {} < {}",
+                    mblock.slot.set_block_number, state.slot.set_block_number
+                )));
+            }
         }
         // if the payload is empty, update the state with pending slot / timestamp info and return
         let arbitrum_batch = match mblock.payload {

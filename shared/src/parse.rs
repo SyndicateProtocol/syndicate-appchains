@@ -24,7 +24,7 @@ pub fn parse_url(value: &str) -> Result<Url, Error> {
 
 /// Parse a string into an Ethereum `Address`.
 pub fn parse_address(value: &str) -> Result<Address, Error> {
-    Address::from_str(value).map_err(|_| Error::EthereumAddress(value.to_string()))
+    Address::from_str(value.trim()).map_err(|_| Error::EthereumAddress(value.to_string()))
 }
 
 /// Parse comma-separated addresses, e.g. "0x123,0x456"
@@ -42,6 +42,51 @@ where
     V: for<'de> Deserialize<'de>,
 {
     serde_json::from_str(s).map_err(|e| Error::InvalidMap(e.to_string()))
+}
+
+/// Sanitize a URL for safe logging by redacting path and query components
+/// that might contain API keys. Returns scheme://host:port/[REDACTED]
+pub fn sanitize_url_for_logging(url: &Url) -> String {
+    let scheme = url.scheme();
+    let host = url.host_str().unwrap_or("[invalid-host]");
+    let port = url.port().map(|p| format!(":{p}")).unwrap_or_default();
+    format!("{scheme}://{host}{port}/[REDACTED]")
+}
+
+/// used to implement Debug sensitive URLs
+pub fn fmt_sanitize_url_for_logging(
+    url: &Url,
+    f: &mut std::fmt::Formatter<'_>,
+) -> Result<(), std::fmt::Error> {
+    write!(f, "{}", sanitize_url_for_logging(url))
+}
+
+/// Helper to format a vector of URLs as a sanitized string
+pub fn sanitize_url_vec_to_string(urls: &[Url]) -> String {
+    urls.iter().map(sanitize_url_for_logging).collect::<Vec<_>>().join(", ")
+}
+
+/// used to implement Debug vectors of sensitive URLs
+pub fn fmt_sanitize_url_for_logging_vec(
+    urls: &[Url],
+    f: &mut std::fmt::Formatter<'_>,
+) -> Result<(), std::fmt::Error> {
+    write!(f, "{}", sanitize_url_vec_to_string(urls))
+}
+
+/// used to implement Debug for hashmaps that contain sensitive URLs as values
+pub fn fmt_sanitize_url_for_logging_hashmap(
+    urls: &HashMap<u64, Vec<Url>>,
+    f: &mut std::fmt::Formatter<'_>,
+) -> Result<(), std::fmt::Error> {
+    write!(
+        f,
+        "{}",
+        urls.iter()
+            .map(|(k, v)| format!("{k}: [{}]", sanitize_url_vec_to_string(v)))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
 
 #[allow(missing_docs)]
@@ -171,6 +216,28 @@ mod tests {
     }
 
     #[test]
+    fn parse_address_empty() {
+        let empty_input = "   ";
+        match parse_address(empty_input) {
+            Err(Error::EthereumAddress(_)) => {}
+            _ => panic!("Expected EthereumAddress error for: {empty_input}"),
+        }
+    }
+
+    #[test]
+    fn parse_address_whitespace() {
+        let whitespace_input = "  0x742d35cc6634c0532925a3b844bc454e4438f44e   ";
+        let result = parse_address(whitespace_input);
+
+        // Ensure no error and the address matches
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Address::from_str("0x742d35cc6634c0532925a3b844bc454e4438f44e").unwrap()
+        );
+    }
+
+    #[test]
     fn test_parse_map_empty() {
         // Test with empty JSON object
         let result = parse_map("{}");
@@ -236,5 +303,12 @@ mod tests {
         assert_eq!(map.len(), 2);
         assert_eq!(map.get("1"), Some(&"https://example.com/path?query=value".to_string()));
         assert_eq!(map.get("2"), Some(&"http://192.168.1.1:8545".to_string()));
+    }
+
+    #[test]
+    fn test_sanitize_url_for_logging() {
+        // Test basic URL without path/query
+        let url = Url::parse("https://example.com/foo/bar/v3/api_key").unwrap();
+        assert_eq!(sanitize_url_for_logging(&url), "https://example.com/[REDACTED]");
     }
 }

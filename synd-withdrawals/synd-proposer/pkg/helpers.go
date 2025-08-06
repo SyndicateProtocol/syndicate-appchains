@@ -180,7 +180,7 @@ func getBatchPreimageData(
 	return nil
 }
 
-// GetMessageAcc if count is zero, attempt to fetch
+// if count is zero, get the latest delayed message accumulator
 func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Address, count uint64) (common.Hash, uint64, error) {
 	// Memory slot in contract is 6
 	slot := common.BigToHash(big.NewInt(6))
@@ -402,9 +402,12 @@ func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay ui
 	i := 0
 	for _, b := range batches {
 		hasMsg := false
-		dmsgTimestamp := binary.BigEndian.
-			Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset : enclave.DelayedMessageTimestampOffset+8])
-		for i < len(dmsgs) && dmsgTimestamp+setDelay <= b.Timestamp {
+		for i < len(dmsgs) {
+			dmsgTimestamp := binary.BigEndian.
+				Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset : enclave.DelayedMessageTimestampOffset+8])
+			if dmsgTimestamp+setDelay > b.Timestamp {
+				break
+			}
 			i++
 			hasMsg = true
 		}

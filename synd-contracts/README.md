@@ -166,8 +166,9 @@ $ make deploy-syndicate-factory
 ### Base Sepolia
 | Contract Name                 | Address                                                                                                                                               |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ArbConfigManagerFactory       | [0xff82F81c66F144cAb9160A4900f7D0D92C94dd97](https://sepolia.basescan.org/address/0xff82F81c66F144cAb9160A4900f7D0D92C94dd97)                         |
-| ArbConfigManager              | [0xbD6b5264de6d3e65ce6e4Cf3E0071E30D01b509C](https://sepolia.basescan.org/address/0xbD6b5264de6d3e65ce6e4Cf3E0071E30D01b509C)                         |
+| ArbConfigManagerFactory       | [0xcf733FD99A9E7052F126C01bf033159775bEcF0B](https://sepolia.basescan.org/address/0xcf733FD99A9E7052F126C01bf033159775bEcF0B)                         |
+| ArbConfigManager              | [0x647e0da79BBEF0e3B076a59cfB3a42429273CE52](https://sepolia.basescan.org/address/0x647e0da79BBEF0e3B076a59cfB3a42429273CE52)                         |
+| AttestationDocVerifier        | [0x8B586B9fe1076d63723f5324aB42854A4DC145C0](https://sepolia.basescan.org/address/0x8B586B9fe1076d63723f5324aB42854A4DC145C0)                         |
 
 ### Risa
 
@@ -188,12 +189,6 @@ $ make deploy-syndicate-factory
 | RequireOrModuleFactory        | [0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d](https://explorer-1205614516323464.devnet.alchemy.com/address/0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d) |
 | RequireCompositeModuleFactory | [0x471584f0B8e35faEB2a618BD58A62316D8882d63](https://explorer-1205614516323464.devnet.alchemy.com/address/0x471584f0B8e35faEB2a618BD58A62316D8882d63) |
 
-### Syndicate Exo
-
-| Contract Name           | Address                                                                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SyndicateFactory        | TODO: deploy new `SyndicateFactory` [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
-| WalletPoolWrapperModule | [0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8](https://syndicate-exo.explorer.alchemy.com/address/0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8)                                     |
 
 ### ETH Holesky
 
@@ -204,8 +199,11 @@ $ make deploy-syndicate-factory
 
 ### ETH Sepolia
 
-| Contract Name      | Address                                                                                                                       |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| TestnetSyndToken   | [0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C](https://sepolia.etherscan.io/address/0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C) |
-| SyndicateToken New | [0xb80c82702791664f59dF773e8b50dE921fC026fE](https://sepolia.etherscan.io/address/0xb80c82702791664f59dF773e8b50dE921fC026fE) |
-| SyndicateToken Old | [0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23](https://sepolia.etherscan.io/address/0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23) |
+| Contract Name            | Address                                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| ArbConfigManagerFactory  | [0x8ad717D4719b57A3DA853F7d422284859b00b10e](https://sepolia.etherscan.io/address/0x8ad717D4719b57A3DA853F7d422284859b00b10e)  |
+| ArbConfigManager         | [0xf7a9732b8e149Da788C11D3D1AAd029B732A8118](https://sepolia.etherscan.io/address/0xf7a9732b8e149Da788C11D3D1AAd029B732A8118)  |
+| AttestationDocVerifier   | [0x860b4eF98ff5A777aEAb715ce06d7fD8c8C1cC25](https://sepolia.etherscan.io/address/0x860b4eF98ff5A777aEAb715ce06d7fD8c8C1cC25)  |
+| TestnetSyndToken         | [0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C](https://sepolia.etherscan.io/address/0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C)  |
+| SyndicateToken New       | [0xb80c82702791664f59dF773e8b50dE921fC026fE](https://sepolia.etherscan.io/address/0xb80c82702791664f59dF773e8b50dE921fC026fE)  |
+| SyndicateToken Old       | [0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23](https://sepolia.etherscan.io/address/0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23)  |

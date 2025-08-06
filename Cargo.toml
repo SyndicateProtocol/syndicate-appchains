@@ -58,12 +58,14 @@ synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-
 synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }
 synd-tee-attestation-zk-proofs-submitter  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter" }
 synd-translator                           = { path = "synd-translator/bin/synd-translator" }
+test-framework                            = { path = "test-framework" }
 test-utils                                = { path = "shared/test-utils" }
 
 # dependencies
 alloy                              = { version = "1.0.17", default-features = false }
 alloy-rlp                          = "0.3.11"
 alloy-trie                         = { version = "0.9.0" }
+arc-swap                           = "1.7.1"
 assert_matches                     = "1.5.0"
 async-trait                        = { version = "0.1" }
 axum                               = "0.8.1"

@@ -54,8 +54,8 @@ var Keys = map[string]struct {
 	"tee-module-contract-address": {"TEE Module Contract Address", "", true},
 	"appchain-bridge-address":     {"Appchain Bridge Address", "", true},
 	"private-key":                 {"Private Key", "", true},
-	"polling-interval":            {"Polling interval", "10m", false},
-	"close-challenge-interval":    {"Close challenge interval", "5m", false},
+	"polling-interval":            {"Polling interval", "1m", false},
+	"close-challenge-interval":    {"Close challenge interval", "1m", false},
 	"port":                        {"Server port", "9292", false},
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
@@ -64,6 +64,7 @@ var Keys = map[string]struct {
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
 	"is-l1-chain":                 {"Is L1 Chain", "false", false},
+	"log-level":                   {"Log Level", "info", false},
 }
 
 func BindFlags(flags *pflag.FlagSet) {
