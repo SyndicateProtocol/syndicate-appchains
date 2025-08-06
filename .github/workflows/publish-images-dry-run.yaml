@@ -20,7 +20,7 @@ jobs:
   docker:
     uses: ./.github/workflows/publish-images.yaml
     with:
-      dry_run: false #TODO change me back
+      dry_run: true
       runner_label: shared-large-01
-      service: "synd-maestro"
+      service: "" # all services
     secrets: inherit
