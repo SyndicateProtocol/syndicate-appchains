@@ -415,7 +415,7 @@ func parseSeqBatches(input VerifySequencingChainInput) (SyndicateAccumulator, co
 	// make sure the end batch accumulator matches the trusted input end hash
 	if input.IsL1Chain {
 		if acc != input.TrustedInput.L1EndHash {
-			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch accumulator mismatch: got %s, expected %s", acc, input.TrustedInput.L1EndHash)
+			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch accumulator mismatch: got %s, expected %s", hexutil.Encode(acc[:]), hexutil.Encode(input.TrustedInput.L1EndHash[:]))
 		}
 	} else {
 		if input.L1EndBlockHeader == nil {

@@ -47,6 +47,9 @@ type Proposer struct {
 	PendingTeeInputHash common.Hash
 	PendingSignature    []byte
 	Metrics             *metrics.Metrics
+
+	settlesToArbitrumRollup bool
+	isL1Chain               bool
 }
 
 func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metrics) *Proposer {
@@ -178,8 +181,15 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get code at ArbSys precompile address", err)
 		log.Warn().Stack().Err(wrappedErr).Msg(msg)
 	}
-	settlesToArbitrumRollup := len(code) > 0
-	log.Info().Bool("settlesToArbitrumRollup", settlesToArbitrumRollup).Msg("Settles to Arbitrum Rollup")
+	p.settlesToArbitrumRollup = len(code) > 0
+	log.Info().Bool("settlesToArbitrumRollup", p.settlesToArbitrumRollup).Msg("Settles to Arbitrum Rollup")
+
+	isL1Chain, err := p.TeeModule.IsL1Chain(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get isL1Chain", err)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
+	}
+	p.isL1Chain = isL1Chain
 
 	for {
 		select {
@@ -202,7 +212,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 			if p.PendingTeeInputHash != trustedInput.Hash() {
 				log.Info().Msg("Proving new assertion...")
-				appOutput, err := p.Prove(ctx, trustedInput, settlesToArbitrumRollup)
+				appOutput, err := p.Prove(ctx, trustedInput)
 				if err != nil {
 					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to prove", err)
 					log.Error().Stack().Err(wrappedErr).Msg(msg)
@@ -291,7 +301,7 @@ func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, 
 
 func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint64, error) {
 	var batchCount uint64
-	if p.Config.IsL1Chain {
+	if p.isL1Chain {
 		if err := p.SequencingClient.Client().CallContext(ctx, &batchCount, "synd_batchFromAcc", l1Hash); err != nil {
 			return 0, errors.Wrap(err, "failed to get batch from seq acc")
 		}
@@ -313,7 +323,6 @@ func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint6
 func (p *Proposer) Prove(
 	ctx context.Context,
 	trustedInput *enclave.TrustedInput,
-	settlesToArbitrumRollup bool,
 ) (*enclave.VerifyAppchainOutput, error) {
 	p.Metrics.ProveTotal.Inc()
 
@@ -399,7 +408,7 @@ func (p *Proposer) Prove(
 
 	log.Debug().Msg("Getting proof...")
 	var proof *enclave.AccountResult
-	if !p.Config.IsL1Chain {
+	if !p.isL1Chain {
 		// get the end block header
 		if header, err = p.EthereumClient.HeaderByHash(ctx, trustedInput.L1EndHash); err != nil {
 			return nil, errors.Wrap(err, "failed to get sequencing header")
@@ -436,7 +445,7 @@ func (p *Proposer) Prove(
 		DelayedMessages:                 valData.DelayedMessages,
 		StartDelayedMessagesAccumulator: valData.StartDelayedAcc,
 		Batches:                         batches,
-		IsL1Chain:                       p.Config.IsL1Chain,
+		IsL1Chain:                       p.isL1Chain,
 		PreimageData:                    preimageData,
 		EndBatchAccumulatorMerkleProof:  proof,
 		L1EndBlockHeader:                header,
@@ -460,7 +469,7 @@ func (p *Proposer) Prove(
 		p.Config.AppchainBridgeAddress,
 		header.Nonce.Uint64(),
 		trustedInput.SetDelayedMessageAcc,
-		settlesToArbitrumRollup,
+		p.settlesToArbitrumRollup,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get delayed messages")

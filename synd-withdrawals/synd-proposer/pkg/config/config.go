@@ -33,8 +33,6 @@ type Config struct {
 
 	AppchainBridgeAddress common.Address
 
-	IsL1Chain bool
-
 	EnclaveConfig    enclave.Config
 	EnclaveTLSConfig tls.Config
 }
@@ -63,7 +61,6 @@ var Keys = map[string]struct {
 	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
-	"is-l1-chain":                 {"Is L1 Chain", "false", false},
 	"log-level":                   {"Log Level", "info", false},
 }
 
@@ -129,7 +126,6 @@ func LoadConfig() (*Config, error) {
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
-		IsL1Chain: viper.GetBool("is-l1-chain"),
 	}, nil
 }
 
