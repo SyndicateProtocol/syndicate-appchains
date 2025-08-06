@@ -8,7 +8,7 @@ interface ISyndStaking {
     function getWeightedStakeDetails(uint256 epochIndex, address user) external view returns (uint256, uint256);
 }
 
-contract SyndStaking is EpochTracker, ISyndStaking { 
+contract SyndStaking is EpochTracker, ISyndStaking {
     uint256 public totalStaked;
     // User => current stake amount
     mapping(address => uint256) public stake;
@@ -32,7 +32,6 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     mapping(uint256 => mapping(address => uint256)) public epochWeightedStake;
     // User => last finalized epoch
     mapping(address => uint256) public lastFinalizedEpochUser;
-    
 
     event Stake(uint256 epochIndex, address user, uint256 amount);
     event WithdrawalInitialized(uint256 timestamp);
@@ -73,7 +72,6 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         epochPartialStake[epochIndex][msg.sender] += msg.value;
         epochWeightedStake[epochIndex][msg.sender] += weight;
         stake[msg.sender] += msg.value;
-
 
         epochPartial[epochIndex] += msg.value;
         epochWeighted[epochIndex] += weight;
@@ -145,8 +143,6 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         emit WithdrawalCompleted(amount);
     }
 
-
-
     ///////////////////////
     // View functions
     ///////////////////////
@@ -169,12 +165,22 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         }
     }
 
-    function getStakeDetails(uint256 epochIndex, address user) external view returns (uint256 stakeAmount, uint256 totalStake) {
+    function getStakeDetails(uint256 epochIndex, address user)
+        external
+        view
+        returns (uint256 stakeAmount, uint256 totalStake)
+    {
         return (getUserStake(epochIndex, user), getTotalStake(epochIndex));
     }
 
-    function getWeightedStakeDetails(uint256 epochIndex, address user) external view returns (uint256 weightedStake, uint256 totalWeightedStake) {
-        return (getUserStake(epochIndex, user) + epochWeightedStake[epochIndex][user], getTotalStake(epochIndex) + epochWeighted[epochIndex]);
+    function getWeightedStakeDetails(uint256 epochIndex, address user)
+        external
+        view
+        returns (uint256 weightedStake, uint256 totalWeightedStake)
+    {
+        return (
+            getUserStake(epochIndex, user) + epochWeightedStake[epochIndex][user],
+            getTotalStake(epochIndex) + epochWeighted[epochIndex]
+        );
     }
-
 }

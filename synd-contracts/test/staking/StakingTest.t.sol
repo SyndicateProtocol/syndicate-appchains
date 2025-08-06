@@ -108,7 +108,5 @@ contract StakingTest is Test {
         (uint256 amountWeighted2, uint256 totalWeighted2) = staking.getWeightedStakeDetails(2, user1);
         assertEq(amountWeighted2, 50 ether);
         assertEq(totalWeighted2, 50 ether);
-
-
     }
 }

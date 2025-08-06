@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-abstract contract EpochTracker { 
+abstract contract EpochTracker {
     uint256 public startTimestamp;
 
     uint256 public constant EPOCH_DURATION = 30 days;

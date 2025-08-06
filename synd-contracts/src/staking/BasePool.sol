@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {ISyndStaking} from "./SyndStaking.sol";
 
-contract BasePool {  
+contract BasePool {
     ISyndStaking public stakingContract;
 
     // Epoch index => emission total for that epoch
