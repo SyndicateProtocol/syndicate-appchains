@@ -92,7 +92,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         uint256 currentEpoch = getCurrentEpoch();
         uint256 index = lastFinalizedEpochUser[user];
         if (index < currentEpoch) {
-            epochStake[index][user] = stake[user] + epochPartialStake[index][user];
+            epochStake[index][user] = stake[user] - epochPartialStake[index][user];
             index++;
         }
         lastFinalizedEpochUser[user] = index;

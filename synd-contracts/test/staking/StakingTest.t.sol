@@ -48,6 +48,40 @@ contract StakingTest is Test {
         assertEq(total2, 50 ether);
     }
 
+    function test_stake_and_finalize() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 50 ether}();
+        vm.stopPrank();
+
+        (uint256 amount1, uint256 total1) = staking.getStakeDetails(1, user1);
+        assertEq(amount1, 0 ether);
+        assertEq(total1, 0 ether);
+
+        stepEpoch(1);
+
+        (uint256 amount2, uint256 total2) = staking.getStakeDetails(2, user1);
+        assertEq(amount2, 50 ether);
+        assertEq(total2, 50 ether);
+
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 10 ether}();
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        (uint256 amount3, uint256 total3) = staking.getStakeDetails(1, user1);
+        assertEq(amount3, 0 ether);
+        assertEq(total3, 0 ether);
+
+        (uint256 amount4, uint256 total4) = staking.getStakeDetails(2, user1);
+        assertEq(amount4, 50 ether);
+        assertEq(total4, 50 ether);
+
+        (uint256 amount5, uint256 total5) = staking.getStakeDetails(3, user1);
+        assertEq(amount5, 60 ether);
+        assertEq(total5, 60 ether);
+    }
+
     function test_withdraw() public {
         vm.startPrank(user1);
         staking.stakeSynd{value: 100 ether}();
