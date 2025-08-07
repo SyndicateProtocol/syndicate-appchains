@@ -9,7 +9,12 @@ services:
     environment:
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
     ports:
-      - 5555:8545
+      - "8545"
+      - "8546"
+    volumes:
+      - ./datadir:/datadir
+    networks:
+      - appchains-network
 
   seq-ingestor:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
@@ -21,9 +26,14 @@ services:
     volumes:
       - ./:/chains
     environment:
-      - DB_FILE=/chains/${SEQUENCING_CHAIN_ID}.db
-      - START_BLOCK=0
-      - WS_URLS=${SEQUENCING_WS_URL}
+      DB_FILE: /chains/ingestor.db
+      START_BLOCK: 0
+      WS_URLS: ${SEQUENCING_WS_URLS}
+    ports:
+      - "8545"
+      - "8546"
+    networks:
+      - appchains-network
 
   set-ingestor:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
@@ -35,9 +45,14 @@ services:
     volumes:
       - ./:/chains
     environment:
-      - DB_FILE=/chains/84532.db
-      - START_BLOCK=20000000
-      - WS_URLS=${SETTLEMENT_WS_URL}
+      DB_FILE: /chains/ingestor.db
+      START_BLOCK: 20000000
+      WS_URLS: ${SETTLEMENT_WS_URLS}
+    ports:
+      - "8545"
+      - "8546"
+    networks:
+      - appchains-network
 
   healthcheck:
     image: curlimages/curl:8.13.0
@@ -46,6 +61,8 @@ services:
       start_period: 3600s
     tty: true
     entrypoint: /bin/sh
+    networks:
+      - appchains-network
 
   translator:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:latest
@@ -68,14 +85,37 @@ services:
     depends_on:
       healthcheck:
         condition: service_healthy
+    networks:
+      - appchains-network
 
   nitro:
-    image: offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
-    command: "--parent-chain.connection.url=ws://mchain:8545 --http.port=8545 --http.addr=0.0.0.0 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/${CHAIN_INFO_FILE}"
+    image: ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
+    command:
+      - "--parent-chain.connection.url=ws://mchain:8545"
+      - "--http.api=arb,eth,net,web3,txpool,arbtrace,synd"
+      - "--node.dangerous.disable-blob-reader=true"
+      - "--node.inbox-reader.check-delay=100ms"
+      - "--node.staker.enable=false"
+      - "--node.parent-chain-reader.poll-interval=100ms"
+      - "--node.parent-chain-reader.old-header-timeout=2540400h"
+      - "--execution.parent-chain-reader.old-header-timeout=2540400h"
+      - "--execution.caching.archive=true"
+      - "--ensure-rollup-deployment=false"
+      - "--chain.info-files=/config/chain_info.json"
+      - "--metrics"
+      - "--log-level=error"    
     depends_on:
       healthcheck:
         condition: service_healthy
     volumes:
       - ./config:/cfg:ro
+      - ./data:/home/user/.arbitrum
     ports:
-      - 8545:8545
+      - "8547"
+      - "6070"
+    networks:
+      - appchains-network
+
+networks:
+  appchains-network:
+    driver: bridge

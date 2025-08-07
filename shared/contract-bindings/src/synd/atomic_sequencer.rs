@@ -79,6 +79,7 @@ constructor();
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -154,6 +155,7 @@ function implementation() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -185,6 +187,7 @@ function implementation() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);

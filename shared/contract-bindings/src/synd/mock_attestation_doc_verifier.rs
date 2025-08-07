@@ -150,6 +150,7 @@ function mockPublicKeyToReturn() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -183,6 +184,7 @@ function mockPublicKeyToReturn() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -295,6 +297,7 @@ function setPublicKeyToReturn(address _key) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -328,6 +331,7 @@ function setPublicKeyToReturn(address _key) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -443,6 +447,7 @@ function setShouldRevert(bool _revert) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -474,6 +479,7 @@ function setShouldRevert(bool _revert) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -589,6 +595,7 @@ function shouldRevert() external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -620,6 +627,7 @@ function shouldRevert() external view returns (bool);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -737,6 +745,7 @@ function verifyAttestationDocProof(bytes memory, bytes memory) external view ret
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Bytes,
@@ -776,6 +785,7 @@ function verifyAttestationDocProof(bytes memory, bytes memory) external view ret
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);

@@ -12,9 +12,14 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/metrics"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/config"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/nitro/arbnode"
+	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func main() {
@@ -29,14 +34,9 @@ func main() {
 	appUrl := flag.String("app-url", "https://rpc.testnet.manchego.syndicate.io", "appchain rpc url")
 
 	// config flags - for risa testnet
-	seqContractFlag := flag.String("seq-contract", "0x1e491B3C0A53492F72dBE5A48C6cd6ffe19b643E", "sequencing contract address for appchain")
+	seqContractFlag := flag.String("seq-contract", "0xAdB61DB12cDB6ED6bFF18A7D76C4DA2a8c12F767", "sequencing contract address for appchain")
 	seqBridgeFlag := flag.String("seq-bridge", "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA", "sequencing chain bridge contract address")
-	appBridgeFlag := flag.String("app-bridge", "0x646eD51Ef2daD941733b004961d9ceC2B32BACF8", "appchain bridge address")
-
-	// config flags - for risa devnet
-	// seqContractFlag := flag.String("seq-contract", "0xb89D1d2E9bc9A14855e6C8509dd5435422CcDd8f", "sequencing contract address for appchain")
-	// seqBridgeFlag := flag.String("seq-bridge", "0x765E6EC7f3A8c8A2712EA230754E5968E45E124b", "sequencing chain bridge contract address")
-	// appBridgeFlag := flag.String("app-bridge", "0xC5432874Fe53da9185a34eCdf48A3a2a2A8Bd241", "appchain bridge address")
+	appBridgeFlag := flag.String("app-bridge", "0xD006E3c249d8A496EbD54DfE8749a13825813e79", "appchain bridge address")
 
 	// config flags - optional. settlement
 	setMsgs := flag.Uint64("set-msg-count", 0, "settlement delayed message count")
@@ -60,7 +60,7 @@ func main() {
 		panic(err)
 	}
 
-	proposerConfig := &pkg.Config{
+	proposerConfig := &config.Config{
 		EthereumRPCURL:           *l1Url,
 		SettlementRPCURL:         *setUrl,
 		SettlementChainID:        85432,
@@ -81,7 +81,25 @@ func main() {
 		},
 	}
 
-	proposer := pkg.NewProposer(ctx, proposerConfig)
+	proposer := pkg.NewProposer(ctx, proposerConfig, metrics.NewMetrics(prometheus.NewRegistry()))
+
+	if *l1EndBatch == 0 {
+		ibridge, err := bridgegen.NewBridge(seqBridgeAddress, proposer.EthereumClient)
+		if err != nil {
+			panic(err)
+		}
+		count, err := ibridge.SequencerMessageCount(&bind.CallOpts{Context: ctx})
+		if err != nil {
+			panic(err)
+		}
+		if !count.IsUint64() {
+			panic("sequencer message count is not a uint64")
+		}
+		if count.Sign() == 0 {
+			panic("sequencer message count is zero")
+		}
+		*l1EndBatch = count.Uint64() - 1
+	}
 
 	// normally this comes from the tee contract instead
 	var startMetadata arbnode.BatchMetadata
@@ -138,7 +156,7 @@ func main() {
 	fmt.Println("Trusted input L1StartBatchAcc: ", common.Hash(trustedInput.L1StartBatchAcc))
 	fmt.Println("ready in", time.Since(now))
 	now = time.Now()
-	proveOutput, err := proposer.Prove(ctx, trustedInput)
+	proveOutput, err := proposer.Prove(ctx, trustedInput, false)
 	if err != nil {
 		panic(err)
 	}

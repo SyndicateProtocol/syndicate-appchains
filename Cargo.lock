@@ -91,6 +91,7 @@ dependencies = [
  "alloy-contract",
  "alloy-core",
  "alloy-eips",
+ "alloy-json-rpc",
  "alloy-network",
  "alloy-node-bindings",
  "alloy-provider",
@@ -6192,14 +6193,17 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "arc-swap",
  "async-trait",
  "axum 0.8.4",
  "byte-unit",
  "bytes",
+ "ctor",
  "eyre",
  "flate2",
  "http",
  "jsonrpsee",
+ "mockito",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry-semantic-conventions",
@@ -6983,7 +6987,9 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "clap",
+ "common",
  "ctor",
+ "derivative",
  "eyre",
  "fs2",
  "futures-util",
@@ -6993,9 +6999,12 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
+ "test-framework",
+ "test-utils",
  "tokio",
  "tower 0.5.2",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -7027,6 +7036,7 @@ dependencies = [
  "tokio-util",
  "tower 0.5.2",
  "tracing",
+ "url",
  "wiremock",
 ]
 
@@ -7117,6 +7127,7 @@ dependencies = [
  "alloy",
  "clap",
  "contract-bindings",
+ "humantime",
  "jsonrpsee",
  "mockito",
  "serde",
@@ -7154,9 +7165,8 @@ dependencies = [
  "temp-env",
  "thiserror 2.0.12",
  "tokio",
- "tower 0.5.2",
- "tower-layer",
  "tracing",
+ "url",
 ]
 
 [[package]]

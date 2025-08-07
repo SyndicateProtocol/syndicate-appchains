@@ -19,6 +19,17 @@ use x509_cert::der::{DecodePem, Encode};
 #[allow(missing_docs)]
 #[derive(Debug, thiserror::Error)]
 pub enum ProofSubmitterError {
+    #[error("RPC URL was provided, but Private key is missing")]
+    PrivateKeyRequired,
+
+    #[error("RPC URL was provided, but contract address is missing. You can use `--deploy-new-contract-with-sp1-verifier` to deploy a new instance")]
+    ContractAddressRequired,
+
+    #[error(
+        "`--contract-address` and `--deploy-new-contract-with-sp1-verifier` are mutually exclusive"
+    )]
+    ContractAddressAndDeployAreMutuallyExclusive,
+
     #[error("Failed to get attestation doc")]
     GetAttestationDoc(#[from] jsonrpsee::core::client::Error),
 
@@ -60,6 +71,18 @@ pub enum ProofSubmitterError {
 
     #[error("Vkey mismatch")]
     VkeyMismatch,
+
+    #[error("Pcr0 mismatch")]
+    Pcr0Mismatch,
+
+    #[error("Pcr1 mismatch")]
+    Pcr1Mismatch,
+
+    #[error("Pcr2 mismatch")]
+    Pcr2Mismatch,
+
+    #[error("Failed to deploy new contracts: {0}")]
+    DeployNewContract(alloy::contract::Error),
 }
 
 #[allow(missing_docs)]

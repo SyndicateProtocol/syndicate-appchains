@@ -8,11 +8,11 @@ services:
       - PORT=8080
       - DB_FILE=/datadir/ingestor.db
       - START_BLOCK={{ settlement_start_block_defaults_to_zero }}
-      - WS_URL={{ settlement_chain_wss }}
+      - WS_URLS={{ settlement_chain_wss_list }}
     ports:
       - "8080"
     volumes:
-      - {{ settlement_data_mount_point }}:/datadir
+      - ./datadir:/datadir
 
   sequencing:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:{{ image_tag }}
@@ -22,8 +22,8 @@ services:
       - PORT=8080
       - DB_FILE=/datadir/ingestor.db
       - START_BLOCK={{ sequencing_start_block_defaults_to_zero }}
-      - WS_URL={{ sequencing_chain_wss }}
+      - WS_URLS={{ sequencing_chain_wss_list }}
     ports:
       - "8080"
     volumes:
-      - {{ sequencing_data_mount_point }}:/datadir
+      - ./datadir:/datadir

@@ -24,9 +24,8 @@ synd-mchain         = { workspace = true }
 synd-slotter        = { workspace = true }
 thiserror           = { workspace = true }
 tokio               = { workspace = true, features = ["signal"] }
-tower               = { workspace = true }
-tower-layer         = { workspace = true }
 tracing             = { workspace = true }
+url                 = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }

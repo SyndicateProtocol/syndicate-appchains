@@ -77,14 +77,15 @@ func createAWSNitroRoot() *x509.CertPool {
 }
 
 type Server struct {
-	pcr0          []byte
+	// https://docs.aws.amazon.com/enclaves/latest/user/set-up-attestation.html lists the pcr values
+	pcrs          [3][]byte
 	signerKey     *ecdsa.PrivateKey
 	decryptionKey *rsa.PrivateKey
 }
 
 func NewServer() (*Server, error) {
 	var random io.Reader
-	var pcr0 []byte
+	var pcrs [3][]byte
 	session, err := nsm.OpenDefaultSession()
 	var signerKeyEnv string
 	if err != nil {
@@ -96,19 +97,21 @@ func NewServer() (*Server, error) {
 		defer func() {
 			_ = session.Close()
 		}()
-		pcr, err := session.Send(&request.DescribePCR{
-			Index: 0,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to describe PCR: %w", err)
+		for i := range pcrs {
+			pcr, err := session.Send(&request.DescribePCR{
+				Index: uint16(i),
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to describe PCR %d: %w", i, err)
+			}
+			if pcr.Error != "" {
+				return nil, fmt.Errorf("NSM device for pcr %d returned an error: %s", i, pcr.Error)
+			}
+			if pcr.DescribePCR == nil || pcr.DescribePCR.Data == nil || len(pcr.DescribePCR.Data) == 0 {
+				return nil, fmt.Errorf("NSM device did not return PCR %d data", i)
+			}
+			pcrs[i] = pcr.DescribePCR.Data
 		}
-		if pcr.Error != "" {
-			return nil, fmt.Errorf("NSM device returned an error: %s", pcr.Error)
-		}
-		if pcr.DescribePCR == nil || pcr.DescribePCR.Data == nil || len(pcr.DescribePCR.Data) == 0 {
-			return nil, errors.New("NSM device did not return PCR data")
-		}
-		pcr0 = pcr.DescribePCR.Data
 		random = session
 	}
 
@@ -128,7 +131,7 @@ func NewServer() (*Server, error) {
 	}
 	log.Info("Generated signer key", "address", crypto.PubkeyToAddress(signerKey.PublicKey).Hex())
 	return &Server{
-		pcr0:          pcr0,
+		pcrs:          pcrs,
 		signerKey:     signerKey,
 		decryptionKey: decryptionKey,
 	}, nil
@@ -188,8 +191,10 @@ func (s *Server) EncryptedSignerKey(ctx context.Context, attestation hexutil.Byt
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify attestation: %w", err)
 	}
-	if !bytes.Equal(verification.Document.PCRs[0], s.pcr0) {
-		return nil, errors.New("attestation does not match PCR0")
+	for i, pcr := range s.pcrs {
+		if !bytes.Equal(verification.Document.PCRs[uint(i)], pcr) {
+			return nil, fmt.Errorf("attestation does not match PCR %d: got %s, expected %s", i, common.Bytes2Hex(verification.Document.PCRs[uint(i)]), common.Bytes2Hex(pcr))
+		}
 	}
 	publicKey, err := x509.ParsePKIXPublicKey(verification.Document.PublicKey)
 	if err != nil {
@@ -410,7 +415,7 @@ func parseSeqBatches(input VerifySequencingChainInput) (SyndicateAccumulator, co
 	// make sure the end batch accumulator matches the trusted input end hash
 	if input.IsL1Chain {
 		if acc != input.TrustedInput.L1EndHash {
-			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch accumulator mismatch: got %s, expected %s", acc, input.TrustedInput.L1EndHash)
+			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch accumulator mismatch: got %s, expected %s", hexutil.Encode(acc[:]), hexutil.Encode(input.TrustedInput.L1EndHash[:]))
 		}
 	} else {
 		if input.L1EndBlockHeader == nil {

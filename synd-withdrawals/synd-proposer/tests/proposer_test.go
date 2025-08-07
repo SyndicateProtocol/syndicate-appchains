@@ -2,24 +2,27 @@ package tests
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
-	"io/ioutil"
-	"net"
+	"io"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/metrics"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/config"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/server"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestInitProposerWithConfig(t *testing.T) {
-	privateKey, err := crypto.HexToECDSA("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
-	if err != nil {
-		t.Fatalf("failed to parse private key: %v", err)
-	}
-	dummyCfg := &pkg.Config{
+func dummyConfig(privateKey *ecdsa.PrivateKey) *config.Config {
+	cfg := &config.Config{
 		EthereumRPCURL:           "http://localhost:8545",
 		SettlementRPCURL:         "http://localhost:8546",
 		SequencingRPCURL:         "http://localhost:8547",
@@ -32,64 +35,114 @@ func TestInitProposerWithConfig(t *testing.T) {
 		CloseChallengeInterval:   5 * time.Second,
 		Port:                     9292,
 		SettlementChainID:        9999,
-		EnclaveTLSConfig: pkg.TLSConfig{
+		EnclaveTLSConfig: tls.Config{
 			Enabled:        false,
 			ClientCertPath: "/etc/tls/tls.crt",
 			ClientKeyPath:  "/etc/tls/tls.key",
 		},
 	}
-	proposer := pkg.NewProposer(context.Background(), dummyCfg)
+
+	return cfg
+}
+
+func TestInitProposerWithConfig(t *testing.T) {
+	privateKey, err := crypto.HexToECDSA("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+	if err != nil {
+		t.Fatalf("failed to parse private key: %v", err)
+	}
+	dummyCfg := dummyConfig(privateKey)
+	registry := prometheus.NewRegistry()
+	dummyMetrics := metrics.NewMetrics(registry)
+	proposer := pkg.NewProposer(context.Background(), dummyCfg, dummyMetrics)
 	if proposer.Config != dummyCfg {
 		t.Errorf("Proposer config was not set correctly")
 	}
 }
 
-func TestHealthEndpoint(t *testing.T) {
-	// Find a free port
-	ln, err := net.Listen("tcp", ":0")
+func TestServerInit(t *testing.T) {
+	// Test server initialization
+	port := 18080
+	testServer := server.InitServer(port)
+
+	assert.NotNil(t, testServer)
+	assert.NotNil(t, testServer.Server)
+	assert.NotNil(t, testServer.Registry)
+	assert.Equal(t, fmt.Sprintf(":%d", port), testServer.Addr)
+}
+
+func TestServerEndpoints(t *testing.T) {
+	privateKey, err := crypto.HexToECDSA("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 	if err != nil {
-		t.Fatalf("failed to find a free port: %v", err)
+		t.Fatalf("failed to parse private key: %v", err)
 	}
-	port := ln.Addr().(*net.TCPAddr).Port
-	ln.Close()
+	dummyCfg := dummyConfig(privateKey)
 
-	healthSrv := &http.Server{
-		Addr: fmt.Sprintf(":%d", port),
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/health" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"status":"ok"}`))
-				return
-			}
-			http.NotFound(w, r)
-		}),
-	}
+	testServer := server.InitServer(dummyCfg.Port)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	done := make(chan struct{})
-	go func() {
-		healthSrv.ListenAndServe()
-		close(done)
-	}()
-	defer func() {
-		healthSrv.Close()
-		<-done
-	}()
+	// Register metrics without starting proposer
+	_ = metrics.NewMetrics(testServer.Registry)
 
-	// Give the server a moment to start
+	// Start server
+	err = testServer.Start(ctx)
+	require.NoError(t, err)
+
+	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
 
-	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/health", port))
-	if err != nil {
-		t.Fatalf("failed to GET /health: %v", err)
-	}
-	defer resp.Body.Close()
+	baseURL := fmt.Sprintf("http://localhost:%d", dummyCfg.Port)
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200 OK, got %d", resp.StatusCode)
+	tests := []struct {
+		name           string
+		endpoint       string
+		expectedStatus int
+		expectedBody   string
+		bodyContains   []string
+	}{
+		{
+			name:           "health endpoint",
+			endpoint:       "/health",
+			expectedStatus: http.StatusOK,
+			expectedBody:   `{"status":"ok"}`,
+		},
+		{
+			name:           "metrics endpoint",
+			endpoint:       "/metrics",
+			expectedStatus: http.StatusOK,
+			bodyContains:   []string{"# HELP", "# TYPE"},
+		},
+		{
+			name:           "root endpoint",
+			endpoint:       "/",
+			expectedStatus: http.StatusOK,
+			expectedBody:   "Syndicate Proposer\nAvailable endpoints:\n- /health\n- /metrics\n",
+		},
+		{
+			name:           "unknown endpoint",
+			endpoint:       "/unknown",
+			expectedStatus: http.StatusNotFound,
+		},
 	}
-	body, _ := ioutil.ReadAll(resp.Body)
-	if string(body) != `{"status":"ok"}` {
-		t.Errorf("unexpected body: %s", string(body))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := http.Get(baseURL + tt.endpoint)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			if tt.expectedBody != "" {
+				assert.Equal(t, tt.expectedBody, string(body))
+			}
+
+			for _, contains := range tt.bodyContains {
+				assert.Contains(t, string(body), contains)
+			}
+		})
 	}
 }

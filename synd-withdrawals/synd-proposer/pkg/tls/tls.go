@@ -1,25 +1,26 @@
-package pkg
+package tls
 
 import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 
+	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/logger"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
-type TLSConfig struct {
+type Config struct {
 	Enabled        bool
 	ClientCertPath string
 	ClientKeyPath  string
 }
 
-func createTLSClient(cfg *TLSConfig, rpcURL string) (*rpc.Client, error) {
+func CreateTLSClient(cfg *Config, rpcURL string) (*rpc.Client, error) {
 	if cfg.ClientCertPath == "" || cfg.ClientKeyPath == "" {
 		return nil, fmt.Errorf("TLS client certificate and key paths are required")
 	}
@@ -27,7 +28,7 @@ func createTLSClient(cfg *TLSConfig, rpcURL string) (*rpc.Client, error) {
 	// Load client certificate and private key
 	clientCert, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load client certificate: %v", err)
+		return nil, errors.Wrap(err, "Failed to load TLS client certificate and key pair")
 	}
 
 	tlsConfig := &tls.Config{
@@ -55,32 +56,35 @@ func createTLSClient(cfg *TLSConfig, rpcURL string) (*rpc.Client, error) {
 
 }
 
-// isTLSErr returns true if err came from a failed TLS handshake / cert validation.
-func isTLSErr(err error) bool {
+// IsTLSErr returns true if err came from a failed TLS handshake / cert validation.
+func IsTLSErr(err error) bool {
 	var urlErr *url.Error
 	if !errors.As(err, &urlErr) {
 		return false
 	}
-	// Certificate validation errors
+	// Certificate validation errors, expect them as value types
 	var certInvalid x509.CertificateInvalidError
 	var unknownAuth x509.UnknownAuthorityError
 	if errors.As(urlErr.Err, &certInvalid) || errors.As(urlErr.Err, &unknownAuth) {
-		log.Printf("TLS handshake / certificate error: %v", err)
+		msg, wrappedErr := logger.WrapErrorWithMsg("TLS handshake / certificate error", err)
+		log.Warn().Stack().Err(wrappedErr).Msg(msg)
 		return true
 	}
 	// Any lower‐level TLS record error
-	if _, ok := urlErr.Err.(tls.RecordHeaderError); ok {
-		log.Printf("TLS record header error: %v", err)
+	var recordHeaderError tls.RecordHeaderError
+	if errors.As(urlErr.Err, &recordHeaderError) {
+		msg, wrappedErr := logger.WrapErrorWithMsg("TLS record header error", err)
+		log.Warn().Stack().Err(wrappedErr).Msg(msg)
 		return true
 	}
 	return false
 }
 
-func handleTLSErr(err error) error {
-	if isTLSErr(err) {
+func HandleTLSErr(err error) error {
+	if IsTLSErr(err) {
 		// If the error is related to TLS, exit the program so k8s can restart it. That will automatically fix any cert expiry issues.
-		log.Fatalf("TLS handshake / certificate error; exiting so k8s can rotate pod: %v", err)
+		log.Fatal().Err(err).Msg("TLS handshake / certificate error; exiting so k8s can rotate pod")
 	}
 
-	return fmt.Errorf("failed to call enclave: %v", err)
+	return errors.Wrap(err, "failed to call enclave")
 }

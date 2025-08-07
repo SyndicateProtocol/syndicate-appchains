@@ -20,6 +20,7 @@ path = "src/main.rs"
 alloy                                     = { workspace = true, features = ["contract", "provider-ws", "signer-local", "signers"] }
 clap                                      = { workspace = true, features = ["derive"] }
 contract-bindings                         = { workspace = true }
+humantime                                 = { workspace = true }
 jsonrpsee                                 = { workspace = true, features = ["http-client"] }
 shared                                    = { workspace = true }
 sp1-sdk                                   = { workspace = true }

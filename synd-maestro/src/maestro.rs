@@ -2,7 +2,7 @@
 //! validates them before submission into the transaction processing pipeline.
 
 use crate::{
-    config::{Config, RpcProvider},
+    config::Config,
     errors::{
         InternalErrorType::{
             Other, RpcFailedToFetchWalletBalance, RpcFailedToFetchWalletNonce, RpcMissing,
@@ -34,6 +34,7 @@ use derivative::Derivative;
 use redis::{aio::ConnectionManager, AsyncCommands};
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
+    multi_rpc_provider::MultiRpcProvider,
     tracing::SpanKind,
     tx_validation::{check_signature, decode_transaction},
 };
@@ -50,7 +51,8 @@ pub struct MaestroService {
     // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
-    rpc_providers: HashMap<ChainId, RpcProvider>,
+    #[derivative(Debug = "ignore")]
+    rpc_providers: HashMap<ChainId, MultiRpcProvider>,
     config: Config,
     pub(crate) metrics: MaestroMetrics,
 }
@@ -117,8 +119,11 @@ impl MaestroService {
         locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
     }
 
-    /// Checks if a given `chain_id` has a corresponding [`RpcProvider`] configured
-    pub fn get_rpc_provider(&self, chain_id: &ChainId) -> Result<&RpcProvider, MaestroRpcError> {
+    /// Checks if a given `chain_id` has a corresponding [`MultiRpcProvider`] configured
+    pub fn get_rpc_provider(
+        &self,
+        chain_id: &ChainId,
+    ) -> Result<&MultiRpcProvider, MaestroRpcError> {
         self.rpc_providers
             .get(chain_id)
             .map_or_else(|| Err(InternalError(RpcMissing(*chain_id))), Ok)
@@ -127,7 +132,7 @@ impl MaestroService {
     #[allow(clippy::cognitive_complexity)]
     async fn handle_finalization(
         raw_tx: Vec<u8>,
-        provider: &RpcProvider,
+        provider: &MultiRpcProvider,
         metrics: &MaestroMetrics,
     ) -> CheckFinalizationResult {
         let tx_hash = keccak256(raw_tx.clone());
@@ -142,9 +147,9 @@ impl MaestroService {
 
                 match provider.get_transaction_count(signer).await {
                     Ok(nonce) => {
-                        if nonce == tx.nonce() {
+                        if nonce <= tx.nonce() {
                             warn!(%tx_hash, "Valid transaction is not finalized, resubmitting");
-                            metrics.increment_maestro_resubmitted_transactions_total(1);
+                            metrics.increment_resubmitted_transactions(1);
                             return CheckFinalizationResult::ReSubmit;
                         }
                         warn!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
@@ -284,7 +289,7 @@ impl MaestroService {
 
                 // 2. enqueue the txn
                 self.enqueue_raw_transaction(&raw_tx, tx.hash(), chain_id).await?;
-                self.metrics.increment_maestro_enqueued_transactions_total(1);
+                self.metrics.increment_enqueued_transactions(1);
 
                 // 3. check cache for waiting txns (background task)
                 let service_clone = self.clone();
@@ -306,7 +311,7 @@ impl MaestroService {
                 debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Caching waiting transaction");
                 self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx, tx.hash())
                     .await?;
-                self.metrics.increment_maestro_waiting_transactions_total(1);
+                self.metrics.increment_waiting_transactions(1);
             }
         }
         Ok(())
@@ -862,6 +867,7 @@ mod tests {
         wait_until,
     };
     use tokio::time::sleep;
+    use url::Url;
     use wiremock::{
         matchers::{body_partial_json, method},
         Mock, MockServer, ResponseTemplate,
@@ -885,8 +891,8 @@ mod tests {
 
         // Create chain RPC URLs map
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
-        chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
+        chain_rpc_urls.insert(4, vec![Url::parse(&mock_rpc_server_4.uri()).unwrap()]);
+        chain_rpc_urls.insert(5, vec![Url::parse(&mock_rpc_server_5.uri()).unwrap()]);
 
         // Create cache connection
         let client = redis::Client::open(valkey_url.as_str()).unwrap();

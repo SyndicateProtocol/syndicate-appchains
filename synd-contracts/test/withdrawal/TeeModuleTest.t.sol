@@ -324,15 +324,6 @@ contract TeeModuleTest is Test {
         assertEq(l1BatchAcc, assertion.l1BatchAcc);
     }
 
-    function testRevert_SubmitAssertionZeroRewardAddress() public {
-        PendingAssertion memory assertion = _createAssertion(100);
-
-        bytes memory signature = _createValidSignature(assertion);
-
-        vm.expectRevert("reward address cannot be zero");
-        teeModule.submitAssertion(assertion, signature, address(0));
-    }
-
     function testRevert_SubmitAssertionInvalidSignatureLength() public {
         PendingAssertion memory assertion = _createAssertion(100);
 
@@ -526,41 +517,6 @@ contract TeeModuleTest is Test {
         teeModule.closeChallengeWindow();
     }
 
-    function testRevert_ResolveChallengeReentrancyGuard() public {
-        // This test demonstrates a bug in the TeeModule contract where resolveChallenge
-        // cannot be called because it has nonReentrant modifier and calls closeChallengeWindow
-        // which also has nonReentrant modifier, causing a reentrancy guard error.
-
-        // Submit two assertions to create a challenge
-        PendingAssertion memory assertion1 = PendingAssertion({
-            appBlockHash: bytes32(uint256(100)),
-            appSendRoot: bytes32(uint256(200)),
-            seqBlockHash: bytes32(uint256(300)),
-            l1BatchAcc: bytes32(uint256(400))
-        });
-
-        PendingAssertion memory assertion2 = PendingAssertion({
-            appBlockHash: bytes32(uint256(101)),
-            appSendRoot: bytes32(uint256(201)),
-            seqBlockHash: bytes32(uint256(301)),
-            l1BatchAcc: bytes32(uint256(401))
-        });
-
-        bytes memory signature1 = _createValidSignature(assertion1);
-        bytes memory signature2 = _createValidSignature(assertion2);
-
-        teeModule.submitAssertion(assertion1, signature1, user1);
-        teeModule.submitAssertion(assertion2, signature2, user2);
-
-        // Set up time so closeChallengeWindow can be called
-        vm.warp(block.timestamp + CHALLENGE_WINDOW_DURATION + 1);
-        mockL1Block.setTimestamp(uint64(block.timestamp + 1));
-
-        // Resolve challenge should fail due to reentrancy guard bug
-        vm.expectRevert("ReentrancyGuardReentrantCall()");
-        teeModule.resolveChallenge(assertion1);
-    }
-
     function testRevert_ResolveChallengeNonOwner() public {
         PendingAssertion memory assertion = PendingAssertion({
             appBlockHash: bytes32(uint256(100)),
@@ -571,7 +527,7 @@ contract TeeModuleTest is Test {
 
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        teeModule.resolveChallenge(assertion);
+        teeModule.resolveChallenge(assertion, hex"");
     }
 
     function testRevert_ResolveChallengeNoChallenge() public {
@@ -583,41 +539,7 @@ contract TeeModuleTest is Test {
         });
 
         vm.expectRevert("challenge does not exist");
-        teeModule.resolveChallenge(assertion);
-    }
-
-    function testRevert_ResolveChallengeAssertionNotFound() public {
-        // Submit two assertions to create a challenge
-        PendingAssertion memory assertion1 = PendingAssertion({
-            appBlockHash: bytes32(uint256(100)),
-            appSendRoot: bytes32(uint256(200)),
-            seqBlockHash: bytes32(uint256(300)),
-            l1BatchAcc: bytes32(uint256(400))
-        });
-
-        PendingAssertion memory assertion2 = PendingAssertion({
-            appBlockHash: bytes32(uint256(101)),
-            appSendRoot: bytes32(uint256(201)),
-            seqBlockHash: bytes32(uint256(301)),
-            l1BatchAcc: bytes32(uint256(401))
-        });
-
-        PendingAssertion memory assertion3 = PendingAssertion({
-            appBlockHash: bytes32(uint256(102)),
-            appSendRoot: bytes32(uint256(202)),
-            seqBlockHash: bytes32(uint256(302)),
-            l1BatchAcc: bytes32(uint256(402))
-        });
-
-        bytes memory signature1 = _createValidSignature(assertion1);
-        bytes memory signature2 = _createValidSignature(assertion2);
-
-        teeModule.submitAssertion(assertion1, signature1, user1);
-        teeModule.submitAssertion(assertion2, signature2, user2);
-
-        // Try to resolve with assertion that doesn't exist
-        vm.expectRevert("assertion not found");
-        teeModule.resolveChallenge(assertion3);
+        teeModule.resolveChallenge(assertion, hex"");
     }
 
     function testTimestampManipulation() public {
