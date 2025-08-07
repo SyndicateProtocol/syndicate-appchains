@@ -777,7 +777,7 @@ impl Provider<Ethereum> for MultiRpcProvider {
         panic!("not implemented");
     }
 
-    /// Gets the number of uncles for the block specified by the tag [BlockId].
+    /// Gets the number of uncles for the block specified by the tag [`BlockId`].
     async fn get_uncle_count(&self, _tag: BlockId) -> TransportResult<u64> {
         panic!("not implemented");
     }
