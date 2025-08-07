@@ -34,7 +34,7 @@ contract StakingTest is Test {
 
     function test_stake() public {
         vm.startPrank(user1);
-        staking.stakeSynd{value: 50 ether}();
+        staking.stakeSynd{value: 50 ether}(111);
         vm.stopPrank();
 
         (uint256 amount1, uint256 total1) = staking.getStakeDetails(1, user1);
@@ -50,7 +50,7 @@ contract StakingTest is Test {
 
     function test_stake_and_finalize() public {
         vm.startPrank(user1);
-        staking.stakeSynd{value: 50 ether}();
+        staking.stakeSynd{value: 50 ether}(111);
         vm.stopPrank();
 
         (uint256 amount1, uint256 total1) = staking.getStakeDetails(1, user1);
@@ -64,7 +64,7 @@ contract StakingTest is Test {
         assertEq(total2, 50 ether);
 
         vm.startPrank(user1);
-        staking.stakeSynd{value: 10 ether}();
+        staking.stakeSynd{value: 10 ether}(111);
         vm.stopPrank();
 
         stepEpoch(1);
@@ -84,7 +84,7 @@ contract StakingTest is Test {
 
     function test_withdraw() public {
         vm.startPrank(user1);
-        staking.stakeSynd{value: 100 ether}();
+        staking.stakeSynd{value: 100 ether}(111);
         vm.stopPrank();
 
         stepEpoch(1);
@@ -122,7 +122,7 @@ contract StakingTest is Test {
         // Stake 20 ether for 15 days
         // Weighted stake is 20 * (15/30) = 10
         vm.startPrank(user1);
-        staking.stakeSynd{value: 20 ether}();
+        staking.stakeSynd{value: 20 ether}(111);
         vm.stopPrank();
 
         stepDays(5);
@@ -130,7 +130,7 @@ contract StakingTest is Test {
         // Stake 30 ether for 10 days
         // Weighted stake is 30 * (10/30) = 10
         vm.startPrank(user1);
-        staking.stakeSynd{value: 30 ether}();
+        staking.stakeSynd{value: 30 ether}(111);
         vm.stopPrank();
 
         stepEpoch(1);
