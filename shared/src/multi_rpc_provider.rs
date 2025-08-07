@@ -247,7 +247,7 @@ impl MultiRpcProvider {
                 }
             }
             Err(e) => {
-                warn!(chain_id = chain_id, url = %url, index, error = %e, "Failed to connect to RPC provider");
+                warn!(chain_id = chain_id, url = %sanitize_url_for_logging(url), index, error = %e, "Failed to connect to RPC provider");
                 None
             }
         }
