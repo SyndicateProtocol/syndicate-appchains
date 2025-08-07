@@ -116,7 +116,6 @@ function depositERC20To(address _l1Token, address _l2Token, address _to, uint256
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -176,7 +175,6 @@ function depositERC20To(address _l1Token, address _l2Token, address _to, uint256
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();

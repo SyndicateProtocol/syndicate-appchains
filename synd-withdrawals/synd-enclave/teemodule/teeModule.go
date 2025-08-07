@@ -220,37 +220,6 @@ func (_Teemodule *TeemoduleTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _Teemodule.Contract.contract.Transact(opts, method, params...)
 }
 
-// MAXPENDINGASSERTIONS is a free data retrieval call binding the contract method 0x24efd64a.
-//
-// Solidity: function MAX_PENDING_ASSERTIONS() view returns(uint256)
-func (_Teemodule *TeemoduleCaller) MAXPENDINGASSERTIONS(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _Teemodule.contract.Call(opts, &out, "MAX_PENDING_ASSERTIONS")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// MAXPENDINGASSERTIONS is a free data retrieval call binding the contract method 0x24efd64a.
-//
-// Solidity: function MAX_PENDING_ASSERTIONS() view returns(uint256)
-func (_Teemodule *TeemoduleSession) MAXPENDINGASSERTIONS() (*big.Int, error) {
-	return _Teemodule.Contract.MAXPENDINGASSERTIONS(&_Teemodule.CallOpts)
-}
-
-// MAXPENDINGASSERTIONS is a free data retrieval call binding the contract method 0x24efd64a.
-//
-// Solidity: function MAX_PENDING_ASSERTIONS() view returns(uint256)
-func (_Teemodule *TeemoduleCallerSession) MAXPENDINGASSERTIONS() (*big.Int, error) {
-	return _Teemodule.Contract.MAXPENDINGASSERTIONS(&_Teemodule.CallOpts)
-}
-
 // Bridge is a free data retrieval call binding the contract method 0xe78cea92.
 //
 // Solidity: function bridge() view returns(address)
