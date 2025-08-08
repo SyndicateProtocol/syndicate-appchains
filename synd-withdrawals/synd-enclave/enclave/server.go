@@ -452,7 +452,7 @@ func (s *Server) VerifySequencingChain(ctx context.Context, input VerifySequenci
 			Messages:     input.DelayedMessages,
 		}
 
-		data, err = Verify(blockVerifierInput, &acc)
+		data, err = Verify(ctx, blockVerifierInput, &acc)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to verify sequencing chain: %w", err)
 		}
@@ -605,7 +605,7 @@ func (s *Server) VerifyAppchain(ctx context.Context, input VerifyAppchainInput) 
 			Batches:      batches,
 			Messages:     input.DelayedMessages,
 		}
-		result, err = Verify(blockVerifierInput, nil)
+		result, err = Verify(ctx, blockVerifierInput, nil)
 		if err != nil {
 			return nil, err
 		}
