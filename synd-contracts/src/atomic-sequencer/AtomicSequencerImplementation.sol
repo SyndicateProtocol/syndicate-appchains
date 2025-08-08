@@ -21,8 +21,7 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 /// │ Component       │ Responsibility                                          │
 /// ├─────────────────┼─────────────────────────────────────────────────────────┤
 /// │ AtomicSequencer │ • Transaction routing and coordination                  │
-/// │                 │ • Input validation (array lengths, size limits)        │
-/// │                 │ • DoS attack prevention (MAX_ATOMIC_* constants)       │
+/// │                 │ • Input validation (array lengths)                     │
 /// ├─────────────────┼─────────────────────────────────────────────────────────┤
 /// │ SequencingChain │ • Delegate to permission modules                       │
 /// │                 │ • Emit transaction events                              │
@@ -50,19 +49,10 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 /// }
 /// ```
 ///
-/// @dev DoS Protection: MAX_ATOMIC_* constants prevent resource exhaustion attacks
 contract AtomicSequencerImplementation {
-    // Maximum number of chains that can be processed atomically to prevent DoS attacks
-    uint256 public constant MAX_ATOMIC_CHAINS = 40;
-    // Maximum number of transactions per chain in bulk atomic operations to prevent DoS attacks
-    uint256 public constant MAX_ATOMIC_BULK_TRANSACTIONS = 100;
 
     /// @dev Thrown when input array lengths don't match or are invalid
     error InputLengthMismatchError();
-    /// @dev Thrown when too many chains are provided for atomic processing
-    error TooManyAtomicChains();
-    /// @dev Thrown when transaction array exceeds maximum size for atomic bulk processing
-    error TransactionArrayExceedsMaximum();
 
     /// @notice Processes transactions on multiple Syndicate chains atomically
     ///
@@ -83,7 +73,6 @@ contract AtomicSequencerImplementation {
         if (chains.length == 0 || chains.length != transactions.length || chains.length != isRaw.length) {
             revert InputLengthMismatchError();
         }
-        if (chains.length > MAX_ATOMIC_CHAINS) revert TooManyAtomicChains();
 
         for (uint256 i = 0; i < chains.length; i++) {
             if (isRaw[i]) {
@@ -110,14 +99,7 @@ contract AtomicSequencerImplementation {
         if (chains.length == 0 || chains.length != transactions.length) {
             revert InputLengthMismatchError();
         }
-        if (chains.length > MAX_ATOMIC_CHAINS) revert TooManyAtomicChains();
 
-        // Check individual transaction arrays don't exceed bulk limits
-        for (uint256 i = 0; i < transactions.length; i++) {
-            if (transactions[i].length > MAX_ATOMIC_BULK_TRANSACTIONS) {
-                revert TransactionArrayExceedsMaximum();
-            }
-        }
 
         for (uint256 i = 0; i < chains.length; i++) {
             chains[i].processTransactionsBulk(transactions[i]);
