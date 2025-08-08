@@ -415,7 +415,7 @@ func parseSeqBatches(input VerifySequencingChainInput) (SyndicateAccumulator, co
 	// make sure the end batch accumulator matches the trusted input end hash
 	if input.IsL1Chain {
 		if acc != input.TrustedInput.L1EndHash {
-			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch accumulator mismatch: got %s, expected %s", acc, input.TrustedInput.L1EndHash)
+			return SyndicateAccumulator{}, common.Hash{}, fmt.Errorf("batch accumulator mismatch: got %s, expected %s", hexutil.Encode(acc[:]), hexutil.Encode(input.TrustedInput.L1EndHash[:]))
 		}
 	} else {
 		if input.L1EndBlockHeader == nil {
@@ -668,7 +668,9 @@ func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppc
 
 	input.Inputs[0].SetDelayedMessageAcc = input.Inputs[1].SetDelayedMessageAcc
 	input.Inputs[0].L1EndHash = input.Inputs[1].L1EndHash
-	input.Outputs[1].sign(&input.Inputs[0], s.signerKey)
+	if err := input.Outputs[1].sign(&input.Inputs[0], s.signerKey); err != nil {
+		return nil, err
+	}
 	return &CombineAppchainOutput{
 		Input:  input.Inputs[0],
 		Output: input.Outputs[1],

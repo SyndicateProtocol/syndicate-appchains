@@ -247,7 +247,7 @@ impl MultiRpcProvider {
                 }
             }
             Err(e) => {
-                warn!(chain_id = chain_id, url = %url, index, error = %e, "Failed to connect to RPC provider");
+                warn!(chain_id = chain_id, url = %sanitize_url_for_logging(url), index, error = %e, "Failed to connect to RPC provider");
                 None
             }
         }
@@ -777,7 +777,7 @@ impl Provider<Ethereum> for MultiRpcProvider {
         panic!("not implemented");
     }
 
-    /// Gets the number of uncles for the block specified by the tag [BlockId].
+    /// Gets the number of uncles for the block specified by the tag [`BlockId`].
     async fn get_uncle_count(&self, _tag: BlockId) -> TransportResult<u64> {
         panic!("not implemented");
     }

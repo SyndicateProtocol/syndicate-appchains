@@ -30,7 +30,7 @@ impl MaestroMetrics {
         };
 
         registry.register(
-            "transaction_requests ",
+            "transaction_requests",
             "Total number of requests received by maestro",
             metrics.transaction_requests.clone(),
         );

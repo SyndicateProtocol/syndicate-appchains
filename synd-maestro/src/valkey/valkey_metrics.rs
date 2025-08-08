@@ -679,7 +679,10 @@ macro_rules! with_cache_metrics {
                 $metrics.increment_operation($operation.clone(), $crate::valkey::valkey_metrics::OperationStatus::Success, func_name.clone());
 
                 // Track hit/miss for read operations if requested
-                if $track && matches!($operation, $crate::valkey::valkey_metrics::Operation::Read) {
+                if $track &&
+                    (matches!($operation,
+                        $crate::valkey::valkey_metrics::Operation::Read |
+                        $crate::valkey::valkey_metrics::Operation::StreamRead)) {
                     // Try to determine if this was a hit or miss based on the result
                     if $crate::valkey::valkey_metrics::is_cache_hit(value) {
                         $metrics.record_hit();
@@ -695,7 +698,10 @@ macro_rules! with_cache_metrics {
                 $metrics.increment_operation($operation.clone(), status, func_name.clone());
                 $metrics.record_error(error_type, $operation.clone(), $cache_type.clone(), func_name.clone());
 
-                if $track && matches!($operation, $crate::valkey::valkey_metrics::Operation::Read) {
+                if $track &&
+                    (matches!($operation,
+                        $crate::valkey::valkey_metrics::Operation::Read |
+                        $crate::valkey::valkey_metrics::Operation::StreamRead)) {
                     // Errors on reads are considered misses
                     $metrics.record_miss();
                 }
