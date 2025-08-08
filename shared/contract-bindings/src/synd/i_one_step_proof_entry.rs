@@ -304,6 +304,7 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Address,
@@ -541,6 +542,7 @@ function getEndMachineHash(MachineStatus status, bytes32 globalStateHash) extern
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 MachineStatus,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -583,6 +585,7 @@ function getEndMachineHash(MachineStatus status, bytes32 globalStateHash) extern
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -710,6 +713,7 @@ function getStartMachineHash(bytes32 globalStateHash, bytes32 wasmModuleRoot) ex
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -752,6 +756,7 @@ function getStartMachineHash(bytes32 globalStateHash, bytes32 wasmModuleRoot) ex
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -885,6 +890,7 @@ function proveOneStep(ExecutionContext memory execCtx, uint256 machineStep, byte
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 ExecutionContext,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -931,6 +937,7 @@ function proveOneStep(ExecutionContext memory execCtx, uint256 machineStep, byte
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
