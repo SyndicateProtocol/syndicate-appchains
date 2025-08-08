@@ -32,7 +32,7 @@ contract AirdropScriptTest is Test {
     address public tokenHolder;
     // Real admin address for SYND token
     address constant SYND_ADMIN = 0x243c63d5DBcF619ee36Fde7fF63D1564d5665b41;
-    
+
     // Role constants from SYND token contract
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
     bytes32 public constant AIRDROP_MANAGER_ROLE = keccak256("AIRDROP_MANAGER_ROLE");
@@ -53,7 +53,7 @@ contract AirdropScriptTest is Test {
 
         // Find a SYND token holder with sufficient balance for testing
         tokenHolder = findTokenHolder();
-        
+
         // Grant AIRDROP_MANAGER_ROLE to token holder using real admin
         grantAirdropRoleToHolder();
 
@@ -90,30 +90,30 @@ contract AirdropScriptTest is Test {
         deal(SYND_TOKEN, testHolder, TOTAL_AIRDROP_AMOUNT * 2);
         return testHolder;
     }
-    
+
     function grantAirdropRoleToHolder() internal {
-        // Use the real SYND token admin to grant AIRDROP_MANAGER_ROLE 
+        // Use the real SYND token admin to grant AIRDROP_MANAGER_ROLE
         // Both to the token holder AND to the airdrop contract
-        
+
         console.log("Granting AIRDROP_MANAGER_ROLE using admin:", SYND_ADMIN);
-        
+
         vm.startPrank(SYND_ADMIN);
-        
+
         // Grant role to token holder (for initial transfers)
         syndTokenAccessControl.grantRole(AIRDROP_MANAGER_ROLE, tokenHolder);
-        
+
         // Grant role to airdrop contract (for distributing to recipients)
         syndTokenAccessControl.grantRole(AIRDROP_MANAGER_ROLE, address(airdrop));
-        
+
         vm.stopPrank();
-        
+
         // Verify the roles were granted
         bool holderHasRole = syndTokenAccessControl.hasRole(AIRDROP_MANAGER_ROLE, tokenHolder);
         bool contractHasRole = syndTokenAccessControl.hasRole(AIRDROP_MANAGER_ROLE, address(airdrop));
-        
+
         require(holderHasRole, "Failed to grant AIRDROP_MANAGER_ROLE to token holder");
         require(contractHasRole, "Failed to grant AIRDROP_MANAGER_ROLE to airdrop contract");
-        
+
         console.log("Successfully granted AIRDROP_MANAGER_ROLE to holder and contract");
     }
 
