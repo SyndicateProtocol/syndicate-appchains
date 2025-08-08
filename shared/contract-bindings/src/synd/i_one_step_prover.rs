@@ -957,7 +957,6 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Address,
@@ -1184,7 +1183,6 @@ struct Instruction { uint16 opcode; uint256 argumentData; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<16>,
             alloy::sol_types::sol_data::Uint<256>,
@@ -1433,7 +1431,6 @@ struct Machine { MachineStatus status; ValueStack valueStack; MultiStack valueMu
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             MachineStatus,
             ValueStack,
@@ -1904,7 +1901,6 @@ struct Module { bytes32 globalsMerkleRoot; ModuleMemory moduleMemory; bytes32 ta
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::FixedBytes<32>,
             ModuleMemory,
@@ -2235,7 +2231,6 @@ struct ModuleMemory { uint64 size; uint64 maxSize; bytes32 merkleRoot; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<64>,
             alloy::sol_types::sol_data::Uint<64>,
@@ -2483,7 +2478,6 @@ struct MultiStack { bytes32 inactiveStackHash; bytes32 remainingHash; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::FixedBytes<32>,
             alloy::sol_types::sol_data::FixedBytes<32>,
@@ -2718,7 +2712,6 @@ struct StackFrame { Value returnPc; bytes32 localsMerkleRoot; uint32 callerModul
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             Value,
             alloy::sol_types::sol_data::FixedBytes<32>,
@@ -2993,7 +2986,6 @@ struct StackFrameWindow { StackFrame[] proved; bytes32 remainingHash; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Array<StackFrame>,
             alloy::sol_types::sol_data::FixedBytes<32>,
@@ -3229,7 +3221,6 @@ struct Value { ValueType valueType; uint256 contents; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (ValueType, alloy::sol_types::sol_data::Uint<256>);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (
@@ -3449,7 +3440,6 @@ struct ValueArray { Value[] inner; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Array<Value>,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (
@@ -3650,7 +3640,6 @@ struct ValueStack { ValueArray proved; bytes32 remainingHash; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             ValueArray,
             alloy::sol_types::sol_data::FixedBytes<32>,
@@ -3897,7 +3886,6 @@ function executeOneStep(ExecutionContext memory execCtx, Machine memory mach, Mo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 ExecutionContext,
                 Machine,
@@ -3953,7 +3941,6 @@ function executeOneStep(ExecutionContext memory execCtx, Machine memory mach, Mo
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (Machine, Module);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
