@@ -305,6 +305,7 @@ func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint6
 		if err := p.SequencingClient.Client().CallContext(ctx, &batchCount, "synd_batchFromAcc", l1Hash); err != nil {
 			return 0, errors.Wrap(err, "failed to get batch from seq acc")
 		}
+		batchCount += 1
 	} else {
 		count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress,
 			enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, l1Hash)
