@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/offchainlabs/nitro/arbnode"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
 	"github.com/offchainlabs/nitro/arbutil"
@@ -150,41 +149,29 @@ func getBatchPreimageData(
 	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
 ) error {
 	// byte 40 is a flag byte that determines if the batch uses alt-DA
-	if len(batch) > 40 {
-		for _, dapReader := range dapReaders {
-			if dapReader != nil && dapReader.IsValidHeaderByte(ctx, batch[40]) {
-				// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
-				_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, nil, true)
-				if err != nil {
-					// Matches the way keyset validation was done inside DAS readers i.e. logging the error
-					// But other DA providers might just want to return the error
-					if strings.Contains(err.Error(), daprovider.ErrSeqMsgValidation.Error()) &&
-						daprovider.IsDASMessageHeaderByte(batch[40]) {
-						log.Error(err.Error())
-					} else {
-						batchHex := hex.EncodeToString(batch)
-
-						return errors.Wrap(err, "failed to recover payload from batch - "+batchHex)
-					}
-				}
-
-				for ty, images := range preimagesRecorded {
-					if preimages[ty] == nil {
-						preimages[ty] = images
-					} else {
-						maps.Copy(preimages[ty], images)
-					}
-				}
-
-				return nil
+	if len(batch) <= 40 || !daprovider.IsDASMessageHeaderByte(batch[40]) {
+		return nil
+	}
+	for _, dapReader := range dapReaders {
+		if dapReader.IsValidHeaderByte(ctx, batch[40]) {
+			// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
+			_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, nil, true)
+			if err != nil {
+				return errors.Wrap(err, "failed to recover payload from batch - "+hex.EncodeToString(batch))
 			}
-		}
-		if daprovider.IsDASMessageHeaderByte(batch[40]) {
-			log.Error("No DAS Reader configured, but sequencer message found with DAS header")
+
+			for ty, images := range preimagesRecorded {
+				if preimages[ty] == nil {
+					preimages[ty] = images
+				} else {
+					maps.Copy(preimages[ty], images)
+				}
+			}
+
+			return nil
 		}
 	}
-
-	return nil
+	return errors.New("No DAS Reader configured, but sequencer message found with DAS header")
 }
 
 // if count is zero, get the latest delayed message accumulator
