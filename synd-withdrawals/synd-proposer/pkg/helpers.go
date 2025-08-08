@@ -61,6 +61,10 @@ func init() {
 	inboxMessageDeliveredID = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
 }
 
+
+// once the target qty is reached or exceeded, getLogs stops fetching logs
+// note that it may return more logs than the target qty or less if target qty logs do not exist
+// if target qty is set to 0, all logs in the range are fetched
 func getLogs(
 	ctx context.Context,
 	c *ethclient.Client,
@@ -68,7 +72,7 @@ func getLogs(
 	endBlock uint64,
 	addresses []common.Address,
 	topics [][]common.Hash,
-	maxQty uint64,
+	targetQty uint64,
 ) ([]types.Log, error) {
 	if startBlock > endBlock {
 		return nil, errors.New("start block > end block")
@@ -87,14 +91,17 @@ func getLogs(
 		return nil, errors.Wrap(err, "start block == end block, cannot bisect further")
 	}
 	mid := (startBlock + endBlock) / 2
-	logs, err = getLogs(ctx, c, mid+1, endBlock, addresses, topics, maxQty)
+	logs, err = getLogs(ctx, c, mid+1, endBlock, addresses, topics, targetQty)
 	if err != nil {
 		return nil, err
 	}
-	if maxQty > 0 && uint64(len(logs)) >= maxQty {
-		return logs, nil
+	if targetQty > 0 {
+		if uint64(len(logs)) >= targetQty {
+			return logs, nil
+		}
+		targetQty -= uint64(len(logs))
 	}
-	prevLogs, err := getLogs(ctx, c, startBlock, mid, addresses, topics, maxQty)
+	prevLogs, err := getLogs(ctx, c, startBlock, mid, addresses, topics, targetQty)
 	if err != nil {
 		return nil, err
 	}
