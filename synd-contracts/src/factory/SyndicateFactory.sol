@@ -3,15 +3,19 @@ pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
 import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
+import {GasTracker} from "../GasTracker.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
+// TODO SEQ-1232: function to send gas tracking data to the staking appchain
+// TODO SEQ-1233: how to update factory on the appchains
+
 /// @title SyndicateFactory
-/// @notice Factory contract for creating SyndicateSequencingChain contracts
+/// @notice Factory contract for creating SyndicateSequencingChain contracts with centralized gas tracking
 /// @dev Uses CREATE2 pattern for deterministic deployments - users deploy permission modules separately
-contract SyndicateFactory is AccessControl, Pausable {
+contract SyndicateFactory is AccessControl, Pausable, GasTracker {
     /// @notice Emitted when a new SyndicateSequencingChain is created
     event SyndicateSequencingChainCreated(
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
@@ -32,6 +36,9 @@ contract SyndicateFactory is AccessControl, Pausable {
     uint256 public namespacePrefix;
     uint256 public nextAutoChainId;
     mapping(uint256 => bool) public usedChainIds;
+
+    /// @notice Mapping from appchain ID to the sequencing contract address
+    mapping(uint256 => address) public appchainContracts;
 
     constructor(address admin) {
         if (admin == address(0)) revert ZeroAddress();
@@ -79,6 +86,9 @@ contract SyndicateFactory is AccessControl, Pausable {
         bytes memory bytecode = getBytecode(actualChainId);
         sequencingChain = Create2.deploy(0, salt, bytecode);
 
+        // Store the mapping of appchain ID to contract address
+        appchainContracts[actualChainId] = sequencingChain;
+
         // Initialize the contract
         SyndicateSequencingChain(sequencingChain).initialize(admin, address(permissionModule));
 
@@ -124,6 +134,13 @@ contract SyndicateFactory is AccessControl, Pausable {
         return usedChainIds[chainId] ? 1 : 0;
     }
 
+    /// @notice Get the contract address for an appchain
+    /// @param chainId The appchain ID
+    /// @return The contract address, or zero address if not registered
+    function getAppchainContract(uint256 chainId) external view returns (address) {
+        return appchainContracts[chainId];
+    }
+
     /// @notice Manually mark a chain ID as used to reserve it
     /// @param chainId The chain ID to mark as used
     /// @dev Useful for reserving specific chain IDs or marking externally deployed chains
@@ -151,5 +168,27 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Unpause the factory (admin only)
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
+    }
+
+    /// @notice Track gas usage for an appchain (called by sequencing contracts)
+    /// @param appchainId The appchain that consumed gas
+    /// @param gasUsed Amount of gas consumed
+    function trackAppchainGas(uint256 appchainId, uint256 gasUsed) external {
+        // Verify caller is the exact sequencing contract for this appchain ID
+        require(
+            appchainContracts[appchainId] == msg.sender, "SyndicateFactory: caller not authorized for this appchain"
+        );
+
+        trackGas(appchainId, gasUsed);
+    }
+
+    /// @notice Disable gas tracking (admin only)
+    function disableGasTracking() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _disableGasTracking();
+    }
+
+    /// @notice Enable gas tracking (admin only)
+    function enableGasTracking() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _enableGasTracking();
     }
 }
