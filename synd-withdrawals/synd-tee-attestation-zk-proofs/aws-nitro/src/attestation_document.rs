@@ -88,7 +88,7 @@ struct AwsNitroAttestationDocument<'a> {
 
 impl AwsNitroAttestationDocument<'_> {
     fn parse_document(
-        input: &'_ mut [u8],
+        input: &mut [u8],
     ) -> Result<AwsNitroAttestationDocument<'_>, VerificationError> {
         let doc: AwsNitroAttestationDocument = serde_cbor::de::from_mut_slice(input)
             .map_err(|e| VerificationError::DocumentParseError(e.to_string()))?;
