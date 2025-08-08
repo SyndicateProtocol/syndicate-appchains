@@ -668,7 +668,9 @@ func (s *Server) CombineAppchainProofs(input CombineAppchainInput) (*CombineAppc
 
 	input.Inputs[0].SetDelayedMessageAcc = input.Inputs[1].SetDelayedMessageAcc
 	input.Inputs[0].L1EndHash = input.Inputs[1].L1EndHash
-	input.Outputs[1].sign(&input.Inputs[0], s.signerKey)
+	if err := input.Outputs[1].sign(&input.Inputs[0], s.signerKey); err != nil {
+		return nil, err
+	}
 	return &CombineAppchainOutput{
 		Input:  input.Inputs[0],
 		Output: input.Outputs[1],
