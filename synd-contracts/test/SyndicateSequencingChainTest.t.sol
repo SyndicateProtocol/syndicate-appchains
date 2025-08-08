@@ -247,7 +247,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         assertEq(validEventCount, expectedValidEventCount, "Wrong amount of valid transaction events emitted");
     }
 
-
     function testOnlyWhenAllowedModifierBranches() public {
         // Deploy a module we can directly control
         DirectMockModule directMock = new DirectMockModule();

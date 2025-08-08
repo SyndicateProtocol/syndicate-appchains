@@ -50,7 +50,6 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 /// ```
 ///
 contract AtomicSequencerImplementation {
-
     /// @dev Thrown when input array lengths don't match or are invalid
     error InputLengthMismatchError();
 
@@ -99,7 +98,6 @@ contract AtomicSequencerImplementation {
         if (chains.length == 0 || chains.length != transactions.length) {
             revert InputLengthMismatchError();
         }
-
 
         for (uint256 i = 0; i < chains.length; i++) {
             chains[i].processTransactionsBulk(transactions[i]);

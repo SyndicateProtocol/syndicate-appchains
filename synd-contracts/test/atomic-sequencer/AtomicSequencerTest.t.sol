@@ -191,8 +191,6 @@ contract AtomicSequencerTest is Test {
         assertEq(errorSelector, AtomicSequencerImplementation.InputLengthMismatchError.selector);
     }
 
-
-
     function testMixedRawProcessing() public {
         SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](3);
         chains[0] = chainA;

@@ -37,7 +37,6 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
 contract SyndicateSequencingChain is SequencingModuleChecker {
-
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
 
