@@ -72,16 +72,16 @@ jobs:
           role-skip-session-tagging: true
 
       - name: Upload versioned eif.bin to S3
-        run: aws s3 cp synd-withdrawals/synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-${{ env.TAG_NAME }}.bin --only-show-errors
+        run: aws s3 cp synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-${{ env.TAG_NAME }}.bin --only-show-errors
 
       - name: Upload latest eif.bin to S3 (testnet alias)
-        run: aws s3 cp synd-withdrawals/synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-latest.bin --only-show-errors
+        run: aws s3 cp synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-latest.bin --only-show-errors
 
       - name: Upload versioned server to S3
-        run: aws s3 cp synd-withdrawals/server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-${{ env.TAG_NAME }}.bin --only-show-errors
+        run: aws s3 cp server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-${{ env.TAG_NAME }}.bin --only-show-errors
 
       - name: Upload latest server to S3 (testnet alias)
-        run: aws s3 cp synd-withdrawals/server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-latest.bin --only-show-errors
+        run: aws s3 cp server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-latest.bin --only-show-errors
 
   publish-mainnet-s3:
     name: Publish to S3 (mainnet)
@@ -109,10 +109,10 @@ jobs:
           role-skip-session-tagging: true
 
       - name: Upload versioned eif.bin to S3
-        run: aws s3 cp synd-withdrawals/synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-${{ env.TAG_NAME }}.bin --only-show-errors
+        run: aws s3 cp synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-${{ env.TAG_NAME }}.bin --only-show-errors
 
       - name: Upload versioned server to S3
-        run: aws s3 cp synd-withdrawals/server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-${{ env.TAG_NAME }}.bin --only-show-errors
+        run: aws s3 cp server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-${{ env.TAG_NAME }}.bin --only-show-errors
 
   notify-failure:
     name: Notify on failure
