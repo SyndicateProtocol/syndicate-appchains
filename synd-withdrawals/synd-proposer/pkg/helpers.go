@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -397,14 +397,14 @@ func GetDelayedMessages(
 	return *prevAcc, msgs, dummy, nil
 }
 
-func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay uint64) uint64 {
+func getNumBatches(batches []teetypes.SyndicateBatch, dmsgs [][]byte, setDelay uint64) uint64 {
 	var batchCount uint64
 	i := 0
 	for _, b := range batches {
 		hasMsg := false
 		for i < len(dmsgs) {
 			dmsgTimestamp := binary.BigEndian.
-				Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset : enclave.DelayedMessageTimestampOffset+8])
+				Uint64(dmsgs[i][teetypes.DelayedMessageTimestampOffset : teetypes.DelayedMessageTimestampOffset+8])
 			if dmsgTimestamp+setDelay > b.Timestamp {
 				break
 			}

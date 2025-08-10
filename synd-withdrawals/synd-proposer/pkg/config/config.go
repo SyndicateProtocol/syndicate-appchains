@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -33,7 +33,7 @@ type Config struct {
 
 	AppchainBridgeAddress common.Address
 
-	EnclaveConfig    enclave.Config
+	EnclaveConfig    teetypes.Config
 	EnclaveTLSConfig tls.Config
 }
 
@@ -116,7 +116,7 @@ func LoadConfig() (*Config, error) {
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
 		Port:                     port,
-		EnclaveConfig: enclave.Config{
+		EnclaveConfig: teetypes.Config{
 			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
