@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -295,7 +296,8 @@ func Verify(
 		return nil, err
 	}
 
-	db := state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), nil), nil)
+	// use the rust LRU cache (0) for wasm programs
+	db := state.NewDatabase(triedb.NewDatabase(rawdb.WrapDatabaseWithWasm(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), memorydb.New(), 0, []ethdb.WasmTarget{rawdb.LocalTarget()}), nil), nil)
 
 	for wavm.GetInboxPosition() < batchCount {
 		if err = ctx.Err(); err != nil {
