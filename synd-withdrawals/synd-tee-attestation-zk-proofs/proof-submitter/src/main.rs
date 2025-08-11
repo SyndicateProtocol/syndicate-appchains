@@ -50,8 +50,11 @@ use zeroize::{Zeroize, Zeroizing};
 #[derive(Parser, Debug)]
 pub struct Args {
     /// The URL of the enclave RPC server
-    #[arg(long, required = true)]
-    enclave_rpc_url: String,
+    #[arg(long)]
+    enclave_rpc_url: Option<String>,
+
+    #[arg(long)]
+    attestation_document: Option<String>,
 
     /// path for the root certificate in PEM format. Will use the built-in aws nitro root
     /// certificate if not provided.
@@ -118,8 +121,16 @@ async fn run(
         Vec<u8>,
     ) -> Result<GenerateProofResult, ProofSubmitterError>,
 ) -> Result<(), ProofSubmitterError> {
+    let attestation_doc_hex = match (args.attestation_document, args.enclave_rpc_url) {
+        (Some(attestation_document), None) => attestation_document,
+        (None, Some(enclave_rpc_url)) => get_attestation_doc(enclave_rpc_url).await?,
+        (Some(_), Some(_)) => {
+            return Err(ProofSubmitterError::AttestationDocumentAndEnclaveRpcUrlAreMutuallyExclusive)
+        }
+        (None, None) => return Err(ProofSubmitterError::AttestationDocumentOrEnclaveRpcUrlRequired),
+    };
+
     // get attestation doc CBOR
-    let attestation_doc_hex = get_attestation_doc(args.enclave_rpc_url).await?;
     info!("Attestation doc: {attestation_doc_hex}");
     let cbor_attestation_doc = hex::decode(attestation_doc_hex)?;
 
@@ -445,7 +456,8 @@ mod tests {
             .await;
 
         let args = Args {
-            enclave_rpc_url: mock_enclave_server.url(),
+            enclave_rpc_url: Some(mock_enclave_server.url()),
+            attestation_document: None,
             root_certificate_path: None,
             proof_system: ProofSystem::Groth16,
             contract_address: Some(*key_mgr_contract.address()),

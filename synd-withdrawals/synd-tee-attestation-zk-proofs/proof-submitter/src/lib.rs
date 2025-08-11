@@ -83,6 +83,12 @@ pub enum ProofSubmitterError {
 
     #[error("Failed to deploy new contracts: {0}")]
     DeployNewContract(alloy::contract::Error),
+
+    #[error("Attestation document and enclave RPC URL are mutually exclusive")]
+    AttestationDocumentAndEnclaveRpcUrlAreMutuallyExclusive,
+
+    #[error("Attestation document or enclave RPC URL is required")]
+    AttestationDocumentOrEnclaveRpcUrlRequired,
 }
 
 #[allow(missing_docs)]
