@@ -133,7 +133,7 @@ contract AirdropScriptTest is Test {
         return data;
     }
 
-    function test_DeployAirdrop() public {
+    function test_DeployAirdrop() public view {
         // Test that airdrop contract is properly deployed
         assertTrue(address(airdrop) != address(0), "Airdrop contract should be deployed");
 
@@ -298,7 +298,7 @@ contract AirdropScriptTest is Test {
         vm.stopPrank();
     }
 
-    function test_TokenInformation() public {
+    function test_TokenInformation() public view {
         // Verify token information
         console.log("Token Name: Syndicate"); // SYND token name
         console.log("Token Symbol: SYND"); // SYND token symbol

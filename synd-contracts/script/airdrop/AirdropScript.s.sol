@@ -63,6 +63,9 @@ contract ExecuteAirdrop is Script {
         console.log("Total recipients:", totalRecipients);
         console.log("Processing in", batches, "batches");
 
+        IERC20 token = IERC20(TOKEN_ADDRESS);
+        uint256 skippedAddresses = 0;
+
         for (uint256 batchIndex = 0; batchIndex < batches; batchIndex++) {
             uint256 startIndex = batchIndex * MAX_BATCH_SIZE;
             uint256 endIndex = startIndex + MAX_BATCH_SIZE;
@@ -70,27 +73,49 @@ contract ExecuteAirdrop is Script {
                 endIndex = totalRecipients;
             }
 
-            uint256 batchSize = endIndex - startIndex;
+            // First pass: filter out addresses with existing balances
+            AirdropData[] memory filteredBatch = new AirdropData[](endIndex - startIndex);
+            uint256 validCount = 0;
 
-            // Prepare batch arrays
-            address[] memory addresses = new address[](batchSize);
-            uint256[] memory amounts = new uint256[](batchSize);
+            for (uint256 i = startIndex; i < endIndex; i++) {
+                address recipient = airdropList[i].recipient;
+                uint256 currentBalance = token.balanceOf(recipient);
+                
+                if (currentBalance > 0) {
+                    console.log("SKIPPING - Address already has SYND tokens:");
+                    console.log("Address:", recipient);
+                    console.log("Current balance:", currentBalance);
+                    skippedAddresses++;
+                } else {
+                    filteredBatch[validCount] = airdropList[i];
+                    validCount++;
+                }
+            }
+
+            // Skip batch if no valid recipients
+            if (validCount == 0) {
+                console.log("Batch", batchIndex + 1, "skipped - no valid recipients");
+                continue;
+            }
+
+            // Prepare batch arrays with only valid recipients
+            address[] memory addresses = new address[](validCount);
+            uint256[] memory amounts = new uint256[](validCount);
             uint256 totalAmount = 0;
 
-            for (uint256 i = 0; i < batchSize; i++) {
-                addresses[i] = airdropList[startIndex + i].recipient;
-                amounts[i] = airdropList[startIndex + i].amount;
+            for (uint256 i = 0; i < validCount; i++) {
+                addresses[i] = filteredBatch[i].recipient;
+                amounts[i] = filteredBatch[i].amount;
                 totalAmount += amounts[i];
             }
 
             // Check allowance
-            IERC20 token = IERC20(TOKEN_ADDRESS);
             uint256 allowance = token.allowance(msg.sender, AIRDROP_CONTRACT);
             require(allowance >= totalAmount, "Insufficient token allowance");
 
             // Execute airdrop batch
             console.log("Executing batch", batchIndex + 1, "of", batches);
-            console.log("Batch size:", batchSize);
+            console.log("Valid recipients in batch:", validCount);
             console.log("Total amount:", totalAmount);
 
             Airdrop(AIRDROP_CONTRACT).airdropERC20(TOKEN_ADDRESS, addresses, amounts, totalAmount);
@@ -99,6 +124,7 @@ contract ExecuteAirdrop is Script {
         }
 
         console.log("All batches completed successfully!");
+        console.log("Total addresses skipped due to existing balance:", skippedAddresses);
     }
 }
 
