@@ -8,6 +8,12 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
+enum NamespaceState {
+    Available,
+    Used,
+    Reserved
+}
+
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts
 /// @dev Uses CREATE2 pattern for deterministic deployments - users deploy permission modules separately
@@ -32,6 +38,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     uint256 public namespacePrefix;
     uint256 public nextAutoChainId;
     mapping(uint256 => bool) public usedChainIds;
+    mapping(uint256 => NamespaceState) public usedNamespaces;
 
     constructor(address admin) {
         if (admin == address(0)) revert ZeroAddress();
@@ -39,7 +46,7 @@ contract SyndicateFactory is AccessControl, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, admin);
 
-        namespacePrefix = 510;
+        _updateNamespaceConfig(510);
         nextAutoChainId = 1;
     }
 
@@ -137,10 +144,24 @@ contract SyndicateFactory is AccessControl, Pausable {
 
     /// @notice Update namespace configuration (manager only)
     /// @param newPrefix The new namespace prefix
+    /// old namespace prefixes can be reused, but prefixes that can generate collisions are forbidden
     function updateNamespaceConfig(uint256 newPrefix) external onlyRole(MANAGER_ROLE) {
-        uint256 oldPrefix = namespacePrefix;
+        _updateNamespaceConfig(newPrefix);
+    }
+
+    function _updateNamespaceConfig(uint256 newPrefix) private {
+        require(newPrefix > 0, "namespace prefix of 0 is forbidden");
+        require(usedNamespaces[newPrefix] != NamespaceState.Reserved, "namespace collision detected");
+        usedNamespaces[newPrefix] = NamespaceState.Used;
+        uint256 prefix = newPrefix / 10;
+        while (prefix > 0) {
+            require(usedNamespaces[prefix] != NamespaceState.Used, "namespace collision detected");
+            usedNamespaces[prefix] = NamespaceState.Reserved;
+            prefix /= 10;
+        }
+        prefix = namespacePrefix;
         namespacePrefix = newPrefix;
-        emit NamespaceConfigUpdated(oldPrefix, newPrefix);
+        emit NamespaceConfigUpdated(prefix, newPrefix);
     }
 
     /// @notice Pause the factory (admin only)
