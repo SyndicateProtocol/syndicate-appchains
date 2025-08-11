@@ -228,11 +228,11 @@ func readMessage(ctx context.Context, wavm *wavmio.Wavm, delayedMessagesRead uin
 		keysetValidationMode = daprovider.KeysetDontValidate
 	}
 	var dapReaders []daprovider.Reader
-	if dasReader != nil {
-		dapReaders = append(dapReaders, dasutil.NewReaderForDAS(dasReader, dasKeysetFetcher))
-	}
 	if eigenDAReader != nil {
 		dapReaders = append(dapReaders, eigenda.NewReaderForEigenDA(eigenDAReader))
+	}
+	if dasReader != nil {
+		dapReaders = append(dapReaders, dasutil.NewReaderForDAS(dasReader, dasKeysetFetcher))
 	}
 
 	dapReaders = append(dapReaders, daprovider.NewReaderForBlobReader(&BlobPreimageReader{wavm}))
