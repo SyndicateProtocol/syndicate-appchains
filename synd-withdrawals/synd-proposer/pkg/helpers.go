@@ -171,7 +171,13 @@ func getBatchPreimageData(
 			return nil
 		}
 	}
-	return errors.New("No DAS Reader configured, but sequencer message found with DAS header")
+    log.Warn("DAS reader mismatch", 
+      "headerByte", fmt.Sprintf("0x%02x", batch[40]),
+      "availableReaders", len(dapReaders),
+      "batchLength", len(batch))
+
+    return fmt.Errorf("no DAS reader configured for header byte 0x%02x (have %d readers)", 
+      batch[40], len(dapReaders))
 }
 
 // if count is zero, get the latest delayed message accumulator
