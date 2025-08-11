@@ -19,6 +19,7 @@ import (
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -227,6 +228,10 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				log.Debug().Msgf("Trusted input: %v", logger.ToHexForLogsTrustedInput(*trustedInput))
 				log.Debug().Msgf("Pending assertion: %v", logger.ToHexForLogsPendingAssertion(*p.PendingAssertion))
 			}
+			if p.PendingAssertion == nil {
+				log.Debug().Msg("No pending assertion")
+				continue
+			}
 
 			submissionTimer := metrics.NewTimer()
 
@@ -255,6 +260,19 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				Str("appHash", appHash.Hex()).
 				Str("l1Acc", common.BytesToHash(p.PendingAssertion.L1BatchAcc[:]).Hex()).
 				Msg("Submitted assertion")
+
+			// wait for tx receipt
+			receipt, err := p.SettlementClient.TransactionReceipt(ctx, transaction.Hash())
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get transaction receipt", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
+			}
+			if receipt.Status == types.ReceiptStatusFailed {
+				log.Debug().Msgf("Transaction failed,receipt: %+v", receipt)
+				continue
+			}
+			p.PendingAssertion = nil // reset pending assertion so we don't keep trying to submit it
 
 			// Update Metrics
 			p.Metrics.AssertionSubmissions.Inc()
