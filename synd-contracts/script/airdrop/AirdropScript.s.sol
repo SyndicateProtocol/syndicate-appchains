@@ -80,7 +80,7 @@ contract ExecuteAirdrop is Script {
             for (uint256 i = startIndex; i < endIndex; i++) {
                 address recipient = airdropList[i].recipient;
                 uint256 currentBalance = token.balanceOf(recipient);
-                
+
                 if (currentBalance > 0) {
                     console.log("SKIPPING - Address already has SYND tokens:");
                     console.log("Address:", recipient);
