@@ -357,6 +357,9 @@ func Verify(
 		if err != nil {
 			return nil, err
 		}
+		if block.NumberU64() != header.Number.Uint64()+1 {
+			return nil, fmt.Errorf("unexpected block number: got %d, expected %d", block.NumberU64(), header.Number.Uint64()+1)
+		}
 
 		header = block.Header()
 		bytes, err := rlp.EncodeToBytes(header)
