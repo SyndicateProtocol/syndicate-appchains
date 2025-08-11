@@ -332,6 +332,10 @@ async fn submit_proof_to_chain<P: Provider>(
 
     info!("Successfully submitted proof to chain. Receipt: {receipt:?}");
 
+    if !receipt.status() {
+        return Err(ProofSubmitterError::SubmitProofToChain("receipt status is: failed".to_string()))
+    }
+
     Ok(())
 }
 
