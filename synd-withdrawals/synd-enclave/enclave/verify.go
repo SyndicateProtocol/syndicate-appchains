@@ -58,10 +58,10 @@ func (c WavmChainContext) Engine() consensus.Engine {
 func (c WavmChainContext) GetHeader(hash common.Hash, num uint64) *types.Header {
 	header, err := c.wavm.GetBlockHeaderByHash(hash)
 	if err != nil {
-		panic(fmt.Sprintf("Missing preimage data for block header hash %v", hash))
+		panic(fmt.Sprintf("missing preimage data for block header hash %v", hash))
 	}
 	if !header.Number.IsUint64() || header.Number.Uint64() != num {
-		panic(fmt.Sprintf("Retrieved wrong block number for header hash %v -- requested %v but got %v", hash, num, header.Number.String()))
+		panic(fmt.Sprintf("retrieved wrong block number for header hash %v -- requested %v but got %v", hash, num, header.Number.String()))
 	}
 	return header
 }
@@ -183,7 +183,6 @@ func (dasReader *EigenDAPreimageReader) QueryBlob(ctx context.Context, cert *eig
 
 	decodedBlob, err := eigenda.GenericDecodeBlob(preimage)
 	if err != nil {
-		println("Error decoding blob: ", err)
 		return nil, err
 	}
 
@@ -211,24 +210,55 @@ func populateEcdsaCaches() {
 	}
 }
 
-func fillInBatchGasCost(wavm *wavmio.Wavm, msg *arbostypes.L1IncomingMessage) error {
-	if msg.Header.Kind != arbostypes.L1MessageType_BatchPostingReport || msg.BatchGasCost != nil {
-		return nil
+func readMessage(ctx context.Context, wavm *wavmio.Wavm, delayedMessagesRead uint64, dasEnabled bool, eigenDAEnabled bool) (*arbostypes.MessageWithMetadata, error) {
+	var dasReader dasutil.DASReader
+	var eigenDAReader *EigenDAPreimageReader
+	var dasKeysetFetcher dasutil.DASKeysetFetcher
+	if dasEnabled {
+		// DAS batch and keysets are all together in the same preimage binary.
+		dasReader = &PreimageDASReader{wavm}
+		dasKeysetFetcher = &PreimageDASReader{wavm}
 	}
-	_, _, batchHash, _, _, _, err := arbostypes.ParseBatchPostingReportMessageFields(bytes.NewReader(msg.L2msg))
+	if eigenDAEnabled {
+		eigenDAReader = &EigenDAPreimageReader{wavm}
+	}
+	backend := WavmInbox{wavm}
+	keysetValidationMode := daprovider.KeysetPanicIfInvalid
+	if backend.GetPositionWithinMessage() > 0 {
+		keysetValidationMode = daprovider.KeysetDontValidate
+	}
+	var dapReaders []daprovider.Reader
+	if dasReader != nil {
+		dapReaders = append(dapReaders, dasutil.NewReaderForDAS(dasReader, dasKeysetFetcher))
+	}
+	if eigenDAReader != nil {
+		dapReaders = append(dapReaders, eigenda.NewReaderForEigenDA(eigenDAReader))
+	}
+
+	dapReaders = append(dapReaders, daprovider.NewReaderForBlobReader(&BlobPreimageReader{wavm}))
+	inboxMultiplexer := arbstate.NewInboxMultiplexer(backend, delayedMessagesRead, dapReaders, keysetValidationMode)
+	msg, err := inboxMultiplexer.Pop(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to parse batch posting report: %w", err)
+		return nil, fmt.Errorf("error reading from inbox multiplexer: %v", err.Error())
 	}
-	batchData, err := wavm.ResolveTypedPreimage(arbutil.Keccak256PreimageType, batchHash)
-	if err != nil {
-		return fmt.Errorf("failed to fetch batch mentioned by batch posting report: %w", err)
+
+	if msg.Message.Header.Kind == arbostypes.L1MessageType_BatchPostingReport && msg.Message.BatchGasCost == nil {
+		_, _, batchHash, _, _, _, err := arbostypes.ParseBatchPostingReportMessageFields(bytes.NewReader(msg.Message.L2msg))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse batch posting report: %w", err)
+		}
+		batchData, err := wavm.ResolveTypedPreimage(arbutil.Keccak256PreimageType, batchHash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch batch mentioned by batch posting report: %w", err)
+		}
+		gas := arbostypes.ComputeBatchGasCost(batchData)
+		msg.Message.BatchGasCost = &gas
 	}
-	gas := arbostypes.ComputeBatchGasCost(batchData)
-	msg.BatchGasCost = &gas
-	return nil
+	return msg, nil
 }
 
 func Verify(
+	ctx context.Context,
 	data wavmio.ValidationInput,
 	processor interface {
 		ProcessBlock(*types.Block, types.Receipts) error
@@ -266,93 +296,47 @@ func Verify(
 	}
 
 	db := state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), nil), nil)
-	for wavm.GetInboxPosition() < batchCount {
 
-		fmt.Println(
-			"wavm.GetInboxPosition:", wavm.GetInboxPosition(),
-			"batchCount:", batchCount,
-			"header.Number:", header.Number.Uint64(),
-			"header.Hash():", header.Hash(),
-			"data.BlockHash:", data.BlockHash,
-		)
+	for wavm.GetInboxPosition() < batchCount {
+		if err = ctx.Err(); err != nil {
+			return nil, err
+		}
 
 		statedb, err := state.NewDeterministic(header.Root, db)
 		if err != nil {
-			return nil, fmt.Errorf("Error opening state db for block %s: %v", header.Hash(), err.Error())
-		}
-
-		readMessage := func(dasEnabled bool, eigenDAEnabled bool) (*arbostypes.MessageWithMetadata, error) {
-			delayedMessagesRead := header.Nonce.Uint64()
-
-			var dasReader dasutil.DASReader
-			var eigenDAReader *EigenDAPreimageReader
-			var dasKeysetFetcher dasutil.DASKeysetFetcher
-			if dasEnabled {
-				// DAS batch and keysets are all together in the same preimage binary.
-				dasReader = &PreimageDASReader{wavm}
-				dasKeysetFetcher = &PreimageDASReader{wavm}
-			}
-
-			if eigenDAEnabled {
-				eigenDAReader = &EigenDAPreimageReader{wavm}
-			}
-			backend := WavmInbox{wavm}
-			keysetValidationMode := daprovider.KeysetPanicIfInvalid
-			if backend.GetPositionWithinMessage() > 0 {
-				keysetValidationMode = daprovider.KeysetDontValidate
-			}
-			var dapReaders []daprovider.Reader
-			if dasReader != nil {
-				dapReaders = append(dapReaders, dasutil.NewReaderForDAS(dasReader, dasKeysetFetcher))
-			}
-			if eigenDAReader != nil {
-				dapReaders = append(dapReaders, eigenda.NewReaderForEigenDA(eigenDAReader))
-			}
-
-			dapReaders = append(dapReaders, daprovider.NewReaderForBlobReader(&BlobPreimageReader{wavm}))
-			inboxMultiplexer := arbstate.NewInboxMultiplexer(backend, delayedMessagesRead, dapReaders, keysetValidationMode)
-			ctx := context.Background()
-			message, err := inboxMultiplexer.Pop(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("Error reading from inbox multiplexer: %v", err.Error())
-			}
-
-			if err := fillInBatchGasCost(wavm, message.Message); err != nil {
-				return nil, err
-			}
-			return message, nil
+			return nil, fmt.Errorf("error opening state db for block %s: %v", header.Hash(), err.Error())
 		}
 
 		// ArbOS has already been initialized.
 		// Load the chain config and then produce a block normally.
 		initialArbosState, err := arbosState.OpenSystemArbosState(statedb, nil, true)
 		if err != nil {
-			return nil, fmt.Errorf("Error opening initial ArbOS state: %v", err.Error())
+			return nil, fmt.Errorf("error opening initial ArbOS state: %v", err.Error())
 		}
 		chainId, err := initialArbosState.ChainId()
 		if err != nil {
-			return nil, fmt.Errorf("Error getting chain ID from initial ArbOS state: %v", err.Error())
+			return nil, fmt.Errorf("error getting chain ID from initial ArbOS state: %v", err.Error())
 		}
 		genesisBlockNum, err := initialArbosState.GenesisBlockNum()
 		if err != nil {
-			return nil, fmt.Errorf("Error getting genesis block number from initial ArbOS state: %v", err.Error())
+			return nil, fmt.Errorf("error getting genesis block number from initial ArbOS state: %v", err.Error())
 		}
 		chainConfigJson, err := initialArbosState.ChainConfig()
 		if err != nil {
-			return nil, fmt.Errorf("Error getting chain config from initial ArbOS state: %v", err.Error())
+			return nil, fmt.Errorf("error getting chain config from initial ArbOS state: %v", err.Error())
 		}
 		var chainConfig *params.ChainConfig
 		if len(chainConfigJson) > 0 {
 			chainConfig = &params.ChainConfig{}
 			err = json.Unmarshal(chainConfigJson, chainConfig)
 			if err != nil {
-				return nil, fmt.Errorf("Error parsing chain config: %v", err.Error())
+				return nil, fmt.Errorf("error parsing chain config: %v", err.Error())
 			}
 			if chainConfig.ChainID.Cmp(chainId) != 0 {
-				return nil, fmt.Errorf("Error: chain id mismatch, chainID: %v, chainConfig.ChainID: %v", chainId, chainConfig.ChainID)
+				return nil, fmt.Errorf("error: chain id mismatch, chainID: %v, chainConfig.ChainID: %v", chainId, chainConfig.ChainID)
 			}
 			if chainConfig.ArbitrumChainParams.GenesisBlockNum != genesisBlockNum {
-				return nil, fmt.Errorf("Error: genesis block number mismatch, genesisBlockNum: %v, chainConfig.ArbitrumParams.GenesisBlockNum: %v", genesisBlockNum, chainConfig.ArbitrumChainParams.GenesisBlockNum)
+				return nil, fmt.Errorf("error: genesis block number mismatch, genesisBlockNum: %v, chainConfig.ArbitrumParams.GenesisBlockNum: %v", genesisBlockNum, chainConfig.ArbitrumChainParams.GenesisBlockNum)
 			}
 		} else {
 			log.Info("Falling back to hardcoded chain config.")
@@ -362,7 +346,7 @@ func Verify(
 			}
 		}
 
-		message, err := readMessage(chainConfig.ArbitrumChainParams.DataAvailabilityCommittee, chainConfig.ArbitrumChainParams.EigenDA)
+		message, err := readMessage(ctx, wavm, header.Nonce.Uint64(), chainConfig.ArbitrumChainParams.DataAvailabilityCommittee, chainConfig.ArbitrumChainParams.EigenDA)
 		if err != nil {
 			return nil, err
 		}
@@ -373,14 +357,14 @@ func Verify(
 		if err != nil {
 			return nil, err
 		}
+		if block.NumberU64() != header.Number.Uint64()+1 {
+			return nil, fmt.Errorf("unexpected block number: got %d, expected %d", block.NumberU64(), header.Number.Uint64()+1)
+		}
 
 		header = block.Header()
-		if header.Number.Uint64()%1000 == 0 {
-			log.Debug("Verifying block", "block", header.Number.Uint64(), "currentBatch", wavm.GetInboxPosition(), "batchCount", batchCount)
-		}
 		bytes, err := rlp.EncodeToBytes(header)
 		if err != nil {
-			return nil, fmt.Errorf("Error RLP encoding header: %v", err)
+			return nil, fmt.Errorf("error RLP encoding header: %v", err)
 		}
 		wavm.Preimages[arbutil.Keccak256PreimageType][crypto.Keccak256Hash(bytes)] = bytes
 
@@ -405,7 +389,7 @@ func Verify(
 
 	extraInfo := types.DeserializeHeaderExtraInformation(header)
 	if extraInfo.ArbOSFormatVersion == 0 {
-		return nil, fmt.Errorf("Error deserializing header extra info: %+v", header)
+		return nil, fmt.Errorf("error deserializing header extra info: %+v", header)
 	}
 
 	return &execution.MessageResult{BlockHash: header.Hash(), SendRoot: extraInfo.SendRoot}, nil
