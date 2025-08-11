@@ -180,7 +180,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 	code, err := p.SettlementClient.CodeAt(ctx, ArbSysPrecompileAddress, nil)
 	if err != nil {
 		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get code at ArbSys precompile address", err)
-		log.Warn().Stack().Err(wrappedErr).Msg(msg)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 	p.settlesToArbitrumRollup = len(code) > 0
 	log.Info().Bool("settlesToArbitrumRollup", p.settlesToArbitrumRollup).Msg("Settles to Arbitrum Rollup")
