@@ -1,28 +1,38 @@
-package enclave
+package teetypes
 
 import (
-	"bytes"
-	"compress/zlib"
 	"crypto/ecdsa"
 	"encoding/binary"
-	"errors"
 	"fmt"
-	"io"
-	"strings"
+	"math/big"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
-	"github.com/andybalholm/brotli"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/offchainlabs/nitro/arbos"
-	"github.com/offchainlabs/nitro/arbos/arbostypes"
-	"github.com/offchainlabs/nitro/arbstate"
 	"github.com/offchainlabs/nitro/arbutil"
-	"github.com/offchainlabs/nitro/daprovider"
+)
+
+// Storage slot of the batch accumulator
+// <https://github.com/SyndicateProtocol/nitro-contracts/blob/9a100a86242176b633a1d907e5efd41296922144/src/bridge/AbsBridge.sol#L51>
+// Since the batch accumulator is a dynamic array, this slot contains the length of the array
+var BATCH_ACCUMULATOR_STORAGE_SLOT = common.BigToHash(big.NewInt(7))
+
+// Storage slot of the first element in the batch accumulator array
+// Dynamic types are stored starting at the keccak256 of the original storage slot plus an offset
+// This value is Keccak256("0x7")
+var (
+	BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT           = crypto.Keccak256Hash(BATCH_ACCUMULATOR_STORAGE_SLOT[:]).Big()
+	BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE = new(big.Int).Sub(BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT, common.Big1)
+)
+
+// field offsets into the serialized arbostypes.L1IncomingMessage struct
+const (
+	DelayedMessageSenderOffset    = 13
+	DelayedMessageTimestampOffset = 41
+	DelayedMessageRequestIdOffset = 49
+	DelayedMessageDataOffset      = 113
 )
 
 // Wrapper around the teemodule.TeeTrustedInput to define the Hash method
@@ -119,13 +129,13 @@ func (output *VerifySequencingChainOutput) hash(input *TrustedInput) []byte {
 	return crypto.Keccak256(teeHash[:], output.L1BatchAcc[:], output.SequencingBlockHash[:], startBlock[:], data)
 }
 
-func (output *VerifySequencingChainOutput) sign(input *TrustedInput, key *ecdsa.PrivateKey) error {
+func (output *VerifySequencingChainOutput) Sign(input *TrustedInput, key *ecdsa.PrivateKey) error {
 	var err error
 	output.Signature, err = crypto.Sign(output.hash(input), key)
 	return err
 }
 
-func (output *VerifySequencingChainOutput) validate(input *TrustedInput, key *ecdsa.PublicKey) error {
+func (output *VerifySequencingChainOutput) Validate(input *TrustedInput, key *ecdsa.PublicKey) error {
 	pubkey, err := crypto.SigToPub(output.hash(input), output.Signature)
 	if err != nil {
 		return err
@@ -146,7 +156,7 @@ func (output *VerifyAppchainOutput) hash(input *TrustedInput) []byte {
 	return crypto.Keccak256(teeHash[:], crypto.Keccak256(output.PendingAssertion.AppBlockHash[:], output.PendingAssertion.AppSendRoot[:], output.PendingAssertion.SeqBlockHash[:], output.PendingAssertion.L1BatchAcc[:]))
 }
 
-func (output *VerifyAppchainOutput) sign(input *TrustedInput, priv *ecdsa.PrivateKey) error {
+func (output *VerifyAppchainOutput) Sign(input *TrustedInput, priv *ecdsa.PrivateKey) error {
 	var err error
 	output.Signature, err = crypto.Sign(output.hash(input), priv)
 	if err != nil {
@@ -163,7 +173,7 @@ func (output *VerifyAppchainOutput) sign(input *TrustedInput, priv *ecdsa.Privat
 	return nil
 }
 
-func (output *VerifyAppchainOutput) validate(input *TrustedInput, key *ecdsa.PublicKey) error {
+func (output *VerifyAppchainOutput) Validate(input *TrustedInput, key *ecdsa.PublicKey) error {
 	if len(output.Signature) != 65 {
 		return fmt.Errorf("signature must be 65 bytes")
 	}
@@ -177,155 +187,6 @@ func (output *VerifyAppchainOutput) validate(input *TrustedInput, key *ecdsa.Pub
 	if !pubkey.Equal(key) {
 		return fmt.Errorf("recovered public key does not match expected value: got %s, expected %s", pubkey, key)
 	}
-	return nil
-}
-
-// TODO: make sure spurious errors eg out of memory are not returned by the zlib reader and rlp decoder
-// These functions should panic if the compressed data is valid but decoding fails
-func processEvent(data []byte) [][]byte {
-	if len(data) == 0 {
-		return nil
-	}
-	if data[0] == 0 {
-		return [][]byte{data[1:]}
-	}
-	version := data[0] & 15
-	if version != 8 && version != 15 {
-		return nil
-	}
-	r, err := zlib.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return nil
-	}
-	defer r.Close()
-	data, err = io.ReadAll(r)
-	if err != nil {
-		return nil
-	}
-	var txs [][]byte
-	if err := rlp.DecodeBytes(data, &txs); err != nil {
-		return nil
-	}
-	return txs
-}
-
-func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
-	var data []byte
-
-	if ts != 0 {
-		segment, err := rlp.EncodeToBytes(ts)
-		if err != nil {
-			return nil, err
-		}
-		segment, err = rlp.EncodeToBytes(append([]byte{arbstate.BatchSegmentKindAdvanceTimestamp}, segment...))
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, segment...)
-	}
-
-	if blockNum != 0 {
-		segment, err := rlp.EncodeToBytes(blockNum)
-		if err != nil {
-			return nil, err
-		}
-		segment, err = rlp.EncodeToBytes(append([]byte{arbstate.BatchSegmentKindAdvanceL1BlockNumber}, segment...))
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, segment...)
-	}
-
-	var l2Message []byte
-	if len(txs) == 1 {
-		l2Message = append(l2Message, arbos.L2MessageKind_SignedTx)
-		l2Message = append(l2Message, txs[0]...)
-	} else {
-		l2Message = append(l2Message, arbos.L2MessageKind_Batch)
-		var sizeBuf [8]byte
-		for _, tx := range txs {
-			binary.BigEndian.PutUint64(sizeBuf[:], uint64(len(tx)+1))
-			l2Message = append(l2Message, sizeBuf[:]...)
-			l2Message = append(l2Message, arbos.L2MessageKind_SignedTx)
-			l2Message = append(l2Message, tx...)
-		}
-	}
-	if len(l2Message) > arbostypes.MaxL2MessageSize {
-		return nil, errors.New("l2message too long")
-	}
-	segment, err := rlp.EncodeToBytes(append([]byte{arbstate.BatchSegmentKindL2Message}, l2Message...))
-	if err != nil {
-		return nil, err
-	}
-	data = append(data, segment...)
-
-	var buffer bytes.Buffer
-	writer := brotli.NewWriter(&buffer)
-	lenWritten, err := writer.Write(data)
-	if err != nil {
-		return nil, err
-	}
-	if lenWritten != len(data) {
-		return nil, errors.New("write failed")
-	}
-	if err := writer.Close(); err != nil {
-		return nil, err
-	}
-	return append([]byte{daprovider.BrotliMessageHeaderByte}, buffer.Bytes()...), nil
-}
-
-type SyndicateAccumulator struct {
-	Address  common.Address
-	Batches  []SyndicateBatch
-	BlockNum uint64
-}
-
-var TransactionProcessedEvent abi.Event
-
-func init() {
-	abi, err := abi.JSON(strings.NewReader(`[{"type":"event","name":"TransactionProcessed","inputs":[{"name":"sender","type":"address","indexed":true,"internalType":"address"},{"name":"data","type":"bytes","indexed":false,"internalType":"bytes"}],"anonymous":false}]`))
-	if err != nil {
-		panic(err)
-	}
-	TransactionProcessedEvent = abi.Events["TransactionProcessed"]
-}
-
-func (s *SyndicateAccumulator) ProcessBlock(block *types.Block, receipts types.Receipts) error {
-	if s.BlockNum > 0 && s.BlockNum+1 != block.NumberU64() {
-		return errors.New("unexpected block number")
-	}
-	s.BlockNum = block.NumberU64()
-	var txs [][]byte
-	for _, receipt := range receipts {
-		for _, log := range receipt.Logs {
-			if log.Address == s.Address && log.Topics[0] == TransactionProcessedEvent.ID {
-				args, err := TransactionProcessedEvent.Inputs.Unpack(log.Data)
-				if err != nil {
-					return fmt.Errorf("failed to decode event: %w", err)
-				}
-				if len(args) != 1 {
-					return errors.New("failed to decode event: unexpected number of args")
-				}
-				data, ok := args[0].([]byte)
-				if !ok {
-					return errors.New("failed to decode event: arg0 is not []byte")
-				}
-				txs = append(txs, processEvent(data)...)
-			}
-		}
-	}
-	var data []byte
-	if len(txs) > 0 {
-		var err error
-		data, err = buildBatch(txs, block.Time(), block.NumberU64())
-		if err != nil {
-			return err
-		}
-	}
-	s.Batches = append(s.Batches, SyndicateBatch{
-		Timestamp: block.Time(),
-		Data:      data,
-	})
 	return nil
 }
 
