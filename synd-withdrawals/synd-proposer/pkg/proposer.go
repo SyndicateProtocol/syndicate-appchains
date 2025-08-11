@@ -175,11 +175,12 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 // PollingLoop runs the polling background process.
 func (p *Proposer) pollingLoop(ctx context.Context) {
 	ticker := time.NewTicker(p.Config.PollingInterval)
+	defer ticker.Stop()
 	// check if the appchain settles to an arbitrum rollup by querying the code at ArbSys precompile address
 	code, err := p.SettlementClient.CodeAt(ctx, ArbSysPrecompileAddress, nil)
 	if err != nil {
 		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get code at ArbSys precompile address", err)
-		log.Warn().Stack().Err(wrappedErr).Msg(msg)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 	p.settlesToArbitrumRollup = len(code) > 0
 	log.Info().Bool("settlesToArbitrumRollup", p.settlesToArbitrumRollup).Msg("Settles to Arbitrum Rollup")
@@ -401,7 +402,7 @@ func (p *Proposer) Prove(
 
 		// update preimages
 		for _, batch := range batches {
-			if err := getBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
+			if err := loadBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
 				return nil, errors.Wrap(err, "failed to get batch preimage data")
 			}
 		}

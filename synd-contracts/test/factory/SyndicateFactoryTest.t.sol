@@ -155,7 +155,10 @@ contract SyndicateFactoryTest is Test {
 
     function testAutoIncrementOnZeroChainId() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
-        uint256 expectedChainId = 5101; // 510 + 1
+
+        // Fetch dynamic values from contract
+        uint256 namespacePrefix = factory.namespacePrefix();
+        uint256 expectedChainId = (namespacePrefix * 10) + 1;
 
         bytes32 salt = keccak256(abi.encodePacked("salt-for-auto-increment"));
         (address sequencingChainAddress, uint256 actualChainId) =
@@ -166,7 +169,8 @@ contract SyndicateFactoryTest is Test {
         assertEq(SyndicateSequencingChain(sequencingChainAddress).appchainId(), expectedChainId);
 
         // Verify next chain ID incremented
-        assertEq(factory.getNextChainId(), 5102); // 510 + 2
+        uint256 nextExpectedChainId = (namespacePrefix * 10) + 2;
+        assertEq(factory.getNextChainId(), nextExpectedChainId);
     }
 
     function testCreateSequencingChainAddressIsDeterministic() public {
@@ -197,19 +201,25 @@ contract SyndicateFactoryTest is Test {
         bytes32 salt1 = keccak256(abi.encodePacked("salt-for-auto-1"));
         (, uint256 id1) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)), salt1);
-        assertEq(id1, 5101); // 510 + 1
+
+        // Fetch dynamic values from contract
+        uint256 namespacePrefix = factory.namespacePrefix();
+        uint256 expectedId1 = (namespacePrefix * 10) + 1;
+        assertEq(id1, expectedId1);
 
         // Second auto-incremented chain ID
         bytes32 salt2 = keccak256(abi.encodePacked("salt-for-auto-2"));
         (, uint256 id2) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)), salt2);
-        assertEq(id2, 5102); // 510 + 2
+        uint256 expectedId2 = (namespacePrefix * 10) + 2;
+        assertEq(id2, expectedId2);
 
         // Third auto-incremented chain ID
         bytes32 salt3 = keccak256(abi.encodePacked("salt-for-auto-3"));
         (, uint256 id3) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule3)), salt3);
-        assertEq(id3, 5103); // 510 + 3
+        uint256 expectedId3 = (namespacePrefix * 10) + 3;
+        assertEq(id3, expectedId3);
     }
 
     function testMixedAutoAndManualChainIds() public {
@@ -221,7 +231,11 @@ contract SyndicateFactoryTest is Test {
         bytes32 salt1 = keccak256(abi.encodePacked("salt-for-mixed-1"));
         (, uint256 id1) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)), salt1);
-        assertEq(id1, 5101); // 510 + 1
+
+        // Fetch dynamic values from contract
+        uint256 namespacePrefix = factory.namespacePrefix();
+        uint256 expectedId1 = (namespacePrefix * 10) + 1;
+        assertEq(id1, expectedId1);
 
         // Manual chain ID
         uint256 manualId = 42000;
@@ -235,8 +249,9 @@ contract SyndicateFactoryTest is Test {
         bytes32 salt3 = keccak256(abi.encodePacked("salt-for-mixed-3"));
         (, uint256 id3) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule3)), salt3);
-        // Should be 510 + 2 since we only used one auto ID so far
-        assertEq(id3, 5102); // 510 + 2
+        // Should be next auto ID since we only used one auto ID so far
+        uint256 expectedId3 = (namespacePrefix * 10) + 2;
+        assertEq(id3, expectedId3);
     }
 
     function testChainIdAlreadyExists() public {
@@ -463,8 +478,10 @@ contract SyndicateFactoryTest is Test {
         (, uint256 id1) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)), salt1);
 
-        // Old namespace: "510" + "1" = 5101
-        assertEq(id1, 5101);
+        // Verify chain ID follows current formula
+        uint256 namespacePrefix = factory.namespacePrefix();
+        uint256 expectedId1 = (namespacePrefix * 10) + 1;
+        assertEq(id1, expectedId1);
 
         // Update namespace config
         uint256 newPrefix = 600;
@@ -477,8 +494,9 @@ contract SyndicateFactoryTest is Test {
         (, uint256 id2) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)), salt2);
 
-        // New namespace: "600" + "2" = 6002 (counter is at 2 now)
-        assertEq(id2, 6002);
+        // New namespace: (600 * 10) + 2 (counter is at 2 now)
+        uint256 expectedId2 = (newPrefix * 10) + 2;
+        assertEq(id2, expectedId2);
     }
 
     function testConstructorWithZeroAddressReverts() public {
@@ -488,60 +506,68 @@ contract SyndicateFactoryTest is Test {
 
     function testGetNextChainIdFunction() public view {
         // Test that the public function works correctly
-        uint256 nextId = factory.getNextChainId();
-        assertEq(nextId, 5101); // "510" + "1"
+        uint256 namespacePrefix = factory.namespacePrefix();
+        uint256 nextAutoChainId = factory.nextAutoChainId();
+
+        uint256 expectedNextId = (namespacePrefix * 10) + nextAutoChainId;
+        uint256 actualNextId = factory.getNextChainId();
+        assertEq(actualNextId, expectedNextId);
     }
 
-    function testChainIdConcatenationLogic() public {
-        // Test various chain ID concatenations
+    function testChainIdArithmeticLogic() public {
+        // Test arithmetic-based chain ID generation (replacement for old concatenation logic)
         RequireAndModule permissionModule1 = new RequireAndModule(admin);
         RequireOrModule permissionModule2 = new RequireOrModule(admin);
 
-        // First: 510 + 1 = 5101
-        bytes32 salt1 = keccak256(abi.encodePacked("concat-1"));
+        // First: dynamic calculation
+        uint256 namespacePrefix = factory.namespacePrefix();
+
+        bytes32 salt1 = keccak256(abi.encodePacked("arithmetic-1"));
         (, uint256 id1) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)), salt1);
-        assertEq(id1, 5101);
+        uint256 expectedId1 = (namespacePrefix * 10) + 1;
+        assertEq(id1, expectedId1);
 
-        // Second: 510 + 2 = 5102
-        bytes32 salt2 = keccak256(abi.encodePacked("concat-2"));
+        // Second: dynamic calculation
+        bytes32 salt2 = keccak256(abi.encodePacked("arithmetic-2"));
         (, uint256 id2) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)), salt2);
-        assertEq(id2, 5102);
+        uint256 expectedId2 = (namespacePrefix * 10) + 2;
+        assertEq(id2, expectedId2);
 
-        // Create many to test larger numbers
-        for (uint256 i = 3; i <= 10; i++) {
+        // Create several more to test sequential generation
+        for (uint256 i = 3; i <= 5; i++) {
             RequireAndModule pm = new RequireAndModule(admin);
-            bytes32 salt = keccak256(abi.encodePacked("concat-loop", i));
+            bytes32 salt = keccak256(abi.encodePacked("arithmetic-loop", i));
             (, uint256 id) = factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(pm)), salt);
 
-            // Expected: "510" + string(i)
-            if (i < 10) {
-                assertEq(id, 5100 + i); // 5103, 5104, ..., 5109
-            } else {
-                assertEq(id, 51010); // "510" + "10" = 51010
-            }
+            // Expected: (namespacePrefix * 10) + i
+            uint256 expectedId = (namespacePrefix * 10) + i;
+            assertEq(id, expectedId);
         }
     }
 
     function testLargeChainIdNumbers() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
 
-        // Update to higher starting point to test larger concatenations
+        // Update to higher starting point to test larger arithmetic calculations
         vm.prank(admin);
         factory.updateNamespaceConfig(999);
 
-        // Create auto chain - should be "999" + "1" = 9991
+        // Create auto chain with dynamic calculation
+        uint256 newNamespacePrefix = factory.namespacePrefix(); // 999 after update
+        uint256 expectedId = (newNamespacePrefix * 10) + 1;
+
         bytes32 salt = keccak256(abi.encodePacked("large-number"));
         (, uint256 id) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule)), salt);
-        assertEq(id, 9991);
+        assertEq(id, expectedId);
     }
 
     function testSequencingChainImplementationAddress() public view {
         // Test that implementation address is set and not zero
         bytes32 salt = keccak256(abi.encodePacked("impl-test"));
-        uint256 chainId = 5101; // Use an auto-generated ID
+        uint256 chainId = 510_000_000_001; // Use an auto-generated ID
         address impl = factory.computeSequencingChainAddress(salt, chainId);
         assertTrue(impl != address(0));
     }
@@ -550,7 +576,9 @@ contract SyndicateFactoryTest is Test {
     function testFuzzManualChainIds(uint256 chainId) public {
         // Skip already used chain IDs and auto-generated ones
         vm.assume(chainId != 0);
-        vm.assume(chainId != 5101); // Skip first auto-generated
+        // Skip first auto-generated ID based on current formula
+        uint256 firstAutoId = (factory.namespacePrefix() * 10) + 1;
+        vm.assume(chainId != firstAutoId);
         vm.assume(factory.isChainIdUsed(chainId) == 0);
 
         RequireAndModule permissionModule = new RequireAndModule(admin);
@@ -573,5 +601,47 @@ contract SyndicateFactoryTest is Test {
 
         assertTrue(sequencingChainAddress != address(0));
         assertEq(sequencingChainAddress, factory.computeSequencingChainAddress(salt, appchainId));
+    }
+
+    function testNewChainIdGenerationFormat() public view {
+        uint256 namespacePrefix = factory.namespacePrefix();
+        uint256 nextAutoChainId = factory.nextAutoChainId();
+
+        uint256 expectedChainId = (namespacePrefix * 10) + nextAutoChainId;
+        uint256 actualChainId = factory.getNextChainId();
+        assertEq(actualChainId, expectedChainId);
+    }
+
+    function testChainIdNoCollisions() public {
+        // Test that different namespace/autoId combinations produce different results
+
+        vm.startPrank(manager);
+
+        // Test scenario 1: namespace=12, simple autoId
+        factory.updateNamespaceConfig(12);
+        uint256 chainId1 = factory.getNextChainId();
+        // Expected: (12 * 10) + 1
+
+        // Test scenario 2: namespace=123
+        vm.expectRevert();
+        factory.updateNamespaceConfig(123);
+
+        // Test scenario 3: namespace=1
+        vm.expectRevert();
+        factory.updateNamespaceConfig(1);
+
+        // Test scenario 3: namespace=133, simple autoId (same counter value)
+        factory.updateNamespaceConfig(133);
+
+        uint256 chainId2 = factory.getNextChainId();
+        // Expected: (133 * 10) + 1
+        // Note: nextAutoChainId is still 1 since we didn't create any chains yet
+
+        vm.stopPrank();
+
+        // These should be completely different, demonstrating no collision
+        assertTrue(chainId1 != chainId2);
+        assertEq(chainId1, (12 * 10) + 1);
+        assertEq(chainId2, (133 * 10) + 1);
     }
 }

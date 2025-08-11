@@ -54,11 +54,11 @@ func readMessage(ctx context.Context, wavm *wavmio.Wavm, delayedMessagesRead uin
 		keysetValidationMode = daprovider.KeysetDontValidate
 	}
 	var dapReaders []daprovider.Reader
-	if dasReader != nil {
-		dapReaders = append(dapReaders, dasutil.NewReaderForDAS(dasReader, dasKeysetFetcher))
-	}
 	if eigenDAReader != nil {
 		dapReaders = append(dapReaders, eigenda.NewReaderForEigenDA(eigenDAReader))
+	}
+	if dasReader != nil {
+		dapReaders = append(dapReaders, dasutil.NewReaderForDAS(dasReader, dasKeysetFetcher))
 	}
 
 	dapReaders = append(dapReaders, daprovider.NewReaderForBlobReader(&wavmio.BlobPreimageReader{Wavm: wavm}))
@@ -174,6 +174,9 @@ func Verify(
 		block, receipts, err := arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, header, statedb, chainContext, false, core.MessageReplayMode)
 		if err != nil {
 			return nil, err
+		}
+		if block.NumberU64() != header.Number.Uint64()+1 {
+			return nil, fmt.Errorf("unexpected block number: got %d, expected %d", block.NumberU64(), header.Number.Uint64()+1)
 		}
 
 		header = block.Header()

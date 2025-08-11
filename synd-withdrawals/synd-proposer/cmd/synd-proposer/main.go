@@ -18,7 +18,6 @@ import (
 )
 
 func main() {
-
 	rootCmd := &cobra.Command{
 		Use:   "synd-proposer",
 		Short: "Syndicate's Proposer service",
@@ -31,7 +30,7 @@ func main() {
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			log.Info().Msgf("Config: %+v", cfg)
+			log.Info().Msgf("Config: %s", cfg)
 
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()

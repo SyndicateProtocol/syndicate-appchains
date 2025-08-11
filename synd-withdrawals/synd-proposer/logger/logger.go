@@ -68,7 +68,10 @@ func ToHexForLogsPendingAssertion(t teemodule.PendingAssertion) string {
 		SeqBlockHash: common.Hash(t.SeqBlockHash).Hex(),
 		L1BatchAcc:   common.Hash(t.L1BatchAcc).Hex(),
 	}
-	jsonInput, _ := json.Marshal(hexInput)
+	jsonInput, err := json.Marshal(hexInput)
+	if err != nil {
+		panic(err)
+	}
 
 	return string(jsonInput)
 }
@@ -83,7 +86,10 @@ func ToHexForLogsTrustedInput(t teetypes.TrustedInput) string {
 		L1StartBatchAcc:      common.Hash(t.L1StartBatchAcc).Hex(),
 		L1EndHash:            common.Hash(t.L1EndHash).Hex(),
 	}
-	jsonInput, _ := json.Marshal(hexInput)
+	jsonInput, err := json.Marshal(hexInput)
+	if err != nil {
+		panic(err)
+	}
 
 	return string(jsonInput)
 }

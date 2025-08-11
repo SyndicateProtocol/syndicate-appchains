@@ -84,6 +84,11 @@ async fn e2e_send_transaction() -> Result<()> {
             .processTransactionUncompressed(tx.encoded_2718().into())
             .send()
             .await?;
+        _ = components
+            .sequencing_contract
+            .processTransactionUncompressed(tx.encoded_2718().into())
+            .send()
+            .await?;
         components.mine_seq_block(0).await?;
 
         // Wait for the tx to arrive
