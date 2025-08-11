@@ -5885,7 +5885,6 @@ function usedNamespaces(uint256) external view returns (NamespaceState);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -5919,7 +5918,6 @@ function usedNamespaces(uint256) external view returns (NamespaceState);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (NamespaceState,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
