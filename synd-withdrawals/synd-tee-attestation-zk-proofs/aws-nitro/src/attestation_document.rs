@@ -116,7 +116,7 @@ impl AwsNitroAttestationDocument<'_> {
                 return Err(VerificationError::BadPCRIndex);
             }
 
-            if value.is_empty() || value.len() == 48 {
+            if value.is_empty() || value.len() != 48 {
                 return Err(VerificationError::BadPCRValue);
             }
         }
