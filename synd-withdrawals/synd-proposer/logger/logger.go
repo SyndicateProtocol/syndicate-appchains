@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 
 	"github.com/ethereum/go-ethereum/common"
 	glog "github.com/ethereum/go-ethereum/log"
@@ -77,7 +77,7 @@ func ToHexForLogsPendingAssertion(t teemodule.PendingAssertion) string {
 }
 
 // ToHexForLogsTrustedInput  converts TeeTrustedInput to a hex-encoded version
-func ToHexForLogsTrustedInput(t enclave.TrustedInput) string {
+func ToHexForLogsTrustedInput(t teetypes.TrustedInput) string {
 	hexInput := TeeTrustedInputHex{
 		ConfigHash:           common.Hash(t.ConfigHash).Hex(),
 		AppStartBlockHash:    common.Hash(t.AppStartBlockHash).Hex(),

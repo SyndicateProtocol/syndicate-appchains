@@ -31,6 +31,7 @@ WORKDIR /
 COPY --from=nitro /workspace ./synd-enclave/nitro
 COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
 COPY ./synd-withdrawals/synd-enclave/teemodule ./synd-enclave/teemodule
+COPY ./synd-withdrawals/synd-enclave/teetypes ./synd-enclave/teetypes
 COPY ./synd-withdrawals/synd-enclave/go.mod ./synd-enclave/go.mod
 COPY ./synd-withdrawals/synd-enclave/go.sum ./synd-enclave/go.sum
 COPY ./synd-withdrawals/synd-proposer ./synd-proposer
