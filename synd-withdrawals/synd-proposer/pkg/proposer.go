@@ -269,7 +269,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 				continue
 			}
 			if receipt.Status == types.ReceiptStatusFailed {
-				log.Debug().Msgf("Transaction failed,receipt: %+v", receipt)
+				log.Debug().Msgf("Transaction failed, receipt: %+v", receipt)
 				continue
 			}
 			p.PendingAssertion = nil // reset pending assertion so we don't keep trying to submit it
