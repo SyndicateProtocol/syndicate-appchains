@@ -133,7 +133,7 @@ async fn run(
 
     let elf_bytes = get_elf_bytes(args.elf_file_path).await?;
 
-    if args.chain_rpc_url.is_none() {
+    let Some(chain_rpc_url) = args.chain_rpc_url else {
         info!("Skipping submission to chain");
 
         let proof =
@@ -141,11 +141,8 @@ async fn run(
         info!("Public values: 0x{}", hex::encode(&proof.public_values));
         info!("Proof: 0x{}", hex::encode(&proof.proof));
         return Ok(());
-    }
-
-    // on chain submission
-    #[allow(clippy::unwrap_used)] // checked above
-    let chain_rpc_url = args.chain_rpc_url.unwrap();
+    };
+    info!("Submitting proof to chain");
     let mut private_key = args.private_key.ok_or(ProofSubmitterError::PrivateKeyRequired)?;
     let signer = PrivateKeySigner::from_str(&private_key)?;
     let provider = ProviderBuilder::new()
