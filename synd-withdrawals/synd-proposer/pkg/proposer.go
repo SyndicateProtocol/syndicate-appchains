@@ -175,6 +175,7 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 // PollingLoop runs the polling background process.
 func (p *Proposer) pollingLoop(ctx context.Context) {
 	ticker := time.NewTicker(p.Config.PollingInterval)
+	defer ticker.Stop()
 	// check if the appchain settles to an arbitrum rollup by querying the code at ArbSys precompile address
 	code, err := p.SettlementClient.CodeAt(ctx, ArbSysPrecompileAddress, nil)
 	if err != nil {
