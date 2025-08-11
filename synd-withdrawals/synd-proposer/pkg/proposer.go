@@ -402,7 +402,7 @@ func (p *Proposer) Prove(
 
 		// update preimages
 		for _, batch := range batches {
-			if err := getBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
+			if err := loadBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
 				return nil, errors.Wrap(err, "failed to get batch preimage data")
 			}
 		}

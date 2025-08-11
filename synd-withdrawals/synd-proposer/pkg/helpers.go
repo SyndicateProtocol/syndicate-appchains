@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/offchainlabs/nitro/arbnode"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
 	"github.com/offchainlabs/nitro/arbutil"
@@ -142,7 +143,7 @@ func getBatches(
 	return data, nil
 }
 
-func getBatchPreimageData(
+func loadBatchPreimageData(
 	ctx context.Context,
 	batch []byte,
 	dapReaders []daprovider.Reader,
@@ -171,13 +172,13 @@ func getBatchPreimageData(
 			return nil
 		}
 	}
-    log.Warn("DAS reader mismatch", 
-      "headerByte", fmt.Sprintf("0x%02x", batch[40]),
-      "availableReaders", len(dapReaders),
-      "batchLength", len(batch))
+	log.Error("DAS reader mismatch",
+		"headerByte", fmt.Sprintf("0x%02x", batch[40]),
+		"availableReaders", len(dapReaders),
+		"batchLength", len(batch))
 
-    return fmt.Errorf("no DAS reader configured for header byte 0x%02x (have %d readers)", 
-      batch[40], len(dapReaders))
+	return fmt.Errorf("no DAS reader configured for header byte 0x%02x (have %d readers)",
+		batch[40], len(dapReaders))
 }
 
 // if count is zero, get the latest delayed message accumulator
