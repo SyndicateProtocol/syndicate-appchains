@@ -26,11 +26,13 @@ contract SyndStaking is EpochTracker, ISyndStaking {
      * 1. Current Total - The present amount (e.g., totalStake, userTotal)
      * 2. Historical Total - Per-epoch snapshots (e.g., epochTotal, epochUserTotal)
      * 3. Epoch Additions - Amount added during specific epoch (e.g., epochAdditions, epochUserAdditions)
-     * 4. Last Finalized Epoch - Tracks which epochs have been fully processed
+     * 4. Epoch Withdrawals - Amount withdrawn during specific epoch (e.g., epochWithdrawals, epochUserWithdrawals)
+     * 5. Last Finalized Epoch - Tracks which epochs have been fully processed
      *
-     * The key insight: stake added during an epoch doesn't count for that epoch's rewards
-     * since it wasn't present for the entire epoch duration. Epoch additions let us
-     * exclude new stake from the current epoch while including it in future epochs.
+     * The key insight: stake added during an epoch doesn't count for that epoch's rewards, while
+     * withdrawals are included in the epoch they are initialized in. Epoch additions let us
+     * exclude new stake from the current epoch while including it in future epochs and vice versa
+     * for withdrawals.
      *
      * We track 4 different stake dimensions:
      * - Total Stake: Global stake across all users and appchains
