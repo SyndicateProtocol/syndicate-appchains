@@ -59,15 +59,6 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // User => last finalized epoch
     mapping(address => uint256) public userFinalizedEpoch;
 
-    // User => appchain => total amount staked
-    mapping(address => mapping(uint256 => uint256)) public userAppchainTotal;
-    // Epoch => user => appchain => amount staked during the epoch
-    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainTotal;
-    // Epoch => user => appchain => amount staked during the epoch
-    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainAdditions;
-    // User => appchain => last finalized epoch
-    mapping(address => mapping(uint256 => uint256)) public userAppchainFinalizedEpoch;
-
     // Appchain => total amount staked
     mapping(uint256 => uint256) public appchainTotal;
     // Epoch => appchain => total amount staked
@@ -76,6 +67,15 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainAdditions;
     // Last finalized epoch for each appchain
     mapping(uint256 => uint256) public appchainFinalizedEpoch;
+
+    // User => appchain => total amount staked
+    mapping(address => mapping(uint256 => uint256)) public userAppchainTotal;
+    // Epoch => user => appchain => amount staked during the epoch
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainTotal;
+    // Epoch => user => appchain => amount staked during the epoch
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainAdditions;
+    // User => appchain => last finalized epoch
+    mapping(address => mapping(uint256 => uint256)) public userAppchainFinalizedEpoch;
 
     /*
      * Pro-Rata Stake Tracking:
@@ -132,11 +132,11 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         if (finalizedEpoch < epochIndex) {
             finalizeEpochs();
         }
-        if (appchainFinalizedEpoch[appchainId] < epochIndex) {
-            finalizeAppchainEpochs(appchainId);
-        }
         if (userFinalizedEpoch[msg.sender] < epochIndex) {
             finalizeUserEpochs(msg.sender);
+        }
+        if (appchainFinalizedEpoch[appchainId] < epochIndex) {
+            finalizeAppchainEpochs(appchainId);
         }
         if (userAppchainFinalizedEpoch[msg.sender][appchainId] < epochIndex) {
             finalizeUserAppchainEpochs(msg.sender, appchainId);
@@ -170,6 +170,16 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // Finalization functions
     ///////////////////////
 
+    function finalizeEpochs() public {
+        uint256 currentEpoch = getCurrentEpoch();
+        while (finalizedEpoch < currentEpoch) {
+            epochTotal[finalizedEpoch] += totalStake;
+            // We only track stake that was present the entire epoch, so we need to subtract the stake that was added during the epoch
+            epochTotal[finalizedEpoch] -= epochAdditions[finalizedEpoch];
+            finalizedEpoch++;
+        }
+    }
+
     function finalizeUserEpochs(address user) public {
         uint256 currentEpoch = getCurrentEpoch();
         uint256 index = userFinalizedEpoch[user];
@@ -182,28 +192,6 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         userFinalizedEpoch[user] = index;
     }
 
-    function finalizeUserAppchainEpochs(address user, uint256 appchainId) public {
-        uint256 currentEpoch = getCurrentEpoch();
-        uint256 index = userAppchainFinalizedEpoch[user][appchainId];
-        while (index < currentEpoch) {
-            // We only track stake that was present the entire epoch, so we need to subtract the stake that was added during the epoch
-            epochUserAppchainTotal[index][user][appchainId] =
-                userAppchainTotal[user][appchainId] - epochUserAppchainAdditions[index][user][appchainId];
-            index++;
-        }
-        userAppchainFinalizedEpoch[user][appchainId] = index;
-    }
-
-    function finalizeEpochs() public {
-        uint256 currentEpoch = getCurrentEpoch();
-        while (finalizedEpoch < currentEpoch) {
-            epochTotal[finalizedEpoch] += totalStake;
-            // We only track stake that was present the entire epoch, so we need to subtract the stake that was added during the epoch
-            epochTotal[finalizedEpoch] -= epochAdditions[finalizedEpoch];
-            finalizedEpoch++;
-        }
-    }
-
     function finalizeAppchainEpochs(uint256 appchainId) public {
         uint256 currentEpoch = getCurrentEpoch();
         uint256 index = appchainFinalizedEpoch[appchainId];
@@ -214,6 +202,18 @@ contract SyndStaking is EpochTracker, ISyndStaking {
             index++;
         }
         appchainFinalizedEpoch[appchainId] = index;
+    }
+
+    function finalizeUserAppchainEpochs(address user, uint256 appchainId) public {
+        uint256 currentEpoch = getCurrentEpoch();
+        uint256 index = userAppchainFinalizedEpoch[user][appchainId];
+        while (index < currentEpoch) {
+            // We only track stake that was present the entire epoch, so we need to subtract the stake that was added during the epoch
+            epochUserAppchainTotal[index][user][appchainId] =
+                userAppchainTotal[user][appchainId] - epochUserAppchainAdditions[index][user][appchainId];
+            index++;
+        }
+        userAppchainFinalizedEpoch[user][appchainId] = index;
     }
 
     ///////////////////////
@@ -229,11 +229,11 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         if (finalizedEpoch < currentEpoch) {
             finalizeEpochs();
         }
-        if (appchainFinalizedEpoch[appchainId] < currentEpoch) {
-            finalizeAppchainEpochs(appchainId);
-        }
         if (userFinalizedEpoch[msg.sender] < currentEpoch) {
             finalizeUserEpochs(msg.sender);
+        }
+        if (appchainFinalizedEpoch[appchainId] < currentEpoch) {
+            finalizeAppchainEpochs(appchainId);
         }
 
         userAppchainWithdrawalInitialized[msg.sender][appchainId] = currentEpoch;
