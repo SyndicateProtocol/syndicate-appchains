@@ -8,6 +8,8 @@ pub mod r#add_batch_transactions_to_syndicate_sequencing_chain_contract;
 pub mod r#address;
 pub mod r#address_structured_linked_list;
 pub mod r#airdrop;
+pub mod r#deploy_airdrop;
+pub mod r#execute_airdrop;
 pub mod r#allowlist_sequencing_module;
 pub mod r#allowlist_syndicate_storage_addresses;
 pub mod r#always_allowed_module;
