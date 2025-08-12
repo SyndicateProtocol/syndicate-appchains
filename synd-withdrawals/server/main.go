@@ -13,12 +13,11 @@ import (
 
 // small HTTP proxy that forwards requests to a vsock service
 func main() {
-	// Get bind address from environment variable, default to localhost for security
-	// Use BIND_ADDRESS=0.0.0.0:7333 for all interfaces (backwards compatibility)
-	// Use BIND_ADDRESS=127.0.0.1:7333 for localhost only (more secure)
+	// Get bind address from environment variable, default to all interfaces if unset
+	// Use BIND_ADDRESS=127.0.0.1:7333 for localhost only
 	bindAddr := os.Getenv("BIND_ADDRESS")
 	if bindAddr == "" {
-		bindAddr = "127.0.0.1:7333" // Default to localhost
+		bindAddr = "0.0.0.0:7333" // Default to all interfaces
 	}
 	pool := sync.Pool{
 		New: func() any {
