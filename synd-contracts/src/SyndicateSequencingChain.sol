@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
+import {GasCounter} from "./GasCounter.sol";
 
 /// @title SyndicateSequencingChain
 /// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
@@ -36,12 +37,9 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 ///
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
-contract SyndicateSequencingChain is SequencingModuleChecker {
+contract SyndicateSequencingChain is SequencingModuleChecker, GasCounter {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
-
-    /// @notice The factory contract that handles centralized gas tracking
-    address public immutable factory;
 
     /// @notice Emitted when a new transaction is processed
     /// @param sender The address that submitted the transaction
@@ -55,21 +53,6 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
         require(_appchainId != 0, "App chain ID cannot be 0");
         appchainId = _appchainId;
-        factory = msg.sender; // Factory is the deployer
-    }
-
-    /// @notice Modifier that tracks gas usage for a function call
-    modifier trackGasUsage() {
-        uint256 gasStart = gasleft();
-        _;
-        uint256 gasUsed = gasStart - gasleft();
-        // try to track gas usage on the factory contract
-        try ISyndicateFactory(factory).trackAppchainGas(appchainId, gasUsed) {
-            // Gas tracking successful
-        } catch {
-            // Silently fail if gas tracking is disabled or fails
-            // This ensures transaction processing continues even if gas tracking has issues
-        }
     }
 
     /// @notice Processes a compressed transaction.
@@ -119,9 +102,20 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     function prependZeroByte(bytes calldata _data) public pure returns (bytes memory) {
         return abi.encodePacked(bytes1(0x00), _data);
     }
-}
 
-/// @notice Interface for the factory's gas tracking function
-interface ISyndicateFactory {
-    function trackAppchainGas(uint256 appchainId, uint256 gasUsed) external;
+    /*//////////////////////////////////////////////////////////////
+                         GAS TRACKING ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Disable gas tracking if needed
+    /// @dev Only callable by the contract owner
+    function disableGasTracking() external onlyOwner {
+        _disableGasTracking();
+    }
+
+    /// @notice Enable gas tracking
+    /// @dev Only callable by the contract owner
+    function enableGasTracking() external onlyOwner {
+        _enableGasTracking();
+    }
 }

@@ -3,11 +3,11 @@ pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
 import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
-import {GasTracker} from "../GasTracker.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {GasAggregator} from "../GasAggregator.sol";
 
 enum NamespaceState {
     Available,
@@ -18,7 +18,7 @@ enum NamespaceState {
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts with centralized gas tracking
 /// @dev Uses CREATE2 pattern for deterministic deployments - users deploy permission modules separately
-contract SyndicateFactory is AccessControl, Pausable, GasTracker {
+contract SyndicateFactory is AccessControl, Pausable, GasAggregator {
     /// @notice Emitted when a new SyndicateSequencingChain is created
     event SyndicateSequencingChainCreated(
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
@@ -38,11 +38,11 @@ contract SyndicateFactory is AccessControl, Pausable, GasTracker {
     // Namespace configuration - made public for frontend access
     uint256 public namespacePrefix;
     uint256 public nextAutoChainId;
-    mapping(uint256 => bool) public usedChainIds;
     mapping(uint256 => NamespaceState) public usedNamespaces;
 
     /// @notice Mapping from appchain ID to the sequencing contract address
     mapping(uint256 => address) public appchainContracts;
+    uint256[] public chainIDs;
 
     constructor(address admin) {
         if (admin == address(0)) revert ZeroAddress();
@@ -76,12 +76,10 @@ contract SyndicateFactory is AccessControl, Pausable, GasTracker {
         actualChainId = appchainId == 0 ? getNextChainId() : appchainId;
 
         // Validate chain ID is not already used
-        if (usedChainIds[actualChainId]) {
+        if (appchainContracts[actualChainId] != address(0)) {
             revert ChainIdAlreadyExists();
         }
 
-        // Reserve the chain ID
-        usedChainIds[actualChainId] = true;
         if (appchainId == 0) {
             nextAutoChainId++;
         }
@@ -92,6 +90,7 @@ contract SyndicateFactory is AccessControl, Pausable, GasTracker {
 
         // Store the mapping of appchain ID to contract address
         appchainContracts[actualChainId] = sequencingChain;
+        chainIDs.push(actualChainId);
 
         // Initialize the contract
         SyndicateSequencingChain(sequencingChain).initialize(admin, address(permissionModule));
@@ -134,26 +133,25 @@ contract SyndicateFactory is AccessControl, Pausable, GasTracker {
     /// @notice Check if a chain ID has been used
     /// @param chainId The chain ID to check
     /// @return 1 if used, 0 if available
-    function isChainIdUsed(uint256 chainId) external view returns (uint256) {
-        return usedChainIds[chainId] ? 1 : 0;
+    function isChainIdUsed(uint256 chainId) public view returns (bool) {
+        return appchainContracts[chainId] != address(0);
+    }
+
+    // TODO add doc
+    function getTotalAppchains() public view override returns (uint256) {
+        return chainIDs.length;
+    }
+
+    // TODO add doc
+    function getAppchainChainIDs() public view override returns (uint256[] memory) {
+        return chainIDs;
     }
 
     /// @notice Get the contract address for an appchain
     /// @param chainId The appchain ID
     /// @return The contract address, or zero address if not registered
-    function getAppchainContract(uint256 chainId) external view returns (address) {
+    function getAppchainContract(uint256 chainId) public view override returns (address) {
         return appchainContracts[chainId];
-    }
-
-    /// @notice Manually mark a chain ID as used to reserve it
-    /// @param chainId The chain ID to mark as used
-    /// @dev Useful for reserving specific chain IDs or marking externally deployed chains
-    function markChainIdAsUsed(uint256 chainId) external onlyRole(MANAGER_ROLE) {
-        if (usedChainIds[chainId]) {
-            revert ChainIdAlreadyExists();
-        }
-        usedChainIds[chainId] = true;
-        emit ChainIdManuallyMarked(chainId);
     }
 
     /// @notice Update namespace configuration (manager only)
@@ -188,25 +186,13 @@ contract SyndicateFactory is AccessControl, Pausable, GasTracker {
         _unpause();
     }
 
-    /// @notice Track gas usage for an appchain (called by sequencing contracts)
-    /// @param appchainId The appchain that consumed gas
-    /// @param gasUsed Amount of gas consumed
-    function trackAppchainGas(uint256 appchainId, uint256 gasUsed) external {
-        // Verify caller is the exact sequencing contract for this appchain ID
-        require(
-            appchainContracts[appchainId] == msg.sender, "SyndicateFactory: caller not authorized for this appchain"
-        );
-
-        trackGas(appchainId, gasUsed);
+    /// @notice set the max number of appchains to query
+    function setMaxAppchainsToQuery(uint8 n) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setMaxAppchainsToQuery(n);
     }
 
-    /// @notice Disable gas tracking (admin only)
-    function disableGasTracking() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _disableGasTracking();
-    }
-
-    /// @notice Enable gas tracking (admin only)
-    function enableGasTracking() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _enableGasTracking();
+    /// @notice set the challenge window
+    function setChallengeWindow(uint256 n) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setChallengeWindow(n);
     }
 }
