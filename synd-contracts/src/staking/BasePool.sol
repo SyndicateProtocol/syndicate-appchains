@@ -41,10 +41,11 @@ contract BasePool {
         }
         claimed[epochIndex][msg.sender] = true;
 
-        (uint256 amount, uint256 total) = stakingContract.getWeightedStakeDetails(epochIndex, msg.sender);
+        uint256 amount = stakingContract.getUserStake(epochIndex, msg.sender);
         if (amount == 0) {
             revert NotStaked();
         }
+        uint256 total = stakingContract.getTotalStake(epochIndex);
 
         // Calculate the amount of synd to claim
         uint256 claimAmount = (epochTotal[epochIndex] * amount) / total;

@@ -13,6 +13,8 @@ contract StakingTest is Test {
     address public user1;
     address public user2;
 
+    uint256 public appchainId1;
+
     function setUp() public {
         staking = new SyndStaking(block.timestamp);
         pool = new BasePool(address(staking));
@@ -22,6 +24,8 @@ contract StakingTest is Test {
 
         vm.deal(user1, 100 ether);
         vm.deal(user2, 100 ether);
+
+        appchainId1 = 111;
     }
 
     function stepEpoch(uint256 epochsToStep) public {
@@ -34,86 +38,119 @@ contract StakingTest is Test {
 
     function test_stake() public {
         vm.startPrank(user1);
-        staking.stakeSynd{value: 50 ether}(111);
+        staking.stakeSynd{value: 50 ether}(appchainId1);
         vm.stopPrank();
 
-        (uint256 amount1, uint256 total1) = staking.getStakeDetails(1, user1);
-        assertEq(amount1, 0 ether);
-        assertEq(total1, 0 ether);
+        assertEq(staking.getUserStake(1, user1), 0 ether);
+        assertEq(staking.getTotalStake(1), 0 ether);
 
         stepEpoch(1);
 
-        (uint256 amount2, uint256 total2) = staking.getStakeDetails(2, user1);
-        assertEq(amount2, 50 ether);
-        assertEq(total2, 50 ether);
+        assertEq(staking.getUserStake(2, user1), 50 ether);
+        assertEq(staking.getTotalStake(2), 50 ether);
     }
 
     function test_stake_and_finalize() public {
         vm.startPrank(user1);
-        staking.stakeSynd{value: 50 ether}(111);
+        staking.stakeSynd{value: 50 ether}(appchainId1);
         vm.stopPrank();
 
-        (uint256 amount1, uint256 total1) = staking.getStakeDetails(1, user1);
-        assertEq(amount1, 0 ether);
-        assertEq(total1, 0 ether);
+        assertEq(staking.getUserStake(1, user1), 0 ether);
+        assertEq(staking.getTotalStake(1), 0 ether);
 
         stepEpoch(1);
 
-        (uint256 amount2, uint256 total2) = staking.getStakeDetails(2, user1);
-        assertEq(amount2, 50 ether);
-        assertEq(total2, 50 ether);
+        assertEq(staking.getUserStake(2, user1), 50 ether);
+        assertEq(staking.getTotalStake(2), 50 ether);
 
         vm.startPrank(user1);
-        staking.stakeSynd{value: 10 ether}(111);
+        staking.stakeSynd{value: 10 ether}(appchainId1);
         vm.stopPrank();
 
         stepEpoch(1);
 
-        (uint256 amount3, uint256 total3) = staking.getStakeDetails(1, user1);
-        assertEq(amount3, 0 ether);
-        assertEq(total3, 0 ether);
+        assertEq(staking.getUserStake(1, user1), 0 ether);
+        assertEq(staking.getTotalStake(1), 0 ether);
 
-        (uint256 amount4, uint256 total4) = staking.getStakeDetails(2, user1);
-        assertEq(amount4, 50 ether);
-        assertEq(total4, 50 ether);
+        assertEq(staking.getUserStake(2, user1), 50 ether);
+        assertEq(staking.getTotalStake(2), 50 ether);
 
-        (uint256 amount5, uint256 total5) = staking.getStakeDetails(3, user1);
-        assertEq(amount5, 60 ether);
-        assertEq(total5, 60 ether);
+        assertEq(staking.getUserStake(3, user1), 60 ether);
+        assertEq(staking.getTotalStake(3), 60 ether);
     }
 
     function test_withdraw() public {
         vm.startPrank(user1);
-        staking.stakeSynd{value: 100 ether}(111);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
         vm.stopPrank();
 
         stepEpoch(1);
 
-        (uint256 amount1, uint256 total1) = staking.getStakeDetails(2, user1);
-        assertEq(amount1, 100 ether);
-        assertEq(total1, 100 ether);
+        assertEq(staking.getUserStake(2, user1), 100 ether);
+        assertEq(staking.getTotalStake(2), 100 ether);
 
         vm.startPrank(user1);
-        staking.initializeWithdrawal();
+        staking.initializeWithdrawal(appchainId1);
         vm.stopPrank();
 
-        (uint256 amount2, uint256 total2) = staking.getStakeDetails(2, user1);
-        assertEq(amount2, 100 ether);
-        assertEq(total2, 100 ether);
+        assertEq(staking.getUserStake(2, user1), 100 ether);
+        assertEq(staking.getTotalStake(2), 100 ether);
 
         stepEpoch(1);
 
-        (uint256 amount3, uint256 total3) = staking.getStakeDetails(3, user1);
-        assertEq(amount3, 0 ether);
-        assertEq(total3, 0 ether);
+        assertEq(staking.getUserStake(3, user1), 0 ether);
+        assertEq(staking.getTotalStake(3), 0 ether);
 
         assertEq(address(user1).balance, 0 ether);
 
         vm.startPrank(user1);
-        staking.withdraw();
+        staking.withdraw(appchainId1, user1);
         vm.stopPrank();
 
         assertEq(address(user1).balance, 100 ether);
+    }
+
+    function test_withdraw_before_finalization() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        assertEq(staking.getUserStake(2, user1), 100 ether);
+        assertEq(staking.getTotalStake(2), 100 ether);
+
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(appchainId1);
+        vm.stopPrank();
+
+        assertEq(staking.getUserStake(2, user1), 100 ether);
+        assertEq(staking.getTotalStake(2), 100 ether);
+
+        stepEpoch(1);
+
+        assertEq(staking.getUserStake(3, user1), 0 ether);
+        assertEq(staking.getTotalStake(3), 0 ether);
+
+        assertEq(address(user1).balance, 0 ether);
+
+        vm.startPrank(user1);
+        staking.withdraw(appchainId1, user1);
+        vm.stopPrank();
+
+        assertEq(address(user1).balance, 100 ether);
+
+        vm.startPrank(user2);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        assertEq(staking.getUserStake(3, user2), 0 ether);
+        assertEq(staking.getTotalStake(3), 0 ether);
+
+        assertEq(staking.getUserStake(4, user2), 100 ether);
+        assertEq(staking.getTotalStake(4), 100 ether);
     }
 
     function test_weightedStake() public {
@@ -122,7 +159,7 @@ contract StakingTest is Test {
         // Stake 20 ether for 15 days
         // Weighted stake is 20 * (15/30) = 10
         vm.startPrank(user1);
-        staking.stakeSynd{value: 20 ether}(111);
+        staking.stakeSynd{value: 20 ether}(appchainId1);
         vm.stopPrank();
 
         stepDays(5);
@@ -130,17 +167,26 @@ contract StakingTest is Test {
         // Stake 30 ether for 10 days
         // Weighted stake is 30 * (10/30) = 10
         vm.startPrank(user1);
-        staking.stakeSynd{value: 30 ether}(111);
+        staking.stakeSynd{value: 30 ether}(appchainId1);
         vm.stopPrank();
 
         stepEpoch(1);
 
-        (uint256 amountWeighted1, uint256 totalWeighted1) = staking.getWeightedStakeDetails(1, user1);
-        assertEq(amountWeighted1, 20 ether);
-        assertEq(totalWeighted1, 20 ether);
+        assertEq(staking.getUserStakeShare(1, user1), 20 ether);
+        assertEq(staking.getTotalStakeShare(1), 20 ether);
 
-        (uint256 amountWeighted2, uint256 totalWeighted2) = staking.getWeightedStakeDetails(2, user1);
-        assertEq(amountWeighted2, 50 ether);
-        assertEq(totalWeighted2, 50 ether);
+        assertEq(staking.getUserStakeShare(2, user1), 50 ether);
+        assertEq(staking.getTotalStakeShare(2), 50 ether);
     }
+
+    // Test cases to add
+    // Add appchain stake ratio checks to all tests
+    // Some tests on precision
+
+    // User adds epoch 1 and then immiediately withdraws
+    // User adds epoch 1 and then immiediately  initalizes withdrawal, never completes it, but trys to deposit more epoch 2
+    // User adds epoch 1 and also adds epoch 2
+    // User adds epoch 1 for chain X withdraws and then adds epoch 2 for chain Y
+    // User adds epoch 1 and then checks share epoch 10
+    // User adds epoch 1 and then immediately initalizes withdrawal, user 2 adds epoch 2 check all balances are correct epoch 3
 }
