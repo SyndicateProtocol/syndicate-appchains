@@ -101,7 +101,7 @@ contract StakingTest is Test {
         assertEq(address(user1).balance, 0 ether);
 
         vm.startPrank(user1);
-        staking.withdraw(appchainId1, user1);
+        staking.withdraw(2, user1);
         vm.stopPrank();
 
         assertEq(address(user1).balance, 100 ether);
@@ -129,7 +129,7 @@ contract StakingTest is Test {
         assertEq(address(user1).balance, 0 ether);
 
         vm.startPrank(user1);
-        staking.withdraw(appchainId1, user1);
+        staking.withdraw(2, user1);
         vm.stopPrank();
 
         assertEq(address(user1).balance, 100 ether);
@@ -197,7 +197,7 @@ contract StakingTest is Test {
         assertEq(staking.getTotalStakeShare(2), 0 ether);
 
         vm.startPrank(user1);
-        staking.withdraw(appchainId1, user1);
+        staking.withdraw(1, user1);
         vm.stopPrank();
 
         checkStake(1, user1, 0 ether, appchainId1);
@@ -232,9 +232,22 @@ contract StakingTest is Test {
         assertEq(staking.getTotalStakeShare(2), 0 ether);
 
         vm.startPrank(user1);
-        vm.expectRevert(abi.encodeWithSelector(SyndStaking.WithdrawalAlreadyInitialized.selector));
         staking.stakeSynd{value: 50 ether}(appchainId1);
         vm.stopPrank();
+
+        stepEpoch(1);
+
+        checkStake(4, user1, 50 ether, appchainId1);
+
+        assertEq(address(user1).balance, 0 ether);
+
+        vm.startPrank(user1);
+        staking.withdraw(1, user1);
+        vm.stopPrank();
+
+        checkStake(4, user1, 50 ether, appchainId1);
+
+        assertEq(address(user1).balance, 50 ether);
     }
 
     function test_stake_multiple_epochs() public {
@@ -377,5 +390,91 @@ contract StakingTest is Test {
         vm.stopPrank();
 
         assertEq(staking.getUserStakeShare(1, user1), 1);
+    }
+
+    function test_double_withdraw() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        staking.initializeWithdrawal(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        vm.startPrank(user1);
+        staking.withdraw(1, user1);
+        vm.stopPrank();
+
+        assertEq(address(user1).balance, 100 ether);
+
+        vm.startPrank(user1);
+        vm.expectRevert(abi.encodeWithSelector(SyndStaking.InvalidWithdrawal.selector));
+        staking.withdraw(1, user1);
+        vm.stopPrank();
+    }
+
+    function test_early_withdraw() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        staking.initializeWithdrawal(appchainId1);
+        vm.stopPrank();
+
+        stepDays(29);
+
+        vm.startPrank(user1);
+        vm.expectRevert(abi.encodeWithSelector(SyndStaking.WithdrawalNotReady.selector));
+        staking.withdraw(1, user1);
+        vm.stopPrank();
+    }
+
+    function test_restake() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        vm.startPrank(user1);
+        staking.restakeSynd(appchainId1, appchainId2, 50 ether);
+        vm.stopPrank();
+
+        checkStake(2, user1, 100 ether, appchainId1);
+
+        stepEpoch(1);
+
+        checkStake(2, user1, 100 ether, appchainId1);
+
+        assertEq(staking.getUserStake(3, user1), 100 ether);
+        assertEq(staking.getTotalStake(3), 100 ether);
+
+        assertEq(staking.getUserAppchainStake(3, user1, appchainId1), 50 ether);
+        assertEq(staking.getUserAppchainStake(3, user1, appchainId2), 50 ether);
+
+        assertEq(staking.getAppchainStake(3, appchainId1), 50 ether);
+        assertEq(staking.getAppchainStake(3, appchainId2), 50 ether);
+    }
+
+    function test_withdrawal_and_restake() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        vm.startPrank(user1);
+        staking.restakeSynd(appchainId1, appchainId2, 50 ether);
+        staking.initializeWithdrawal(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        checkStake(2, user1, 100 ether, appchainId1);
+        checkStake(3, user1, 50 ether, appchainId2);
+
+        vm.startPrank(user1);
+        staking.withdraw(2, user1);
+        vm.stopPrank();
+
+        checkStake(3, user1, 50 ether, appchainId2);
+        assertEq(address(user1).balance, 50 ether);
     }
 }

@@ -47,6 +47,8 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     mapping(uint256 => uint256) public epochTotal;
     // Epoch => amount staked during the epoch
     mapping(uint256 => uint256) public epochAdditions;
+    // Epoch => amount withdrawn during the epoch
+    mapping(uint256 => uint256) public epochWithdrawals;
     // Last finalized epoch
     uint256 public finalizedEpoch;
 
@@ -56,6 +58,8 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     mapping(uint256 => mapping(address => uint256)) public epochUserTotal;
     // Epoch => user => amount staked during the epoch
     mapping(uint256 => mapping(address => uint256)) public epochUserAdditions;
+    // Epoch => user => amount withdrawn during the epoch
+    mapping(uint256 => mapping(address => uint256)) public epochUserWithdrawals;
     // User => last finalized epoch
     mapping(address => uint256) public userFinalizedEpoch;
 
@@ -65,6 +69,8 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainTotal;
     // Epoch => appchain => amount staked during the epoch
     mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainAdditions;
+    // Epoch => appchain => amount withdrawn during the epoch
+    mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainWithdrawals;
     // Last finalized epoch for each appchain
     mapping(uint256 => uint256) public appchainFinalizedEpoch;
 
@@ -74,6 +80,8 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainTotal;
     // Epoch => user => appchain => amount staked during the epoch
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainAdditions;
+    // Epoch => user => appchain => amount withdrawn during the epoch
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainWithdrawals;
     // User => appchain => last finalized epoch
     mapping(address => mapping(uint256 => uint256)) public userAppchainFinalizedEpoch;
 
@@ -96,19 +104,17 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // Epoch => user => amount staked during the epoch weighted by time left in the epoch
     mapping(uint256 => mapping(address => uint256)) public epochUserStakeShare;
 
-    // User => appchain => epoch index of withdrawal initialization
-    mapping(address => mapping(uint256 => uint256)) public userAppchainWithdrawalInitialized;
-
     event Stake(uint256 epochIndex, address user, uint256 amount, uint256 appchainId);
-    event WithdrawalInitialized(address user, uint256 appchainId, uint256 timestamp);
+    event Restake(uint256 epochIndex, address user, uint256 amount, uint256 fromAppchainId, uint256 toAppchainId);
+    event WithdrawalInitialized(address user, uint256 appchainId, uint256 amount);
     event WithdrawalCompleted(address user, address destination, uint256 amount);
     event Log(string message, uint256 index);
 
-    error InvalidStakeAmount();
+    error InvalidAmount();
     error InvalidAppchainId();
-    error WithdrawalAlreadyInitialized();
-    error WithdrawalNotInitialized();
+    error InsufficientStake();
     error WithdrawalNotReady();
+    error InvalidWithdrawal();
 
     constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {}
 
@@ -118,13 +124,10 @@ contract SyndStaking is EpochTracker, ISyndStaking {
 
     function stakeSynd(uint256 appchainId) external payable {
         if (msg.value == 0) {
-            revert InvalidStakeAmount();
+            revert InvalidAmount();
         }
         if (appchainId == 0) {
             revert InvalidAppchainId();
-        }
-        if (userAppchainWithdrawalInitialized[msg.sender][appchainId] != 0) {
-            revert WithdrawalAlreadyInitialized();
         }
 
         // Finalize epoch accounting if needed
@@ -166,6 +169,41 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         return (amount * (getEpochEnd(getCurrentEpoch()) - block.timestamp)) / EPOCH_DURATION;
     }
 
+    function restakeSynd(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable {
+        if (amount == 0) {
+            revert InvalidAmount();
+        }
+        if (fromAppchainId == 0 || toAppchainId == 0) {
+            revert InvalidAppchainId();
+        }
+        if (userAppchainTotal[msg.sender][fromAppchainId] < amount) {
+            revert InsufficientStake();
+        }
+
+        uint256 epochIndex = getCurrentEpoch();
+        if (userFinalizedEpoch[msg.sender] < epochIndex) {
+            finalizeUserEpochs(msg.sender);
+        }
+        if (appchainFinalizedEpoch[fromAppchainId] < epochIndex) {
+            finalizeAppchainEpochs(fromAppchainId);
+        }
+        if (userAppchainFinalizedEpoch[msg.sender][fromAppchainId] < epochIndex) {
+            finalizeUserAppchainEpochs(msg.sender, fromAppchainId);
+        }
+
+        epochUserAppchainTotal[epochIndex][msg.sender][fromAppchainId] += amount;
+        epochAppchainTotal[epochIndex][fromAppchainId] += amount;
+        userAppchainTotal[msg.sender][fromAppchainId] -= amount;
+        appchainTotal[fromAppchainId] -= amount;
+
+        epochUserAppchainAdditions[epochIndex][msg.sender][toAppchainId] += amount;
+        epochAppchainAdditions[epochIndex][toAppchainId] += amount;
+        userAppchainTotal[msg.sender][toAppchainId] += amount;
+        appchainTotal[toAppchainId] += amount;
+
+        emit Restake(epochIndex, msg.sender, amount, fromAppchainId, toAppchainId);
+    }
+
     ///////////////////////
     // Finalization functions
     ///////////////////////
@@ -174,7 +212,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         uint256 currentEpoch = getCurrentEpoch();
         while (finalizedEpoch < currentEpoch) {
             epochTotal[finalizedEpoch] += totalStake;
-            // We only track stake that was present the entire epoch, so we need to subtract the stake that was added during the epoch
+            epochTotal[finalizedEpoch] += epochWithdrawals[finalizedEpoch];
             epochTotal[finalizedEpoch] -= epochAdditions[finalizedEpoch];
             finalizedEpoch++;
         }
@@ -184,8 +222,8 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         uint256 currentEpoch = getCurrentEpoch();
         uint256 index = userFinalizedEpoch[user];
         while (index < currentEpoch) {
-            // We only track stake that was present the entire epoch, so we need to subtract the stake that was added during the epoch
             epochUserTotal[index][user] += userTotal[user];
+            epochUserTotal[index][user] += epochUserWithdrawals[index][user];
             epochUserTotal[index][user] -= epochUserAdditions[index][user];
             index++;
         }
@@ -197,7 +235,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         uint256 index = appchainFinalizedEpoch[appchainId];
         while (index < currentEpoch) {
             epochAppchainTotal[index][appchainId] += appchainTotal[appchainId];
-            // We only track stake that was present the entire epoch, so we need to subtract the stake that was added during the epoch
+            epochAppchainTotal[index][appchainId] += epochAppchainWithdrawals[index][appchainId];
             epochAppchainTotal[index][appchainId] -= epochAppchainAdditions[index][appchainId];
             index++;
         }
@@ -208,9 +246,9 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         uint256 currentEpoch = getCurrentEpoch();
         uint256 index = userAppchainFinalizedEpoch[user][appchainId];
         while (index < currentEpoch) {
-            // We only track stake that was present the entire epoch, so we need to subtract the stake that was added during the epoch
-            epochUserAppchainTotal[index][user][appchainId] =
-                userAppchainTotal[user][appchainId] - epochUserAppchainAdditions[index][user][appchainId];
+            epochUserAppchainTotal[index][user][appchainId] += userAppchainTotal[user][appchainId];
+            epochUserAppchainTotal[index][user][appchainId] += epochUserAppchainWithdrawals[index][user][appchainId];
+            epochUserAppchainTotal[index][user][appchainId] -= epochUserAppchainAdditions[index][user][appchainId];
             index++;
         }
         userAppchainFinalizedEpoch[user][appchainId] = index;
@@ -219,10 +257,15 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     ///////////////////////
     // Withdrawal functions
     ///////////////////////
-
-    function initializeWithdrawal(uint256 appchainId) external {
-        if (userAppchainWithdrawalInitialized[msg.sender][appchainId] != 0) {
-            revert WithdrawalAlreadyInitialized();
+    function initializeWithdrawal(uint256 appchainId, uint256 amount) public {
+        if (amount == 0) {
+            revert InvalidAmount();
+        }
+        if (appchainId == 0) {
+            revert InvalidAppchainId();
+        }
+        if (userAppchainTotal[msg.sender][appchainId] < amount) {
+            revert InsufficientStake();
         }
 
         uint256 currentEpoch = getCurrentEpoch();
@@ -235,38 +278,40 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         if (appchainFinalizedEpoch[appchainId] < currentEpoch) {
             finalizeAppchainEpochs(appchainId);
         }
+        if (userAppchainFinalizedEpoch[msg.sender][appchainId] < currentEpoch) {
+            finalizeUserAppchainEpochs(msg.sender, appchainId);
+        }
 
-        userAppchainWithdrawalInitialized[msg.sender][appchainId] = currentEpoch;
+        epochWithdrawals[currentEpoch] += amount;
+        epochUserWithdrawals[currentEpoch][msg.sender] += amount;
+        epochAppchainWithdrawals[currentEpoch][appchainId] += amount;
+        epochUserAppchainWithdrawals[currentEpoch][msg.sender][appchainId] += amount;
 
-        // Pre-emptively remove stake from current totals and add to the epoch totals
-        // This is to make sure we have accurate accounting regardless of the withdrawal completion time
-        uint256 amount = userAppchainTotal[msg.sender][appchainId];
         totalStake -= amount;
         userTotal[msg.sender] -= amount;
         appchainTotal[appchainId] -= amount;
+        userAppchainTotal[msg.sender][appchainId] -= amount;
 
-        epochTotal[currentEpoch] += amount;
-        epochUserTotal[currentEpoch][msg.sender] += amount;
-        epochAppchainTotal[currentEpoch][appchainId] += amount;
-        epochUserAppchainTotal[currentEpoch][msg.sender][appchainId] += amount;
-
-        emit WithdrawalInitialized(msg.sender, appchainId, block.timestamp);
+        emit WithdrawalInitialized(msg.sender, appchainId, amount);
     }
 
-    function withdraw(uint256 appchainId, address destination) external {
-        if (userAppchainWithdrawalInitialized[msg.sender][appchainId] == 0) {
-            revert WithdrawalNotInitialized();
-        }
+    function initializeWithdrawal(uint256 appchainId) external {
+        initializeWithdrawal(appchainId, userAppchainTotal[msg.sender][appchainId]);
+    }
 
-        if (getCurrentEpoch() <= userAppchainWithdrawalInitialized[msg.sender][appchainId]) {
+    function withdraw(uint256 epochIndex, address destination) external {
+        if (epochIndex >= getCurrentEpoch()) {
             revert WithdrawalNotReady();
         }
 
-        finalizeUserAppchainEpochs(msg.sender, appchainId);
+        uint256 amount = epochUserWithdrawals[epochIndex][msg.sender];
+        if (amount == 0) {
+            revert InvalidWithdrawal();
+        }
 
-        uint256 amount = userAppchainTotal[msg.sender][appchainId];
-        userAppchainTotal[msg.sender][appchainId] = 0;
-        userAppchainWithdrawalInitialized[msg.sender][appchainId] = 0;
+        finalizeUserEpochs(msg.sender);
+
+        epochUserWithdrawals[epochIndex][msg.sender] = 0;
 
         payable(destination).transfer(amount);
 
@@ -279,7 +324,8 @@ contract SyndStaking is EpochTracker, ISyndStaking {
 
     function getUserStake(uint256 epochIndex, address user) public view returns (uint256) {
         if (epochIndex >= userFinalizedEpoch[user]) {
-            return userTotal[user] + epochUserTotal[epochIndex][user] - epochUserAdditions[epochIndex][user];
+            return userTotal[user] + epochUserTotal[epochIndex][user] + epochUserWithdrawals[epochIndex][user]
+                - epochUserAdditions[epochIndex][user];
         } else {
             return epochUserTotal[epochIndex][user];
         }
@@ -291,7 +337,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
 
     function getTotalStake(uint256 epochIndex) public view returns (uint256) {
         if (epochIndex >= finalizedEpoch) {
-            return totalStake + epochTotal[epochIndex] - epochAdditions[epochIndex];
+            return totalStake + epochTotal[epochIndex] + epochWithdrawals[epochIndex] - epochAdditions[epochIndex];
         } else {
             return epochTotal[epochIndex];
         }
@@ -304,18 +350,16 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     function getAppchainStake(uint256 epochIndex, uint256 appchainId) public view returns (uint256) {
         if (epochIndex >= appchainFinalizedEpoch[appchainId]) {
             return appchainTotal[appchainId] + epochAppchainTotal[epochIndex][appchainId]
-                - epochAppchainAdditions[epochIndex][appchainId];
+                + epochAppchainWithdrawals[epochIndex][appchainId] - epochAppchainAdditions[epochIndex][appchainId];
         } else {
             return epochAppchainTotal[epochIndex][appchainId];
         }
     }
 
     function getUserAppchainStake(uint256 epochIndex, address user, uint256 appchainId) public view returns (uint256) {
-        if (userAppchainWithdrawalInitialized[user][appchainId] != 0) {
-            return epochUserAppchainTotal[epochIndex][user][appchainId]
-                - epochUserAppchainAdditions[epochIndex][user][appchainId];
-        } else if (epochIndex >= userAppchainFinalizedEpoch[user][appchainId]) {
+        if (epochIndex >= userAppchainFinalizedEpoch[user][appchainId]) {
             return userAppchainTotal[user][appchainId] + epochUserAppchainTotal[epochIndex][user][appchainId]
+                + epochUserAppchainWithdrawals[epochIndex][user][appchainId]
                 - epochUserAppchainAdditions[epochIndex][user][appchainId];
         } else {
             return epochUserAppchainTotal[epochIndex][user][appchainId];
