@@ -1,440 +1,7 @@
-///Module containing a contract's types and functions.
-/**
-
-```solidity
-library GasCounter {
-    struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGasUsed; uint256 totalGasCost; }
-}
-```*/
-#[allow(
-    non_camel_case_types,
-    non_snake_case,
-    clippy::pub_underscore_fields,
-    clippy::style,
-    clippy::empty_structs_with_brackets
-)]
-pub mod GasCounter {
-    use super::*;
-    use alloy::sol_types as alloy_sol_types;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**```solidity
-struct GasPeriod { uint256 startTimestamp; uint256 endTimestamp; uint256 totalGasUsed; uint256 totalGasCost; }
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct GasPeriod {
-        #[allow(missing_docs)]
-        pub startTimestamp: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub endTimestamp: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub totalGasUsed: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub totalGasCost: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[doc(hidden)]
-        #[allow(dead_code)]
-        type UnderlyingSolTuple<'a> = (
-            alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
-        );
-        #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = (
-            alloy::sol_types::private::primitives::aliases::U256,
-            alloy::sol_types::private::primitives::aliases::U256,
-            alloy::sol_types::private::primitives::aliases::U256,
-            alloy::sol_types::private::primitives::aliases::U256,
-        );
-        #[cfg(test)]
-        #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(
-            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-        ) {
-            match _t {
-                alloy_sol_types::private::AssertTypeEq::<
-                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                >(_) => {}
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<GasPeriod> for UnderlyingRustTuple<'_> {
-            fn from(value: GasPeriod) -> Self {
-                (
-                    value.startTimestamp,
-                    value.endTimestamp,
-                    value.totalGasUsed,
-                    value.totalGasCost,
-                )
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for GasPeriod {
-            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {
-                    startTimestamp: tuple.0,
-                    endTimestamp: tuple.1,
-                    totalGasUsed: tuple.2,
-                    totalGasCost: tuple.3,
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolValue for GasPeriod {
-            type SolType = Self;
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::private::SolTypeValue<Self> for GasPeriod {
-            #[inline]
-            fn stv_to_tokens(&self) -> <Self as alloy_sol_types::SolType>::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.startTimestamp),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.endTimestamp),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.totalGasUsed),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.totalGasCost),
-                )
-            }
-            #[inline]
-            fn stv_abi_encoded_size(&self) -> usize {
-                if let Some(size) = <Self as alloy_sol_types::SolType>::ENCODED_SIZE {
-                    return size;
-                }
-                let tuple = <UnderlyingRustTuple<
-                    '_,
-                > as ::core::convert::From<Self>>::from(self.clone());
-                <UnderlyingSolTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_encoded_size(&tuple)
-            }
-            #[inline]
-            fn stv_eip712_data_word(&self) -> alloy_sol_types::Word {
-                <Self as alloy_sol_types::SolStruct>::eip712_hash_struct(self)
-            }
-            #[inline]
-            fn stv_abi_encode_packed_to(
-                &self,
-                out: &mut alloy_sol_types::private::Vec<u8>,
-            ) {
-                let tuple = <UnderlyingRustTuple<
-                    '_,
-                > as ::core::convert::From<Self>>::from(self.clone());
-                <UnderlyingSolTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
-            }
-            #[inline]
-            fn stv_abi_packed_encoded_size(&self) -> usize {
-                if let Some(size) = <Self as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE {
-                    return size;
-                }
-                let tuple = <UnderlyingRustTuple<
-                    '_,
-                > as ::core::convert::From<Self>>::from(self.clone());
-                <UnderlyingSolTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_packed_encoded_size(&tuple)
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolType for GasPeriod {
-            type RustType = Self;
-            type Token<'a> = <UnderlyingSolTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SOL_NAME: &'static str = <Self as alloy_sol_types::SolStruct>::NAME;
-            const ENCODED_SIZE: Option<usize> = <UnderlyingSolTuple<
-                '_,
-            > as alloy_sol_types::SolType>::ENCODED_SIZE;
-            const PACKED_ENCODED_SIZE: Option<usize> = <UnderlyingSolTuple<
-                '_,
-            > as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE;
-            #[inline]
-            fn valid_token(token: &Self::Token<'_>) -> bool {
-                <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::valid_token(token)
-            }
-            #[inline]
-            fn detokenize(token: Self::Token<'_>) -> Self::RustType {
-                let tuple = <UnderlyingSolTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::detokenize(token);
-                <Self as ::core::convert::From<UnderlyingRustTuple<'_>>>::from(tuple)
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolStruct for GasPeriod {
-            const NAME: &'static str = "GasPeriod";
-            #[inline]
-            fn eip712_root_type() -> alloy_sol_types::private::Cow<'static, str> {
-                alloy_sol_types::private::Cow::Borrowed(
-                    "GasPeriod(uint256 startTimestamp,uint256 endTimestamp,uint256 totalGasUsed,uint256 totalGasCost)",
-                )
-            }
-            #[inline]
-            fn eip712_components() -> alloy_sol_types::private::Vec<
-                alloy_sol_types::private::Cow<'static, str>,
-            > {
-                alloy_sol_types::private::Vec::new()
-            }
-            #[inline]
-            fn eip712_encode_type() -> alloy_sol_types::private::Cow<'static, str> {
-                <Self as alloy_sol_types::SolStruct>::eip712_root_type()
-            }
-            #[inline]
-            fn eip712_encode_data(&self) -> alloy_sol_types::private::Vec<u8> {
-                [
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::eip712_data_word(
-                            &self.startTimestamp,
-                        )
-                        .0,
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::eip712_data_word(&self.endTimestamp)
-                        .0,
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::eip712_data_word(&self.totalGasUsed)
-                        .0,
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::eip712_data_word(&self.totalGasCost)
-                        .0,
-                ]
-                    .concat()
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::EventTopic for GasPeriod {
-            #[inline]
-            fn topic_preimage_length(rust: &Self::RustType) -> usize {
-                0usize
-                    + <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.startTimestamp,
-                    )
-                    + <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.endTimestamp,
-                    )
-                    + <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.totalGasUsed,
-                    )
-                    + <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::EventTopic>::topic_preimage_length(
-                        &rust.totalGasCost,
-                    )
-            }
-            #[inline]
-            fn encode_topic_preimage(
-                rust: &Self::RustType,
-                out: &mut alloy_sol_types::private::Vec<u8>,
-            ) {
-                out.reserve(
-                    <Self as alloy_sol_types::EventTopic>::topic_preimage_length(rust),
-                );
-                <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.startTimestamp,
-                    out,
-                );
-                <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.endTimestamp,
-                    out,
-                );
-                <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.totalGasUsed,
-                    out,
-                );
-                <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    &rust.totalGasCost,
-                    out,
-                );
-            }
-            #[inline]
-            fn encode_topic(
-                rust: &Self::RustType,
-            ) -> alloy_sol_types::abi::token::WordToken {
-                let mut out = alloy_sol_types::private::Vec::new();
-                <Self as alloy_sol_types::EventTopic>::encode_topic_preimage(
-                    rust,
-                    &mut out,
-                );
-                alloy_sol_types::abi::token::WordToken(
-                    alloy_sol_types::private::keccak256(out),
-                )
-            }
-        }
-    };
-    use alloy::contract as alloy_contract;
-    /**Creates a new wrapper around an on-chain [`GasCounter`](self) contract instance.
-
-See the [wrapper's documentation](`GasCounterInstance`) for more details.*/
-    #[inline]
-    pub const fn new<
-        P: alloy_contract::private::Provider<N>,
-        N: alloy_contract::private::Network,
-    >(
-        address: alloy_sol_types::private::Address,
-        provider: P,
-    ) -> GasCounterInstance<P, N> {
-        GasCounterInstance::<P, N>::new(address, provider)
-    }
-    /**A [`GasCounter`](self) instance.
-
-Contains type-safe methods for interacting with an on-chain instance of the
-[`GasCounter`](self) contract located at a given `address`, using a given
-provider `P`.
-
-If the contract bytecode is available (see the [`sol!`](alloy_sol_types::sol!)
-documentation on how to provide it), the `deploy` and `deploy_builder` methods can
-be used to deploy a new instance of the contract.
-
-See the [module-level documentation](self) for all the available methods.*/
-    #[derive(Clone)]
-    pub struct GasCounterInstance<P, N = alloy_contract::private::Ethereum> {
-        address: alloy_sol_types::private::Address,
-        provider: P,
-        _network: ::core::marker::PhantomData<N>,
-    }
-    #[automatically_derived]
-    impl<P, N> ::core::fmt::Debug for GasCounterInstance<P, N> {
-        #[inline]
-        fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-            f.debug_tuple("GasCounterInstance").field(&self.address).finish()
-        }
-    }
-    /// Instantiation and getters/setters.
-    #[automatically_derived]
-    impl<
-        P: alloy_contract::private::Provider<N>,
-        N: alloy_contract::private::Network,
-    > GasCounterInstance<P, N> {
-        /**Creates a new wrapper around an on-chain [`GasCounter`](self) contract instance.
-
-See the [wrapper's documentation](`GasCounterInstance`) for more details.*/
-        #[inline]
-        pub const fn new(
-            address: alloy_sol_types::private::Address,
-            provider: P,
-        ) -> Self {
-            Self {
-                address,
-                provider,
-                _network: ::core::marker::PhantomData,
-            }
-        }
-        /// Returns a reference to the address.
-        #[inline]
-        pub const fn address(&self) -> &alloy_sol_types::private::Address {
-            &self.address
-        }
-        /// Sets the address.
-        #[inline]
-        pub fn set_address(&mut self, address: alloy_sol_types::private::Address) {
-            self.address = address;
-        }
-        /// Sets the address and returns `self`.
-        pub fn at(mut self, address: alloy_sol_types::private::Address) -> Self {
-            self.set_address(address);
-            self
-        }
-        /// Returns a reference to the provider.
-        #[inline]
-        pub const fn provider(&self) -> &P {
-            &self.provider
-        }
-    }
-    impl<P: ::core::clone::Clone, N> GasCounterInstance<&P, N> {
-        /// Clones the provider and returns a new instance with the cloned provider.
-        #[inline]
-        pub fn with_cloned_provider(self) -> GasCounterInstance<P, N> {
-            GasCounterInstance {
-                address: self.address,
-                provider: ::core::clone::Clone::clone(&self.provider),
-                _network: ::core::marker::PhantomData,
-            }
-        }
-    }
-    /// Function calls.
-    #[automatically_derived]
-    impl<
-        P: alloy_contract::private::Provider<N>,
-        N: alloy_contract::private::Network,
-    > GasCounterInstance<P, N> {
-        /// Creates a new call builder using this contract instance's provider and address.
-        ///
-        /// Note that the call can be any function call, not just those defined in this
-        /// contract. Prefer using the other methods for building type-safe contract calls.
-        pub fn call_builder<C: alloy_sol_types::SolCall>(
-            &self,
-            call: &C,
-        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
-            alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
-        }
-    }
-    /// Event filters.
-    #[automatically_derived]
-    impl<
-        P: alloy_contract::private::Provider<N>,
-        N: alloy_contract::private::Network,
-    > GasCounterInstance<P, N> {
-        /// Creates a new event filter using this contract instance's provider and address.
-        ///
-        /// Note that the type can be any event, not just those defined in this contract.
-        /// Prefer using the other methods for building type-safe event filters.
-        pub fn event_filter<E: alloy_sol_types::SolEvent>(
-            &self,
-        ) -> alloy_contract::Event<&P, E, N> {
-            alloy_contract::Event::new_sol(&self.provider, &self.address)
-        }
-    }
-}
 /**
 
 Generated by the following Solidity interface...
 ```solidity
-library GasCounter {
-    struct GasPeriod {
-        uint256 startTimestamp;
-        uint256 endTimestamp;
-        uint256 totalGasUsed;
-        uint256 totalGasCost;
-    }
-}
-
 interface SyndicateSequencingChainWithDecayingPriority {
     error AlreadyInitialized();
     error InvalidModuleAddress();
@@ -442,10 +9,7 @@ interface SyndicateSequencingChainWithDecayingPriority {
     error OwnableUnauthorizedAccount(address account);
     error TransactionOrSenderNotAllowed();
 
-    event GasTracked(uint256 indexed periodIndex, uint256 gasUsed, uint256 gasPrice);
-    event NewPeriodStarted(uint256 indexed periodIndex, uint256 startTimestamp);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event PeriodFinalized(uint256 indexed periodIndex, uint256 totalGasUsed, uint256 duration);
     event RequirementModuleUpdated(address indexed newModule);
     event TransactionProcessed(address indexed sender, bytes data);
     event TransactionProcessed(address indexed sender, bytes data, uint256 originalPriority, uint256 timestamp);
@@ -455,26 +19,10 @@ interface SyndicateSequencingChainWithDecayingPriority {
     function PRIORITY_DECAY_RATE() external view returns (uint256);
     function appchainId() external view returns (uint256);
     function calculateEffectivePriority(uint256 originalPriority, uint256 submittedTimestamp, uint256 currentTimestamp) external pure returns (uint256);
-    function cumulativeGasFees() external view returns (uint256);
-    function currentPeriodIndex() external view returns (uint256);
-    function disableGasTracking() external;
-    function enableGasTracking() external;
-    function gasTrackingEnabled() external view returns (bool);
-    function gasTrackingInitialized() external view returns (bool);
-    function getCumulativeGasFees() external view returns (uint256 totalCost);
-    function getCurrentPeriod() external view returns (GasCounter.GasPeriod memory period);
-    function getCurrentPeriodGasUsed() external view returns (uint256 totalGas);
-    function getCurrentPeriodTimeRemaining() external view returns (uint256 timeRemaining);
-    function getGasFeesInRange(uint256 startCumulative, uint256 endCumulative) external pure returns (uint256 feesDuring);
-    function getPeriod(uint256 periodIndex) external view returns (GasCounter.GasPeriod memory period);
-    function getTotalGasFees() external view returns (uint256 totalCost);
-    function getTotalPeriods() external view returns (uint256 totalPeriods);
+    function factory() external view returns (address);
     function initialize(address admin, address _permissionRequirementModule) external;
     function isAllowed(address proposer, address originator, bytes memory data) external view returns (bool);
-    function isGasTrackingInitialized() external view returns (bool initialized);
     function owner() external view returns (address);
-    function periodDuration() external view returns (uint256);
-    function periods(uint256) external view returns (uint256 startTimestamp, uint256 endTimestamp, uint256 totalGasUsed, uint256 totalGasCost);
     function permissionRequirementModule() external view returns (address);
     function prependZeroByte(bytes memory _data) external pure returns (bytes memory);
     function processTransaction(bytes memory data, uint256 priority) external;
@@ -560,231 +108,13 @@ interface SyndicateSequencingChainWithDecayingPriority {
   },
   {
     "type": "function",
-    "name": "cumulativeGasFees",
+    "name": "factory",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "currentPeriodIndex",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "disableGasTracking",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "enableGasTracking",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "gasTrackingEnabled",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "gasTrackingInitialized",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getCumulativeGasFees",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "totalCost",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getCurrentPeriod",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "period",
-        "type": "tuple",
-        "internalType": "struct GasCounter.GasPeriod",
-        "components": [
-          {
-            "name": "startTimestamp",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "endTimestamp",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalGasUsed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalGasCost",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getCurrentPeriodGasUsed",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "totalGas",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getCurrentPeriodTimeRemaining",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "timeRemaining",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getGasFeesInRange",
-    "inputs": [
-      {
-        "name": "startCumulative",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "endCumulative",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "feesDuring",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
-    "name": "getPeriod",
-    "inputs": [
-      {
-        "name": "periodIndex",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "period",
-        "type": "tuple",
-        "internalType": "struct GasCounter.GasPeriod",
-        "components": [
-          {
-            "name": "startTimestamp",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "endTimestamp",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalGasUsed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalGasCost",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getTotalGasFees",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "totalCost",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getTotalPeriods",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "totalPeriods",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -838,19 +168,6 @@ interface SyndicateSequencingChainWithDecayingPriority {
   },
   {
     "type": "function",
-    "name": "isGasTrackingInitialized",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "initialized",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -858,53 +175,6 @@ interface SyndicateSequencingChainWithDecayingPriority {
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "periodDuration",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "periods",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "startTimestamp",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "endTimestamp",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "totalGasUsed",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "totalGasCost",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1069,50 +339,6 @@ interface SyndicateSequencingChainWithDecayingPriority {
   },
   {
     "type": "event",
-    "name": "GasTracked",
-    "inputs": [
-      {
-        "name": "periodIndex",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "gasUsed",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "gasPrice",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "NewPeriodStarted",
-    "inputs": [
-      {
-        "name": "periodIndex",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "startTimestamp",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "OwnershipTransferred",
     "inputs": [
       {
@@ -1126,31 +352,6 @@ interface SyndicateSequencingChainWithDecayingPriority {
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PeriodFinalized",
-    "inputs": [
-      {
-        "name": "periodIndex",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "totalGasUsed",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "duration",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1270,22 +471,22 @@ pub mod SyndicateSequencingChainWithDecayingPriority {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60a03461018f57601f6119cf38819003918201601f19168301916001600160401b038311848410176101685780849260209460405283398101031261018f5751331561017c575f8054336001600160a01b03198216811783556040519290916001600160a01b0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a36001805460ff60a01b1916905560ff8181016001600160401b038111838210176101685782916118d0833903905ff0801561015d57600180546001600160a01b0319166001600160a01b039290921691909117905562278d006002556004805461ff00191661010017905580156101185760805260405161173c908161019482396080518161035d0152f35b60405162461bcd60e51b815260206004820152601860248201527f41707020636861696e2049442063616e6e6f74206265203000000000000000006044820152606490fd5b6040513d5f823e3d90fd5b634e487b7160e01b5f52604160045260245ffd5b631e4fbdf760e01b5f525f60045260245ffd5b5f80fdfe60806040526004361015610011575f80fd5b5f3560e01c8063050ec13814610c04578063086146d214610baf57806311992f8c14610a1757806318d5aafe146109385780631c0b6367146109ab578063366cbab71461095a5780633b6ab2a9146109385780633d44ae8b1461091d57806346e2cc09146108d2578063485cc955146108105780634b2c0706146107825780635467cb48146107405780635b3cd6e21461070d57806361543801146106f0578063715018a6146106745780637a3979dc1461061a5780637fbd295e146105f0578063804e51231461057d57806382f44ade1461056357806383d3c1151461053f57806384fab62b1461051a5780638d5a239b146104fe5780638da5cb5b146104cc578063aff74c6d146104b2578063b470aade14610495578063c660d3f31461046f578063cdafb97814610435578063d4f0eb4d14610380578063d878134214610346578063de1f453e14610300578063ea4a1104146102b4578063f2fde38b14610240578063f7b8935e146101b05763ff7b30841461018f575f80fd5b346101ac575f6003193601126101ac576020600654604051908152f35b5f80fd5b346101ac5760406003193601126101ac576004356024358181106101e2576020916101da91610f3f565b604051908152f35b60646040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601960248201527f476173436f756e7465723a20696e76616c69642072616e6765000000000000006044820152fd5b346101ac5760206003193601126101ac57610259610d3d565b610261611687565b73ffffffffffffffffffffffffffffffffffffffff81161561028857610286906116d3565b005b7f1e4fbdf7000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b346101ac5760206003193601126101ac576004355f526005602052608060405f208054906001810154906003600282015491015491604051938452602084015260408301526060820152f35b346101ac575f6003193601126101ac57610318611687565b600480547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff16610100179055005b346101ac575f6003193601126101ac5760206040517f00000000000000000000000000000000000000000000000000000000000000008152f35b346101ac5760206003193601126101ac5773ffffffffffffffffffffffffffffffffffffffff6103ae610d3d565b6103b6611687565b16801561040d57807fffffffffffffffffffffffff000000000000000000000000000000000000000060015416176001557f253580f806741c11b3d4aa60d9cacc5bef0cebb35748767fe23f11916e2f04b95f80a2005b7f5cfe78fe000000000000000000000000000000000000000000000000000000005f5260045ffd5b346101ac5760206003193601126101ac5760043567ffffffffffffffff81116101ac57610469610286913690600401610cc9565b906111d0565b346101ac575f6003193601126101ac576020604061048b61126f565b0151604051908152f35b346101ac575f6003193601126101ac576020600254604051908152f35b346101ac575f6003193601126101ac5760206101da6111b0565b346101ac575f6003193601126101ac57602073ffffffffffffffffffffffffffffffffffffffff5f5416604051908152f35b346101ac575f6003193601126101ac576020606061048b61126f565b346101ac575f6003193601126101ac57602060ff60045460081c166040519015158152f35b346101ac5760606003193601126101ac5760206101da60443560243560043561116e565b346101ac575f6003193601126101ac5760206101da611128565b346101ac5760206003193601126101ac5760043567ffffffffffffffff81116101ac576105ae903690600401610c68565b6105ba81833233610fed565b156105c857610286916110c0565b7fdc741458000000000000000000000000000000000000000000000000000000005f5260045ffd5b346101ac575f6003193601126101ac5760206101da600654606061061261126f565b0151906110b3565b346101ac5760606003193601126101ac57610633610d3d565b61063b610d60565b6044359067ffffffffffffffff82116101ac5760209261066261066a933690600401610c68565b929091610fed565b6040519015158152f35b346101ac575f6003193601126101ac5761068c611687565b5f73ffffffffffffffffffffffffffffffffffffffff81547fffffffffffffffffffffffff000000000000000000000000000000000000000081168355167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a3005b346101ac575f6003193601126101ac576020600354604051908152f35b346101ac575f6003193601126101ac57602073ffffffffffffffffffffffffffffffffffffffff60015416604051908152f35b346101ac575f6003193601126101ac57610758611687565b600480547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff169055005b346101ac5760206003193601126101ac5761079b610e2f565b506004355f52600560205261080c60405f206003604051916107bc83610da5565b805483526001810154602084015260028101546040840152015460608201526040519182918291909160608060808301948051845260208101516020850152604081015160408501520151910152565b0390f35b346101ac5760406003193601126101ac57610829610d3d565b610831610d60565b610839611687565b6001549060ff8260a01c166108aa5773ffffffffffffffffffffffffffffffffffffffff16801561040d577fffffffffffffffffffffff0000000000000000000000000000000000000000007401000000000000000000000000000000000000000092161717600155610261611687565b7f0dc149f0000000000000000000000000000000000000000000000000000000005f5260045ffd5b346101ac5760206003193601126101ac5760043567ffffffffffffffff81116101ac57610903903690600401610c68565b61090f81833233610fed565b156105c85761028691610f79565b346101ac575f6003193601126101ac576020604051600a8152f35b346101ac575f6003193601126101ac57602060ff600454166040519015158152f35b346101ac5760206003193601126101ac5760043567ffffffffffffffff81116101ac5761099761099161080c923690600401610c68565b90610ef1565b604051918291602083526020830190610cfa565b346101ac576109b936610c96565b91906109c781833233610fed565b156105c857610a037f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f29260405192606084526060840191610eb3565b9260208201524260408201528033930390a2005b346101ac5760406003193601126101ac5760043567ffffffffffffffff81116101ac57610a48903690600401610cc9565b9060243567ffffffffffffffff81116101ac57610a69903690600401610cc9565b9092818103610b2b575f5b818110610a7d57005b610a93610a8b828487610e53565b903233610fed565b610aa0575b600101610a74565b610aae610991828487610e53565b9083811015610afe576001917f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f260405180610af4339442908760051b8d01359084610d83565b0390a29050610a98565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b60846040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603260248201527f4461746120616e64207072696f7269747920617272617973206d75737420686160448201527f7665207468652073616d65206c656e67746800000000000000000000000000006064820152fd5b346101ac575f6003193601126101ac57610bc7610e2f565b5061080c610bd361126f565b6040519182918291909160608060808301948051845260208101516020850152604081015160408501520151910152565b346101ac57610c1236610c96565b9190610c2081833233610fed565b156105c857610c53610c63917f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f293610ef1565b6040519182913395429184610d83565b0390a2005b9181601f840112156101ac5782359167ffffffffffffffff83116101ac57602083818601950101116101ac57565b60406003198201126101ac576004359067ffffffffffffffff82116101ac57610cc191600401610c68565b909160243590565b9181601f840112156101ac5782359167ffffffffffffffff83116101ac576020808501948460051b0101116101ac57565b907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0601f602080948051918291828752018686015e5f8582860101520116010190565b6004359073ffffffffffffffffffffffffffffffffffffffff821682036101ac57565b6024359073ffffffffffffffffffffffffffffffffffffffff821682036101ac57565b610d9b60409295949395606083526060830190610cfa565b9460208201520152565b6080810190811067ffffffffffffffff821117610dc157604052565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff821117610dc157604052565b60405190610e3c82610da5565b5f6060838281528260208201528260408201520152565b9190811015610afe5760051b810135907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe1813603018212156101ac57019081359167ffffffffffffffff83116101ac5760200182360381136101ac579190565b601f82602094937fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe093818652868601375f8582860101520116010190565b6021610f3c91836040519485925f60208501528484013781015f8382015203017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08101835282610dee565b90565b91908203918211610f4c57565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b9060ff60045460081c1615610fa857610fa691610f9a610fa1925a92610fad565b5a90610f3f565b611378565b565b610fa6915b610fe87f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f916040519182916020835233956020840191610eb3565b0390a2565b9273ffffffffffffffffffffffffffffffffffffffff809461105b602095836001541694604051988997889687967f7a3979dc000000000000000000000000000000000000000000000000000000008852166004870152166024850152606060448501526064840191610eb3565b03915afa9081156110a8575f91611070575090565b90506020813d6020116110a0575b8161108b60209383610dee565b810103126101ac575180151581036101ac5790565b3d915061107e565b6040513d5f823e3d90fd5b91908201809211610f4c57565b9060ff60045460081c16156110e157610fa691610f9a610fa1925a926110e6565b610fa6915b906110f091610ef1565b7f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f6040516020815280610fe833946020830190610cfa565b61113061126f565b51801561115657600254611143916110b3565b8042101561115657610f3c904290610f3f565b505f90565b81810292918115918404141715610f4c57565b9190808211156111ab5761118191610f3f565b600a810290808204600a1490151715610f4c57818110156111a557610f3c91610f3f565b50505f90565b505090565b60ff60045416156111cc5760035460018101809111610f4c5790565b5f90565b9060ff60045460081c16156111f157610fa691610f9a610fa1925a926111f6565b610fa6915b905f5b81811061120557505050565b80611216610a8b6001938587610e53565b611221575b016111f9565b61122f610991828587610e53565b7f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f604051602081528061126733946020830190610cfa565b0390a261121b565b611277610e2f565b5060ff6004541615611354576003545f52600560205260405f206040519061129e82610da5565b60038154918284526001810154602085015260028101546040850152015460608301526112ce60025480926110b3565b4210156112d9575090565b906112e5815142610f3f565b9082156113275782611303936112fd9251930461115b565b906110b3565b6040519061131082610da5565b81525f60208201525f60408201525f606082015290565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601260045260245ffd5b60405161136081610da5565b5f81525f60208201525f60408201525f606082015290565b60045460ff8160081c16156116835760ff8116158061155e575b50506003545f52600560205260405f20805490600254916113b383826110b3565b421015611449575b5050503a3a15611441575b6113d0908261115b565b6003545f526005602052600260405f20016113ec8382546110b3565b90556003545f52600560205261140a600360405f20019182546110b3565b90557f2d9c47ad553b63bbbad1819d4fd97da088505c96a58182691b8abb5f2bcc29ee60406003549281519081523a6020820152a2565b5060016113c6565b60406114796114a8947f48a298f9d376b82a7174a798e90cf1209495fdd68b0c11eb11beabacc2d29cf5936110b3565b6001840190815561149060038501546006546110b3565b60065560035494846002879601549254905490610f3f565b82519182526020820152a27fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8114610f4c57600101806003556003604051916114f083610da5565b428352602083015f815260408401905f825260608501925f84525f52600560205260405f2094518555516001850155516002840155519101556003547f41f1e08f21cc818cf0cffb3a62609fb6a3cbc9b3671b011e285e17a1ebb4688e6020604051428152a25f80806113bb565b611569575b80611392565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00166001176004555f6003556040516115a181610da5565b428082525f60208084018281526040808601848152606087018581528580526005855296517f05b8ccbb9d4d8fb16ea74ce3c29a41f1b461fbdaff4714a0d9a8eb05499746bc5591517f05b8ccbb9d4d8fb16ea74ce3c29a41f1b461fbdaff4714a0d9a8eb05499746bd5590517f05b8ccbb9d4d8fb16ea74ce3c29a41f1b461fbdaff4714a0d9a8eb05499746be5593517f05b8ccbb9d4d8fb16ea74ce3c29a41f1b461fbdaff4714a0d9a8eb05499746bf559251918252917f41f1e08f21cc818cf0cffb3a62609fb6a3cbc9b3671b011e285e17a1ebb4688e91a25f611563565b5050565b73ffffffffffffffffffffffffffffffffffffffff5f541633036116a757565b7f118cdaa7000000000000000000000000000000000000000000000000000000005f523360045260245ffd5b73ffffffffffffffffffffffffffffffffffffffff805f54921691827fffffffffffffffffffffffff00000000000000000000000000000000000000008216175f55167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e05f80a3566080806040523460145760e690816100198239f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c637a3979dc146023575f80fd5b34609e5760607ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112609e57605660a2565b50605d60c4565b5060443567ffffffffffffffff8111609e5736602382011215609e57806004013567ffffffffffffffff8111609e5736910160240111609e57805f60209252f35b5f80fd5b6004359073ffffffffffffffffffffffffffffffffffffffff82168203609e57565b6024359073ffffffffffffffffffffffffffffffffffffffff82168203609e5756
+    ///0x60c0346101a257601f61129d38819003918201601f19168301916001600160401b0383118484101761017b578084926020946040528339810103126101a25751331561018f575f8054336001600160a01b03198216811783556040519290916001600160a01b0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a36001805460ff60a01b1916905560ff8181016001600160401b0381118382101761017b57829161119e833903905ff0801561017057600180546001600160a01b0319166001600160a01b0392909216919091179055801561012b576080523360a052604051610ff790816101a78239608051818181610170015281816103090152610832015260a0518181816102ae0152818161040201526107d70152f35b60405162461bcd60e51b815260206004820152601860248201527f41707020636861696e2049442063616e6e6f74206265203000000000000000006044820152606490fd5b6040513d5f823e3d90fd5b634e487b7160e01b5f52604160045260245ffd5b631e4fbdf760e01b5f525f60045260245ffd5b5f80fdfe60806040526004361015610011575f80fd5b5f5f3560e01c8063050ec13814610b0557806311992f8c146109755780631c0b636714610909578063366cbab7146108ba5780633d44ae8b1461089f57806346e2cc091461073c578063485cc955146106515780635b3cd6e21461061d578063715018a61461059f5780637a3979dc14610543578063804e51231461048657806383d3c115146104595780638da5cb5b14610426578063c45a0155146103d5578063cdafb9781461024a578063d4f0eb4d14610193578063d8781342146101585763f2fde38b146100e0575f80fd5b34610155576020600319360112610155576100f9610c3e565b610101610f42565b73ffffffffffffffffffffffffffffffffffffffff8116156101295761012690610f8e565b80f35b6024827f1e4fbdf700000000000000000000000000000000000000000000000000000000815280600452fd5b80fd5b503461015557806003193601126101555760206040517f00000000000000000000000000000000000000000000000000000000000000008152f35b50346101555760206003193601126101555773ffffffffffffffffffffffffffffffffffffffff6101c2610c3e565b6101ca610f42565b16801561022257807fffffffffffffffffffffffff000000000000000000000000000000000000000060015416176001557f253580f806741c11b3d4aa60d9cacc5bef0cebb35748767fe23f11916e2f04b98280a280f35b6004827f5cfe78fe000000000000000000000000000000000000000000000000000000008152fd5b50346101555760206003193601126101555760043567ffffffffffffffff81116103d15761027d82913690600401610bca565b905a91835b81811061035057505050610297905a90610e00565b73ffffffffffffffffffffffffffffffffffffffff7f00000000000000000000000000000000000000000000000000000000000000001690813b1561034c5782916044839260405194859384927fe3e793700000000000000000000000000000000000000000000000000000000084527f0000000000000000000000000000000000000000000000000000000000000000600485015260248401525af161033b5750f35b8161034591610d44565b6101555780f35b5050fd5b8293945061036d610365828460019596610ca6565b903233610e3a565b61037d575b019084939291610282565b61039161038b828587610ca6565b90610db2565b7f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f60405160208152806103c933946020830190610bfb565b0390a2610372565b5080fd5b5034610155578060031936011261015557602060405173ffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000168152f35b503461015557806003193601126101555773ffffffffffffffffffffffffffffffffffffffff6020915416604051908152f35b503461015557606060031936011261015557602061047e604435602435600435610f00565b604051908152f35b50346101555760206003193601126101555760043567ffffffffffffffff81116103d1576104b8903690600401610b69565b6104c481833233610e3a565b1561051b5782916104d9610297925a92610db2565b7f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f604051602081528061051133946020830190610bfb565b0390a25a90610e00565b6004837fdc741458000000000000000000000000000000000000000000000000000000008152fd5b50346101555760606003193601126101555761055d610c3e565b610565610c61565b916044359067ffffffffffffffff8211610155576020610595858561058d3660048801610b69565b929091610e3a565b6040519015158152f35b50346101555780600319360112610155576105b8610f42565b8073ffffffffffffffffffffffffffffffffffffffff81547fffffffffffffffffffffffff000000000000000000000000000000000000000081168355167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a380f35b5034610155578060031936011261015557602073ffffffffffffffffffffffffffffffffffffffff60015416604051908152f35b50346101555760406003193601126101555761066b610c3e565b610673610c61565b61067b610f42565b6001549060ff8260a01c166107145773ffffffffffffffffffffffffffffffffffffffff169081156106ec577fffffffffffffffffffffff00000000000000000000000000000000000000000016177401000000000000000000000000000000000000000017600155610101610f42565b6004847f5cfe78fe000000000000000000000000000000000000000000000000000000008152fd5b6004847f0dc149f0000000000000000000000000000000000000000000000000000000008152fd5b50346108735760206003193601126108735760043567ffffffffffffffff81116108735761076e903690600401610b69565b9061077b82823233610e3a565b15610877576107c0917f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f6105115a936040519182916020835233956020840191610d06565b73ffffffffffffffffffffffffffffffffffffffff7f00000000000000000000000000000000000000000000000000000000000000001690813b15610873575f916044839260405194859384927fe3e793700000000000000000000000000000000000000000000000000000000084527f0000000000000000000000000000000000000000000000000000000000000000600485015260248401525af1610865575080f35b61087191505f90610d44565b005b5f80fd5b7fdc741458000000000000000000000000000000000000000000000000000000005f5260045ffd5b34610873575f600319360112610873576020604051600a8152f35b346108735760206003193601126108735760043567ffffffffffffffff8111610873576108f161038b610905923690600401610b69565b604051918291602083526020830190610bfb565b0390f35b346108735761091736610b97565b919061092581833233610e3a565b15610877576109617f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f29260405192606084526060840191610d06565b9260208201524260408201528033930390a2005b346108735760406003193601126108735760043567ffffffffffffffff8111610873576109a6903690600401610bca565b9060243567ffffffffffffffff8111610873576109c7903690600401610bca565b9092818103610a81575f5b8181106109db57005b6109e9610365828487610ca6565b6109f6575b6001016109d2565b610a0461038b828487610ca6565b9083811015610a54576001917f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f260405180610a4a339442908760051b8d01359084610c84565b0390a290506109ee565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b60846040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603260248201527f4461746120616e64207072696f7269747920617272617973206d75737420686160448201527f7665207468652073616d65206c656e67746800000000000000000000000000006064820152fd5b3461087357610b1336610b97565b9190610b2181833233610e3a565b1561087757610b54610b64917f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f293610db2565b6040519182913395429184610c84565b0390a2005b9181601f840112156108735782359167ffffffffffffffff8311610873576020838186019501011161087357565b6040600319820112610873576004359067ffffffffffffffff821161087357610bc291600401610b69565b909160243590565b9181601f840112156108735782359167ffffffffffffffff8311610873576020808501948460051b01011161087357565b907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0601f602080948051918291828752018686015e5f8582860101520116010190565b6004359073ffffffffffffffffffffffffffffffffffffffff8216820361087357565b6024359073ffffffffffffffffffffffffffffffffffffffff8216820361087357565b610c9c60409295949395606083526060830190610bfb565b9460208201520152565b9190811015610a545760051b810135907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe18136030182121561087357019081359167ffffffffffffffff8311610873576020018236038113610873579190565b601f82602094937fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe093818652868601375f8582860101520116010190565b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff821117610d8557604052565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b6021610dfd91836040519485925f60208501528484013781015f8382015203017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08101835282610d44565b90565b91908203918211610e0d57565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b9273ffffffffffffffffffffffffffffffffffffffff8094610ea8602095836001541694604051988997889687967f7a3979dc000000000000000000000000000000000000000000000000000000008852166004870152166024850152606060448501526064840191610d06565b03915afa908115610ef5575f91610ebd575090565b90506020813d602011610eed575b81610ed860209383610d44565b81010312610873575180151581036108735790565b3d9150610ecb565b6040513d5f823e3d90fd5b919080821115610f3d57610f1391610e00565b600a810290808204600a1490151715610e0d5781811015610f3757610dfd91610e00565b50505f90565b505090565b73ffffffffffffffffffffffffffffffffffffffff5f54163303610f6257565b7f118cdaa7000000000000000000000000000000000000000000000000000000005f523360045260245ffd5b73ffffffffffffffffffffffffffffffffffffffff805f54921691827fffffffffffffffffffffffff00000000000000000000000000000000000000008216175f55167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e05f80a3566080806040523460145760e690816100198239f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c637a3979dc146023575f80fd5b34609e5760607ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112609e57605660a2565b50605d60c4565b5060443567ffffffffffffffff8111609e5736602382011215609e57806004013567ffffffffffffffff8111609e5736910160240111609e57805f60209252f35b5f80fd5b6004359073ffffffffffffffffffffffffffffffffffffffff82168203609e57565b6024359073ffffffffffffffffffffffffffffffffffffffff82168203609e5756
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\xA04a\x01\x8FW`\x1Fa\x19\xCF8\x81\x90\x03\x91\x82\x01`\x1F\x19\x16\x83\x01\x91`\x01`\x01`@\x1B\x03\x83\x11\x84\x84\x10\x17a\x01hW\x80\x84\x92` \x94`@R\x839\x81\x01\x03\x12a\x01\x8FWQ3\x15a\x01|W_\x80T3`\x01`\x01`\xA0\x1B\x03\x19\x82\x16\x81\x17\x83U`@Q\x92\x90\x91`\x01`\x01`\xA0\x1B\x03\x16\x90\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0\x90\x80\xA3`\x01\x80T`\xFF`\xA0\x1B\x19\x16\x90U`\xFF\x81\x81\x01`\x01`\x01`@\x1B\x03\x81\x11\x83\x82\x10\x17a\x01hW\x82\x91a\x18\xD0\x839\x03\x90_\xF0\x80\x15a\x01]W`\x01\x80T`\x01`\x01`\xA0\x1B\x03\x19\x16`\x01`\x01`\xA0\x1B\x03\x92\x90\x92\x16\x91\x90\x91\x17\x90Ub'\x8D\0`\x02U`\x04\x80Ta\xFF\0\x19\x16a\x01\0\x17\x90U\x80\x15a\x01\x18W`\x80R`@Qa\x17<\x90\x81a\x01\x94\x829`\x80Q\x81a\x03]\x01R\xF3[`@QbF\x1B\xCD`\xE5\x1B\x81R` `\x04\x82\x01R`\x18`$\x82\x01R\x7FApp chain ID cannot be 0\0\0\0\0\0\0\0\0`D\x82\x01R`d\x90\xFD[`@Q=_\x82>=\x90\xFD[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD[c\x1EO\xBD\xF7`\xE0\x1B_R_`\x04R`$_\xFD[_\x80\xFD\xFE`\x80`@R`\x046\x10\x15a\0\x11W_\x80\xFD[_5`\xE0\x1C\x80c\x05\x0E\xC18\x14a\x0C\x04W\x80c\x08aF\xD2\x14a\x0B\xAFW\x80c\x11\x99/\x8C\x14a\n\x17W\x80c\x18\xD5\xAA\xFE\x14a\t8W\x80c\x1C\x0Bcg\x14a\t\xABW\x80c6l\xBA\xB7\x14a\tZW\x80c;j\xB2\xA9\x14a\t8W\x80c=D\xAE\x8B\x14a\t\x1DW\x80cF\xE2\xCC\t\x14a\x08\xD2W\x80cH\\\xC9U\x14a\x08\x10W\x80cK,\x07\x06\x14a\x07\x82W\x80cTg\xCBH\x14a\x07@W\x80c[<\xD6\xE2\x14a\x07\rW\x80caT8\x01\x14a\x06\xF0W\x80cqP\x18\xA6\x14a\x06tW\x80cz9y\xDC\x14a\x06\x1AW\x80c\x7F\xBD)^\x14a\x05\xF0W\x80c\x80NQ#\x14a\x05}W\x80c\x82\xF4J\xDE\x14a\x05cW\x80c\x83\xD3\xC1\x15\x14a\x05?W\x80c\x84\xFA\xB6+\x14a\x05\x1AW\x80c\x8DZ#\x9B\x14a\x04\xFEW\x80c\x8D\xA5\xCB[\x14a\x04\xCCW\x80c\xAF\xF7Lm\x14a\x04\xB2W\x80c\xB4p\xAA\xDE\x14a\x04\x95W\x80c\xC6`\xD3\xF3\x14a\x04oW\x80c\xCD\xAF\xB9x\x14a\x045W\x80c\xD4\xF0\xEBM\x14a\x03\x80W\x80c\xD8x\x13B\x14a\x03FW\x80c\xDE\x1FE>\x14a\x03\0W\x80c\xEAJ\x11\x04\x14a\x02\xB4W\x80c\xF2\xFD\xE3\x8B\x14a\x02@W\x80c\xF7\xB8\x93^\x14a\x01\xB0Wc\xFF{0\x84\x14a\x01\x8FW_\x80\xFD[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\x06T`@Q\x90\x81R\xF3[_\x80\xFD[4a\x01\xACW`@`\x03\x196\x01\x12a\x01\xACW`\x045`$5\x81\x81\x10a\x01\xE2W` \x91a\x01\xDA\x91a\x0F?V[`@Q\x90\x81R\xF3[`d`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`\x19`$\x82\x01R\x7FGasCounter: invalid range\0\0\0\0\0\0\0`D\x82\x01R\xFD[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACWa\x02Ya\r=V[a\x02aa\x16\x87V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x16\x15a\x02\x88Wa\x02\x86\x90a\x16\xD3V[\0[\x7F\x1EO\xBD\xF7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045_R`\x05` R`\x80`@_ \x80T\x90`\x01\x81\x01T\x90`\x03`\x02\x82\x01T\x91\x01T\x91`@Q\x93\x84R` \x84\x01R`@\x83\x01R``\x82\x01R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACWa\x03\x18a\x16\x87V[`\x04\x80T\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\xFF\x16a\x01\0\x17\x90U\0[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `@Q\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xF3[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACWs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFFa\x03\xAEa\r=V[a\x03\xB6a\x16\x87V[\x16\x80\x15a\x04\rW\x80\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`\x01T\x16\x17`\x01U\x7F%5\x80\xF8\x06t\x1C\x11\xB3\xD4\xAA`\xD9\xCA\xCC[\xEF\x0C\xEB\xB3WHv\x7F\xE2?\x11\x91n/\x04\xB9_\x80\xA2\0[\x7F\\\xFEx\xFE\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\x04ia\x02\x86\x916\x90`\x04\x01a\x0C\xC9V[\x90a\x11\xD0V[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `@a\x04\x8Ba\x12oV[\x01Q`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\x02T`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` a\x01\xDAa\x11\xB0V[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_T\x16`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` ``a\x04\x8Ba\x12oV[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\xFF`\x04T`\x08\x1C\x16`@Q\x90\x15\x15\x81R\xF3[4a\x01\xACW```\x03\x196\x01\x12a\x01\xACW` a\x01\xDA`D5`$5`\x045a\x11nV[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` a\x01\xDAa\x11(V[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\x05\xAE\x906\x90`\x04\x01a\x0ChV[a\x05\xBA\x81\x8323a\x0F\xEDV[\x15a\x05\xC8Wa\x02\x86\x91a\x10\xC0V[\x7F\xDCt\x14X\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` a\x01\xDA`\x06T``a\x06\x12a\x12oV[\x01Q\x90a\x10\xB3V[4a\x01\xACW```\x03\x196\x01\x12a\x01\xACWa\x063a\r=V[a\x06;a\r`V[`D5\x90g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11a\x01\xACW` \x92a\x06ba\x06j\x936\x90`\x04\x01a\x0ChV[\x92\x90\x91a\x0F\xEDV[`@Q\x90\x15\x15\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACWa\x06\x8Ca\x16\x87V[_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81T\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81\x16\x83U\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0\x82\x80\xA3\0[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\x03T`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`\x01T\x16`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACWa\x07Xa\x16\x87V[`\x04\x80T\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\xFF\x16\x90U\0[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACWa\x07\x9Ba\x0E/V[P`\x045_R`\x05` Ra\x08\x0C`@_ `\x03`@Q\x91a\x07\xBC\x83a\r\xA5V[\x80T\x83R`\x01\x81\x01T` \x84\x01R`\x02\x81\x01T`@\x84\x01R\x01T``\x82\x01R`@Q\x91\x82\x91\x82\x91\x90\x91``\x80`\x80\x83\x01\x94\x80Q\x84R` \x81\x01Q` \x85\x01R`@\x81\x01Q`@\x85\x01R\x01Q\x91\x01RV[\x03\x90\xF3[4a\x01\xACW`@`\x03\x196\x01\x12a\x01\xACWa\x08)a\r=V[a\x081a\r`V[a\x089a\x16\x87V[`\x01T\x90`\xFF\x82`\xA0\x1C\x16a\x08\xAAWs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x80\x15a\x04\rW\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0t\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x92\x16\x17\x17`\x01Ua\x02aa\x16\x87V[\x7F\r\xC1I\xF0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\t\x03\x906\x90`\x04\x01a\x0ChV[a\t\x0F\x81\x8323a\x0F\xEDV[\x15a\x05\xC8Wa\x02\x86\x91a\x0FyV[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `@Q`\n\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\xFF`\x04T\x16`@Q\x90\x15\x15\x81R\xF3[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\t\x97a\t\x91a\x08\x0C\x926\x90`\x04\x01a\x0ChV[\x90a\x0E\xF1V[`@Q\x91\x82\x91` \x83R` \x83\x01\x90a\x0C\xFAV[4a\x01\xACWa\t\xB96a\x0C\x96V[\x91\x90a\t\xC7\x81\x8323a\x0F\xEDV[\x15a\x05\xC8Wa\n\x03\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2\x92`@Q\x92``\x84R``\x84\x01\x91a\x0E\xB3V[\x92` \x82\x01RB`@\x82\x01R\x803\x93\x03\x90\xA2\0[4a\x01\xACW`@`\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\nH\x906\x90`\x04\x01a\x0C\xC9V[\x90`$5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\ni\x906\x90`\x04\x01a\x0C\xC9V[\x90\x92\x81\x81\x03a\x0B+W_[\x81\x81\x10a\n}W\0[a\n\x93a\n\x8B\x82\x84\x87a\x0ESV[\x9023a\x0F\xEDV[a\n\xA0W[`\x01\x01a\ntV[a\n\xAEa\t\x91\x82\x84\x87a\x0ESV[\x90\x83\x81\x10\x15a\n\xFEW`\x01\x91\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2`@Q\x80a\n\xF43\x94B\x90\x87`\x05\x1B\x8D\x015\x90\x84a\r\x83V[\x03\x90\xA2\x90Pa\n\x98V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[`\x84`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`2`$\x82\x01R\x7FData and priority arrays must ha`D\x82\x01R\x7Fve the same length\0\0\0\0\0\0\0\0\0\0\0\0\0\0`d\x82\x01R\xFD[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACWa\x0B\xC7a\x0E/V[Pa\x08\x0Ca\x0B\xD3a\x12oV[`@Q\x91\x82\x91\x82\x91\x90\x91``\x80`\x80\x83\x01\x94\x80Q\x84R` \x81\x01Q` \x85\x01R`@\x81\x01Q`@\x85\x01R\x01Q\x91\x01RV[4a\x01\xACWa\x0C\x126a\x0C\x96V[\x91\x90a\x0C \x81\x8323a\x0F\xEDV[\x15a\x05\xC8Wa\x0CSa\x0Cc\x91\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2\x93a\x0E\xF1V[`@Q\x91\x82\x913\x95B\x91\x84a\r\x83V[\x03\x90\xA2\0[\x91\x81`\x1F\x84\x01\x12\x15a\x01\xACW\x825\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x01\xACW` \x83\x81\x86\x01\x95\x01\x01\x11a\x01\xACWV[`@`\x03\x19\x82\x01\x12a\x01\xACW`\x045\x90g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11a\x01\xACWa\x0C\xC1\x91`\x04\x01a\x0ChV[\x90\x91`$5\x90V[\x91\x81`\x1F\x84\x01\x12\x15a\x01\xACW\x825\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x01\xACW` \x80\x85\x01\x94\x84`\x05\x1B\x01\x01\x11a\x01\xACWV[\x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0`\x1F` \x80\x94\x80Q\x91\x82\x91\x82\x87R\x01\x86\x86\x01^_\x85\x82\x86\x01\x01R\x01\x16\x01\x01\x90V[`\x045\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03a\x01\xACWV[`$5\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03a\x01\xACWV[a\r\x9B`@\x92\x95\x94\x93\x95``\x83R``\x83\x01\x90a\x0C\xFAV[\x94` \x82\x01R\x01RV[`\x80\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\r\xC1W`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\r\xC1W`@RV[`@Q\x90a\x0E<\x82a\r\xA5V[_``\x83\x82\x81R\x82` \x82\x01R\x82`@\x82\x01R\x01RV[\x91\x90\x81\x10\x15a\n\xFEW`\x05\x1B\x81\x015\x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE1\x816\x03\x01\x82\x12\x15a\x01\xACW\x01\x90\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x01\xACW` \x01\x826\x03\x81\x13a\x01\xACW\x91\x90V[`\x1F\x82` \x94\x93\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x93\x81\x86R\x86\x86\x017_\x85\x82\x86\x01\x01R\x01\x16\x01\x01\x90V[`!a\x0F<\x91\x83`@Q\x94\x85\x92_` \x85\x01R\x84\x84\x017\x81\x01_\x83\x82\x01R\x03\x01\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x81\x01\x83R\x82a\r\xEEV[\x90V[\x91\x90\x82\x03\x91\x82\x11a\x0FLWV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[\x90`\xFF`\x04T`\x08\x1C\x16\x15a\x0F\xA8Wa\x0F\xA6\x91a\x0F\x9Aa\x0F\xA1\x92Z\x92a\x0F\xADV[Z\x90a\x0F?V[a\x13xV[V[a\x0F\xA6\x91[a\x0F\xE8\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F\x91`@Q\x91\x82\x91` \x83R3\x95` \x84\x01\x91a\x0E\xB3V[\x03\x90\xA2V[\x92s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80\x94a\x10[` \x95\x83`\x01T\x16\x94`@Q\x98\x89\x97\x88\x96\x87\x96\x7Fz9y\xDC\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x88R\x16`\x04\x87\x01R\x16`$\x85\x01R```D\x85\x01R`d\x84\x01\x91a\x0E\xB3V[\x03\x91Z\xFA\x90\x81\x15a\x10\xA8W_\x91a\x10pWP\x90V[\x90P` \x81=` \x11a\x10\xA0W[\x81a\x10\x8B` \x93\x83a\r\xEEV[\x81\x01\x03\x12a\x01\xACWQ\x80\x15\x15\x81\x03a\x01\xACW\x90V[=\x91Pa\x10~V[`@Q=_\x82>=\x90\xFD[\x91\x90\x82\x01\x80\x92\x11a\x0FLWV[\x90`\xFF`\x04T`\x08\x1C\x16\x15a\x10\xE1Wa\x0F\xA6\x91a\x0F\x9Aa\x0F\xA1\x92Z\x92a\x10\xE6V[a\x0F\xA6\x91[\x90a\x10\xF0\x91a\x0E\xF1V[\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F`@Q` \x81R\x80a\x0F\xE83\x94` \x83\x01\x90a\x0C\xFAV[a\x110a\x12oV[Q\x80\x15a\x11VW`\x02Ta\x11C\x91a\x10\xB3V[\x80B\x10\x15a\x11VWa\x0F<\x90B\x90a\x0F?V[P_\x90V[\x81\x81\x02\x92\x91\x81\x15\x91\x84\x04\x14\x17\x15a\x0FLWV[\x91\x90\x80\x82\x11\x15a\x11\xABWa\x11\x81\x91a\x0F?V[`\n\x81\x02\x90\x80\x82\x04`\n\x14\x90\x15\x17\x15a\x0FLW\x81\x81\x10\x15a\x11\xA5Wa\x0F<\x91a\x0F?V[PP_\x90V[PP\x90V[`\xFF`\x04T\x16\x15a\x11\xCCW`\x03T`\x01\x81\x01\x80\x91\x11a\x0FLW\x90V[_\x90V[\x90`\xFF`\x04T`\x08\x1C\x16\x15a\x11\xF1Wa\x0F\xA6\x91a\x0F\x9Aa\x0F\xA1\x92Z\x92a\x11\xF6V[a\x0F\xA6\x91[\x90_[\x81\x81\x10a\x12\x05WPPPV[\x80a\x12\x16a\n\x8B`\x01\x93\x85\x87a\x0ESV[a\x12!W[\x01a\x11\xF9V[a\x12/a\t\x91\x82\x85\x87a\x0ESV[\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F`@Q` \x81R\x80a\x12g3\x94` \x83\x01\x90a\x0C\xFAV[\x03\x90\xA2a\x12\x1BV[a\x12wa\x0E/V[P`\xFF`\x04T\x16\x15a\x13TW`\x03T_R`\x05` R`@_ `@Q\x90a\x12\x9E\x82a\r\xA5V[`\x03\x81T\x91\x82\x84R`\x01\x81\x01T` \x85\x01R`\x02\x81\x01T`@\x85\x01R\x01T``\x83\x01Ra\x12\xCE`\x02T\x80\x92a\x10\xB3V[B\x10\x15a\x12\xD9WP\x90V[\x90a\x12\xE5\x81QBa\x0F?V[\x90\x82\x15a\x13'W\x82a\x13\x03\x93a\x12\xFD\x92Q\x93\x04a\x11[V[\x90a\x10\xB3V[`@Q\x90a\x13\x10\x82a\r\xA5V[\x81R_` \x82\x01R_`@\x82\x01R_``\x82\x01R\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x12`\x04R`$_\xFD[`@Qa\x13`\x81a\r\xA5V[_\x81R_` \x82\x01R_`@\x82\x01R_``\x82\x01R\x90V[`\x04T`\xFF\x81`\x08\x1C\x16\x15a\x16\x83W`\xFF\x81\x16\x15\x80a\x15^W[PP`\x03T_R`\x05` R`@_ \x80T\x90`\x02T\x91a\x13\xB3\x83\x82a\x10\xB3V[B\x10\x15a\x14IW[PPP::\x15a\x14AW[a\x13\xD0\x90\x82a\x11[V[`\x03T_R`\x05` R`\x02`@_ \x01a\x13\xEC\x83\x82Ta\x10\xB3V[\x90U`\x03T_R`\x05` Ra\x14\n`\x03`@_ \x01\x91\x82Ta\x10\xB3V[\x90U\x7F-\x9CG\xADU;c\xBB\xBA\xD1\x81\x9DO\xD9}\xA0\x88P\\\x96\xA5\x81\x82i\x1B\x8A\xBB_+\xCC)\xEE`@`\x03T\x92\x81Q\x90\x81R:` \x82\x01R\xA2V[P`\x01a\x13\xC6V[`@a\x14ya\x14\xA8\x94\x7FH\xA2\x98\xF9\xD3v\xB8*qt\xA7\x98\xE9\x0C\xF1 \x94\x95\xFD\xD6\x8B\x0C\x11\xEB\x11\xBE\xAB\xAC\xC2\xD2\x9C\xF5\x93a\x10\xB3V[`\x01\x84\x01\x90\x81Ua\x14\x90`\x03\x85\x01T`\x06Ta\x10\xB3V[`\x06U`\x03T\x94\x84`\x02\x87\x96\x01T\x92T\x90T\x90a\x0F?V[\x82Q\x91\x82R` \x82\x01R\xA2\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x14a\x0FLW`\x01\x01\x80`\x03U`\x03`@Q\x91a\x14\xF0\x83a\r\xA5V[B\x83R` \x83\x01_\x81R`@\x84\x01\x90_\x82R``\x85\x01\x92_\x84R_R`\x05` R`@_ \x94Q\x85UQ`\x01\x85\x01UQ`\x02\x84\x01UQ\x91\x01U`\x03T\x7FA\xF1\xE0\x8F!\xCC\x81\x8C\xF0\xCF\xFB:b`\x9F\xB6\xA3\xCB\xC9\xB3g\x1B\x01\x1E(^\x17\xA1\xEB\xB4h\x8E` `@QB\x81R\xA2_\x80\x80a\x13\xBBV[a\x15iW[\x80a\x13\x92V[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\x16`\x01\x17`\x04U_`\x03U`@Qa\x15\xA1\x81a\r\xA5V[B\x80\x82R_` \x80\x84\x01\x82\x81R`@\x80\x86\x01\x84\x81R``\x87\x01\x85\x81R\x85\x80R`\x05\x85R\x96Q\x7F\x05\xB8\xCC\xBB\x9DM\x8F\xB1n\xA7L\xE3\xC2\x9AA\xF1\xB4a\xFB\xDA\xFFG\x14\xA0\xD9\xA8\xEB\x05I\x97F\xBCU\x91Q\x7F\x05\xB8\xCC\xBB\x9DM\x8F\xB1n\xA7L\xE3\xC2\x9AA\xF1\xB4a\xFB\xDA\xFFG\x14\xA0\xD9\xA8\xEB\x05I\x97F\xBDU\x90Q\x7F\x05\xB8\xCC\xBB\x9DM\x8F\xB1n\xA7L\xE3\xC2\x9AA\xF1\xB4a\xFB\xDA\xFFG\x14\xA0\xD9\xA8\xEB\x05I\x97F\xBEU\x93Q\x7F\x05\xB8\xCC\xBB\x9DM\x8F\xB1n\xA7L\xE3\xC2\x9AA\xF1\xB4a\xFB\xDA\xFFG\x14\xA0\xD9\xA8\xEB\x05I\x97F\xBFU\x92Q\x91\x82R\x91\x7FA\xF1\xE0\x8F!\xCC\x81\x8C\xF0\xCF\xFB:b`\x9F\xB6\xA3\xCB\xC9\xB3g\x1B\x01\x1E(^\x17\xA1\xEB\xB4h\x8E\x91\xA2_a\x15cV[PPV[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_T\x163\x03a\x16\xA7WV[\x7F\x11\x8C\xDA\xA7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R3`\x04R`$_\xFD[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80_T\x92\x16\x91\x82\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82\x16\x17_U\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0_\x80\xA3V`\x80\x80`@R4`\x14W`\xE6\x90\x81a\0\x19\x829\xF3[_\x80\xFD\xFE`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Ccz9y\xDC\x14`#W_\x80\xFD[4`\x9EW``\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC6\x01\x12`\x9EW`V`\xA2V[P`]`\xC4V[P`D5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11`\x9EW6`#\x82\x01\x12\x15`\x9EW\x80`\x04\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11`\x9EW6\x91\x01`$\x01\x11`\x9EW\x80_` \x92R\xF3[_\x80\xFD[`\x045\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03`\x9EWV[`$5\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03`\x9EWV",
+        b"`\xC04a\x01\xA2W`\x1Fa\x12\x9D8\x81\x90\x03\x91\x82\x01`\x1F\x19\x16\x83\x01\x91`\x01`\x01`@\x1B\x03\x83\x11\x84\x84\x10\x17a\x01{W\x80\x84\x92` \x94`@R\x839\x81\x01\x03\x12a\x01\xA2WQ3\x15a\x01\x8FW_\x80T3`\x01`\x01`\xA0\x1B\x03\x19\x82\x16\x81\x17\x83U`@Q\x92\x90\x91`\x01`\x01`\xA0\x1B\x03\x16\x90\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0\x90\x80\xA3`\x01\x80T`\xFF`\xA0\x1B\x19\x16\x90U`\xFF\x81\x81\x01`\x01`\x01`@\x1B\x03\x81\x11\x83\x82\x10\x17a\x01{W\x82\x91a\x11\x9E\x839\x03\x90_\xF0\x80\x15a\x01pW`\x01\x80T`\x01`\x01`\xA0\x1B\x03\x19\x16`\x01`\x01`\xA0\x1B\x03\x92\x90\x92\x16\x91\x90\x91\x17\x90U\x80\x15a\x01+W`\x80R3`\xA0R`@Qa\x0F\xF7\x90\x81a\x01\xA7\x829`\x80Q\x81\x81\x81a\x01p\x01R\x81\x81a\x03\t\x01Ra\x082\x01R`\xA0Q\x81\x81\x81a\x02\xAE\x01R\x81\x81a\x04\x02\x01Ra\x07\xD7\x01R\xF3[`@QbF\x1B\xCD`\xE5\x1B\x81R` `\x04\x82\x01R`\x18`$\x82\x01R\x7FApp chain ID cannot be 0\0\0\0\0\0\0\0\0`D\x82\x01R`d\x90\xFD[`@Q=_\x82>=\x90\xFD[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD[c\x1EO\xBD\xF7`\xE0\x1B_R_`\x04R`$_\xFD[_\x80\xFD\xFE`\x80`@R`\x046\x10\x15a\0\x11W_\x80\xFD[__5`\xE0\x1C\x80c\x05\x0E\xC18\x14a\x0B\x05W\x80c\x11\x99/\x8C\x14a\tuW\x80c\x1C\x0Bcg\x14a\t\tW\x80c6l\xBA\xB7\x14a\x08\xBAW\x80c=D\xAE\x8B\x14a\x08\x9FW\x80cF\xE2\xCC\t\x14a\x07<W\x80cH\\\xC9U\x14a\x06QW\x80c[<\xD6\xE2\x14a\x06\x1DW\x80cqP\x18\xA6\x14a\x05\x9FW\x80cz9y\xDC\x14a\x05CW\x80c\x80NQ#\x14a\x04\x86W\x80c\x83\xD3\xC1\x15\x14a\x04YW\x80c\x8D\xA5\xCB[\x14a\x04&W\x80c\xC4Z\x01U\x14a\x03\xD5W\x80c\xCD\xAF\xB9x\x14a\x02JW\x80c\xD4\xF0\xEBM\x14a\x01\x93W\x80c\xD8x\x13B\x14a\x01XWc\xF2\xFD\xE3\x8B\x14a\0\xE0W_\x80\xFD[4a\x01UW` `\x03\x196\x01\x12a\x01UWa\0\xF9a\x0C>V[a\x01\x01a\x0FBV[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x16\x15a\x01)Wa\x01&\x90a\x0F\x8EV[\x80\xF3[`$\x82\x7F\x1EO\xBD\xF7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\x80`\x04R\xFD[\x80\xFD[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UW` `@Q\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xF3[P4a\x01UW` `\x03\x196\x01\x12a\x01UWs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFFa\x01\xC2a\x0C>V[a\x01\xCAa\x0FBV[\x16\x80\x15a\x02\"W\x80\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`\x01T\x16\x17`\x01U\x7F%5\x80\xF8\x06t\x1C\x11\xB3\xD4\xAA`\xD9\xCA\xCC[\xEF\x0C\xEB\xB3WHv\x7F\xE2?\x11\x91n/\x04\xB9\x82\x80\xA2\x80\xF3[`\x04\x82\x7F\\\xFEx\xFE\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xFD[P4a\x01UW` `\x03\x196\x01\x12a\x01UW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x03\xD1Wa\x02}\x82\x916\x90`\x04\x01a\x0B\xCAV[\x90Z\x91\x83[\x81\x81\x10a\x03PWPPPa\x02\x97\x90Z\x90a\x0E\0V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x16\x90\x81;\x15a\x03LW\x82\x91`D\x83\x92`@Q\x94\x85\x93\x84\x92\x7F\xE3\xE7\x93p\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x84R\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`\x04\x85\x01R`$\x84\x01RZ\xF1a\x03;WP\xF3[\x81a\x03E\x91a\rDV[a\x01UW\x80\xF3[PP\xFD[\x82\x93\x94Pa\x03ma\x03e\x82\x84`\x01\x95\x96a\x0C\xA6V[\x9023a\x0E:V[a\x03}W[\x01\x90\x84\x93\x92\x91a\x02\x82V[a\x03\x91a\x03\x8B\x82\x85\x87a\x0C\xA6V[\x90a\r\xB2V[\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F`@Q` \x81R\x80a\x03\xC93\x94` \x83\x01\x90a\x0B\xFBV[\x03\x90\xA2a\x03rV[P\x80\xFD[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UW` `@Qs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x16\x81R\xF3[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UWs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF` \x91T\x16`@Q\x90\x81R\xF3[P4a\x01UW```\x03\x196\x01\x12a\x01UW` a\x04~`D5`$5`\x045a\x0F\0V[`@Q\x90\x81R\xF3[P4a\x01UW` `\x03\x196\x01\x12a\x01UW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x03\xD1Wa\x04\xB8\x906\x90`\x04\x01a\x0BiV[a\x04\xC4\x81\x8323a\x0E:V[\x15a\x05\x1BW\x82\x91a\x04\xD9a\x02\x97\x92Z\x92a\r\xB2V[\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F`@Q` \x81R\x80a\x05\x113\x94` \x83\x01\x90a\x0B\xFBV[\x03\x90\xA2Z\x90a\x0E\0V[`\x04\x83\x7F\xDCt\x14X\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xFD[P4a\x01UW```\x03\x196\x01\x12a\x01UWa\x05]a\x0C>V[a\x05ea\x0CaV[\x91`D5\x90g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11a\x01UW` a\x05\x95\x85\x85a\x05\x8D6`\x04\x88\x01a\x0BiV[\x92\x90\x91a\x0E:V[`@Q\x90\x15\x15\x81R\xF3[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UWa\x05\xB8a\x0FBV[\x80s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81T\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81\x16\x83U\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0\x82\x80\xA3\x80\xF3[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UW` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`\x01T\x16`@Q\x90\x81R\xF3[P4a\x01UW`@`\x03\x196\x01\x12a\x01UWa\x06ka\x0C>V[a\x06sa\x0CaV[a\x06{a\x0FBV[`\x01T\x90`\xFF\x82`\xA0\x1C\x16a\x07\x14Ws\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x90\x81\x15a\x06\xECW\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x16\x17t\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x17`\x01Ua\x01\x01a\x0FBV[`\x04\x84\x7F\\\xFEx\xFE\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xFD[`\x04\x84\x7F\r\xC1I\xF0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xFD[P4a\x08sW` `\x03\x196\x01\x12a\x08sW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x08sWa\x07n\x906\x90`\x04\x01a\x0BiV[\x90a\x07{\x82\x8223a\x0E:V[\x15a\x08wWa\x07\xC0\x91\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7Fa\x05\x11Z\x93`@Q\x91\x82\x91` \x83R3\x95` \x84\x01\x91a\r\x06V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x16\x90\x81;\x15a\x08sW_\x91`D\x83\x92`@Q\x94\x85\x93\x84\x92\x7F\xE3\xE7\x93p\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x84R\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`\x04\x85\x01R`$\x84\x01RZ\xF1a\x08eWP\x80\xF3[a\x08q\x91P_\x90a\rDV[\0[_\x80\xFD[\x7F\xDCt\x14X\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x08sW_`\x03\x196\x01\x12a\x08sW` `@Q`\n\x81R\xF3[4a\x08sW` `\x03\x196\x01\x12a\x08sW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x08sWa\x08\xF1a\x03\x8Ba\t\x05\x926\x90`\x04\x01a\x0BiV[`@Q\x91\x82\x91` \x83R` \x83\x01\x90a\x0B\xFBV[\x03\x90\xF3[4a\x08sWa\t\x176a\x0B\x97V[\x91\x90a\t%\x81\x8323a\x0E:V[\x15a\x08wWa\ta\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2\x92`@Q\x92``\x84R``\x84\x01\x91a\r\x06V[\x92` \x82\x01RB`@\x82\x01R\x803\x93\x03\x90\xA2\0[4a\x08sW`@`\x03\x196\x01\x12a\x08sW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x08sWa\t\xA6\x906\x90`\x04\x01a\x0B\xCAV[\x90`$5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x08sWa\t\xC7\x906\x90`\x04\x01a\x0B\xCAV[\x90\x92\x81\x81\x03a\n\x81W_[\x81\x81\x10a\t\xDBW\0[a\t\xE9a\x03e\x82\x84\x87a\x0C\xA6V[a\t\xF6W[`\x01\x01a\t\xD2V[a\n\x04a\x03\x8B\x82\x84\x87a\x0C\xA6V[\x90\x83\x81\x10\x15a\nTW`\x01\x91\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2`@Q\x80a\nJ3\x94B\x90\x87`\x05\x1B\x8D\x015\x90\x84a\x0C\x84V[\x03\x90\xA2\x90Pa\t\xEEV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[`\x84`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`2`$\x82\x01R\x7FData and priority arrays must ha`D\x82\x01R\x7Fve the same length\0\0\0\0\0\0\0\0\0\0\0\0\0\0`d\x82\x01R\xFD[4a\x08sWa\x0B\x136a\x0B\x97V[\x91\x90a\x0B!\x81\x8323a\x0E:V[\x15a\x08wWa\x0BTa\x0Bd\x91\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2\x93a\r\xB2V[`@Q\x91\x82\x913\x95B\x91\x84a\x0C\x84V[\x03\x90\xA2\0[\x91\x81`\x1F\x84\x01\x12\x15a\x08sW\x825\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x08sW` \x83\x81\x86\x01\x95\x01\x01\x11a\x08sWV[`@`\x03\x19\x82\x01\x12a\x08sW`\x045\x90g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11a\x08sWa\x0B\xC2\x91`\x04\x01a\x0BiV[\x90\x91`$5\x90V[\x91\x81`\x1F\x84\x01\x12\x15a\x08sW\x825\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x08sW` \x80\x85\x01\x94\x84`\x05\x1B\x01\x01\x11a\x08sWV[\x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0`\x1F` \x80\x94\x80Q\x91\x82\x91\x82\x87R\x01\x86\x86\x01^_\x85\x82\x86\x01\x01R\x01\x16\x01\x01\x90V[`\x045\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03a\x08sWV[`$5\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03a\x08sWV[a\x0C\x9C`@\x92\x95\x94\x93\x95``\x83R``\x83\x01\x90a\x0B\xFBV[\x94` \x82\x01R\x01RV[\x91\x90\x81\x10\x15a\nTW`\x05\x1B\x81\x015\x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE1\x816\x03\x01\x82\x12\x15a\x08sW\x01\x90\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x08sW` \x01\x826\x03\x81\x13a\x08sW\x91\x90V[`\x1F\x82` \x94\x93\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x93\x81\x86R\x86\x86\x017_\x85\x82\x86\x01\x01R\x01\x16\x01\x01\x90V[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\r\x85W`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[`!a\r\xFD\x91\x83`@Q\x94\x85\x92_` \x85\x01R\x84\x84\x017\x81\x01_\x83\x82\x01R\x03\x01\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x81\x01\x83R\x82a\rDV[\x90V[\x91\x90\x82\x03\x91\x82\x11a\x0E\rWV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[\x92s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80\x94a\x0E\xA8` \x95\x83`\x01T\x16\x94`@Q\x98\x89\x97\x88\x96\x87\x96\x7Fz9y\xDC\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x88R\x16`\x04\x87\x01R\x16`$\x85\x01R```D\x85\x01R`d\x84\x01\x91a\r\x06V[\x03\x91Z\xFA\x90\x81\x15a\x0E\xF5W_\x91a\x0E\xBDWP\x90V[\x90P` \x81=` \x11a\x0E\xEDW[\x81a\x0E\xD8` \x93\x83a\rDV[\x81\x01\x03\x12a\x08sWQ\x80\x15\x15\x81\x03a\x08sW\x90V[=\x91Pa\x0E\xCBV[`@Q=_\x82>=\x90\xFD[\x91\x90\x80\x82\x11\x15a\x0F=Wa\x0F\x13\x91a\x0E\0V[`\n\x81\x02\x90\x80\x82\x04`\n\x14\x90\x15\x17\x15a\x0E\rW\x81\x81\x10\x15a\x0F7Wa\r\xFD\x91a\x0E\0V[PP_\x90V[PP\x90V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_T\x163\x03a\x0FbWV[\x7F\x11\x8C\xDA\xA7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R3`\x04R`$_\xFD[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80_T\x92\x16\x91\x82\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82\x16\x17_U\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0_\x80\xA3V`\x80\x80`@R4`\x14W`\xE6\x90\x81a\0\x19\x829\xF3[_\x80\xFD\xFE`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Ccz9y\xDC\x14`#W_\x80\xFD[4`\x9EW``\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC6\x01\x12`\x9EW`V`\xA2V[P`]`\xC4V[P`D5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11`\x9EW6`#\x82\x01\x12\x15`\x9EW\x80`\x04\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11`\x9EW6\x91\x01`$\x01\x11`\x9EW\x80_` \x92R\xF3[_\x80\xFD[`\x045\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03`\x9EWV[`$5\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03`\x9EWV",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040526004361015610011575f80fd5b5f3560e01c8063050ec13814610c04578063086146d214610baf57806311992f8c14610a1757806318d5aafe146109385780631c0b6367146109ab578063366cbab71461095a5780633b6ab2a9146109385780633d44ae8b1461091d57806346e2cc09146108d2578063485cc955146108105780634b2c0706146107825780635467cb48146107405780635b3cd6e21461070d57806361543801146106f0578063715018a6146106745780637a3979dc1461061a5780637fbd295e146105f0578063804e51231461057d57806382f44ade1461056357806383d3c1151461053f57806384fab62b1461051a5780638d5a239b146104fe5780638da5cb5b146104cc578063aff74c6d146104b2578063b470aade14610495578063c660d3f31461046f578063cdafb97814610435578063d4f0eb4d14610380578063d878134214610346578063de1f453e14610300578063ea4a1104146102b4578063f2fde38b14610240578063f7b8935e146101b05763ff7b30841461018f575f80fd5b346101ac575f6003193601126101ac576020600654604051908152f35b5f80fd5b346101ac5760406003193601126101ac576004356024358181106101e2576020916101da91610f3f565b604051908152f35b60646040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601960248201527f476173436f756e7465723a20696e76616c69642072616e6765000000000000006044820152fd5b346101ac5760206003193601126101ac57610259610d3d565b610261611687565b73ffffffffffffffffffffffffffffffffffffffff81161561028857610286906116d3565b005b7f1e4fbdf7000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b346101ac5760206003193601126101ac576004355f526005602052608060405f208054906001810154906003600282015491015491604051938452602084015260408301526060820152f35b346101ac575f6003193601126101ac57610318611687565b600480547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff16610100179055005b346101ac575f6003193601126101ac5760206040517f00000000000000000000000000000000000000000000000000000000000000008152f35b346101ac5760206003193601126101ac5773ffffffffffffffffffffffffffffffffffffffff6103ae610d3d565b6103b6611687565b16801561040d57807fffffffffffffffffffffffff000000000000000000000000000000000000000060015416176001557f253580f806741c11b3d4aa60d9cacc5bef0cebb35748767fe23f11916e2f04b95f80a2005b7f5cfe78fe000000000000000000000000000000000000000000000000000000005f5260045ffd5b346101ac5760206003193601126101ac5760043567ffffffffffffffff81116101ac57610469610286913690600401610cc9565b906111d0565b346101ac575f6003193601126101ac576020604061048b61126f565b0151604051908152f35b346101ac575f6003193601126101ac576020600254604051908152f35b346101ac575f6003193601126101ac5760206101da6111b0565b346101ac575f6003193601126101ac57602073ffffffffffffffffffffffffffffffffffffffff5f5416604051908152f35b346101ac575f6003193601126101ac576020606061048b61126f565b346101ac575f6003193601126101ac57602060ff60045460081c166040519015158152f35b346101ac5760606003193601126101ac5760206101da60443560243560043561116e565b346101ac575f6003193601126101ac5760206101da611128565b346101ac5760206003193601126101ac5760043567ffffffffffffffff81116101ac576105ae903690600401610c68565b6105ba81833233610fed565b156105c857610286916110c0565b7fdc741458000000000000000000000000000000000000000000000000000000005f5260045ffd5b346101ac575f6003193601126101ac5760206101da600654606061061261126f565b0151906110b3565b346101ac5760606003193601126101ac57610633610d3d565b61063b610d60565b6044359067ffffffffffffffff82116101ac5760209261066261066a933690600401610c68565b929091610fed565b6040519015158152f35b346101ac575f6003193601126101ac5761068c611687565b5f73ffffffffffffffffffffffffffffffffffffffff81547fffffffffffffffffffffffff000000000000000000000000000000000000000081168355167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a3005b346101ac575f6003193601126101ac576020600354604051908152f35b346101ac575f6003193601126101ac57602073ffffffffffffffffffffffffffffffffffffffff60015416604051908152f35b346101ac575f6003193601126101ac57610758611687565b600480547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff169055005b346101ac5760206003193601126101ac5761079b610e2f565b506004355f52600560205261080c60405f206003604051916107bc83610da5565b805483526001810154602084015260028101546040840152015460608201526040519182918291909160608060808301948051845260208101516020850152604081015160408501520151910152565b0390f35b346101ac5760406003193601126101ac57610829610d3d565b610831610d60565b610839611687565b6001549060ff8260a01c166108aa5773ffffffffffffffffffffffffffffffffffffffff16801561040d577fffffffffffffffffffffff0000000000000000000000000000000000000000007401000000000000000000000000000000000000000092161717600155610261611687565b7f0dc149f0000000000000000000000000000000000000000000000000000000005f5260045ffd5b346101ac5760206003193601126101ac5760043567ffffffffffffffff81116101ac57610903903690600401610c68565b61090f81833233610fed565b156105c85761028691610f79565b346101ac575f6003193601126101ac576020604051600a8152f35b346101ac575f6003193601126101ac57602060ff600454166040519015158152f35b346101ac5760206003193601126101ac5760043567ffffffffffffffff81116101ac5761099761099161080c923690600401610c68565b90610ef1565b604051918291602083526020830190610cfa565b346101ac576109b936610c96565b91906109c781833233610fed565b156105c857610a037f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f29260405192606084526060840191610eb3565b9260208201524260408201528033930390a2005b346101ac5760406003193601126101ac5760043567ffffffffffffffff81116101ac57610a48903690600401610cc9565b9060243567ffffffffffffffff81116101ac57610a69903690600401610cc9565b9092818103610b2b575f5b818110610a7d57005b610a93610a8b828487610e53565b903233610fed565b610aa0575b600101610a74565b610aae610991828487610e53565b9083811015610afe576001917f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f260405180610af4339442908760051b8d01359084610d83565b0390a29050610a98565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b60846040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603260248201527f4461746120616e64207072696f7269747920617272617973206d75737420686160448201527f7665207468652073616d65206c656e67746800000000000000000000000000006064820152fd5b346101ac575f6003193601126101ac57610bc7610e2f565b5061080c610bd361126f565b6040519182918291909160608060808301948051845260208101516020850152604081015160408501520151910152565b346101ac57610c1236610c96565b9190610c2081833233610fed565b156105c857610c53610c63917f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f293610ef1565b6040519182913395429184610d83565b0390a2005b9181601f840112156101ac5782359167ffffffffffffffff83116101ac57602083818601950101116101ac57565b60406003198201126101ac576004359067ffffffffffffffff82116101ac57610cc191600401610c68565b909160243590565b9181601f840112156101ac5782359167ffffffffffffffff83116101ac576020808501948460051b0101116101ac57565b907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0601f602080948051918291828752018686015e5f8582860101520116010190565b6004359073ffffffffffffffffffffffffffffffffffffffff821682036101ac57565b6024359073ffffffffffffffffffffffffffffffffffffffff821682036101ac57565b610d9b60409295949395606083526060830190610cfa565b9460208201520152565b6080810190811067ffffffffffffffff821117610dc157604052565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff821117610dc157604052565b60405190610e3c82610da5565b5f6060838281528260208201528260408201520152565b9190811015610afe5760051b810135907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe1813603018212156101ac57019081359167ffffffffffffffff83116101ac5760200182360381136101ac579190565b601f82602094937fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe093818652868601375f8582860101520116010190565b6021610f3c91836040519485925f60208501528484013781015f8382015203017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08101835282610dee565b90565b91908203918211610f4c57565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b9060ff60045460081c1615610fa857610fa691610f9a610fa1925a92610fad565b5a90610f3f565b611378565b565b610fa6915b610fe87f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f916040519182916020835233956020840191610eb3565b0390a2565b9273ffffffffffffffffffffffffffffffffffffffff809461105b602095836001541694604051988997889687967f7a3979dc000000000000000000000000000000000000000000000000000000008852166004870152166024850152606060448501526064840191610eb3565b03915afa9081156110a8575f91611070575090565b90506020813d6020116110a0575b8161108b60209383610dee565b810103126101ac575180151581036101ac5790565b3d915061107e565b6040513d5f823e3d90fd5b91908201809211610f4c57565b9060ff60045460081c16156110e157610fa691610f9a610fa1925a926110e6565b610fa6915b906110f091610ef1565b7f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f6040516020815280610fe833946020830190610cfa565b61113061126f565b51801561115657600254611143916110b3565b8042101561115657610f3c904290610f3f565b505f90565b81810292918115918404141715610f4c57565b9190808211156111ab5761118191610f3f565b600a810290808204600a1490151715610f4c57818110156111a557610f3c91610f3f565b50505f90565b505090565b60ff60045416156111cc5760035460018101809111610f4c5790565b5f90565b9060ff60045460081c16156111f157610fa691610f9a610fa1925a926111f6565b610fa6915b905f5b81811061120557505050565b80611216610a8b6001938587610e53565b611221575b016111f9565b61122f610991828587610e53565b7f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f604051602081528061126733946020830190610cfa565b0390a261121b565b611277610e2f565b5060ff6004541615611354576003545f52600560205260405f206040519061129e82610da5565b60038154918284526001810154602085015260028101546040850152015460608301526112ce60025480926110b3565b4210156112d9575090565b906112e5815142610f3f565b9082156113275782611303936112fd9251930461115b565b906110b3565b6040519061131082610da5565b81525f60208201525f60408201525f606082015290565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601260045260245ffd5b60405161136081610da5565b5f81525f60208201525f60408201525f606082015290565b60045460ff8160081c16156116835760ff8116158061155e575b50506003545f52600560205260405f20805490600254916113b383826110b3565b421015611449575b5050503a3a15611441575b6113d0908261115b565b6003545f526005602052600260405f20016113ec8382546110b3565b90556003545f52600560205261140a600360405f20019182546110b3565b90557f2d9c47ad553b63bbbad1819d4fd97da088505c96a58182691b8abb5f2bcc29ee60406003549281519081523a6020820152a2565b5060016113c6565b60406114796114a8947f48a298f9d376b82a7174a798e90cf1209495fdd68b0c11eb11beabacc2d29cf5936110b3565b6001840190815561149060038501546006546110b3565b60065560035494846002879601549254905490610f3f565b82519182526020820152a27fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8114610f4c57600101806003556003604051916114f083610da5565b428352602083015f815260408401905f825260608501925f84525f52600560205260405f2094518555516001850155516002840155519101556003547f41f1e08f21cc818cf0cffb3a62609fb6a3cbc9b3671b011e285e17a1ebb4688e6020604051428152a25f80806113bb565b611569575b80611392565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00166001176004555f6003556040516115a181610da5565b428082525f60208084018281526040808601848152606087018581528580526005855296517f05b8ccbb9d4d8fb16ea74ce3c29a41f1b461fbdaff4714a0d9a8eb05499746bc5591517f05b8ccbb9d4d8fb16ea74ce3c29a41f1b461fbdaff4714a0d9a8eb05499746bd5590517f05b8ccbb9d4d8fb16ea74ce3c29a41f1b461fbdaff4714a0d9a8eb05499746be5593517f05b8ccbb9d4d8fb16ea74ce3c29a41f1b461fbdaff4714a0d9a8eb05499746bf559251918252917f41f1e08f21cc818cf0cffb3a62609fb6a3cbc9b3671b011e285e17a1ebb4688e91a25f611563565b5050565b73ffffffffffffffffffffffffffffffffffffffff5f541633036116a757565b7f118cdaa7000000000000000000000000000000000000000000000000000000005f523360045260245ffd5b73ffffffffffffffffffffffffffffffffffffffff805f54921691827fffffffffffffffffffffffff00000000000000000000000000000000000000008216175f55167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e05f80a356
+    ///0x60806040526004361015610011575f80fd5b5f5f3560e01c8063050ec13814610b0557806311992f8c146109755780631c0b636714610909578063366cbab7146108ba5780633d44ae8b1461089f57806346e2cc091461073c578063485cc955146106515780635b3cd6e21461061d578063715018a61461059f5780637a3979dc14610543578063804e51231461048657806383d3c115146104595780638da5cb5b14610426578063c45a0155146103d5578063cdafb9781461024a578063d4f0eb4d14610193578063d8781342146101585763f2fde38b146100e0575f80fd5b34610155576020600319360112610155576100f9610c3e565b610101610f42565b73ffffffffffffffffffffffffffffffffffffffff8116156101295761012690610f8e565b80f35b6024827f1e4fbdf700000000000000000000000000000000000000000000000000000000815280600452fd5b80fd5b503461015557806003193601126101555760206040517f00000000000000000000000000000000000000000000000000000000000000008152f35b50346101555760206003193601126101555773ffffffffffffffffffffffffffffffffffffffff6101c2610c3e565b6101ca610f42565b16801561022257807fffffffffffffffffffffffff000000000000000000000000000000000000000060015416176001557f253580f806741c11b3d4aa60d9cacc5bef0cebb35748767fe23f11916e2f04b98280a280f35b6004827f5cfe78fe000000000000000000000000000000000000000000000000000000008152fd5b50346101555760206003193601126101555760043567ffffffffffffffff81116103d15761027d82913690600401610bca565b905a91835b81811061035057505050610297905a90610e00565b73ffffffffffffffffffffffffffffffffffffffff7f00000000000000000000000000000000000000000000000000000000000000001690813b1561034c5782916044839260405194859384927fe3e793700000000000000000000000000000000000000000000000000000000084527f0000000000000000000000000000000000000000000000000000000000000000600485015260248401525af161033b5750f35b8161034591610d44565b6101555780f35b5050fd5b8293945061036d610365828460019596610ca6565b903233610e3a565b61037d575b019084939291610282565b61039161038b828587610ca6565b90610db2565b7f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f60405160208152806103c933946020830190610bfb565b0390a2610372565b5080fd5b5034610155578060031936011261015557602060405173ffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000168152f35b503461015557806003193601126101555773ffffffffffffffffffffffffffffffffffffffff6020915416604051908152f35b503461015557606060031936011261015557602061047e604435602435600435610f00565b604051908152f35b50346101555760206003193601126101555760043567ffffffffffffffff81116103d1576104b8903690600401610b69565b6104c481833233610e3a565b1561051b5782916104d9610297925a92610db2565b7f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f604051602081528061051133946020830190610bfb565b0390a25a90610e00565b6004837fdc741458000000000000000000000000000000000000000000000000000000008152fd5b50346101555760606003193601126101555761055d610c3e565b610565610c61565b916044359067ffffffffffffffff8211610155576020610595858561058d3660048801610b69565b929091610e3a565b6040519015158152f35b50346101555780600319360112610155576105b8610f42565b8073ffffffffffffffffffffffffffffffffffffffff81547fffffffffffffffffffffffff000000000000000000000000000000000000000081168355167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a380f35b5034610155578060031936011261015557602073ffffffffffffffffffffffffffffffffffffffff60015416604051908152f35b50346101555760406003193601126101555761066b610c3e565b610673610c61565b61067b610f42565b6001549060ff8260a01c166107145773ffffffffffffffffffffffffffffffffffffffff169081156106ec577fffffffffffffffffffffff00000000000000000000000000000000000000000016177401000000000000000000000000000000000000000017600155610101610f42565b6004847f5cfe78fe000000000000000000000000000000000000000000000000000000008152fd5b6004847f0dc149f0000000000000000000000000000000000000000000000000000000008152fd5b50346108735760206003193601126108735760043567ffffffffffffffff81116108735761076e903690600401610b69565b9061077b82823233610e3a565b15610877576107c0917f83363b78bdfbb23e2a61db7accc3c01fda29c5c5ec81888003cb962912618a7f6105115a936040519182916020835233956020840191610d06565b73ffffffffffffffffffffffffffffffffffffffff7f00000000000000000000000000000000000000000000000000000000000000001690813b15610873575f916044839260405194859384927fe3e793700000000000000000000000000000000000000000000000000000000084527f0000000000000000000000000000000000000000000000000000000000000000600485015260248401525af1610865575080f35b61087191505f90610d44565b005b5f80fd5b7fdc741458000000000000000000000000000000000000000000000000000000005f5260045ffd5b34610873575f600319360112610873576020604051600a8152f35b346108735760206003193601126108735760043567ffffffffffffffff8111610873576108f161038b610905923690600401610b69565b604051918291602083526020830190610bfb565b0390f35b346108735761091736610b97565b919061092581833233610e3a565b15610877576109617f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f29260405192606084526060840191610d06565b9260208201524260408201528033930390a2005b346108735760406003193601126108735760043567ffffffffffffffff8111610873576109a6903690600401610bca565b9060243567ffffffffffffffff8111610873576109c7903690600401610bca565b9092818103610a81575f5b8181106109db57005b6109e9610365828487610ca6565b6109f6575b6001016109d2565b610a0461038b828487610ca6565b9083811015610a54576001917f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f260405180610a4a339442908760051b8d01359084610c84565b0390a290506109ee565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b60846040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603260248201527f4461746120616e64207072696f7269747920617272617973206d75737420686160448201527f7665207468652073616d65206c656e67746800000000000000000000000000006064820152fd5b3461087357610b1336610b97565b9190610b2181833233610e3a565b1561087757610b54610b64917f4b5aa8d082e691cb9972a7958fa4153f663f215fe697a3e08bd2729ed78f02f293610db2565b6040519182913395429184610c84565b0390a2005b9181601f840112156108735782359167ffffffffffffffff8311610873576020838186019501011161087357565b6040600319820112610873576004359067ffffffffffffffff821161087357610bc291600401610b69565b909160243590565b9181601f840112156108735782359167ffffffffffffffff8311610873576020808501948460051b01011161087357565b907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0601f602080948051918291828752018686015e5f8582860101520116010190565b6004359073ffffffffffffffffffffffffffffffffffffffff8216820361087357565b6024359073ffffffffffffffffffffffffffffffffffffffff8216820361087357565b610c9c60409295949395606083526060830190610bfb565b9460208201520152565b9190811015610a545760051b810135907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe18136030182121561087357019081359167ffffffffffffffff8311610873576020018236038113610873579190565b601f82602094937fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe093818652868601375f8582860101520116010190565b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff821117610d8557604052565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b6021610dfd91836040519485925f60208501528484013781015f8382015203017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08101835282610d44565b90565b91908203918211610e0d57565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b9273ffffffffffffffffffffffffffffffffffffffff8094610ea8602095836001541694604051988997889687967f7a3979dc000000000000000000000000000000000000000000000000000000008852166004870152166024850152606060448501526064840191610d06565b03915afa908115610ef5575f91610ebd575090565b90506020813d602011610eed575b81610ed860209383610d44565b81010312610873575180151581036108735790565b3d9150610ecb565b6040513d5f823e3d90fd5b919080821115610f3d57610f1391610e00565b600a810290808204600a1490151715610e0d5781811015610f3757610dfd91610e00565b50505f90565b505090565b73ffffffffffffffffffffffffffffffffffffffff5f54163303610f6257565b7f118cdaa7000000000000000000000000000000000000000000000000000000005f523360045260245ffd5b73ffffffffffffffffffffffffffffffffffffffff805f54921691827fffffffffffffffffffffffff00000000000000000000000000000000000000008216175f55167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e05f80a356
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R`\x046\x10\x15a\0\x11W_\x80\xFD[_5`\xE0\x1C\x80c\x05\x0E\xC18\x14a\x0C\x04W\x80c\x08aF\xD2\x14a\x0B\xAFW\x80c\x11\x99/\x8C\x14a\n\x17W\x80c\x18\xD5\xAA\xFE\x14a\t8W\x80c\x1C\x0Bcg\x14a\t\xABW\x80c6l\xBA\xB7\x14a\tZW\x80c;j\xB2\xA9\x14a\t8W\x80c=D\xAE\x8B\x14a\t\x1DW\x80cF\xE2\xCC\t\x14a\x08\xD2W\x80cH\\\xC9U\x14a\x08\x10W\x80cK,\x07\x06\x14a\x07\x82W\x80cTg\xCBH\x14a\x07@W\x80c[<\xD6\xE2\x14a\x07\rW\x80caT8\x01\x14a\x06\xF0W\x80cqP\x18\xA6\x14a\x06tW\x80cz9y\xDC\x14a\x06\x1AW\x80c\x7F\xBD)^\x14a\x05\xF0W\x80c\x80NQ#\x14a\x05}W\x80c\x82\xF4J\xDE\x14a\x05cW\x80c\x83\xD3\xC1\x15\x14a\x05?W\x80c\x84\xFA\xB6+\x14a\x05\x1AW\x80c\x8DZ#\x9B\x14a\x04\xFEW\x80c\x8D\xA5\xCB[\x14a\x04\xCCW\x80c\xAF\xF7Lm\x14a\x04\xB2W\x80c\xB4p\xAA\xDE\x14a\x04\x95W\x80c\xC6`\xD3\xF3\x14a\x04oW\x80c\xCD\xAF\xB9x\x14a\x045W\x80c\xD4\xF0\xEBM\x14a\x03\x80W\x80c\xD8x\x13B\x14a\x03FW\x80c\xDE\x1FE>\x14a\x03\0W\x80c\xEAJ\x11\x04\x14a\x02\xB4W\x80c\xF2\xFD\xE3\x8B\x14a\x02@W\x80c\xF7\xB8\x93^\x14a\x01\xB0Wc\xFF{0\x84\x14a\x01\x8FW_\x80\xFD[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\x06T`@Q\x90\x81R\xF3[_\x80\xFD[4a\x01\xACW`@`\x03\x196\x01\x12a\x01\xACW`\x045`$5\x81\x81\x10a\x01\xE2W` \x91a\x01\xDA\x91a\x0F?V[`@Q\x90\x81R\xF3[`d`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`\x19`$\x82\x01R\x7FGasCounter: invalid range\0\0\0\0\0\0\0`D\x82\x01R\xFD[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACWa\x02Ya\r=V[a\x02aa\x16\x87V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x16\x15a\x02\x88Wa\x02\x86\x90a\x16\xD3V[\0[\x7F\x1EO\xBD\xF7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045_R`\x05` R`\x80`@_ \x80T\x90`\x01\x81\x01T\x90`\x03`\x02\x82\x01T\x91\x01T\x91`@Q\x93\x84R` \x84\x01R`@\x83\x01R``\x82\x01R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACWa\x03\x18a\x16\x87V[`\x04\x80T\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\xFF\x16a\x01\0\x17\x90U\0[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `@Q\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xF3[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACWs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFFa\x03\xAEa\r=V[a\x03\xB6a\x16\x87V[\x16\x80\x15a\x04\rW\x80\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`\x01T\x16\x17`\x01U\x7F%5\x80\xF8\x06t\x1C\x11\xB3\xD4\xAA`\xD9\xCA\xCC[\xEF\x0C\xEB\xB3WHv\x7F\xE2?\x11\x91n/\x04\xB9_\x80\xA2\0[\x7F\\\xFEx\xFE\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\x04ia\x02\x86\x916\x90`\x04\x01a\x0C\xC9V[\x90a\x11\xD0V[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `@a\x04\x8Ba\x12oV[\x01Q`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\x02T`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` a\x01\xDAa\x11\xB0V[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_T\x16`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` ``a\x04\x8Ba\x12oV[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\xFF`\x04T`\x08\x1C\x16`@Q\x90\x15\x15\x81R\xF3[4a\x01\xACW```\x03\x196\x01\x12a\x01\xACW` a\x01\xDA`D5`$5`\x045a\x11nV[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` a\x01\xDAa\x11(V[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\x05\xAE\x906\x90`\x04\x01a\x0ChV[a\x05\xBA\x81\x8323a\x0F\xEDV[\x15a\x05\xC8Wa\x02\x86\x91a\x10\xC0V[\x7F\xDCt\x14X\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` a\x01\xDA`\x06T``a\x06\x12a\x12oV[\x01Q\x90a\x10\xB3V[4a\x01\xACW```\x03\x196\x01\x12a\x01\xACWa\x063a\r=V[a\x06;a\r`V[`D5\x90g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11a\x01\xACW` \x92a\x06ba\x06j\x936\x90`\x04\x01a\x0ChV[\x92\x90\x91a\x0F\xEDV[`@Q\x90\x15\x15\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACWa\x06\x8Ca\x16\x87V[_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81T\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81\x16\x83U\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0\x82\x80\xA3\0[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\x03T`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`\x01T\x16`@Q\x90\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACWa\x07Xa\x16\x87V[`\x04\x80T\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\xFF\x16\x90U\0[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACWa\x07\x9Ba\x0E/V[P`\x045_R`\x05` Ra\x08\x0C`@_ `\x03`@Q\x91a\x07\xBC\x83a\r\xA5V[\x80T\x83R`\x01\x81\x01T` \x84\x01R`\x02\x81\x01T`@\x84\x01R\x01T``\x82\x01R`@Q\x91\x82\x91\x82\x91\x90\x91``\x80`\x80\x83\x01\x94\x80Q\x84R` \x81\x01Q` \x85\x01R`@\x81\x01Q`@\x85\x01R\x01Q\x91\x01RV[\x03\x90\xF3[4a\x01\xACW`@`\x03\x196\x01\x12a\x01\xACWa\x08)a\r=V[a\x081a\r`V[a\x089a\x16\x87V[`\x01T\x90`\xFF\x82`\xA0\x1C\x16a\x08\xAAWs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x80\x15a\x04\rW\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0t\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x92\x16\x17\x17`\x01Ua\x02aa\x16\x87V[\x7F\r\xC1I\xF0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\t\x03\x906\x90`\x04\x01a\x0ChV[a\t\x0F\x81\x8323a\x0F\xEDV[\x15a\x05\xC8Wa\x02\x86\x91a\x0FyV[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `@Q`\n\x81R\xF3[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACW` `\xFF`\x04T\x16`@Q\x90\x15\x15\x81R\xF3[4a\x01\xACW` `\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\t\x97a\t\x91a\x08\x0C\x926\x90`\x04\x01a\x0ChV[\x90a\x0E\xF1V[`@Q\x91\x82\x91` \x83R` \x83\x01\x90a\x0C\xFAV[4a\x01\xACWa\t\xB96a\x0C\x96V[\x91\x90a\t\xC7\x81\x8323a\x0F\xEDV[\x15a\x05\xC8Wa\n\x03\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2\x92`@Q\x92``\x84R``\x84\x01\x91a\x0E\xB3V[\x92` \x82\x01RB`@\x82\x01R\x803\x93\x03\x90\xA2\0[4a\x01\xACW`@`\x03\x196\x01\x12a\x01\xACW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\nH\x906\x90`\x04\x01a\x0C\xC9V[\x90`$5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01\xACWa\ni\x906\x90`\x04\x01a\x0C\xC9V[\x90\x92\x81\x81\x03a\x0B+W_[\x81\x81\x10a\n}W\0[a\n\x93a\n\x8B\x82\x84\x87a\x0ESV[\x9023a\x0F\xEDV[a\n\xA0W[`\x01\x01a\ntV[a\n\xAEa\t\x91\x82\x84\x87a\x0ESV[\x90\x83\x81\x10\x15a\n\xFEW`\x01\x91\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2`@Q\x80a\n\xF43\x94B\x90\x87`\x05\x1B\x8D\x015\x90\x84a\r\x83V[\x03\x90\xA2\x90Pa\n\x98V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[`\x84`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`2`$\x82\x01R\x7FData and priority arrays must ha`D\x82\x01R\x7Fve the same length\0\0\0\0\0\0\0\0\0\0\0\0\0\0`d\x82\x01R\xFD[4a\x01\xACW_`\x03\x196\x01\x12a\x01\xACWa\x0B\xC7a\x0E/V[Pa\x08\x0Ca\x0B\xD3a\x12oV[`@Q\x91\x82\x91\x82\x91\x90\x91``\x80`\x80\x83\x01\x94\x80Q\x84R` \x81\x01Q` \x85\x01R`@\x81\x01Q`@\x85\x01R\x01Q\x91\x01RV[4a\x01\xACWa\x0C\x126a\x0C\x96V[\x91\x90a\x0C \x81\x8323a\x0F\xEDV[\x15a\x05\xC8Wa\x0CSa\x0Cc\x91\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2\x93a\x0E\xF1V[`@Q\x91\x82\x913\x95B\x91\x84a\r\x83V[\x03\x90\xA2\0[\x91\x81`\x1F\x84\x01\x12\x15a\x01\xACW\x825\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x01\xACW` \x83\x81\x86\x01\x95\x01\x01\x11a\x01\xACWV[`@`\x03\x19\x82\x01\x12a\x01\xACW`\x045\x90g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11a\x01\xACWa\x0C\xC1\x91`\x04\x01a\x0ChV[\x90\x91`$5\x90V[\x91\x81`\x1F\x84\x01\x12\x15a\x01\xACW\x825\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x01\xACW` \x80\x85\x01\x94\x84`\x05\x1B\x01\x01\x11a\x01\xACWV[\x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0`\x1F` \x80\x94\x80Q\x91\x82\x91\x82\x87R\x01\x86\x86\x01^_\x85\x82\x86\x01\x01R\x01\x16\x01\x01\x90V[`\x045\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03a\x01\xACWV[`$5\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03a\x01\xACWV[a\r\x9B`@\x92\x95\x94\x93\x95``\x83R``\x83\x01\x90a\x0C\xFAV[\x94` \x82\x01R\x01RV[`\x80\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\r\xC1W`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\r\xC1W`@RV[`@Q\x90a\x0E<\x82a\r\xA5V[_``\x83\x82\x81R\x82` \x82\x01R\x82`@\x82\x01R\x01RV[\x91\x90\x81\x10\x15a\n\xFEW`\x05\x1B\x81\x015\x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE1\x816\x03\x01\x82\x12\x15a\x01\xACW\x01\x90\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x01\xACW` \x01\x826\x03\x81\x13a\x01\xACW\x91\x90V[`\x1F\x82` \x94\x93\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x93\x81\x86R\x86\x86\x017_\x85\x82\x86\x01\x01R\x01\x16\x01\x01\x90V[`!a\x0F<\x91\x83`@Q\x94\x85\x92_` \x85\x01R\x84\x84\x017\x81\x01_\x83\x82\x01R\x03\x01\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x81\x01\x83R\x82a\r\xEEV[\x90V[\x91\x90\x82\x03\x91\x82\x11a\x0FLWV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[\x90`\xFF`\x04T`\x08\x1C\x16\x15a\x0F\xA8Wa\x0F\xA6\x91a\x0F\x9Aa\x0F\xA1\x92Z\x92a\x0F\xADV[Z\x90a\x0F?V[a\x13xV[V[a\x0F\xA6\x91[a\x0F\xE8\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F\x91`@Q\x91\x82\x91` \x83R3\x95` \x84\x01\x91a\x0E\xB3V[\x03\x90\xA2V[\x92s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80\x94a\x10[` \x95\x83`\x01T\x16\x94`@Q\x98\x89\x97\x88\x96\x87\x96\x7Fz9y\xDC\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x88R\x16`\x04\x87\x01R\x16`$\x85\x01R```D\x85\x01R`d\x84\x01\x91a\x0E\xB3V[\x03\x91Z\xFA\x90\x81\x15a\x10\xA8W_\x91a\x10pWP\x90V[\x90P` \x81=` \x11a\x10\xA0W[\x81a\x10\x8B` \x93\x83a\r\xEEV[\x81\x01\x03\x12a\x01\xACWQ\x80\x15\x15\x81\x03a\x01\xACW\x90V[=\x91Pa\x10~V[`@Q=_\x82>=\x90\xFD[\x91\x90\x82\x01\x80\x92\x11a\x0FLWV[\x90`\xFF`\x04T`\x08\x1C\x16\x15a\x10\xE1Wa\x0F\xA6\x91a\x0F\x9Aa\x0F\xA1\x92Z\x92a\x10\xE6V[a\x0F\xA6\x91[\x90a\x10\xF0\x91a\x0E\xF1V[\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F`@Q` \x81R\x80a\x0F\xE83\x94` \x83\x01\x90a\x0C\xFAV[a\x110a\x12oV[Q\x80\x15a\x11VW`\x02Ta\x11C\x91a\x10\xB3V[\x80B\x10\x15a\x11VWa\x0F<\x90B\x90a\x0F?V[P_\x90V[\x81\x81\x02\x92\x91\x81\x15\x91\x84\x04\x14\x17\x15a\x0FLWV[\x91\x90\x80\x82\x11\x15a\x11\xABWa\x11\x81\x91a\x0F?V[`\n\x81\x02\x90\x80\x82\x04`\n\x14\x90\x15\x17\x15a\x0FLW\x81\x81\x10\x15a\x11\xA5Wa\x0F<\x91a\x0F?V[PP_\x90V[PP\x90V[`\xFF`\x04T\x16\x15a\x11\xCCW`\x03T`\x01\x81\x01\x80\x91\x11a\x0FLW\x90V[_\x90V[\x90`\xFF`\x04T`\x08\x1C\x16\x15a\x11\xF1Wa\x0F\xA6\x91a\x0F\x9Aa\x0F\xA1\x92Z\x92a\x11\xF6V[a\x0F\xA6\x91[\x90_[\x81\x81\x10a\x12\x05WPPPV[\x80a\x12\x16a\n\x8B`\x01\x93\x85\x87a\x0ESV[a\x12!W[\x01a\x11\xF9V[a\x12/a\t\x91\x82\x85\x87a\x0ESV[\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F`@Q` \x81R\x80a\x12g3\x94` \x83\x01\x90a\x0C\xFAV[\x03\x90\xA2a\x12\x1BV[a\x12wa\x0E/V[P`\xFF`\x04T\x16\x15a\x13TW`\x03T_R`\x05` R`@_ `@Q\x90a\x12\x9E\x82a\r\xA5V[`\x03\x81T\x91\x82\x84R`\x01\x81\x01T` \x85\x01R`\x02\x81\x01T`@\x85\x01R\x01T``\x83\x01Ra\x12\xCE`\x02T\x80\x92a\x10\xB3V[B\x10\x15a\x12\xD9WP\x90V[\x90a\x12\xE5\x81QBa\x0F?V[\x90\x82\x15a\x13'W\x82a\x13\x03\x93a\x12\xFD\x92Q\x93\x04a\x11[V[\x90a\x10\xB3V[`@Q\x90a\x13\x10\x82a\r\xA5V[\x81R_` \x82\x01R_`@\x82\x01R_``\x82\x01R\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x12`\x04R`$_\xFD[`@Qa\x13`\x81a\r\xA5V[_\x81R_` \x82\x01R_`@\x82\x01R_``\x82\x01R\x90V[`\x04T`\xFF\x81`\x08\x1C\x16\x15a\x16\x83W`\xFF\x81\x16\x15\x80a\x15^W[PP`\x03T_R`\x05` R`@_ \x80T\x90`\x02T\x91a\x13\xB3\x83\x82a\x10\xB3V[B\x10\x15a\x14IW[PPP::\x15a\x14AW[a\x13\xD0\x90\x82a\x11[V[`\x03T_R`\x05` R`\x02`@_ \x01a\x13\xEC\x83\x82Ta\x10\xB3V[\x90U`\x03T_R`\x05` Ra\x14\n`\x03`@_ \x01\x91\x82Ta\x10\xB3V[\x90U\x7F-\x9CG\xADU;c\xBB\xBA\xD1\x81\x9DO\xD9}\xA0\x88P\\\x96\xA5\x81\x82i\x1B\x8A\xBB_+\xCC)\xEE`@`\x03T\x92\x81Q\x90\x81R:` \x82\x01R\xA2V[P`\x01a\x13\xC6V[`@a\x14ya\x14\xA8\x94\x7FH\xA2\x98\xF9\xD3v\xB8*qt\xA7\x98\xE9\x0C\xF1 \x94\x95\xFD\xD6\x8B\x0C\x11\xEB\x11\xBE\xAB\xAC\xC2\xD2\x9C\xF5\x93a\x10\xB3V[`\x01\x84\x01\x90\x81Ua\x14\x90`\x03\x85\x01T`\x06Ta\x10\xB3V[`\x06U`\x03T\x94\x84`\x02\x87\x96\x01T\x92T\x90T\x90a\x0F?V[\x82Q\x91\x82R` \x82\x01R\xA2\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x14a\x0FLW`\x01\x01\x80`\x03U`\x03`@Q\x91a\x14\xF0\x83a\r\xA5V[B\x83R` \x83\x01_\x81R`@\x84\x01\x90_\x82R``\x85\x01\x92_\x84R_R`\x05` R`@_ \x94Q\x85UQ`\x01\x85\x01UQ`\x02\x84\x01UQ\x91\x01U`\x03T\x7FA\xF1\xE0\x8F!\xCC\x81\x8C\xF0\xCF\xFB:b`\x9F\xB6\xA3\xCB\xC9\xB3g\x1B\x01\x1E(^\x17\xA1\xEB\xB4h\x8E` `@QB\x81R\xA2_\x80\x80a\x13\xBBV[a\x15iW[\x80a\x13\x92V[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\x16`\x01\x17`\x04U_`\x03U`@Qa\x15\xA1\x81a\r\xA5V[B\x80\x82R_` \x80\x84\x01\x82\x81R`@\x80\x86\x01\x84\x81R``\x87\x01\x85\x81R\x85\x80R`\x05\x85R\x96Q\x7F\x05\xB8\xCC\xBB\x9DM\x8F\xB1n\xA7L\xE3\xC2\x9AA\xF1\xB4a\xFB\xDA\xFFG\x14\xA0\xD9\xA8\xEB\x05I\x97F\xBCU\x91Q\x7F\x05\xB8\xCC\xBB\x9DM\x8F\xB1n\xA7L\xE3\xC2\x9AA\xF1\xB4a\xFB\xDA\xFFG\x14\xA0\xD9\xA8\xEB\x05I\x97F\xBDU\x90Q\x7F\x05\xB8\xCC\xBB\x9DM\x8F\xB1n\xA7L\xE3\xC2\x9AA\xF1\xB4a\xFB\xDA\xFFG\x14\xA0\xD9\xA8\xEB\x05I\x97F\xBEU\x93Q\x7F\x05\xB8\xCC\xBB\x9DM\x8F\xB1n\xA7L\xE3\xC2\x9AA\xF1\xB4a\xFB\xDA\xFFG\x14\xA0\xD9\xA8\xEB\x05I\x97F\xBFU\x92Q\x91\x82R\x91\x7FA\xF1\xE0\x8F!\xCC\x81\x8C\xF0\xCF\xFB:b`\x9F\xB6\xA3\xCB\xC9\xB3g\x1B\x01\x1E(^\x17\xA1\xEB\xB4h\x8E\x91\xA2_a\x15cV[PPV[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_T\x163\x03a\x16\xA7WV[\x7F\x11\x8C\xDA\xA7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R3`\x04R`$_\xFD[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80_T\x92\x16\x91\x82\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82\x16\x17_U\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0_\x80\xA3V",
+        b"`\x80`@R`\x046\x10\x15a\0\x11W_\x80\xFD[__5`\xE0\x1C\x80c\x05\x0E\xC18\x14a\x0B\x05W\x80c\x11\x99/\x8C\x14a\tuW\x80c\x1C\x0Bcg\x14a\t\tW\x80c6l\xBA\xB7\x14a\x08\xBAW\x80c=D\xAE\x8B\x14a\x08\x9FW\x80cF\xE2\xCC\t\x14a\x07<W\x80cH\\\xC9U\x14a\x06QW\x80c[<\xD6\xE2\x14a\x06\x1DW\x80cqP\x18\xA6\x14a\x05\x9FW\x80cz9y\xDC\x14a\x05CW\x80c\x80NQ#\x14a\x04\x86W\x80c\x83\xD3\xC1\x15\x14a\x04YW\x80c\x8D\xA5\xCB[\x14a\x04&W\x80c\xC4Z\x01U\x14a\x03\xD5W\x80c\xCD\xAF\xB9x\x14a\x02JW\x80c\xD4\xF0\xEBM\x14a\x01\x93W\x80c\xD8x\x13B\x14a\x01XWc\xF2\xFD\xE3\x8B\x14a\0\xE0W_\x80\xFD[4a\x01UW` `\x03\x196\x01\x12a\x01UWa\0\xF9a\x0C>V[a\x01\x01a\x0FBV[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x16\x15a\x01)Wa\x01&\x90a\x0F\x8EV[\x80\xF3[`$\x82\x7F\x1EO\xBD\xF7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\x80`\x04R\xFD[\x80\xFD[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UW` `@Q\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xF3[P4a\x01UW` `\x03\x196\x01\x12a\x01UWs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFFa\x01\xC2a\x0C>V[a\x01\xCAa\x0FBV[\x16\x80\x15a\x02\"W\x80\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`\x01T\x16\x17`\x01U\x7F%5\x80\xF8\x06t\x1C\x11\xB3\xD4\xAA`\xD9\xCA\xCC[\xEF\x0C\xEB\xB3WHv\x7F\xE2?\x11\x91n/\x04\xB9\x82\x80\xA2\x80\xF3[`\x04\x82\x7F\\\xFEx\xFE\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xFD[P4a\x01UW` `\x03\x196\x01\x12a\x01UW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x03\xD1Wa\x02}\x82\x916\x90`\x04\x01a\x0B\xCAV[\x90Z\x91\x83[\x81\x81\x10a\x03PWPPPa\x02\x97\x90Z\x90a\x0E\0V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x16\x90\x81;\x15a\x03LW\x82\x91`D\x83\x92`@Q\x94\x85\x93\x84\x92\x7F\xE3\xE7\x93p\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x84R\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`\x04\x85\x01R`$\x84\x01RZ\xF1a\x03;WP\xF3[\x81a\x03E\x91a\rDV[a\x01UW\x80\xF3[PP\xFD[\x82\x93\x94Pa\x03ma\x03e\x82\x84`\x01\x95\x96a\x0C\xA6V[\x9023a\x0E:V[a\x03}W[\x01\x90\x84\x93\x92\x91a\x02\x82V[a\x03\x91a\x03\x8B\x82\x85\x87a\x0C\xA6V[\x90a\r\xB2V[\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F`@Q` \x81R\x80a\x03\xC93\x94` \x83\x01\x90a\x0B\xFBV[\x03\x90\xA2a\x03rV[P\x80\xFD[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UW` `@Qs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x16\x81R\xF3[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UWs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF` \x91T\x16`@Q\x90\x81R\xF3[P4a\x01UW```\x03\x196\x01\x12a\x01UW` a\x04~`D5`$5`\x045a\x0F\0V[`@Q\x90\x81R\xF3[P4a\x01UW` `\x03\x196\x01\x12a\x01UW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x03\xD1Wa\x04\xB8\x906\x90`\x04\x01a\x0BiV[a\x04\xC4\x81\x8323a\x0E:V[\x15a\x05\x1BW\x82\x91a\x04\xD9a\x02\x97\x92Z\x92a\r\xB2V[\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7F`@Q` \x81R\x80a\x05\x113\x94` \x83\x01\x90a\x0B\xFBV[\x03\x90\xA2Z\x90a\x0E\0V[`\x04\x83\x7F\xDCt\x14X\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xFD[P4a\x01UW```\x03\x196\x01\x12a\x01UWa\x05]a\x0C>V[a\x05ea\x0CaV[\x91`D5\x90g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11a\x01UW` a\x05\x95\x85\x85a\x05\x8D6`\x04\x88\x01a\x0BiV[\x92\x90\x91a\x0E:V[`@Q\x90\x15\x15\x81R\xF3[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UWa\x05\xB8a\x0FBV[\x80s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81T\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81\x16\x83U\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0\x82\x80\xA3\x80\xF3[P4a\x01UW\x80`\x03\x196\x01\x12a\x01UW` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`\x01T\x16`@Q\x90\x81R\xF3[P4a\x01UW`@`\x03\x196\x01\x12a\x01UWa\x06ka\x0C>V[a\x06sa\x0CaV[a\x06{a\x0FBV[`\x01T\x90`\xFF\x82`\xA0\x1C\x16a\x07\x14Ws\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x90\x81\x15a\x06\xECW\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x16\x17t\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x17`\x01Ua\x01\x01a\x0FBV[`\x04\x84\x7F\\\xFEx\xFE\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xFD[`\x04\x84\x7F\r\xC1I\xF0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R\xFD[P4a\x08sW` `\x03\x196\x01\x12a\x08sW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x08sWa\x07n\x906\x90`\x04\x01a\x0BiV[\x90a\x07{\x82\x8223a\x0E:V[\x15a\x08wWa\x07\xC0\x91\x7F\x836;x\xBD\xFB\xB2>*a\xDBz\xCC\xC3\xC0\x1F\xDA)\xC5\xC5\xEC\x81\x88\x80\x03\xCB\x96)\x12a\x8A\x7Fa\x05\x11Z\x93`@Q\x91\x82\x91` \x83R3\x95` \x84\x01\x91a\r\x06V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x16\x90\x81;\x15a\x08sW_\x91`D\x83\x92`@Q\x94\x85\x93\x84\x92\x7F\xE3\xE7\x93p\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x84R\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`\x04\x85\x01R`$\x84\x01RZ\xF1a\x08eWP\x80\xF3[a\x08q\x91P_\x90a\rDV[\0[_\x80\xFD[\x7F\xDCt\x14X\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x08sW_`\x03\x196\x01\x12a\x08sW` `@Q`\n\x81R\xF3[4a\x08sW` `\x03\x196\x01\x12a\x08sW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x08sWa\x08\xF1a\x03\x8Ba\t\x05\x926\x90`\x04\x01a\x0BiV[`@Q\x91\x82\x91` \x83R` \x83\x01\x90a\x0B\xFBV[\x03\x90\xF3[4a\x08sWa\t\x176a\x0B\x97V[\x91\x90a\t%\x81\x8323a\x0E:V[\x15a\x08wWa\ta\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2\x92`@Q\x92``\x84R``\x84\x01\x91a\r\x06V[\x92` \x82\x01RB`@\x82\x01R\x803\x93\x03\x90\xA2\0[4a\x08sW`@`\x03\x196\x01\x12a\x08sW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x08sWa\t\xA6\x906\x90`\x04\x01a\x0B\xCAV[\x90`$5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x08sWa\t\xC7\x906\x90`\x04\x01a\x0B\xCAV[\x90\x92\x81\x81\x03a\n\x81W_[\x81\x81\x10a\t\xDBW\0[a\t\xE9a\x03e\x82\x84\x87a\x0C\xA6V[a\t\xF6W[`\x01\x01a\t\xD2V[a\n\x04a\x03\x8B\x82\x84\x87a\x0C\xA6V[\x90\x83\x81\x10\x15a\nTW`\x01\x91\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2`@Q\x80a\nJ3\x94B\x90\x87`\x05\x1B\x8D\x015\x90\x84a\x0C\x84V[\x03\x90\xA2\x90Pa\t\xEEV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[`\x84`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`2`$\x82\x01R\x7FData and priority arrays must ha`D\x82\x01R\x7Fve the same length\0\0\0\0\0\0\0\0\0\0\0\0\0\0`d\x82\x01R\xFD[4a\x08sWa\x0B\x136a\x0B\x97V[\x91\x90a\x0B!\x81\x8323a\x0E:V[\x15a\x08wWa\x0BTa\x0Bd\x91\x7FKZ\xA8\xD0\x82\xE6\x91\xCB\x99r\xA7\x95\x8F\xA4\x15?f?!_\xE6\x97\xA3\xE0\x8B\xD2r\x9E\xD7\x8F\x02\xF2\x93a\r\xB2V[`@Q\x91\x82\x913\x95B\x91\x84a\x0C\x84V[\x03\x90\xA2\0[\x91\x81`\x1F\x84\x01\x12\x15a\x08sW\x825\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x08sW` \x83\x81\x86\x01\x95\x01\x01\x11a\x08sWV[`@`\x03\x19\x82\x01\x12a\x08sW`\x045\x90g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11a\x08sWa\x0B\xC2\x91`\x04\x01a\x0BiV[\x90\x91`$5\x90V[\x91\x81`\x1F\x84\x01\x12\x15a\x08sW\x825\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x08sW` \x80\x85\x01\x94\x84`\x05\x1B\x01\x01\x11a\x08sWV[\x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0`\x1F` \x80\x94\x80Q\x91\x82\x91\x82\x87R\x01\x86\x86\x01^_\x85\x82\x86\x01\x01R\x01\x16\x01\x01\x90V[`\x045\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03a\x08sWV[`$5\x90s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x82\x03a\x08sWV[a\x0C\x9C`@\x92\x95\x94\x93\x95``\x83R``\x83\x01\x90a\x0B\xFBV[\x94` \x82\x01R\x01RV[\x91\x90\x81\x10\x15a\nTW`\x05\x1B\x81\x015\x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE1\x816\x03\x01\x82\x12\x15a\x08sW\x01\x90\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x08sW` \x01\x826\x03\x81\x13a\x08sW\x91\x90V[`\x1F\x82` \x94\x93\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x93\x81\x86R\x86\x86\x017_\x85\x82\x86\x01\x01R\x01\x16\x01\x01\x90V[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\r\x85W`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[`!a\r\xFD\x91\x83`@Q\x94\x85\x92_` \x85\x01R\x84\x84\x017\x81\x01_\x83\x82\x01R\x03\x01\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x81\x01\x83R\x82a\rDV[\x90V[\x91\x90\x82\x03\x91\x82\x11a\x0E\rWV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[\x92s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80\x94a\x0E\xA8` \x95\x83`\x01T\x16\x94`@Q\x98\x89\x97\x88\x96\x87\x96\x7Fz9y\xDC\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x88R\x16`\x04\x87\x01R\x16`$\x85\x01R```D\x85\x01R`d\x84\x01\x91a\r\x06V[\x03\x91Z\xFA\x90\x81\x15a\x0E\xF5W_\x91a\x0E\xBDWP\x90V[\x90P` \x81=` \x11a\x0E\xEDW[\x81a\x0E\xD8` \x93\x83a\rDV[\x81\x01\x03\x12a\x08sWQ\x80\x15\x15\x81\x03a\x08sW\x90V[=\x91Pa\x0E\xCBV[`@Q=_\x82>=\x90\xFD[\x91\x90\x80\x82\x11\x15a\x0F=Wa\x0F\x13\x91a\x0E\0V[`\n\x81\x02\x90\x80\x82\x04`\n\x14\x90\x15\x17\x15a\x0E\rW\x81\x81\x10\x15a\x0F7Wa\r\xFD\x91a\x0E\0V[PP_\x90V[PP\x90V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_T\x163\x03a\x0FbWV[\x7F\x11\x8C\xDA\xA7\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R3`\x04R`$_\xFD[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80_T\x92\x16\x91\x82\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82\x16\x17_U\x16\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0_\x80\xA3V",
     );
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
@@ -1677,247 +878,6 @@ error TransactionOrSenderNotAllowed();
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Event with signature `GasTracked(uint256,uint256,uint256)` and selector `0x2d9c47ad553b63bbbad1819d4fd97da088505c96a58182691b8abb5f2bcc29ee`.
-```solidity
-event GasTracked(uint256 indexed periodIndex, uint256 gasUsed, uint256 gasPrice);
-```*/
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    #[derive(Clone)]
-    pub struct GasTracked {
-        #[allow(missing_docs)]
-        pub periodIndex: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub gasUsed: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub gasPrice: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[automatically_derived]
-        impl alloy_sol_types::SolEvent for GasTracked {
-            type DataTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            type DataToken<'a> = <Self::DataTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type TopicList = (
-                alloy_sol_types::sol_data::FixedBytes<32>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            const SIGNATURE: &'static str = "GasTracked(uint256,uint256,uint256)";
-            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                45u8, 156u8, 71u8, 173u8, 85u8, 59u8, 99u8, 187u8, 186u8, 209u8, 129u8,
-                157u8, 79u8, 217u8, 125u8, 160u8, 136u8, 80u8, 92u8, 150u8, 165u8, 129u8,
-                130u8, 105u8, 27u8, 138u8, 187u8, 95u8, 43u8, 204u8, 41u8, 238u8,
-            ]);
-            const ANONYMOUS: bool = false;
-            #[allow(unused_variables)]
-            #[inline]
-            fn new(
-                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
-                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                Self {
-                    periodIndex: topics.1,
-                    gasUsed: data.0,
-                    gasPrice: data.1,
-                }
-            }
-            #[inline]
-            fn check_signature(
-                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
-            ) -> alloy_sol_types::Result<()> {
-                if topics.0 != Self::SIGNATURE_HASH {
-                    return Err(
-                        alloy_sol_types::Error::invalid_event_signature_hash(
-                            Self::SIGNATURE,
-                            topics.0,
-                            Self::SIGNATURE_HASH,
-                        ),
-                    );
-                }
-                Ok(())
-            }
-            #[inline]
-            fn tokenize_body(&self) -> Self::DataToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.gasUsed),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.gasPrice),
-                )
-            }
-            #[inline]
-            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
-                (Self::SIGNATURE_HASH.into(), self.periodIndex.clone())
-            }
-            #[inline]
-            fn encode_topics_raw(
-                &self,
-                out: &mut [alloy_sol_types::abi::token::WordToken],
-            ) -> alloy_sol_types::Result<()> {
-                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
-                    return Err(alloy_sol_types::Error::Overrun);
-                }
-                out[0usize] = alloy_sol_types::abi::token::WordToken(
-                    Self::SIGNATURE_HASH,
-                );
-                out[1usize] = <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic(&self.periodIndex);
-                Ok(())
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::private::IntoLogData for GasTracked {
-            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
-                From::from(self)
-            }
-            fn into_log_data(self) -> alloy_sol_types::private::LogData {
-                From::from(&self)
-            }
-        }
-        #[automatically_derived]
-        impl From<&GasTracked> for alloy_sol_types::private::LogData {
-            #[inline]
-            fn from(this: &GasTracked) -> alloy_sol_types::private::LogData {
-                alloy_sol_types::SolEvent::encode_log_data(this)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Event with signature `NewPeriodStarted(uint256,uint256)` and selector `0x41f1e08f21cc818cf0cffb3a62609fb6a3cbc9b3671b011e285e17a1ebb4688e`.
-```solidity
-event NewPeriodStarted(uint256 indexed periodIndex, uint256 startTimestamp);
-```*/
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    #[derive(Clone)]
-    pub struct NewPeriodStarted {
-        #[allow(missing_docs)]
-        pub periodIndex: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub startTimestamp: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[automatically_derived]
-        impl alloy_sol_types::SolEvent for NewPeriodStarted {
-            type DataTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type DataToken<'a> = <Self::DataTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type TopicList = (
-                alloy_sol_types::sol_data::FixedBytes<32>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            const SIGNATURE: &'static str = "NewPeriodStarted(uint256,uint256)";
-            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                65u8, 241u8, 224u8, 143u8, 33u8, 204u8, 129u8, 140u8, 240u8, 207u8,
-                251u8, 58u8, 98u8, 96u8, 159u8, 182u8, 163u8, 203u8, 201u8, 179u8, 103u8,
-                27u8, 1u8, 30u8, 40u8, 94u8, 23u8, 161u8, 235u8, 180u8, 104u8, 142u8,
-            ]);
-            const ANONYMOUS: bool = false;
-            #[allow(unused_variables)]
-            #[inline]
-            fn new(
-                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
-                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                Self {
-                    periodIndex: topics.1,
-                    startTimestamp: data.0,
-                }
-            }
-            #[inline]
-            fn check_signature(
-                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
-            ) -> alloy_sol_types::Result<()> {
-                if topics.0 != Self::SIGNATURE_HASH {
-                    return Err(
-                        alloy_sol_types::Error::invalid_event_signature_hash(
-                            Self::SIGNATURE,
-                            topics.0,
-                            Self::SIGNATURE_HASH,
-                        ),
-                    );
-                }
-                Ok(())
-            }
-            #[inline]
-            fn tokenize_body(&self) -> Self::DataToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.startTimestamp),
-                )
-            }
-            #[inline]
-            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
-                (Self::SIGNATURE_HASH.into(), self.periodIndex.clone())
-            }
-            #[inline]
-            fn encode_topics_raw(
-                &self,
-                out: &mut [alloy_sol_types::abi::token::WordToken],
-            ) -> alloy_sol_types::Result<()> {
-                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
-                    return Err(alloy_sol_types::Error::Overrun);
-                }
-                out[0usize] = alloy_sol_types::abi::token::WordToken(
-                    Self::SIGNATURE_HASH,
-                );
-                out[1usize] = <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic(&self.periodIndex);
-                Ok(())
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::private::IntoLogData for NewPeriodStarted {
-            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
-                From::from(self)
-            }
-            fn into_log_data(self) -> alloy_sol_types::private::LogData {
-                From::from(&self)
-            }
-        }
-        #[automatically_derived]
-        impl From<&NewPeriodStarted> for alloy_sol_types::private::LogData {
-            #[inline]
-            fn from(this: &NewPeriodStarted) -> alloy_sol_types::private::LogData {
-                alloy_sol_types::SolEvent::encode_log_data(this)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `OwnershipTransferred(address,address)` and selector `0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0`.
 ```solidity
 event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -2032,132 +992,6 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
         impl From<&OwnershipTransferred> for alloy_sol_types::private::LogData {
             #[inline]
             fn from(this: &OwnershipTransferred) -> alloy_sol_types::private::LogData {
-                alloy_sol_types::SolEvent::encode_log_data(this)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Event with signature `PeriodFinalized(uint256,uint256,uint256)` and selector `0x48a298f9d376b82a7174a798e90cf1209495fdd68b0c11eb11beabacc2d29cf5`.
-```solidity
-event PeriodFinalized(uint256 indexed periodIndex, uint256 totalGasUsed, uint256 duration);
-```*/
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    #[derive(Clone)]
-    pub struct PeriodFinalized {
-        #[allow(missing_docs)]
-        pub periodIndex: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub totalGasUsed: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub duration: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[automatically_derived]
-        impl alloy_sol_types::SolEvent for PeriodFinalized {
-            type DataTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            type DataToken<'a> = <Self::DataTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type TopicList = (
-                alloy_sol_types::sol_data::FixedBytes<32>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            const SIGNATURE: &'static str = "PeriodFinalized(uint256,uint256,uint256)";
-            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                72u8, 162u8, 152u8, 249u8, 211u8, 118u8, 184u8, 42u8, 113u8, 116u8,
-                167u8, 152u8, 233u8, 12u8, 241u8, 32u8, 148u8, 149u8, 253u8, 214u8,
-                139u8, 12u8, 17u8, 235u8, 17u8, 190u8, 171u8, 172u8, 194u8, 210u8, 156u8,
-                245u8,
-            ]);
-            const ANONYMOUS: bool = false;
-            #[allow(unused_variables)]
-            #[inline]
-            fn new(
-                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
-                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                Self {
-                    periodIndex: topics.1,
-                    totalGasUsed: data.0,
-                    duration: data.1,
-                }
-            }
-            #[inline]
-            fn check_signature(
-                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
-            ) -> alloy_sol_types::Result<()> {
-                if topics.0 != Self::SIGNATURE_HASH {
-                    return Err(
-                        alloy_sol_types::Error::invalid_event_signature_hash(
-                            Self::SIGNATURE,
-                            topics.0,
-                            Self::SIGNATURE_HASH,
-                        ),
-                    );
-                }
-                Ok(())
-            }
-            #[inline]
-            fn tokenize_body(&self) -> Self::DataToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.totalGasUsed),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.duration),
-                )
-            }
-            #[inline]
-            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
-                (Self::SIGNATURE_HASH.into(), self.periodIndex.clone())
-            }
-            #[inline]
-            fn encode_topics_raw(
-                &self,
-                out: &mut [alloy_sol_types::abi::token::WordToken],
-            ) -> alloy_sol_types::Result<()> {
-                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
-                    return Err(alloy_sol_types::Error::Overrun);
-                }
-                out[0usize] = alloy_sol_types::abi::token::WordToken(
-                    Self::SIGNATURE_HASH,
-                );
-                out[1usize] = <alloy::sol_types::sol_data::Uint<
-                    256,
-                > as alloy_sol_types::EventTopic>::encode_topic(&self.periodIndex);
-                Ok(())
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::private::IntoLogData for PeriodFinalized {
-            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
-                From::from(self)
-            }
-            fn into_log_data(self) -> alloy_sol_types::private::LogData {
-                From::from(&self)
-            }
-        }
-        #[automatically_derived]
-        impl From<&PeriodFinalized> for alloy_sol_types::private::LogData {
-            #[inline]
-            fn from(this: &PeriodFinalized) -> alloy_sol_types::private::LogData {
                 alloy_sol_types::SolEvent::encode_log_data(this)
             }
         }
@@ -3075,21 +1909,21 @@ function calculateEffectivePriority(uint256 originalPriority, uint256 submittedT
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `cumulativeGasFees()` and selector `0xff7b3084`.
+    /**Function with signature `factory()` and selector `0xc45a0155`.
 ```solidity
-function cumulativeGasFees() external view returns (uint256);
+function factory() external view returns (address);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct cumulativeGasFeesCall;
+    pub struct factoryCall;
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`cumulativeGasFees()`](cumulativeGasFeesCall) function.
+    ///Container type for the return parameters of the [`factory()`](factoryCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct cumulativeGasFeesReturn {
+    pub struct factoryReturn {
         #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+        pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
         non_camel_case_types,
@@ -3118,16 +1952,14 @@ function cumulativeGasFees() external view returns (uint256);
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<cumulativeGasFeesCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: cumulativeGasFeesCall) -> Self {
+            impl ::core::convert::From<factoryCall> for UnderlyingRustTuple<'_> {
+                fn from(value: factoryCall) -> Self {
                     ()
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for cumulativeGasFeesCall {
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for factoryCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self
                 }
@@ -3136,11 +1968,9 @@ function cumulativeGasFees() external view returns (uint256);
         {
             #[doc(hidden)]
             #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
+            type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
             fn _type_assertion(
@@ -3154,34 +1984,32 @@ function cumulativeGasFees() external view returns (uint256);
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<cumulativeGasFeesReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: cumulativeGasFeesReturn) -> Self {
+            impl ::core::convert::From<factoryReturn> for UnderlyingRustTuple<'_> {
+                fn from(value: factoryReturn) -> Self {
                     (value._0,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for cumulativeGasFeesReturn {
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for factoryReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { _0: tuple.0 }
                 }
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for cumulativeGasFeesCall {
+        impl alloy_sol_types::SolCall for factoryCall {
             type Parameters<'a> = ();
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Return = alloy::sol_types::private::Address;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "cumulativeGasFees()";
-            const SELECTOR: [u8; 4] = [255u8, 123u8, 48u8, 132u8];
+            const SIGNATURE: &'static str = "factory()";
+            const SELECTOR: [u8; 4] = [196u8, 90u8, 1u8, 85u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -3195,589 +2023,7 @@ function cumulativeGasFees() external view returns (uint256);
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
                 (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: cumulativeGasFeesReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: cumulativeGasFeesReturn = r.into();
-                        r._0
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `currentPeriodIndex()` and selector `0x61543801`.
-```solidity
-function currentPeriodIndex() external view returns (uint256);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct currentPeriodIndexCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`currentPeriodIndex()`](currentPeriodIndexCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct currentPeriodIndexReturn {
-        #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<currentPeriodIndexCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: currentPeriodIndexCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for currentPeriodIndexCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<currentPeriodIndexReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: currentPeriodIndexReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for currentPeriodIndexReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for currentPeriodIndexCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "currentPeriodIndex()";
-            const SELECTOR: [u8; 4] = [97u8, 84u8, 56u8, 1u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: currentPeriodIndexReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: currentPeriodIndexReturn = r.into();
-                        r._0
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `disableGasTracking()` and selector `0x5467cb48`.
-```solidity
-function disableGasTracking() external;
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct disableGasTrackingCall;
-    ///Container type for the return parameters of the [`disableGasTracking()`](disableGasTrackingCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct disableGasTrackingReturn {}
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<disableGasTrackingCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: disableGasTrackingCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for disableGasTrackingCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<disableGasTrackingReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: disableGasTrackingReturn) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for disableGasTrackingReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        impl disableGasTrackingReturn {
-            fn _tokenize(
-                &self,
-            ) -> <disableGasTrackingCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for disableGasTrackingCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = disableGasTrackingReturn;
-            type ReturnTuple<'a> = ();
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "disableGasTracking()";
-            const SELECTOR: [u8; 4] = [84u8, 103u8, 203u8, 72u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                disableGasTrackingReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Into::into)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `enableGasTracking()` and selector `0xde1f453e`.
-```solidity
-function enableGasTracking() external;
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct enableGasTrackingCall;
-    ///Container type for the return parameters of the [`enableGasTracking()`](enableGasTrackingCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct enableGasTrackingReturn {}
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<enableGasTrackingCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: enableGasTrackingCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for enableGasTrackingCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<enableGasTrackingReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: enableGasTrackingReturn) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for enableGasTrackingReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        impl enableGasTrackingReturn {
-            fn _tokenize(
-                &self,
-            ) -> <enableGasTrackingCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for enableGasTrackingCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = enableGasTrackingReturn;
-            type ReturnTuple<'a> = ();
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "enableGasTracking()";
-            const SELECTOR: [u8; 4] = [222u8, 31u8, 69u8, 62u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                enableGasTrackingReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Into::into)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `gasTrackingEnabled()` and selector `0x84fab62b`.
-```solidity
-function gasTrackingEnabled() external view returns (bool);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct gasTrackingEnabledCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`gasTrackingEnabled()`](gasTrackingEnabledCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct gasTrackingEnabledReturn {
-        #[allow(missing_docs)]
-        pub _0: bool,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<gasTrackingEnabledCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: gasTrackingEnabledCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for gasTrackingEnabledCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (bool,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<gasTrackingEnabledReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: gasTrackingEnabledReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for gasTrackingEnabledReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for gasTrackingEnabledCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "gasTrackingEnabled()";
-            const SELECTOR: [u8; 4] = [132u8, 250u8, 182u8, 43u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         ret,
                     ),
                 )
@@ -3788,7 +2034,7 @@ function gasTrackingEnabled() external view returns (bool);
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
                     .map(|r| {
-                        let r: gasTrackingEnabledReturn = r.into();
+                        let r: factoryReturn = r.into();
                         r._0
                     })
             }
@@ -3800,1382 +2046,8 @@ function gasTrackingEnabled() external view returns (bool);
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
-                        let r: gasTrackingEnabledReturn = r.into();
+                        let r: factoryReturn = r.into();
                         r._0
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `gasTrackingInitialized()` and selector `0x3b6ab2a9`.
-```solidity
-function gasTrackingInitialized() external view returns (bool);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct gasTrackingInitializedCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`gasTrackingInitialized()`](gasTrackingInitializedCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct gasTrackingInitializedReturn {
-        #[allow(missing_docs)]
-        pub _0: bool,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<gasTrackingInitializedCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: gasTrackingInitializedCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for gasTrackingInitializedCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (bool,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<gasTrackingInitializedReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: gasTrackingInitializedReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for gasTrackingInitializedReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for gasTrackingInitializedCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "gasTrackingInitialized()";
-            const SELECTOR: [u8; 4] = [59u8, 106u8, 178u8, 169u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: gasTrackingInitializedReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: gasTrackingInitializedReturn = r.into();
-                        r._0
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getCumulativeGasFees()` and selector `0x7fbd295e`.
-```solidity
-function getCumulativeGasFees() external view returns (uint256 totalCost);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getCumulativeGasFeesCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getCumulativeGasFees()`](getCumulativeGasFeesCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getCumulativeGasFeesReturn {
-        #[allow(missing_docs)]
-        pub totalCost: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getCumulativeGasFeesCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getCumulativeGasFeesCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getCumulativeGasFeesCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getCumulativeGasFeesReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getCumulativeGasFeesReturn) -> Self {
-                    (value.totalCost,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getCumulativeGasFeesReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { totalCost: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getCumulativeGasFeesCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getCumulativeGasFees()";
-            const SELECTOR: [u8; 4] = [127u8, 189u8, 41u8, 94u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getCumulativeGasFeesReturn = r.into();
-                        r.totalCost
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getCumulativeGasFeesReturn = r.into();
-                        r.totalCost
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getCurrentPeriod()` and selector `0x086146d2`.
-```solidity
-function getCurrentPeriod() external view returns (GasCounter.GasPeriod memory period);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getCurrentPeriodCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getCurrentPeriod()`](getCurrentPeriodCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getCurrentPeriodReturn {
-        #[allow(missing_docs)]
-        pub period: <GasCounter::GasPeriod as alloy::sol_types::SolType>::RustType,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getCurrentPeriodCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getCurrentPeriodCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getCurrentPeriodCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (GasCounter::GasPeriod,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                <GasCounter::GasPeriod as alloy::sol_types::SolType>::RustType,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getCurrentPeriodReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getCurrentPeriodReturn) -> Self {
-                    (value.period,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getCurrentPeriodReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { period: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getCurrentPeriodCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = <GasCounter::GasPeriod as alloy::sol_types::SolType>::RustType;
-            type ReturnTuple<'a> = (GasCounter::GasPeriod,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getCurrentPeriod()";
-            const SELECTOR: [u8; 4] = [8u8, 97u8, 70u8, 210u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (<GasCounter::GasPeriod as alloy_sol_types::SolType>::tokenize(ret),)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getCurrentPeriodReturn = r.into();
-                        r.period
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getCurrentPeriodReturn = r.into();
-                        r.period
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getCurrentPeriodGasUsed()` and selector `0xc660d3f3`.
-```solidity
-function getCurrentPeriodGasUsed() external view returns (uint256 totalGas);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getCurrentPeriodGasUsedCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getCurrentPeriodGasUsed()`](getCurrentPeriodGasUsedCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getCurrentPeriodGasUsedReturn {
-        #[allow(missing_docs)]
-        pub totalGas: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getCurrentPeriodGasUsedCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getCurrentPeriodGasUsedCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getCurrentPeriodGasUsedCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getCurrentPeriodGasUsedReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getCurrentPeriodGasUsedReturn) -> Self {
-                    (value.totalGas,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getCurrentPeriodGasUsedReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { totalGas: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getCurrentPeriodGasUsedCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getCurrentPeriodGasUsed()";
-            const SELECTOR: [u8; 4] = [198u8, 96u8, 211u8, 243u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getCurrentPeriodGasUsedReturn = r.into();
-                        r.totalGas
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getCurrentPeriodGasUsedReturn = r.into();
-                        r.totalGas
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getCurrentPeriodTimeRemaining()` and selector `0x82f44ade`.
-```solidity
-function getCurrentPeriodTimeRemaining() external view returns (uint256 timeRemaining);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getCurrentPeriodTimeRemainingCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getCurrentPeriodTimeRemaining()`](getCurrentPeriodTimeRemainingCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getCurrentPeriodTimeRemainingReturn {
-        #[allow(missing_docs)]
-        pub timeRemaining: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getCurrentPeriodTimeRemainingCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getCurrentPeriodTimeRemainingCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getCurrentPeriodTimeRemainingCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getCurrentPeriodTimeRemainingReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getCurrentPeriodTimeRemainingReturn) -> Self {
-                    (value.timeRemaining,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getCurrentPeriodTimeRemainingReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { timeRemaining: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getCurrentPeriodTimeRemainingCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getCurrentPeriodTimeRemaining()";
-            const SELECTOR: [u8; 4] = [130u8, 244u8, 74u8, 222u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getCurrentPeriodTimeRemainingReturn = r.into();
-                        r.timeRemaining
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getCurrentPeriodTimeRemainingReturn = r.into();
-                        r.timeRemaining
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getGasFeesInRange(uint256,uint256)` and selector `0xf7b8935e`.
-```solidity
-function getGasFeesInRange(uint256 startCumulative, uint256 endCumulative) external pure returns (uint256 feesDuring);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getGasFeesInRangeCall {
-        #[allow(missing_docs)]
-        pub startCumulative: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub endCumulative: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getGasFeesInRange(uint256,uint256)`](getGasFeesInRangeCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getGasFeesInRangeReturn {
-        #[allow(missing_docs)]
-        pub feesDuring: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getGasFeesInRangeCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getGasFeesInRangeCall) -> Self {
-                    (value.startCumulative, value.endCumulative)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getGasFeesInRangeCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {
-                        startCumulative: tuple.0,
-                        endCumulative: tuple.1,
-                    }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getGasFeesInRangeReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getGasFeesInRangeReturn) -> Self {
-                    (value.feesDuring,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getGasFeesInRangeReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { feesDuring: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getGasFeesInRangeCall {
-            type Parameters<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getGasFeesInRange(uint256,uint256)";
-            const SELECTOR: [u8; 4] = [247u8, 184u8, 147u8, 94u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.startCumulative),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.endCumulative),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getGasFeesInRangeReturn = r.into();
-                        r.feesDuring
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getGasFeesInRangeReturn = r.into();
-                        r.feesDuring
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getPeriod(uint256)` and selector `0x4b2c0706`.
-```solidity
-function getPeriod(uint256 periodIndex) external view returns (GasCounter.GasPeriod memory period);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getPeriodCall {
-        #[allow(missing_docs)]
-        pub periodIndex: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getPeriod(uint256)`](getPeriodCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getPeriodReturn {
-        #[allow(missing_docs)]
-        pub period: <GasCounter::GasPeriod as alloy::sol_types::SolType>::RustType,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getPeriodCall> for UnderlyingRustTuple<'_> {
-                fn from(value: getPeriodCall) -> Self {
-                    (value.periodIndex,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getPeriodCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { periodIndex: tuple.0 }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (GasCounter::GasPeriod,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                <GasCounter::GasPeriod as alloy::sol_types::SolType>::RustType,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getPeriodReturn> for UnderlyingRustTuple<'_> {
-                fn from(value: getPeriodReturn) -> Self {
-                    (value.period,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getPeriodReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { period: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getPeriodCall {
-            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = <GasCounter::GasPeriod as alloy::sol_types::SolType>::RustType;
-            type ReturnTuple<'a> = (GasCounter::GasPeriod,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getPeriod(uint256)";
-            const SELECTOR: [u8; 4] = [75u8, 44u8, 7u8, 6u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.periodIndex),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (<GasCounter::GasPeriod as alloy_sol_types::SolType>::tokenize(ret),)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getPeriodReturn = r.into();
-                        r.period
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getPeriodReturn = r.into();
-                        r.period
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getTotalGasFees()` and selector `0x8d5a239b`.
-```solidity
-function getTotalGasFees() external view returns (uint256 totalCost);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getTotalGasFeesCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getTotalGasFees()`](getTotalGasFeesCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getTotalGasFeesReturn {
-        #[allow(missing_docs)]
-        pub totalCost: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getTotalGasFeesCall> for UnderlyingRustTuple<'_> {
-                fn from(value: getTotalGasFeesCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getTotalGasFeesCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getTotalGasFeesReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getTotalGasFeesReturn) -> Self {
-                    (value.totalCost,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getTotalGasFeesReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { totalCost: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getTotalGasFeesCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getTotalGasFees()";
-            const SELECTOR: [u8; 4] = [141u8, 90u8, 35u8, 155u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getTotalGasFeesReturn = r.into();
-                        r.totalCost
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getTotalGasFeesReturn = r.into();
-                        r.totalCost
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getTotalPeriods()` and selector `0xaff74c6d`.
-```solidity
-function getTotalPeriods() external view returns (uint256 totalPeriods);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getTotalPeriodsCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getTotalPeriods()`](getTotalPeriodsCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getTotalPeriodsReturn {
-        #[allow(missing_docs)]
-        pub totalPeriods: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getTotalPeriodsCall> for UnderlyingRustTuple<'_> {
-                fn from(value: getTotalPeriodsCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getTotalPeriodsCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getTotalPeriodsReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getTotalPeriodsReturn) -> Self {
-                    (value.totalPeriods,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getTotalPeriodsReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { totalPeriods: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getTotalPeriodsCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getTotalPeriods()";
-            const SELECTOR: [u8; 4] = [175u8, 247u8, 76u8, 109u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getTotalPeriodsReturn = r.into();
-                        r.totalPeriods
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getTotalPeriodsReturn = r.into();
-                        r.totalPeriods
                     })
             }
         }
@@ -5521,155 +2393,6 @@ function isAllowed(address proposer, address originator, bytes memory data) exte
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `isGasTrackingInitialized()` and selector `0x18d5aafe`.
-```solidity
-function isGasTrackingInitialized() external view returns (bool initialized);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct isGasTrackingInitializedCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`isGasTrackingInitialized()`](isGasTrackingInitializedCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct isGasTrackingInitializedReturn {
-        #[allow(missing_docs)]
-        pub initialized: bool,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<isGasTrackingInitializedCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: isGasTrackingInitializedCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for isGasTrackingInitializedCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (bool,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<isGasTrackingInitializedReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: isGasTrackingInitializedReturn) -> Self {
-                    (value.initialized,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for isGasTrackingInitializedReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { initialized: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for isGasTrackingInitializedCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "isGasTrackingInitialized()";
-            const SELECTOR: [u8; 4] = [24u8, 213u8, 170u8, 254u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: isGasTrackingInitializedReturn = r.into();
-                        r.initialized
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: isGasTrackingInitializedReturn = r.into();
-                        r.initialized
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `owner()` and selector `0x8da5cb5b`.
 ```solidity
 function owner() external view returns (address);
@@ -5810,347 +2533,6 @@ function owner() external view returns (address);
                         let r: ownerReturn = r.into();
                         r._0
                     })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `periodDuration()` and selector `0xb470aade`.
-```solidity
-function periodDuration() external view returns (uint256);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct periodDurationCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`periodDuration()`](periodDurationCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct periodDurationReturn {
-        #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<periodDurationCall> for UnderlyingRustTuple<'_> {
-                fn from(value: periodDurationCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for periodDurationCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<periodDurationReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: periodDurationReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for periodDurationReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for periodDurationCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "periodDuration()";
-            const SELECTOR: [u8; 4] = [180u8, 112u8, 170u8, 222u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: periodDurationReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: periodDurationReturn = r.into();
-                        r._0
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `periods(uint256)` and selector `0xea4a1104`.
-```solidity
-function periods(uint256) external view returns (uint256 startTimestamp, uint256 endTimestamp, uint256 totalGasUsed, uint256 totalGasCost);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct periodsCall(pub alloy::sol_types::private::primitives::aliases::U256);
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`periods(uint256)`](periodsCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct periodsReturn {
-        #[allow(missing_docs)]
-        pub startTimestamp: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub endTimestamp: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub totalGasUsed: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub totalGasCost: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<periodsCall> for UnderlyingRustTuple<'_> {
-                fn from(value: periodsCall) -> Self {
-                    (value.0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for periodsCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self(tuple.0)
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-                alloy::sol_types::private::primitives::aliases::U256,
-                alloy::sol_types::private::primitives::aliases::U256,
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<periodsReturn> for UnderlyingRustTuple<'_> {
-                fn from(value: periodsReturn) -> Self {
-                    (
-                        value.startTimestamp,
-                        value.endTimestamp,
-                        value.totalGasUsed,
-                        value.totalGasCost,
-                    )
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for periodsReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {
-                        startTimestamp: tuple.0,
-                        endTimestamp: tuple.1,
-                        totalGasUsed: tuple.2,
-                        totalGasCost: tuple.3,
-                    }
-                }
-            }
-        }
-        impl periodsReturn {
-            fn _tokenize(
-                &self,
-            ) -> <periodsCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.startTimestamp),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.endTimestamp),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.totalGasUsed),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.totalGasCost),
-                )
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for periodsCall {
-            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = periodsReturn;
-            type ReturnTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "periods(uint256)";
-            const SELECTOR: [u8; 4] = [234u8, 74u8, 17u8, 4u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.0),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                periodsReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Into::into)
             }
         }
     };
@@ -7868,45 +4250,13 @@ function updateRequirementModule(address _newModule) external;
         #[allow(missing_docs)]
         calculateEffectivePriority(calculateEffectivePriorityCall),
         #[allow(missing_docs)]
-        cumulativeGasFees(cumulativeGasFeesCall),
-        #[allow(missing_docs)]
-        currentPeriodIndex(currentPeriodIndexCall),
-        #[allow(missing_docs)]
-        disableGasTracking(disableGasTrackingCall),
-        #[allow(missing_docs)]
-        enableGasTracking(enableGasTrackingCall),
-        #[allow(missing_docs)]
-        gasTrackingEnabled(gasTrackingEnabledCall),
-        #[allow(missing_docs)]
-        gasTrackingInitialized(gasTrackingInitializedCall),
-        #[allow(missing_docs)]
-        getCumulativeGasFees(getCumulativeGasFeesCall),
-        #[allow(missing_docs)]
-        getCurrentPeriod(getCurrentPeriodCall),
-        #[allow(missing_docs)]
-        getCurrentPeriodGasUsed(getCurrentPeriodGasUsedCall),
-        #[allow(missing_docs)]
-        getCurrentPeriodTimeRemaining(getCurrentPeriodTimeRemainingCall),
-        #[allow(missing_docs)]
-        getGasFeesInRange(getGasFeesInRangeCall),
-        #[allow(missing_docs)]
-        getPeriod(getPeriodCall),
-        #[allow(missing_docs)]
-        getTotalGasFees(getTotalGasFeesCall),
-        #[allow(missing_docs)]
-        getTotalPeriods(getTotalPeriodsCall),
+        factory(factoryCall),
         #[allow(missing_docs)]
         initialize(initializeCall),
         #[allow(missing_docs)]
         isAllowed(isAllowedCall),
         #[allow(missing_docs)]
-        isGasTrackingInitialized(isGasTrackingInitializedCall),
-        #[allow(missing_docs)]
         owner(ownerCall),
-        #[allow(missing_docs)]
-        periodDuration(periodDurationCall),
-        #[allow(missing_docs)]
-        periods(periodsCall),
         #[allow(missing_docs)]
         permissionRequirementModule(permissionRequirementModuleCall),
         #[allow(missing_docs)]
@@ -7940,39 +4290,23 @@ function updateRequirementModule(address _newModule) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [5u8, 14u8, 193u8, 56u8],
-            [8u8, 97u8, 70u8, 210u8],
             [17u8, 153u8, 47u8, 140u8],
-            [24u8, 213u8, 170u8, 254u8],
             [28u8, 11u8, 99u8, 103u8],
             [54u8, 108u8, 186u8, 183u8],
-            [59u8, 106u8, 178u8, 169u8],
             [61u8, 68u8, 174u8, 139u8],
             [70u8, 226u8, 204u8, 9u8],
             [72u8, 92u8, 201u8, 85u8],
-            [75u8, 44u8, 7u8, 6u8],
-            [84u8, 103u8, 203u8, 72u8],
             [91u8, 60u8, 214u8, 226u8],
-            [97u8, 84u8, 56u8, 1u8],
             [113u8, 80u8, 24u8, 166u8],
             [122u8, 57u8, 121u8, 220u8],
-            [127u8, 189u8, 41u8, 94u8],
             [128u8, 78u8, 81u8, 35u8],
-            [130u8, 244u8, 74u8, 222u8],
             [131u8, 211u8, 193u8, 21u8],
-            [132u8, 250u8, 182u8, 43u8],
-            [141u8, 90u8, 35u8, 155u8],
             [141u8, 165u8, 203u8, 91u8],
-            [175u8, 247u8, 76u8, 109u8],
-            [180u8, 112u8, 170u8, 222u8],
-            [198u8, 96u8, 211u8, 243u8],
+            [196u8, 90u8, 1u8, 85u8],
             [205u8, 175u8, 185u8, 120u8],
             [212u8, 240u8, 235u8, 77u8],
             [216u8, 120u8, 19u8, 66u8],
-            [222u8, 31u8, 69u8, 62u8],
-            [234u8, 74u8, 17u8, 4u8],
             [242u8, 253u8, 227u8, 139u8],
-            [247u8, 184u8, 147u8, 94u8],
-            [255u8, 123u8, 48u8, 132u8],
         ];
     }
     #[automatically_derived]
@@ -7980,7 +4314,7 @@ function updateRequirementModule(address _newModule) external;
     for SyndicateSequencingChainWithDecayingPriorityCalls {
         const NAME: &'static str = "SyndicateSequencingChainWithDecayingPriorityCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 34usize;
+        const COUNT: usize = 18usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -7993,62 +4327,14 @@ function updateRequirementModule(address _newModule) external;
                 Self::calculateEffectivePriority(_) => {
                     <calculateEffectivePriorityCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::cumulativeGasFees(_) => {
-                    <cumulativeGasFeesCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::currentPeriodIndex(_) => {
-                    <currentPeriodIndexCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::disableGasTracking(_) => {
-                    <disableGasTrackingCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::enableGasTracking(_) => {
-                    <enableGasTrackingCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::gasTrackingEnabled(_) => {
-                    <gasTrackingEnabledCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::gasTrackingInitialized(_) => {
-                    <gasTrackingInitializedCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getCumulativeGasFees(_) => {
-                    <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getCurrentPeriod(_) => {
-                    <getCurrentPeriodCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getCurrentPeriodGasUsed(_) => {
-                    <getCurrentPeriodGasUsedCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getCurrentPeriodTimeRemaining(_) => {
-                    <getCurrentPeriodTimeRemainingCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getGasFeesInRange(_) => {
-                    <getGasFeesInRangeCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getPeriod(_) => {
-                    <getPeriodCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getTotalGasFees(_) => {
-                    <getTotalGasFeesCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getTotalPeriods(_) => {
-                    <getTotalPeriodsCall as alloy_sol_types::SolCall>::SELECTOR
-                }
+                Self::factory(_) => <factoryCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::initialize(_) => {
                     <initializeCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::isAllowed(_) => {
                     <isAllowedCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::isGasTrackingInitialized(_) => {
-                    <isGasTrackingInitializedCall as alloy_sol_types::SolCall>::SELECTOR
-                }
                 Self::owner(_) => <ownerCall as alloy_sol_types::SolCall>::SELECTOR,
-                Self::periodDuration(_) => {
-                    <periodDurationCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::periods(_) => <periodsCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::permissionRequirementModule(_) => {
                     <permissionRequirementModuleCall as alloy_sol_types::SolCall>::SELECTOR
                 }
@@ -8119,21 +4405,6 @@ function updateRequirementModule(address _newModule) external;
                     processTransactionUncompressed_0
                 },
                 {
-                    fn getCurrentPeriod(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getCurrentPeriodCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getCurrentPeriod,
-                            )
-                    }
-                    getCurrentPeriod
-                },
-                {
                     fn processTransactionsBulk_0(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8147,21 +4418,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     processTransactionsBulk_0
-                },
-                {
-                    fn isGasTrackingInitialized(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <isGasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::isGasTrackingInitialized,
-                            )
-                    }
-                    isGasTrackingInitialized
                 },
                 {
                     fn processTransaction_0(
@@ -8192,21 +4448,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     prependZeroByte
-                },
-                {
-                    fn gasTrackingInitialized(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <gasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::gasTrackingInitialized,
-                            )
-                    }
-                    gasTrackingInitialized
                 },
                 {
                     fn PRIORITY_DECAY_RATE(
@@ -8254,34 +4495,6 @@ function updateRequirementModule(address _newModule) external;
                     initialize
                 },
                 {
-                    fn getPeriod(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getPeriodCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getPeriod,
-                            )
-                    }
-                    getPeriod
-                },
-                {
-                    fn disableGasTracking(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <disableGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::disableGasTracking,
-                            )
-                    }
-                    disableGasTracking
-                },
-                {
                     fn permissionRequirementModule(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8295,21 +4508,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     permissionRequirementModule
-                },
-                {
-                    fn currentPeriodIndex(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <currentPeriodIndexCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::currentPeriodIndex,
-                            )
-                    }
-                    currentPeriodIndex
                 },
                 {
                     fn renounceOwnership(
@@ -8340,21 +4538,6 @@ function updateRequirementModule(address _newModule) external;
                     isAllowed
                 },
                 {
-                    fn getCumulativeGasFees(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getCumulativeGasFees,
-                            )
-                    }
-                    getCumulativeGasFees
-                },
-                {
                     fn processTransactionUncompressed_1(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8368,21 +4551,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     processTransactionUncompressed_1
-                },
-                {
-                    fn getCurrentPeriodTimeRemaining(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getCurrentPeriodTimeRemainingCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getCurrentPeriodTimeRemaining,
-                            )
-                    }
-                    getCurrentPeriodTimeRemaining
                 },
                 {
                     fn calculateEffectivePriority(
@@ -8400,36 +4568,6 @@ function updateRequirementModule(address _newModule) external;
                     calculateEffectivePriority
                 },
                 {
-                    fn gasTrackingEnabled(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <gasTrackingEnabledCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::gasTrackingEnabled,
-                            )
-                    }
-                    gasTrackingEnabled
-                },
-                {
-                    fn getTotalGasFees(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getTotalGasFeesCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getTotalGasFees,
-                            )
-                    }
-                    getTotalGasFees
-                },
-                {
                     fn owner(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8443,49 +4581,17 @@ function updateRequirementModule(address _newModule) external;
                     owner
                 },
                 {
-                    fn getTotalPeriods(
+                    fn factory(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
                         SyndicateSequencingChainWithDecayingPriorityCalls,
                     > {
-                        <getTotalPeriodsCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
+                        <factoryCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getTotalPeriods,
+                                SyndicateSequencingChainWithDecayingPriorityCalls::factory,
                             )
                     }
-                    getTotalPeriods
-                },
-                {
-                    fn periodDuration(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <periodDurationCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::periodDuration,
-                            )
-                    }
-                    periodDuration
-                },
-                {
-                    fn getCurrentPeriodGasUsed(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getCurrentPeriodGasUsedCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getCurrentPeriodGasUsed,
-                            )
-                    }
-                    getCurrentPeriodGasUsed
+                    factory
                 },
                 {
                     fn processTransactionsBulk_1(
@@ -8533,34 +4639,6 @@ function updateRequirementModule(address _newModule) external;
                     appchainId
                 },
                 {
-                    fn enableGasTracking(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <enableGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::enableGasTracking,
-                            )
-                    }
-                    enableGasTracking
-                },
-                {
-                    fn periods(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <periodsCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::periods,
-                            )
-                    }
-                    periods
-                },
-                {
                     fn transferOwnership(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8574,36 +4652,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     transferOwnership
-                },
-                {
-                    fn getGasFeesInRange(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getGasFeesInRangeCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getGasFeesInRange,
-                            )
-                    }
-                    getGasFeesInRange
-                },
-                {
-                    fn cumulativeGasFees(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <cumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::cumulativeGasFees,
-                            )
-                    }
-                    cumulativeGasFees
                 },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
@@ -8643,21 +4691,6 @@ function updateRequirementModule(address _newModule) external;
                     processTransactionUncompressed_0
                 },
                 {
-                    fn getCurrentPeriod(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getCurrentPeriodCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getCurrentPeriod,
-                            )
-                    }
-                    getCurrentPeriod
-                },
-                {
                     fn processTransactionsBulk_0(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8671,21 +4704,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     processTransactionsBulk_0
-                },
-                {
-                    fn isGasTrackingInitialized(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <isGasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::isGasTrackingInitialized,
-                            )
-                    }
-                    isGasTrackingInitialized
                 },
                 {
                     fn processTransaction_0(
@@ -8716,21 +4734,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     prependZeroByte
-                },
-                {
-                    fn gasTrackingInitialized(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <gasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::gasTrackingInitialized,
-                            )
-                    }
-                    gasTrackingInitialized
                 },
                 {
                     fn PRIORITY_DECAY_RATE(
@@ -8778,36 +4781,6 @@ function updateRequirementModule(address _newModule) external;
                     initialize
                 },
                 {
-                    fn getPeriod(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getPeriodCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getPeriod,
-                            )
-                    }
-                    getPeriod
-                },
-                {
-                    fn disableGasTracking(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <disableGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::disableGasTracking,
-                            )
-                    }
-                    disableGasTracking
-                },
-                {
                     fn permissionRequirementModule(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8821,21 +4794,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     permissionRequirementModule
-                },
-                {
-                    fn currentPeriodIndex(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <currentPeriodIndexCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::currentPeriodIndex,
-                            )
-                    }
-                    currentPeriodIndex
                 },
                 {
                     fn renounceOwnership(
@@ -8868,21 +4826,6 @@ function updateRequirementModule(address _newModule) external;
                     isAllowed
                 },
                 {
-                    fn getCumulativeGasFees(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getCumulativeGasFees,
-                            )
-                    }
-                    getCumulativeGasFees
-                },
-                {
                     fn processTransactionUncompressed_1(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8896,21 +4839,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     processTransactionUncompressed_1
-                },
-                {
-                    fn getCurrentPeriodTimeRemaining(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getCurrentPeriodTimeRemainingCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getCurrentPeriodTimeRemaining,
-                            )
-                    }
-                    getCurrentPeriodTimeRemaining
                 },
                 {
                     fn calculateEffectivePriority(
@@ -8928,36 +4856,6 @@ function updateRequirementModule(address _newModule) external;
                     calculateEffectivePriority
                 },
                 {
-                    fn gasTrackingEnabled(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <gasTrackingEnabledCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::gasTrackingEnabled,
-                            )
-                    }
-                    gasTrackingEnabled
-                },
-                {
-                    fn getTotalGasFees(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getTotalGasFeesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getTotalGasFees,
-                            )
-                    }
-                    getTotalGasFees
-                },
-                {
                     fn owner(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -8973,49 +4871,19 @@ function updateRequirementModule(address _newModule) external;
                     owner
                 },
                 {
-                    fn getTotalPeriods(
+                    fn factory(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
                         SyndicateSequencingChainWithDecayingPriorityCalls,
                     > {
-                        <getTotalPeriodsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <factoryCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
                             )
                             .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getTotalPeriods,
+                                SyndicateSequencingChainWithDecayingPriorityCalls::factory,
                             )
                     }
-                    getTotalPeriods
-                },
-                {
-                    fn periodDuration(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <periodDurationCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::periodDuration,
-                            )
-                    }
-                    periodDuration
-                },
-                {
-                    fn getCurrentPeriodGasUsed(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getCurrentPeriodGasUsedCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getCurrentPeriodGasUsed,
-                            )
-                    }
-                    getCurrentPeriodGasUsed
+                    factory
                 },
                 {
                     fn processTransactionsBulk_1(
@@ -9063,36 +4931,6 @@ function updateRequirementModule(address _newModule) external;
                     appchainId
                 },
                 {
-                    fn enableGasTracking(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <enableGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::enableGasTracking,
-                            )
-                    }
-                    enableGasTracking
-                },
-                {
-                    fn periods(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <periodsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::periods,
-                            )
-                    }
-                    periods
-                },
-                {
                     fn transferOwnership(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<
@@ -9106,36 +4944,6 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     transferOwnership
-                },
-                {
-                    fn getGasFeesInRange(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <getGasFeesInRangeCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::getGasFeesInRange,
-                            )
-                    }
-                    getGasFeesInRange
-                },
-                {
-                    fn cumulativeGasFees(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<
-                        SyndicateSequencingChainWithDecayingPriorityCalls,
-                    > {
-                        <cumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(
-                                SyndicateSequencingChainWithDecayingPriorityCalls::cumulativeGasFees,
-                            )
-                    }
-                    cumulativeGasFees
                 },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
@@ -9164,73 +4972,8 @@ function updateRequirementModule(address _newModule) external;
                         inner,
                     )
                 }
-                Self::cumulativeGasFees(inner) => {
-                    <cumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::currentPeriodIndex(inner) => {
-                    <currentPeriodIndexCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::disableGasTracking(inner) => {
-                    <disableGasTrackingCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::enableGasTracking(inner) => {
-                    <enableGasTrackingCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::gasTrackingEnabled(inner) => {
-                    <gasTrackingEnabledCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::gasTrackingInitialized(inner) => {
-                    <gasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::getCumulativeGasFees(inner) => {
-                    <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::getCurrentPeriod(inner) => {
-                    <getCurrentPeriodCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::getCurrentPeriodGasUsed(inner) => {
-                    <getCurrentPeriodGasUsedCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::getCurrentPeriodTimeRemaining(inner) => {
-                    <getCurrentPeriodTimeRemainingCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::getGasFeesInRange(inner) => {
-                    <getGasFeesInRangeCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::getPeriod(inner) => {
-                    <getPeriodCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
-                }
-                Self::getTotalGasFees(inner) => {
-                    <getTotalGasFeesCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::getTotalPeriods(inner) => {
-                    <getTotalPeriodsCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
+                Self::factory(inner) => {
+                    <factoryCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
                 Self::initialize(inner) => {
                     <initializeCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
@@ -9238,21 +4981,8 @@ function updateRequirementModule(address _newModule) external;
                 Self::isAllowed(inner) => {
                     <isAllowedCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
-                Self::isGasTrackingInitialized(inner) => {
-                    <isGasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
-                }
-                Self::periodDuration(inner) => {
-                    <periodDurationCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::periods(inner) => {
-                    <periodsCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
                 Self::permissionRequirementModule(inner) => {
                     <permissionRequirementModuleCall as alloy_sol_types::SolCall>::abi_encoded_size(
@@ -9332,89 +5062,8 @@ function updateRequirementModule(address _newModule) external;
                         out,
                     )
                 }
-                Self::cumulativeGasFees(inner) => {
-                    <cumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::currentPeriodIndex(inner) => {
-                    <currentPeriodIndexCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::disableGasTracking(inner) => {
-                    <disableGasTrackingCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::enableGasTracking(inner) => {
-                    <enableGasTrackingCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::gasTrackingEnabled(inner) => {
-                    <gasTrackingEnabledCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::gasTrackingInitialized(inner) => {
-                    <gasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getCumulativeGasFees(inner) => {
-                    <getCumulativeGasFeesCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getCurrentPeriod(inner) => {
-                    <getCurrentPeriodCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getCurrentPeriodGasUsed(inner) => {
-                    <getCurrentPeriodGasUsedCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getCurrentPeriodTimeRemaining(inner) => {
-                    <getCurrentPeriodTimeRemainingCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getGasFeesInRange(inner) => {
-                    <getGasFeesInRangeCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getPeriod(inner) => {
-                    <getPeriodCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getTotalGasFees(inner) => {
-                    <getTotalGasFeesCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getTotalPeriods(inner) => {
-                    <getTotalPeriodsCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
+                Self::factory(inner) => {
+                    <factoryCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
                 Self::initialize(inner) => {
                     <initializeCall as alloy_sol_types::SolCall>::abi_encode_raw(
@@ -9428,23 +5077,8 @@ function updateRequirementModule(address _newModule) external;
                         out,
                     )
                 }
-                Self::isGasTrackingInitialized(inner) => {
-                    <isGasTrackingInitializedCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
-                }
-                Self::periodDuration(inner) => {
-                    <periodDurationCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::periods(inner) => {
-                    <periodsCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
                 Self::permissionRequirementModule(inner) => {
                     <permissionRequirementModuleCall as alloy_sol_types::SolCall>::abi_encode_raw(
@@ -9845,13 +5479,7 @@ function updateRequirementModule(address _newModule) external;
     #[derive()]
     pub enum SyndicateSequencingChainWithDecayingPriorityEvents {
         #[allow(missing_docs)]
-        GasTracked(GasTracked),
-        #[allow(missing_docs)]
-        NewPeriodStarted(NewPeriodStarted),
-        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
-        #[allow(missing_docs)]
-        PeriodFinalized(PeriodFinalized),
         #[allow(missing_docs)]
         RequirementModuleUpdated(RequirementModuleUpdated),
         #[allow(missing_docs)]
@@ -9874,22 +5502,6 @@ function updateRequirementModule(address _newModule) external;
                 118u8, 127u8, 226u8, 63u8, 17u8, 145u8, 110u8, 47u8, 4u8, 185u8,
             ],
             [
-                45u8, 156u8, 71u8, 173u8, 85u8, 59u8, 99u8, 187u8, 186u8, 209u8, 129u8,
-                157u8, 79u8, 217u8, 125u8, 160u8, 136u8, 80u8, 92u8, 150u8, 165u8, 129u8,
-                130u8, 105u8, 27u8, 138u8, 187u8, 95u8, 43u8, 204u8, 41u8, 238u8,
-            ],
-            [
-                65u8, 241u8, 224u8, 143u8, 33u8, 204u8, 129u8, 140u8, 240u8, 207u8,
-                251u8, 58u8, 98u8, 96u8, 159u8, 182u8, 163u8, 203u8, 201u8, 179u8, 103u8,
-                27u8, 1u8, 30u8, 40u8, 94u8, 23u8, 161u8, 235u8, 180u8, 104u8, 142u8,
-            ],
-            [
-                72u8, 162u8, 152u8, 249u8, 211u8, 118u8, 184u8, 42u8, 113u8, 116u8,
-                167u8, 152u8, 233u8, 12u8, 241u8, 32u8, 148u8, 149u8, 253u8, 214u8,
-                139u8, 12u8, 17u8, 235u8, 17u8, 190u8, 171u8, 172u8, 194u8, 210u8, 156u8,
-                245u8,
-            ],
-            [
                 75u8, 90u8, 168u8, 208u8, 130u8, 230u8, 145u8, 203u8, 153u8, 114u8,
                 167u8, 149u8, 143u8, 164u8, 21u8, 63u8, 102u8, 63u8, 33u8, 95u8, 230u8,
                 151u8, 163u8, 224u8, 139u8, 210u8, 114u8, 158u8, 215u8, 143u8, 2u8, 242u8,
@@ -9910,26 +5522,12 @@ function updateRequirementModule(address _newModule) external;
     impl alloy_sol_types::SolEventInterface
     for SyndicateSequencingChainWithDecayingPriorityEvents {
         const NAME: &'static str = "SyndicateSequencingChainWithDecayingPriorityEvents";
-        const COUNT: usize = 7usize;
+        const COUNT: usize = 4usize;
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
-                Some(<GasTracked as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <GasTracked as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                        )
-                        .map(Self::GasTracked)
-                }
-                Some(<NewPeriodStarted as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <NewPeriodStarted as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                        )
-                        .map(Self::NewPeriodStarted)
-                }
                 Some(
                     <OwnershipTransferred as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
                 ) => {
@@ -9938,13 +5536,6 @@ function updateRequirementModule(address _newModule) external;
                             data,
                         )
                         .map(Self::OwnershipTransferred)
-                }
-                Some(<PeriodFinalized as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <PeriodFinalized as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                        )
-                        .map(Self::PeriodFinalized)
                 }
                 Some(
                     <RequirementModuleUpdated as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
@@ -9992,16 +5583,7 @@ function updateRequirementModule(address _newModule) external;
     for SyndicateSequencingChainWithDecayingPriorityEvents {
         fn to_log_data(&self) -> alloy_sol_types::private::LogData {
             match self {
-                Self::GasTracked(inner) => {
-                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
-                }
-                Self::NewPeriodStarted(inner) => {
-                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
-                }
                 Self::OwnershipTransferred(inner) => {
-                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
-                }
-                Self::PeriodFinalized(inner) => {
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
                 Self::RequirementModuleUpdated(inner) => {
@@ -10017,16 +5599,7 @@ function updateRequirementModule(address _newModule) external;
         }
         fn into_log_data(self) -> alloy_sol_types::private::LogData {
             match self {
-                Self::GasTracked(inner) => {
-                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
-                }
-                Self::NewPeriodStarted(inner) => {
-                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
-                }
                 Self::OwnershipTransferred(inner) => {
-                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
-                }
-                Self::PeriodFinalized(inner) => {
                     alloy_sol_types::private::IntoLogData::into_log_data(inner)
                 }
                 Self::RequirementModuleUpdated(inner) => {
@@ -10266,97 +5839,9 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
-        ///Creates a new call builder for the [`cumulativeGasFees`] function.
-        pub fn cumulativeGasFees(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, cumulativeGasFeesCall, N> {
-            self.call_builder(&cumulativeGasFeesCall)
-        }
-        ///Creates a new call builder for the [`currentPeriodIndex`] function.
-        pub fn currentPeriodIndex(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, currentPeriodIndexCall, N> {
-            self.call_builder(&currentPeriodIndexCall)
-        }
-        ///Creates a new call builder for the [`disableGasTracking`] function.
-        pub fn disableGasTracking(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, disableGasTrackingCall, N> {
-            self.call_builder(&disableGasTrackingCall)
-        }
-        ///Creates a new call builder for the [`enableGasTracking`] function.
-        pub fn enableGasTracking(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, enableGasTrackingCall, N> {
-            self.call_builder(&enableGasTrackingCall)
-        }
-        ///Creates a new call builder for the [`gasTrackingEnabled`] function.
-        pub fn gasTrackingEnabled(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, gasTrackingEnabledCall, N> {
-            self.call_builder(&gasTrackingEnabledCall)
-        }
-        ///Creates a new call builder for the [`gasTrackingInitialized`] function.
-        pub fn gasTrackingInitialized(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, gasTrackingInitializedCall, N> {
-            self.call_builder(&gasTrackingInitializedCall)
-        }
-        ///Creates a new call builder for the [`getCumulativeGasFees`] function.
-        pub fn getCumulativeGasFees(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, getCumulativeGasFeesCall, N> {
-            self.call_builder(&getCumulativeGasFeesCall)
-        }
-        ///Creates a new call builder for the [`getCurrentPeriod`] function.
-        pub fn getCurrentPeriod(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, getCurrentPeriodCall, N> {
-            self.call_builder(&getCurrentPeriodCall)
-        }
-        ///Creates a new call builder for the [`getCurrentPeriodGasUsed`] function.
-        pub fn getCurrentPeriodGasUsed(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, getCurrentPeriodGasUsedCall, N> {
-            self.call_builder(&getCurrentPeriodGasUsedCall)
-        }
-        ///Creates a new call builder for the [`getCurrentPeriodTimeRemaining`] function.
-        pub fn getCurrentPeriodTimeRemaining(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, getCurrentPeriodTimeRemainingCall, N> {
-            self.call_builder(&getCurrentPeriodTimeRemainingCall)
-        }
-        ///Creates a new call builder for the [`getGasFeesInRange`] function.
-        pub fn getGasFeesInRange(
-            &self,
-            startCumulative: alloy::sol_types::private::primitives::aliases::U256,
-            endCumulative: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, getGasFeesInRangeCall, N> {
-            self.call_builder(
-                &getGasFeesInRangeCall {
-                    startCumulative,
-                    endCumulative,
-                },
-            )
-        }
-        ///Creates a new call builder for the [`getPeriod`] function.
-        pub fn getPeriod(
-            &self,
-            periodIndex: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, getPeriodCall, N> {
-            self.call_builder(&getPeriodCall { periodIndex })
-        }
-        ///Creates a new call builder for the [`getTotalGasFees`] function.
-        pub fn getTotalGasFees(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, getTotalGasFeesCall, N> {
-            self.call_builder(&getTotalGasFeesCall)
-        }
-        ///Creates a new call builder for the [`getTotalPeriods`] function.
-        pub fn getTotalPeriods(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, getTotalPeriodsCall, N> {
-            self.call_builder(&getTotalPeriodsCall)
+        ///Creates a new call builder for the [`factory`] function.
+        pub fn factory(&self) -> alloy_contract::SolCallBuilder<&P, factoryCall, N> {
+            self.call_builder(&factoryCall)
         }
         ///Creates a new call builder for the [`initialize`] function.
         pub fn initialize(
@@ -10386,28 +5871,9 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
-        ///Creates a new call builder for the [`isGasTrackingInitialized`] function.
-        pub fn isGasTrackingInitialized(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, isGasTrackingInitializedCall, N> {
-            self.call_builder(&isGasTrackingInitializedCall)
-        }
         ///Creates a new call builder for the [`owner`] function.
         pub fn owner(&self) -> alloy_contract::SolCallBuilder<&P, ownerCall, N> {
             self.call_builder(&ownerCall)
-        }
-        ///Creates a new call builder for the [`periodDuration`] function.
-        pub fn periodDuration(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, periodDurationCall, N> {
-            self.call_builder(&periodDurationCall)
-        }
-        ///Creates a new call builder for the [`periods`] function.
-        pub fn periods(
-            &self,
-            _0: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, periodsCall, N> {
-            self.call_builder(&periodsCall(_0))
         }
         ///Creates a new call builder for the [`permissionRequirementModule`] function.
         pub fn permissionRequirementModule(
@@ -10540,27 +6006,11 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
-        ///Creates a new event filter for the [`GasTracked`] event.
-        pub fn GasTracked_filter(&self) -> alloy_contract::Event<&P, GasTracked, N> {
-            self.event_filter::<GasTracked>()
-        }
-        ///Creates a new event filter for the [`NewPeriodStarted`] event.
-        pub fn NewPeriodStarted_filter(
-            &self,
-        ) -> alloy_contract::Event<&P, NewPeriodStarted, N> {
-            self.event_filter::<NewPeriodStarted>()
-        }
         ///Creates a new event filter for the [`OwnershipTransferred`] event.
         pub fn OwnershipTransferred_filter(
             &self,
         ) -> alloy_contract::Event<&P, OwnershipTransferred, N> {
             self.event_filter::<OwnershipTransferred>()
-        }
-        ///Creates a new event filter for the [`PeriodFinalized`] event.
-        pub fn PeriodFinalized_filter(
-            &self,
-        ) -> alloy_contract::Event<&P, PeriodFinalized, N> {
-            self.event_filter::<PeriodFinalized>()
         }
         ///Creates a new event filter for the [`RequirementModuleUpdated`] event.
         pub fn RequirementModuleUpdated_filter(

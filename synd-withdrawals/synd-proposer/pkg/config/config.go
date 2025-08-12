@@ -2,11 +2,12 @@ package config
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -15,26 +16,26 @@ import (
 )
 
 type Config struct {
-	EthereumRPCURL    string
-	SettlementRPCURL  string
-	SettlementChainID uint64
+	EthereumRPCURL    string `json:"EthereumRPCURL"`
+	SettlementRPCURL  string `json:"SettlementRPCURL"`
+	SettlementChainID uint64 `json:"SettlementChainID"`
 
-	SequencingRPCURL string
-	AppchainRPCURL   string
-	EnclaveRPCURL    string
-	EigenRPCUrl      string
+	SequencingRPCURL string `json:"SequencingRPCURL"`
+	AppchainRPCURL   string `json:"AppchainRPCURL"`
+	EnclaveRPCURL    string `json:"EnclaveRPCURL"`
+	EigenRPCUrl      string `json:"EigenRPCUrl"`
 
-	PrivateKey             *ecdsa.PrivateKey
-	PollingInterval        time.Duration
-	CloseChallengeInterval time.Duration
-	Port                   int
+	PrivateKey             *ecdsa.PrivateKey `json:"-"`
+	PollingInterval        time.Duration     `json:"PollingInterval"`
+	CloseChallengeInterval time.Duration     `json:"CloseChallengeInterval"`
+	Port                   int               `json:"Port"`
 
-	TeeModuleContractAddress common.Address
+	TeeModuleContractAddress common.Address `json:"TeeModuleContractAddress"`
 
-	AppchainBridgeAddress common.Address
+	AppchainBridgeAddress common.Address `json:"AppchainBridgeAddress"`
 
-	EnclaveConfig    enclave.Config
-	EnclaveTLSConfig tls.Config
+	EnclaveConfig    teetypes.Config `json:"EnclaveConfig"`
+	EnclaveTLSConfig tls.Config     `json:"EnclaveTLSConfig"`
 }
 
 var Keys = map[string]struct {
@@ -116,7 +117,7 @@ func LoadConfig() (*Config, error) {
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
 		Port:                     port,
-		EnclaveConfig: enclave.Config{
+		EnclaveConfig: teetypes.Config{
 			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
@@ -127,6 +128,14 @@ func LoadConfig() (*Config, error) {
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
 	}, nil
+}
+
+func (c *Config) String() string {
+	jsonBytes, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("Config{error marshaling: %v}", err)
+	}
+	return string(jsonBytes)
 }
 
 func mustAtoi(s string, fallback int) int {

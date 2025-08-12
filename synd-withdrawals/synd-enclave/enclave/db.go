@@ -64,7 +64,7 @@ func (db *PreimageDb) NewBatchWithSize(size int) ethdb.Batch {
 }
 
 func (db *PreimageDb) NewIterator(prefix []byte, start []byte) ethdb.Iterator {
-	panic("recording KV doesn't support NewIterator")
+	panic("preimage DB doesn't support NewIterator")
 }
 
 func (db *PreimageDb) Stat() (string, error) {

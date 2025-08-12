@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/logger"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/metrics"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/config"
@@ -175,11 +175,12 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 // PollingLoop runs the polling background process.
 func (p *Proposer) pollingLoop(ctx context.Context) {
 	ticker := time.NewTicker(p.Config.PollingInterval)
+	defer ticker.Stop()
 	// check if the appchain settles to an arbitrum rollup by querying the code at ArbSys precompile address
 	code, err := p.SettlementClient.CodeAt(ctx, ArbSysPrecompileAddress, nil)
 	if err != nil {
 		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to get code at ArbSys precompile address", err)
-		log.Warn().Stack().Err(wrappedErr).Msg(msg)
+		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
 	p.settlesToArbitrumRollup = len(code) > 0
 	log.Info().Bool("settlesToArbitrumRollup", p.settlesToArbitrumRollup).Msg("Settles to Arbitrum Rollup")
@@ -289,12 +290,12 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 	}
 }
 
-func (p *Proposer) getTrustedInput(ctx context.Context) (*enclave.TrustedInput, error) {
+func (p *Proposer) getTrustedInput(ctx context.Context) (*teetypes.TrustedInput, error) {
 	contractTrustedInput, err := p.TeeModule.TeeTrustedInput(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get trusted input from contract")
 	}
-	trustedInput := enclave.TrustedInput(contractTrustedInput)
+	trustedInput := teetypes.TrustedInput(contractTrustedInput)
 
 	return &trustedInput, nil
 }
@@ -305,9 +306,10 @@ func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint6
 		if err := p.SequencingClient.Client().CallContext(ctx, &batchCount, "synd_batchFromAcc", l1Hash); err != nil {
 			return 0, errors.Wrap(err, "failed to get batch from seq acc")
 		}
+		batchCount += 1
 	} else {
 		count, err := p.EthereumClient.StorageAtHash(ctx, p.Config.EnclaveConfig.SequencingBridgeAddress,
-			enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, l1Hash)
+			teetypes.BATCH_ACCUMULATOR_STORAGE_SLOT, l1Hash)
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to get batch count from l1")
 		}
@@ -322,8 +324,8 @@ func (p *Proposer) getBatchCount(ctx context.Context, l1Hash common.Hash) (uint6
 
 func (p *Proposer) Prove(
 	ctx context.Context,
-	trustedInput *enclave.TrustedInput,
-) (*enclave.VerifyAppchainOutput, error) {
+	trustedInput *teetypes.TrustedInput,
+) (*teetypes.VerifyAppchainOutput, error) {
 	p.Metrics.ProveTotal.Inc()
 
 	// get trusted input
@@ -400,14 +402,14 @@ func (p *Proposer) Prove(
 
 		// update preimages
 		for _, batch := range batches {
-			if err := getBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
+			if err := loadBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
 				return nil, errors.Wrap(err, "failed to get batch preimage data")
 			}
 		}
 	}
 
 	log.Debug().Msg("Getting proof...")
-	var proof *enclave.AccountResult
+	var proof *teetypes.AccountResult
 	if !p.isL1Chain {
 		// get the end block header
 		if header, err = p.EthereumClient.HeaderByHash(ctx, trustedInput.L1EndHash); err != nil {
@@ -416,14 +418,14 @@ func (p *Proposer) Prove(
 
 		// get merkle proof
 		accSlot := common.BigToHash(new(big.Int).Add(
-			enclave.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE,
+			teetypes.BATCH_ACCUMULATOR_ARRAY_START_STORAGE_SLOT_MINUS_ONE,
 			big.NewInt(int64(endBatchCount)),
 		))
 		if err := p.EthereumClient.Client().CallContext(ctx,
 			&proof,
 			"eth_getProof",
 			p.Config.EnclaveConfig.SequencingBridgeAddress,
-			[]common.Hash{enclave.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot},
+			[]common.Hash{teetypes.BATCH_ACCUMULATOR_STORAGE_SLOT, accSlot},
 			common.Hash(trustedInput.L1EndHash),
 		); err != nil {
 			return nil, errors.Wrap(err, "failed to get proof")
@@ -438,8 +440,8 @@ func (p *Proposer) Prove(
 	// derive sequencing chain
 	log.Debug().Msg("Verifying sequencing chain...")
 	sequencingChainTimer := metrics.NewTimer()
-	var seqOutput enclave.VerifySequencingChainOutput
-	if err = p.handleEnclaveCall(&seqOutput, "enclave_verifySequencingChain", enclave.VerifySequencingChainInput{
+	var seqOutput teetypes.VerifySequencingChainOutput
+	if err = p.handleEnclaveCall(&seqOutput, "enclave_verifySequencingChain", teetypes.VerifySequencingChainInput{
 		TrustedInput:                    *trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 valData.DelayedMessages,
@@ -492,8 +494,8 @@ func (p *Proposer) Prove(
 	// derive appchain
 	log.Debug().Msg("Verifying appchain...")
 	appchainTimer := metrics.NewTimer()
-	var appOutput enclave.VerifyAppchainOutput
-	if err := p.handleEnclaveCall(&appOutput, "enclave_verifyAppchain", enclave.VerifyAppchainInput{
+	var appOutput teetypes.VerifyAppchainOutput
+	if err := p.handleEnclaveCall(&appOutput, "enclave_verifyAppchain", teetypes.VerifyAppchainInput{
 		TrustedInput:                    *trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 msgs,
@@ -511,7 +513,7 @@ func (p *Proposer) Prove(
 	return &appOutput, nil
 }
 
-func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInput) (*enclave.VerifyAppchainOutput, error) {
+func (p *Proposer) Verify(ctx context.Context, trustedInput *teetypes.TrustedInput) (*teetypes.VerifyAppchainOutput, error) {
 	// get trusted input
 	if trustedInput == nil {
 		var err error
@@ -556,7 +558,7 @@ func (p *Proposer) Verify(ctx context.Context, trustedInput *enclave.TrustedInpu
 		return nil, fmt.Errorf("failed to find appchain end block: %w", err)
 	}
 
-	return &enclave.VerifyAppchainOutput{
+	return &teetypes.VerifyAppchainOutput{
 		PendingAssertion: teemodule.PendingAssertion{
 			AppBlockHash: appEndBlock.BlockHash,
 			AppSendRoot:  appEndBlock.SendRoot,

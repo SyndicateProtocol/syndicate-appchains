@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 
 	"github.com/ethereum/go-ethereum/common"
 	glog "github.com/ethereum/go-ethereum/log"
@@ -68,13 +68,16 @@ func ToHexForLogsPendingAssertion(t teemodule.PendingAssertion) string {
 		SeqBlockHash: common.Hash(t.SeqBlockHash).Hex(),
 		L1BatchAcc:   common.Hash(t.L1BatchAcc).Hex(),
 	}
-	jsonInput, _ := json.Marshal(hexInput)
+	jsonInput, err := json.Marshal(hexInput)
+	if err != nil {
+		panic(err)
+	}
 
 	return string(jsonInput)
 }
 
 // ToHexForLogsTrustedInput  converts TeeTrustedInput to a hex-encoded version
-func ToHexForLogsTrustedInput(t enclave.TrustedInput) string {
+func ToHexForLogsTrustedInput(t teetypes.TrustedInput) string {
 	hexInput := TeeTrustedInputHex{
 		ConfigHash:           common.Hash(t.ConfigHash).Hex(),
 		AppStartBlockHash:    common.Hash(t.AppStartBlockHash).Hex(),
@@ -83,7 +86,10 @@ func ToHexForLogsTrustedInput(t enclave.TrustedInput) string {
 		L1StartBatchAcc:      common.Hash(t.L1StartBatchAcc).Hex(),
 		L1EndHash:            common.Hash(t.L1EndHash).Hex(),
 	}
-	jsonInput, _ := json.Marshal(hexInput)
+	jsonInput, err := json.Marshal(hexInput)
+	if err != nil {
+		panic(err)
+	}
 
 	return string(jsonInput)
 }

@@ -1,12 +1,18 @@
 name: Publish to S3
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'S3 object version tag (e.g., v1.2.3, v0.10.15-dev.1)'
+        required: true
+        type: string
 
 jobs:
-  publish-s3:
+  build:
+    name: Build artifacts
     runs-on: shared-medium-01
     steps:
       - uses: actions/checkout@v4
@@ -32,8 +38,30 @@ jobs:
           cd synd-withdrawals/synd-enclave
           docker build --target eif-bin --output=out .
 
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-artifacts
+          path: |
+            synd-withdrawals/synd-enclave/out/eif.bin
+            synd-withdrawals/server/app/server
+          retention-days: 1
+
+  publish-testnet-s3:
+    name: Publish to S3 (testnet)
+    needs: build
+    runs-on: shared-medium-01
+    environment: testnet
+    env:
+      TAG_NAME: ${{ github.event.release.tag_name || inputs.tag_name }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: built-artifacts
+
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4.1.0
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -43,25 +71,60 @@ jobs:
           role-duration-seconds: 1200
           role-skip-session-tagging: true
 
-      - name: Upload eif.bin to AWS S3
-        uses: usualdesigner/s3-artifact-upload@main
-        with:
-          bucket-name: ${{ secrets.AWS_S3_BUCKET_NAME }}
-          file: synd-withdrawals/synd-enclave/out/eif.bin
+      - name: Upload versioned eif.bin to S3
+        run: aws s3 cp synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-${{ env.TAG_NAME }}.bin --only-show-errors
 
-      - name: Upload server to AWS S3
-        uses: usualdesigner/s3-artifact-upload@main
-        with:
-          bucket-name: ${{ secrets.AWS_S3_BUCKET_NAME }}
-          file: synd-withdrawals/server/app/server
+      - name: Upload latest eif.bin to S3 (testnet alias)
+        run: aws s3 cp synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-latest.bin --only-show-errors
 
-      # Needs to be the last job step
+      - name: Upload versioned server to S3
+        run: aws s3 cp server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-${{ env.TAG_NAME }}.bin --only-show-errors
+
+      - name: Upload latest server to S3 (testnet alias)
+        run: aws s3 cp server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-latest.bin --only-show-errors
+
+  publish-mainnet-s3:
+    name: Publish to S3 (mainnet)
+    needs: build
+    if: "!contains(github.event.release.tag_name || inputs.tag_name, 'dev')"
+    runs-on: shared-medium-01
+    environment: mainnet
+    env:
+      TAG_NAME: ${{ github.event.release.tag_name || inputs.tag_name }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: built-artifacts
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-external-id: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
+          role-duration-seconds: 1200
+          role-skip-session-tagging: true
+
+      - name: Upload versioned eif.bin to S3
+        run: aws s3 cp synd-enclave/out/eif.bin s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/synd-enclave/eif-${{ env.TAG_NAME }}.bin --only-show-errors
+
+      - name: Upload versioned server to S3
+        run: aws s3 cp server/app/server s3://${{ secrets.AWS_S3_BUCKET_NAME }}/synd-withdrawals/server/server-${{ env.TAG_NAME }}.bin --only-show-errors
+
+  notify-failure:
+    name: Notify on failure
+    if: always() && (needs.build.result == 'failure' || needs.publish-testnet-s3.result == 'failure' || needs.publish-mainnet-s3.result == 'failure')
+    needs: [build, publish-testnet-s3, publish-mainnet-s3]
+    runs-on: ubuntu-latest
+    steps:
       - name: Notify Slack on Failure
-        # Only notify for workflow_run failures on main branch (not PRs)
-        if: failure() && github.ref_name == 'main'
         uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_COLOR: "danger"
-          SLACK_MESSAGE: ":x: `${{github.workflow}}` failed on `main` branch. View failure information here: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-          SLACK_TITLE: "*${{github.workflow}}* failed on `main` branch. Notify the author of the latest PR merged to `main`"
+        with:
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          color: danger
+          message: ":x: `${{github.workflow}}` failed. View failure information here: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+          title: "*${{github.workflow}}* failed"

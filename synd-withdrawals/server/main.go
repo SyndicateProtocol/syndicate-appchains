@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -16,7 +16,7 @@ func main() {
 		New: func() any {
 			conn, err := vsock.Dial(16, 1234, &vsock.Config{})
 			if err != nil {
-				log.Printf("Error dialing vsock: %v", err)
+				slog.Error("Error dialing vsock", "error", err)
 				return nil
 			}
 			return conn
@@ -35,7 +35,7 @@ func main() {
 		}
 		req, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.Printf("Error reading request body: %v", err)
+			slog.Error("Error reading request body", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -50,7 +50,7 @@ func main() {
 
 		_, err = conn.Write(req)
 		if err != nil {
-			log.Printf("Error writing to vsock: %v", err)
+			slog.Error("Error writing to vsock", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -60,7 +60,7 @@ func main() {
 
 		var raw json.RawMessage
 		if err := dec.Decode(&raw); err != nil {
-			log.Printf("Error decoding response: %v", err)
+			slog.Error("Error decoding response", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -72,6 +72,6 @@ func main() {
 
 	err := http.ListenAndServe(":7333", nil)
 	if err != nil {
-		log.Fatalf("Error starting server: %v", err)
+		slog.Error("Error starting server", "error", err)
 	}
 }
