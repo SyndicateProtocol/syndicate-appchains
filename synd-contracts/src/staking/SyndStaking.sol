@@ -311,7 +311,10 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     }
 
     function getUserAppchainStake(uint256 epochIndex, address user, uint256 appchainId) public view returns (uint256) {
-        if (epochIndex >= userAppchainFinalizedEpoch[user][appchainId]) {
+        if (userAppchainWithdrawalInitialized[user][appchainId] != 0) {
+            return epochUserAppchainTotal[epochIndex][user][appchainId]
+                - epochUserAppchainAdditions[epochIndex][user][appchainId];
+        } else if (epochIndex >= userAppchainFinalizedEpoch[user][appchainId]) {
             return userAppchainTotal[user][appchainId] + epochUserAppchainTotal[epochIndex][user][appchainId]
                 - epochUserAppchainAdditions[epochIndex][user][appchainId];
         } else {
