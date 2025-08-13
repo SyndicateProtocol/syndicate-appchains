@@ -3,88 +3,148 @@ pragma solidity 0.8.28;
 
 import {EpochTracker} from "./EpochTracker.sol";
 
+/**
+ * @title ISyndStaking
+ * @notice Interface for the SyndStaking contract providing stake query functionality
+ * @dev Defines the core view functions for accessing stake information across different dimensions
+ */
 interface ISyndStaking {
+    /**
+     * @notice Get the total stake amount for a specific user in a specific epoch
+     * @param epochIndex The epoch index to query
+     * @param user The address of the user
+     * @return The user's total stake amount for the specified epoch
+     */
     function getUserStake(uint256 epochIndex, address user) external view returns (uint256);
+
+    /**
+     * @notice Get the pro-rata stake share for a specific user in a specific epoch
+     * @param epochIndex The epoch index to query
+     * @param user The address of the user
+     * @return The user's pro-rata stake share for the specified epoch
+     */
     function getUserStakeShare(uint256 epochIndex, address user) external view returns (uint256);
+
+    /**
+     * @notice Get the total stake amount across all users in a specific epoch
+     * @param epochIndex The epoch index to query
+     * @return The total stake amount for the specified epoch
+     */
     function getTotalStake(uint256 epochIndex) external view returns (uint256);
+
+    /**
+     * @notice Get the total pro-rata stake share across all users in a specific epoch
+     * @param epochIndex The epoch index to query
+     * @return The total pro-rata stake share for the specified epoch
+     */
     function getTotalStakeShare(uint256 epochIndex) external view returns (uint256);
+
+    /**
+     * @notice Get the total stake amount for a specific appchain in a specific epoch
+     * @param epochIndex The epoch index to query
+     * @param appchainId The ID of the appchain
+     * @return The total stake amount for the specified appchain and epoch
+     */
     function getAppchainStake(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
+
+    /**
+     * @notice Get the stake amount for a specific user on a specific appchain in a specific epoch
+     * @param epochIndex The epoch index to query
+     * @param user The address of the user
+     * @param appchainId The ID of the appchain
+     * @return The user's stake amount for the specified appchain and epoch
+     */
     function getUserAppchainStake(uint256 epochIndex, address user, uint256 appchainId)
         external
         view
         returns (uint256);
 }
 
+/**
+ * @title SyndStaking
+ * @notice Main staking contract for SYND token
+ * @dev Extends EpochTracker to provide comprehensive stake management across multiple dimensions
+ *
+ * This contract implements a stake tracking system that maintains historical
+ * accounting while enabling efficient queries. It tracks stake across four dimensions:
+ * - Global total stake across all users and appchains
+ * - Per-user total stake across all appchains
+ * - Per-appchain total stake across all users
+ * - Per-user per-appchain stake
+ *
+ * The 5-variable pattern for each dimension ensures accurate historical accounting:
+ * 1. Current Total - Present amount
+ * 2. Historical Total - Per-epoch snapshots
+ * 3. Epoch Additions - Amount added during specific epoch
+ * 4. Epoch Withdrawals - Amount withdrawn during specific epoch
+ * 5. Last Finalized Epoch - Tracks processed epochs
+ *
+ * Key features:
+ * - Epoch-based stake accounting with 30-day periods
+ * - Pro-rata stake sharing for partial epoch participation
+ * - Multi-appchain support with restaking capabilities
+ * - Delayed withdrawal system for security
+ * - Efficient finalization system for historical queries
+ */
 contract SyndStaking is EpochTracker, ISyndStaking {
-    /**
-     * Stake Tracking System Overview
-     *
-     * This contract uses a 5-variable pattern to track stake across different dimensions.
-     * The pattern ensures accurate historical accounting while enabling efficient queries.
-     *
-     * For each tracked value, we maintain:
-     * 1. Current Total - The present amount (e.g., totalStake, userTotal)
-     * 2. Historical Total - Per-epoch snapshots (e.g., epochTotal, epochUserTotal)
-     * 3. Epoch Additions - Amount added during specific epoch (e.g., epochAdditions, epochUserAdditions)
-     * 4. Epoch Withdrawals - Amount withdrawn during specific epoch (e.g., epochWithdrawals, epochUserWithdrawals)
-     * 5. Last Finalized Epoch - Tracks which epochs have been fully processed
-     *
-     * The key insight: stake added during an epoch doesn't count for that epoch's rewards, while
-     * withdrawals are included in the epoch they are initialized in. Epoch additions let us
-     * exclude new stake from the current epoch while including it in future epochs and vice versa
-     * for withdrawals.
-     *
-     * We track 4 different stake dimensions:
-     * - Total Stake: Global stake across all users and appchains
-     * - User Total Stake: Individual user's stake across all appchains
-     * - Appchain Stake: Total stake for specific appchain across all users
-     * - User Appchain Stake: Individual user's stake for specific appchain
-     *
-     * Each dimension uses the same 5-variable pattern for consistent accounting.
-     */
-
-    // Total amount staked
+    /// @notice Total amount of SYND tokens staked across all users and appchains
     uint256 public totalStake;
-    // Epoch => total amount staked
+
+    /// @notice Mapping from epoch index to total amount staked in that epoch
     mapping(uint256 => uint256) public epochTotal;
-    // Epoch => amount staked during the epoch
+
+    /// @notice Mapping from epoch index to amount staked during that specific epoch
     mapping(uint256 => uint256) public epochAdditions;
-    // Epoch => amount withdrawn during the epoch
+
+    /// @notice Mapping from epoch index to amount withdrawn during that specific epoch
     mapping(uint256 => uint256) public epochWithdrawals;
-    // Last finalized epoch
+
+    /// @notice Last finalized epoch index for global stake accounting
     uint256 public finalizedEpochCount;
 
-    // User => current stake amount
+    /// @notice Mapping from user address to their current total stake amount across all appchains
     mapping(address => uint256) public userTotal;
-    // Epoch => user => stake amount
+
+    /// @notice Mapping from epoch index and user address to their stake amount in that epoch
     mapping(uint256 => mapping(address => uint256)) public epochUserTotal;
-    // Epoch => user => amount staked during the epoch
+
+    /// @notice Mapping from epoch index and user address to amount staked during that specific epoch
     mapping(uint256 => mapping(address => uint256)) public epochUserAdditions;
-    // Epoch => user => amount withdrawn during the epoch
+
+    /// @notice Mapping from epoch index and user address to amount withdrawn during that specific epoch
     mapping(uint256 => mapping(address => uint256)) public epochUserWithdrawals;
-    // User => last finalized epoch
+
+    /// @notice Mapping from user address to their last finalized epoch index
     mapping(address => uint256) public userFinalizedEpochCount;
 
-    // Appchain => total amount staked
+    /// @notice Mapping from appchain ID to total amount staked on that appchain across all users
     mapping(uint256 => uint256) public appchainTotal;
-    // Epoch => appchain => total amount staked
+
+    /// @notice Mapping from epoch index and appchain ID to total amount staked on that appchain in that epoch
     mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainTotal;
-    // Epoch => appchain => amount staked during the epoch
+
+    /// @notice Mapping from epoch index and appchain ID to amount staked on that appchain during that specific epoch
     mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainAdditions;
-    // Epoch => appchain => amount withdrawn during the epoch
+
+    /// @notice Mapping from epoch index and appchain ID to amount withdrawn from that appchain during that specific epoch
     mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainWithdrawals;
-    // Last finalized epoch for each appchain
+
+    /// @notice Mapping from appchain ID to its last finalized epoch index
     mapping(uint256 => uint256) public appchainFinalizedEpochCount;
 
-    // User => appchain => total amount staked
+    /// @notice Mapping from user address and appchain ID to user's current stake amount on that specific appchain
     mapping(address => mapping(uint256 => uint256)) public userAppchainTotal;
-    // Epoch => user => appchain => amount staked during the epoch
+
+    /// @notice Mapping from epoch index, user address, and appchain ID to user's stake amount on that appchain in that epoch
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainTotal;
-    // Epoch => user => appchain => amount staked during the epoch
+
+    /// @notice Mapping from epoch index, user address, and appchain ID to amount staked by user on that appchain during that specific epoch
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainAdditions;
-    // Epoch => user => appchain => amount withdrawn during the epoch
+
+    /// @notice Mapping from epoch index, user address, and appchain ID to amount withdrawn by user from that appchain during that specific epoch
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainWithdrawals;
-    // User => appchain => last finalized epoch
+
+    /// @notice Mapping from user address and appchain ID to their last finalized epoch index for that specific appchain
     mapping(address => mapping(uint256 => uint256)) public userAppchainFinalizedEpochCount;
 
     /*
@@ -101,28 +161,73 @@ contract SyndStaking is EpochTracker, ISyndStaking {
      * complete stake accounting for both full-epoch and partial-epoch rewards.
     */
 
-    // Epoch => amount staked during the epoch weighted by time left in the epoch
+    /// @notice Mapping from epoch index to total pro-rata stake share for that epoch (weighted by time remaining)
     mapping(uint256 => uint256) public epochStakeShare;
-    // Epoch => user => amount staked during the epoch weighted by time left in the epoch
+
+    /// @notice Mapping from epoch index and user address to user's pro-rata stake share for that epoch (weighted by time remaining)
     mapping(uint256 => mapping(address => uint256)) public epochUserStakeShare;
 
+    /**
+     * @notice Emitted when a user stakes SYND tokens
+     * @param epochIndex The epoch index when staking occurred
+     * @param user The address of the user who staked
+     * @param amount The amount of SYND tokens staked
+     * @param appchainId The ID of the appchain where tokens were staked
+     */
     event Stake(uint256 epochIndex, address user, uint256 amount, uint256 appchainId);
+
+    /**
+     * @notice Emitted when a user restakes tokens from one appchain to another
+     * @param epochIndex The epoch index when restaking occurred
+     * @param user The address of the user who restaked
+     * @param amount The amount of SYND tokens restaked
+     * @param fromAppchainId The ID of the source appchain
+     * @param toAppchainId The ID of the destination appchain
+     */
     event Restake(uint256 epochIndex, address user, uint256 amount, uint256 fromAppchainId, uint256 toAppchainId);
+
+    /**
+     * @notice Emitted when a withdrawal is initialized
+     * @param user The address of the user who initiated withdrawal
+     * @param appchainId The ID of the appchain where withdrawal was initiated
+     * @param amount The amount of SYND tokens to be withdrawn
+     */
     event WithdrawalInitialized(address user, uint256 appchainId, uint256 amount);
+
+    /**
+     * @notice Emitted when a withdrawal is completed
+     * @param user The address of the user who completed withdrawal
+     * @param destination The address where tokens were sent
+     * @param amount The amount of SYND tokens withdrawn
+     */
     event WithdrawalCompleted(address user, address destination, uint256 amount);
 
+    /// @notice Error thrown when attempting to stake or withdraw zero amount
     error InvalidAmount();
+    /// @notice Error thrown when attempting to use invalid appchain ID (0)
     error InvalidAppchainId();
+    /// @notice Error thrown when user doesn't have sufficient stake for operation
     error InsufficientStake();
+    /// @notice Error thrown when attempting to withdraw before withdrawal period is complete
     error WithdrawalNotReady();
+    /// @notice Error thrown when withdrawal data is invalid or missing
     error InvalidWithdrawal();
 
+    /**
+     * @notice Constructor to initialize the staking contract with epoch start time
+     * @param _startTimestamp The timestamp when epoch counting begins
+     */
     constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {}
 
     ///////////////////////
     // Staking functions
     ///////////////////////
 
+    /**
+     * @notice Stake SYND tokens for a specific appchain
+     * @dev Automatically finalizes epochs if needed and calculates pro-rata stake share
+     * @param appchainId The ID of the appchain to stake for (must be non-zero)
+     */
     function stakeSynd(uint256 appchainId) external payable {
         if (msg.value == 0) {
             revert InvalidAmount();
@@ -166,10 +271,23 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         emit Stake(epochIndex, msg.sender, msg.value, appchainId);
     }
 
+    /**
+     * @notice Calculate pro-rata stake share based on time remaining in current epoch
+     * @dev Stake share is weighted by the fraction of epoch remaining when staking occurs
+     * @param amount The amount of tokens being staked
+     * @return The calculated stake share for the current epoch
+     */
     function calculateStakeShare(uint256 amount) internal view returns (uint256) {
         return (amount * (getEpochEnd(getCurrentEpoch()) - block.timestamp)) / EPOCH_DURATION;
     }
 
+    /**
+     * @notice Restake tokens from one appchain to another
+     * @dev Moves existing stake between appchains without affecting total user stake
+     * @param fromAppchainId The ID of the source appchain
+     * @param toAppchainId The ID of the destination appchain
+     * @param amount The amount of tokens to restake
+     */
     function restakeSynd(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable {
         if (amount == 0) {
             revert InvalidAmount();
@@ -209,6 +327,10 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // Finalization functions
     ///////////////////////
 
+    /**
+     * @notice Finalize global epoch accounting up to the current epoch
+     * @dev Updates epoch totals by incorporating additions and withdrawals
+     */
     function finalizeEpochs() public {
         uint256 currentEpoch = getCurrentEpoch();
         while (finalizedEpochCount < currentEpoch) {
@@ -219,6 +341,11 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         }
     }
 
+    /**
+     * @notice Finalize user epoch accounting up to the current epoch
+     * @dev Updates user epoch totals by incorporating additions and withdrawals
+     * @param user The address of the user to finalize epochs for
+     */
     function finalizeUserEpochs(address user) public {
         uint256 currentEpoch = getCurrentEpoch();
         uint256 index = userFinalizedEpochCount[user];
@@ -231,6 +358,11 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         userFinalizedEpochCount[user] = index;
     }
 
+    /**
+     * @notice Finalize appchain epoch accounting up to the current epoch
+     * @dev Updates appchain epoch totals by incorporating additions and withdrawals
+     * @param appchainId The ID of the appchain to finalize epochs for
+     */
     function finalizeAppchainEpochs(uint256 appchainId) public {
         uint256 currentEpoch = getCurrentEpoch();
         uint256 index = appchainFinalizedEpochCount[appchainId];
@@ -243,6 +375,12 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         appchainFinalizedEpochCount[appchainId] = index;
     }
 
+    /**
+     * @notice Finalize user-appchain epoch accounting up to the current epoch
+     * @dev Updates user-appchain epoch totals by incorporating additions and withdrawals
+     * @param user The address of the user
+     * @param appchainId The ID of the appchain
+     */
     function finalizeUserAppchainEpochs(address user, uint256 appchainId) public {
         uint256 currentEpoch = getCurrentEpoch();
         uint256 index = userAppchainFinalizedEpochCount[user][appchainId];
@@ -258,6 +396,14 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     ///////////////////////
     // Withdrawal functions
     ///////////////////////
+
+    /**
+     * @notice Initialize a withdrawal for a specific amount from a specific appchain
+     * @dev Withdrawals are delayed by one epoch for security. This function marks
+     * the withdrawal but doesn't transfer tokens immediately.
+     * @param appchainId The ID of the appchain to withdraw from
+     * @param amount The amount of tokens to withdraw
+     */
     function initializeWithdrawal(uint256 appchainId, uint256 amount) public {
         if (amount == 0) {
             revert InvalidAmount();
@@ -296,10 +442,21 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         emit WithdrawalInitialized(msg.sender, appchainId, amount);
     }
 
+    /**
+     * @notice Initialize a withdrawal for the user's entire stake on a specific appchain
+     * @dev Convenience function that calls initializeWithdrawal with the user's full stake amount
+     * @param appchainId The ID of the appchain to withdraw from
+     */
     function initializeWithdrawal(uint256 appchainId) external {
         initializeWithdrawal(appchainId, getWithdrawalAmount(msg.sender, appchainId));
     }
 
+    /**
+     * @notice Complete a withdrawal after the required epoch delay
+     * @dev Can only be called after the withdrawal epoch has passed
+     * @param epochIndex The epoch index when withdrawal was initialized
+     * @param destination The address where tokens should be sent
+     */
     function withdraw(uint256 epochIndex, address destination) external {
         if (epochIndex >= getCurrentEpoch()) {
             revert WithdrawalNotReady();
@@ -323,10 +480,23 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // View functions
     ///////////////////////
 
+    /**
+     * @notice Get the amount available for withdrawal for a specific user and appchain
+     * @param user The address of the user
+     * @param appchainId The ID of the appchain
+     * @return The amount of tokens available for withdrawal
+     */
     function getWithdrawalAmount(address user, uint256 appchainId) public view returns (uint256) {
         return userAppchainTotal[user][appchainId];
     }
 
+    /**
+     * @notice Get the total stake amount for a specific user in a specific epoch
+     * @dev Returns finalized data if available, otherwise calculates from current state
+     * @param epochIndex The epoch index to query
+     * @param user The address of the user
+     * @return The user's total stake amount for the specified epoch
+     */
     function getUserStake(uint256 epochIndex, address user) public view returns (uint256) {
         if (epochIndex >= userFinalizedEpochCount[user]) {
             return userTotal[user] + epochUserTotal[epochIndex][user] + epochUserWithdrawals[epochIndex][user]
@@ -336,10 +506,23 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         }
     }
 
+    /**
+     * @notice Get the pro-rata stake share for a specific user in a specific epoch
+     * @dev Combines full stake with pro-rata stake share for complete epoch participation
+     * @param epochIndex The epoch index to query
+     * @param user The address of the user
+     * @return The user's complete stake share for the specified epoch
+     */
     function getUserStakeShare(uint256 epochIndex, address user) public view returns (uint256) {
         return getUserStake(epochIndex, user) + epochUserStakeShare[epochIndex][user];
     }
 
+    /**
+     * @notice Get the total stake amount across all users in a specific epoch
+     * @dev Returns finalized data if available, otherwise calculates from current state
+     * @param epochIndex The epoch index to query
+     * @return The total stake amount for the specified epoch
+     */
     function getTotalStake(uint256 epochIndex) public view returns (uint256) {
         if (epochIndex >= finalizedEpochCount) {
             return totalStake + epochTotal[epochIndex] + epochWithdrawals[epochIndex] - epochAdditions[epochIndex];
@@ -348,10 +531,23 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         }
     }
 
+    /**
+     * @notice Get the total pro-rata stake share across all users in a specific epoch
+     * @dev Combines full stake with pro-rata stake share for complete epoch participation
+     * @param epochIndex The epoch index to query
+     * @return The total complete stake share for the specified epoch
+     */
     function getTotalStakeShare(uint256 epochIndex) public view returns (uint256) {
         return getTotalStake(epochIndex) + epochStakeShare[epochIndex];
     }
 
+    /**
+     * @notice Get the total stake amount for a specific appchain in a specific epoch
+     * @dev Returns finalized data if available, otherwise calculates from current state
+     * @param epochIndex The epoch index to query
+     * @param appchainId The ID of the appchain
+     * @return The total stake amount for the specified appchain and epoch
+     */
     function getAppchainStake(uint256 epochIndex, uint256 appchainId) public view returns (uint256) {
         if (epochIndex >= appchainFinalizedEpochCount[appchainId]) {
             return appchainTotal[appchainId] + epochAppchainTotal[epochIndex][appchainId]
@@ -361,6 +557,14 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         }
     }
 
+    /**
+     * @notice Get the stake amount for a specific user on a specific appchain in a specific epoch
+     * @dev Returns finalized data if available, otherwise calculates from current state
+     * @param epochIndex The epoch index to query
+     * @param user The address of the user
+     * @param appchainId The ID of the appchain
+     * @return The user's stake amount for the specified appchain and epoch
+     */
     function getUserAppchainStake(uint256 epochIndex, address user, uint256 appchainId) public view returns (uint256) {
         if (epochIndex >= userAppchainFinalizedEpochCount[user][appchainId]) {
             return userAppchainTotal[user][appchainId] + epochUserAppchainTotal[epochIndex][user][appchainId]
