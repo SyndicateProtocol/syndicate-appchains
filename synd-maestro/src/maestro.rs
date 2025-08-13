@@ -33,7 +33,10 @@ use alloy::{
 use derivative::Derivative;
 use redis::{aio::ConnectionManager, AsyncCommands};
 use shared::{
-    json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
+    json_rpc::{
+        Rejection::{InsufficientFunds, NonceTooLow},
+        RpcError::TransactionRejected,
+    },
     multi_rpc_provider::MultiRpcProvider,
     tracing::SpanKind,
     tx_validation::{check_signature, decode_transaction},
@@ -41,7 +44,6 @@ use shared::{
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument, trace, warn, Instrument};
-use shared::json_rpc::Rejection::InsufficientFunds;
 
 /// The service for filtering and directing transactions
 #[derive(Derivative)]
@@ -2364,7 +2366,7 @@ mod tests {
         let result = MaestroService::balance_check(&tx, account_balance);
         assert!(result.is_err());
         match result.unwrap_err() {
-            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            JsonRpcError(TransactionRejected(InsufficientFunds)) => {}
             _ => panic!("Expected InsufficientFunds error"),
         }
     }
@@ -2378,7 +2380,7 @@ mod tests {
         let result = MaestroService::balance_check(&tx, account_balance);
         assert!(result.is_err());
         match result.unwrap_err() {
-            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            JsonRpcError(TransactionRejected(InsufficientFunds)) => {}
             _ => {
                 panic!("Expected InsufficientFunds error due to maximal gas cost and zero balance")
             }
