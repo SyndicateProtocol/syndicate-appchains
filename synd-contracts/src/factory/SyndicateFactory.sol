@@ -18,7 +18,7 @@ enum NamespaceState {
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts with centralized gas tracking
 /// @dev Uses CREATE2 pattern for deterministic deployments - users deploy permission modules separately
-contract SyndicateFactory is AccessControl, Pausable, GasAggregator {
+contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Emitted when a new SyndicateSequencingChain is created
     event SyndicateSequencingChainCreated(
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
@@ -137,21 +137,35 @@ contract SyndicateFactory is AccessControl, Pausable, GasAggregator {
         return appchainContracts[chainId] != address(0);
     }
 
-    // TODO add doc
-    function getTotalAppchains() public view override returns (uint256) {
+    /// @notice returns the number of appchains
+    function getTotalAppchains() external view returns (uint256) {
         return chainIDs.length;
     }
 
-    // TODO add doc
-    function getAppchainChainIDs() public view override returns (uint256[] memory) {
-        return chainIDs;
+    /// @notice returns the contracts for a given list of appchain chainIDs
+    /// @param _chainIDs the list of chain IDs
+    /// @return _contracts contracts for the given chain IDs
+    function getContractsForAppchains(uint256[] memory _chainIDs) external view returns (address[] memory _contracts) {
+        address[] memory contracts = new address[](_chainIDs.length);
+        for (uint256 i = 0; i < _chainIDs.length; i++) {
+            contracts[i] = appchainContracts[i];
+        }
+        return contracts;
     }
 
-    /// @notice Get the contract address for an appchain
-    /// @param chainId The appchain ID
-    /// @return The contract address, or zero address if not registered
-    function getAppchainContract(uint256 chainId) public view override returns (address) {
-        return appchainContracts[chainId];
+    /// @notice returns all appchains chainIDs and associated contracts
+    /// @return _chainIDs
+    /// @return _contracts
+    function getAppchainsAndContracts()
+        external
+        view
+        returns (uint256[] memory _chainIDs, address[] memory _contracts)
+    {
+        address[] memory contracts = new address[](chainIDs.length);
+        for (uint256 i = 0; i < chainIDs.length; i++) {
+            contracts[i] = appchainContracts[i];
+        }
+        return (chainIDs, contracts);
     }
 
     /// @notice Update namespace configuration (manager only)
@@ -184,15 +198,5 @@ contract SyndicateFactory is AccessControl, Pausable, GasAggregator {
     /// @notice Unpause the factory (admin only)
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
-    }
-
-    /// @notice set the max number of appchains to query
-    function setMaxAppchainsToQuery(uint8 n) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setMaxAppchainsToQuery(n);
-    }
-
-    /// @notice set the challenge window
-    function setChallengeWindow(uint256 n) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setChallengeWindow(n);
     }
 }

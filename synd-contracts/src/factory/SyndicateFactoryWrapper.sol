@@ -126,8 +126,8 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
 
     /// @notice Check if a chain ID has been used in the syndicate factory
     /// @param chainId The chain ID to check
-    /// @return 1 if used, 0 if available
-    function isChainIdUsed(uint256 chainId) external view returns (uint256) {
+    /// @return true if used, false if available
+    function isChainIdUsed(uint256 chainId) external view returns (bool) {
         return syndicateFactory.isChainIdUsed(chainId);
     }
 
