@@ -41,6 +41,7 @@ use shared::{
 use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument, trace, warn, Instrument};
+use shared::json_rpc::Rejection::InsufficientFunds;
 
 /// The service for filtering and directing transactions
 #[derive(Derivative)]
@@ -200,9 +201,7 @@ impl MaestroService {
 
         if account_balance < total_required {
             debug!(%tx_hash_str, %account_balance, %total_required, "Insufficient funds for transaction");
-            return Err(JsonRpcError(TransactionRejected(
-                shared::json_rpc::Rejection::InsufficientFunds,
-            )));
+            return Err(JsonRpcError(TransactionRejected(InsufficientFunds)));
         }
 
         trace!(%tx_hash_str, %account_balance, %total_required, "Gas check passed");
@@ -282,7 +281,7 @@ impl MaestroService {
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
-                        error!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
+                        debug!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
                         JsonRpcError(TransactionRejected(rejection))
                     }
                     )?;
