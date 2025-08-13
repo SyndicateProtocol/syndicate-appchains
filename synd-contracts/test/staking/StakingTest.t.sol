@@ -425,7 +425,7 @@ contract StakingTest is Test {
         vm.stopPrank();
     }
 
-    function test_restake() public {
+    function test_stake_transfer() public {
         vm.startPrank(user1);
         staking.stakeSynd{value: 100 ether}(appchainId1);
         vm.stopPrank();
@@ -433,7 +433,7 @@ contract StakingTest is Test {
         stepEpoch(1);
 
         vm.startPrank(user1);
-        staking.restakeSynd(appchainId1, appchainId2, 50 ether);
+        staking.stageStakeTransfer(appchainId1, appchainId2, 50 ether);
         vm.stopPrank();
 
         checkStake(2, user1, 100 ether, appchainId1);
@@ -452,7 +452,7 @@ contract StakingTest is Test {
         assertEq(staking.getAppchainStake(3, appchainId2), 50 ether);
     }
 
-    function test_withdrawal_and_restake() public {
+    function test_withdrawal_and_stake_transfer() public {
         vm.startPrank(user1);
         staking.stakeSynd{value: 100 ether}(appchainId1);
         vm.stopPrank();
@@ -460,7 +460,7 @@ contract StakingTest is Test {
         stepEpoch(1);
 
         vm.startPrank(user1);
-        staking.restakeSynd(appchainId1, appchainId2, 50 ether);
+        staking.stageStakeTransfer(appchainId1, appchainId2, 50 ether);
         staking.initializeWithdrawal(appchainId1);
         vm.stopPrank();
 
@@ -477,7 +477,7 @@ contract StakingTest is Test {
         assertEq(address(user1).balance, 50 ether);
     }
 
-    function test_restake_twice() public {
+    function test_stake_transfer_twice() public {
         vm.startPrank(user1);
         staking.stakeSynd{value: 100 ether}(appchainId1);
         vm.stopPrank();
@@ -485,13 +485,13 @@ contract StakingTest is Test {
         stepEpoch(1);
 
         vm.startPrank(user1);
-        staking.restakeSynd(appchainId1, appchainId2, 50 ether);
+        staking.stageStakeTransfer(appchainId1, appchainId2, 50 ether);
         vm.stopPrank();
 
         stepDays(15);
 
         vm.startPrank(user1);
-        staking.restakeSynd(appchainId2, appchainId3, 25 ether);
+        staking.stageStakeTransfer(appchainId2, appchainId3, 25 ether);
         vm.stopPrank();
 
         assertEq(staking.getWithdrawalAmount(user1, appchainId1), 50 ether);
@@ -512,7 +512,7 @@ contract StakingTest is Test {
         assertEq(staking.getUserAppchainStake(3, user1, appchainId3), 25 ether);
     }
 
-    function test_restake_and_reverse_restake() public {
+    function test_stake_transfer_and_reverse_stake_transfer() public {
         vm.startPrank(user1);
         staking.stakeSynd{value: 100 ether}(appchainId1);
         vm.stopPrank();
@@ -523,7 +523,7 @@ contract StakingTest is Test {
         assertEq(staking.getWithdrawalAmount(user1, appchainId2), 0 ether);
 
         vm.startPrank(user1);
-        staking.restakeSynd(appchainId1, appchainId2, 50 ether);
+        staking.stageStakeTransfer(appchainId1, appchainId2, 50 ether);
         vm.stopPrank();
 
         stepDays(15);
@@ -532,7 +532,7 @@ contract StakingTest is Test {
         assertEq(staking.getWithdrawalAmount(user1, appchainId2), 50 ether);
 
         vm.startPrank(user1);
-        staking.restakeSynd(appchainId2, appchainId1, 50 ether);
+        staking.stageStakeTransfer(appchainId2, appchainId1, 50 ether);
         vm.stopPrank();
 
         assertEq(staking.getWithdrawalAmount(user1, appchainId1), 100 ether);

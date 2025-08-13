@@ -177,14 +177,14 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     event Stake(uint256 epochIndex, address user, uint256 amount, uint256 appchainId);
 
     /**
-     * @notice Emitted when a user restakes tokens from one appchain to another
-     * @param epochIndex The epoch index when restaking occurred
-     * @param user The address of the user who restaked
-     * @param amount The amount of SYND tokens restaked
+     * @notice Emitted when a user stages a transfer of stake from one appchain to another
+     * @param epochIndex The epoch index when the transfer was staged
+     * @param user The address of the user who staged the transfer
+     * @param amount The amount of SYND tokens being transferred
      * @param fromAppchainId The ID of the source appchain
      * @param toAppchainId The ID of the destination appchain
      */
-    event Restake(uint256 epochIndex, address user, uint256 amount, uint256 fromAppchainId, uint256 toAppchainId);
+    event StakeTransfer(uint256 epochIndex, address user, uint256 amount, uint256 fromAppchainId, uint256 toAppchainId);
 
     /**
      * @notice Emitted when a withdrawal is initialized
@@ -282,13 +282,13 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     }
 
     /**
-     * @notice Restake tokens from one appchain to another
+     * @notice Stage a transfer of stake from one appchain to another that will go into effect in the next epoch
      * @dev Moves existing stake between appchains without affecting total user stake
      * @param fromAppchainId The ID of the source appchain
      * @param toAppchainId The ID of the destination appchain
      * @param amount The amount of tokens to restake
      */
-    function restakeSynd(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable {
+    function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable {
         if (amount == 0) {
             revert InvalidAmount();
         }
@@ -320,7 +320,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         userAppchainTotal[msg.sender][toAppchainId] += amount;
         appchainTotal[toAppchainId] += amount;
 
-        emit Restake(epochIndex, msg.sender, amount, fromAppchainId, toAppchainId);
+        emit StakeTransfer(epochIndex, msg.sender, amount, fromAppchainId, toAppchainId);
     }
 
     ///////////////////////

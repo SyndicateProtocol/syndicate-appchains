@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 /**
  * @title EpochTracker
- * @author Syndicate
  * @notice Abstract contract for tracking epochs based on a configurable start timestamp
  * @dev Provides epoch calculation utilities for staking and reward distribution systems
  *
