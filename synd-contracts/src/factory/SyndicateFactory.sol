@@ -148,7 +148,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     function getContractsForAppchains(uint256[] memory _chainIDs) external view returns (address[] memory _contracts) {
         address[] memory contracts = new address[](_chainIDs.length);
         for (uint256 i = 0; i < _chainIDs.length; i++) {
-            contracts[i] = appchainContracts[i];
+            contracts[i] = appchainContracts[_chainIDs[i]];
         }
         return contracts;
     }

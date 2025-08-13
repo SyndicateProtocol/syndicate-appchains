@@ -590,4 +590,47 @@ contract SyndicateFactoryTest is Test {
         assertEq(chainId1, (12 * 10) + 1);
         assertEq(chainId2, (133 * 10) + 1);
     }
+
+    function testGetContractsForAppchains() public {
+        // Create a few chains with non-sequential chain IDs
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-test-9a"));
+        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-test-9b"));
+        bytes32 salt3 = keccak256(abi.encodePacked("salt-for-test-9c"));
+
+        uint256 appchainId1 = 100;
+        uint256 appchainId2 = 200;
+        uint256 appchainId3 = 300;
+
+        vm.prank(nonManager);
+        (address chain1,) = factory.createSyndicateSequencingChain(appchainId1, admin, permissionModule, salt1);
+
+        vm.prank(nonManager);
+        (address chain2,) = factory.createSyndicateSequencingChain(appchainId2, admin, permissionModule, salt2);
+
+        vm.prank(nonManager);
+        (address chain3,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule, salt3);
+
+        // Test getContractsForAppchains with specific chain IDs
+        uint256[] memory chainIDs = new uint256[](2);
+        chainIDs[0] = appchainId2; // 200
+        chainIDs[1] = appchainId1; // 100
+
+        address[] memory contracts = factory.getContractsForAppchains(chainIDs);
+
+        // Verify that the correct contracts are returned for each chain ID
+        // This is the regression test for the bug where it was using the loop index instead of the chain ID
+        assertEq(contracts.length, 2);
+        assertEq(contracts[0], chain2); // Contract for chain ID 200
+        assertEq(contracts[1], chain1); // Contract for chain ID 100
+
+        // Test with a single chain ID
+        uint256[] memory singleChainID = new uint256[](1);
+        singleChainID[0] = appchainId3; // 300
+
+        address[] memory singleContract = factory.getContractsForAppchains(singleChainID);
+
+        assertEq(singleContract.length, 1);
+        assertEq(singleContract[0], chain3); // Contract for chain ID 300
+    }
 }

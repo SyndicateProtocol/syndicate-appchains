@@ -35,8 +35,6 @@ contract GasAggregator is GasEpoch, AccessControl {
 
     uint256 public currentEpochToAggregate;
 
-    uint256 public curentEpochKnownMaxGas;
-
     /// @notice used for the offchain aggregation mechanism
     uint256[] public pendingChainIDs;
     uint256[] public pendingTokensUsed;
@@ -86,14 +84,19 @@ contract GasAggregator is GasEpoch, AccessControl {
 
     function pushToStakingAppchain(uint256[] memory appchainIDs, uint256[] memory tokens) internal {
         stakingAppchain.pushData(appchainIDs, tokens);
+        // progress the epoch and cleanup pending data
+        currentEpochToAggregate++;
+        delete pendingChainIDs;
+        delete pendingTokensUsed;
+        pendingTotalTokensUsed = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
                             EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice triggers automatic aggretation of the appchain gas usage data and pushes it to the staking appchain
-    /// @dev only usable until there are up to `maxAppchainsToQuery` appchains, after that point the offchain aggretation mechanism must be used
+    /// @notice triggers automatic aggregation of the appchain gas usage data and pushes it to the staking appchain
+    /// @dev only usable until there are up to `maxAppchainsToQuery` appchains, after that point the offchain aggregation mechanism must be used
     function aggregateTokensUsed() external onlyCompletedEpoch {
         if (fallbackToOffchainAggregation()) {
             revert MustUseOffchainAggregation();
@@ -104,7 +107,6 @@ contract GasAggregator is GasEpoch, AccessControl {
             tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(currentEpochToAggregate);
         }
         pushToStakingAppchain(appchains, tokens);
-        currentEpochToAggregate++;
     }
 
     /// @notice Submission of top appchains aggregated off-chain
@@ -142,11 +144,6 @@ contract GasAggregator is GasEpoch, AccessControl {
             revert NoPendingDataToPush();
         }
         pushToStakingAppchain(pendingChainIDs, pendingTokensUsed);
-        // cleanup pending data
-        currentEpochToAggregate++;
-        delete pendingChainIDs;
-        delete pendingTokensUsed;
-        pendingTotalTokensUsed = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -174,8 +171,8 @@ contract GasAggregator is GasEpoch, AccessControl {
         challengeWindow = newChallengeWindow;
     }
 
-    /// @notice
-    /// @param newFactory
+    /// @notice Sets the appchain factory contract
+    /// @param newFactory The new factory contract address
     function setFactory(AppchainFactory newFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
         factory = newFactory;
     }
