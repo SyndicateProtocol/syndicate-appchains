@@ -65,4 +65,4 @@ SP1_PROVER=cuda cargo run --release --bin proof-submitter \
   -- --contract-address "$KEY_MANAGER_ADDRESS" \
   --chain-rpc-url wss://base-sepolia.g.alchemy.com/v2/qZP155RkIA6rfHFaYT6Gm \
   --private-key "$PRIVATE_KEY" \
-  --attestation-document "{$ATTESTATION_DOCUMENT}"
+  --attestation-document "$ATTESTATION_DOCUMENT"
