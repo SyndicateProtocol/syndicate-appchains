@@ -5,7 +5,7 @@ import {GasEpoch} from "./GasEpoch.sol";
 
 /**
  * @title GasCounter
- * @notice Tracks gas consumption over 30-day periods for reward calculation
+ * @notice Tracks gas consumption over 30-day epoch for reward calculation
  * @dev This contract provides gas tracking functionality that can be inherited by sequencing contracts
  * @author Syndicate Protocol
  */
@@ -14,7 +14,7 @@ abstract contract GasCounter is GasEpoch {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Whether gas tracking is enabled (can be disabled for formal verification)
+    /// @notice Whether gas tracking is enabled
     bool public gasTrackingEnabled = true;
 
     /// @notice Mapping of epoch to gas data
@@ -55,7 +55,7 @@ abstract contract GasCounter is GasEpoch {
             gasPrice = 1;
         }
 
-        // Add gas and cost to current period
+        // Add gas and cost to current epoch
         tokensUsedPerEpoch[currentEpoch] += gasUsed * gasPrice;
     }
 

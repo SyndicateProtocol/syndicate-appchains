@@ -33,7 +33,7 @@ abstract contract GasAggregator is GasEpoch {
                             MODIFIERS 
     //////////////////////////////////////////////////////////////*/
 
-    modifier onlyCompletedPeriod() {
+    modifier onlyCompletedEpoch() {
         uint256 currentEpoch = getCurrentEpoch();
         if (currentEpoch <= currentEpochToAggregate) {
             revert CurrentEpochToAggregateNotOver(currentEpochToAggregate, currentEpoch);
@@ -49,6 +49,8 @@ abstract contract GasAggregator is GasEpoch {
     error NotHigherThanPendingTotal(uint256 submitted, uint256 pending);
     error CurrentEpochToAggregateNotOver(uint256 currentEpochToAggregate, uint256 currentEpoch);
     error WindowNotOver(uint256 currentEpoch, uint256 challengeWindow);
+    error ChainIDsMustBeInAscendingOrder();
+    error NoPendingDataToPush();
 
     /*//////////////////////////////////////////////////////////////
                             INTERNAL FUNCTIONS
@@ -64,9 +66,9 @@ abstract contract GasAggregator is GasEpoch {
     }
 
     /*//////////////////////////////////////////////////////////////
-                            PUBLIC FUNCTIONS
+                            EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    function aggregateTokensUsed() public onlyCompletedPeriod {
+    function aggregateTokensUsed() external onlyCompletedEpoch {
         if (fallbackToOffchainAggregation()) {
             revert MustUseOffchainAggregation();
         }
@@ -79,10 +81,14 @@ abstract contract GasAggregator is GasEpoch {
         currentEpochToAggregate++;
     }
 
-    function sumbitOffchainTopChains(uint256[] memory appchainIDs) public onlyCompletedPeriod {
+    /// @notice Submission of top appchains aggregated off-chain (NOTE: chainIDs must be submitted in ascending order)
+    function submitOffchainTopChains(uint256[] memory appchainIDs) external onlyCompletedEpoch {
         uint256 total = 0;
         uint256[] memory tokens = new uint256[](appchainIDs.length);
         for (uint256 i = 0; i < appchainIDs.length; i++) {
+            if (i > 0 && appchainIDs[i] <= appchainIDs[i - 1]) {
+                revert ChainIDsMustBeInAscendingOrder();
+            }
             tokens[i] = getTokensUsed(appchainIDs[i]);
             total += tokens[i];
         }
@@ -94,12 +100,15 @@ abstract contract GasAggregator is GasEpoch {
         pendingTotalTokensUsed = total;
     }
 
-    function pushTopChainsDataToStakingAppchain() public onlyCompletedPeriod {
+    function pushTopChainsDataToStakingAppchain() external onlyCompletedEpoch {
         if (!fallbackToOffchainAggregation()) {
             revert MustUseAutomaticAggregation();
         }
         if (block.timestamp < getEpochEndTime(currentEpochToAggregate) + challengeWindow) {
             revert WindowNotOver(currentEpochToAggregate, challengeWindow);
+        }
+        if (pendingChainIDs.length == 0) {
+            revert NoPendingDataToPush();
         }
         pushToStakingAppchain(pendingChainIDs, pendingTokensUsed);
         // cleanup pending data
