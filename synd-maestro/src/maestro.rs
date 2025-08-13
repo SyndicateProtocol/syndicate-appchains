@@ -33,7 +33,10 @@ use alloy::{
 use derivative::Derivative;
 use redis::{aio::ConnectionManager, AsyncCommands};
 use shared::{
-    json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
+    json_rpc::{
+        Rejection::{InsufficientFunds, NonceTooLow},
+        RpcError::TransactionRejected,
+    },
     multi_rpc_provider::MultiRpcProvider,
     tracing::SpanKind,
     tx_validation::{check_signature, decode_transaction},
@@ -200,9 +203,7 @@ impl MaestroService {
 
         if account_balance < total_required {
             debug!(%tx_hash_str, %account_balance, %total_required, "Insufficient funds for transaction");
-            return Err(JsonRpcError(TransactionRejected(
-                shared::json_rpc::Rejection::InsufficientFunds,
-            )));
+            return Err(JsonRpcError(TransactionRejected(InsufficientFunds)));
         }
 
         trace!(%tx_hash_str, %account_balance, %total_required, "Gas check passed");
@@ -282,7 +283,7 @@ impl MaestroService {
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
-                        error!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
+                        debug!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
                         JsonRpcError(TransactionRejected(rejection))
                     }
                     )?;
@@ -2365,7 +2366,7 @@ mod tests {
         let result = MaestroService::balance_check(&tx, account_balance);
         assert!(result.is_err());
         match result.unwrap_err() {
-            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            JsonRpcError(TransactionRejected(InsufficientFunds)) => {}
             _ => panic!("Expected InsufficientFunds error"),
         }
     }
@@ -2379,7 +2380,7 @@ mod tests {
         let result = MaestroService::balance_check(&tx, account_balance);
         assert!(result.is_err());
         match result.unwrap_err() {
-            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            JsonRpcError(TransactionRejected(InsufficientFunds)) => {}
             _ => {
                 panic!("Expected InsufficientFunds error due to maximal gas cost and zero balance")
             }
