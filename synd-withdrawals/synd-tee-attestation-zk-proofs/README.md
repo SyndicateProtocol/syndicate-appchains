@@ -26,6 +26,9 @@ The script performs the following actions:
 Update the env vars in the `setup-box.sh` script:
 
 ```
+GITHUB_USERBAME=yourgithubusername
+GITHUB_TOKEN=gpg_yourgithubpat
+...
 KEY_MANAGER_ADDRESS=0xYourKeyManagerAddress
 PRIVATE_KEY=0xYourPrivateKey
 ```
