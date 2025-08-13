@@ -11,7 +11,8 @@ abstract contract EpochTracker {
     }
 
     function getCurrentEpoch() public view returns (uint256) {
-        // We start at epoch 1 so we need to add 1
+        // Since all the epoch finalization counts are initialized to 0,
+        // we start the epochs at 1 to make sure we will finalize the first epoch.
         return ((block.timestamp - startTimestamp) / EPOCH_DURATION) + 1;
     }
 

@@ -2,23 +2,21 @@
 pragma solidity 0.8.28;
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
-import {BasePool} from "src/staking/BasePool.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract StakingTest is Test {
     SyndStaking public staking;
-    BasePool public pool;
 
     address public user1;
     address public user2;
 
     uint256 public appchainId1;
     uint256 public appchainId2;
+    uint256 public appchainId3;
 
     function setUp() public {
         staking = new SyndStaking(block.timestamp);
-        pool = new BasePool(address(staking));
 
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
@@ -28,6 +26,7 @@ contract StakingTest is Test {
 
         appchainId1 = 111;
         appchainId2 = 222;
+        appchainId3 = 333;
     }
 
     function stepEpoch(uint256 epochsToStep) public {
@@ -476,5 +475,72 @@ contract StakingTest is Test {
 
         checkStake(3, user1, 50 ether, appchainId2);
         assertEq(address(user1).balance, 50 ether);
+    }
+
+    function test_restake_twice() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        vm.startPrank(user1);
+        staking.restakeSynd(appchainId1, appchainId2, 50 ether);
+        vm.stopPrank();
+
+        stepDays(15);
+
+        vm.startPrank(user1);
+        staking.restakeSynd(appchainId2, appchainId3, 25 ether);
+        vm.stopPrank();
+
+        assertEq(staking.getWithdrawalAmount(user1, appchainId1), 50 ether);
+        assertEq(staking.getWithdrawalAmount(user1, appchainId2), 25 ether);
+        assertEq(staking.getWithdrawalAmount(user1, appchainId3), 25 ether);
+
+        stepEpoch(1);
+
+        assertEq(staking.getUserStake(2, user1), 100 ether);
+        assertEq(staking.getUserStake(3, user1), 100 ether);
+
+        assertEq(staking.getUserAppchainStake(2, user1, appchainId1), 100 ether);
+        assertEq(staking.getUserAppchainStake(2, user1, appchainId2), 0 ether);
+        assertEq(staking.getUserAppchainStake(2, user1, appchainId3), 0 ether);
+
+        assertEq(staking.getUserAppchainStake(3, user1, appchainId1), 50 ether);
+        assertEq(staking.getUserAppchainStake(3, user1, appchainId2), 25 ether);
+        assertEq(staking.getUserAppchainStake(3, user1, appchainId3), 25 ether);
+    }
+
+    function test_restake_and_reverse_restake() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        assertEq(staking.getWithdrawalAmount(user1, appchainId1), 100 ether);
+        assertEq(staking.getWithdrawalAmount(user1, appchainId2), 0 ether);
+
+        vm.startPrank(user1);
+        staking.restakeSynd(appchainId1, appchainId2, 50 ether);
+        vm.stopPrank();
+
+        stepDays(15);
+
+        assertEq(staking.getWithdrawalAmount(user1, appchainId1), 50 ether);
+        assertEq(staking.getWithdrawalAmount(user1, appchainId2), 50 ether);
+
+        vm.startPrank(user1);
+        staking.restakeSynd(appchainId2, appchainId1, 50 ether);
+        vm.stopPrank();
+
+        assertEq(staking.getWithdrawalAmount(user1, appchainId1), 100 ether);
+        assertEq(staking.getWithdrawalAmount(user1, appchainId2), 0 ether);
+
+        stepEpoch(1);
+
+        checkStake(2, user1, 100 ether, appchainId1);
+        checkStake(3, user1, 100 ether, appchainId1);
     }
 }

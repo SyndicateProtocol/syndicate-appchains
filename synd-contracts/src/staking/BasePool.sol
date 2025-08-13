@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {ISyndStaking} from "./SyndStaking.sol";
 
 contract BasePool {
+    address public immutable depositor;
+
     ISyndStaking public stakingContract;
 
     // Epoch index => emission total for that epoch
@@ -12,26 +14,30 @@ contract BasePool {
     mapping(uint256 => mapping(address => bool)) public claimed;
 
     event EpochDeposit(uint256 epochIndex, uint256 amount);
-    event ClaimSuccess(uint256 epochIndex, uint256 amount);
+    event ClaimSuccess(uint256 epochIndex, address user, address destination, uint256 amount);
 
     error NotStaked();
     error AlreadyClaimed();
     error ClaimNotAvailable();
+    error DepositNotAllowed();
 
-    constructor(address _stakingContract) {
+    constructor(address _stakingContract, address _depositor) {
         stakingContract = ISyndStaking(_stakingContract);
+        depositor = _depositor;
     }
 
-    // TODO: Make this function only callable from the staking contract
     function deposit(uint256 epochIndex) external payable {
-        uint256 amount = msg.value;
+        if (msg.sender != depositor) {
+            revert DepositNotAllowed();
+        }
 
+        uint256 amount = msg.value;
         epochTotal[epochIndex] += amount;
 
         emit EpochDeposit(epochIndex, amount);
     }
 
-    function claim(uint256 epochIndex) external {
+    function claim(uint256 epochIndex, address destination) external {
         if (epochTotal[epochIndex] == 0) {
             revert ClaimNotAvailable();
         }
@@ -51,8 +57,8 @@ contract BasePool {
         uint256 claimAmount = (epochTotal[epochIndex] * amount) / total;
 
         // Send synd to user
-        payable(msg.sender).transfer(claimAmount);
+        payable(destination).transfer(claimAmount);
 
-        emit ClaimSuccess(epochIndex, claimAmount);
+        emit ClaimSuccess(epochIndex, msg.sender, destination, claimAmount);
     }
 }

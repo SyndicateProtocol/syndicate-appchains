@@ -19,7 +19,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     /**
      * Stake Tracking System Overview
      *
-     * This contract uses a 4-variable pattern to track stake across different dimensions.
+     * This contract uses a 5-variable pattern to track stake across different dimensions.
      * The pattern ensures accurate historical accounting while enabling efficient queries.
      *
      * For each tracked value, we maintain:
@@ -40,7 +40,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
      * - Appchain Stake: Total stake for specific appchain across all users
      * - User Appchain Stake: Individual user's stake for specific appchain
      *
-     * Each dimension uses the same 4-variable pattern for consistent accounting.
+     * Each dimension uses the same 5-variable pattern for consistent accounting.
      */
 
     // Total amount staked
@@ -52,7 +52,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // Epoch => amount withdrawn during the epoch
     mapping(uint256 => uint256) public epochWithdrawals;
     // Last finalized epoch
-    uint256 public finalizedEpoch;
+    uint256 public finalizedEpochCount;
 
     // User => current stake amount
     mapping(address => uint256) public userTotal;
@@ -63,7 +63,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // Epoch => user => amount withdrawn during the epoch
     mapping(uint256 => mapping(address => uint256)) public epochUserWithdrawals;
     // User => last finalized epoch
-    mapping(address => uint256) public userFinalizedEpoch;
+    mapping(address => uint256) public userFinalizedEpochCount;
 
     // Appchain => total amount staked
     mapping(uint256 => uint256) public appchainTotal;
@@ -74,7 +74,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // Epoch => appchain => amount withdrawn during the epoch
     mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainWithdrawals;
     // Last finalized epoch for each appchain
-    mapping(uint256 => uint256) public appchainFinalizedEpoch;
+    mapping(uint256 => uint256) public appchainFinalizedEpochCount;
 
     // User => appchain => total amount staked
     mapping(address => mapping(uint256 => uint256)) public userAppchainTotal;
@@ -85,7 +85,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // Epoch => user => appchain => amount withdrawn during the epoch
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainWithdrawals;
     // User => appchain => last finalized epoch
-    mapping(address => mapping(uint256 => uint256)) public userAppchainFinalizedEpoch;
+    mapping(address => mapping(uint256 => uint256)) public userAppchainFinalizedEpochCount;
 
     /*
      * Pro-Rata Stake Tracking:
@@ -110,7 +110,6 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     event Restake(uint256 epochIndex, address user, uint256 amount, uint256 fromAppchainId, uint256 toAppchainId);
     event WithdrawalInitialized(address user, uint256 appchainId, uint256 amount);
     event WithdrawalCompleted(address user, address destination, uint256 amount);
-    event Log(string message, uint256 index);
 
     error InvalidAmount();
     error InvalidAppchainId();
@@ -134,16 +133,16 @@ contract SyndStaking is EpochTracker, ISyndStaking {
 
         // Finalize epoch accounting if needed
         uint256 epochIndex = getCurrentEpoch();
-        if (finalizedEpoch < epochIndex) {
+        if (finalizedEpochCount < epochIndex) {
             finalizeEpochs();
         }
-        if (userFinalizedEpoch[msg.sender] < epochIndex) {
+        if (userFinalizedEpochCount[msg.sender] < epochIndex) {
             finalizeUserEpochs(msg.sender);
         }
-        if (appchainFinalizedEpoch[appchainId] < epochIndex) {
+        if (appchainFinalizedEpochCount[appchainId] < epochIndex) {
             finalizeAppchainEpochs(appchainId);
         }
-        if (userAppchainFinalizedEpoch[msg.sender][appchainId] < epochIndex) {
+        if (userAppchainFinalizedEpochCount[msg.sender][appchainId] < epochIndex) {
             finalizeUserAppchainEpochs(msg.sender, appchainId);
         }
 
@@ -183,13 +182,13 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         }
 
         uint256 epochIndex = getCurrentEpoch();
-        if (userFinalizedEpoch[msg.sender] < epochIndex) {
+        if (userFinalizedEpochCount[msg.sender] < epochIndex) {
             finalizeUserEpochs(msg.sender);
         }
-        if (appchainFinalizedEpoch[fromAppchainId] < epochIndex) {
+        if (appchainFinalizedEpochCount[fromAppchainId] < epochIndex) {
             finalizeAppchainEpochs(fromAppchainId);
         }
-        if (userAppchainFinalizedEpoch[msg.sender][fromAppchainId] < epochIndex) {
+        if (userAppchainFinalizedEpochCount[msg.sender][fromAppchainId] < epochIndex) {
             finalizeUserAppchainEpochs(msg.sender, fromAppchainId);
         }
 
@@ -212,48 +211,48 @@ contract SyndStaking is EpochTracker, ISyndStaking {
 
     function finalizeEpochs() public {
         uint256 currentEpoch = getCurrentEpoch();
-        while (finalizedEpoch < currentEpoch) {
-            epochTotal[finalizedEpoch] += totalStake;
-            epochTotal[finalizedEpoch] += epochWithdrawals[finalizedEpoch];
-            epochTotal[finalizedEpoch] -= epochAdditions[finalizedEpoch];
-            finalizedEpoch++;
+        while (finalizedEpochCount < currentEpoch) {
+            epochTotal[finalizedEpochCount] += totalStake;
+            epochTotal[finalizedEpochCount] += epochWithdrawals[finalizedEpochCount];
+            epochTotal[finalizedEpochCount] -= epochAdditions[finalizedEpochCount];
+            finalizedEpochCount++;
         }
     }
 
     function finalizeUserEpochs(address user) public {
         uint256 currentEpoch = getCurrentEpoch();
-        uint256 index = userFinalizedEpoch[user];
+        uint256 index = userFinalizedEpochCount[user];
         while (index < currentEpoch) {
             epochUserTotal[index][user] += userTotal[user];
             epochUserTotal[index][user] += epochUserWithdrawals[index][user];
             epochUserTotal[index][user] -= epochUserAdditions[index][user];
             index++;
         }
-        userFinalizedEpoch[user] = index;
+        userFinalizedEpochCount[user] = index;
     }
 
     function finalizeAppchainEpochs(uint256 appchainId) public {
         uint256 currentEpoch = getCurrentEpoch();
-        uint256 index = appchainFinalizedEpoch[appchainId];
+        uint256 index = appchainFinalizedEpochCount[appchainId];
         while (index < currentEpoch) {
             epochAppchainTotal[index][appchainId] += appchainTotal[appchainId];
             epochAppchainTotal[index][appchainId] += epochAppchainWithdrawals[index][appchainId];
             epochAppchainTotal[index][appchainId] -= epochAppchainAdditions[index][appchainId];
             index++;
         }
-        appchainFinalizedEpoch[appchainId] = index;
+        appchainFinalizedEpochCount[appchainId] = index;
     }
 
     function finalizeUserAppchainEpochs(address user, uint256 appchainId) public {
         uint256 currentEpoch = getCurrentEpoch();
-        uint256 index = userAppchainFinalizedEpoch[user][appchainId];
+        uint256 index = userAppchainFinalizedEpochCount[user][appchainId];
         while (index < currentEpoch) {
             epochUserAppchainTotal[index][user][appchainId] += userAppchainTotal[user][appchainId];
             epochUserAppchainTotal[index][user][appchainId] += epochUserAppchainWithdrawals[index][user][appchainId];
             epochUserAppchainTotal[index][user][appchainId] -= epochUserAppchainAdditions[index][user][appchainId];
             index++;
         }
-        userAppchainFinalizedEpoch[user][appchainId] = index;
+        userAppchainFinalizedEpochCount[user][appchainId] = index;
     }
 
     ///////////////////////
@@ -271,16 +270,16 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         }
 
         uint256 currentEpoch = getCurrentEpoch();
-        if (finalizedEpoch < currentEpoch) {
+        if (finalizedEpochCount < currentEpoch) {
             finalizeEpochs();
         }
-        if (userFinalizedEpoch[msg.sender] < currentEpoch) {
+        if (userFinalizedEpochCount[msg.sender] < currentEpoch) {
             finalizeUserEpochs(msg.sender);
         }
-        if (appchainFinalizedEpoch[appchainId] < currentEpoch) {
+        if (appchainFinalizedEpochCount[appchainId] < currentEpoch) {
             finalizeAppchainEpochs(appchainId);
         }
-        if (userAppchainFinalizedEpoch[msg.sender][appchainId] < currentEpoch) {
+        if (userAppchainFinalizedEpochCount[msg.sender][appchainId] < currentEpoch) {
             finalizeUserAppchainEpochs(msg.sender, appchainId);
         }
 
@@ -298,7 +297,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     }
 
     function initializeWithdrawal(uint256 appchainId) external {
-        initializeWithdrawal(appchainId, userAppchainTotal[msg.sender][appchainId]);
+        initializeWithdrawal(appchainId, getWithdrawalAmount(msg.sender, appchainId));
     }
 
     function withdraw(uint256 epochIndex, address destination) external {
@@ -324,8 +323,12 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     // View functions
     ///////////////////////
 
+    function getWithdrawalAmount(address user, uint256 appchainId) public view returns (uint256) {
+        return userAppchainTotal[user][appchainId];
+    }
+
     function getUserStake(uint256 epochIndex, address user) public view returns (uint256) {
-        if (epochIndex >= userFinalizedEpoch[user]) {
+        if (epochIndex >= userFinalizedEpochCount[user]) {
             return userTotal[user] + epochUserTotal[epochIndex][user] + epochUserWithdrawals[epochIndex][user]
                 - epochUserAdditions[epochIndex][user];
         } else {
@@ -338,7 +341,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     }
 
     function getTotalStake(uint256 epochIndex) public view returns (uint256) {
-        if (epochIndex >= finalizedEpoch) {
+        if (epochIndex >= finalizedEpochCount) {
             return totalStake + epochTotal[epochIndex] + epochWithdrawals[epochIndex] - epochAdditions[epochIndex];
         } else {
             return epochTotal[epochIndex];
@@ -350,7 +353,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     }
 
     function getAppchainStake(uint256 epochIndex, uint256 appchainId) public view returns (uint256) {
-        if (epochIndex >= appchainFinalizedEpoch[appchainId]) {
+        if (epochIndex >= appchainFinalizedEpochCount[appchainId]) {
             return appchainTotal[appchainId] + epochAppchainTotal[epochIndex][appchainId]
                 + epochAppchainWithdrawals[epochIndex][appchainId] - epochAppchainAdditions[epochIndex][appchainId];
         } else {
@@ -359,7 +362,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     }
 
     function getUserAppchainStake(uint256 epochIndex, address user, uint256 appchainId) public view returns (uint256) {
-        if (epochIndex >= userAppchainFinalizedEpoch[user][appchainId]) {
+        if (epochIndex >= userAppchainFinalizedEpochCount[user][appchainId]) {
             return userAppchainTotal[user][appchainId] + epochUserAppchainTotal[epochIndex][user][appchainId]
                 + epochUserAppchainWithdrawals[epochIndex][user][appchainId]
                 - epochUserAppchainAdditions[epochIndex][user][appchainId];
