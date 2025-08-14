@@ -39,8 +39,6 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module
     function initialize(address admin, address _permissionRequirementModule) external onlyOwner {
         if (hasBeenInitialized) revert AlreadyInitialized();
-        if (_permissionRequirementModule == address(0)) revert InvalidModuleAddress();
-
         hasBeenInitialized = true;
 
         permissionRequirementModule = IPermissionModule(_permissionRequirementModule);
@@ -51,7 +49,6 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// @notice Updates the requirement module
     /// @param _newModule The address of the new requirement module
     function updateRequirementModule(address _newModule) external onlyOwner {
-        if (_newModule == address(0)) revert InvalidModuleAddress();
         permissionRequirementModule = IPermissionModule(_newModule);
 
         emit RequirementModuleUpdated(_newModule);
@@ -66,12 +63,35 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
         _;
     }
 
+    modifier onlyWhenAllowedCompressed(address msgSender, address txOrigin) {
+        if (!isAllowedCompressed(msgSender, txOrigin)) revert TransactionOrSenderNotAllowed();
+        _;
+    }
+
+    modifier onlyWhenAllowedUnsigned(address msgSender, address txOrigin) {
+        if (!isAllowedUnsigned(msgSender, txOrigin)) revert TransactionOrSenderNotAllowed();
+        _;
+    }
+
     /// @notice Checks if both the proposer and calldata are allowed
     /// @param proposer The address to check
     /// @param originator The address of tx.origin.
     /// @param data The calldata to check
     /// @return bool indicating if both the proposer and calldata are allowed
     function isAllowed(address proposer, address originator, bytes calldata data) public view returns (bool) {
-        return permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
+        return address(permissionRequirementModule) == address(0)
+            || permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
+    }
+
+    /// tx data is ignored as it is compressed
+    function isAllowedCompressed(address proposer, address originator) public view returns (bool) {
+        return address(permissionRequirementModule) == address(0)
+            || permissionRequirementModule.isAllowed(proposer, originator, ""); //#olympix-ignore-calls-in-loop
+    }
+
+    /// tx data is set to 0 to indicate that this is an unsigned tx and msgSender is the tx source address
+    function isAllowedUnsigned(address proposer, address originator) public view returns (bool) {
+        return address(permissionRequirementModule) == address(0)
+            || permissionRequirementModule.isAllowed(proposer, originator, hex"00"); //#olympix-ignore-calls-in-loop
     }
 }

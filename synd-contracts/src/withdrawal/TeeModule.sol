@@ -62,8 +62,6 @@ function hash_object(PendingAssertion calldata a) pure returns (bytes32) {
     return keccak256(abi.encodePacked(a.appBlockHash, a.appSendRoot, a.seqBlockHash, a.l1BatchAcc));
 }
 
-event TeeConfigHash(bytes32 configHash);
-
 event TeeHacked(uint256);
 
 event ChallengeResolved(PendingAssertion);
@@ -71,6 +69,8 @@ event ChallengeResolved(PendingAssertion);
 event TeeInput(TeeTrustedInput input);
 
 event KeyManagerUpdate(ITeeKeyManager newTeeKeyManager, ITeeKeyManager oldTeeKeyManager);
+
+event ChallengeWindowDurationUpdate(uint64 newChallengeWindowDuration, uint64 oldChallengeWindowDuration);
 
 /**
  * @title TeeModule Contract
@@ -121,11 +121,11 @@ contract TeeModule is Ownable(msg.sender) {
         uint64 challengeWindowDuration_, //#olympix-ignore-no-parameter-validation-in-constructor
         ITeeKeyManager teeKeyManager_
     ) {
+        require(challengeWindowDuration_ < 7 * 24 * 3600, "challenge window must be less than a week");
         challengeWindowDuration = challengeWindowDuration_;
         l1BlockOrBridge = l1BlockOrBridge_;
         isL1Chain = isL1Chain_;
         teeTrustedInput.configHash = configHash_;
-        emit TeeConfigHash(configHash_);
 
         if (isL1Chain) {
             require(
@@ -257,5 +257,11 @@ contract TeeModule is Ownable(msg.sender) {
         require(address(newTeeKeyManager).code.length > 0, "teeKeyManager address does not have any code");
         emit KeyManagerUpdate(newTeeKeyManager, teeKeyManager);
         teeKeyManager = newTeeKeyManager;
+    }
+
+    function updateChallengeWindowDuration(uint64 challengeWindowDuration_) external onlyOwner {
+        require(challengeWindowDuration_ < 7 * 24 * 3600, "challenge window must be less than a week");
+        emit ChallengeWindowDurationUpdate(challengeWindowDuration_, challengeWindowDuration);
+        challengeWindowDuration = challengeWindowDuration_;
     }
 }

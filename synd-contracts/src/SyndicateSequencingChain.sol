@@ -3,6 +3,17 @@ pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 
+enum TransactionType {
+    Unsigned, // an unsigned tx
+    Contract, // a contract tx (unsigned, nonceless)
+    Compressed, // compressed transactions (signed)
+    _Reserved,
+    Signed // a regular signed tx
+
+}
+
+error GasLimitTooLarge();
+
 /// @title SyndicateSequencingChain
 /// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
 ///
@@ -27,7 +38,7 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 /// └─────────────────────────────────────────────────────────────────────────┘
 ///
 /// @dev Transaction Lifecycle:
-/// 1. Transaction is submitted via processTransaction, processTransactionUncompressed, or processTransactionsBulk
+/// 1. Transaction is submitted via processTransaction, processTransactionsCompressed, or processTransactionsBulk
 /// 2. onlyWhenAllowed modifier passes both msg.sender AND tx.origin to SequencingModuleChecker
 /// 3. SequencingModuleChecker delegates to the configured permissionRequirementModule
 /// 4. Permission module evaluates BOTH addresses using custom logic (developer responsibility)
@@ -54,25 +65,83 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         appchainId = _appchainId;
     }
 
-    /// @notice Processes a compressed transaction.
+    // We use per-address contract nonces instead of a global one to increase the predictability of the request id
+    // and store per-address contract tx counts for debugging purposes.
+    // Note that gaps are allowed in the request id, unlike a regular nonce.
+    mapping(address => uint256) public contractNonce;
+
+    /// This has a signature similar to the inbox function.
+    /// Note that unlike the inbox function, no max data size is enforced.
+    function sendContractTransaction(
+        uint64 gasLimit,
+        uint256 maxFeePerGas,
+        address to,
+        uint256 value,
+        bytes calldata data
+    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) returns (uint256) {
+        // add 1<<255 to prevent collisions with delayed message requestIds
+        uint256 requestId = (1 << 255) + contractNonce[msg.sender]++;
+        emit TransactionProcessed(
+            msg.sender,
+            abi.encodePacked(
+                TransactionType.Contract,
+                msg.sender,
+                requestId,
+                uint256(gasLimit),
+                maxFeePerGas,
+                uint256(uint160(to)),
+                value,
+                data
+            )
+        );
+        return requestId;
+    }
+
+    /// This has a signature similar to the inbox function.
+    /// Note that unlike the inbox function, no max data size is enforced.
+    function sendUnsignedTransaction(
+        uint64 gasLimit,
+        uint256 maxFeePerGas,
+        uint256 nonce,
+        address to,
+        uint256 value,
+        bytes calldata data
+    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) {
+        emit TransactionProcessed(
+            msg.sender,
+            abi.encodePacked(
+                TransactionType.Unsigned,
+                msg.sender,
+                uint256(gasLimit),
+                maxFeePerGas,
+                nonce,
+                uint256(uint160(to)),
+                value,
+                data
+            )
+        );
+    }
+
+    /// @notice Processes a compressed batch of signed transactions.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
-        emit TransactionProcessed(msg.sender, data);
-    }
-
-    /// @notice Processes multiple uncompressed transactions in bulk.
-    /// @param data An array of transaction data without prepended zero bytes.
-    //#olympix-ignore-required-tx-origin
-    function processTransactionUncompressed(bytes calldata data)
+    function processTransactionsCompressed(bytes calldata data)
         external
-        onlyWhenAllowed(msg.sender, tx.origin, data)
+        onlyWhenAllowedCompressed(msg.sender, tx.origin)
     {
-        emit TransactionProcessed(msg.sender, prependZeroByte(data));
+        require(data.length > 0, "no tx data");
+        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Compressed, data));
     }
 
-    /// @notice Processes multiple transactions in bulk.
-    /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
+    /// @notice Process a signed transaction.
+    /// @param data Transaction data
+    //#olympix-ignore-required-tx-origin
+    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
+        require(data.length > 0, "no tx data");
+        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data));
+    }
+
+    /// @notice Processes multiple signed transactions in bulk.
     /// @param data An array of transaction data.
     //#olympix-ignore
     function processTransactionsBulk(bytes[] calldata data) external {
@@ -81,19 +150,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         // Process all transactions
         uint256 i;
         for (i = 0; i < dataCount; i++) {
-            bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
+            bool isAllowed = data.length > 0 && isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed
-                emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
+                emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data[i]));
             }
         }
-    }
-
-    /// @notice Prepends a zero byte to the transaction data
-    /// @dev This helps op-translator identify uncompressed data
-    /// @param _data The original transaction data
-    /// @return bytes The transaction data with a zero byte prepended
-    function prependZeroByte(bytes calldata _data) public pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), _data);
     }
 }
