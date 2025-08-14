@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {EpochTracker} from "./EpochTracker.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title ISyndStaking
@@ -475,7 +476,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
 
         epochUserWithdrawals[epochIndex][msg.sender] = 0;
 
-        payable(destination).transfer(amount);
+        Address.sendValue(payable(destination), amount);
 
         emit WithdrawalCompleted(msg.sender, destination, amount);
     }
