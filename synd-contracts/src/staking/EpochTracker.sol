@@ -11,7 +11,7 @@ pragma solidity 0.8.28;
  */
 abstract contract EpochTracker {
     /// @notice The timestamp when epoch counting begins
-    uint256 public startTimestamp;
+    uint256 public immutable startTimestamp;
 
     /// @notice Duration of each epoch in seconds (30 days)
     uint256 public constant EPOCH_DURATION = 30 days;

@@ -18,12 +18,12 @@ contract BasePool {
     address public immutable depositor;
 
     /// @notice Reference to the SyndStaking contract for stake queries
-    ISyndStaking public stakingContract;
+    ISyndStaking public immutable stakingContract;
 
     /// @notice Mapping from epoch index to total reward amount deposited for that epoch
-    mapping(uint256 => uint256) public epochTotal;
+    mapping(uint256 epochIndex => uint256 total) public epochTotal;
     /// @notice Mapping from epoch index and user address to whether they have claimed rewards
-    mapping(uint256 => mapping(address => bool)) public claimed;
+    mapping(uint256 epochIndex => mapping(address user => bool claimed)) public claimed;
 
     /**
      * @notice Emitted when rewards are deposited for a specific epoch
@@ -60,16 +60,20 @@ contract BasePool {
         depositor = _depositor;
     }
 
+    /// @notice Restricts function access to the authorized depositor only
+    modifier onlyDepositor() {
+        if (msg.sender != depositor) {
+            revert DepositNotAllowed();
+        }
+        _;
+    }
+
     /**
      * @notice Deposit rewards for a specific epoch
      * @dev Only the designated depositor can call this function
      * @param epochIndex The epoch index for which rewards are being deposited
      */
-    function deposit(uint256 epochIndex) external payable {
-        if (msg.sender != depositor) {
-            revert DepositNotAllowed();
-        }
-
+    function deposit(uint256 epochIndex) external payable onlyDepositor {
         uint256 amount = msg.value;
         epochTotal[epochIndex] += amount;
 

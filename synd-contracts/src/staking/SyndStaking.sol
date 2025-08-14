@@ -91,61 +91,65 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     uint256 public totalStake;
 
     /// @notice Mapping from epoch index to total amount staked in that epoch
-    mapping(uint256 => uint256) public epochTotal;
+    mapping(uint256 epochIndex => uint256 total) public epochTotal;
 
     /// @notice Mapping from epoch index to amount staked during that specific epoch
-    mapping(uint256 => uint256) public epochAdditions;
+    mapping(uint256 epochIndex => uint256 additions) public epochAdditions;
 
     /// @notice Mapping from epoch index to amount withdrawn during that specific epoch
-    mapping(uint256 => uint256) public epochWithdrawals;
+    mapping(uint256 epochIndex => uint256 withdrawals) public epochWithdrawals;
 
     /// @notice Last finalized epoch index for global stake accounting
     uint256 public finalizedEpochCount;
 
     /// @notice Mapping from user address to their current total stake amount across all appchains
-    mapping(address => uint256) public userTotal;
+    mapping(address user => uint256 total) public userTotal;
 
     /// @notice Mapping from epoch index and user address to their stake amount in that epoch
-    mapping(uint256 => mapping(address => uint256)) public epochUserTotal;
+    mapping(uint256 epochIndex => mapping(address user => uint256 total)) public epochUserTotal;
 
     /// @notice Mapping from epoch index and user address to amount staked during that specific epoch
-    mapping(uint256 => mapping(address => uint256)) public epochUserAdditions;
+    mapping(uint256 epochIndex => mapping(address user => uint256 additions)) public epochUserAdditions;
 
     /// @notice Mapping from epoch index and user address to amount withdrawn during that specific epoch
-    mapping(uint256 => mapping(address => uint256)) public epochUserWithdrawals;
+    mapping(uint256 epochIndex => mapping(address user => uint256 withdrawals)) public epochUserWithdrawals;
 
     /// @notice Mapping from user address to their last finalized epoch index
-    mapping(address => uint256) public userFinalizedEpochCount;
+    mapping(address user => uint256 finalizedEpochCount) public userFinalizedEpochCount;
 
     /// @notice Mapping from appchain ID to total amount staked on that appchain across all users
-    mapping(uint256 => uint256) public appchainTotal;
+    mapping(uint256 appchainId => uint256 total) public appchainTotal;
 
     /// @notice Mapping from epoch index and appchain ID to total amount staked on that appchain in that epoch
-    mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainTotal;
+    mapping(uint256 epochIndex => mapping(uint256 appchainId => uint256 total)) public epochAppchainTotal;
 
     /// @notice Mapping from epoch index and appchain ID to amount staked on that appchain during that specific epoch
-    mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainAdditions;
+    mapping(uint256 epochIndex => mapping(uint256 appchainId => uint256 additions)) public epochAppchainAdditions;
 
     /// @notice Mapping from epoch index and appchain ID to amount withdrawn from that appchain during that specific epoch
-    mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainWithdrawals;
+    mapping(uint256 epochIndex => mapping(uint256 appchainId => uint256 withdrawals)) public epochAppchainWithdrawals;
 
     /// @notice Mapping from appchain ID to its last finalized epoch index
-    mapping(uint256 => uint256) public appchainFinalizedEpochCount;
+    mapping(uint256 appchainId => uint256 finalizedEpochCount) public appchainFinalizedEpochCount;
 
     /// @notice Mapping from user address and appchain ID to user's current stake amount on that specific appchain
-    mapping(address => mapping(uint256 => uint256)) public userAppchainTotal;
+    mapping(address user => mapping(uint256 appchainId => uint256 total)) public userAppchainTotal;
 
     /// @notice Mapping from epoch index, user address, and appchain ID to user's stake amount on that appchain in that epoch
-    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainTotal;
+    mapping(uint256 epochIndex => mapping(address user => mapping(uint256 appchainId => uint256 total))) public
+        epochUserAppchainTotal;
 
     /// @notice Mapping from epoch index, user address, and appchain ID to amount staked by user on that appchain during that specific epoch
-    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainAdditions;
+    mapping(uint256 epochIndex => mapping(address user => mapping(uint256 appchainId => uint256 additions))) public
+        epochUserAppchainAdditions;
 
     /// @notice Mapping from epoch index, user address, and appchain ID to amount withdrawn by user from that appchain during that specific epoch
-    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public epochUserAppchainWithdrawals;
+    mapping(uint256 epochIndex => mapping(address user => mapping(uint256 appchainId => uint256 withdrawals))) public
+        epochUserAppchainWithdrawals;
 
     /// @notice Mapping from user address and appchain ID to their last finalized epoch index for that specific appchain
-    mapping(address => mapping(uint256 => uint256)) public userAppchainFinalizedEpochCount;
+    mapping(address user => mapping(uint256 appchainId => uint256 finalizedEpochCount)) public
+        userAppchainFinalizedEpochCount;
 
     /*
      * Pro-Rata Stake Tracking:
@@ -162,10 +166,10 @@ contract SyndStaking is EpochTracker, ISyndStaking {
     */
 
     /// @notice Mapping from epoch index to total pro-rata stake share for that epoch (weighted by time remaining)
-    mapping(uint256 => uint256) public epochStakeShare;
+    mapping(uint256 epochIndex => uint256 stakeShare) public epochStakeShare;
 
     /// @notice Mapping from epoch index and user address to user's pro-rata stake share for that epoch (weighted by time remaining)
-    mapping(uint256 => mapping(address => uint256)) public epochUserStakeShare;
+    mapping(uint256 epochIndex => mapping(address user => uint256 stakeShare)) public epochUserStakeShare;
 
     /**
      * @notice Emitted when a user stakes SYND tokens
