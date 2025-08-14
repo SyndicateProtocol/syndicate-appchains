@@ -72,6 +72,10 @@ event KeyManagerUpdate(ITeeKeyManager newTeeKeyManager, ITeeKeyManager oldTeeKey
 
 event ChallengeWindowDurationUpdate(uint64 newChallengeWindowDuration, uint64 oldChallengeWindowDuration);
 
+event FundsTransferred(address dest);
+
+event AssertionPosterTransferred(address dest);
+
 /**
  * @title TeeModule Contract
  */
@@ -242,11 +246,13 @@ contract TeeModule is Ownable(msg.sender) {
     }
 
     function transferAssertionPosterOwner(address newOwner) external onlyOwner {
+        emit AssertionPosterTransferred(newOwner);
         Ownable(address(poster)).transferOwnership(newOwner);
     }
 
     function transferFunds(address dest) external onlyOwner {
         require(dest != address(0), "destination address is zero");
+        emit FundsTransferred(dest);
 
         //#olympix-ignore-low-level-call-params-verified
         (bool success,) = payable(dest).call{value: address(this).balance}("");

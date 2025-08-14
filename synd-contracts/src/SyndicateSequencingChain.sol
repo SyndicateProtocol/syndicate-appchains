@@ -12,8 +12,6 @@ enum TransactionType {
 
 }
 
-error GasLimitTooLarge();
-
 /// @title SyndicateSequencingChain
 /// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
 ///
