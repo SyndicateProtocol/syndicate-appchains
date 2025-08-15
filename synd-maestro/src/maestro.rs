@@ -305,7 +305,7 @@ impl MaestroService {
             }
             Ordering::Less => {
                 let rejection = NonceTooLow(expected_nonce, tx_nonce);
-                warn!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Failed to submit forwarded transaction: {}", rejection);
+                debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Failed to submit forwarded transaction: {rejection}");
                 return Err(JsonRpcError(TransactionRejected(rejection)));
             }
             Ordering::Greater => {
