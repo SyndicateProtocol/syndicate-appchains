@@ -43,7 +43,8 @@ pub struct StreamConsumer {
     #[derivative(Debug = "ignore")]
     conn: ConnectionManager,
     stream_key: String,
-    last_id: String,
+    /// The last ID of the message that was processed
+    pub last_id: String,
     valkey_metrics: Arc<ValkeyMetrics>,
 }
 
