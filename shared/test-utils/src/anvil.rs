@@ -7,10 +7,10 @@ use crate::{
 use alloy::{
     eips::BlockNumberOrTag,
     node_bindings::Anvil,
+    primitives::Address,
     providers::{ext::AnvilApi as _, Provider, ProviderBuilder},
     rpc::types::{anvil::MineOptions, Block},
 };
-use alloy::primitives::Address;
 use eyre::{eyre, Result};
 use shared::types::FilledProvider;
 
@@ -51,7 +51,11 @@ pub async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
 }
 
 /// for an Anvil chain, set a wallet's nonce to a provided value
-pub async fn set_address_nonce(provider: &FilledProvider, address: Address, nonce: u64) -> Result<()> {
+pub async fn set_address_nonce(
+    provider: &FilledProvider,
+    address: Address,
+    nonce: u64,
+) -> Result<()> {
     provider.anvil_set_nonce(address, nonce).await?;
     Ok(())
 }

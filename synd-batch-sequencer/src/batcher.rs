@@ -44,8 +44,8 @@ use tracing::{debug, error, info, instrument, trace, warn};
 #[derive(Derivative)]
 #[derivative(Debug)]
 struct Batcher {
-    /// Whether compression is enabled (default: true)
-    compression_enabled: bool,
+    /// Batcher configuration
+    config: Arc<BatcherConfig>,
     /// The max batch size for the batcher (default: 90KB)
     max_batch_size: usize,
     /// The Stream consumer for the batcher
@@ -55,10 +55,6 @@ struct Batcher {
     valkey_conn: ConnectionManager,
     /// The sequencing contract provider for the batcher
     sequencing_contract_instance: SyndicateSequencingChainInstance<MultiRpcProvider>,
-    /// The chain ID for the batcher
-    chain_id: u64,
-    /// The timeout for the batcher (default: 200ms)
-    timeout: Duration,
     /// Metrics
     metrics: BatcherMetrics,
     /// Outstanding transactions that didn't fit in the last batch and their stream ID
@@ -106,7 +102,7 @@ pub async fn get_cached_consumer_last_id(
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
-pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
+pub async fn run_batcher(config: Arc<BatcherConfig>) -> Result<JoinHandle<()>> {
     let client = ValkeyClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
@@ -128,7 +124,7 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
         Some(cache_health_handler), // same /ready behavior as /health
     ));
 
-    let sequencing_contract_instance = create_sequencing_contract_instance(config).await?;
+    let sequencing_contract_instance = create_sequencing_contract_instance(config.clone()).await?;
 
     let consumer_last_id =
         get_cached_consumer_last_id(&mut conn, config.chain_id, valkey_metrics.clone()).await;
@@ -169,7 +165,7 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
 }
 
 async fn create_sequencing_contract_instance(
-    config: &BatcherConfig,
+    config: Arc<BatcherConfig>,
 ) -> Result<SyndicateSequencingChainInstance<MultiRpcProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
@@ -195,25 +191,35 @@ async fn create_sequencing_contract_instance(
 
 impl Batcher {
     const fn new(
-        config: &BatcherConfig,
+        config: Arc<BatcherConfig>,
         valkey_conn: ConnectionManager,
         stream_consumer: StreamConsumer,
         sequencing_contract_instance: SyndicateSequencingChainInstance<MultiRpcProvider>,
         metrics: BatcherMetrics,
     ) -> Self {
         Self {
-            compression_enabled: config.compression_enabled,
+            config: config.clone(),
             max_batch_size: config.max_batch_size.as_u64() as usize,
             stream_consumer,
             valkey_conn,
             sequencing_contract_instance,
-            chain_id: config.chain_id,
-            timeout: config.timeout,
-            wait_for_receipt: config.wait_for_receipt,
             metrics,
             outstanding_txs: Vec::new(),
             last_included_id: None,
         }
+    }
+
+    async fn reset_sequencing_contract_instance(&mut self) {
+        let contract_instance = match create_sequencing_contract_instance(self.config.clone()).await
+        {
+            Ok(instance) => instance,
+            Err(e) => {
+                error!("Failed to reset sequencing contract instance: {:?}", e);
+                return
+            }
+        };
+
+        self.sequencing_contract_instance = contract_instance
     }
 
     #[instrument(
@@ -221,7 +227,7 @@ impl Batcher {
         err,
         fields(
             otel.kind = ?SpanKind::Consumer,
-            chain_id = %self.chain_id
+            chain_id = %self.config.chain_id
         )
     )]
     async fn process_transactions(&mut self) -> Result<(), BatchError> {
@@ -229,14 +235,14 @@ impl Batcher {
 
         let batch = self.read_and_batch_transactions().await?;
         if batch.is_empty() {
-            trace!(%self.chain_id, "No transactions available to batch.");
+            trace!(%self.config.chain_id, "No transactions available to batch.");
             return Ok(());
         }
 
         let submission_start = Instant::now();
         if let Err(e) = self.send_batch(batch).await {
             // Don't reset the compressor here, because we want to retry the same batch
-            error!(%self.chain_id, "send_batch failed: {:?}", e);
+            error!(%self.config.chain_id, "send_batch failed: {:?}", e);
             return Err(e);
         }
         self.metrics.record_submission_latency(submission_start.elapsed());
@@ -250,7 +256,7 @@ impl Batcher {
         err,
         fields(
             otel.kind = ?SpanKind::Consumer,
-            chain_id = %self.chain_id
+            chain_id = %self.config.chain_id
         )
     )]
     async fn read_and_batch_transactions(&mut self) -> Result<SequencingBatch> {
@@ -260,8 +266,8 @@ impl Batcher {
         let mut uncompressed_size = 0;
 
         'outer: loop {
-            if start.elapsed() >= self.timeout {
-                debug!(%self.chain_id, "Read timeout reached. Stopping transaction read.");
+            if start.elapsed() >= self.config.timeout {
+                debug!(%self.config.chain_id, "Read timeout reached. Stopping transaction read.");
                 break;
             }
 
@@ -279,7 +285,7 @@ impl Batcher {
 
             // Process transactions until one doesn't fit
             while let Some((tx_bytes, _tx_id)) = pending_txs.front() {
-                let proposed_batch = match self.compression_enabled {
+                let proposed_batch = match self.config.compression_enabled {
                     true => compress_batch(&txs, tx_bytes)?,
                     false => uncompressed_batch(&txs, tx_bytes),
                 };
@@ -292,10 +298,10 @@ impl Batcher {
                     if txs.is_empty() {
                         match pending_txs.pop_front() {
                             Some((bad_tx, bad_tx_id)) => {
-                                error!(%self.chain_id, tx_hash=%keccak256(&bad_tx), tx_id=%bad_tx_id, "Transaction is too large to fit in the batch. Discarding");
+                                error!(%self.config.chain_id, tx_hash=%keccak256(&bad_tx), tx_id=%bad_tx_id, "Transaction is too large to fit in the batch. Discarding");
                             }
                             None => {
-                                error!(%self.chain_id, "No transactions to discard");
+                                error!(%self.config.chain_id, "No transactions to discard");
                             }
                         }
                         continue;
@@ -309,7 +315,7 @@ impl Batcher {
 
                 uncompressed_size += tx_bytes.len();
                 debug!(
-                    %self.chain_id, ?tx_bytes, batch_size = %proposed_batch.len(), "Adding transaction to batch",
+                    %self.config.chain_id, ?tx_bytes, batch_size = %proposed_batch.len(), "Adding transaction to batch",
                 );
                 batch = proposed_batch;
                 if let Some((tx, tx_id)) = pending_txs.pop_front() {
@@ -333,13 +339,13 @@ impl Batcher {
         err,
         fields(
             otel.kind = ?SpanKind::Producer,
-            chain_id = %self.chain_id,
+            chain_id = %self.config.chain_id,
             batch_size = %batch.len()
         )
     )]
-    async fn send_batch(&self, batch: SequencingBatch) -> Result<(), BatchError> {
+    async fn send_batch(&mut self, batch: SequencingBatch) -> Result<(), BatchError> {
         debug!(
-            %self.chain_id, "Sending Batch - size: {} bytes",
+            %self.config.chain_id, "Sending Batch - size: {} bytes",
             batch.len()
         );
 
@@ -363,18 +369,20 @@ impl Batcher {
                 BatchError::SendBatchFailed(format!("error: {e:?}, tx: {transaction_request:?}",))
             })?;
 
-        if self.wait_for_receipt {
+        if self.config.wait_for_receipt {
             let receipt = pending_tx
                 .get_receipt()
                 .await
                 .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
-            warn!(%self.chain_id, "Batch submitted and receipt received: {:?}", receipt);
+            warn!(%self.config.chain_id, "Batch submitted and receipt received: {:?}", receipt);
             if !receipt.status() {
-                error!(%self.chain_id, "Batch submission failed. tx: {:?}, receipt: {:?}", transaction_request, receipt);
+                error!(%self.config.chain_id, "Batch submission failed. tx: {:?}, receipt: {:?}", transaction_request, receipt);
+                // Reset wallet nonce by recreating the contract instance
+                self.reset_sequencing_contract_instance().await;
                 return Err(BatchError::SendBatchFailed("Batch submission failed".to_string()));
             }
         } else {
-            debug!(%self.chain_id, "Batch submitted");
+            debug!(%self.config.chain_id, "Batch submitted");
         }
 
         // Record the wallet balance in the background
@@ -535,7 +543,7 @@ mod tests {
 
         let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher = Batcher::new(
-            &config,
+            Arc::from(config),
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -579,7 +587,7 @@ mod tests {
 
         let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher = Batcher::new(
-            &config,
+            Arc::from(config),
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -609,7 +617,7 @@ mod tests {
 
         let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher = Batcher::new(
-            &config,
+            Arc::from(config),
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -664,7 +672,7 @@ mod tests {
         config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
         let mut batcher = Batcher::new(
-            &config,
+            Arc::from(config),
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -728,7 +736,7 @@ mod tests {
         config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
         let mut batcher = Batcher::new(
-            &config,
+            Arc::from(config),
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -751,7 +759,7 @@ mod tests {
         let (valkey, valkey_url) = start_valkey().await.unwrap();
         let anvil = start_anvil(1).await.unwrap();
 
-        let config = BatcherConfig {
+        let config = Arc::from(BatcherConfig {
             max_batch_size: byte_unit::Byte::from_u64(1024),
             valkey_url,
             chain_id: 1,
@@ -764,9 +772,9 @@ mod tests {
             port: PortManager::instance().next_port().await,
             sequencing_address: Address::ZERO,
             ..Default::default()
-        };
+        });
 
-        let _handle = run_batcher(&config).await.unwrap();
+        let _handle = run_batcher(config.clone()).await.unwrap();
 
         let url = format!("http://0.0.0.0:{}/health", config.port);
 

@@ -20,9 +20,7 @@ use synd_maestro::valkey::models::waiting_transaction::WaitingGapTxnExt;
 use test_framework::components::{
     configuration::ConfigurationOptions, test_components::TestComponents,
 };
-use test_utils::anvil::set_address_nonce;
-use test_utils::chain_info::test_account1;
-use test_utils::wait_until;
+use test_utils::{anvil::set_address_nonce, chain_info::test_account1, wait_until};
 
 // an arbitrary eoa address used for testing
 const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380");
@@ -604,8 +602,8 @@ async fn e2e_maestro_l2_crash_recovery() -> Result<(), eyre::Error> {
             // Goal: create `nonce too high` errors
             // Reset nonce of sequencer to value before transaction.
             let batch_sequencer_address = test_account1().address;
-            set_address_nonce(&components.appchain_provider, batch_sequencer_address, nonce).await?;
-
+            set_address_nonce(&components.appchain_provider, batch_sequencer_address, nonce)
+                .await?;
 
             // 2. Send second transaction that will be in-flight when L2 crashes
             let tx2 = TransactionRequest::default()
@@ -632,14 +630,17 @@ async fn e2e_maestro_l2_crash_recovery() -> Result<(), eyre::Error> {
 
             // Verify that second transaction is not yet confirmed (L2 is down)
             tokio::time::sleep(Duration::from_secs(1)).await;
-            let receipt2_before_restart = components.appchain_provider.get_transaction_receipt(tx_hash2).await?;
+            let receipt2_before_restart =
+                components.appchain_provider.get_transaction_receipt(tx_hash2).await?;
             // Transaction might or might not be there depending on timing - that's okay
 
             // 5. Restart the L2 sequencing chain
             // Note: In a real test environment, you'd need to restart the actual service
             // This is a conceptual demonstration - actual restart would require process management
             println!("L2 sequencing chain would be restarted here");
-            println!("Maestro and batch-sequencer should reconnect and resubmit pending transactions");
+            println!(
+                "Maestro and batch-sequencer should reconnect and resubmit pending transactions"
+            );
 
             // In a full implementation, you would:
             // - Start a new sequencing chain process
@@ -844,4 +845,3 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
     )
     .await
 }
-
