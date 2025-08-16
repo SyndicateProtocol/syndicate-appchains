@@ -2,11 +2,12 @@ package config
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/SyndicateProtocol/synd-appchains/synd-proposer/pkg/tls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -15,28 +16,26 @@ import (
 )
 
 type Config struct {
-	EthereumRPCURL    string
-	SettlementRPCURL  string
-	SettlementChainID uint64
+	EthereumRPCURL    string `json:"EthereumRPCURL"`
+	SettlementRPCURL  string `json:"SettlementRPCURL"`
+	SettlementChainID uint64 `json:"SettlementChainID"`
 
-	SequencingRPCURL string
-	AppchainRPCURL   string
-	EnclaveRPCURL    string
-	EigenRPCUrl      string
+	SequencingRPCURL string `json:"SequencingRPCURL"`
+	AppchainRPCURL   string `json:"AppchainRPCURL"`
+	EnclaveRPCURL    string `json:"EnclaveRPCURL"`
+	EigenRPCUrl      string `json:"EigenRPCUrl"`
 
-	PrivateKey             *ecdsa.PrivateKey
-	PollingInterval        time.Duration
-	CloseChallengeInterval time.Duration
-	Port                   int
+	PrivateKey             *ecdsa.PrivateKey `json:"-"`
+	PollingInterval        time.Duration     `json:"PollingInterval"`
+	CloseChallengeInterval time.Duration     `json:"CloseChallengeInterval"`
+	Port                   int               `json:"Port"`
 
-	TeeModuleContractAddress common.Address
+	TeeModuleContractAddress common.Address `json:"TeeModuleContractAddress"`
 
-	AppchainBridgeAddress common.Address
+	AppchainBridgeAddress common.Address `json:"AppchainBridgeAddress"`
 
-	IsL1Chain bool
-
-	EnclaveConfig    enclave.Config
-	EnclaveTLSConfig tls.Config
+	EnclaveConfig    teetypes.Config `json:"EnclaveConfig"`
+	EnclaveTLSConfig tls.Config     `json:"EnclaveTLSConfig"`
 }
 
 var Keys = map[string]struct {
@@ -54,8 +53,8 @@ var Keys = map[string]struct {
 	"tee-module-contract-address": {"TEE Module Contract Address", "", true},
 	"appchain-bridge-address":     {"Appchain Bridge Address", "", true},
 	"private-key":                 {"Private Key", "", true},
-	"polling-interval":            {"Polling interval", "10m", false},
-	"close-challenge-interval":    {"Close challenge interval", "5m", false},
+	"polling-interval":            {"Polling interval", "1m", false},
+	"close-challenge-interval":    {"Close challenge interval", "1m", false},
 	"port":                        {"Server port", "9292", false},
 	"sequencing-contract-address": {"Sequencing Contract Address", "", true},
 	"sequencing-bridge-address":   {"Sequencing Bridge Address", "", true},
@@ -63,7 +62,6 @@ var Keys = map[string]struct {
 	"mtls-client-cert-path":       {"mTLS client certificate path", "/etc/tls/tls.crt", false},
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
-	"is-l1-chain":                 {"Is L1 Chain", "false", false},
 	"log-level":                   {"Log Level", "info", false},
 }
 
@@ -119,7 +117,7 @@ func LoadConfig() (*Config, error) {
 		PollingInterval:          pollingInterval,
 		CloseChallengeInterval:   closeChallengeInterval,
 		Port:                     port,
-		EnclaveConfig: enclave.Config{
+		EnclaveConfig: teetypes.Config{
 			SequencingContractAddress: common.HexToAddress(viper.GetString("sequencing-contract-address")),
 			SequencingBridgeAddress:   common.HexToAddress(viper.GetString("sequencing-bridge-address")),
 			SettlementDelay:           viper.GetUint64("settlement-delay"),
@@ -129,8 +127,15 @@ func LoadConfig() (*Config, error) {
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
-		IsL1Chain: viper.GetBool("is-l1-chain"),
 	}, nil
+}
+
+func (c *Config) String() string {
+	jsonBytes, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("Config{error marshaling: %v}", err)
+	}
+	return string(jsonBytes)
 }
 
 func mustAtoi(s string, fallback int) int {

@@ -81,13 +81,15 @@ func TestServerEndpoints(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Register metrics without starting proposer
+	_ = metrics.NewMetrics(testServer.Registry)
+
 	// Start server
 	err = testServer.Start(ctx)
 	require.NoError(t, err)
 
-	// Run proposer with server, allow connections to fail
-	go testServer.RunProposer(ctx, dummyCfg)
-	time.Sleep(1 * time.Second)
+	// Give server time to start
+	time.Sleep(100 * time.Millisecond)
 
 	baseURL := fmt.Sprintf("http://localhost:%d", dummyCfg.Port)
 

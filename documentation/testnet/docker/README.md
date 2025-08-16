@@ -42,7 +42,7 @@ This chain config file will be mounted into the `nitro` container in the next st
 
 Run all of the components together in Docker, using the provided `./rpc-node-docker-compose.yml` file. Replace all of the templated values. Up-to-date chain config values can be found in the [helm values overrides files](https://github.com/SyndicateProtocol/helm/blob/main/charts/appchains/values/testnet/values.yaml).
 
-After running that Docker Compose file, use the `slotter_last_processed_block` metric (with `settlement` and `sequencing` tags) from the `synd-translator` container to monitor the node's syncing progress. If that number is increasing over time, then the node is successfully syncing. Once it syncs up to the settlement/sequencing chain heads, you can begin sending transactions to this RPC node.
+After running that Docker Compose file, use the `last_processed_block` metric (with `settlement` and `sequencing` tags) from the `synd-translator` container to monitor the node's syncing progress. If that number is increasing over time, then the node is successfully syncing. Once it syncs up to the settlement/sequencing chain heads, you can begin sending transactions to this RPC node.
 
 ## Liveness and Monitoring
 

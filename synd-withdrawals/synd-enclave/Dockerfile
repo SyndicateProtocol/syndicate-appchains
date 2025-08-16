@@ -157,6 +157,7 @@ COPY cmd/enclave/g1.point cmd/enclave/g1.point
 COPY enclave enclave
 COPY nitro nitro
 COPY teemodule teemodule
+COPY teetypes teetypes
 WORKDIR /build/nitro
 COPY --from=contracts-builder workspace/contracts/build/ contracts/build/
 COPY --from=contracts-builder workspace/contracts/out/ contracts/out/
@@ -230,6 +231,7 @@ COPY cmd/enclave/main.go cmd/enclave/main.go
 COPY cmd/enclave/g1.point cmd/enclave/g1.point
 COPY enclave enclave
 COPY teemodule teemodule
+COPY teetypes teetypes
 RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/enclave ./cmd/enclave
 ENTRYPOINT ["/bin/enclave"]
 

@@ -8,7 +8,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {IBridge} from "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 using ECDSA for bytes32;
 
@@ -71,19 +70,21 @@ event ChallengeResolved(PendingAssertion);
 
 event TeeInput(TeeTrustedInput input);
 
+event KeyManagerUpdate(ITeeKeyManager newTeeKeyManager, ITeeKeyManager oldTeeKeyManager);
+
 /**
  * @title TeeModule Contract
  */
-contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
+contract TeeModule is Ownable(msg.sender) {
     // Immutable state variables
     IAssertionPoster public immutable poster;
     IBridge public immutable bridge;
     // the l1 block contract or bridge from the l1 chain to the sequencing chain (when the settlement chain is the same as the l1 chain)
     address public immutable l1BlockOrBridge;
     bool public immutable isL1Chain;
-    ITeeKeyManager public immutable teeKeyManager;
 
     // TEE variables
+    ITeeKeyManager public teeKeyManager;
     TeeTrustedInput public teeTrustedInput;
     PendingAssertion[] public pendingAssertions;
     //#olympix-ignore-uninitialized-state-variable
@@ -160,7 +161,11 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
         closeChallengeWindow();
     }
 
-    function closeChallengeWindow() public nonReentrant {
+    function pendingAssertionsCount() external view returns (uint256) {
+        return pendingAssertions.length;
+    }
+
+    function closeChallengeWindow() public {
         require(
             (isL1Chain ? uint64(block.timestamp) : IL1Block(l1BlockOrBridge).timestamp()) > challengeWindowEnd,
             "cannot close challenge window - insufficient time has passed"
@@ -201,50 +206,56 @@ contract TeeModule is Ownable(msg.sender), ReentrancyGuard {
     }
 
     function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature, address rewardAddr)
-        external
-        nonReentrant
+        public
     {
-        require(rewardAddr != address(0), "reward address cannot be zero");
         require(signature.length == 65, "invalid signature length");
         bytes32 assertionHash = hash_object(assertion);
         bytes32 payload_hash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
         require(teeKeyManager.isKeyValid(payload_hash.recover(signature)), "invalid tee signature");
         require(!isL1Chain || assertion.l1BatchAcc == teeTrustedInput.l1EndHash, "unexpected l1 end batch acc");
-        for (uint256 i = 0; i < pendingAssertions.length; i++) {
-            require(assertionHash != hash_object(pendingAssertions[i]), "assertion already exists");
-        }
-        if (pendingAssertions.length == 0) {
-            challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
-        }
         pendingAssertions.push(assertion);
-        if (pendingAssertions.length == 2) {
-            teeHackCount += 1;
-            emit TeeHacked(teeHackCount);
-
-            // pay out rewards
-            //#olympix-ignore-low-level-call-params-verified
-            (bool success,) = payable(rewardAddr).call{value: address(this).balance}("");
-            require(success, "payment failed");
+        if (pendingAssertions.length == 1) {
+            challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
+            return;
         }
+        require(pendingAssertions.length == 2, "TeeModule: Too many pending assertions");
+        require(assertionHash != hash_object(pendingAssertions[0]), "assertion already exists");
+        teeHackCount += 1;
+        emit TeeHacked(teeHackCount);
+        if (rewardAddr == address(0)) {
+            return;
+        }
+
+        // pay out rewards
+        //#olympix-ignore-low-level-call-params-verified
+        (bool success,) = payable(rewardAddr).call{value: address(this).balance}("");
+        require(success, "payment failed");
     }
 
-    function resolveChallenge(PendingAssertion calldata assertion) external onlyOwner nonReentrant {
+    function resolveChallenge(PendingAssertion calldata assertion, bytes calldata signature) external onlyOwner {
         require(pendingAssertions.length > 1, "challenge does not exist");
-        bytes32 assertionHash = hash_object(assertion);
-        for (uint256 i = 0; i < pendingAssertions.length; i++) {
-            if (assertionHash == hash_object(pendingAssertions[i])) {
-                delete pendingAssertions;
-                pendingAssertions.push(assertion);
-                challengeWindowEnd = 0;
-                closeChallengeWindow();
-                emit ChallengeResolved(assertion);
-                return;
-            }
-        }
-        revert("assertion not found");
+        delete pendingAssertions;
+        submitAssertion(assertion, signature, address(0));
+        challengeWindowEnd = 0;
+        closeChallengeWindow();
+        emit ChallengeResolved(assertion);
     }
 
-    function transferAssertionPosterOwner(address newOwner) public onlyOwner {
+    function transferAssertionPosterOwner(address newOwner) external onlyOwner {
         Ownable(address(poster)).transferOwnership(newOwner);
+    }
+
+    function transferFunds(address dest) external onlyOwner {
+        require(dest != address(0), "destination address is zero");
+
+        //#olympix-ignore-low-level-call-params-verified
+        (bool success,) = payable(dest).call{value: address(this).balance}("");
+        require(success, "payment failed");
+    }
+
+    function updateKeyManager(ITeeKeyManager newTeeKeyManager) external onlyOwner {
+        require(address(newTeeKeyManager).code.length > 0, "teeKeyManager address does not have any code");
+        emit KeyManagerUpdate(newTeeKeyManager, teeKeyManager);
+        teeKeyManager = newTeeKeyManager;
     }
 }

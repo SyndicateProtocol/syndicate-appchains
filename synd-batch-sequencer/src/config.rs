@@ -2,11 +2,11 @@
 
 use alloy::{
     primitives::{Address, ChainId},
-    providers::{Provider, ProviderBuilder},
     transports::TransportError,
 };
 use clap::Parser;
-use shared::parse::{parse_address, parse_url};
+use derivative::Derivative;
+use shared::parse::{fmt_sanitize_url_for_logging_vec, parse_address, parse_url};
 use std::{fmt::Debug, time::Duration};
 use thiserror::Error;
 use url::Url;
@@ -24,7 +24,8 @@ pub enum ConfigError {
 
 /// Configuration for Batcher
 #[allow(clippy::doc_markdown)]
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Derivative, Clone)]
+#[derivative(Debug)]
 #[command(version, about, long_about = None)]
 pub struct BatcherConfig {
     /// Valkey address to listen on
@@ -57,9 +58,12 @@ pub struct BatcherConfig {
     #[arg(short = 'k', long, env = "BATCHER_PRIVATE_KEY")]
     pub private_key: String,
 
-    /// URL of the sequencing chain RPC node
-    #[arg(short = 'u', long, env = "SEQUENCING_RPC_URL", value_parser = parse_url)]
-    pub sequencing_rpc_url: Url,
+    /// An array of sequencing chain RPC URLs to use, in priority order. If the first one fails, a
+    /// connection will be retried to the next one. E.g. `"rpc.testnet.base.io,
+    /// rpc.dev.polygon.com"`
+    #[derivative(Debug(format_with = "fmt_sanitize_url_for_logging_vec"))]
+    #[arg(short = 'u', long, env = "SEQUENCING_RPC_URLS", value_parser = parse_url, value_delimiter = ',')]
+    pub sequencing_rpc_urls: Vec<Url>,
 
     /// The maximum number of retries for rate limit errors
     #[arg(long, env = "RPC_MAX_RETRIES", default_value = "16")]
@@ -91,26 +95,6 @@ pub struct BatcherConfig {
     pub wait_for_receipt: bool,
 }
 
-impl BatcherConfig {
-    /// Initializes the configuration by parsing CLI arguments and environment variables.
-    pub fn initialize() -> Self {
-        Self::parse()
-    }
-
-    /// Validates the configuration
-    pub async fn validate(&self) -> Result<(), ConfigError> {
-        ping_sequencing_rpc_url(&self.sequencing_rpc_url).await?;
-        Ok(())
-    }
-}
-
-async fn ping_sequencing_rpc_url(url: &Url) -> Result<(), ConfigError> {
-    let provider =
-        ProviderBuilder::new().connect(url.as_str()).await.map_err(ConfigError::ConnectionError)?;
-    provider.get_chain_id().await?;
-    Ok(())
-}
-
 impl Default for BatcherConfig {
     fn default() -> Self {
         Self {
@@ -121,9 +105,9 @@ impl Default for BatcherConfig {
             timeout: Duration::from_millis(200),
             private_key: "0x0000000000000000000000000000000000000000000000000000000000000000"
                 .to_string(),
-            sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap_or_else(|_| {
+            sequencing_rpc_urls: vec![Url::parse("http://localhost:8545").unwrap_or_else(|_| {
                 panic!("Failed to parse default sequencing RPC URL");
-            }),
+            })],
             rpc_max_retries: 10,
             rpc_initial_backoff_ms: 100,
             rpc_compute_units_per_second: 1000,

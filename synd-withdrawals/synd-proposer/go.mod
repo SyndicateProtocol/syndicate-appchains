@@ -10,8 +10,6 @@ replace github.com/ethereum/go-ethereum => ../synd-enclave/nitro/go-ethereum
 
 replace github.com/SyndicateProtocol/synd-appchains/synd-enclave => ../synd-enclave
 
-replace github.com/SyndicateProtocol/synd-appchains/synd-enclave/teemodule => ../synd-enclave/teemodule
-
 require (
 	github.com/SyndicateProtocol/synd-appchains/synd-enclave v0.0.0-00010101000000-000000000000
 	github.com/ethereum/go-ethereum v1.16.1
@@ -132,8 +130,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.10 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/hf/nitrite v0.0.0-20211104000856-f9e0dcc73703 // indirect
-	github.com/hf/nsm v0.0.0-20220930140112-cd181bd646b9 // indirect
 	github.com/holiman/billy v0.0.0-20240216141850-2abb0c79d3c4 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.3.2 // indirect

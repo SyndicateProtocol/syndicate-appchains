@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -61,6 +61,10 @@ func init() {
 	inboxMessageDeliveredID = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
 }
 
+
+// once the target qty is reached or exceeded, getLogs stops fetching logs
+// note that it may return more logs than the target qty or less if target qty logs do not exist
+// if target qty is set to 0, all logs in the range are fetched
 func getLogs(
 	ctx context.Context,
 	c *ethclient.Client,
@@ -68,7 +72,7 @@ func getLogs(
 	endBlock uint64,
 	addresses []common.Address,
 	topics [][]common.Hash,
-	maxQty uint64,
+	targetQty uint64,
 ) ([]types.Log, error) {
 	if startBlock > endBlock {
 		return nil, errors.New("start block > end block")
@@ -87,14 +91,17 @@ func getLogs(
 		return nil, errors.Wrap(err, "start block == end block, cannot bisect further")
 	}
 	mid := (startBlock + endBlock) / 2
-	logs, err = getLogs(ctx, c, mid+1, endBlock, addresses, topics, maxQty)
+	logs, err = getLogs(ctx, c, mid+1, endBlock, addresses, topics, targetQty)
 	if err != nil {
 		return nil, err
 	}
-	if maxQty > 0 && uint64(len(logs)) >= maxQty {
-		return logs, nil
+	if targetQty > 0 {
+		if uint64(len(logs)) >= targetQty {
+			return logs, nil
+		}
+		targetQty -= uint64(len(logs))
 	}
-	prevLogs, err := getLogs(ctx, c, startBlock, mid, addresses, topics, maxQty)
+	prevLogs, err := getLogs(ctx, c, startBlock, mid, addresses, topics, targetQty)
 	if err != nil {
 		return nil, err
 	}
@@ -136,51 +143,45 @@ func getBatches(
 	return data, nil
 }
 
-func getBatchPreimageData(
+func loadBatchPreimageData(
 	ctx context.Context,
 	batch []byte,
 	dapReaders []daprovider.Reader,
 	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
 ) error {
 	// byte 40 is a flag byte that determines if the batch uses alt-DA
-	if len(batch) > 40 {
-		for _, dapReader := range dapReaders {
-			if dapReader != nil && dapReader.IsValidHeaderByte(ctx, batch[40]) {
-				// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
-				_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, nil, true)
-				if err != nil {
-					// Matches the way keyset validation was done inside DAS readers i.e. logging the error
-					// But other DA providers might just want to return the error
-					if strings.Contains(err.Error(), daprovider.ErrSeqMsgValidation.Error()) &&
-						daprovider.IsDASMessageHeaderByte(batch[40]) {
-						log.Error(err.Error())
-					} else {
-						batchHex := hex.EncodeToString(batch)
-
-						return errors.Wrap(err, "failed to recover payload from batch - "+batchHex)
-					}
-				}
-
-				for ty, images := range preimagesRecorded {
-					if preimages[ty] == nil {
-						preimages[ty] = images
-					} else {
-						maps.Copy(preimages[ty], images)
-					}
-				}
-
-				return nil
+	if len(batch) <= 40 || !daprovider.IsDASMessageHeaderByte(batch[40]) {
+		return nil
+	}
+	for _, dapReader := range dapReaders {
+		if dapReader.IsValidHeaderByte(ctx, batch[40]) {
+			// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
+			_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, nil, true)
+			if err != nil {
+				return errors.Wrap(err, "failed to recover payload from batch - "+hex.EncodeToString(batch))
 			}
-		}
-		if daprovider.IsDASMessageHeaderByte(batch[40]) {
-			log.Error("No DAS Reader configured, but sequencer message found with DAS header")
+
+			for ty, images := range preimagesRecorded {
+				if preimages[ty] == nil {
+					preimages[ty] = images
+				} else {
+					maps.Copy(preimages[ty], images)
+				}
+			}
+
+			return nil
 		}
 	}
+	log.Error("DAS reader mismatch",
+		"headerByte", fmt.Sprintf("0x%02x", batch[40]),
+		"availableReaders", len(dapReaders),
+		"batchLength", len(batch))
 
-	return nil
+	return fmt.Errorf("no DAS reader configured for header byte 0x%02x (have %d readers)",
+		batch[40], len(dapReaders))
 }
 
-// GetMessageAcc if count is zero, attempt to fetch
+// if count is zero, get the latest delayed message accumulator
 func GetMessageAcc(ctx context.Context, c *ethclient.Client, bridge common.Address, count uint64) (common.Hash, uint64, error) {
 	// Memory slot in contract is 6
 	slot := common.BigToHash(big.NewInt(6))
@@ -397,14 +398,14 @@ func GetDelayedMessages(
 	return *prevAcc, msgs, dummy, nil
 }
 
-func getNumBatches(batches []enclave.SyndicateBatch, dmsgs [][]byte, setDelay uint64) uint64 {
+func getNumBatches(batches []teetypes.SyndicateBatch, dmsgs [][]byte, setDelay uint64) uint64 {
 	var batchCount uint64
 	i := 0
 	for _, b := range batches {
 		hasMsg := false
 		for i < len(dmsgs) {
 			dmsgTimestamp := binary.BigEndian.
-				Uint64(dmsgs[i][enclave.DelayedMessageTimestampOffset : enclave.DelayedMessageTimestampOffset+8])
+				Uint64(dmsgs[i][teetypes.DelayedMessageTimestampOffset : teetypes.DelayedMessageTimestampOffset+8])
 			if dmsgTimestamp+setDelay > b.Timestamp {
 				break
 			}

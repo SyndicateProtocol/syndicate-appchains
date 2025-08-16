@@ -75,3 +75,14 @@ verify-contract-direct :; forge verify-contract --rpc-url sepolia --watch --ethe
 
 # Example of how to ABI encode constructor args
 # cast abi-encode "constructor(address,address)" 0x45d6450fC59A6F8D9c753126cE1EFF6fa4D7e0fb 0x45d6450fC59A6F8D9c753126cE1EFF6fa4D7e0fb
+
+## Airdrop Commands
+
+# Deploy airdrop contract
+deploy-airdrop :; forge script script/airdrop/AirdropScript.s.sol:DeployAirdrop --rpc-url ${RPC_URL} --account ${ACCOUNT} --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
+
+# Execute airdrop with bash script (dry run)
+airdrop-dry-run :; DRY_RUN=true AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_ADDRESS} RPC_URL=${RPC_URL} ACCOUNT=${ACCOUNT} DEV_PUB_ADDRESS=${DEV_PUB_ADDRESS} ./script/airdrop/airdrop.sh
+
+# Execute airdrop with bash script
+airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_ADDRESS} RPC_URL=${RPC_URL} ACCOUNT=${ACCOUNT} DEV_PUB_ADDRESS=${DEV_PUB_ADDRESS} ./script/airdrop/airdrop.sh

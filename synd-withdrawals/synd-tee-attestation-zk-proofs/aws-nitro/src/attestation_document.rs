@@ -87,7 +87,9 @@ struct AwsNitroAttestationDocument<'a> {
 }
 
 impl AwsNitroAttestationDocument<'_> {
-    fn parse_document(input: &mut [u8]) -> Result<AwsNitroAttestationDocument, VerificationError> {
+    fn parse_document(
+        input: &mut [u8],
+    ) -> Result<AwsNitroAttestationDocument<'_>, VerificationError> {
         let doc: AwsNitroAttestationDocument = serde_cbor::de::from_mut_slice(input)
             .map_err(|e| VerificationError::DocumentParseError(e.to_string()))?;
 
@@ -114,7 +116,7 @@ impl AwsNitroAttestationDocument<'_> {
                 return Err(VerificationError::BadPCRIndex);
             }
 
-            if value.is_empty() || !(value.len() == 32 || value.len() == 48 || value.len() == 64) {
+            if value.is_empty() || value.len() != 48 {
                 return Err(VerificationError::BadPCRValue);
             }
         }

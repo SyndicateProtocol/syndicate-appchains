@@ -44,6 +44,51 @@ where
     serde_json::from_str(s).map_err(|e| Error::InvalidMap(e.to_string()))
 }
 
+/// Sanitize a URL for safe logging by redacting path and query components
+/// that might contain API keys. Returns scheme://host:port/[REDACTED]
+pub fn sanitize_url_for_logging(url: &Url) -> String {
+    let scheme = url.scheme();
+    let host = url.host_str().unwrap_or("[invalid-host]");
+    let port = url.port().map(|p| format!(":{p}")).unwrap_or_default();
+    format!("{scheme}://{host}{port}/[REDACTED]")
+}
+
+/// used to implement Debug sensitive URLs
+pub fn fmt_sanitize_url_for_logging(
+    url: &Url,
+    f: &mut std::fmt::Formatter<'_>,
+) -> Result<(), std::fmt::Error> {
+    write!(f, "{}", sanitize_url_for_logging(url))
+}
+
+/// Helper to format a vector of URLs as a sanitized string
+pub fn sanitize_url_vec_to_string(urls: &[Url]) -> String {
+    urls.iter().map(sanitize_url_for_logging).collect::<Vec<_>>().join(", ")
+}
+
+/// used to implement Debug vectors of sensitive URLs
+pub fn fmt_sanitize_url_for_logging_vec(
+    urls: &[Url],
+    f: &mut std::fmt::Formatter<'_>,
+) -> Result<(), std::fmt::Error> {
+    write!(f, "{}", sanitize_url_vec_to_string(urls))
+}
+
+/// used to implement Debug for hashmaps that contain sensitive URLs as values
+pub fn fmt_sanitize_url_for_logging_hashmap(
+    urls: &HashMap<u64, Vec<Url>>,
+    f: &mut std::fmt::Formatter<'_>,
+) -> Result<(), std::fmt::Error> {
+    write!(
+        f,
+        "{}",
+        urls.iter()
+            .map(|(k, v)| format!("{k}: [{}]", sanitize_url_vec_to_string(v)))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+}
+
 #[allow(missing_docs)]
 #[derive(Debug, Error)]
 /// Possible parsing errors
@@ -258,5 +303,12 @@ mod tests {
         assert_eq!(map.len(), 2);
         assert_eq!(map.get("1"), Some(&"https://example.com/path?query=value".to_string()));
         assert_eq!(map.get("2"), Some(&"http://192.168.1.1:8545".to_string()));
+    }
+
+    #[test]
+    fn test_sanitize_url_for_logging() {
+        // Test basic URL without path/query
+        let url = Url::parse("https://example.com/foo/bar/v3/api_key").unwrap();
+        assert_eq!(sanitize_url_for_logging(&url), "https://example.com/[REDACTED]");
     }
 }
