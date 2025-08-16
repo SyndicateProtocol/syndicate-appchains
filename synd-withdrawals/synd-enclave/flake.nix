@@ -12,15 +12,17 @@
       flake = false;
     };
 
-    systems.url = "github:nix-systems/default-linux";
+    systems.url = "github:nix-systems/default";
     flake-parts.url = "github:hercules-ci/flake-parts";
 
+    solc = {
+      url = "github:hellwolf/solc.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nitro = {
-      type = "git";
-      url = "https://github.com/Layr-Labs/nitro.git";
-      rev = "5b41a2dcf81c2b6f4798ecb472c27002a6af9bab";
+      url = "git+file:./nitro?submodules=1";
       flake = false;
-      submodules = true;
     };
 
     enclaves-sdk-bootstrap = {
@@ -49,6 +51,7 @@
     nixpkgs-2505,
     systems,
     flake-parts,
+    solc,
     nitro,
     enclaves-sdk-bootstrap,
     enclaves-image-format,
@@ -63,6 +66,7 @@
       }: let
         pkgs-foundry100 = import nixpkgs-foundry100 {inherit system;};
         pkgs-2505 = import nixpkgs-2505 {inherit system;};
+        solc-pkgs = solc.packages.${system};
         build-ramdisk = {
           name,
           init,
@@ -125,6 +129,28 @@
             postInstall = ''
               mv $out/lib $out/lib-wasm
             '';
+          });
+
+          nitro-safe-smart-account = pkgs-2505.stdenv.mkDerivation (final: {
+            name = "safe-smart-account";
+            src = "${nitro}/${final.name}";
+            nativeBuildInputs =
+              (with solc-pkgs; [solc_0_7_6 solc_0_6_12])
+              ++ (with pkgs-2505; [
+                nodejs
+                yarnConfigHook
+                writableTmpDirAsHomeHook
+                yarnInstallHook
+              ]);
+            buildPhase = ''
+              runHook preBuild
+              yarn --offline build
+              runHook postBuild
+            '';
+            offlineCache = pkgs.fetchYarnDeps {
+              yarnLock = final.src + "/yarn.lock";
+              hash = "sha256-J836BIf/OJmKiruXt6HhtQzhkn0KL6hbs2Tf8se1kAY=";
+            };
           });
 
           nitro-contracts = with pkgs-2505;
@@ -222,20 +248,32 @@
             '';
           };
 
-          synd-enclave = pkgs-2505.buildGoModule {
+          synd-enclave-server = pkgs-2505.buildGoModule {
             pname = "synd-enclave";
             version = "0.1.0";
-            src = ./.;
-            vendorHash = pkgs.lib.fakeHash;
-            subPackages = ["cmd/enclave" "enclave"];
+            src = pkgs.lib.fileset.toSource {
+              root = ./.;
+              fileset = pkgs.lib.fileset.unions [
+                ./cmd/enclave
+                ./enclave
+                ./nitro
+                ./teemodule
+                ./go.mod
+                ./go.sum
+              ];
+            };
+            # preBuild = ''
+            #   sed -i 's#\./nitro#${nitro}#' go.mod
+            #   sed -i 's#\./nitro/go-ethereum#${nitro}/go-ethereum#' go.mod
+            #   cat go.mod
+            # '';
+            vendorHash = null;
+            subPackages = ["cmd/enclave"];
             ldFlags = [
               "-linkmode external"
               "-extldflags"
               "-static"
             ];
-            preBuild = ''
-              ln -s ${nitro} ./nitro
-            '';
           };
 
           init-ramdisk = build-ramdisk {

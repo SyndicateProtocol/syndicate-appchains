@@ -52,23 +52,39 @@
         "type": "github"
       }
     },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "nitro": {
       "flake": false,
       "locked": {
-        "lastModified": 1746549093,
-        "narHash": "sha256-DqE1MBz1DgqtSRVglk3Z4VrCHnxyPGYXQmI7L3ncjhQ=",
-        "ref": "refs/heads/eigenda-v3.6.4",
-        "rev": "5b41a2dcf81c2b6f4798ecb472c27002a6af9bab",
-        "revCount": 18269,
+        "lastModified": 1751937809,
+        "narHash": "sha256-MKspZoDyO7xUMSjldVbzhucHM1ED/5yfR7A5WKjpdm0=",
+        "rev": "2625cbb20485326af9f8c05bce6b025b42ba59b6",
+        "revCount": 18593,
         "submodules": true,
         "type": "git",
-        "url": "https://github.com/Layr-Labs/nitro.git"
+        "url": "file:./nitro"
       },
       "original": {
-        "rev": "5b41a2dcf81c2b6f4798ecb472c27002a6af9bab",
         "submodules": true,
         "type": "git",
-        "url": "https://github.com/Layr-Labs/nitro.git"
+        "url": "file:./nitro"
       }
     },
     "nixpkgs": {
@@ -144,21 +160,71 @@
         "nixpkgs": "nixpkgs",
         "nixpkgs-2505": "nixpkgs-2505",
         "nixpkgs-foundry100": "nixpkgs-foundry100",
-        "systems": "systems"
+        "solc": "solc",
+        "systems": "systems_2"
+      }
+    },
+    "solc": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "solc-macos-amd64-list-json": "solc-macos-amd64-list-json"
+      },
+      "locked": {
+        "lastModified": 1748780655,
+        "narHash": "sha256-mradCdMvjXwKd7kVFACB/d1CP2LLCyEgUu4vJCSzNLU=",
+        "owner": "hellwolf",
+        "repo": "solc.nix",
+        "rev": "3b6f3223ace5a7bc400b01a434d86bb1cb2593fb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hellwolf",
+        "repo": "solc.nix",
+        "type": "github"
+      }
+    },
+    "solc-macos-amd64-list-json": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-AvITkfpNYgCypXuLJyqco0li+unVw39BAfdOZvd/SPE=",
+        "type": "file",
+        "url": "https://github.com/ethereum/solc-bin/raw/26fc3fd/macosx-amd64/list.json"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/ethereum/solc-bin/raw/26fc3fd/macosx-amd64/list.json"
       }
     },
     "systems": {
       "locked": {
-        "lastModified": 1689347949,
-        "narHash": "sha256-12tWmuL2zgBgZkdoB6qXZsgJEH9LR3oUgpaQq2RbI80=",
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
         "owner": "nix-systems",
-        "repo": "default-linux",
-        "rev": "31732fcf5e8fea42e59c2488ad31a0e651500f68",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
         "type": "github"
       },
       "original": {
         "owner": "nix-systems",
-        "repo": "default-linux",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_2": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
         "type": "github"
       }
     }
