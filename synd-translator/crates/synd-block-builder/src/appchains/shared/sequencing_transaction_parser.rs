@@ -71,7 +71,7 @@ impl TryFrom<u8> for TransactionType {
     }
 }
 
-/// Decompresses `zlib`-compressed Ethereum transactions back into their original form
+/// Decompresses `brotli`-compressed Ethereum transactions back into their original form
 fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, SequencingParserError> {
     // Check for empty data first
     if data.is_empty() {
