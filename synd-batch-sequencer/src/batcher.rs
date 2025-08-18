@@ -772,4 +772,80 @@ mod tests {
             Duration::from_secs(2)
         );
     }
+
+    #[tokio::test]
+    async fn test_consumer_last_id_update_on_tx() {
+        let mut config = test_config();
+        config.compression_enabled = false;
+        config.max_batch_size = byte_unit::Byte::from_u64(51 * 1024); // 51KB
+
+        let (_valkey, valkey_url) = start_valkey().await.unwrap();
+        config.valkey_url = valkey_url.clone();
+        let valkey_metrics = Arc::new(ValkeyMetrics::default());
+
+        let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
+            .await
+            .unwrap();
+        let stream_consumer = StreamConsumer::new(
+            conn.clone(),
+            config.chain_id,
+            "0-0".to_string(),
+            valkey_metrics.clone(),
+        );
+        let producer = StreamProducer::new(
+            conn.clone(),
+            config.chain_id,
+            Duration::from_secs(60),
+            Duration::from_secs(60),
+            0,
+            |_| async { CheckFinalizationResult::Done },
+            Arc::new(ValkeyMetrics::default()),
+        )
+        .await;
+
+        // Enqueue one transaction
+        let test_data = b"hello world".to_vec();
+        producer.enqueue_transaction(&test_data).await.unwrap();
+
+        let mut registry = Registry::default();
+        let metrics = BatcherMetrics::new(&mut registry);
+
+        let anvil = start_anvil(1).await.unwrap();
+        config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
+        let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
+        let mut batcher = Batcher::new(
+            &config,
+            conn.clone(),
+            stream_consumer,
+            sequencing_contract_instance,
+            metrics,
+        );
+
+        // Process the transaction so that last_included_id is updated and persisted
+        batcher.process_transactions().await.unwrap();
+
+        // get_cached_consumer_last_id reads what update_consumer_last_id wrote,
+        // which is done on a spawned task; wait until it shows up.
+        wait_until!(
+            {
+                let mut c = conn.clone();
+                let vm = (*valkey_metrics).clone();
+                get_cached_consumer_last_id(&mut c, config.chain_id, vm)
+                    .await
+                    .is_ok_and(|id| id != "0-0")
+            },
+            Duration::from_secs(5)
+        );
+
+        // Final assert
+        let mut conn_clone = conn.clone();
+        let updated = get_cached_consumer_last_id(
+            &mut conn_clone,
+            config.chain_id,
+            (*valkey_metrics).clone(),
+        )
+        .await
+        .unwrap();
+        assert_ne!(updated, "0-0", "Expected consumer last id to be updated after processing a tx");
+    }
 }

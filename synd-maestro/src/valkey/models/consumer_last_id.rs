@@ -1,5 +1,20 @@
 //! This module describes the required functionality for Maestro to interact with consumer last id
 //! values in the Valkey cache.
+//!
+//! # About consumer last ids
+//!
+//! The consumer "last id" used here comes directly from Redis Streams. Every message written to a
+//! Redis stream (via `XADD`, which `StreamProducer` wraps) is assigned an **ID** of the form
+//!
+//! ```text
+//! <milliseconds-since-epoch>-<sequence>
+//! ```
+//!
+//! - The first component is the server's current time in **milliseconds** when the entry was added.
+//! - The second component is a sequence number used to disambiguate multiple entries created in the
+//!   same millisecond.
+//!
+//! For example: `1755541598977-0`
 
 use crate::valkey::keys::consumer_last_id::chain_consumer_last_id_key;
 use alloy::primitives::ChainId;
