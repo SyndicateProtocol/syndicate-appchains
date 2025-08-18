@@ -7578,12 +7578,12 @@ See the [wrapper's documentation](`SyndicateSequencingChainWithDecayingPriorityI
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> SyndicateSequencingChainWithDecayingPriorityInstance<P, N> {
         SyndicateSequencingChainWithDecayingPriorityInstance::<
             P,
             N,
-        >::new(address, provider)
+        >::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -7595,7 +7595,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _appchainId: alloy::sol_types::private::primitives::aliases::U256,
         epochStartTime: alloy::sol_types::private::primitives::aliases::U256,
     ) -> impl ::core::future::Future<
@@ -7606,7 +7606,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         SyndicateSequencingChainWithDecayingPriorityInstance::<
             P,
             N,
-        >::deploy(provider, _appchainId, epochStartTime)
+        >::deploy(__provider, _appchainId, epochStartTime)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -7618,14 +7618,14 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _appchainId: alloy::sol_types::private::primitives::aliases::U256,
         epochStartTime: alloy::sol_types::private::primitives::aliases::U256,
     ) -> alloy_contract::RawCallBuilder<P, N> {
         SyndicateSequencingChainWithDecayingPriorityInstance::<
             P,
             N,
-        >::deploy_builder(provider, _appchainId, epochStartTime)
+        >::deploy_builder(__provider, _appchainId, epochStartTime)
     }
     /**A [`SyndicateSequencingChainWithDecayingPriority`](self) instance.
 
@@ -7669,11 +7669,11 @@ See the [wrapper's documentation](`SyndicateSequencingChainWithDecayingPriorityI
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -7684,14 +7684,14 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
             _appchainId: alloy::sol_types::private::primitives::aliases::U256,
             epochStartTime: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::Result<
             SyndicateSequencingChainWithDecayingPriorityInstance<P, N>,
         > {
             let call_builder = Self::deploy_builder(
-                provider,
+                __provider,
                 _appchainId,
                 epochStartTime,
             );
@@ -7705,12 +7705,12 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            provider: P,
+            __provider: P,
             _appchainId: alloy::sol_types::private::primitives::aliases::U256,
             epochStartTime: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(

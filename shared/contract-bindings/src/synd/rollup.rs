@@ -442,8 +442,11 @@ See the [wrapper's documentation](`IBridgeInstance`) for more details.*/
     pub const fn new<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(address: alloy_sol_types::private::Address, provider: P) -> IBridgeInstance<P, N> {
-        IBridgeInstance::<P, N>::new(address, provider)
+    >(
+        address: alloy_sol_types::private::Address,
+        __provider: P,
+    ) -> IBridgeInstance<P, N> {
+        IBridgeInstance::<P, N>::new(address, __provider)
     }
     /**A [`IBridge`](self) instance.
 
@@ -481,11 +484,11 @@ See the [wrapper's documentation](`IBridgeInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -6705,8 +6708,11 @@ See the [wrapper's documentation](`RollupInstance`) for more details.*/
     pub const fn new<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(address: alloy_sol_types::private::Address, provider: P) -> RollupInstance<P, N> {
-        RollupInstance::<P, N>::new(address, provider)
+    >(
+        address: alloy_sol_types::private::Address,
+        __provider: P,
+    ) -> RollupInstance<P, N> {
+        RollupInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -6718,14 +6724,14 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         chainId: alloy::sol_types::private::primitives::aliases::U256,
         chainConfig: alloy::sol_types::private::String,
         owner_: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<RollupInstance<P, N>>,
     > {
-        RollupInstance::<P, N>::deploy(provider, chainId, chainConfig, owner_)
+        RollupInstance::<P, N>::deploy(__provider, chainId, chainConfig, owner_)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -6737,12 +6743,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         chainId: alloy::sol_types::private::primitives::aliases::U256,
         chainConfig: alloy::sol_types::private::String,
         owner_: alloy::sol_types::private::Address,
     ) -> alloy_contract::RawCallBuilder<P, N> {
-        RollupInstance::<P, N>::deploy_builder(provider, chainId, chainConfig, owner_)
+        RollupInstance::<P, N>::deploy_builder(__provider, chainId, chainConfig, owner_)
     }
     /**A [`Rollup`](self) instance.
 
@@ -6780,11 +6786,11 @@ See the [wrapper's documentation](`RollupInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -6795,13 +6801,13 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
             chainId: alloy::sol_types::private::primitives::aliases::U256,
             chainConfig: alloy::sol_types::private::String,
             owner_: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<RollupInstance<P, N>> {
             let call_builder = Self::deploy_builder(
-                provider,
+                __provider,
                 chainId,
                 chainConfig,
                 owner_,
@@ -6816,13 +6822,13 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            provider: P,
+            __provider: P,
             chainId: alloy::sol_types::private::primitives::aliases::U256,
             chainConfig: alloy::sol_types::private::String,
             owner_: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(

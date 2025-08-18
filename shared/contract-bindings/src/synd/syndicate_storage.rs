@@ -4123,9 +4123,9 @@ See the [wrapper's documentation](`SyndicateStorageInstance`) for more details.*
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> SyndicateStorageInstance<P, N> {
-        SyndicateStorageInstance::<P, N>::new(address, provider)
+        SyndicateStorageInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -4137,14 +4137,14 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         admin: alloy::sol_types::private::Address,
         manager: alloy::sol_types::private::Address,
         appchainId_: alloy::sol_types::private::primitives::aliases::U256,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<SyndicateStorageInstance<P, N>>,
     > {
-        SyndicateStorageInstance::<P, N>::deploy(provider, admin, manager, appchainId_)
+        SyndicateStorageInstance::<P, N>::deploy(__provider, admin, manager, appchainId_)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -4156,7 +4156,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         admin: alloy::sol_types::private::Address,
         manager: alloy::sol_types::private::Address,
         appchainId_: alloy::sol_types::private::primitives::aliases::U256,
@@ -4164,7 +4164,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         SyndicateStorageInstance::<
             P,
             N,
-        >::deploy_builder(provider, admin, manager, appchainId_)
+        >::deploy_builder(__provider, admin, manager, appchainId_)
     }
     /**A [`SyndicateStorage`](self) instance.
 
@@ -4202,11 +4202,11 @@ See the [wrapper's documentation](`SyndicateStorageInstance`) for more details.*
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -4217,13 +4217,13 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
             admin: alloy::sol_types::private::Address,
             manager: alloy::sol_types::private::Address,
             appchainId_: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::Result<SyndicateStorageInstance<P, N>> {
             let call_builder = Self::deploy_builder(
-                provider,
+                __provider,
                 admin,
                 manager,
                 appchainId_,
@@ -4238,13 +4238,13 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            provider: P,
+            __provider: P,
             admin: alloy::sol_types::private::Address,
             manager: alloy::sol_types::private::Address,
             appchainId_: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
