@@ -91,7 +91,7 @@ pub async fn get_cached_consumer_last_id(
     conn: &mut ConnectionManager,
     chain_id: u64,
     valkey_metrics: ValkeyMetrics,
-) -> Result<String> {
+) -> String {
     let consumer_last_id =
         match with_cache_metrics!(&valkey_metrics, conn.get_consumer_last_id(chain_id)) {
             Ok(Some(id)) => id,
@@ -102,7 +102,7 @@ pub async fn get_cached_consumer_last_id(
             _ => "0-0".to_string(),
         };
 
-    Ok(consumer_last_id)
+    consumer_last_id
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
@@ -131,7 +131,7 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let sequencing_contract_instance = create_sequencing_contract_instance(config).await?;
 
     let consumer_last_id =
-        get_cached_consumer_last_id(&mut conn, config.chain_id, valkey_metrics.clone()).await?;
+        get_cached_consumer_last_id(&mut conn, config.chain_id, valkey_metrics.clone()).await;
 
     debug!(%config.chain_id, %consumer_last_id, "Using consumer last id");
 
@@ -839,9 +839,7 @@ mod tests {
             {
                 let mut c = conn.clone();
                 let vm = (*valkey_metrics).clone();
-                get_cached_consumer_last_id(&mut c, config.chain_id, vm)
-                    .await
-                    .is_ok_and(|id| id != "0-0")
+                get_cached_consumer_last_id(&mut c, config.chain_id, vm).await != "0-0"
             },
             Duration::from_secs(5)
         );
@@ -853,8 +851,7 @@ mod tests {
             config.chain_id,
             (*valkey_metrics).clone(),
         )
-        .await
-        .unwrap();
+        .await;
         assert_ne!(updated, "0-0", "Expected consumer last id to be updated after processing a tx");
     }
 }

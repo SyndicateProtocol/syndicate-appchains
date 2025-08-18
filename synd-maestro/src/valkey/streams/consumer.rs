@@ -64,8 +64,6 @@ impl StreamConsumer {
         start_from_id: String,
         valkey_metrics: Arc<ValkeyMetrics>,
     ) -> Self {
-        // NOTE maybe we don't need ConnectionManager here (unless we want to have multiple
-        // consumers per service)
         Self { conn, stream_key: tx_stream_key(chain_id), last_id: start_from_id, valkey_metrics }
     }
 
