@@ -2,16 +2,13 @@
 //! transactions using zlib.
 
 use alloy::primitives::Bytes;
-use flate2::{write::ZlibEncoder, Compression};
 use rlp::RlpStream;
-use shared::zlib_compression::is_valid_cm_bits_8_only;
-use std::io::{Error, Write};
 use tracing::instrument;
 
 /// A batch of transactions.
 #[derive(Debug, Clone)]
 pub enum SequencingBatch {
-    /// A batch of zlib compressed transactions.
+    /// A batch of brotli compressed transactions.
     Compressed(Vec<u8>),
     /// A batch of uncompressed transactions.
     Uncompressed(Vec<Vec<u8>>),
@@ -60,10 +57,10 @@ pub fn uncompressed_batch(txs: &[Bytes], tx: &Bytes) -> SequencingBatch {
     SequencingBatch::Uncompressed(final_tx_list)
 }
 
-/// Compresses a list of transactions along with a new transaction using zlib compression.
+/// Compresses a list of transactions along with a new transaction using brotli compression.
 ///
 /// This function takes an existing list of transactions and a new transaction, combines them
-/// into an RLP-encoded list, and compresses the result using zlib compression. The compression
+/// into an RLP-encoded list, and compresses the result using brotli compression. The compression
 /// is validated to ensure it meets the required format (8-bit CM bits only).
 ///
 /// # Arguments
@@ -94,18 +91,19 @@ pub fn uncompressed_batch(txs: &[Bytes], tx: &Bytes) -> SequencingBatch {
         tx_count = txs.len() + 1,
     )
 )]
-pub fn compress_batch(txs: &[Bytes], tx: &Bytes) -> Result<SequencingBatch, Error> {
+pub fn compress_batch(txs: &[Bytes], tx: &Bytes) -> std::io::Result<SequencingBatch> {
     let mut stream = RlpStream::new_list(txs.len() + 1);
     for t in txs {
         stream.append(&t.as_ref());
     }
     stream.append(&tx.as_ref());
 
-    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(&stream.out())?;
-    let compressed = encoder.finish()?;
-
-    is_valid_cm_bits_8_only(&compressed)?;
+    let mut compressed = Vec::new();
+    brotli::enc::BrotliCompress(
+        &mut &stream.out()[..],
+        &mut compressed,
+        &brotli::enc::BrotliEncoderInitParams(),
+    )?;
 
     Ok(SequencingBatch::Compressed(compressed))
 }
@@ -114,9 +112,7 @@ pub fn compress_batch(txs: &[Bytes], tx: &Bytes) -> Result<SequencingBatch, Erro
 mod tests {
     use super::*;
     use alloy::primitives::Bytes;
-    use flate2::read::ZlibDecoder;
     use rlp::Rlp;
-    use std::io::Read;
 
     fn sample_txn(data: &[u8]) -> Bytes {
         Bytes::from(data.to_vec())
@@ -155,9 +151,8 @@ mod tests {
         };
 
         // Decompress and decode
-        let mut decoder = ZlibDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed).unwrap();
+        brotli::BrotliDecompress(&mut &compressed[..], &mut decompressed).unwrap();
 
         let rlp = Rlp::new(&decompressed);
         let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();
@@ -178,9 +173,8 @@ mod tests {
         };
 
         // Decompress and check the RLP list
-        let mut decoder = ZlibDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed).unwrap();
+        brotli::BrotliDecompress(&mut &compressed[..], &mut decompressed).unwrap();
 
         let rlp = Rlp::new(&decompressed);
         let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();
@@ -209,9 +203,9 @@ mod tests {
             SequencingBatch::Compressed(compressed) => compressed,
             SequencingBatch::Uncompressed(_) => panic!("Expected compressed batch"),
         };
-        let mut decoder = ZlibDecoder::new(&compressed[..]);
+
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed).unwrap();
+        brotli::BrotliDecompress(&mut &compressed[..], &mut decompressed).unwrap();
 
         let rlp = Rlp::new(&decompressed);
         let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();

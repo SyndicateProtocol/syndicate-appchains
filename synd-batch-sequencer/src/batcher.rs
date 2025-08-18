@@ -283,7 +283,7 @@ impl Batcher {
         let transaction_request = match batch {
             SequencingBatch::Compressed(batch) => self
                 .sequencing_contract_instance
-                .processTransaction(Bytes::from(batch))
+                .processTransactionsCompressed(Bytes::from(batch))
                 .into_transaction_request(),
             SequencingBatch::Uncompressed(batch) => self
                 .sequencing_contract_instance

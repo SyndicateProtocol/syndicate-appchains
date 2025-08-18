@@ -7,9 +7,8 @@ use alloy::{
     primitives::{keccak256, Address, Bytes, Log},
     sol_types::SolEvent,
 };
-use common::compression::{get_compression_type, CompressionType};
 use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
-use shared::zlib_compression::decompress_transactions;
+use rlp::Rlp;
 use thiserror::Error;
 use tracing::error;
 
@@ -52,6 +51,52 @@ pub struct SequencingTransactionParser {
     pub sequencing_contract_address: Address,
 }
 
+enum TransactionType {
+    Unsigned = 0,
+    Contract = 1,
+    Compressed = 3,
+    Signed = 4,
+}
+
+impl TryFrom<u8> for TransactionType {
+    type Error = ();
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Unsigned),
+            1 => Ok(Self::Contract),
+            3 => Ok(Self::Compressed),
+            4 => Ok(Self::Signed),
+            _ => Err(()),
+        }
+    }
+}
+
+/// Decompresses `zlib`-compressed Ethereum transactions back into their original form
+fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, SequencingParserError> {
+    // Check for empty data first
+    if data.is_empty() {
+        return Err(SequencingParserError::DecompressionError("Empty compressed data".to_string()));
+    }
+
+    let mut decoded_bytes = Vec::new();
+    brotli::BrotliDecompress(&mut &data[..], &mut decoded_bytes)
+        .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))?;
+
+    // Decode RLP
+    Rlp::new(&decoded_bytes)
+        .as_list::<Vec<u8>>()
+        .map(|vec_list| {
+            vec_list
+                .into_iter()
+                .map(|mut tx| {
+                    tx.insert(0, TransactionType::Signed as u8);
+                    Bytes::from(tx)
+                })
+                .collect()
+        })
+        .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))
+}
+
 impl SequencingTransactionParser {
     /// Creates a new `SequencingTransactionParser`
     pub const fn new(sequencing_contract_address: Address) -> Self {
@@ -67,31 +112,20 @@ impl SequencingTransactionParser {
                 .is_some_and(|t| *t == keccak256(TransactionProcessed::SIGNATURE.as_bytes()))
     }
 
-    /// Decodes the event data into a vector of transactions
+    /// Decodes the event data into a vector of typed transactions
     pub fn decode_event_data(data: &Bytes) -> Result<Vec<Bytes>, SequencingParserError> {
         if data.is_empty() {
             return Err(SequencingParserError::NoDataProvided);
         }
 
-        let compression_byte = &data[0];
-        let compression_type = get_compression_type(*compression_byte);
-
         let mut transactions = Vec::new();
-        match compression_type {
-            CompressionType::None => {
-                // Excluding the leading compression byte
-                let uncompressed_data = Bytes::copy_from_slice(&data[1..]);
-                transactions.push(uncompressed_data);
+        match data[0].try_into().map_err(|_| SequencingParserError::UnexpectedDataType)? {
+            TransactionType::Compressed => {
+                transactions.append(&mut decompress_transactions(&data[1..])?)
             }
-            CompressionType::Zlib => {
-                let mut decompressed_data = decompress_transactions(data)
-                    .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))?;
-                transactions.append(&mut decompressed_data);
-            }
-            CompressionType::Unknown => {
-                return Err(SequencingParserError::UnknownCompressionType(*compression_byte));
-            }
+            _ => transactions.push(data.clone()),
         }
+
         Ok(transactions)
     }
 
@@ -117,13 +151,33 @@ impl SequencingTransactionParser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::{hex, primitives::B256};
-    use shared::zlib_compression::{compress_transactions, is_valid_zlib_cm_bits};
+    use alloy::{hex, primitives::B256, sol_types::SolValue};
+    use rlp::RlpStream;
 
-    const DUMMY_ENCODED_DATA: &[u8] = &hex!(
-        "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000020002000000000000000000000000000000000000000000000000000000000000"
-    );
-    const DUMMY_TXN_VALUE: &[u8] = &hex!("02");
+    const DUMMY_TXN_VALUE: &[u8] = &[TransactionType::Signed as u8];
+
+    /// RLP encodes and compresses a slice of Ethereum transactions using zlib compression
+    fn compress_transactions(transactions: &[Bytes]) -> std::io::Result<Bytes> {
+        // RLP encode the list of transactions
+        let mut stream = RlpStream::new_list(transactions.len());
+        for tx in transactions {
+            stream.append(&tx.as_ref());
+        }
+        let encoded = stream.out();
+
+        // Compress the RLP encoded bytes using brotli
+        let mut compressed = Vec::new();
+        brotli::enc::BrotliCompress(
+            &mut &encoded[..],
+            &mut compressed,
+            &brotli::enc::BrotliEncoderInitParams(),
+        )?;
+
+        // Append the compression prefix
+        compressed.insert(0, TransactionType::Compressed as u8);
+
+        Ok(Bytes::from(compressed))
+    }
 
     fn generate_valid_test_log(contract_address: Address) -> Log {
         let topics = vec![
@@ -134,7 +188,7 @@ mod tests {
             ),
         ];
 
-        Log::new_unchecked(contract_address, topics, Bytes::from(DUMMY_ENCODED_DATA))
+        Log::new_unchecked(contract_address, topics, Bytes::from(DUMMY_TXN_VALUE.abi_encode()))
     }
 
     #[tokio::test]
@@ -192,46 +246,28 @@ mod tests {
         assert_eq!(result.unwrap_err(), SequencingParserError::InvalidLogEvent);
     }
 
-    #[tokio::test]
-    async fn test_decode_event_data() {
-        let uncompressed_data = b"mock_data".to_vec();
-        let input = Bytes::from([vec![0x0], uncompressed_data.clone()].concat());
-
-        let result = SequencingTransactionParser::decode_event_data(&input);
-
-        println!("Decoded result: {result:?}");
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![Bytes::from(uncompressed_data)])
-    }
-
     #[test]
-    fn test_protocol_data_structure() {
+    fn test_decode_event_data() {
         // Test that demonstrates the correct protocol data structure for each compression case
 
-        // Case 1: No compression, so there's a leading compression byte
-        let raw_data = b"raw_transaction_data".to_vec();
-        let no_compression_input = Bytes::from([vec![0x00], raw_data.clone()].concat());
+        // Case 1: No compression, so there's a leading signed byte
+        let mut raw_data = b"raw_transaction_data".to_vec();
+        raw_data.insert(0, TransactionType::Signed as u8);
+        let raw_data = raw_data.into();
 
-        let result = SequencingTransactionParser::decode_event_data(&no_compression_input);
+        let result = SequencingTransactionParser::decode_event_data(&raw_data);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap()[0], Bytes::from(raw_data));
+        assert_eq!(result.unwrap(), vec![raw_data]);
 
-        // Case 2: Zlib compression - data starts directly with zlib header
+        // Case 2: Brotli compression, the uncompressed tx includes a leading signed byte
         let tx = Bytes::from(b"test_transaction".to_vec());
         let transactions = vec![tx.clone()];
         let compressed_data = compress_transactions(&transactions).unwrap();
+        let mut signed_tx = Vec::from(tx);
+        signed_tx.insert(0, TransactionType::Signed as u8);
 
-        // Verify the compressed data starts with valid zlib header
-        assert!(is_valid_zlib_cm_bits(compressed_data[0]), "Should start with valid zlib CM=8");
-
-        // Pass compressed data directly - no protocol prefix needed
         let result = SequencingTransactionParser::decode_event_data(&compressed_data);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap()[0], tx);
-
-        println!("Protocol structure verified:");
-        println!("- No compression: [0x00][raw_data]");
-        println!("- Zlib compression: [zlib_header (e.g., 0x78)][zlib_payload]");
+        assert_eq!(result.unwrap(), vec![signed_tx]);
     }
 }

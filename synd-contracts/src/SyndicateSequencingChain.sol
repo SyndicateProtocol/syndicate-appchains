@@ -6,8 +6,8 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 enum TransactionType {
     Unsigned, // an unsigned tx
     Contract, // a contract tx (unsigned, nonceless)
-    Compressed, // compressed transactions (signed)
     _Reserved,
+    Compressed, // compressed batch of transactions (signed)
     Signed // a regular signed tx
 
 }
@@ -68,8 +68,32 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     // Note that gaps are allowed in the request id, unlike a regular nonce.
     mapping(address => uint256) public contractNonce;
 
+    /// this is intentionally different from the standard offset used by rollups to prevent collisions
+    uint160 public constant OFFSET = uint160(0x1000000000000000000000000000000000000001);
+
+    /// @notice Utility function that converts the address in the sequencing chain
+    /// that submitted a tx to the inbox to the msg.sender viewed in the appchain.
+    /// @param seqAddress the address in the sequencing chain that triggered the tx to appchain
+    /// @return appAddress appchain address as viewed in msg.sender
+    function applyAlias(address seqAddress) public pure returns (address appAddress) {
+        unchecked {
+            appAddress = address(uint160(seqAddress) + OFFSET);
+        }
+    }
+
+    /// @notice Utility function that converts the msg.sender viewed in the appchain
+    /// to the address in the sequencing chain that submitted a tx to the inbox.
+    /// @param appAddress appchain address as viewed in msg.sender
+    /// @return seqAddress the address in the sequencing chain that triggered the tx to appchain
+    function undoAlias(address appAddress) public pure returns (address seqAddress) {
+        unchecked {
+            seqAddress = address(uint160(appAddress) - OFFSET);
+        }
+    }
+
     /// This has a signature similar to the inbox function.
     /// Note that unlike the inbox function, no max data size is enforced.
+    /// Sending to the zero address creates a contract instead.
     function sendContractTransaction(
         uint64 gasLimit,
         uint256 maxFeePerGas,
@@ -77,13 +101,12 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         uint256 value,
         bytes calldata data
     ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) returns (uint256) {
-        // add 1<<255 to prevent collisions with delayed message requestIds
-        uint256 requestId = (1 << 255) + contractNonce[msg.sender]++;
+        uint256 requestId = contractNonce[msg.sender]++;
         emit TransactionProcessed(
             msg.sender,
             abi.encodePacked(
                 TransactionType.Contract,
-                msg.sender,
+                applyAlias(msg.sender),
                 requestId,
                 uint256(gasLimit),
                 maxFeePerGas,
@@ -97,6 +120,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
 
     /// This has a signature similar to the inbox function.
     /// Note that unlike the inbox function, no max data size is enforced.
+    /// Sending to the zero address creates a contract instead.
     function sendUnsignedTransaction(
         uint64 gasLimit,
         uint256 maxFeePerGas,
@@ -109,7 +133,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
             msg.sender,
             abi.encodePacked(
                 TransactionType.Unsigned,
-                msg.sender,
+                applyAlias(msg.sender),
                 uint256(gasLimit),
                 maxFeePerGas,
                 nonce,

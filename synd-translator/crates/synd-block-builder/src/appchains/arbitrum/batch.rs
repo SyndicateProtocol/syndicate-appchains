@@ -30,11 +30,6 @@ enum BatchSegmentKind {
     AdvanceL1BlockNumber = 4,
 }
 
-enum L2MessageKind {
-    Batch = 3,
-    SignedTx = 4,
-}
-
 /// Arbitrum batch
 #[derive(Debug, Serialize)]
 pub struct Batch(pub Vec<BatchMessage>);
@@ -155,15 +150,12 @@ fn l2_msg_to_bytes(msg: &Vec<Bytes>) -> Result<Bytes> {
         return Err(eyre::eyre!("Cannot serialize empty l2 msg"));
     }
     if msg.len() > 1 {
-        data.push(L2MessageKind::Batch as u8);
+        data.push(3); // L2MessageKind Batch
         for tx in msg {
-            // total length is tx.len() + 1 due to the SignedTx header byte
-            data.extend_from_slice(&(tx.len() + 1).to_be_bytes());
-            data.push(L2MessageKind::SignedTx as u8);
+            data.extend_from_slice(&(tx.len()).to_be_bytes());
             data.extend(tx);
         }
     } else {
-        data.push(L2MessageKind::SignedTx as u8);
         data.extend(&msg[0]);
     }
     Ok(data.into())
@@ -186,11 +178,11 @@ mod tests {
             BatchMessage::Delayed,
             BatchMessage::L2(L1IncomingMessage {
                 header: Default::default(),
-                l2_msg: vec![Default::default()],
+                l2_msg: vec![vec![4].into()],
             }),
             BatchMessage::L2(L1IncomingMessage {
                 header: Default::default(),
-                l2_msg: vec![Default::default(); 2],
+                l2_msg: vec![vec![4].into(); 2],
             }),
         ]);
         assert_eq!(
@@ -233,6 +225,7 @@ mod tests {
             .build(&wallet)
             .await?
             .encode(&mut tx);
+        tx.insert(0, 4);
         let batch = Batch(vec![
             BatchMessage::L2(L1IncomingMessage {
                 header: Default::default(),

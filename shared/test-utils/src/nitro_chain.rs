@@ -101,6 +101,7 @@ pub fn chain_config(chain_id: u64, chain_owner: Address, use_eigen_da: bool) -> 
             "InitialArbOSVersion": 32,
             "InitialChainOwner": "{chain_owner}",
             "GenesisBlockNum": 0,
+            "Syndicate": true,
             "EigenDA": {use_eigen_da}
           }}
       }}"#
@@ -248,7 +249,7 @@ pub async fn deploy_nitro_rollup(
         .join("shared/test-utils/src/nitro-hardhat-config.patch")
         .to_string_lossy()
         .to_string();
-    let status = E2EProcess::new(
+    E2EProcess::new(
         Command::new("git")
             .current_dir(nitro_contracts_dir.clone())
             .arg("apply")
@@ -258,7 +259,7 @@ pub async fn deploy_nitro_rollup(
     )?
     .wait()
     .await?;
-    assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
+    // NOTE: ignore `status` here, as it exits with code 1 if the patch has already been applied
 
     // install and build dependencies
     let status = E2EProcess::new(
@@ -269,7 +270,7 @@ pub async fn deploy_nitro_rollup(
     .await?;
     assert!(status.success(), "Failed to run `yarn install` in nitro contracts");
 
-    let _status = E2EProcess::new(
+    E2EProcess::new(
         Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build:all"),
         "nitro-contracts-build",
     )?
