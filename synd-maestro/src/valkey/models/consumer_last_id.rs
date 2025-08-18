@@ -29,7 +29,7 @@ pub trait ConsumerLastIdExt {
         chain_id: ChainId,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send;
 
-    /// Set a consumer last id in the Valkey cache with TTL
+    /// Set a consumer last id in the Valkey cache.
     fn set_consumer_last_id(
         &mut self,
         chain_id: ChainId,
