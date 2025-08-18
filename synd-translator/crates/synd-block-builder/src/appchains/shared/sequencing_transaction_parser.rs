@@ -156,7 +156,7 @@ mod tests {
 
     const DUMMY_TXN_VALUE: &[u8] = &[TransactionType::Signed as u8];
 
-    /// RLP encodes and compresses a slice of Ethereum transactions using zlib compression
+    /// RLP encodes and compresses a slice of Ethereum transactions using brotli compression
     fn compress_transactions(transactions: &[Bytes]) -> std::io::Result<Bytes> {
         // RLP encode the list of transactions
         let mut stream = RlpStream::new_list(transactions.len());
