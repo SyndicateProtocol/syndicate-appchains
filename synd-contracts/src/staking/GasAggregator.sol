@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {GasEpoch} from "./GasEpoch.sol";
+import {EpochTracker} from "./EpochTracker.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 interface GasCounter {
@@ -21,7 +21,7 @@ interface StakingAppchain {
 
 /// @title GasAggregator
 /// @notice Aggregates gas usage data from appchains and pushes it to the staking appchain
-contract GasAggregator is GasEpoch, AccessControl {
+contract GasAggregator is EpochTracker, AccessControl {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -55,7 +55,9 @@ contract GasAggregator is GasEpoch, AccessControl {
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR 
     //////////////////////////////////////////////////////////////*/
-    constructor(AppchainFactory _factory, StakingAppchain _stakingAppchain, address admin) {
+    constructor(AppchainFactory _factory, StakingAppchain _stakingAppchain, address admin, uint256 _epochStartTimestamp)
+        EpochTracker(_epochStartTimestamp)
+    {
         if (admin == address(0)) revert ZeroAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -137,7 +139,7 @@ contract GasAggregator is GasEpoch, AccessControl {
         if (!fallbackToOffchainAggregation()) {
             revert MustUseAutomaticAggregation();
         }
-        if (block.timestamp < getEpochEndTime(currentEpochToAggregate) + challengeWindow) {
+        if (block.timestamp < getEpochEnd(currentEpochToAggregate) + challengeWindow) {
             revert WindowNotOver(currentEpochToAggregate, challengeWindow);
         }
         if (pendingChainIDs.length == 0) {

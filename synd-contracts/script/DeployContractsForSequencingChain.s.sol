@@ -23,7 +23,7 @@ contract DeploySyndicateFactory is Script {
         // syndicate admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
-        syndicateFactory = new SyndicateFactory(admin);
+        syndicateFactory = new SyndicateFactory(admin, 0);
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
         requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
@@ -65,7 +65,7 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
         console.log("Deployed RequireAndModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencingChain = new SyndicateSequencingChain(appchainId);
+        sequencingChain = new SyndicateSequencingChain(appchainId, 0);
         sequencingChain.initialize(admin, address(permissionModule));
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 

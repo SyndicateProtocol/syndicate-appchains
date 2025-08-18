@@ -33,7 +33,7 @@ contract SyndicateFactoryTest is Test {
         admin = address(0x1);
         manager = address(0x2);
         nonManager = address(0x3);
-        factory = new SyndicateFactory(admin);
+        factory = new SyndicateFactory(admin, 0);
 
         // Grant manager role to the manager address
         vm.prank(admin);
@@ -188,7 +188,7 @@ contract SyndicateFactoryTest is Test {
     function testGetBytecode() public view {
         bytes memory bytecode = factory.getBytecode(appchainId);
         bytes memory expectedBytecode =
-            abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(appchainId));
+            abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(appchainId, 0));
         assertEq(bytecode, expectedBytecode);
     }
 
@@ -447,7 +447,7 @@ contract SyndicateFactoryTest is Test {
 
     function testConstructorWithZeroAddressReverts() public {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        new SyndicateFactory(address(0));
+        new SyndicateFactory(address(0), 0);
     }
 
     function testGetNextChainIdFunction() public view {

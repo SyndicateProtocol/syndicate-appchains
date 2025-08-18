@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
-import {GasCounter} from "./GasCounter.sol";
+import {GasCounter} from "./staking/GasCounter.sol";
 
 /// @title SyndicateSequencingChain
 /// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
@@ -49,7 +49,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, GasCounter {
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-missing-revert-reason-tests
-    constructor(uint256 _appchainId) SequencingModuleChecker() {
+    constructor(uint256 _appchainId, uint256 epochStartTime) SequencingModuleChecker() GasCounter(epochStartTime) {
         // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
         require(_appchainId != 0, "App chain ID cannot be 0");
         appchainId = _appchainId;

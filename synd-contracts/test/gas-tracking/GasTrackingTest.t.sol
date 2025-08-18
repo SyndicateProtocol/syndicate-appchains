@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {GasAggregator, AppchainFactory, StakingAppchain} from "../../src/GasAggregator.sol";
+import {GasAggregator, AppchainFactory, StakingAppchain} from "../../src/staking/GasAggregator.sol";
 import {SyndicateFactory} from "../../src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
 import {AlwaysAllowedModule} from "../../src/sequencing-modules/AlwaysAllowedModule.sol";
@@ -96,7 +96,7 @@ contract GasAggregatorTest is Test {
         mockGasCounter3 = new MockGasCounter();
 
         // Deploy GasAggregator with mock factory
-        gasAggregator = new GasAggregator(mockFactory, new MockStakingAppchain(), admin);
+        gasAggregator = new GasAggregator(mockFactory, new MockStakingAppchain(), admin, 0);
 
         // Set initial values using admin role
         vm.prank(admin);
@@ -117,7 +117,7 @@ contract GasAggregatorTest is Test {
     function test_Constructor_ZeroAdmin() public {
         MockStakingAppchain stakingAppchain = new MockStakingAppchain();
         vm.expectRevert(GasAggregator.ZeroAddress.selector);
-        new GasAggregator(mockFactory, stakingAppchain, address(0));
+        new GasAggregator(mockFactory, stakingAppchain, address(0), 0);
     }
 
     function test_SetMaxAppchainsToQuery() public {

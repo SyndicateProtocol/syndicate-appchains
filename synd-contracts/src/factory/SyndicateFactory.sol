@@ -7,7 +7,6 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {GasAggregator} from "../GasAggregator.sol";
 
 enum NamespaceState {
     Available,
@@ -44,14 +43,18 @@ contract SyndicateFactory is AccessControl, Pausable {
     mapping(uint256 => address) public appchainContracts;
     uint256[] public chainIDs;
 
-    constructor(address admin) {
+    uint256 public epochStartTime;
+
+    constructor(address admin, uint256 _epochStartTime) {
         if (admin == address(0)) revert ZeroAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, admin);
 
         _updateNamespaceConfig(510);
+
         nextAutoChainId = 1;
+        epochStartTime = _epochStartTime;
     }
 
     /// @notice Creates a new SyndicateSequencingChain contract
@@ -111,8 +114,8 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Returns the bytecode for deploying a SyndicateSequencingChain
     /// @param chainId The chain ID
     /// @return The bytecode with constructor parameters
-    function getBytecode(uint256 chainId) public pure returns (bytes memory) {
-        return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId));
+    function getBytecode(uint256 chainId) public view returns (bytes memory) {
+        return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId, epochStartTime));
     }
 
     /// @notice Get the next auto-generated chain ID

@@ -35,7 +35,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTestSetUp is Test {
         vm.startPrank(admin);
         requireAndModule = new RequireAndModule(admin);
         requireOrModule = new RequireOrModule(admin);
-        chain = new SyndicateSequencingChainWithDecayingPriority(appchainId);
+        chain = new SyndicateSequencingChainWithDecayingPriority(appchainId, 0);
         chain.initialize(admin, address(requireAndModule));
         vm.stopPrank();
     }
@@ -78,7 +78,7 @@ contract SyndicateSequencingChainWithDecayingPriorityTest is SyndicateSequencing
     function testConstructorRevertsWithZeroChainId() public {
         // Verify that constructor reverts with chain ID 0
         vm.expectRevert("App chain ID cannot be 0");
-        new SyndicateSequencingChainWithDecayingPriority(0);
+        new SyndicateSequencingChainWithDecayingPriority(0, 0);
     }
 
     // PROCESS TRANSACTION TESTS

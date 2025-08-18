@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {GasEpoch} from "./GasEpoch.sol";
+import {EpochTracker} from "./EpochTracker.sol";
 
 /**
  * @title GasCounter
@@ -9,7 +9,7 @@ import {GasEpoch} from "./GasEpoch.sol";
  * @dev This contract provides gas tracking functionality that can be inherited by sequencing contracts
  * @author Syndicate Protocol
  */
-abstract contract GasCounter is GasEpoch {
+abstract contract GasCounter is EpochTracker {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -19,6 +19,11 @@ abstract contract GasCounter is GasEpoch {
 
     /// @notice Mapping of epoch to gas data
     mapping(uint256 => uint256) public tokensUsedPerEpoch;
+
+    /*//////////////////////////////////////////////////////////////
+                              CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+    constructor(uint256 epochStartTimestamp) EpochTracker(epochStartTimestamp) {}
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS

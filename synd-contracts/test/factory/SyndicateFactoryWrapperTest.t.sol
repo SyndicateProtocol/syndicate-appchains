@@ -44,7 +44,7 @@ contract SyndicateFactoryWrapperTest is Test {
         nonManager = address(0x5);
 
         // Deploy individual factories
-        syndicateFactory = new SyndicateFactory(admin);
+        syndicateFactory = new SyndicateFactory(admin, 0);
         andFactory = new RequireAndModuleFactory(admin);
         orFactory = new RequireOrModuleFactory(admin);
 
