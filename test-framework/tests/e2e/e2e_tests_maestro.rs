@@ -630,7 +630,7 @@ async fn e2e_maestro_l2_crash_recovery() -> Result<(), eyre::Error> {
 
             // Verify that second transaction is not yet confirmed (L2 is down)
             tokio::time::sleep(Duration::from_secs(1)).await;
-            let receipt2_before_restart =
+            let _receipt2_before_restart =
                 components.appchain_provider.get_transaction_receipt(tx_hash2).await?;
             // Transaction might or might not be there depending on timing - that's okay
 
