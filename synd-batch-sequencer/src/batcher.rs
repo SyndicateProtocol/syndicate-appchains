@@ -62,10 +62,11 @@ struct Batcher {
     /// Metrics
     metrics: BatcherMetrics,
     /// Outstanding transactions that didn't fit in the last batch and their IDs
+    /// [(0xbytes, <milliseconds-since-epoch>-<sequence>)]
     outstanding_txs: Vec<(Bytes, String)>,
     /// Whether to wait for the receipt of the batch submission
     wait_for_receipt: bool,
-    /// The last included id
+    /// The last included ID (<milliseconds-since-epoch>-<sequence>)
     last_included_id: Option<String>,
 }
 
