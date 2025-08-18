@@ -40,8 +40,7 @@ impl ConsumerLastIdExt for ConnectionManager {
         last_id: String,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send {
         let key = chain_consumer_last_id_key(chain_id);
-        let opts = SetOptions::default().get(true);
-        Box::pin(self.set_options(key, last_id, opts))
+        self.set_options(key, last_id, SetOptions::default())
     }
 }
 
@@ -75,7 +74,7 @@ mod tests {
         println!("valkey url is {valkey_url}");
 
         test_set_get_consumer_last_id(conn.clone()).await;
-        test_consumer_last_id_expiration(conn.clone()).await;
+        test_consumer_set_last_id(conn.clone()).await;
         test_update_existing_consumer_last_id(conn.clone()).await;
         test_non_existent_consumer_last_id(conn.clone()).await;
 
@@ -89,14 +88,13 @@ mod tests {
         // Test set_consumer_last_id
         let set_result = conn.set_consumer_last_id(chain_id, last_id.clone()).await;
         assert!(set_result.is_ok(), "Failed to set consumer last id: {:?}", set_result.err());
-        assert!(set_result.unwrap().is_none(), "no value there previously");
 
         // Test get_consumer_last_id after setting
         let get_result = conn.get_consumer_last_id(chain_id).await.unwrap();
         assert_eq!(get_result, Some(last_id), "Retrieved last id doesn't match set last id");
     }
 
-    async fn test_consumer_last_id_expiration(mut conn: ConnectionManager) {
+    async fn test_consumer_set_last_id(mut conn: ConnectionManager) {
         let chain_id = 5u64;
         let last_id = "123-123".to_string();
 
@@ -122,10 +120,8 @@ mod tests {
         assert_eq!(initial_get, Some(initial_last_id.clone()), "Initial last id not set correctly");
 
         // Update last id
-        let result =
-            conn.set_consumer_last_id(chain_id, updated_last_id.clone()).await.unwrap().unwrap();
-        assert_eq!(result, initial_last_id, "old last id was in cache");
-        assert_eq!(result, updated_last_id, "last id should be updated");
+        let result = conn.set_consumer_last_id(chain_id, updated_last_id.clone()).await;
+        assert!(result.is_ok(), "Failed to update consumer last id: {:?}", result.err());
 
         // Verify updated last id
         let updated_get = conn.get_consumer_last_id(chain_id).await.unwrap();
