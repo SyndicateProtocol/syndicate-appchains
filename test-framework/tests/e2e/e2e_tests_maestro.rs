@@ -20,7 +20,7 @@ use synd_maestro::valkey::models::waiting_transaction::WaitingGapTxnExt;
 use test_framework::components::{
     configuration::ConfigurationOptions, test_components::TestComponents,
 };
-use test_utils::{anvil::set_address_nonce, chain_info::test_account1, wait_until};
+use test_utils::wait_until;
 
 // an arbitrary eoa address used for testing
 const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380");

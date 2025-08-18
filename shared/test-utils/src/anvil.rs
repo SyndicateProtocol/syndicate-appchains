@@ -7,7 +7,6 @@ use crate::{
 use alloy::{
     eips::BlockNumberOrTag,
     node_bindings::Anvil,
-    primitives::Address,
     providers::{ext::AnvilApi as _, Provider, ProviderBuilder},
     rpc::types::{anvil::MineOptions, Block},
 };
