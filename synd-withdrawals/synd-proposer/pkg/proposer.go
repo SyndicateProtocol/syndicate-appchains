@@ -236,14 +236,12 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			// for more info.
 			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature, keyAddress)
 			if err != nil {
-				var event *zerolog.Event
 				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
-					event = log.Debug()
+					log.Debug().Msgf("Submit assertion reverted with error: %v", err)
 				} else {
-					event = log.Error()
+					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
+					log.Error().Stack().Err(wrappedErr).Msg(msg)
 				}
-				msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
-				event.Stack().Err(wrappedErr).Msg(msg)
 
 				continue
 			}

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/mdlayher/vsock"
@@ -12,6 +13,12 @@ import (
 
 // small HTTP proxy that forwards requests to a vsock service
 func main() {
+	// Get bind address from environment variable, default to all interfaces if unset
+	// Use BIND_ADDRESS=127.0.0.1:7333 for localhost only
+	bindAddr := os.Getenv("BIND_ADDRESS")
+	if bindAddr == "" {
+		bindAddr = "0.0.0.0:7333" // Default to all interfaces
+	}
 	pool := sync.Pool{
 		New: func() any {
 			conn, err := vsock.Dial(16, 1234, &vsock.Config{})
@@ -70,7 +77,8 @@ func main() {
 
 	http.HandleFunc("/", handler)
 
-	err := http.ListenAndServe(":7333", nil)
+	slog.Info("Starting server", "bind_address", bindAddr)
+	err := http.ListenAndServe(bindAddr, nil)
 	if err != nil {
 		slog.Error("Error starting server", "error", err)
 	}
