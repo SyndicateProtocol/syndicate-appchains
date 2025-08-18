@@ -5423,9 +5423,9 @@ See the [wrapper's documentation](`SealedBidAuctionSequencingModuleInstance`) fo
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> SealedBidAuctionSequencingModuleInstance<P, N> {
-        SealedBidAuctionSequencingModuleInstance::<P, N>::new(address, provider)
+        SealedBidAuctionSequencingModuleInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -5437,7 +5437,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _duration: alloy::sol_types::private::primitives::aliases::U256,
         _treasury: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
@@ -5446,7 +5446,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         SealedBidAuctionSequencingModuleInstance::<
             P,
             N,
-        >::deploy(provider, _duration, _treasury)
+        >::deploy(__provider, _duration, _treasury)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -5458,14 +5458,14 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _duration: alloy::sol_types::private::primitives::aliases::U256,
         _treasury: alloy::sol_types::private::Address,
     ) -> alloy_contract::RawCallBuilder<P, N> {
         SealedBidAuctionSequencingModuleInstance::<
             P,
             N,
-        >::deploy_builder(provider, _duration, _treasury)
+        >::deploy_builder(__provider, _duration, _treasury)
     }
     /**A [`SealedBidAuctionSequencingModule`](self) instance.
 
@@ -5508,11 +5508,11 @@ See the [wrapper's documentation](`SealedBidAuctionSequencingModuleInstance`) fo
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -5523,11 +5523,11 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
             _duration: alloy::sol_types::private::primitives::aliases::U256,
             _treasury: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<SealedBidAuctionSequencingModuleInstance<P, N>> {
-            let call_builder = Self::deploy_builder(provider, _duration, _treasury);
+            let call_builder = Self::deploy_builder(__provider, _duration, _treasury);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -5538,12 +5538,12 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            provider: P,
+            __provider: P,
             _duration: alloy::sol_types::private::primitives::aliases::U256,
             _treasury: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
