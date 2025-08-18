@@ -61,7 +61,7 @@ struct Batcher {
     timeout: Duration,
     /// Metrics
     metrics: BatcherMetrics,
-    /// Outstanding transactions that didn't fit in the last batch and their IDs
+    /// Outstanding transactions that didn't fit in the last batch and their stream ID
     /// [(0xbytes, <milliseconds-since-epoch>-<sequence>)]
     outstanding_txs: Vec<(Bytes, String)>,
     /// Whether to wait for the receipt of the batch submission
@@ -290,8 +290,14 @@ impl Batcher {
                     // We need to discard it, or this loop will get stuck trying
                     // to add the same transaction over and over.
                     if txs.is_empty() {
-                        let (bad_tx, bad_tx_id) = pending_txs.pop_front().unwrap_or_default();
-                        error!(%self.chain_id, tx_hash=%keccak256(&bad_tx), tx_id=%bad_tx_id, "Transaction is too large to fit in the batch. Discarding");
+                        match pending_txs.pop_front() {
+                            Some((bad_tx, bad_tx_id)) => {
+                                error!(%self.chain_id, tx_hash=%keccak256(&bad_tx), tx_id=%bad_tx_id, "Transaction is too large to fit in the batch. Discarding");
+                            }
+                            None => {
+                                error!(%self.chain_id, "No transactions to discard");
+                            }
+                        }
                         continue;
                     }
 
