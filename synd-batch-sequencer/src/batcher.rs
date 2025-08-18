@@ -86,7 +86,7 @@ enum BatchError {
 ///
 /// If the consumer last id is not found, return "0-0".
 /// If the consumer last id is found but fails to parse, return "0-0".
-/// If the consumer last id is found but fails to get from the cache, return "0-0".
+/// `0-0` means the consumer will start from the beginning of all transactions in the cache
 pub async fn get_cached_consumer_last_id(
     conn: &mut ConnectionManager,
     chain_id: u64,
