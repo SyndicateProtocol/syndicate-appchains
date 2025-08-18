@@ -186,7 +186,7 @@ impl Batcher {
         let submission_start = Instant::now();
         if let Err(e) = self.send_batch(batch).await {
             // Don't reset the compressor here, because we want to retry the same batch
-            error!(%self.chain_id, "Failed to send batch: {:?}", e);
+            error!(%self.chain_id, "send_batch failed: {:?}", e);
             return Err(e);
         }
         self.metrics.record_submission_latency(submission_start.elapsed());
@@ -296,7 +296,9 @@ impl Batcher {
             .provider()
             .send_transaction(transaction_request.clone())
             .await
-            .map_err(|e| BatchError::SendBatchFailed(e.to_string()))?;
+            .map_err(|e| {
+                BatchError::SendBatchFailed(format!("error: {e:?}, tx: {transaction_request:?}",))
+            })?;
 
         if self.wait_for_receipt {
             let receipt = pending_tx
