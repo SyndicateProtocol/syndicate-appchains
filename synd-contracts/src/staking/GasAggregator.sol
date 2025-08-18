@@ -16,7 +16,7 @@ interface AppchainFactory {
 
 // TODO this is just a placeholder until we have the actual usage designed
 interface StakingAppchain {
-    function pushData(uint256[] memory chainIDs, uint256[] memory tokens) external;
+    function pushData(uint256[] memory chainIDs, uint256[] memory tokens, uint256 epoch) external;
 }
 
 /// @title GasAggregator
@@ -36,6 +36,7 @@ contract GasAggregator is EpochTracker, AccessControl {
     uint256 public currentEpochToAggregate;
 
     /// @notice used for the offchain aggregation mechanism
+    uint256 public pendingEpoch;
     uint256[] public pendingChainIDs;
     uint256[] public pendingTokensUsed;
     uint256 public pendingTotalTokensUsed;
@@ -46,8 +47,9 @@ contract GasAggregator is EpochTracker, AccessControl {
     error MustUseOffchainAggregation();
     error MustUseAutomaticAggregation();
     error NotHigherThanPendingTotal(uint256 submitted, uint256 pending);
-    error CurrentEpochToAggregateNotOver(uint256 currentEpochToAggregate, uint256 currentEpoch);
+    error EpochNotOver(uint256 epoch, uint256 currentEpoch);
     error WindowNotOver(uint256 currentEpoch, uint256 challengeWindow);
+    error WindowOver(uint256 currentEpoch, uint256 challengeWindow);
     error ChainIDsMustBeInAscendingOrder();
     error NoPendingDataToPush();
     error ZeroAddress();
@@ -72,10 +74,10 @@ contract GasAggregator is EpochTracker, AccessControl {
                             MODIFIERS 
     //////////////////////////////////////////////////////////////*/
 
-    modifier onlyCompletedEpoch() {
+    modifier onlyCompletedEpoch(uint256 epoch) {
         uint256 currentEpoch = getCurrentEpoch();
-        if (currentEpoch <= currentEpochToAggregate) {
-            revert CurrentEpochToAggregateNotOver(currentEpochToAggregate, currentEpoch);
+        if (currentEpoch <= epoch) {
+            revert EpochNotOver(epoch, currentEpoch);
         }
         _;
     }
@@ -84,13 +86,8 @@ contract GasAggregator is EpochTracker, AccessControl {
                             INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function pushToStakingAppchain(uint256[] memory appchainIDs, uint256[] memory tokens) internal {
-        stakingAppchain.pushData(appchainIDs, tokens);
-        // progress the epoch and cleanup pending data
-        currentEpochToAggregate++;
-        delete pendingChainIDs;
-        delete pendingTokensUsed;
-        pendingTotalTokensUsed = 0;
+    function pushToStakingAppchain(uint256[] memory appchainIDs, uint256[] memory tokens, uint256 epoch) internal {
+        stakingAppchain.pushData(appchainIDs, tokens, epoch);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -99,22 +96,31 @@ contract GasAggregator is EpochTracker, AccessControl {
 
     /// @notice triggers automatic aggregation of the appchain gas usage data and pushes it to the staking appchain
     /// @dev only usable until there are up to `maxAppchainsToQuery` appchains, after that point the offchain aggregation mechanism must be used
-    function aggregateTokensUsed() external onlyCompletedEpoch {
+    function aggregateTokensUsed(uint256 epoch) external onlyCompletedEpoch(epoch) {
         if (fallbackToOffchainAggregation()) {
             revert MustUseOffchainAggregation();
         }
         (uint256[] memory appchains, address[] memory contracts) = factory.getAppchainsAndContracts();
         uint256[] memory tokens = new uint256[](appchains.length);
         for (uint256 i = 0; i < appchains.length; i++) {
-            tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(currentEpochToAggregate);
+            tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(epoch);
         }
-        pushToStakingAppchain(appchains, tokens);
+        if (currentEpochToAggregate <= epoch) {
+            currentEpochToAggregate = epoch + 1;
+        }
+        pushToStakingAppchain(appchains, tokens, epoch);
     }
 
     /// @notice Submission of top appchains aggregated off-chain
     /// @dev appchainIDs must be submitted in ascending order
     /// @param appchainIDs the chainIDs of the top appchains for the current epoch
-    function submitOffchainTopChains(uint256[] calldata appchainIDs) external onlyCompletedEpoch {
+    function submitOffchainTopChains(uint256[] calldata appchainIDs)
+        external
+        onlyCompletedEpoch(currentEpochToAggregate)
+    {
+        if (block.timestamp > getEpochEnd(currentEpochToAggregate) + challengeWindow) {
+            revert WindowOver(currentEpochToAggregate, challengeWindow);
+        }
         uint256 total = 0;
         address[] memory contracts = factory.getContractsForAppchains(appchainIDs);
         uint256[] memory tokens = new uint256[](appchainIDs.length);
@@ -128,6 +134,7 @@ contract GasAggregator is EpochTracker, AccessControl {
         if (total <= pendingTotalTokensUsed) {
             revert NotHigherThanPendingTotal(total, pendingTotalTokensUsed);
         }
+        pendingEpoch = currentEpochToAggregate;
         pendingChainIDs = appchainIDs;
         pendingTokensUsed = tokens;
         pendingTotalTokensUsed = total;
@@ -135,17 +142,20 @@ contract GasAggregator is EpochTracker, AccessControl {
 
     /// @notice Pushes the pending data of the top appchains to the stakin appchain
     /// @dev only callable after the current epoch has ended and the challengeWindow period has elapsed
-    function pushTopChainsDataToStakingAppchain() external onlyCompletedEpoch {
+    function pushTopChainsDataToStakingAppchain() external {
         if (!fallbackToOffchainAggregation()) {
             revert MustUseAutomaticAggregation();
         }
-        if (block.timestamp < getEpochEnd(currentEpochToAggregate) + challengeWindow) {
+        if (block.timestamp <= getEpochEnd(currentEpochToAggregate) + challengeWindow) {
             revert WindowNotOver(currentEpochToAggregate, challengeWindow);
         }
         if (pendingChainIDs.length == 0) {
             revert NoPendingDataToPush();
         }
-        pushToStakingAppchain(pendingChainIDs, pendingTokensUsed);
+        if (pendingEpoch == currentEpochToAggregate) {
+            currentEpochToAggregate++;
+        }
+        pushToStakingAppchain(pendingChainIDs, pendingTokensUsed, pendingEpoch);
     }
 
     /*//////////////////////////////////////////////////////////////

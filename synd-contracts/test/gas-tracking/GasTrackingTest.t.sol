@@ -59,10 +59,12 @@ contract MockAppchainFactory is AppchainFactory {
 contract MockStakingAppchain is StakingAppchain {
     uint256[] public chainIDs;
     uint256[] public tokens;
+    uint256 public epoch;
 
-    function pushData(uint256[] memory _chainIDs, uint256[] memory _tokens) external {
+    function pushData(uint256[] memory _chainIDs, uint256[] memory _tokens, uint256 _epoch) external {
         chainIDs = _chainIDs;
         tokens = _tokens;
+        epoch = _epoch;
     }
 
     function getChainIDs() external view returns (uint256[] memory) {
@@ -178,17 +180,17 @@ contract GasAggregatorTest is Test {
         mockFactory.addAppchain(2, address(mockGasCounter2));
 
         // Set gas usage for current epoch
-        uint256 currentEpoch = gasAggregator.currentEpochToAggregate();
-        mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
-        mockGasCounter2.setTokensForEpoch(currentEpoch, 200);
+        uint256 epoch = 1;
+        mockGasCounter1.setTokensForEpoch(epoch, 100);
+        mockGasCounter2.setTokensForEpoch(epoch, 200);
 
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
-        gasAggregator.aggregateTokensUsed();
+        gasAggregator.aggregateTokensUsed(epoch);
 
         // Should increment epoch
-        assertEq(gasAggregator.currentEpochToAggregate(), currentEpoch + 1);
+        assertEq(gasAggregator.currentEpochToAggregate(), epoch + 1);
 
         // Verify staking appchain data
         MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
@@ -196,6 +198,7 @@ contract GasAggregatorTest is Test {
         assertEq(stakingAppchain.getTokens().length, 2);
         assertEq(stakingAppchain.getChainIDs()[0], 1);
         assertEq(stakingAppchain.getChainIDs()[1], 2);
+        assertEq(stakingAppchain.epoch(), epoch);
     }
 
     function test_AggregateTokensUsed_AboveThreshold() public {
@@ -206,19 +209,16 @@ contract GasAggregatorTest is Test {
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
         vm.expectRevert(GasAggregator.MustUseOffchainAggregation.selector);
-        gasAggregator.aggregateTokensUsed();
+        gasAggregator.aggregateTokensUsed(1);
     }
 
     function test_AggregateTokensUsed_EpochNotCompleted() public {
         // Try to aggregate before epoch is complete
+        uint256 badEpoch = 2 ** 256 - 1;
         vm.expectRevert(
-            abi.encodeWithSelector(
-                GasAggregator.CurrentEpochToAggregateNotOver.selector,
-                gasAggregator.currentEpochToAggregate(),
-                gasAggregator.getCurrentEpoch()
-            )
+            abi.encodeWithSelector(GasAggregator.EpochNotOver.selector, badEpoch, gasAggregator.getCurrentEpoch())
         );
-        gasAggregator.aggregateTokensUsed();
+        gasAggregator.aggregateTokensUsed(badEpoch);
     }
 
     function test_SubmitOffchainTopChains_Success() public {
@@ -296,7 +296,7 @@ contract GasAggregatorTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                GasAggregator.CurrentEpochToAggregateNotOver.selector,
+                GasAggregator.EpochNotOver.selector,
                 gasAggregator.currentEpochToAggregate(),
                 gasAggregator.getCurrentEpoch()
             )
@@ -330,7 +330,6 @@ contract GasAggregatorTest is Test {
 
         // Should increment epoch and clear pending data
         assertEq(gasAggregator.currentEpochToAggregate(), gasAggregator.getCurrentEpoch());
-        assertEq(gasAggregator.pendingTotalTokensUsed(), 0);
     }
 
     function test_PushTopChainsDataToStakingAppchain_BelowThreshold() public {
@@ -382,20 +381,6 @@ contract GasAggregatorTest is Test {
         gasAggregator.pushTopChainsDataToStakingAppchain();
     }
 
-    function test_PushTopChainsDataToStakingAppchain_EpochNotCompleted() public {
-        // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                GasAggregator.CurrentEpochToAggregateNotOver.selector,
-                gasAggregator.currentEpochToAggregate(),
-                gasAggregator.getCurrentEpoch()
-            )
-        );
-        gasAggregator.pushTopChainsDataToStakingAppchain();
-    }
-
     function test_Integration_CompleteWorkflow() public {
         // Setup: above threshold
         mockFactory.setTotalAppchains(3);
@@ -425,10 +410,6 @@ contract GasAggregatorTest is Test {
         // Push data
         gasAggregator.pushTopChainsDataToStakingAppchain();
 
-        // Verify state
-        assertEq(gasAggregator.currentEpochToAggregate(), epoch1 + 1);
-        assertEq(gasAggregator.pendingTotalTokensUsed(), 0);
-
         // Verify staking appchain data
         MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
         assertEq(stakingAppchain.getChainIDs().length, 2);
@@ -437,6 +418,7 @@ contract GasAggregatorTest is Test {
         assertEq(stakingAppchain.getChainIDs()[1], 3);
         assertEq(stakingAppchain.getTokens()[0], 200);
         assertEq(stakingAppchain.getTokens()[1], 300);
+        assertEq(stakingAppchain.epoch(), epoch1);
     }
 
     function test_EdgeCase_ZeroGasPrice() public {
@@ -466,7 +448,7 @@ contract GasAggregatorTest is Test {
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
         // Should work with empty arrays
-        gasAggregator.aggregateTokensUsed();
+        gasAggregator.aggregateTokensUsed(1);
 
         // Should increment epoch
         assertEq(gasAggregator.currentEpochToAggregate(), gasAggregator.getCurrentEpoch());
