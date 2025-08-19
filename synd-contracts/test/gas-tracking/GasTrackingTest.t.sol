@@ -113,7 +113,7 @@ contract GasAggregatorTest is Test {
 
         // Should start with current epoch
         uint256 currentEpoch = gasAggregator.getCurrentEpoch();
-        assertEq(gasAggregator.currentEpochToAggregate(), currentEpoch);
+        assertEq(gasAggregator.pendingEpoch(), currentEpoch);
     }
 
     function test_Constructor_ZeroAdmin() public {
@@ -190,7 +190,7 @@ contract GasAggregatorTest is Test {
         gasAggregator.aggregateTokensUsed(epoch);
 
         // Should increment epoch
-        assertEq(gasAggregator.currentEpochToAggregate(), epoch + 1);
+        assertEq(gasAggregator.pendingEpoch(), epoch + 1);
 
         // Verify staking appchain data
         MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
@@ -228,7 +228,7 @@ contract GasAggregatorTest is Test {
         mockFactory.addAppchain(2, address(mockGasCounter2));
 
         // Set gas usage
-        uint256 currentEpoch = gasAggregator.currentEpochToAggregate();
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
         mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
         mockGasCounter2.setTokensForEpoch(currentEpoch, 200);
 
@@ -239,7 +239,12 @@ contract GasAggregatorTest is Test {
         chainIDs[0] = 1;
         chainIDs[1] = 2;
 
+        // Record submission time to verify challenge window starts now
+        uint256 submissionTime = block.timestamp;
         gasAggregator.submitOffchainTopChains(chainIDs);
+
+        // Verify first submission time is set
+        assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), submissionTime);
 
         // Check pending data
         assertEq(gasAggregator.pendingTotalTokensUsed(), 300);
@@ -254,6 +259,11 @@ contract GasAggregatorTest is Test {
         mockFactory.setTotalAppchains(3);
         mockFactory.addAppchain(1, address(mockGasCounter1));
         mockFactory.addAppchain(2, address(mockGasCounter2));
+
+        // Set gas usage for pending epoch first
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+        mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
+        mockGasCounter2.setTokensForEpoch(currentEpoch, 200);
 
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
@@ -271,6 +281,10 @@ contract GasAggregatorTest is Test {
         mockFactory.setTotalAppchains(3);
         mockFactory.addAppchain(1, address(mockGasCounter1));
 
+        // Set gas usage for pending epoch
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+        mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
+
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
@@ -278,11 +292,10 @@ contract GasAggregatorTest is Test {
         chainIDs[0] = 1;
 
         // First submission
-        mockGasCounter1.setTokensForEpoch(gasAggregator.currentEpochToAggregate(), 100);
         gasAggregator.submitOffchainTopChains(chainIDs);
 
         // Second submission with lower total
-        mockGasCounter1.setTokensForEpoch(gasAggregator.currentEpochToAggregate(), 50);
+        mockGasCounter1.setTokensForEpoch(gasAggregator.pendingEpoch(), 50);
         vm.expectRevert(abi.encodeWithSelector(GasAggregator.NotHigherThanPendingTotal.selector, 50, 100));
         gasAggregator.submitOffchainTopChains(chainIDs);
     }
@@ -296,9 +309,7 @@ contract GasAggregatorTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                GasAggregator.EpochNotOver.selector,
-                gasAggregator.currentEpochToAggregate(),
-                gasAggregator.getCurrentEpoch()
+                GasAggregator.EpochNotOver.selector, gasAggregator.pendingEpoch(), gasAggregator.getCurrentEpoch()
             )
         );
         gasAggregator.submitOffchainTopChains(chainIDs);
@@ -310,26 +321,29 @@ contract GasAggregatorTest is Test {
         mockFactory.addAppchain(1, address(mockGasCounter1));
         mockFactory.addAppchain(2, address(mockGasCounter2));
 
+        // Set gas usage for current pending epoch
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+        mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
+        mockGasCounter2.setTokensForEpoch(currentEpoch, 200);
+
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
-        // Submit data
+        // Submit data (this starts the challenge window)
         uint256[] memory chainIDs = new uint256[](2);
         chainIDs[0] = 1;
         chainIDs[1] = 2;
 
-        mockGasCounter1.setTokensForEpoch(gasAggregator.currentEpochToAggregate(), 100);
-        mockGasCounter2.setTokensForEpoch(gasAggregator.currentEpochToAggregate(), 200);
+        uint256 submissionTime = block.timestamp;
         gasAggregator.submitOffchainTopChains(chainIDs);
 
-        // Wait for challenge window
-        vm.warp(block.timestamp + CHALLENGE_WINDOW + 1);
+        // Wait for challenge window (from submission time, not epoch end)
+        vm.warp(submissionTime + CHALLENGE_WINDOW + 1);
 
-        // Uncomment when the function is implemented
         gasAggregator.pushTopChainsDataToStakingAppchain();
 
         // Should increment epoch and clear pending data
-        assertEq(gasAggregator.currentEpochToAggregate(), gasAggregator.getCurrentEpoch());
+        assertEq(gasAggregator.pendingEpoch(), gasAggregator.getCurrentEpoch());
     }
 
     function test_PushTopChainsDataToStakingAppchain_BelowThreshold() public {
@@ -348,36 +362,22 @@ contract GasAggregatorTest is Test {
         mockFactory.setTotalAppchains(3);
         mockFactory.addAppchain(1, address(mockGasCounter1));
 
+        // Set gas usage for current pending epoch
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+        mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
+
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
-        // Submit data
+        // Submit data (this starts the challenge window)
         uint256[] memory chainIDs = new uint256[](1);
         chainIDs[0] = 1;
-
-        mockGasCounter1.setTokensForEpoch(gasAggregator.currentEpochToAggregate(), 100);
         gasAggregator.submitOffchainTopChains(chainIDs);
 
-        // Try to push before challenge window is over
+        // Try to push before challenge window is over (immediately after submission)
         vm.expectRevert(
-            abi.encodeWithSelector(
-                GasAggregator.WindowNotOver.selector, gasAggregator.currentEpochToAggregate(), CHALLENGE_WINDOW
-            )
+            abi.encodeWithSelector(GasAggregator.WindowNotOver.selector, gasAggregator.pendingEpoch(), CHALLENGE_WINDOW)
         );
-        gasAggregator.pushTopChainsDataToStakingAppchain();
-    }
-
-    function test_PushTopChainsDataToStakingAppchain_NoPendingData() public {
-        // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
-
-        // Move to next epoch
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
-
-        // Wait for challenge window
-        vm.warp(block.timestamp + CHALLENGE_WINDOW + 1);
-
-        vm.expectRevert(GasAggregator.NoPendingDataToPush.selector);
         gasAggregator.pushTopChainsDataToStakingAppchain();
     }
 
@@ -389,7 +389,7 @@ contract GasAggregatorTest is Test {
         mockFactory.addAppchain(3, address(mockGasCounter3));
 
         // Set initial gas usage
-        uint256 epoch1 = gasAggregator.currentEpochToAggregate();
+        uint256 epoch1 = gasAggregator.pendingEpoch();
         mockGasCounter1.setTokensForEpoch(epoch1, 100);
         mockGasCounter2.setTokensForEpoch(epoch1, 200);
         mockGasCounter3.setTokensForEpoch(epoch1, 300);
@@ -397,15 +397,16 @@ contract GasAggregatorTest is Test {
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
-        // Submit offchain data
+        // Submit offchain data (this starts challenge window)
         uint256[] memory chainIDs = new uint256[](2);
         chainIDs[0] = 2; // 200 tokens
         chainIDs[1] = 3; // 300 tokens
 
+        uint256 submissionTime = block.timestamp;
         gasAggregator.submitOffchainTopChains(chainIDs);
 
-        // Wait for challenge window
-        vm.warp(block.timestamp + CHALLENGE_WINDOW + 1);
+        // Wait for challenge window (from submission time)
+        vm.warp(submissionTime + CHALLENGE_WINDOW + 1);
 
         // Push data
         gasAggregator.pushTopChainsDataToStakingAppchain();
@@ -451,6 +452,64 @@ contract GasAggregatorTest is Test {
         gasAggregator.aggregateTokensUsed(1);
 
         // Should increment epoch
-        assertEq(gasAggregator.currentEpochToAggregate(), gasAggregator.getCurrentEpoch());
+        assertEq(gasAggregator.pendingEpoch(), gasAggregator.getCurrentEpoch());
+    }
+
+    function test_ChallengeWindowMechanism() public {
+        // Setup: above threshold
+        mockFactory.setTotalAppchains(3);
+        mockFactory.addAppchain(1, address(mockGasCounter1));
+        mockFactory.addAppchain(2, address(mockGasCounter2));
+
+        // Set gas usage for current pending epoch
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+        mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
+        mockGasCounter2.setTokensForEpoch(currentEpoch, 200);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Capture the first submission time IMMEDIATELY after warp
+        uint256 firstSubmissionTime = block.timestamp;
+
+        uint256[] memory chainIDs1 = new uint256[](1);
+        chainIDs1[0] = 1;
+
+        uint256[] memory chainIDs2 = new uint256[](2);
+        chainIDs2[0] = 1;
+        chainIDs2[1] = 2;
+
+        // First submission should work (starts challenge window)
+        gasAggregator.submitOffchainTopChains(chainIDs1);
+        assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), firstSubmissionTime);
+        assertEq(gasAggregator.pendingTotalTokensUsed(), 100);
+
+        // Second submission during challenge window should work if higher total
+        vm.warp(firstSubmissionTime + CHALLENGE_WINDOW / 2);
+        gasAggregator.submitOffchainTopChains(chainIDs2);
+        assertEq(gasAggregator.pendingTotalTokensUsed(), 300);
+        // First submission time should not change (it records the FIRST submission)
+        assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), 2592002);
+
+        // Third submission after challenge window should fail
+        vm.warp(firstSubmissionTime + CHALLENGE_WINDOW + 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(GasAggregator.WindowOver.selector, gasAggregator.pendingEpoch(), CHALLENGE_WINDOW)
+        );
+        gasAggregator.submitOffchainTopChains(chainIDs1);
+
+        // But push should now work
+        gasAggregator.pushTopChainsDataToStakingAppchain();
+
+        // Verify data was pushed
+        MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
+        assertEq(stakingAppchain.getChainIDs().length, 2);
+        assertEq(stakingAppchain.getTokens()[0], 100);
+        assertEq(stakingAppchain.getTokens()[1], 200);
+        assertEq(stakingAppchain.epoch(), currentEpoch);
+
+        // Epoch should be incremented and submission time reset
+        assertEq(gasAggregator.pendingEpoch(), currentEpoch + 1);
+        assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), 0);
     }
 }

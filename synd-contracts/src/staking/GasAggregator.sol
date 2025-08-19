@@ -31,14 +31,20 @@ contract GasAggregator is EpochTracker, AccessControl {
 
     uint8 public maxAppchainsToQuery;
 
+    /// @notice used for the offchain aggregation mechanism.
+    /// The challenge window is the time period after the first submission during which new submission can be made
+    /// After the challenge window has elapsed, the data must be pushed to the staking appchain for the next epoch aggregation to start
     uint256 public challengeWindow = 24 hours;
-
-    /// @notice used for the offchain aggregation mechanism
-    uint256 public currentEpochToAggregate;
     uint256 public pendingEpoch;
+    uint256 public pendingEpochFirstSubmissionTime;
     uint256[] public pendingChainIDs;
     uint256[] public pendingTokensUsed;
     uint256 public pendingTotalTokensUsed;
+
+    /// @notice last epoch that was aggregated using the offchain mechanism (this data can be used for re-submissions)
+    uint256 public lastAggregatedEpoch;
+    uint256[] public lastAggregatedChainIDs;
+    uint256[] public lastAggregatedTokensUsed;
 
     /*//////////////////////////////////////////////////////////////
       ERRORS
@@ -50,7 +56,6 @@ contract GasAggregator is EpochTracker, AccessControl {
     error WindowNotOver(uint256 currentEpoch, uint256 challengeWindow);
     error WindowOver(uint256 currentEpoch, uint256 challengeWindow);
     error ChainIDsMustBeInAscendingOrder();
-    error NoPendingDataToPush();
     error ZeroAddress();
 
     /*//////////////////////////////////////////////////////////////
@@ -64,7 +69,7 @@ contract GasAggregator is EpochTracker, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         // consider all past epochs ignoed
-        currentEpochToAggregate = getCurrentEpoch();
+        pendingEpoch = getCurrentEpoch();
         factory = _factory;
         stakingAppchain = _stakingAppchain;
     }
@@ -104,8 +109,8 @@ contract GasAggregator is EpochTracker, AccessControl {
         for (uint256 i = 0; i < appchains.length; i++) {
             tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(epoch);
         }
-        if (currentEpochToAggregate <= epoch) {
-            currentEpochToAggregate = epoch + 1;
+        if (pendingEpoch <= epoch) {
+            pendingEpoch = epoch + 1;
         }
         _pushToStakingAppchain(appchains, tokens, epoch);
     }
@@ -113,12 +118,10 @@ contract GasAggregator is EpochTracker, AccessControl {
     /// @notice Submission of top appchains aggregated off-chain
     /// @dev appchainIDs must be submitted in ascending order
     /// @param appchainIDs the chainIDs of the top appchains for the current epoch
-    function submitOffchainTopChains(uint256[] calldata appchainIDs)
-        external
-        onlyCompletedEpoch(currentEpochToAggregate)
-    {
-        if (block.timestamp > getEpochEnd(currentEpochToAggregate) + challengeWindow) {
-            revert WindowOver(currentEpochToAggregate, challengeWindow);
+    function submitOffchainTopChains(uint256[] calldata appchainIDs) external onlyCompletedEpoch(pendingEpoch) {
+        if (pendingEpochFirstSubmissionTime != 0 && block.timestamp > pendingEpochFirstSubmissionTime + challengeWindow)
+        {
+            revert WindowOver(pendingEpoch, challengeWindow);
         }
         uint256 total = 0;
         address[] memory contracts = factory.getContractsForAppchains(appchainIDs);
@@ -127,13 +130,15 @@ contract GasAggregator is EpochTracker, AccessControl {
             if (i > 0 && appchainIDs[i] <= appchainIDs[i - 1]) {
                 revert ChainIDsMustBeInAscendingOrder();
             }
-            tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(currentEpochToAggregate);
+            tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(pendingEpoch);
             total += tokens[i];
         }
         if (total <= pendingTotalTokensUsed) {
             revert NotHigherThanPendingTotal(total, pendingTotalTokensUsed);
         }
-        pendingEpoch = currentEpochToAggregate;
+        if (pendingEpochFirstSubmissionTime == 0) {
+            pendingEpochFirstSubmissionTime = block.timestamp;
+        }
         pendingChainIDs = appchainIDs;
         pendingTokensUsed = tokens;
         pendingTotalTokensUsed = total;
@@ -145,16 +150,17 @@ contract GasAggregator is EpochTracker, AccessControl {
         if (!fallbackToOffchainAggregation()) {
             revert MustUseAutomaticAggregation();
         }
-        if (block.timestamp <= getEpochEnd(currentEpochToAggregate) + challengeWindow) {
-            revert WindowNotOver(currentEpochToAggregate, challengeWindow);
+        if (block.timestamp <= pendingEpochFirstSubmissionTime + challengeWindow) {
+            revert WindowNotOver(pendingEpoch, challengeWindow);
         }
-        if (pendingChainIDs.length == 0) {
-            revert NoPendingDataToPush();
+        if (lastAggregatedEpoch != pendingEpoch) {
+            lastAggregatedEpoch = pendingEpoch;
+            lastAggregatedChainIDs = pendingChainIDs;
+            lastAggregatedTokensUsed = pendingTokensUsed;
+            pendingEpoch++;
+            pendingEpochFirstSubmissionTime = 0;
         }
-        if (pendingEpoch == currentEpochToAggregate) {
-            currentEpochToAggregate++;
-        }
-        _pushToStakingAppchain(pendingChainIDs, pendingTokensUsed, pendingEpoch);
+        _pushToStakingAppchain(lastAggregatedChainIDs, lastAggregatedTokensUsed, lastAggregatedEpoch);
     }
 
     /*//////////////////////////////////////////////////////////////
