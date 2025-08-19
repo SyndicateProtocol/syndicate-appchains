@@ -348,8 +348,8 @@ impl StreamProducer {
                             )
                             .await
                             {
-                                Ok(id) => {
-                                    debug!(%stream_key, original_id = %id, new_id = %id, "Finalization checker: Resubmitted transaction.");
+                                Ok(submitted_id) => {
+                                    debug!(%stream_key, original_id = %id, submitted_id = %submitted_id, "Finalization checker: Resubmitted transaction.");
                                 }
                                 Err(e) => {
                                     error!(
