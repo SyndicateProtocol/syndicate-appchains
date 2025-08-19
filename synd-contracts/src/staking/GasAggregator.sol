@@ -14,7 +14,7 @@ interface AppchainFactory {
     function getAppchainsAndContracts() external view returns (uint256[] memory chainIDs, address[] memory contracts);
 }
 
-// TODO this is just a placeholder until we have the actual usage designed
+// TODO SEQ-1283: this is just a placeholder until we have the actual usage designed
 interface StakingAppchain {
     function pushData(uint256[] memory chainIDs, uint256[] memory tokens, uint256 epoch) external;
 }
@@ -33,9 +33,8 @@ contract GasAggregator is EpochTracker, AccessControl {
 
     uint256 public challengeWindow = 24 hours;
 
-    uint256 public currentEpochToAggregate;
-
     /// @notice used for the offchain aggregation mechanism
+    uint256 public currentEpochToAggregate;
     uint256 public pendingEpoch;
     uint256[] public pendingChainIDs;
     uint256[] public pendingTokensUsed;
@@ -86,7 +85,7 @@ contract GasAggregator is EpochTracker, AccessControl {
                             INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function pushToStakingAppchain(uint256[] memory appchainIDs, uint256[] memory tokens, uint256 epoch) internal {
+    function _pushToStakingAppchain(uint256[] memory appchainIDs, uint256[] memory tokens, uint256 epoch) internal {
         stakingAppchain.pushData(appchainIDs, tokens, epoch);
     }
 
@@ -108,7 +107,7 @@ contract GasAggregator is EpochTracker, AccessControl {
         if (currentEpochToAggregate <= epoch) {
             currentEpochToAggregate = epoch + 1;
         }
-        pushToStakingAppchain(appchains, tokens, epoch);
+        _pushToStakingAppchain(appchains, tokens, epoch);
     }
 
     /// @notice Submission of top appchains aggregated off-chain
@@ -155,7 +154,7 @@ contract GasAggregator is EpochTracker, AccessControl {
         if (pendingEpoch == currentEpochToAggregate) {
             currentEpochToAggregate++;
         }
-        pushToStakingAppchain(pendingChainIDs, pendingTokensUsed, pendingEpoch);
+        _pushToStakingAppchain(pendingChainIDs, pendingTokensUsed, pendingEpoch);
     }
 
     /*//////////////////////////////////////////////////////////////

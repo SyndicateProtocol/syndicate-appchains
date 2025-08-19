@@ -787,6 +787,14 @@ impl MaestroService {
 
         let mut conn = self.valkey_conn.clone();
         let txn_ids = waiting_txns;
+
+        debug!(
+            chain_id = %txn_ids[0].chain_id,
+            wallet_address = %txn_ids[0].wallet_address,
+            removed_txns = ?txn_ids,
+            "Attempting to remove waiting transactions from cache"
+        );
+
         let result = with_cache_metrics!(&self.metrics.valkey, conn.del_waiting_txn_keys(txn_ids))
             .map_err(|_| InternalError(Other))?;
 
@@ -796,7 +804,7 @@ impl MaestroService {
         // Log if an incorrect number of keys was removed - likely a bug
         if result != (txn_ids.len() as u64) {
             error!(
-            %chain_id, %wallet_address, num_txns_requested = %txn_ids.len(), num_txns_requested = %result,
+            %chain_id, %wallet_address, num_txns_requested = %txn_ids.len(), num_txns_removed = %result,
             "Removed different number of waiting transactions from cache than requested"
             );
         }

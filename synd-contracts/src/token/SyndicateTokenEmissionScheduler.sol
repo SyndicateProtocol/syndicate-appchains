@@ -97,8 +97,6 @@ contract SyndicateTokenEmissionScheduler is AccessControl, Pausable, ReentrancyG
     /// @notice Timestamp when emissions were started
     uint256 public emissionsStartTime;
 
-    // TODO this should probably be refactored to re-use the EpochTracker logic
-
     /// @notice Current emission epoch (0-based)
     uint256 public currentEpoch;
 
