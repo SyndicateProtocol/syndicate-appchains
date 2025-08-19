@@ -85,7 +85,7 @@ impl BatcherMetrics {
         self.batch_size_bytes.set(size as i64);
     }
 
-    pub fn record_compression_ratio(&self, original_size: usize, compressed_size: usize) {
+    pub fn record_compression_space_saving_pct(&self, original_size: usize, compressed_size: usize) {
         if original_size > 0 {
             let ratio = ((1.0 - compressed_size as f64 / original_size as f64) * 100.0) as i64;
             self.batch_compression_space_saving_pct.set(ratio);
@@ -146,14 +146,17 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
-        metrics.record_compression_ratio(1000, 500);
+        metrics.record_compression_space_saving_pct(1000, 500);
         assert_eq!(metrics.batch_compression_space_saving_pct.get(), 50);
 
-        metrics.record_compression_ratio(100, 25);
+        metrics.record_compression_space_saving_pct(100, 25);
         assert_eq!(metrics.batch_compression_space_saving_pct.get(), 75);
 
-        metrics.record_compression_ratio(200, 196);
+        metrics.record_compression_space_saving_pct(200, 196);
         assert_eq!(metrics.batch_compression_space_saving_pct.get(), 2);
+
+        metrics.record_compression_space_saving_pct(100, 101);
+        assert_eq!(metrics.batch_compression_space_saving_pct.get(), -1);
     }
 
     #[test]

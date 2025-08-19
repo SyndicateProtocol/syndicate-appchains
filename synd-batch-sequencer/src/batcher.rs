@@ -319,7 +319,12 @@ impl Batcher {
             }
         }
         self.metrics.record_batch_transactions(txs.len());
-        self.metrics.record_compression_ratio(uncompressed_size, batch.len());
+        if self.compression_enabled {
+            if batch.len() > uncompressed_size {
+                warn!(%self.chain_id, "Batch compressed size is larger than uncompressed size.");
+            }
+            self.metrics.record_compression_space_saving_pct(uncompressed_size, batch.len());
+        }
         Ok(batch)
     }
 
