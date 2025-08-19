@@ -6941,6 +6941,7 @@ dependencies = [
  "byte-unit",
  "clap",
  "contract-bindings",
+ "ctor",
  "derivative",
  "eyre",
  "flate2",

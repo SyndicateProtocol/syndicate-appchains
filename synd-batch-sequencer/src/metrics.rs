@@ -14,6 +14,7 @@ pub struct BatcherMetrics {
     pub batch_processing_time_ms: Gauge,
     pub batch_submission_latency_ms: Gauge,
     pub total_txs_processed: Gauge,
+    pub outstanding_txs: Gauge,
     pub wallet_balance: Gauge,
     /// Cache metrics for Valkey cache operations (stream reads, etc.)
     pub valkey: ValkeyMetrics,
@@ -28,6 +29,7 @@ impl BatcherMetrics {
             batch_processing_time_ms: Gauge::default(),
             batch_submission_latency_ms: Gauge::default(),
             total_txs_processed: Gauge::default(),
+            outstanding_txs: Gauge::default(),
             wallet_balance: Gauge::default(),
             valkey: ValkeyMetrics::new(registry),
         };
@@ -73,6 +75,12 @@ impl BatcherMetrics {
             metrics.wallet_balance.clone(),
         );
 
+        registry.register(
+            "outstanding_txs",
+            "Number of outstanding transactions",
+            metrics.outstanding_txs.clone(),
+        );
+
         metrics
     }
 
@@ -111,6 +119,10 @@ impl BatcherMetrics {
 
     pub fn record_wallet_balance(&self, balance: u128) {
         self.wallet_balance.set(balance as i64);
+    }
+
+    pub fn record_outstanding_txs(&self, count: usize) {
+        self.outstanding_txs.set(count as i64);
     }
 }
 

@@ -94,6 +94,10 @@ pub struct BatcherConfig {
     /// whether to wait for the receipt of the batch submission
     #[arg(long, env = "WAIT_FOR_RECEIPT", default_value_t = false)]
     pub wait_for_receipt: bool,
+
+    /// The timeout for waiting for the receipt of the batch submission
+    #[arg(long, env = "WAIT_FOR_RECEIPT_TIMEOUT", value_parser = humantime::parse_duration)]
+    pub wait_for_receipt_timeout: Option<Duration>,
 }
 
 fn fmt_redacted<T>(_value: &T, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -120,6 +124,7 @@ impl Default for BatcherConfig {
             sequencing_address: Address::ZERO,
             port: 8082,
             wait_for_receipt: false,
+            wait_for_receipt_timeout: Some(Duration::from_secs(600)),
         }
     }
 }
