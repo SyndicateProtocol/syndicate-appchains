@@ -59,6 +59,12 @@ interface ISyndStaking {
         external
         view
         returns (uint256);
+
+    /**
+     * @notice Get the current epoch index
+     * @return The current epoch index
+     */
+    function getCurrentEpoch() external view returns (uint256);
 }
 
 /**
@@ -578,5 +584,13 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         } else {
             return epochUserAppchainTotal[epochIndex][user][appchainId];
         }
+    }
+
+    /**
+     * @notice Get the current epoch index
+     * @return The current epoch index
+     */
+    function getCurrentEpoch() public view override(EpochTracker, ISyndStaking) returns (uint256) {
+        return super.getCurrentEpoch();
     }
 }

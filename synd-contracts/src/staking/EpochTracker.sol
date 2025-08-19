@@ -29,7 +29,7 @@ abstract contract EpochTracker {
      * @dev Epochs are 1-indexed to ensure proper initialization of finalization counts
      * @return The current epoch index (1-based)
      */
-    function getCurrentEpoch() public view returns (uint256) {
+    function getCurrentEpoch() public view virtual returns (uint256) {
         // Since all the epoch finalization counts are initialized to 0,
         // we start the epochs at 1 to make sure we will finalize the first epoch.
         return ((block.timestamp - startTimestamp) / EPOCH_DURATION) + 1;
