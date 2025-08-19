@@ -158,7 +158,6 @@ error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 nee
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Uint<256>,
@@ -263,7 +262,6 @@ error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Uint<256>,
@@ -364,7 +362,6 @@ error ERC20InvalidApprover(address approver);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -445,7 +442,6 @@ error ERC20InvalidReceiver(address receiver);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -526,7 +522,6 @@ error ERC20InvalidSender(address sender);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -607,7 +602,6 @@ error ERC20InvalidSpender(address spender);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);

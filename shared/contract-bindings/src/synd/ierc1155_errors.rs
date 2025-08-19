@@ -177,7 +177,6 @@ error ERC1155InsufficientBalance(address sender, uint256 balance, uint256 needed
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Uint<256>,
@@ -284,7 +283,6 @@ error ERC1155InvalidApprover(address approver);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -367,7 +365,6 @@ error ERC1155InvalidArrayLength(uint256 idsLength, uint256 valuesLength);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Uint<256>,
@@ -462,7 +459,6 @@ error ERC1155InvalidOperator(address operator);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -543,7 +539,6 @@ error ERC1155InvalidReceiver(address receiver);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -624,7 +619,6 @@ error ERC1155InvalidSender(address sender);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -707,7 +701,6 @@ error ERC1155MissingApprovalForAll(address operator, address owner);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Address,

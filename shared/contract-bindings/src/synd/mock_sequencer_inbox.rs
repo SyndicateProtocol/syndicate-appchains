@@ -402,7 +402,6 @@ constructor(address bridge_);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -490,7 +489,6 @@ function addSequencerL2Batch(uint256 sequenceNumber, bytes memory, uint256, addr
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Bytes,
@@ -552,7 +550,6 @@ function addSequencerL2Batch(uint256 sequenceNumber, bytes memory, uint256, addr
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -693,7 +690,6 @@ function isBatchPoster(address poster) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -725,7 +721,6 @@ function isBatchPoster(address poster) external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -842,7 +837,6 @@ function setIsBatchPoster(address poster, bool authorized) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bool,
@@ -882,7 +876,6 @@ function setIsBatchPoster(address poster, bool authorized) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();

@@ -751,7 +751,6 @@ function approve(address _approved, uint256 _tokenId) external payable;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -792,7 +791,6 @@ function approve(address _approved, uint256 _tokenId) external payable;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -915,7 +913,6 @@ function balanceOf(address _owner) external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -947,7 +944,6 @@ function balanceOf(address _owner) external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1069,7 +1065,6 @@ function getApproved(uint256 _tokenId) external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1103,7 +1098,6 @@ function getApproved(uint256 _tokenId) external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1225,7 +1219,6 @@ function isApprovedForAll(address _owner, address _operator) external view retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1268,7 +1261,6 @@ function isApprovedForAll(address _owner, address _operator) external view retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -1396,7 +1388,6 @@ function ownerOf(uint256 _tokenId) external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1430,7 +1421,6 @@ function ownerOf(uint256 _tokenId) external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1549,7 +1539,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1595,7 +1584,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1725,7 +1713,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes me
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1774,7 +1761,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes me
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1904,7 +1890,6 @@ function setApprovalForAll(address _operator, bool _approved) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bool,
@@ -1944,7 +1929,6 @@ function setApprovalForAll(address _operator, bool _approved) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2069,7 +2053,6 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -2103,7 +2086,6 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -2224,7 +2206,6 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -2268,7 +2249,6 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();

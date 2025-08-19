@@ -336,7 +336,6 @@ struct TransferCall { address token; address refundTo; address to; uint256 amoun
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Address,
@@ -673,7 +672,6 @@ constructor();
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -749,7 +747,6 @@ function getGateway(address) external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -781,7 +778,6 @@ function getGateway(address) external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -898,7 +894,6 @@ function getLastTransferCall() external view returns (TransferCall memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -932,7 +927,6 @@ function getLastTransferCall() external view returns (TransferCall memory);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (TransferCall,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1045,7 +1039,6 @@ function getTransferCallCount() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1079,7 +1072,6 @@ function getTransferCallCount() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1196,7 +1188,6 @@ function mockGateway() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1228,7 +1219,6 @@ function mockGateway() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1356,7 +1346,6 @@ function outboundTransferCustomRefund(address _token, address _refundTo, address
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1422,7 +1411,6 @@ function outboundTransferCustomRefund(address _token, address _refundTo, address
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -1565,7 +1553,6 @@ function setShouldRevert(bool _shouldRevert) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -1597,7 +1584,6 @@ function setShouldRevert(bool _shouldRevert) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1713,7 +1699,6 @@ function shouldRevert() external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1745,7 +1730,6 @@ function shouldRevert() external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -1874,7 +1858,6 @@ function transferCalls(uint256) external view returns (address token, address re
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1908,7 +1891,6 @@ function transferCalls(uint256) external view returns (address token, address re
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,

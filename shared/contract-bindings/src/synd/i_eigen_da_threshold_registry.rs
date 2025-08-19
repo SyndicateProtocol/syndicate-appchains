@@ -354,7 +354,6 @@ struct SecurityThresholds { uint8 confirmationThreshold; uint8 adversaryThreshol
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<8>,
             alloy::sol_types::sol_data::Uint<8>,
@@ -588,7 +587,6 @@ struct VersionedBlobParams { uint32 maxNumOperators; uint32 numChunks; uint8 cod
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<32>,
             alloy::sol_types::sol_data::Uint<32>,
@@ -1439,7 +1437,6 @@ function getBlobParams(uint16 version) external view returns (VersionedBlobParam
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<16>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u16,);
@@ -1471,7 +1468,6 @@ function getBlobParams(uint16 version) external view returns (VersionedBlobParam
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VersionedBlobParams,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1589,7 +1585,6 @@ function getIsQuorumRequired(uint8 quorumNumber) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -1623,7 +1618,6 @@ function getIsQuorumRequired(uint8 quorumNumber) external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -1745,7 +1739,6 @@ function getQuorumAdversaryThresholdPercentage(uint8 quorumNumber) external view
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -1779,7 +1772,6 @@ function getQuorumAdversaryThresholdPercentage(uint8 quorumNumber) external view
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -1901,7 +1893,6 @@ function getQuorumConfirmationThresholdPercentage(uint8 quorumNumber) external v
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -1935,7 +1926,6 @@ function getQuorumConfirmationThresholdPercentage(uint8 quorumNumber) external v
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -2054,7 +2044,6 @@ function quorumAdversaryThresholdPercentages() external view returns (bytes memo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2088,7 +2077,6 @@ function quorumAdversaryThresholdPercentages() external view returns (bytes memo
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -2203,7 +2191,6 @@ function quorumConfirmationThresholdPercentages() external view returns (bytes m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2237,7 +2224,6 @@ function quorumConfirmationThresholdPercentages() external view returns (bytes m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -2352,7 +2338,6 @@ function quorumNumbersRequired() external view returns (bytes memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2386,7 +2371,6 @@ function quorumNumbersRequired() external view returns (bytes memory);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
