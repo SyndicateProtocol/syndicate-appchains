@@ -45,7 +45,7 @@ use tracing::{debug, error, info, instrument, trace, warn};
 #[derivative(Debug)]
 struct Batcher {
     /// Batcher configuration
-    config: Arc<BatcherConfig>,
+    config: BatcherConfig,
     /// The max batch size for the batcher (default: 90KB)
     max_batch_size: usize,
     /// The Stream consumer for the batcher
@@ -100,7 +100,7 @@ pub async fn get_cached_consumer_last_id(
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
-pub async fn run_batcher(config: Arc<BatcherConfig>) -> Result<JoinHandle<()>> {
+pub async fn run_batcher(config: BatcherConfig) -> Result<JoinHandle<()>> {
     let client = ValkeyClient::open(config.valkey_url.as_str()).map_err(|e| {
         eyre!("Failed to open Valkey client: {}. Valkey URL: {}", e, config.valkey_url)
     })?;
@@ -122,7 +122,7 @@ pub async fn run_batcher(config: Arc<BatcherConfig>) -> Result<JoinHandle<()>> {
         Some(cache_health_handler), // same /ready behavior as /health
     ));
 
-    let sequencing_contract_instance = create_sequencing_contract_instance(config.clone()).await?;
+    let sequencing_contract_instance = create_sequencing_contract_instance(&config).await?;
 
     let consumer_last_id =
         get_cached_consumer_last_id(&mut conn, config.chain_id, valkey_metrics.clone()).await;
@@ -163,7 +163,7 @@ pub async fn run_batcher(config: Arc<BatcherConfig>) -> Result<JoinHandle<()>> {
 }
 
 async fn create_sequencing_contract_instance(
-    config: Arc<BatcherConfig>,
+    config: &BatcherConfig,
 ) -> Result<SyndicateSequencingChainInstance<MultiRpcProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {err}"));
@@ -189,7 +189,7 @@ async fn create_sequencing_contract_instance(
 
 impl Batcher {
     fn new(
-        config: Arc<BatcherConfig>,
+        config: BatcherConfig,
         valkey_conn: ConnectionManager,
         stream_consumer: StreamConsumer,
         sequencing_contract_instance: SyndicateSequencingChainInstance<MultiRpcProvider>,
@@ -208,8 +208,7 @@ impl Batcher {
     }
 
     async fn reset_sequencing_contract_instance(&mut self) {
-        let contract_instance = match create_sequencing_contract_instance(self.config.clone()).await
-        {
+        let contract_instance = match create_sequencing_contract_instance(&self.config).await {
             Ok(instance) => instance,
             Err(e) => {
                 error!("Failed to reset sequencing contract instance: {:?}", e);
@@ -323,9 +322,9 @@ impl Batcher {
             }
         }
         self.metrics.record_batch_transactions(txs.len());
-        if self.compression_enabled {
+        if self.config.compression_enabled {
             if batch.len() > uncompressed_size {
-                warn!(%self.chain_id, "Batch compressed size is larger than uncompressed size.");
+                warn!(%self.config.chain_id, "Batch compressed size is larger than uncompressed size.");
             }
             self.metrics.record_compression_space_saving_pct(uncompressed_size, batch.len());
         }
@@ -541,7 +540,7 @@ mod tests {
 
         let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher = Batcher::new(
-            Arc::from(config),
+            config,
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -585,7 +584,7 @@ mod tests {
 
         let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher = Batcher::new(
-            Arc::from(config),
+            config,
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -615,7 +614,7 @@ mod tests {
 
         let sequencing_contract_instance = create_mock_contract(None).await;
         let mut batcher = Batcher::new(
-            Arc::from(config),
+            config,
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -670,7 +669,7 @@ mod tests {
         config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
         let mut batcher = Batcher::new(
-            Arc::from(config),
+            config,
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -734,7 +733,7 @@ mod tests {
         config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
         let mut batcher = Batcher::new(
-            Arc::from(config),
+            config,
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -757,7 +756,8 @@ mod tests {
         let (valkey, valkey_url) = start_valkey().await.unwrap();
         let anvil = start_anvil(1).await.unwrap();
 
-        let config = Arc::from(BatcherConfig {
+        let port = PortManager::instance().next_port().await;
+        let config = BatcherConfig {
             max_batch_size: byte_unit::Byte::from_u64(1024),
             valkey_url,
             chain_id: 1,
@@ -767,14 +767,14 @@ mod tests {
                 .to_string(),
             sequencing_rpc_urls: vec![Url::parse(&anvil.http_url).unwrap()],
             rpc_max_retries: 10,
-            port: PortManager::instance().next_port().await,
+            port,
             sequencing_address: Address::ZERO,
             ..Default::default()
-        });
+        };
 
-        let _handle = run_batcher(config.clone()).await.unwrap();
+        let _handle = run_batcher(config).await.unwrap();
 
-        let url = format!("http://0.0.0.0:{}/health", config.port);
+        let url = format!("http://0.0.0.0:{}/health", port);
 
         let client = reqwest::Client::new();
 
@@ -810,7 +810,6 @@ mod tests {
         let anvil = start_anvil(1).await.unwrap();
         config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
 
-        let config = Arc::from(config);
         let stream_consumer = StreamConsumer::new(
             conn.clone(),
             config.chain_id,

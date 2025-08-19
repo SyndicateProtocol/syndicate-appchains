@@ -4,7 +4,6 @@
 use clap::Parser;
 use eyre::Result;
 use shared::tracing::{setup_global_tracing, ServiceTracingConfig};
-use std::sync::Arc;
 use synd_batch_sequencer::{batcher::run_batcher, config::BatcherConfig};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
@@ -20,7 +19,7 @@ async fn main() -> Result<()> {
     let config = BatcherConfig::parse();
     info!("BatcherConfig: {:?}", config);
 
-    let batcher_handle = run_batcher(Arc::from(config)).await?;
+    let batcher_handle = run_batcher(config).await?;
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
