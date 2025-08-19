@@ -9,7 +9,7 @@ use synd_maestro::valkey::valkey_metrics::ValkeyMetrics;
 pub struct BatcherMetrics {
     pub batch_transactions_count: Gauge,
     pub batch_size_bytes: Gauge,
-    /// 0-100% with 100% as ideal. See https://en.wikipedia.org/wiki/Data_compression_ratio
+    /// 0-100% with 100% as ideal. See <https://en.wikipedia.org/wiki/Data_compression_ratio>
     pub batch_compression_space_saving_pct: Gauge,
     pub batch_processing_time_ms: Gauge,
     pub batch_submission_latency_ms: Gauge,
