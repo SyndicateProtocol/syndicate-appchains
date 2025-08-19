@@ -89,7 +89,7 @@ services:
       - appchains-network
 
   nitro:
-    image: ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
+    image: ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.5
     command:
       - "--parent-chain.connection.url=ws://mchain:8545"
       - "--http.api=arb,eth,net,web3,txpool,arbtrace,synd"
