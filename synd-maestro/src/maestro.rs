@@ -804,7 +804,7 @@ impl MaestroService {
         // Log if an incorrect number of keys was removed - likely a bug
         if result != (txn_ids.len() as u64) {
             error!(
-            %chain_id, %wallet_address, num_txns_requested = %txn_ids.len(), num_txns_requested = %result,
+            %chain_id, %wallet_address, num_txns_requested = %txn_ids.len(), num_txns_removed = %result,
             "Removed different number of waiting transactions from cache than requested"
             );
         }
