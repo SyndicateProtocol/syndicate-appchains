@@ -55,6 +55,7 @@ pub struct BatcherConfig {
     /// batches submitted by the Batcher service. The corresponding wallet must be
     /// funded with sufficient native tokens (e.g., ETH) to cover gas costs when
     /// submitting transactions on the sequencing chain.
+    #[derivative(Debug(format_with = "fmt_redacted"))]
     #[arg(short = 'k', long, env = "BATCHER_PRIVATE_KEY")]
     pub private_key: String,
 
@@ -95,6 +96,10 @@ pub struct BatcherConfig {
     pub wait_for_receipt: bool,
 }
 
+fn fmt_redacted<T>(_value: &T, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.write_str("[REDACTED]")
+}
+
 impl Default for BatcherConfig {
     fn default() -> Self {
         Self {
@@ -116,5 +121,25 @@ impl Default for BatcherConfig {
             port: 8082,
             wait_for_receipt: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_redacts_private_key() {
+        let config = BatcherConfig {
+            private_key: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+                .to_string(),
+            ..Default::default()
+        };
+        let debug_output = format!("{config:?}");
+
+        assert!(!debug_output
+            .contains("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"));
+        assert!(debug_output.contains("[REDACTED]"));
+        assert!(debug_output.contains("private_key"));
     }
 }
