@@ -3,7 +3,7 @@
 use crate::{
     config::BatcherConfig,
     metrics::BatcherMetrics,
-    sequencing_batch::{SequencingBatch, TxWithVakeyId},
+    sequencing_batch::{SequencingBatch, TxWithValkeyId},
 };
 use alloy::{
     network::EthereumWallet,
@@ -59,7 +59,7 @@ struct Batcher {
     metrics: BatcherMetrics,
     /// Outstanding transactions that didn't fit in the last batch and their stream ID
     /// [(0xbytes, <milliseconds-since-epoch>-<sequence>)]
-    outstanding_txs: Vec<TxWithVakeyId>,
+    outstanding_txs: Vec<TxWithValkeyId>,
 }
 
 #[derive(Debug, thiserror::Error)]

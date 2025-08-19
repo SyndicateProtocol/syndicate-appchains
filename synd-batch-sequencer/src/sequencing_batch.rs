@@ -12,13 +12,13 @@ use tracing::instrument;
 pub enum SequencingBatch {
     /// A batch of zlib compressed transactions. (also includes the uncompressed transactions, in
     /// case they need to be re-tried)
-    Compressed(Vec<u8>, Vec<TxWithVakeyId>),
+    Compressed(Vec<u8>, Vec<TxWithValkeyId>),
     /// A batch of uncompressed transactions.
-    Uncompressed(Vec<TxWithVakeyId>),
+    Uncompressed(Vec<TxWithValkeyId>),
 }
 
 /// A transaction with a vakey ID.
-pub type TxWithVakeyId = (Vec<u8>, String);
+pub type TxWithValkeyId = (Vec<u8>, String);
 
 impl SequencingBatch {
     /// Returns the length of the batch.
@@ -38,21 +38,21 @@ impl SequencingBatch {
     }
 
     /// Returns a reference to the transactions in the batch.
-    pub const fn txs(&self) -> &Vec<TxWithVakeyId> {
+    pub const fn txs(&self) -> &Vec<TxWithValkeyId> {
         match self {
             Self::Compressed(_, txs) | Self::Uncompressed(txs) => txs,
         }
     }
 
     /// Takes ownership of the transactions in the batch.
-    pub fn into_owned_txs(self) -> Vec<TxWithVakeyId> {
+    pub fn into_owned_txs(self) -> Vec<TxWithValkeyId> {
         match self {
             Self::Compressed(_, txs) | Self::Uncompressed(txs) => txs,
         }
     }
 
     /// Creates a new batch with the given transaction added.
-    pub fn create_new_with_tx(&self, tx: TxWithVakeyId) -> Result<Self, Error> {
+    pub fn create_new_with_tx(&self, tx: TxWithValkeyId) -> Result<Self, Error> {
         match self {
             Self::Compressed(_, txs) => compress_batch(txs, tx),
             Self::Uncompressed(txs) => Ok(uncompressed_batch(txs, tx)),
@@ -79,7 +79,7 @@ impl SequencingBatch {
         tx_count = txs.len() + 1,
     )
 )]
-fn uncompressed_batch(txs: &[TxWithVakeyId], new_tx: TxWithVakeyId) -> SequencingBatch {
+fn uncompressed_batch(txs: &[TxWithValkeyId], new_tx: TxWithValkeyId) -> SequencingBatch {
     let mut final_tx_list = txs.to_vec();
     final_tx_list.push(new_tx);
     SequencingBatch::Uncompressed(final_tx_list)
@@ -120,8 +120,8 @@ fn uncompressed_batch(txs: &[TxWithVakeyId], new_tx: TxWithVakeyId) -> Sequencin
     )
 )]
 fn compress_batch(
-    batch_txs: &[TxWithVakeyId],
-    new_tx: TxWithVakeyId,
+    batch_txs: &[TxWithValkeyId],
+    new_tx: TxWithValkeyId,
 ) -> Result<SequencingBatch, Error> {
     let mut batch_txs_clone = batch_txs.to_vec();
     batch_txs_clone.push(new_tx.clone());
