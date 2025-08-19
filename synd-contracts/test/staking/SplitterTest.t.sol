@@ -24,18 +24,22 @@ contract SplitterTest is Test {
         pool2 = new MockPool();
         pool3 = new MockPool();
 
-        splitter = new Splitter(address(this), address(pool1), address(pool2), address(pool3));
+        splitter = new Splitter(address(this), address(pool1));
+    }
+
+    function setupPools() public {
+        splitter.setPerformancePool(address(pool2));
+        splitter.setAppchainPool(address(pool3));
     }
 
     function test_split() public {
         splitter.split{value: 100 ether}(1);
 
         assertEq(address(pool1).balance, 100 ether);
-        assertEq(address(pool2).balance, 0 ether);
-        assertEq(address(pool3).balance, 0 ether);
     }
 
     function test_split_with_splits() public {
+        setupPools();
         splitter.updateSplits(50 ether, 25 ether, 25 ether);
         splitter.split{value: 100 ether}(1);
 
@@ -45,13 +49,40 @@ contract SplitterTest is Test {
     }
 
     function test_invalid_splits() public {
+        setupPools();
         vm.expectRevert(Splitter.InvalidSplits.selector);
         splitter.updateSplits(33 ether, 33 ether, 33 ether);
     }
 
     function test_not_admin() public {
+        setupPools();
         vm.prank(makeAddr("user1"));
         vm.expectRevert(Splitter.NotAdmin.selector);
         splitter.updateSplits(0 ether, 0 ether, 100 ether);
+    }
+
+    function test_set_base_pool() public {
+        splitter.setBasePool(address(pool2));
+        assertEq(splitter.basePool(), address(pool2));
+    }
+
+    function test_set_performance_pool() public {
+        splitter.setPerformancePool(address(pool2));
+        assertEq(splitter.performancePool(), address(pool2));
+    }
+
+    function test_set_appchain_pool() public {
+        splitter.setAppchainPool(address(pool3));
+        assertEq(splitter.appchainPool(), address(pool3));
+    }
+
+    function test_set_splits_with_no_pools() public {
+        vm.expectRevert(Splitter.InvalidSplits.selector);
+        splitter.updateSplits(99 ether, 1 ether, 0 ether);
+    }
+
+    function test_set_address_with_non_zero_split() public {
+        vm.expectRevert(Splitter.InvalidSplits.selector);
+        splitter.setBasePool(address(0));
     }
 }

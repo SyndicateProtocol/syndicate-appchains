@@ -45,30 +45,38 @@ contract Splitter {
     /// @param appchainPoolSplit New split percentage for the appchain pool (in wei)
     event SplitsUpdated(uint256 basePoolSplit, uint256 performancePoolSplit, uint256 appchainPoolSplit);
 
+    /// @notice Emitted when the base pool address is set
+    event BasePoolSet(address basePool);
+
+    /// @notice Emitted when the performance pool address is set
+    event PerformancePoolSet(address performancePool);
+
+    /// @notice Emitted when the appchain pool address is set
+    event AppchainPoolSet(address appchainPool);
+
     /// @notice Error thrown when a non-admin address tries to call admin-only functions
     error NotAdmin();
 
-    /// @notice Error thrown when the sum of split percentages doesn't equal 100%
+    /// @notice Error thrown when the sum of split percentages doesn't equal 100% or there is a non-zero split with a zero address pool
     error InvalidSplits();
 
     /**
-     * @notice Initializes the Splitter contract with pool addresses and default splits
+     * @notice Initializes the Splitter contract with admin and base pool address
      * @param _admin Address of the contract admin
      * @param _basePool Address of the base pool contract
-     * @param _performancePool Address of the performance pool contract
-     * @param _appchainPool Address of the appchain pool contract
-     * @dev Sets initial splits to 100% base pool, 0% performance pool, 0% appchain pool
+     * @dev Sets initial splits to 100% base pool, 0% performance pool, 0% appchain pool.
+     *      Performance and appchain pools are initially set to zero address and can be set later.
      */
-    constructor(address _admin, address _basePool, address _performancePool, address _appchainPool) {
+    constructor(address _admin, address _basePool) {
         admin = _admin;
 
         basePool = _basePool;
-        performancePool = _performancePool;
-        appchainPool = _appchainPool;
 
         basePoolSplit = 100 ether;
         performancePoolSplit = 0 ether;
         appchainPoolSplit = 0 ether;
+
+        emit BasePoolSet(_basePool);
     }
 
     /**
@@ -88,7 +96,7 @@ contract Splitter {
      * @dev This function:
      *      - Calculates amounts for each pool based on their split percentages
      *      - Prevents dust by assigning remaining amount to base pool
-     *      - Deposits the calculated amounts to each respective pool
+     *      - Only deposits to pools that have non-zero addresses and amounts
      *      - Must be called with ETH value (msg.value > 0)
      * @custom:security This function is external and payable, allowing anyone to trigger splits
      */
@@ -100,9 +108,17 @@ contract Splitter {
         // Prevent dust
         uint256 basePoolAmount = total - performancePoolAmount - appchainPoolAmount;
 
-        IPool(basePool).deposit{value: basePoolAmount}(epochIndex);
-        IPool(performancePool).deposit{value: performancePoolAmount}(epochIndex);
-        IPool(appchainPool).deposit{value: appchainPoolAmount}(epochIndex);
+        if (basePoolAmount > 0 && basePool != address(0)) {
+            IPool(basePool).deposit{value: basePoolAmount}(epochIndex);
+        }
+
+        if (performancePoolAmount > 0 && performancePool != address(0)) {
+            IPool(performancePool).deposit{value: performancePoolAmount}(epochIndex);
+        }
+
+        if (appchainPoolAmount > 0 && appchainPool != address(0)) {
+            IPool(appchainPool).deposit{value: appchainPoolAmount}(epochIndex);
+        }
 
         emit Split(epochIndex, basePoolAmount, performancePoolAmount, appchainPoolAmount);
     }
@@ -114,6 +130,7 @@ contract Splitter {
      * @param _appchainPoolSplit New split percentage for appchain pool (in wei)
      * @dev This function:
      *      - Can only be called by the admin
+     *      - Validates that the pool addresses with non-zero splits are not 0 address
      *      - Validates that the sum of all splits equals 100 ether (100%)
      *      - Reverts with InvalidSplits error if validation fails
      *      - Updates all split percentages atomically
@@ -123,6 +140,18 @@ contract Splitter {
         external
         onlyAdmin
     {
+        if (_basePoolSplit != 0 && basePool == address(0)) {
+            revert InvalidSplits();
+        }
+
+        if (_performancePoolSplit != 0 && performancePool == address(0)) {
+            revert InvalidSplits();
+        }
+
+        if (_appchainPoolSplit != 0 && appchainPool == address(0)) {
+            revert InvalidSplits();
+        }
+
         if (_basePoolSplit + _performancePoolSplit + _appchainPoolSplit != 100 ether) {
             revert InvalidSplits();
         }
@@ -132,5 +161,50 @@ contract Splitter {
         appchainPoolSplit = _appchainPoolSplit;
 
         emit SplitsUpdated(_basePoolSplit, _performancePoolSplit, _appchainPoolSplit);
+    }
+
+    /**
+     * @notice Sets the base pool address
+     * @param _basePool New address for the base pool contract
+     * @dev Can only be called by admin. Allows updating the base pool after deployment.
+     */
+    function setBasePool(address _basePool) external onlyAdmin {
+        if (_basePool == address(0) && basePoolSplit != 0) {
+            revert InvalidSplits();
+        }
+
+        basePool = _basePool;
+
+        emit BasePoolSet(_basePool);
+    }
+
+    /**
+     * @notice Sets the performance pool address
+     * @param _performancePool New address for the performance pool contract
+     * @dev Can only be called by admin. Allows setting the performance pool after deployment.
+     */
+    function setPerformancePool(address _performancePool) external onlyAdmin {
+        if (_performancePool == address(0) && performancePoolSplit != 0) {
+            revert InvalidSplits();
+        }
+
+        performancePool = _performancePool;
+
+        emit PerformancePoolSet(_performancePool);
+    }
+
+    /**
+     * @notice Sets the appchain pool address
+     * @param _appchainPool New address for the appchain pool contract
+     * @dev Can only be called by admin. Allows setting the appchain pool after deployment.
+     */
+    function setAppchainPool(address _appchainPool) external onlyAdmin {
+        if (_appchainPool == address(0) && appchainPoolSplit != 0) {
+            revert InvalidSplits();
+        }
+
+        appchainPool = _appchainPool;
+
+        emit AppchainPoolSet(_appchainPool);
     }
 }
