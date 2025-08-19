@@ -131,14 +131,15 @@ mod tests {
     #[test]
     fn test_config_redacts_private_key() {
         let config = BatcherConfig {
-            private_key: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef".to_string(),
+            private_key: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+                .to_string(),
             ..Default::default()
         };
-        let debug_output = format!("{:?}", config);
+        let debug_output = format!("{config:?}");
 
-        assert!(!debug_output.contains("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"));
+        assert!(!debug_output
+            .contains("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"));
         assert!(debug_output.contains("[REDACTED]"));
         assert!(debug_output.contains("private_key"));
-
     }
 }
