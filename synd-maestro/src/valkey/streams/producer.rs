@@ -11,9 +11,8 @@ use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, instrument, trace};
 
-// TODO(SEQ-916): update me to `synd-maestro`
 /// Base key for Valkey transaction streams
-/// Format: `maestro:transactions:{chain_id}`
+/// Format: `synd-maestro:transactions:{chain_id}`
 const TX_STREAM_KEY: &str = "maestro:transactions";
 
 /// Generates a Valkey Stream key for a specific chain
