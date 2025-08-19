@@ -123,7 +123,9 @@ impl SequencingTransactionParser {
             TransactionType::Compressed => {
                 transactions.append(&mut decompress_transactions(&data[1..])?)
             }
-            _ => transactions.push(data.clone()),
+            TransactionType::Unsigned | TransactionType::Contract | TransactionType::Signed => {
+                transactions.push(data.clone())
+            }
         }
 
         Ok(transactions)

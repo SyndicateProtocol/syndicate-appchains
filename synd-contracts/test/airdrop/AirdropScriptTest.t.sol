@@ -43,8 +43,12 @@ contract AirdropScriptTest is Test {
     }
 
     function setUp() public {
-        // Fork Ethereum mainnet
-        vm.createSelectFork("mainnet");
+        // Deploy SYND token
+        deployCodeTo(
+            "SyndicateToken.sol",
+            abi.encode(SYND_ADMIN, address(0x9697211552826D7714c0267d274f51984f39D060)),
+            SYND_TOKEN
+        );
 
         // Deploy Airdrop contract
         airdrop = new Airdrop();

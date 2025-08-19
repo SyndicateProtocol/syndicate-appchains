@@ -214,8 +214,8 @@ contract TeeModule is Ownable(msg.sender) {
     {
         require(signature.length == 65, "invalid signature length");
         bytes32 assertionHash = hash_object(assertion);
-        bytes32 payload_hash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
-        require(teeKeyManager.isKeyValid(payload_hash.recover(signature)), "invalid tee signature");
+        bytes32 payloadHash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
+        require(teeKeyManager.isKeyValid(payloadHash.recover(signature)), "invalid tee signature");
         require(!isL1Chain || assertion.l1BatchAcc == teeTrustedInput.l1EndHash, "unexpected l1 end batch acc");
         pendingAssertions.push(assertion);
         if (pendingAssertions.length == 1) {

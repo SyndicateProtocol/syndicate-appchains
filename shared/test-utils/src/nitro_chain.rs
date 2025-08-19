@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use shared::types::{deserialize_address, FilledProvider};
 use std::path::Path;
 use tokio::{fs, process::Command};
-use tracing::info;
+use tracing::{error, info};
 
 pub struct NitroChainInfoArgs {
     pub chain_id: u64,
@@ -249,7 +249,7 @@ pub async fn deploy_nitro_rollup(
         .join("shared/test-utils/src/nitro-hardhat-config.patch")
         .to_string_lossy()
         .to_string();
-    E2EProcess::new(
+    let status = E2EProcess::new(
         Command::new("git")
             .current_dir(nitro_contracts_dir.clone())
             .arg("apply")
@@ -259,7 +259,11 @@ pub async fn deploy_nitro_rollup(
     )?
     .wait()
     .await?;
-    // NOTE: ignore `status` here, as it exits with code 1 if the patch has already been applied
+    if !status.success() {
+        // log an error instead of failing the test as this exits with code 1 if the patch has
+        // already been applied
+        error!("Failed to apply patch to hardhat.config.ts");
+    }
 
     // install and build dependencies
     let status = E2EProcess::new(

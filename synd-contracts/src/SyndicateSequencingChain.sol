@@ -151,7 +151,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         external
         onlyWhenAllowedCompressed(msg.sender, tx.origin)
     {
-        require(data.length > 0, "no tx data");
+        require(data.length > 0, NoTxData());
         emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Compressed, data));
     }
 
@@ -159,7 +159,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @param data Transaction data
     //#olympix-ignore-required-tx-origin
     function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
-        require(data.length > 0, "no tx data");
+        require(data.length > 0, NoTxData());
         emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data));
     }
 

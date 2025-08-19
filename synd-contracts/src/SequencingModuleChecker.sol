@@ -21,6 +21,7 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     error InvalidModuleAddress();
     error TransactionOrSenderNotAllowed();
     error AlreadyInitialized();
+    error NoTxData();
 
     bool internal hasBeenInitialized = false;
 
@@ -63,11 +64,13 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
         _;
     }
 
+    /// @notice tx data is ignored as it is compressed and replaced with empty bytes
     modifier onlyWhenAllowedCompressed(address msgSender, address txOrigin) {
         if (!isAllowedCompressed(msgSender, txOrigin)) revert TransactionOrSenderNotAllowed();
         _;
     }
 
+    /// @notice tx data is set to the 0 byte to indicate that this is an unsigned tx and msgSender is the tx source address
     modifier onlyWhenAllowedUnsigned(address msgSender, address txOrigin) {
         if (!isAllowedUnsigned(msgSender, txOrigin)) revert TransactionOrSenderNotAllowed();
         _;
@@ -83,13 +86,13 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
             || permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
     }
 
-    /// tx data is ignored as it is compressed
+    /// @notice tx data is ignored as it is compressed and replaced with empty bytes
     function isAllowedCompressed(address proposer, address originator) public view returns (bool) {
         return address(permissionRequirementModule) == address(0)
             || permissionRequirementModule.isAllowed(proposer, originator, ""); //#olympix-ignore-calls-in-loop
     }
 
-    /// tx data is set to 0 to indicate that this is an unsigned tx and msgSender is the tx source address
+    /// @notice tx data is set to the 0 byte to indicate that this is an unsigned tx and msgSender is the tx source address
     function isAllowedUnsigned(address proposer, address originator) public view returns (bool) {
         return address(permissionRequirementModule) == address(0)
             || permissionRequirementModule.isAllowed(proposer, originator, hex"00"); //#olympix-ignore-calls-in-loop

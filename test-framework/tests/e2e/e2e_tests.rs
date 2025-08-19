@@ -11,7 +11,7 @@ use alloy::{
     rpc::types::{Block, TransactionRequest},
     sol,
 };
-use contract_bindings::synd::{i_inbox::IInbox, rollup::Rollup};
+use contract_bindings::synd::{dummy_poster::DummyPoster, i_inbox::IInbox, rollup::Rollup};
 use eyre::Result;
 use std::time::Duration;
 use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig};
@@ -181,9 +181,37 @@ async fn e2e_unsigned_tx() -> Result<()> {
             )
             .send()
             .await?;
-        components.mine_seq_block(0).await?;
+
+        // Send unsigned tx with the wrong nonce
+        let _ = components
+            .sequencing_contract
+            .sendUnsignedTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                U256::from(2),
+                TEST_ADDR,
+                parse_ether("0.1")?,
+                Default::default(),
+            )
+            .send()
+            .await?;
+
+        // Try deploying a contract via an unsigned tx with the correct nonce
+        let _ = components
+            .sequencing_contract
+            .sendUnsignedTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                U256::ONE,
+                Address::ZERO,
+                Default::default(),
+                DummyPoster::BYTECODE.clone(),
+            )
+            .send()
+            .await?;
 
         // Wait for the tx to arrive
+        components.mine_seq_block(0).await?;
         wait_until!(
             components.appchain_provider.get_block_number().await? == 2,
             Duration::from_secs(20)
@@ -191,6 +219,10 @@ async fn e2e_unsigned_tx() -> Result<()> {
 
         // Check balance & nonce
         assert_eq!(components.appchain_provider.get_balance(TEST_ADDR).await?, parse_ether("0.1")?);
+        assert_eq!(
+            components.appchain_provider.get_code_at(alias_address.create(1)).await?,
+            DummyPoster::DEPLOYED_BYTECODE
+        );
         assert_eq!(components.appchain_provider.get_transaction_count(wallet_address).await?, 0);
         assert_eq!(
             components.sequencing_contract.contractNonce(wallet_address).call().await?,
@@ -200,7 +232,7 @@ async fn e2e_unsigned_tx() -> Result<()> {
             components.sequencing_contract.contractNonce(alias_address).call().await?,
             U256::ZERO
         );
-        assert_eq!(components.appchain_provider.get_transaction_count(alias_address).await?, 1);
+        assert_eq!(components.appchain_provider.get_transaction_count(alias_address).await?, 2);
 
         Ok(())
     })
@@ -237,26 +269,56 @@ async fn e2e_contract_tx() -> Result<()> {
             )
             .send()
             .await?;
-        components.mine_seq_block(0).await?;
 
-        // Wait for the tx to arrive
+        // Send contract tx with the wrong balance
+        let _ = components
+            .sequencing_contract
+            .sendContractTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                TEST_ADDR,
+                parse_ether("10")?,
+                Default::default(),
+            )
+            .send()
+            .await?;
+
+        // Try deploying a contract via a contract tx
+        let _ = components
+            .sequencing_contract
+            .sendContractTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                Address::ZERO,
+                Default::default(),
+                DummyPoster::BYTECODE.clone(),
+            )
+            .send()
+            .await?;
+
+        // Wait for the txs to arrive
+        components.mine_seq_block(0).await?;
         wait_until!(
             components.appchain_provider.get_block_number().await? == 2,
             Duration::from_secs(20)
         );
 
-        // Check balance & nonce
+        // Check balance, nonce, and code
         assert_eq!(components.appchain_provider.get_balance(TEST_ADDR).await?, parse_ether("0.1")?);
+        assert_eq!(
+            components.appchain_provider.get_code_at(alias_address.create(1)).await?,
+            DummyPoster::DEPLOYED_BYTECODE
+        );
         assert_eq!(components.appchain_provider.get_transaction_count(wallet_address).await?, 0);
         assert_eq!(
             components.sequencing_contract.contractNonce(wallet_address).call().await?,
-            U256::ONE
+            U256::from(3)
         );
         assert_eq!(
             components.sequencing_contract.contractNonce(alias_address).call().await?,
             U256::ZERO
         );
-        assert_eq!(components.appchain_provider.get_transaction_count(alias_address).await?, 1);
+        assert_eq!(components.appchain_provider.get_transaction_count(alias_address).await?, 2);
 
         Ok(())
     })

@@ -30,6 +30,9 @@ enum BatchSegmentKind {
     AdvanceL1BlockNumber = 4,
 }
 
+// See arbos/parse_l2.go for details.
+const L2_MESSAGE_KIND_BATCH: u8 = 3;
+
 /// Arbitrum batch
 #[derive(Debug, Serialize)]
 pub struct Batch(pub Vec<BatchMessage>);
@@ -150,7 +153,7 @@ fn l2_msg_to_bytes(msg: &Vec<Bytes>) -> Result<Bytes> {
         return Err(eyre::eyre!("Cannot serialize empty l2 msg"));
     }
     if msg.len() > 1 {
-        data.push(3); // L2MessageKind Batch
+        data.push(L2_MESSAGE_KIND_BATCH);
         for tx in msg {
             data.extend_from_slice(&(tx.len()).to_be_bytes());
             data.extend(tx);
