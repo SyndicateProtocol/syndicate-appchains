@@ -60,8 +60,6 @@ struct Batcher {
     /// Outstanding transactions that didn't fit in the last batch and their stream ID
     /// [(0xbytes, <milliseconds-since-epoch>-<sequence>)]
     outstanding_txs: Vec<(Bytes, String)>,
-    /// Whether to wait for the receipt of the batch submission
-    wait_for_receipt: bool,
     /// The last included ID (<milliseconds-since-epoch>-<sequence>)
     last_included_id: Option<String>,
 }
@@ -190,7 +188,7 @@ async fn create_sequencing_contract_instance(
 }
 
 impl Batcher {
-    const fn new(
+    fn new(
         config: Arc<BatcherConfig>,
         valkey_conn: ConnectionManager,
         stream_consumer: StreamConsumer,
@@ -415,7 +413,7 @@ impl Batcher {
 
     fn update_consumer_last_id(&self, last_included_id: String) {
         let mut conn = self.valkey_conn.clone();
-        let chain_id = self.chain_id;
+        let chain_id = self.config.chain_id;
         let metrics = self.metrics.clone();
         tokio::spawn(async move {
             let cache_result = with_cache_metrics!(
@@ -808,6 +806,11 @@ mod tests {
         let conn = ConnectionManager::new(redis::Client::open(valkey_url.as_str()).unwrap())
             .await
             .unwrap();
+
+        let anvil = start_anvil(1).await.unwrap();
+        config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
+
+        let config = Arc::from(config);
         let stream_consumer = StreamConsumer::new(
             conn.clone(),
             config.chain_id,
@@ -832,11 +835,10 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
-        let anvil = start_anvil(1).await.unwrap();
-        config.sequencing_rpc_urls = vec![Url::parse(&anvil.http_url).unwrap()];
         let sequencing_contract_instance = create_mock_contract(Some(&anvil)).await;
+        let chain_id = config.chain_id;
         let mut batcher = Batcher::new(
-            &config,
+            config,
             conn.clone(),
             stream_consumer,
             sequencing_contract_instance,
@@ -852,19 +854,15 @@ mod tests {
             {
                 let mut c = conn.clone();
                 let vm = (*valkey_metrics).clone();
-                get_cached_consumer_last_id(&mut c, config.chain_id, vm).await != "0-0"
+                get_cached_consumer_last_id(&mut c, chain_id, vm).await != "0-0"
             },
             Duration::from_secs(5)
         );
 
         // Final assert
         let mut conn_clone = conn.clone();
-        let updated = get_cached_consumer_last_id(
-            &mut conn_clone,
-            config.chain_id,
-            (*valkey_metrics).clone(),
-        )
-        .await;
+        let updated =
+            get_cached_consumer_last_id(&mut conn_clone, chain_id, (*valkey_metrics).clone()).await;
         assert_ne!(updated, "0-0", "Expected consumer last id to be updated after processing a tx");
     }
 }
