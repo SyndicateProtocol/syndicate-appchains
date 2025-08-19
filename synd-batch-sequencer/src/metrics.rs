@@ -85,7 +85,11 @@ impl BatcherMetrics {
         self.batch_size_bytes.set(size as i64);
     }
 
-    pub fn record_compression_space_saving_pct(&self, original_size: usize, compressed_size: usize) {
+    pub fn record_compression_space_saving_pct(
+        &self,
+        original_size: usize,
+        compressed_size: usize,
+    ) {
         if original_size > 0 {
             let ratio = ((1.0 - compressed_size as f64 / original_size as f64) * 100.0) as i64;
             self.batch_compression_space_saving_pct.set(ratio);
