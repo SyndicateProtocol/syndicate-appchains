@@ -230,7 +230,7 @@ mod tests {
             (vec![0x01, 0x02, 0x03, 0x04], "txn3".to_string()),
         ];
 
-        let batch = compress_batch(&[txns[0].clone()], txns[1].clone()).unwrap();
+        let batch = compress_batch(&[txns[0].clone(), txns[1].clone()], txns[2].clone()).unwrap();
         let compressed = match batch {
             SequencingBatch::Compressed(compressed, _) => compressed,
             SequencingBatch::Uncompressed(_) => panic!("Expected compressed batch"),
