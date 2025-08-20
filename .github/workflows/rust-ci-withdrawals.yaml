@@ -92,7 +92,7 @@ jobs:
         if: steps.diff.outputs.run_tests == 'true'
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Install SP1 toolchain
         if: steps.diff.outputs.run_tests == 'true'
