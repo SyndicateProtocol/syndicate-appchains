@@ -9,10 +9,17 @@ import {IPool} from "./IPool.sol";
  * @notice Contract for splitting pool rewards between base, performance, and appchain pools
  * @dev This contract manages the distribution of rewards to different pools: base 30%, performance 30%, and appchain 40%.
  */
-contract Splitter {
-    // uint256 public constant BASE_POOL_SPLIT = 30 ether;
-    uint256 public constant PERFORMANCE_POOL_SPLIT = 30 ether;
-    uint256 public constant APPCHAIN_POOL_SPLIT = 40 ether;
+contract Splitter is IPool {
+    /// @notice Percentage of the reward for the performance pool
+    uint256 public constant PERFORMANCE_POOL_SPLIT = 30; // 30%
+
+    /// @notice Percentage of the reward for the appchain pool
+    uint256 public constant APPCHAIN_POOL_SPLIT = 40; // 40%
+
+    // Remaining percentage of the reward goes to the base pool: 30%
+
+    /// @notice Total percentage of the reward
+    uint256 public constant PERCENTAGE_DENOMINATOR = 100; // 100%
 
     /// @notice Address of the base pool contract
     address public basePool;
@@ -30,6 +37,12 @@ contract Splitter {
     /// @param appchainPoolAmount Amount of ETH deposited to the appchain pool
     event Split(uint256 epochIndex, uint256 basePoolAmount, uint256 performancePoolAmount, uint256 appchainPoolAmount);
 
+    /// @notice Error thrown when no value is sent
+    error NoValueSent();
+
+    /// @notice Error thrown when an invalid address is provided
+    error InvalidAddress();
+
     /**
      * @notice Initializes the Splitter contract with base, performance, and appchain pool addresses
      * @param _basePool Address of the base pool contract
@@ -37,9 +50,15 @@ contract Splitter {
      * @param _appchainPool Address of the appchain pool contract
      */
     constructor(address _basePool, address _performancePool, address _appchainPool) {
-        require(_basePool != address(0), "Base pool cannot be 0 address");
-        require(_performancePool != address(0), "Performance pool cannot be 0 address");
-        require(_appchainPool != address(0), "Appchain pool cannot be 0 address");
+        if (_basePool == address(0)) {
+            revert InvalidAddress();
+        }
+        if (_performancePool == address(0)) {
+            revert InvalidAddress();
+        }
+        if (_appchainPool == address(0)) {
+            revert InvalidAddress();
+        }
 
         basePool = _basePool;
         performancePool = _performancePool;
@@ -53,19 +72,17 @@ contract Splitter {
      *      - Calculates amounts for each pool based on their split percentages
      *      - Prevents dust by assigning remaining amount to base pool
      *      - Must be called with ETH value (msg.value > 0)
-     * @custom:security This function is external and payable, allowing anyone to trigger splits
      */
-    function split(uint256 epochIndex) external payable {
-        require(msg.value > 0, "No value sent");
+    function deposit(uint256 epochIndex) external payable {
+        if (msg.value == 0) {
+            revert NoValueSent();
+        }
+
         uint256 total = msg.value;
 
-        uint256 performancePoolAmount = (total * PERFORMANCE_POOL_SPLIT) / 100 ether;
-        uint256 appchainPoolAmount = (total * APPCHAIN_POOL_SPLIT) / 100 ether;
+        uint256 performancePoolAmount = (total * PERFORMANCE_POOL_SPLIT) / PERCENTAGE_DENOMINATOR;
+        uint256 appchainPoolAmount = (total * APPCHAIN_POOL_SPLIT) / PERCENTAGE_DENOMINATOR;
         uint256 basePoolAmount = total - performancePoolAmount - appchainPoolAmount;
-        // Prevent dust
-        if (basePoolAmount > 0) {
-            basePoolAmount = total - performancePoolAmount - appchainPoolAmount;
-        }
 
         IPool(basePool).deposit{value: basePoolAmount}(epochIndex);
         IPool(performancePool).deposit{value: performancePoolAmount}(epochIndex);

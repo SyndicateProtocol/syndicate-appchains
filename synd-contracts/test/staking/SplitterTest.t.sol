@@ -28,7 +28,7 @@ contract SplitterTest is Test {
     }
 
     function test_split() public {
-        splitter.split{value: 100 ether}(1);
+        splitter.deposit{value: 100 ether}(1);
 
         assertEq(address(pool1).balance, 30 ether);
         assertEq(address(pool2).balance, 30 ether);
@@ -36,12 +36,12 @@ contract SplitterTest is Test {
     }
 
     function test_split_with_no_value() public {
-        vm.expectRevert("No value sent");
-        splitter.split(1);
+        vm.expectRevert(abi.encodeWithSelector(Splitter.NoValueSent.selector));
+        splitter.deposit(1);
     }
 
     function test_split_no_dust() public {
-        splitter.split{value: 111111111111111111111}(1);
+        splitter.deposit{value: 111111111111111111111}(1);
 
         assertEq(address(pool1).balance, 33333333333333333334);
         assertEq(address(pool2).balance, 33333333333333333333);
