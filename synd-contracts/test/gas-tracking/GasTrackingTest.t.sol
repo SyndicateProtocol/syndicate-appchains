@@ -98,7 +98,7 @@ contract GasAggregatorTest is Test {
         mockGasCounter3 = new MockGasCounter();
 
         // Deploy GasAggregator with mock factory
-        gasAggregator = new GasAggregator(mockFactory, new MockStakingAppchain(), admin, 0);
+        gasAggregator = new GasAggregator(mockFactory, new MockStakingAppchain(), admin, 0, 24 hours);
 
         // Set initial values using admin role
         vm.prank(admin);
@@ -119,7 +119,7 @@ contract GasAggregatorTest is Test {
     function test_Constructor_ZeroAdmin() public {
         MockStakingAppchain stakingAppchain = new MockStakingAppchain();
         vm.expectRevert(GasAggregator.ZeroAddress.selector);
-        new GasAggregator(mockFactory, stakingAppchain, address(0), 0);
+        new GasAggregator(mockFactory, stakingAppchain, address(0), 0, 24 hours);
     }
 
     function test_SetMaxAppchainsToQuery() public {

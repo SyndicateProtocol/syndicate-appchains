@@ -34,7 +34,7 @@ contract GasAggregator is EpochTracker, AccessControl {
     /// @notice used for the offchain aggregation mechanism.
     /// The challenge window is the time period after the first submission during which new submission can be made
     /// After the challenge window has elapsed, the data must be pushed to the staking appchain for the next epoch aggregation to start
-    uint256 public challengeWindow = 24 hours;
+    uint256 public challengeWindow;
     uint256 public pendingEpoch;
     uint256 public pendingEpochFirstSubmissionTime;
     uint256[] public pendingChainIDs;
@@ -56,15 +56,23 @@ contract GasAggregator is EpochTracker, AccessControl {
     error WindowNotOver(uint256 currentEpoch, uint256 challengeWindow);
     error WindowOver(uint256 currentEpoch, uint256 challengeWindow);
     error ChainIDsMustBeInAscendingOrder();
+    error ZeroChallengeWindow();
     error ZeroAddress();
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR 
     //////////////////////////////////////////////////////////////*/
-    constructor(AppchainFactory _factory, StakingAppchain _stakingAppchain, address admin, uint256 _epochStartTimestamp)
-        EpochTracker(_epochStartTimestamp)
-    {
+    constructor(
+        AppchainFactory _factory,
+        StakingAppchain _stakingAppchain,
+        address admin,
+        uint256 _epochStartTimestamp,
+        uint256 _challengeWindow
+    ) EpochTracker(_epochStartTimestamp) {
+        if (address(_factory) == address(0)) revert ZeroAddress();
+        if (address(_stakingAppchain) == address(0)) revert ZeroAddress();
         if (admin == address(0)) revert ZeroAddress();
+        if (_challengeWindow == 0) revert ZeroChallengeWindow();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
