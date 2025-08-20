@@ -111,8 +111,7 @@ contract AppchainPool is IPool {
             return 0;
         }
 
-        uint256 user_appchain_share = user_appchain_stake / total_appchain_stake;
-
-        return (appchain_pool_amount * user_appchain_share) - claimed[epochIndex][user];
+        uint256 user_appchain_reward = (appchain_pool_amount * user_appchain_stake) / total_appchain_stake;
+        return user_appchain_reward - claimed[epochIndex][user];
     }
 }
