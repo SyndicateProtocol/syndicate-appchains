@@ -210,8 +210,7 @@ impl StreamProducer {
             valkey_metrics,
             producer_conn.xdel::<_, _, usize>(&stream_key, &ids)
         ) {
-            let ids_str = ids.iter().map(|id| id.as_str()).collect::<Vec<&str>>().join(", ");
-            error!(%stream_key, %max_id, %e, failed_ids = ids_str, "Finalization checker: Failed to delete finalized transaction entries");
+            error!(%stream_key, %max_id, %e, failed_ids = ids.join(", "), "Finalization checker: Failed to delete finalized transaction entries");
             return Err(e);
         }
         trace!(%stream_key, %max_id, count = ids.len(), "Finalization checker: Deleted entries");
