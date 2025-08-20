@@ -58,6 +58,7 @@ source "$HOME/.cargo/env"
 echo "🚀 Running proof-submitter..."
 cd ~/syndicate-appchains/synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter
 
+# Look in notion for the teeKeyManager address for your appchain
 KEY_MANAGER_ADDRESS="0xYOUR_KEY_MANAGER_ADDRESS"
 PRIVATE_KEY="0xYOUR_PRIVATE_KEY"
 # To get the attestation document, run the following command in the enclave: cast rpc --rpc-url localhost:7333 enclave_signerAttestation

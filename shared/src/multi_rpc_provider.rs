@@ -345,7 +345,7 @@ impl MultiRpcProvider {
         if self.next_provider(start_index) {
             ControlFlow::RetryWithNextProvider
         } else {
-            ControlFlow::ErrAllProvidersFailed
+            ControlFlow::ErrAllProvidersFailed(error)
         }
     }
 
@@ -366,9 +366,9 @@ impl MultiRpcProvider {
                 Ok(result) => return Ok(result),
                 Err(e) => match self.handle_error(e, start_index) {
                     ControlFlow::RetryWithNextProvider => {}
-                    ControlFlow::ErrAllProvidersFailed => {
+                    ControlFlow::ErrAllProvidersFailed(e) => {
                         return Err(RpcError::LocalUsageError(
-                            "All providers failed".to_string().into(),
+                            format!("All providers failed - most recent error: {e:?}").into(),
                         ))
                     }
                     ControlFlow::Err(e) => return Err(e),
@@ -417,7 +417,7 @@ pub enum ControlFlow {
     /// - A transport/connectivity error occurs
     /// - All available providers have been exhausted (we've cycled back to the starting provider)
     /// - No more failover options remain
-    ErrAllProvidersFailed,
+    ErrAllProvidersFailed(RpcError<TransportErrorKind>),
 
     /// Immediately return the provided error without attempting failover.
     ///

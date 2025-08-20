@@ -11,10 +11,9 @@ use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, instrument, trace};
 
-// TODO(SEQ-916): update me to `synd-maestro`
 /// Base key for Valkey transaction streams
-/// Format: `maestro:transactions:{chain_id}`
-const TX_STREAM_KEY: &str = "maestro:transactions";
+/// Format: `synd-maestro:transactions:{chain_id}`
+const TX_STREAM_KEY: &str = "synd-maestro:transactions";
 
 /// Generates a Valkey Stream key for a specific chain
 ///
@@ -196,7 +195,7 @@ impl StreamProducer {
         let entries = match result {
             Ok(entries) => entries,
             Err(e) => {
-                error!(%stream_key, %max_id, %e, "Failed to fetch old entries");
+                error!(%stream_key, %max_id, %e, "Finalization checker: Failed to fetch finalized transactions");
                 return Err(e);
             }
         };
@@ -211,10 +210,10 @@ impl StreamProducer {
             valkey_metrics,
             producer_conn.xdel::<_, _, usize>(&stream_key, &ids)
         ) {
-            error!(%stream_key, %max_id, %e, "Failed to delete finalized transaction entries");
+            error!(%stream_key, %max_id, %e, failed_ids = ids.join(", "), "Finalization checker: Failed to delete finalized transaction entries");
             return Err(e);
         }
-        trace!(%stream_key, %max_id, count = ids.len(), "Deleted entries");
+        trace!(%stream_key, %max_id, count = ids.len(), "Finalization checker: Deleted entries");
         Ok(entries)
     }
 
@@ -348,8 +347,8 @@ impl StreamProducer {
                             )
                             .await
                             {
-                                Ok(id) => {
-                                    debug!(%stream_key, original_id = %id, new_id = %id, "Finalization checker: Resubmitted transaction.");
+                                Ok(submitted_id) => {
+                                    debug!(%stream_key, original_id = %id, submitted_id = %submitted_id, "Finalization checker: Resubmitted transaction.");
                                 }
                                 Err(e) => {
                                     error!(
