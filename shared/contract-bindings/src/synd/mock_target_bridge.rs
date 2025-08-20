@@ -123,7 +123,6 @@ function bridgeFunction(address, uint256, bytes memory) external view;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -167,7 +166,6 @@ function bridgeFunction(address, uint256, bytes memory) external view;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -291,7 +289,6 @@ function setShouldRevert(bool _shouldRevert) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -323,7 +320,6 @@ function setShouldRevert(bool _shouldRevert) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -439,7 +435,6 @@ function shouldRevert() external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -471,7 +466,6 @@ function shouldRevert() external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -768,9 +762,9 @@ See the [wrapper's documentation](`MockTargetBridgeInstance`) for more details.*
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        __provider: P,
+        provider: P,
     ) -> MockTargetBridgeInstance<P, N> {
-        MockTargetBridgeInstance::<P, N>::new(address, __provider)
+        MockTargetBridgeInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -782,11 +776,11 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<MockTargetBridgeInstance<P, N>>,
     > {
-        MockTargetBridgeInstance::<P, N>::deploy(__provider)
+        MockTargetBridgeInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -797,8 +791,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     pub fn deploy_builder<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        MockTargetBridgeInstance::<P, N>::deploy_builder(__provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        MockTargetBridgeInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`MockTargetBridge`](self) instance.
 
@@ -836,11 +830,11 @@ See the [wrapper's documentation](`MockTargetBridgeInstance`) for more details.*
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -851,9 +845,9 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
         ) -> alloy_contract::Result<MockTargetBridgeInstance<P, N>> {
-            let call_builder = Self::deploy_builder(__provider);
+            let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -863,9 +857,9 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 ::core::clone::Clone::clone(&BYTECODE),
             )
         }

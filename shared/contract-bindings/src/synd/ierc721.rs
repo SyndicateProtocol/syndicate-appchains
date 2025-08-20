@@ -751,7 +751,6 @@ function approve(address _approved, uint256 _tokenId) external payable;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -792,7 +791,6 @@ function approve(address _approved, uint256 _tokenId) external payable;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -915,7 +913,6 @@ function balanceOf(address _owner) external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -947,7 +944,6 @@ function balanceOf(address _owner) external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1069,7 +1065,6 @@ function getApproved(uint256 _tokenId) external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1103,7 +1098,6 @@ function getApproved(uint256 _tokenId) external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1225,7 +1219,6 @@ function isApprovedForAll(address _owner, address _operator) external view retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1268,7 +1261,6 @@ function isApprovedForAll(address _owner, address _operator) external view retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -1396,7 +1388,6 @@ function ownerOf(uint256 _tokenId) external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1430,7 +1421,6 @@ function ownerOf(uint256 _tokenId) external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1549,7 +1539,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1595,7 +1584,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1725,7 +1713,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes me
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1774,7 +1761,6 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes me
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1904,7 +1890,6 @@ function setApprovalForAll(address _operator, bool _approved) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bool,
@@ -1944,7 +1929,6 @@ function setApprovalForAll(address _operator, bool _approved) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2069,7 +2053,6 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -2103,7 +2086,6 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -2224,7 +2206,6 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -2268,7 +2249,6 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2915,11 +2895,8 @@ See the [wrapper's documentation](`IERC721Instance`) for more details.*/
     pub const fn new<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(
-        address: alloy_sol_types::private::Address,
-        __provider: P,
-    ) -> IERC721Instance<P, N> {
-        IERC721Instance::<P, N>::new(address, __provider)
+    >(address: alloy_sol_types::private::Address, provider: P) -> IERC721Instance<P, N> {
+        IERC721Instance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -2931,11 +2908,11 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<IERC721Instance<P, N>>,
     > {
-        IERC721Instance::<P, N>::deploy(__provider)
+        IERC721Instance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -2946,8 +2923,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     pub fn deploy_builder<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        IERC721Instance::<P, N>::deploy_builder(__provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        IERC721Instance::<P, N>::deploy_builder(provider)
     }
     /**A [`IERC721`](self) instance.
 
@@ -2985,11 +2962,11 @@ See the [wrapper's documentation](`IERC721Instance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -3000,9 +2977,9 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
         ) -> alloy_contract::Result<IERC721Instance<P, N>> {
-            let call_builder = Self::deploy_builder(__provider);
+            let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -3012,9 +2989,9 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 ::core::clone::Clone::clone(&BYTECODE),
             )
         }
