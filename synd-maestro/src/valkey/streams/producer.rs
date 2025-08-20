@@ -13,7 +13,7 @@ use tracing::{debug, error, info, instrument, trace};
 
 /// Base key for Valkey transaction streams
 /// Format: `synd-maestro:transactions:{chain_id}`
-const TX_STREAM_KEY: &str = "maestro:transactions";
+const TX_STREAM_KEY: &str = "synd-maestro:transactions";
 
 /// Generates a Valkey Stream key for a specific chain
 ///
