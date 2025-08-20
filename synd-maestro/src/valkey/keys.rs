@@ -50,3 +50,23 @@ pub mod waiting_txn {
         format!("{WAITING_GAP_KEY_PREFIX}:{waiting_gap_composite_key}")
     }
 }
+
+/// Valkey keys to retrieve Consumer Last Id values
+pub mod consumer_last_id {
+    use alloy::primitives::ChainId;
+
+    /// Unique prefix of Consumer Last Id key for Valkey String retrieval
+    pub const CONSUMER_LAST_ID_KEY_PREFIX: &str = "sequencer:consumer-last-id";
+
+    /// Generates a Valkey String key for a specific chain, thereby corresponding to a unique
+    /// consumer.
+    ///
+    /// # Arguments
+    /// * `chain_id` - The chain identifier to create the key for
+    ///
+    /// # Returns
+    /// A string in the format `sequencer:consumer-last-id:{chain_id}`
+    pub fn chain_consumer_last_id_key(chain_id: ChainId) -> String {
+        format!("{CONSUMER_LAST_ID_KEY_PREFIX}:{chain_id}")
+    }
+}
