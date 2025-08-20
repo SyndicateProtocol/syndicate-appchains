@@ -368,7 +368,7 @@ impl MultiRpcProvider {
                     ControlFlow::RetryWithNextProvider => {}
                     ControlFlow::ErrAllProvidersFailed(e) => {
                         return Err(RpcError::LocalUsageError(
-                            format!("All providers failed. last error: {:?}", e).into(),
+                            format!("All providers failed - most recent error: {e:?}").into(),
                         ))
                     }
                     ControlFlow::Err(e) => return Err(e),
