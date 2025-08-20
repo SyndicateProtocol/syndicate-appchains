@@ -29,7 +29,7 @@ contract GasAggregator is EpochTracker, AccessControl {
     AppchainFactory public factory;
     StakingAppchain public stakingAppchain;
 
-    uint8 public maxAppchainsToQuery;
+    uint256 public maxAppchainsToQuery;
 
     /// @notice used for the offchain aggregation mechanism.
     /// The challenge window is the time period after the first submission during which new submission can be made
@@ -178,7 +178,7 @@ contract GasAggregator is EpochTracker, AccessControl {
 
     /// @notice set the max number of appchains to query
     /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
-    function setMaxAppchainsToQuery(uint8 newMax) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMaxAppchainsToQuery(uint256 newMax) external onlyRole(DEFAULT_ADMIN_ROLE) {
         maxAppchainsToQuery = newMax;
     }
 
