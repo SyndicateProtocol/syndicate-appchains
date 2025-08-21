@@ -152,8 +152,6 @@ pub mod IERC7802 {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `CrosschainBurn(address,uint256,address)` and selector `0xb90795a66650155983e242cac3e1ac1a4dc26f8ed2987f3ce416a34e00111fd4`.
 ```solidity
 event CrosschainBurn(address indexed from, uint256 amount, address indexed bridge);
@@ -194,9 +192,38 @@ event CrosschainBurn(address indexed from, uint256 amount, address indexed bridg
             );
             const SIGNATURE: &'static str = "CrosschainBurn(address,uint256,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                185u8, 7u8, 149u8, 166u8, 102u8, 80u8, 21u8, 89u8, 131u8, 226u8, 66u8,
-                202u8, 195u8, 225u8, 172u8, 26u8, 77u8, 194u8, 111u8, 142u8, 210u8,
-                152u8, 127u8, 60u8, 228u8, 22u8, 163u8, 78u8, 0u8, 17u8, 31u8, 212u8,
+                185u8,
+                7u8,
+                149u8,
+                166u8,
+                102u8,
+                80u8,
+                21u8,
+                89u8,
+                131u8,
+                226u8,
+                66u8,
+                202u8,
+                195u8,
+                225u8,
+                172u8,
+                26u8,
+                77u8,
+                194u8,
+                111u8,
+                142u8,
+                210u8,
+                152u8,
+                127u8,
+                60u8,
+                228u8,
+                22u8,
+                163u8,
+                78u8,
+                0u8,
+                17u8,
+                31u8,
+                212u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -275,8 +302,6 @@ event CrosschainBurn(address indexed from, uint256 amount, address indexed bridg
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `CrosschainMint(address,uint256,address)` and selector `0xde22baff038e3a3e08407cbdf617deed74e869a7ba517df611e33131c6e6ea04`.
 ```solidity
 event CrosschainMint(address indexed to, uint256 amount, address indexed bridge);
@@ -317,9 +342,38 @@ event CrosschainMint(address indexed to, uint256 amount, address indexed bridge)
             );
             const SIGNATURE: &'static str = "CrosschainMint(address,uint256,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                222u8, 34u8, 186u8, 255u8, 3u8, 142u8, 58u8, 62u8, 8u8, 64u8, 124u8,
-                189u8, 246u8, 23u8, 222u8, 237u8, 116u8, 232u8, 105u8, 167u8, 186u8,
-                81u8, 125u8, 246u8, 17u8, 227u8, 49u8, 49u8, 198u8, 230u8, 234u8, 4u8,
+                222u8,
+                34u8,
+                186u8,
+                255u8,
+                3u8,
+                142u8,
+                58u8,
+                62u8,
+                8u8,
+                64u8,
+                124u8,
+                189u8,
+                246u8,
+                23u8,
+                222u8,
+                237u8,
+                116u8,
+                232u8,
+                105u8,
+                167u8,
+                186u8,
+                81u8,
+                125u8,
+                246u8,
+                17u8,
+                227u8,
+                49u8,
+                49u8,
+                198u8,
+                230u8,
+                234u8,
+                4u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -398,8 +452,6 @@ event CrosschainMint(address indexed to, uint256 amount, address indexed bridge)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `crosschainBurn(address,uint256)` and selector `0x2b8c49e3`.
 ```solidity
 function crosschainBurn(address from, uint256 amount) external;
@@ -497,13 +549,6 @@ function crosschainBurn(address from, uint256 amount) external;
                 }
             }
         }
-        impl crosschainBurnReturn {
-            fn _tokenize(
-                &self,
-            ) -> <crosschainBurnCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for crosschainBurnCall {
             type Parameters<'a> = (
@@ -538,29 +583,17 @@ function crosschainBurn(address from, uint256 amount) external;
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                crosschainBurnReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `crosschainMint(address,uint256)` and selector `0x18bf5077`.
 ```solidity
 function crosschainMint(address to, uint256 amount) external;
@@ -658,13 +691,6 @@ function crosschainMint(address to, uint256 amount) external;
                 }
             }
         }
-        impl crosschainMintReturn {
-            fn _tokenize(
-                &self,
-            ) -> <crosschainMintCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for crosschainMintCall {
             type Parameters<'a> = (
@@ -699,29 +725,17 @@ function crosschainMint(address to, uint256 amount) external;
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                crosschainMintReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `supportsInterface(bytes4)` and selector `0x01ffc9a7`.
 ```solidity
 function supportsInterface(bytes4 interfaceId) external view returns (bool);
@@ -732,8 +746,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         pub interfaceId: alloy::sol_types::private::FixedBytes<4>,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -821,7 +833,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
+            type Return = supportsInterfaceReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -843,40 +855,18 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: supportsInterfaceReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: supportsInterfaceReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
     ///Container for all the [`IERC7802`](self) function calls.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive()]
     pub enum IERC7802Calls {
         #[allow(missing_docs)]
         crosschainBurn(crosschainBurnCall),
@@ -931,16 +921,20 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
+                bool,
             ) -> alloy_sol_types::Result<IERC7802Calls>] = &[
                 {
                     fn supportsInterface(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC7802Calls> {
                         <supportsInterfaceCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC7802Calls::supportsInterface)
                     }
@@ -949,9 +943,11 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 {
                     fn crosschainMint(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC7802Calls> {
                         <crosschainMintCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC7802Calls::crosschainMint)
                     }
@@ -960,9 +956,11 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 {
                     fn crosschainBurn(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC7802Calls> {
                         <crosschainBurnCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC7802Calls::crosschainBurn)
                     }
@@ -977,60 +975,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data)
-        }
-        #[inline]
-        #[allow(non_snake_case)]
-        fn abi_decode_raw_validate(
-            selector: [u8; 4],
-            data: &[u8],
-        ) -> alloy_sol_types::Result<Self> {
-            static DECODE_VALIDATE_SHIMS: &[fn(
-                &[u8],
-            ) -> alloy_sol_types::Result<IERC7802Calls>] = &[
-                {
-                    fn supportsInterface(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC7802Calls> {
-                        <supportsInterfaceCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC7802Calls::supportsInterface)
-                    }
-                    supportsInterface
-                },
-                {
-                    fn crosschainMint(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC7802Calls> {
-                        <crosschainMintCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC7802Calls::crosschainMint)
-                    }
-                    crosschainMint
-                },
-                {
-                    fn crosschainBurn(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC7802Calls> {
-                        <crosschainBurnCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC7802Calls::crosschainBurn)
-                    }
-                    crosschainBurn
-                },
-            ];
-            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                return Err(
-                    alloy_sol_types::Error::unknown_selector(
-                        <Self as alloy_sol_types::SolInterface>::NAME,
-                        selector,
-                    ),
-                );
-            };
-            DECODE_VALIDATE_SHIMS[idx](data)
+            DECODE_SHIMS[idx](data, validate)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -1077,8 +1022,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
     }
     ///Container for all the [`IERC7802`](self) events.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC7802Events {
         #[allow(missing_docs)]
         CrosschainBurn(CrosschainBurn),
@@ -1095,14 +1038,72 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                185u8, 7u8, 149u8, 166u8, 102u8, 80u8, 21u8, 89u8, 131u8, 226u8, 66u8,
-                202u8, 195u8, 225u8, 172u8, 26u8, 77u8, 194u8, 111u8, 142u8, 210u8,
-                152u8, 127u8, 60u8, 228u8, 22u8, 163u8, 78u8, 0u8, 17u8, 31u8, 212u8,
+                185u8,
+                7u8,
+                149u8,
+                166u8,
+                102u8,
+                80u8,
+                21u8,
+                89u8,
+                131u8,
+                226u8,
+                66u8,
+                202u8,
+                195u8,
+                225u8,
+                172u8,
+                26u8,
+                77u8,
+                194u8,
+                111u8,
+                142u8,
+                210u8,
+                152u8,
+                127u8,
+                60u8,
+                228u8,
+                22u8,
+                163u8,
+                78u8,
+                0u8,
+                17u8,
+                31u8,
+                212u8,
             ],
             [
-                222u8, 34u8, 186u8, 255u8, 3u8, 142u8, 58u8, 62u8, 8u8, 64u8, 124u8,
-                189u8, 246u8, 23u8, 222u8, 237u8, 116u8, 232u8, 105u8, 167u8, 186u8,
-                81u8, 125u8, 246u8, 17u8, 227u8, 49u8, 49u8, 198u8, 230u8, 234u8, 4u8,
+                222u8,
+                34u8,
+                186u8,
+                255u8,
+                3u8,
+                142u8,
+                58u8,
+                62u8,
+                8u8,
+                64u8,
+                124u8,
+                189u8,
+                246u8,
+                23u8,
+                222u8,
+                237u8,
+                116u8,
+                232u8,
+                105u8,
+                167u8,
+                186u8,
+                81u8,
+                125u8,
+                246u8,
+                17u8,
+                227u8,
+                49u8,
+                49u8,
+                198u8,
+                230u8,
+                234u8,
+                4u8,
             ],
         ];
     }
@@ -1113,12 +1114,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<CrosschainBurn as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <CrosschainBurn as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
+                            validate,
                         )
                         .map(Self::CrosschainBurn)
                 }
@@ -1126,6 +1129,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     <CrosschainMint as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
+                            validate,
                         )
                         .map(Self::CrosschainMint)
                 }
@@ -1172,13 +1176,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
 See the [wrapper's documentation](`IERC7802Instance`) for more details.*/
     #[inline]
     pub const fn new<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> IERC7802Instance<P, N> {
-        IERC7802Instance::<P, N>::new(address, provider)
+    ) -> IERC7802Instance<T, P, N> {
+        IERC7802Instance::<T, P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -1187,14 +1192,15 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<IERC7802Instance<P, N>>,
+        Output = alloy_contract::Result<IERC7802Instance<T, P, N>>,
     > {
-        IERC7802Instance::<P, N>::deploy(provider)
+        IERC7802Instance::<T, P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -1203,10 +1209,11 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        IERC7802Instance::<P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        IERC7802Instance::<T, P, N>::deploy_builder(provider)
     }
     /**A [`IERC7802`](self) instance.
 
@@ -1220,13 +1227,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct IERC7802Instance<P, N = alloy_contract::private::Ethereum> {
+    pub struct IERC7802Instance<T, P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network: ::core::marker::PhantomData<N>,
+        _network_transport: ::core::marker::PhantomData<(N, T)>,
     }
     #[automatically_derived]
-    impl<P, N> ::core::fmt::Debug for IERC7802Instance<P, N> {
+    impl<T, P, N> ::core::fmt::Debug for IERC7802Instance<T, P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("IERC7802Instance").field(&self.address).finish()
@@ -1235,9 +1242,10 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC7802Instance<P, N> {
+    > IERC7802Instance<T, P, N> {
         /**Creates a new wrapper around an on-chain [`IERC7802`](self) contract instance.
 
 See the [wrapper's documentation](`IERC7802Instance`) for more details.*/
@@ -1249,7 +1257,7 @@ See the [wrapper's documentation](`IERC7802Instance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -1260,7 +1268,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<IERC7802Instance<P, N>> {
+        ) -> alloy_contract::Result<IERC7802Instance<T, P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -1271,7 +1279,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -1298,23 +1306,24 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<P: ::core::clone::Clone, N> IERC7802Instance<&P, N> {
+    impl<T, P: ::core::clone::Clone, N> IERC7802Instance<T, &P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> IERC7802Instance<P, N> {
+        pub fn with_cloned_provider(self) -> IERC7802Instance<T, P, N> {
             IERC7802Instance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC7802Instance<P, N> {
+    > IERC7802Instance<T, P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -1322,7 +1331,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`crosschainBurn`] function.
@@ -1330,7 +1339,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             from: alloy::sol_types::private::Address,
             amount: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, crosschainBurnCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, crosschainBurnCall, N> {
             self.call_builder(&crosschainBurnCall { from, amount })
         }
         ///Creates a new call builder for the [`crosschainMint`] function.
@@ -1338,14 +1347,14 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             to: alloy::sol_types::private::Address,
             amount: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, crosschainMintCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, crosschainMintCall, N> {
             self.call_builder(&crosschainMintCall { to, amount })
         }
         ///Creates a new call builder for the [`supportsInterface`] function.
         pub fn supportsInterface(
             &self,
             interfaceId: alloy::sol_types::private::FixedBytes<4>,
-        ) -> alloy_contract::SolCallBuilder<&P, supportsInterfaceCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, supportsInterfaceCall, N> {
             self.call_builder(
                 &supportsInterfaceCall {
                     interfaceId,
@@ -1356,28 +1365,29 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     /// Event filters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC7802Instance<P, N> {
+    > IERC7802Instance<T, P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<&P, E, N> {
+        ) -> alloy_contract::Event<T, &P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`CrosschainBurn`] event.
         pub fn CrosschainBurn_filter(
             &self,
-        ) -> alloy_contract::Event<&P, CrosschainBurn, N> {
+        ) -> alloy_contract::Event<T, &P, CrosschainBurn, N> {
             self.event_filter::<CrosschainBurn>()
         }
         ///Creates a new event filter for the [`CrosschainMint`] event.
         pub fn CrosschainMint_filter(
             &self,
-        ) -> alloy_contract::Event<&P, CrosschainMint, N> {
+        ) -> alloy_contract::Event<T, &P, CrosschainMint, N> {
             self.event_filter::<CrosschainMint>()
         }
     }

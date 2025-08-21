@@ -177,6 +177,9 @@ async fn run(
         (None, Some(verifier_address)) => {
             info!("Deploying new attestation doc verifier contract");
 
+            let git_hash = env!("GIT_HASH");
+            info!("synd-appchains commit hash: {}", git_hash);
+
             let attestation_doc_verifier_contract = AttestationDocVerifier::deploy(
                 provider.clone(),
                 verifier_address,
@@ -186,6 +189,7 @@ async fn run(
                 keccak256(&attestation_result.pcr_1),
                 keccak256(&attestation_result.pcr_2),
                 args.deploy_expiration_tolerance.as_secs(),
+                git_hash.into(),
             )
             .await
             .map_err(|e| {
@@ -428,6 +432,7 @@ mod tests {
             pcr1,
             pcr2,
             expiration_tolerance,
+            String::new(),
         )
         .await
         .unwrap();

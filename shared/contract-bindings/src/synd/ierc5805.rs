@@ -273,8 +273,6 @@ pub mod IERC5805 {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `VotesExpiredSignature(uint256)` and selector `0x4683af0e`.
 ```solidity
 error VotesExpiredSignature(uint256 expiry);
@@ -346,17 +344,8 @@ error VotesExpiredSignature(uint256 expiry);
                     > as alloy_sol_types::SolType>::tokenize(&self.expiry),
                 )
             }
-            #[inline]
-            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
-                <Self::Parameters<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Self::new)
-            }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `DelegateChanged(address,address,address)` and selector `0x3134e8a2e6d97e929a7e54011ea5485d7d196dd5f0ba4d4ef95803e8e3fc257f`.
 ```solidity
 event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
@@ -398,9 +387,38 @@ event DelegateChanged(address indexed delegator, address indexed fromDelegate, a
             );
             const SIGNATURE: &'static str = "DelegateChanged(address,address,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                49u8, 52u8, 232u8, 162u8, 230u8, 217u8, 126u8, 146u8, 154u8, 126u8, 84u8,
-                1u8, 30u8, 165u8, 72u8, 93u8, 125u8, 25u8, 109u8, 213u8, 240u8, 186u8,
-                77u8, 78u8, 249u8, 88u8, 3u8, 232u8, 227u8, 252u8, 37u8, 127u8,
+                49u8,
+                52u8,
+                232u8,
+                162u8,
+                230u8,
+                217u8,
+                126u8,
+                146u8,
+                154u8,
+                126u8,
+                84u8,
+                1u8,
+                30u8,
+                165u8,
+                72u8,
+                93u8,
+                125u8,
+                25u8,
+                109u8,
+                213u8,
+                240u8,
+                186u8,
+                77u8,
+                78u8,
+                249u8,
+                88u8,
+                3u8,
+                232u8,
+                227u8,
+                252u8,
+                37u8,
+                127u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -483,8 +501,6 @@ event DelegateChanged(address indexed delegator, address indexed fromDelegate, a
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `DelegateVotesChanged(address,uint256,uint256)` and selector `0xdec2bacdd2f05b59de34da9b523dff8be42e5e38e818c82fdb0bae774387a724`.
 ```solidity
 event DelegateVotesChanged(address indexed delegate, uint256 previousVotes, uint256 newVotes);
@@ -527,9 +543,38 @@ event DelegateVotesChanged(address indexed delegate, uint256 previousVotes, uint
             );
             const SIGNATURE: &'static str = "DelegateVotesChanged(address,uint256,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                222u8, 194u8, 186u8, 205u8, 210u8, 240u8, 91u8, 89u8, 222u8, 52u8, 218u8,
-                155u8, 82u8, 61u8, 255u8, 139u8, 228u8, 46u8, 94u8, 56u8, 232u8, 24u8,
-                200u8, 47u8, 219u8, 11u8, 174u8, 119u8, 67u8, 135u8, 167u8, 36u8,
+                222u8,
+                194u8,
+                186u8,
+                205u8,
+                210u8,
+                240u8,
+                91u8,
+                89u8,
+                222u8,
+                52u8,
+                218u8,
+                155u8,
+                82u8,
+                61u8,
+                255u8,
+                139u8,
+                228u8,
+                46u8,
+                94u8,
+                56u8,
+                232u8,
+                24u8,
+                200u8,
+                47u8,
+                219u8,
+                11u8,
+                174u8,
+                119u8,
+                67u8,
+                135u8,
+                167u8,
+                36u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -608,17 +653,13 @@ event DelegateVotesChanged(address indexed delegate, uint256 previousVotes, uint
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `CLOCK_MODE()` and selector `0x4bf5d7e9`.
 ```solidity
 function CLOCK_MODE() external view returns (string memory);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct CLOCK_MODECall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    pub struct CLOCK_MODECall {}
     ///Container type for the return parameters of the [`CLOCK_MODE()`](CLOCK_MODECall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -661,7 +702,7 @@ function CLOCK_MODE() external view returns (string memory);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for CLOCK_MODECall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
+                    Self {}
                 }
             }
         }
@@ -702,7 +743,7 @@ function CLOCK_MODE() external view returns (string memory);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::String;
+            type Return = CLOCK_MODEReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::String,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -720,48 +761,24 @@ function CLOCK_MODE() external view returns (string memory);
                 ()
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::String as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: CLOCK_MODEReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: CLOCK_MODEReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `clock()` and selector `0x91ddadf4`.
 ```solidity
 function clock() external view returns (uint48);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct clockCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    pub struct clockCall {}
     ///Container type for the return parameters of the [`clock()`](clockCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -804,7 +821,7 @@ function clock() external view returns (uint48);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for clockCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self
+                    Self {}
                 }
             }
         }
@@ -847,7 +864,7 @@ function clock() external view returns (uint48);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U48;
+            type Return = clockReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<48>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -865,39 +882,17 @@ function clock() external view returns (uint48);
                 ()
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        48,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: clockReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: clockReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `delegate(address)` and selector `0x5c19a95c`.
 ```solidity
 function delegate(address delegatee) external;
@@ -982,13 +977,6 @@ function delegate(address delegatee) external;
                 }
             }
         }
-        impl delegateReturn {
-            fn _tokenize(
-                &self,
-            ) -> <delegateCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for delegateCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::Address,);
@@ -1017,29 +1005,17 @@ function delegate(address delegatee) external;
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                delegateReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `delegateBySig(address,uint256,uint256,uint8,bytes32,bytes32)` and selector `0xc3cda520`.
 ```solidity
 function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external;
@@ -1162,13 +1138,6 @@ function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v
                 }
             }
         }
-        impl delegateBySigReturn {
-            fn _tokenize(
-                &self,
-            ) -> <delegateBySigCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for delegateBySigCall {
             type Parameters<'a> = (
@@ -1219,29 +1188,17 @@ function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                delegateBySigReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                     .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `delegates(address)` and selector `0x587cde1e`.
 ```solidity
 function delegates(address account) external view returns (address);
@@ -1252,8 +1209,6 @@ function delegates(address account) external view returns (address);
         #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`delegates(address)`](delegatesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1337,7 +1292,7 @@ function delegates(address account) external view returns (address);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::Address;
+            type Return = delegatesReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1359,39 +1314,17 @@ function delegates(address account) external view returns (address);
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: delegatesReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: delegatesReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getPastTotalSupply(uint256)` and selector `0x8e539e8c`.
 ```solidity
 function getPastTotalSupply(uint256 timepoint) external view returns (uint256);
@@ -1402,8 +1335,6 @@ function getPastTotalSupply(uint256 timepoint) external view returns (uint256);
         #[allow(missing_docs)]
         pub timepoint: alloy::sol_types::private::primitives::aliases::U256,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getPastTotalSupply(uint256)`](getPastTotalSupplyCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1495,7 +1426,7 @@ function getPastTotalSupply(uint256 timepoint) external view returns (uint256);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type Return = getPastTotalSupplyReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1517,39 +1448,17 @@ function getPastTotalSupply(uint256 timepoint) external view returns (uint256);
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getPastTotalSupplyReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getPastTotalSupplyReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getPastVotes(address,uint256)` and selector `0x3a46b1a8`.
 ```solidity
 function getPastVotes(address account, uint256 timepoint) external view returns (uint256);
@@ -1562,8 +1471,6 @@ function getPastVotes(address account, uint256 timepoint) external view returns 
         #[allow(missing_docs)]
         pub timepoint: alloy::sol_types::private::primitives::aliases::U256,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getPastVotes(address,uint256)`](getPastVotesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1661,7 +1568,7 @@ function getPastVotes(address account, uint256 timepoint) external view returns 
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type Return = getPastVotesReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1686,39 +1593,17 @@ function getPastVotes(address account, uint256 timepoint) external view returns 
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getPastVotesReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getPastVotesReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getVotes(address)` and selector `0x9ab24eb0`.
 ```solidity
 function getVotes(address account) external view returns (uint256);
@@ -1729,8 +1614,6 @@ function getVotes(address account) external view returns (uint256);
         #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getVotes(address)`](getVotesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1816,7 +1699,7 @@ function getVotes(address account) external view returns (uint256);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type Return = getVotesReturn;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1838,40 +1721,18 @@ function getVotes(address account) external view returns (uint256);
                 )
             }
             #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getVotesReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
+            fn abi_decode_returns(
                 data: &[u8],
+                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getVotesReturn = r.into();
-                        r._0
-                    })
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
     ///Container for all the [`IERC5805`](self) function calls.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive()]
     pub enum IERC5805Calls {
         #[allow(missing_docs)]
         CLOCK_MODE(CLOCK_MODECall),
@@ -1950,16 +1811,20 @@ function getVotes(address account) external view returns (uint256);
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
+                bool,
             ) -> alloy_sol_types::Result<IERC5805Calls>] = &[
                 {
                     fn getPastVotes(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC5805Calls> {
                         <getPastVotesCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC5805Calls::getPastVotes)
                     }
@@ -1968,24 +1833,38 @@ function getVotes(address account) external view returns (uint256);
                 {
                     fn CLOCK_MODE(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC5805Calls> {
                         <CLOCK_MODECall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC5805Calls::CLOCK_MODE)
                     }
                     CLOCK_MODE
                 },
                 {
-                    fn delegates(data: &[u8]) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <delegatesCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                    fn delegates(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<IERC5805Calls> {
+                        <delegatesCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
                             .map(IERC5805Calls::delegates)
                     }
                     delegates
                 },
                 {
-                    fn delegate(data: &[u8]) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <delegateCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                    fn delegate(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<IERC5805Calls> {
+                        <delegateCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
                             .map(IERC5805Calls::delegate)
                     }
                     delegate
@@ -1993,24 +1872,38 @@ function getVotes(address account) external view returns (uint256);
                 {
                     fn getPastTotalSupply(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC5805Calls> {
                         <getPastTotalSupplyCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC5805Calls::getPastTotalSupply)
                     }
                     getPastTotalSupply
                 },
                 {
-                    fn clock(data: &[u8]) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <clockCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                    fn clock(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<IERC5805Calls> {
+                        <clockCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
                             .map(IERC5805Calls::clock)
                     }
                     clock
                 },
                 {
-                    fn getVotes(data: &[u8]) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <getVotesCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                    fn getVotes(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<IERC5805Calls> {
+                        <getVotesCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
                             .map(IERC5805Calls::getVotes)
                     }
                     getVotes
@@ -2018,9 +1911,11 @@ function getVotes(address account) external view returns (uint256);
                 {
                     fn delegateBySig(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC5805Calls> {
                         <delegateBySigCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC5805Calls::delegateBySig)
                     }
@@ -2035,107 +1930,7 @@ function getVotes(address account) external view returns (uint256);
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data)
-        }
-        #[inline]
-        #[allow(non_snake_case)]
-        fn abi_decode_raw_validate(
-            selector: [u8; 4],
-            data: &[u8],
-        ) -> alloy_sol_types::Result<Self> {
-            static DECODE_VALIDATE_SHIMS: &[fn(
-                &[u8],
-            ) -> alloy_sol_types::Result<IERC5805Calls>] = &[
-                {
-                    fn getPastVotes(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <getPastVotesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Calls::getPastVotes)
-                    }
-                    getPastVotes
-                },
-                {
-                    fn CLOCK_MODE(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <CLOCK_MODECall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Calls::CLOCK_MODE)
-                    }
-                    CLOCK_MODE
-                },
-                {
-                    fn delegates(data: &[u8]) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <delegatesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Calls::delegates)
-                    }
-                    delegates
-                },
-                {
-                    fn delegate(data: &[u8]) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <delegateCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Calls::delegate)
-                    }
-                    delegate
-                },
-                {
-                    fn getPastTotalSupply(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <getPastTotalSupplyCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Calls::getPastTotalSupply)
-                    }
-                    getPastTotalSupply
-                },
-                {
-                    fn clock(data: &[u8]) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <clockCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Calls::clock)
-                    }
-                    clock
-                },
-                {
-                    fn getVotes(data: &[u8]) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <getVotesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Calls::getVotes)
-                    }
-                    getVotes
-                },
-                {
-                    fn delegateBySig(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC5805Calls> {
-                        <delegateBySigCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Calls::delegateBySig)
-                    }
-                    delegateBySig
-                },
-            ];
-            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                return Err(
-                    alloy_sol_types::Error::unknown_selector(
-                        <Self as alloy_sol_types::SolInterface>::NAME,
-                        selector,
-                    ),
-                );
-            };
-            DECODE_VALIDATE_SHIMS[idx](data)
+            DECODE_SHIMS[idx](data, validate)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -2224,8 +2019,6 @@ function getVotes(address account) external view returns (uint256);
         }
     }
     ///Container for all the [`IERC5805`](self) custom errors.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC5805Errors {
         #[allow(missing_docs)]
         VotesExpiredSignature(VotesExpiredSignature),
@@ -2266,16 +2059,20 @@ function getVotes(address account) external view returns (uint256);
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
+                bool,
             ) -> alloy_sol_types::Result<IERC5805Errors>] = &[
                 {
                     fn VotesExpiredSignature(
                         data: &[u8],
+                        validate: bool,
                     ) -> alloy_sol_types::Result<IERC5805Errors> {
                         <VotesExpiredSignature as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
+                                validate,
                             )
                             .map(IERC5805Errors::VotesExpiredSignature)
                     }
@@ -2290,38 +2087,7 @@ function getVotes(address account) external view returns (uint256);
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data)
-        }
-        #[inline]
-        #[allow(non_snake_case)]
-        fn abi_decode_raw_validate(
-            selector: [u8; 4],
-            data: &[u8],
-        ) -> alloy_sol_types::Result<Self> {
-            static DECODE_VALIDATE_SHIMS: &[fn(
-                &[u8],
-            ) -> alloy_sol_types::Result<IERC5805Errors>] = &[
-                {
-                    fn VotesExpiredSignature(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IERC5805Errors> {
-                        <VotesExpiredSignature as alloy_sol_types::SolError>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IERC5805Errors::VotesExpiredSignature)
-                    }
-                    VotesExpiredSignature
-                },
-            ];
-            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                return Err(
-                    alloy_sol_types::Error::unknown_selector(
-                        <Self as alloy_sol_types::SolInterface>::NAME,
-                        selector,
-                    ),
-                );
-            };
-            DECODE_VALIDATE_SHIMS[idx](data)
+            DECODE_SHIMS[idx](data, validate)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -2346,8 +2112,6 @@ function getVotes(address account) external view returns (uint256);
         }
     }
     ///Container for all the [`IERC5805`](self) events.
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC5805Events {
         #[allow(missing_docs)]
         DelegateChanged(DelegateChanged),
@@ -2364,14 +2128,72 @@ function getVotes(address account) external view returns (uint256);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                49u8, 52u8, 232u8, 162u8, 230u8, 217u8, 126u8, 146u8, 154u8, 126u8, 84u8,
-                1u8, 30u8, 165u8, 72u8, 93u8, 125u8, 25u8, 109u8, 213u8, 240u8, 186u8,
-                77u8, 78u8, 249u8, 88u8, 3u8, 232u8, 227u8, 252u8, 37u8, 127u8,
+                49u8,
+                52u8,
+                232u8,
+                162u8,
+                230u8,
+                217u8,
+                126u8,
+                146u8,
+                154u8,
+                126u8,
+                84u8,
+                1u8,
+                30u8,
+                165u8,
+                72u8,
+                93u8,
+                125u8,
+                25u8,
+                109u8,
+                213u8,
+                240u8,
+                186u8,
+                77u8,
+                78u8,
+                249u8,
+                88u8,
+                3u8,
+                232u8,
+                227u8,
+                252u8,
+                37u8,
+                127u8,
             ],
             [
-                222u8, 194u8, 186u8, 205u8, 210u8, 240u8, 91u8, 89u8, 222u8, 52u8, 218u8,
-                155u8, 82u8, 61u8, 255u8, 139u8, 228u8, 46u8, 94u8, 56u8, 232u8, 24u8,
-                200u8, 47u8, 219u8, 11u8, 174u8, 119u8, 67u8, 135u8, 167u8, 36u8,
+                222u8,
+                194u8,
+                186u8,
+                205u8,
+                210u8,
+                240u8,
+                91u8,
+                89u8,
+                222u8,
+                52u8,
+                218u8,
+                155u8,
+                82u8,
+                61u8,
+                255u8,
+                139u8,
+                228u8,
+                46u8,
+                94u8,
+                56u8,
+                232u8,
+                24u8,
+                200u8,
+                47u8,
+                219u8,
+                11u8,
+                174u8,
+                119u8,
+                67u8,
+                135u8,
+                167u8,
+                36u8,
             ],
         ];
     }
@@ -2382,12 +2204,14 @@ function getVotes(address account) external view returns (uint256);
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
+            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<DelegateChanged as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <DelegateChanged as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
+                            validate,
                         )
                         .map(Self::DelegateChanged)
                 }
@@ -2397,6 +2221,7 @@ function getVotes(address account) external view returns (uint256);
                     <DelegateVotesChanged as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
                             data,
+                            validate,
                         )
                         .map(Self::DelegateVotesChanged)
                 }
@@ -2443,13 +2268,14 @@ function getVotes(address account) external view returns (uint256);
 See the [wrapper's documentation](`IERC5805Instance`) for more details.*/
     #[inline]
     pub const fn new<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> IERC5805Instance<P, N> {
-        IERC5805Instance::<P, N>::new(address, provider)
+    ) -> IERC5805Instance<T, P, N> {
+        IERC5805Instance::<T, P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -2458,14 +2284,15 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<IERC5805Instance<P, N>>,
+        Output = alloy_contract::Result<IERC5805Instance<T, P, N>>,
     > {
-        IERC5805Instance::<P, N>::deploy(provider)
+        IERC5805Instance::<T, P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -2474,10 +2301,11 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        IERC5805Instance::<P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        IERC5805Instance::<T, P, N>::deploy_builder(provider)
     }
     /**A [`IERC5805`](self) instance.
 
@@ -2491,13 +2319,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct IERC5805Instance<P, N = alloy_contract::private::Ethereum> {
+    pub struct IERC5805Instance<T, P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network: ::core::marker::PhantomData<N>,
+        _network_transport: ::core::marker::PhantomData<(N, T)>,
     }
     #[automatically_derived]
-    impl<P, N> ::core::fmt::Debug for IERC5805Instance<P, N> {
+    impl<T, P, N> ::core::fmt::Debug for IERC5805Instance<T, P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("IERC5805Instance").field(&self.address).finish()
@@ -2506,9 +2334,10 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC5805Instance<P, N> {
+    > IERC5805Instance<T, P, N> {
         /**Creates a new wrapper around an on-chain [`IERC5805`](self) contract instance.
 
 See the [wrapper's documentation](`IERC5805Instance`) for more details.*/
@@ -2520,7 +2349,7 @@ See the [wrapper's documentation](`IERC5805Instance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -2531,7 +2360,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<IERC5805Instance<P, N>> {
+        ) -> alloy_contract::Result<IERC5805Instance<T, P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -2542,7 +2371,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -2569,23 +2398,24 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<P: ::core::clone::Clone, N> IERC5805Instance<&P, N> {
+    impl<T, P: ::core::clone::Clone, N> IERC5805Instance<T, &P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> IERC5805Instance<P, N> {
+        pub fn with_cloned_provider(self) -> IERC5805Instance<T, P, N> {
             IERC5805Instance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network: ::core::marker::PhantomData,
+                _network_transport: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC5805Instance<P, N> {
+    > IERC5805Instance<T, P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -2593,24 +2423,24 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`CLOCK_MODE`] function.
         pub fn CLOCK_MODE(
             &self,
-        ) -> alloy_contract::SolCallBuilder<&P, CLOCK_MODECall, N> {
-            self.call_builder(&CLOCK_MODECall)
+        ) -> alloy_contract::SolCallBuilder<T, &P, CLOCK_MODECall, N> {
+            self.call_builder(&CLOCK_MODECall {})
         }
         ///Creates a new call builder for the [`clock`] function.
-        pub fn clock(&self) -> alloy_contract::SolCallBuilder<&P, clockCall, N> {
-            self.call_builder(&clockCall)
+        pub fn clock(&self) -> alloy_contract::SolCallBuilder<T, &P, clockCall, N> {
+            self.call_builder(&clockCall {})
         }
         ///Creates a new call builder for the [`delegate`] function.
         pub fn delegate(
             &self,
             delegatee: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<&P, delegateCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, delegateCall, N> {
             self.call_builder(&delegateCall { delegatee })
         }
         ///Creates a new call builder for the [`delegateBySig`] function.
@@ -2622,7 +2452,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             v: u8,
             r: alloy::sol_types::private::FixedBytes<32>,
             s: alloy::sol_types::private::FixedBytes<32>,
-        ) -> alloy_contract::SolCallBuilder<&P, delegateBySigCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, delegateBySigCall, N> {
             self.call_builder(
                 &delegateBySigCall {
                     delegatee,
@@ -2638,14 +2468,14 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn delegates(
             &self,
             account: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<&P, delegatesCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, delegatesCall, N> {
             self.call_builder(&delegatesCall { account })
         }
         ///Creates a new call builder for the [`getPastTotalSupply`] function.
         pub fn getPastTotalSupply(
             &self,
             timepoint: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, getPastTotalSupplyCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, getPastTotalSupplyCall, N> {
             self.call_builder(
                 &getPastTotalSupplyCall {
                     timepoint,
@@ -2657,7 +2487,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             account: alloy::sol_types::private::Address,
             timepoint: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, getPastVotesCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, getPastVotesCall, N> {
             self.call_builder(
                 &getPastVotesCall {
                     account,
@@ -2669,35 +2499,36 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn getVotes(
             &self,
             account: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<&P, getVotesCall, N> {
+        ) -> alloy_contract::SolCallBuilder<T, &P, getVotesCall, N> {
             self.call_builder(&getVotesCall { account })
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        P: alloy_contract::private::Provider<N>,
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    > IERC5805Instance<P, N> {
+    > IERC5805Instance<T, P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<&P, E, N> {
+        ) -> alloy_contract::Event<T, &P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`DelegateChanged`] event.
         pub fn DelegateChanged_filter(
             &self,
-        ) -> alloy_contract::Event<&P, DelegateChanged, N> {
+        ) -> alloy_contract::Event<T, &P, DelegateChanged, N> {
             self.event_filter::<DelegateChanged>()
         }
         ///Creates a new event filter for the [`DelegateVotesChanged`] event.
         pub fn DelegateVotesChanged_filter(
             &self,
-        ) -> alloy_contract::Event<&P, DelegateVotesChanged, N> {
+        ) -> alloy_contract::Event<T, &P, DelegateVotesChanged, N> {
             self.event_filter::<DelegateVotesChanged>()
         }
     }

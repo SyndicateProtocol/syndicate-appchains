@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {ISyndStaking} from "./SyndStaking.sol";
+import {ISyndStaking} from "./ISyndStaking.sol";
 import {IPool} from "./IPool.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
@@ -20,7 +20,7 @@ contract BasePool is IPool {
     ISyndStaking public immutable stakingContract;
 
     /// @notice Mapping from epoch index to total reward amount deposited for that epoch
-    mapping(uint256 epochIndex => uint256 total) public epochTotal;
+    mapping(uint256 epochIndex => uint256 total) public epochRewardTotal;
 
     /// @notice Mapping from epoch index and user address to the amount of rewards claimed
     mapping(uint256 epochIndex => mapping(address user => uint256 claimed)) public claimed;
@@ -59,7 +59,7 @@ contract BasePool is IPool {
      */
     function deposit(uint256 epochIndex) external payable {
         uint256 amount = msg.value;
-        epochTotal[epochIndex] += amount;
+        epochRewardTotal[epochIndex] += amount;
 
         emit EpochDeposit(epochIndex, amount);
     }
@@ -71,7 +71,7 @@ contract BasePool is IPool {
      * @param destination The address where rewards should be sent
      */
     function claim(uint256 epochIndex, address destination) external {
-        if (epochTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
+        if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
 
@@ -95,20 +95,23 @@ contract BasePool is IPool {
      * @return The amount of rewards claimable by the user for the specified epoch
      */
     function getClaimableAmount(uint256 epochIndex, address user) public view returns (uint256) {
-        if (epochTotal[epochIndex] == 0) {
+        if (epochRewardTotal[epochIndex] == 0) {
             return 0;
         }
 
-        uint256 amount = stakingContract.getUserStakeShare(epochIndex, user);
-        if (amount == 0) {
+        uint256 user_staked_amount = stakingContract.getUserStakeShare(epochIndex, user);
+        if (user_staked_amount == 0) {
             return 0;
         }
 
-        uint256 total = stakingContract.getTotalStakeShare(epochIndex);
-        if (total == 0) {
+        uint256 total_staked_amount = stakingContract.getTotalStakeShare(epochIndex);
+        if (total_staked_amount == 0) {
             return 0;
         }
 
-        return ((epochTotal[epochIndex] * amount) / total) - claimed[epochIndex][user];
+        uint256 reward_total = epochRewardTotal[epochIndex];
+        uint256 user_reward_share = (reward_total * user_staked_amount) / total_staked_amount;
+        // Subtract the amount the user has already claimed for this epoch
+        return user_reward_share - claimed[epochIndex][user];
     }
 }
