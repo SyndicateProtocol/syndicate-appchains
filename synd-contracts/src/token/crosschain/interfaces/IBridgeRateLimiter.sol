@@ -12,10 +12,6 @@ interface IBridgeRateLimiter {
     struct BridgeConfig {
         uint256 dailyMintLimit; // Maximum tokens that can be minted per day
         uint256 dailyBurnLimit; // Maximum tokens that can be burned per day
-        uint256 lastMintTimestamp; // Last time minting occurred
-        uint256 lastBurnTimestamp; // Last time burning occurred
-        uint256 currentMintUsed; // Amount used today for minting
-        uint256 currentBurnUsed; // Amount used today for burning
         bool isActive; // Whether bridge is active
     }
 
@@ -49,6 +45,21 @@ interface IBridgeRateLimiter {
 
     /// @notice Thrown when bridge is not active
     error BridgeNotActive(address bridge);
+
+    /// @notice Thrown when trying to add self as bridge
+    error CannotAddSelfAsBridge();
+
+    /// @notice Thrown when bridge address is not a contract
+    error BridgeMustBeContract();
+
+    /// @notice Thrown when bridge has insufficient emission budget
+    error InsufficientEmissionBudget();
+
+    /// @notice Thrown when mint limit is unreasonably high
+    error UnreasonableMintLimit();
+
+    /// @notice Thrown when burn limit is unreasonably high
+    error UnreasonableBurnLimit();
 
     /*//////////////////////////////////////////////////////////////
                             CORE FUNCTIONS

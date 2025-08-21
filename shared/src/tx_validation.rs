@@ -2,14 +2,13 @@
 //! transaction
 
 use crate::json_rpc::{
-    InvalidInputError::{ChainIdMissing, TransactionTooLarge, UnableToRLPDecode},
-    Rejection::FeeTooHigh,
+    InvalidInputError::{ChainIdMissing, TransactionTooLarge},
     RpcError,
-    RpcError::{InvalidInput, TransactionRejected},
+    RpcError::InvalidInput,
 };
 use alloy::{
-    consensus::{Transaction, TxEnvelope},
-    primitives::{Address, Bytes, U256},
+    consensus::{transaction::SignerRecoverable, Transaction, TxEnvelope},
+    primitives::{Address, Bytes},
     rlp::Decodable,
 };
 use byte_unit::Unit;
@@ -18,11 +17,7 @@ use tracing::{debug, instrument};
 /// Convert a raw transaction from [`&Bytes`] to [`TxEnvelope`]
 pub fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
     let mut slice: &[u8] = raw_tx.as_ref();
-    TxEnvelope::decode(&mut slice).map_err(|_| {
-        let error = InvalidInput(UnableToRLPDecode);
-        debug!(error = %error, "Transaction decoding failed");
-        error
-    })
+    Ok(TxEnvelope::decode(&mut slice)?)
 }
 
 fn check_chain_id(tx: &TxEnvelope) -> Result<(), RpcError> {
@@ -50,21 +45,6 @@ pub fn check_signature(tx: &TxEnvelope) -> Result<Address, RpcError> {
         e
     })?;
     Ok(signer)
-}
-
-fn check_gas_price(tx: &TxEnvelope) -> Result<(), RpcError> {
-    //TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
-    // RPCTxFeeCap for equivalent skip check if unset
-    let tx_fee_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
-
-    let gas_price = U256::try_from(tx.max_fee_per_gas())?;
-    let gas = U256::try_from(tx.gas_limit())?;
-    let fee_wei = gas_price.saturating_mul(gas);
-
-    if fee_wei > tx_fee_cap_in_wei {
-        return Err(TransactionRejected(FeeTooHigh));
-    }
-    Ok(())
 }
 
 fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), RpcError> {
@@ -100,18 +80,16 @@ pub fn validate_transaction(raw_tx: &Bytes) -> Result<(TxEnvelope, Address), Rpc
     // Check signature
     let signer = check_signature(&tx)?;
 
-    // Check gas price
-    check_gas_price(&tx)?;
-
     Ok((tx, signer))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::json_rpc::InvalidInputError::UnableToRLPDecode;
     use alloy::{
-        consensus::{Signed, TxEip1559, TxLegacy},
-        primitives::{b256, Bytes, PrimitiveSignature},
+        consensus::{Signed, TxLegacy},
+        primitives::{b256, Bytes, Signature},
     };
     use byte_unit::Byte;
     use std::str::FromStr;
@@ -140,21 +118,17 @@ mod tests {
         // Invalid transaction
         let invalid_tx = Bytes::from_str("0x1234").unwrap();
         let result = decode_transaction(&invalid_tx);
-        assert!(matches!(result, Err(InvalidInput(UnableToRLPDecode))));
+        println!("result: {result:?}");
+        assert!(matches!(
+            result,
+            Err(InvalidInput(UnableToRLPDecode(alloy::rlp::Error::Custom("unexpected tx type"))))
+        ));
     }
 
     fn wrap_txn_legacy(tx: TxLegacy) -> TxEnvelope {
         TxEnvelope::Legacy(Signed::new_unchecked(
             tx,
-            PrimitiveSignature::test_signature(),
-            Default::default(),
-        ))
-    }
-
-    fn wrap_txn_eip1559(tx: TxEip1559) -> TxEnvelope {
-        TxEnvelope::Eip1559(Signed::new_unchecked(
-            tx,
-            PrimitiveSignature::test_signature(),
+            Signature::test_signature(),
             Default::default(),
         ))
     }
@@ -180,7 +154,7 @@ mod tests {
         // Transaction with invalid signature should fail
         let invalid_tx = TxEnvelope::Legacy(Signed::new_unchecked(
             TxLegacy::default(),
-            PrimitiveSignature::from_scalars_and_parity(
+            Signature::from_scalars_and_parity(
                 b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
                 b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
                 true,
@@ -188,35 +162,6 @@ mod tests {
             Default::default(),
         ));
         assert!(check_signature(&invalid_tx).is_err());
-    }
-
-    #[test]
-    fn test_check_gas_price() {
-        // Valid transaction with acceptable gas price
-        let valid_tx = wrap_txn_legacy(TxLegacy::default());
-        assert!(check_gas_price(&valid_tx).is_ok());
-
-        // Legacy transaction with extremely high gas price should fail
-        let invalid_legacy_tx = wrap_txn_legacy(TxLegacy {
-            gas_limit: 2u64,
-            gas_price: 1_000_000_000_000_000_000u128,
-            ..Default::default()
-        });
-        assert!(matches!(
-            check_gas_price(&invalid_legacy_tx),
-            Err(TransactionRejected(FeeTooHigh))
-        ));
-
-        // EIP-1559 transaction with extremely high gas price should fail
-        let invalid_eip1559_tx = wrap_txn_eip1559(TxEip1559 {
-            gas_limit: 2u64,
-            max_fee_per_gas: 1_000_000_000_000_000_000u128,
-            ..Default::default()
-        });
-        assert!(matches!(
-            check_gas_price(&invalid_eip1559_tx),
-            Err(TransactionRejected(FeeTooHigh))
-        ));
     }
 
     #[test]

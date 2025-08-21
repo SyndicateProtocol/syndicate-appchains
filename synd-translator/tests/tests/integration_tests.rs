@@ -8,7 +8,7 @@ use alloy::{
     signers::local::PrivateKeySigner,
     sol_types::SolValue,
 };
-use contract_bindings::synd::{arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic};
+use contract_bindings::synd::{arb_gas_info::ArbGasInfo, arb_owner_public::ArbOwnerPublic};
 use eyre::{Ok, Result};
 use std::{str::FromStr as _, time::Duration};
 use synd_block_builder::appchains::arbitrum::{self, arbitrum_adapter::L1MessageType};
@@ -76,7 +76,7 @@ async fn arb_owner_test() -> Result<()> {
     })
     .await?;
     let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &chain_info.provider);
-    assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [appchain_owner]);
+    assert_eq!(arb_owner_public.getAllChainOwners().call().await?, [appchain_owner]);
     Ok(())
 }
 
@@ -102,7 +102,7 @@ async fn no_l1_fees_test() -> Result<()> {
     })
     .await?;
     let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &chain_info.provider);
-    assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
+    assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?, U256::ZERO);
     // Make sure adding delayed messages with a non-zero base fee does not increase the l1 fee.
     // The l1 fee should only be updated when BatchPostingReport messages are sent, which we
     // explicitly block in the `synd-translator`.
@@ -130,7 +130,7 @@ async fn no_l1_fees_test() -> Result<()> {
         .await?;
     wait_until!(chain_info.provider.get_block_number().await? == 2, Duration::from_secs(2));
     assert_eq!(chain_info.provider.get_balance(TEST_ADDR).await?, qty + qty);
-    assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
+    assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?, U256::ZERO);
     Ok(())
 }
 

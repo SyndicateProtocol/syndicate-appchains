@@ -7,7 +7,6 @@ use alloy::primitives::Address;
 use clap::Parser;
 use common::types::Chain;
 use eyre::Result;
-use metrics::config::MetricsConfig;
 use shared::parse::parse_address;
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::config::BlockBuilderConfig;
@@ -79,9 +78,6 @@ pub enum ConfigError {
 
     #[error("Ingestor chain configuration error: {0}")]
     Ingestor(#[from] IngestorConfigError),
-
-    #[error("Metrics configuration error: {0}")]
-    Metrics(#[from] metrics::config::ConfigError),
 }
 
 // Due to `clap` not supporting prefixes, we need to redefine the SequencingChainConfig and
@@ -161,7 +157,7 @@ impl SettlementChainConfig {
 
 /// Common config struct for the `synd-translator`. This contains all possible config options
 /// which other crates can use
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 #[command(version, about)]
 pub struct TranslatorConfig {
     #[command(flatten)]
@@ -173,8 +169,8 @@ pub struct TranslatorConfig {
     #[command(flatten)]
     pub settlement: SettlementChainConfig,
 
-    #[command(flatten)]
-    pub metrics: MetricsConfig,
+    #[arg(long, env = "PORT", default_value_t = 9090)]
+    pub port: u16,
 
     /// The delay to be applied to settlement chain blocks (expressed in seconds)
     #[arg(long, env = "SETTLEMENT_DELAY")]
@@ -192,15 +188,26 @@ pub struct TranslatorConfig {
     )]
     pub config_manager_address: Option<Address>,
 
-    #[arg(long, env = "APPCHAIN_BLOCK_EXPLORER_URL")]
-    pub appchain_block_explorer_url: Option<String>,
-
+    /// The timeout for WebSocket requests
     #[arg(long, env = "WS_REQUEST_TIMEOUT", value_parser=humantime::parse_duration, default_value="10s")]
     pub ws_request_timeout: Duration,
+
+    /// Manually override maximum message buffer capacity per WebSocket subscription
+    #[arg(long, env = "WS_MAX_BUFFER_CAPACITY_PER_SUBSCRIPTION", default_value = "1024")]
+    pub max_buffer_capacity_per_subscription: usize,
+
+    /// Manually override maximum response size for memory safety (default: 4GB)
+    #[arg(long, env = "WS_MAX_RESPONSE_SIZE", default_value = "4294967295")] // u32::MAX
+    pub max_response_size: u32,
+
+    /// The maximum number of blocks to fetch per request (default: 0, which means no batching)
+    #[arg(long, env = "GET_LOGS_MAX_BLOCKS_PER_REQUEST", default_value = "0")]
+    pub get_logs_max_blocks_per_request: u64,
 
     #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
     pub get_logs_timeout: Duration,
 
+    /// The interval to retry RPC requests
     #[arg(
         long,
         env = "RPC_RETRY_INTERVAL",
@@ -208,6 +215,10 @@ pub struct TranslatorConfig {
         value_parser = humantime::parse_duration
     )]
     pub rpc_retry_interval: Duration,
+
+    /// The interval to wait for the ingestors to be ready if not ready yet
+    #[arg(long, env = "INGESTOR_READY_CHECK_INTERVAL", value_parser=humantime::parse_duration, default_value="1s")]
+    pub ingestor_ready_check_interval: Duration,
 }
 
 impl TranslatorConfig {
@@ -218,10 +229,8 @@ impl TranslatorConfig {
 
     /// Validate [`TranslatorConfig`]
     pub fn validate(&self) -> Result<(), ConfigError> {
-        self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
         self.sequencing.validate().map_err(ConfigError::Ingestor)?;
         self.settlement.validate().map_err(ConfigError::Ingestor)?;
-        self.metrics.validate().map_err(ConfigError::Metrics)?;
         Ok(())
     }
 
@@ -252,29 +261,10 @@ impl TranslatorConfig {
         add_fields::<BlockBuilderConfig>(&mut cmd);
         add_fields::<SequencingChainConfig>(&mut cmd);
         add_fields::<SettlementChainConfig>(&mut cmd);
-        add_fields::<MetricsConfig>(&mut cmd);
 
         // Remove the trailing slash and newline
         cmd.truncate(cmd.len() - 2);
         println!("{cmd}");
-    }
-}
-
-impl Default for TranslatorConfig {
-    fn default() -> Self {
-        Self {
-            block_builder: BlockBuilderConfig::default(),
-            settlement_delay: Some(60),
-            sequencing: SequencingChainConfig::default(),
-            settlement: SettlementChainConfig::default(),
-            metrics: MetricsConfig::default(),
-            config_manager_address: None,
-            appchain_chain_id: 0,
-            appchain_block_explorer_url: None,
-            get_logs_timeout: Duration::from_secs(60),
-            ws_request_timeout: Duration::from_secs(10),
-            rpc_retry_interval: Duration::from_secs(1),
-        }
     }
 }
 

@@ -1,10 +1,10 @@
 //! The Batch Sequencer is a service that pulls transactions off the queue, processes and validates
 //! them, and submits them to the Appchain in batches (can be compressed or not).
 
-use batcher::batcher::run_batcher;
+use clap::Parser;
 use eyre::Result;
 use shared::tracing::{setup_global_tracing, ServiceTracingConfig};
-use synd_batch_sequencer::config::BatchSequencerConfig;
+use synd_batch_sequencer::{batcher::run_batcher, config::BatcherConfig};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -16,11 +16,10 @@ async fn main() -> Result<()> {
         env!("CARGO_PKG_VERSION"),
     ))?;
 
-    let config = BatchSequencerConfig::initialize();
-    info!("BatchSequencerConfig: {:?}", config);
+    let config = BatcherConfig::parse();
+    info!("BatcherConfig: {:?}", config);
 
-    let batcher_handle =
-        run_batcher(&config.batcher, config.sequencing_address, config.metrics_port).await?;
+    let batcher_handle = run_batcher(config).await?;
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");

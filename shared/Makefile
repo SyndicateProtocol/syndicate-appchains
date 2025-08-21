@@ -8,7 +8,10 @@ create-contract-bindings-rust:
 	cd ../synd-contracts  && forge bind --alloy --force
 	cp -r ../synd-contracts/out/bindings/src/* contract-bindings/src/synd
 	mv contract-bindings/src/synd/lib.rs contract-bindings/src/synd/mod.rs
-
+  
+	# remove this specific contract binding until this issue is resolved: https://github.com/foundry-rs/foundry/issues/10911
+	rm contract-bindings/src/synd/syndicate_token_emission_scheduler.rs
+	grep -v 'pub mod r#syndicate_token_emission_scheduler;' contract-bindings/src/synd/mod.rs > contract-bindings/src/synd/mod.rs.tmp && mv contract-bindings/src/synd/mod.rs.tmp contract-bindings/src/synd/mod.rs
 
 .PHONY: create-withdrawal-contract-bindings-go
 create-withdrawal-contract-bindings-go:
@@ -28,12 +31,12 @@ create-withdrawal-contract-bindings-go:
 	    > ../shared/contract-bindings/src/withdrawals-go/TeeModule.bin
 
 	# 4) generate Go bindings from those artifacts
-	# You need to install abigen: `go install github.com/ethereum/go-ethereum/cmd/abigen@latest`
+	# You need to install abigen: `go install github.com/ethereum/go-ethereum/cmd/abigen@latest` and add to your PATH
 	abigen \
 		--abi=contract-bindings/src/withdrawals-go/TeeModule.abi \
 		--bin=contract-bindings/src/withdrawals-go/TeeModule.bin \
 		--pkg=teemodule \
-		--out=../synd-withdrawals/synd-proposer/teemodule/TeeModule.go
+		--out=../synd-withdrawals/synd-enclave/teemodule/teeModule.go
 
 	# 5) Clean up
 	rm -rf contract-bindings/src/withdrawals-go

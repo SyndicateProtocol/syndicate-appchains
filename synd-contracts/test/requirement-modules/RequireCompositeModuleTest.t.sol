@@ -281,7 +281,12 @@ contract RequireCompositeModuleTest is Test {
 
         // Should fail as one AND check fails
         vm.expectRevert(
-            abi.encodeWithSelector(RequireCompositeModule.AndCheckFailed.selector, address(alwaysDenyModule), user1)
+            abi.encodeWithSelector(
+                RequireCompositeModule.CompositeAndPermissionCheckFailed.selector,
+                address(alwaysDenyModule),
+                user1,
+                bytes("")
+            )
         );
         compositeModule.isAllowed(user1, user2, bytes(""));
     }
@@ -313,7 +318,11 @@ contract RequireCompositeModuleTest is Test {
         vm.stopPrank();
 
         // Should fail as all OR checks fail
-        vm.expectRevert(abi.encodeWithSelector(RequireCompositeModule.AllOrChecksFailed.selector, user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RequireCompositeModule.CompositeAllOrPermissionChecksFailed.selector, user1, bytes("")
+            )
+        );
         compositeModule.isAllowed(user1, user2, bytes(""));
     }
 
@@ -332,7 +341,12 @@ contract RequireCompositeModuleTest is Test {
 
         // Should fail as the AND check fails
         vm.expectRevert(
-            abi.encodeWithSelector(RequireCompositeModule.AndCheckFailed.selector, address(alwaysDenyModule), user1)
+            abi.encodeWithSelector(
+                RequireCompositeModule.CompositeAndPermissionCheckFailed.selector,
+                address(alwaysDenyModule),
+                user1,
+                bytes("")
+            )
         );
         compositeModule.isAllowed(user1, user2, bytes(""));
     }
@@ -349,7 +363,11 @@ contract RequireCompositeModuleTest is Test {
         vm.stopPrank();
 
         // Should fail as the OR check fails and there are no passing OR checks
-        vm.expectRevert(abi.encodeWithSelector(RequireCompositeModule.AllOrChecksFailed.selector, user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RequireCompositeModule.CompositeAllOrPermissionChecksFailed.selector, user1, bytes("")
+            )
+        );
         compositeModule.isAllowed(user1, user2, bytes(""));
     }
 
@@ -394,7 +412,11 @@ contract RequireCompositeModuleTest is Test {
         vm.stopPrank();
 
         // Should now fail
-        vm.expectRevert(abi.encodeWithSelector(RequireCompositeModule.AllOrChecksFailed.selector, user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RequireCompositeModule.CompositeAllOrPermissionChecksFailed.selector, user1, bytes("")
+            )
+        );
         compositeModule.isAllowed(user1, user2, bytes(""));
     }
 }

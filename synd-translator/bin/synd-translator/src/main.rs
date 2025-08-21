@@ -1,13 +1,16 @@
 use eyre::Result;
-use shared::tracing::setup_global_logging;
-use synd_translator::{config::TranslatorConfig, config_manager::with_onchain_config, spawn::run};
+use shared::tracing::{setup_global_tracing, ServiceTracingConfig};
+use synd_translator::{config::TranslatorConfig, config_manager::with_onchain_config};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{error, info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    setup_global_logging()?;
+    setup_global_tracing(ServiceTracingConfig::from_env(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION"),
+    ))?;
 
     let base_config = TranslatorConfig::initialize();
 
@@ -38,8 +41,7 @@ async fn main() -> Result<()> {
     let config = with_onchain_config(&base_config).await;
     config.validate_strict()?;
 
-    // Run the async process
-    run(&config).await?;
+    synd_translator::spawn::run(&config).await?;
 
     Ok(())
 }

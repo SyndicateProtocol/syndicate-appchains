@@ -1,18 +1,19 @@
 //! This module provides the producer implementation for Valkey Streams used to queue
 //! and process transactions across different chains.
 
+use crate::{valkey::valkey_metrics::ValkeyMetrics, with_cache_metrics};
 use alloy::{hex, primitives::keccak256};
-use redis::{aio::MultiplexedConnection, AsyncCommands, RedisError};
+use derivative::Derivative;
+use redis::{aio::ConnectionManager, AsyncCommands, RedisError};
 use shared::tracing::{current_traceparent, SpanKind};
-use std::{self, time::Duration};
+use std::{self, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, instrument, trace};
 
-// TODO(SEQ-916): update me to `synd-maestro`
 /// Base key for Valkey transaction streams
-/// Format: `maestro:transactions:{chain_id}`
-const TX_STREAM_KEY: &str = "maestro:transactions";
+/// Format: `synd-maestro:transactions:{chain_id}`
+const TX_STREAM_KEY: &str = "synd-maestro:transactions";
 
 /// Generates a Valkey Stream key for a specific chain
 ///
@@ -33,11 +34,14 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 ///
 /// # Examples
 /// ```rust
-/// use redis::aio::MultiplexedConnection;
-/// use std::time::Duration;
-/// use synd_maestro::valkey::streams::producer::{CheckFinalizationResult, StreamProducer};
+/// use redis::aio::ConnectionManager;
+/// use std::{sync::Arc, time::Duration};
+/// use synd_maestro::valkey::{
+///     streams::producer::{CheckFinalizationResult, StreamProducer},
+///     valkey_metrics::ValkeyMetrics,
+/// };
 ///
-/// async fn example(valkey_conn: MultiplexedConnection) {
+/// async fn example(valkey_conn: ConnectionManager) {
 ///     let mut producer = StreamProducer::new(
 ///         valkey_conn,
 ///         1,
@@ -45,18 +49,22 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 ///         Duration::from_secs(60 * 60 * 24),
 ///         5, // max_transaction_retries
 ///         |_raw_tx: &[u8]| async { CheckFinalizationResult::Done },
+///         Arc::new(ValkeyMetrics::default()),
 ///     )
 ///     .await;
 ///     let tx_data = vec![0x01, 0x02, 0x03];
 ///     let id = producer.enqueue_transaction(&tx_data).await.unwrap();
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct StreamProducer {
-    conn: MultiplexedConnection,
+    #[derivative(Debug = "ignore")]
+    conn: ConnectionManager,
     pub(crate) stream_key: String,
     shutdown_token: CancellationToken,
     finalization_task_handle: Mutex<Option<JoinHandle<()>>>,
+    valkey_metrics: Arc<ValkeyMetrics>,
 }
 
 impl StreamProducer {
@@ -73,12 +81,13 @@ impl StreamProducer {
     /// # Returns
     /// A new `StreamProducer` instance configured for the specified chain
     pub async fn new<F, Fut>(
-        conn: MultiplexedConnection,
+        conn: ConnectionManager,
         chain_id: u64,
         finalization_checker_interval: Duration,
         finalization_duration: Duration,
         max_transaction_retries: u32,
         check_tx_finalization: F,
+        valkey_metrics: Arc<ValkeyMetrics>,
     ) -> Self
     where
         F: Fn(&[u8]) -> Fut + Send + 'static,
@@ -86,8 +95,13 @@ impl StreamProducer {
     {
         let stream_key = tx_stream_key(chain_id);
         let shutdown_token = CancellationToken::new();
-        let res =
-            Self { conn, stream_key, shutdown_token, finalization_task_handle: Mutex::new(None) };
+        let res = Self {
+            conn,
+            stream_key,
+            shutdown_token,
+            finalization_task_handle: Mutex::new(None),
+            valkey_metrics,
+        };
 
         res.start_finalization_checker(
             finalization_checker_interval,
@@ -118,12 +132,13 @@ impl StreamProducer {
     /// * Stream write operation fails
     /// * Connection is dropped
     pub async fn enqueue_transaction(&self, raw_tx: &[u8]) -> Result<String, RedisError> {
-        Self::add_to_stream(&self.conn, &self.stream_key, raw_tx, 0).await
+        Self::add_to_stream(&self.conn, &self.stream_key, raw_tx, 0, self.valkey_metrics.clone())
+            .await
     }
 
     #[instrument(
         name = "enqueue_transaction",
-        skip(conn, raw_tx),
+        skip(conn, raw_tx, valkey_metrics),
         err,
         fields(
             otel.kind = ?SpanKind::Producer,
@@ -133,15 +148,17 @@ impl StreamProducer {
         )
     )]
     async fn add_to_stream(
-        conn: &MultiplexedConnection,
+        conn: &ConnectionManager,
         stream_key: &str,
         raw_tx: &[u8],
         retries: u32,
+        valkey_metrics: Arc<ValkeyMetrics>,
     ) -> Result<String, RedisError> {
         let traceparent = current_traceparent().unwrap_or_default();
-        let id: String = conn
-            .clone()
-            .xadd(
+        let mut producer_conn = conn.clone();
+        let id: String = with_cache_metrics!(
+            valkey_metrics,
+            producer_conn.xadd(
                 stream_key,
                 "*",
                 &[
@@ -150,32 +167,35 @@ impl StreamProducer {
                     ("traceparent", Vec::from(traceparent).as_slice()),
                 ],
             )
-            .await?;
+        )?;
         debug!(%stream_key, %id, "Enqueued transaction");
         Ok(id)
     }
 
     /// Get all transactions that are older than the finalization duration, deletes them from the
     /// stream and returns them
+    #[allow(clippy::cognitive_complexity)]
     async fn get_finalized_transactions(
-        conn: &mut MultiplexedConnection,
+        conn: &mut ConnectionManager,
         stream_key: &str,
         finalization_ms: u128,
+        valkey_metrics: Arc<ValkeyMetrics>,
     ) -> Result<Vec<(String, Vec<(String, Vec<u8>)>)>, RedisError> {
         #[allow(clippy::unwrap_used)] // safe to unwrap
         let current_time =
             std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
         let max_id = format!("{}-0", current_time - finalization_ms);
+        let producer_conn = conn;
 
         // Use XRANGE to get all entries that are older than finalization_duration
         #[allow(clippy::type_complexity)]
         let result: Result<Vec<(String, Vec<(String, Vec<u8>)>)>, RedisError> =
-            conn.xrange(stream_key, "-", &max_id).await;
+            with_cache_metrics!(valkey_metrics, producer_conn.xrange(stream_key, "-", &max_id));
 
         let entries = match result {
             Ok(entries) => entries,
             Err(e) => {
-                error!(%stream_key, %max_id, %e, "Failed to fetch old entries");
+                error!(%stream_key, %max_id, %e, "Finalization checker: Failed to fetch finalized transactions");
                 return Err(e);
             }
         };
@@ -186,11 +206,14 @@ impl StreamProducer {
 
         // Collect IDs for deletion and call XDEL on all of them
         let ids: Vec<String> = entries.iter().map(|(id, _)| id.clone()).collect();
-        if let Err(e) = conn.xdel::<_, _, usize>(&stream_key, &ids).await {
-            error!(%stream_key, %max_id, %e, "Failed to delete finalized transaction entries");
+        if let Err(e) = with_cache_metrics!(
+            valkey_metrics,
+            producer_conn.xdel::<_, _, usize>(&stream_key, &ids)
+        ) {
+            error!(%stream_key, %max_id, %e, failed_ids = ids.join(", "), "Finalization checker: Failed to delete finalized transaction entries");
             return Err(e);
         }
-        trace!(%stream_key, %max_id, count = ids.len(), "Deleted entries");
+        trace!(%stream_key, %max_id, count = ids.len(), "Finalization checker: Deleted entries");
         Ok(entries)
     }
 
@@ -219,6 +242,8 @@ impl StreamProducer {
                     retries_value =
                         String::from_utf8(value.clone()).ok().and_then(|s| s.parse::<u32>().ok());
                 }
+                // The `traceparent` field is optional and used for tracing purposes
+                "traceparent" => (),
                 _ => {
                     error!(%stream_key, entry_id = %id, "Unexpected field: {}", name);
                 }
@@ -261,6 +286,7 @@ impl StreamProducer {
         let shutdown_token = self.shutdown_token.clone();
         let stream_key = self.stream_key.clone();
         let mut conn = self.conn.clone();
+        let valkey_metrics = self.valkey_metrics.clone();
 
         let finalization_ms = finalization_duration.as_millis();
         let handle = tokio::spawn(async move {
@@ -283,6 +309,7 @@ impl StreamProducer {
                     &mut conn,
                     &stream_key,
                     finalization_ms,
+                    valkey_metrics.clone(),
                 )
                 .await
                 {
@@ -311,9 +338,17 @@ impl StreamProducer {
                     match check_tx_finalization(data).await {
                         CheckFinalizationResult::Done => {} // do nothing
                         CheckFinalizationResult::ReSubmit => {
-                            match Self::add_to_stream(&conn, &stream_key, data, retries + 1).await {
-                                Ok(id) => {
-                                    debug!(%stream_key, original_id = %id, new_id = %id, "Finalization checker: Resubmitted transaction.");
+                            match Self::add_to_stream(
+                                &conn,
+                                &stream_key,
+                                data,
+                                retries + 1,
+                                valkey_metrics.clone(),
+                            )
+                            .await
+                            {
+                                Ok(submitted_id) => {
+                                    debug!(%stream_key, original_id = %id, submitted_id = %submitted_id, "Finalization checker: Resubmitted transaction.");
                                 }
                                 Err(e) => {
                                     error!(
@@ -412,7 +447,7 @@ mod tests {
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
 
         let client = redis::Client::open(valkey_url.as_str()).unwrap();
-        let conn = client.get_multiplexed_async_connection().await.unwrap();
+        let conn = ConnectionManager::new(client).await.unwrap();
 
         let mut conn_clone = conn.clone();
 
@@ -462,6 +497,7 @@ mod tests {
                 }
             },
             // shutdown_token.clone(), // This is now managed internally
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
         // Use the stream key generated by the producer
@@ -538,7 +574,7 @@ mod tests {
 
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         let client = redis::Client::open(valkey_url.as_str()).unwrap();
-        let conn = client.get_multiplexed_async_connection().await.unwrap();
+        let conn = ConnectionManager::new(client).await.unwrap();
         let mut conn_clone_for_setup = conn.clone();
         let mut conn_clone_for_assert = conn.clone();
 
@@ -567,6 +603,7 @@ mod tests {
             finalization_duration,
             max_transaction_retries,
             finalization_callback,
+            Arc::new(ValkeyMetrics::default()),
         )
         .await;
 
@@ -584,7 +621,7 @@ mod tests {
         // Wait for the first finalization cycle
         sleep(Duration::from_millis(150)).await; // interval (100) + duration (50)
 
-        // Assertions after 1st cycle
+        // Assertions after the 1st cycle
         assert_eq!(
             callback_invocations.load(Ordering::SeqCst),
             1,

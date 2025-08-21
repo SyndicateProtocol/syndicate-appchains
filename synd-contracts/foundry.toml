@@ -9,6 +9,8 @@ via_ir = true
 evm_version = "cancun"
 bytecode_hash = "none"
 cbor_metadata = false
+optimizer = true
+optimizer_runs = 10000
 
 [rpc_endpoints]
 localhost = "http://localhost:8545"

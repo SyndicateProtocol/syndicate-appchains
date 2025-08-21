@@ -6,12 +6,12 @@ use crate::{
 use alloy::{consensus::Transaction, primitives::ChainId};
 use http::Extensions;
 use jsonrpsee::{
-    core::RpcResult,
+    core::{JsonValue, RpcResult},
     server::{middleware::http::ProxyGetRequestLayer, Server},
     types::{ErrorCode, Params},
     RpcModule,
 };
-use serde_json::Value as JsonValue;
+use redis::aio::{ConnectionManager, ConnectionManagerConfig};
 use shared::{
     json_rpc::{
         parse_send_raw_transaction_params,
@@ -33,7 +33,7 @@ pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
 pub type ShutdownFn =
     Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = Result<(), eyre::Error>> + Send>> + Send>;
 
-/// Runs the base server for the sequencer
+/// Run the maestro server
 pub async fn run(
     config: Config,
     metrics: MaestroMetrics,
@@ -44,7 +44,7 @@ pub async fn run(
         vec![HEADER_CHAIN_ID.to_string(), "traceparent".to_string(), "tracestate".to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
-        .layer(ProxyGetRequestLayer::new([("/health", "health")])?);
+        .layer(ProxyGetRequestLayer::new([("/health", "health"), ("/ready", "ready")])?);
 
     let server = Server::builder()
         .set_http_middleware(http_middleware)
@@ -53,7 +53,9 @@ pub async fn run(
 
     // Create the service internally again
     let client = redis::Client::open(config.valkey_url.as_str())?;
-    let valkey_conn = client.get_multiplexed_async_connection().await?;
+
+    let connection_mgr_config = ConnectionManagerConfig::new();
+    let valkey_conn = ConnectionManager::new_with_config(client, connection_mgr_config).await?;
     let service = Arc::new(MaestroService::new(valkey_conn, config.clone(), metrics).await?);
     info!("MaestroService created and connected to Valkey successfully!");
 
@@ -73,9 +75,19 @@ pub async fn run(
             }
         },
     )?;
+    module.register_async_method(
+        "ready",
+        |_, service: Arc<Arc<MaestroService>>, _| async move {
+            // Intentionally the same as `/health` above
+            let ready = service.health().await;
+            match ready {
+                Ok(true) => Ok::<JsonValue, ErrorCode>(serde_json::json!({"ready": true})),
+                _ => Err(ErrorCode::InternalError),
+            }
+        },
+    )?;
 
     // TODO (SEQ-908): Background job to unstick `waiting txn` cache
-
     info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
 
     let addr = server.local_addr()?;
@@ -118,7 +130,7 @@ pub async fn send_raw_transaction_handler(
 
     let service = service_arc_arc.as_ref();
     let req_start = Instant::now();
-    service.metrics.increment_maestro_requests_total(1);
+    service.metrics.increment_transaction_requests(1);
 
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let (tx, signer) = validate_transaction(&raw_tx)?;
@@ -141,8 +153,8 @@ pub async fn send_raw_transaction_handler(
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
 
-    service.metrics.record_maestro_requests_duration_ms(req_start.elapsed());
-    service.metrics.increment_maestro_successful_transactions_total(1);
+    service.metrics.record_transaction_requests_duration_ms(req_start.elapsed());
+    service.metrics.increment_successful_transactions(1);
     Ok(tx_hash)
 }
 
@@ -172,6 +184,7 @@ fn validate_chain_id(
 mod tests {
     use super::*;
     use http::Extensions;
+    use jsonrpsee::core::JsonValue;
     use reqwest;
     use shared::{
         json_rpc::InvalidInputError::ChainIdMismatched, service_start_utils::MetricsState,
@@ -262,16 +275,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_health_endpoint() {
-        let mut metrics_state = MetricsState::default();
-        let metrics = MaestroMetrics::new(&mut metrics_state.registry);
+    async fn test_health_and_ready_endpoints() {
         let mut config = Config::default();
 
-        // Start Valkey container for testing
+        // Start a Valkey container for testing
         let (valkey, valkey_url) = test_utils::docker::start_valkey().await.unwrap();
         config.valkey_url = valkey_url;
 
-        // Create and run server
+        let mut metrics_state = MetricsState::default();
+        let metrics = MaestroMetrics::new(&mut metrics_state.registry);
+
+        // Create and run the server
         let (addr, shutdown_fn) = run(config, metrics).await.unwrap();
 
         // Create HTTP client

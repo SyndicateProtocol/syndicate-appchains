@@ -8,7 +8,7 @@ use alloy::{
     sol_types::SolEvent,
 };
 use common::compression::{get_compression_type, CompressionType};
-use contract_bindings::synd::syndicatesequencingchain::SyndicateSequencingChain::TransactionProcessed;
+use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
 use shared::zlib_compression::decompress_transactions;
 use thiserror::Error;
 use tracing::error;
@@ -74,13 +74,14 @@ impl SequencingTransactionParser {
         }
 
         let compression_byte = &data[0];
-        let compressed_data = Bytes::copy_from_slice(&data[1..]);
         let compression_type = get_compression_type(*compression_byte);
 
         let mut transactions = Vec::new();
         match compression_type {
             CompressionType::None => {
-                transactions.push(compressed_data);
+                // Excluding the leading compression byte
+                let uncompressed_data = Bytes::copy_from_slice(&data[1..]);
+                transactions.push(uncompressed_data);
             }
             CompressionType::Zlib => {
                 let mut decompressed_data = decompress_transactions(data)
@@ -102,7 +103,7 @@ impl SequencingTransactionParser {
         if !self.is_log_transaction_processed(eth_log) {
             return Err(SequencingParserError::InvalidLogEvent);
         }
-        let decoded_event = TransactionProcessed::decode_log_data(&eth_log.data, true)
+        let decoded_event = TransactionProcessed::decode_log_data_validate(&eth_log.data)
             .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Decode the transactions
@@ -117,6 +118,7 @@ impl SequencingTransactionParser {
 mod tests {
     use super::*;
     use alloy::{hex, primitives::B256};
+    use shared::zlib_compression::{compress_transactions, is_valid_zlib_cm_bits};
 
     const DUMMY_ENCODED_DATA: &[u8] = &hex!(
         "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000020002000000000000000000000000000000000000000000000000000000000000"
@@ -163,19 +165,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_decode_event_data() {
-        let uncompressed_data = b"mock_data".to_vec();
-        let input = Bytes::from([vec![0x0], uncompressed_data.clone()].concat());
-
-        let result = SequencingTransactionParser::decode_event_data(&input);
-
-        println!("Decoded result: {result:?}");
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![Bytes::from(uncompressed_data)])
-    }
-
-    #[tokio::test]
     async fn test_get_event_transactions_valid_log() {
         let contract_address: Address =
             "0x000000000000000000000000000000000000abcd".parse().unwrap();
@@ -201,5 +190,48 @@ mod tests {
         let result = parser.get_event_transactions(&log);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SequencingParserError::InvalidLogEvent);
+    }
+
+    #[tokio::test]
+    async fn test_decode_event_data() {
+        let uncompressed_data = b"mock_data".to_vec();
+        let input = Bytes::from([vec![0x0], uncompressed_data.clone()].concat());
+
+        let result = SequencingTransactionParser::decode_event_data(&input);
+
+        println!("Decoded result: {result:?}");
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), vec![Bytes::from(uncompressed_data)])
+    }
+
+    #[test]
+    fn test_protocol_data_structure() {
+        // Test that demonstrates the correct protocol data structure for each compression case
+
+        // Case 1: No compression, so there's a leading compression byte
+        let raw_data = b"raw_transaction_data".to_vec();
+        let no_compression_input = Bytes::from([vec![0x00], raw_data.clone()].concat());
+
+        let result = SequencingTransactionParser::decode_event_data(&no_compression_input);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap()[0], Bytes::from(raw_data));
+
+        // Case 2: Zlib compression - data starts directly with zlib header
+        let tx = Bytes::from(b"test_transaction".to_vec());
+        let transactions = vec![tx.clone()];
+        let compressed_data = compress_transactions(&transactions).unwrap();
+
+        // Verify the compressed data starts with valid zlib header
+        assert!(is_valid_zlib_cm_bits(compressed_data[0]), "Should start with valid zlib CM=8");
+
+        // Pass compressed data directly - no protocol prefix needed
+        let result = SequencingTransactionParser::decode_event_data(&compressed_data);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap()[0], tx);
+
+        println!("Protocol structure verified:");
+        println!("- No compression: [0x00][raw_data]");
+        println!("- Zlib compression: [zlib_header (e.g., 0x78)][zlib_payload]");
     }
 }

@@ -1,5 +1,5 @@
 # RequireCompositeModule
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/requirement-modules/RequireCompositeModule.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/requirement-modules/RequireCompositeModule.sol)
 
 **Inherits:**
 [BaseRequirementModule](/src/requirement-modules/BaseRequirementModule.sol/abstract.BaseRequirementModule.md)
@@ -163,12 +163,12 @@ event CheckTypeUpdated(address indexed check, CheckType indexed oldType, CheckTy
 ```
 
 ## Errors
-### AndCheckFailed
-Thrown when an AND permission check fails
+### CompositeAndPermissionCheckFailed
+Thrown when an AND permission check fails in composite logic
 
 
 ```solidity
-error AndCheckFailed(address requireAddress, address msgSender);
+error CompositeAndPermissionCheckFailed(address requireAddress, address msgSender, bytes data);
 ```
 
 **Parameters**
@@ -177,13 +177,14 @@ error AndCheckFailed(address requireAddress, address msgSender);
 |----|----|-----------|
 |`requireAddress`|`address`|The address of the check that failed|
 |`msgSender`|`address`|The address of the sender|
+|`data`|`bytes`|The calldata that was being checked|
 
-### AllOrChecksFailed
-Thrown when all OR permission checks fail
+### CompositeAllOrPermissionChecksFailed
+Thrown when all OR permission checks fail in composite logic
 
 
 ```solidity
-error AllOrChecksFailed(address msgSender);
+error CompositeAllOrPermissionChecksFailed(address msgSender, bytes data);
 ```
 
 **Parameters**
@@ -191,6 +192,7 @@ error AllOrChecksFailed(address msgSender);
 |Name|Type|Description|
 |----|----|-----------|
 |`msgSender`|`address`|The address of the sender|
+|`data`|`bytes`|The calldata that was being checked|
 
 ## Enums
 ### CheckType

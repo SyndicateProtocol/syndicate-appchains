@@ -1,5 +1,5 @@
 # AtomicSequencer
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/atomic-sequencer/AtomicSequencer.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/atomic-sequencer/AtomicSequencer.sol)
 
 **Inherits:**
 Proxy
@@ -28,8 +28,8 @@ constructor();
 
 ### _implementation
 
-*This is a virtual function that should be overridden so it returns the address to which the fallback
-function and {_fallback} should delegate.*
+*This is a virtual function that should be overridden so it returns the address to which the fallback function
+and {_fallback} should delegate.*
 
 
 ```solidity

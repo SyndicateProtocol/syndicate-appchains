@@ -1,5 +1,5 @@
 # RequireOrModule
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/requirement-modules/RequireOrModule.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/requirement-modules/RequireOrModule.sol)
 
 **Inherits:**
 [BaseRequirementModule](/src/requirement-modules/BaseRequirementModule.sol/abstract.BaseRequirementModule.md)
@@ -51,12 +51,12 @@ function isAllowed(address msgSender, address txOrigin, bytes calldata data) ext
 
 
 ## Errors
-### CheckFailed
-Thrown when all permission checks fail
+### AllOrPermissionChecksFailed
+Thrown when all permission checks fail in OR logic
 
 
 ```solidity
-error CheckFailed(address msgSender);
+error AllOrPermissionChecksFailed(address msgSender, bytes data);
 ```
 
 **Parameters**
@@ -64,4 +64,5 @@ error CheckFailed(address msgSender);
 |Name|Type|Description|
 |----|----|-----------|
 |`msgSender`|`address`|The address of the sender|
+|`data`|`bytes`|The calldata that was being checked|
 

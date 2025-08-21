@@ -71,6 +71,12 @@ pub fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Byte
 #[derive(Debug)]
 pub struct ParamsWrapper(Params<'static>);
 
+impl From<alloy::consensus::crypto::RecoveryError> for RpcError {
+    fn from(_e: alloy::consensus::crypto::RecoveryError) -> Self {
+        Self::InvalidInput(InvalidInputError::InvalidTransactionSignature)
+    }
+}
+
 impl From<Params<'static>> for ParamsWrapper {
     fn from(params: Params<'static>) -> Self {
         Self(params)
@@ -149,9 +155,6 @@ impl From<RpcError> for ErrorObjectOwned {
 /// Reasons for transaction rejection
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum Rejection {
-    /// Transaction fee is too high
-    #[error("transaction fee too high")]
-    FeeTooHigh,
     /// Transaction nonce is too low
     #[error("transaction nonce too low: expected {0}, got {1}")]
     NonceTooLow(u64, u64),
@@ -181,6 +184,9 @@ pub enum InvalidParamsError {
     /// String is not hex encoded
     #[error("not a hex encoded string")]
     NotHexEncoded,
+    /// Invalid Params string
+    #[error("invalid params string")]
+    InvalidParamsString,
 }
 
 /// Invalid input errors that can occur during request processing
@@ -196,12 +202,12 @@ pub enum InvalidInputError {
     #[error("invalid transaction signature")]
     InvalidTransactionSignature,
     /// Failed to decode RLP data
-    #[error("unable to RLP decode")]
-    UnableToRLPDecode,
+    #[error("unable to RLP decode: {0}")]
+    UnableToRLPDecode(rlp::Error),
     /// Chain ID is missing
     #[error("missing chain ID")]
     ChainIdMissing,
-    /// Chain ID is missing
+    /// Chain ID mismatch
     #[error("chain ID mismatch: expected {0} got {1}")]
     ChainIdMismatched(String, String),
     /// Unsupported Chain ID
@@ -225,8 +231,8 @@ impl From<hex::FromHexError> for RpcError {
 }
 
 impl From<rlp::Error> for RpcError {
-    fn from(_: rlp::Error) -> Self {
-        Self::InvalidInput(InvalidInputError::UnableToRLPDecode)
+    fn from(error: rlp::Error) -> Self {
+        Self::InvalidInput(InvalidInputError::UnableToRLPDecode(error))
     }
 }
 

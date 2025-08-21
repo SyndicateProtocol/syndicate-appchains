@@ -1,11 +1,15 @@
 # This workflow runs on PRs to `main` to confirm that all Docker images will build successfully. It does not actually push the images to the registry.
-# It does not actually publish the images anywhere.
+# It does NOT publish the images anywhere.
 
 name: Publish Service Images (Dry Run)
 
 on:
   pull_request:
     branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -17,6 +21,6 @@ jobs:
     uses: ./.github/workflows/publish-images.yaml
     with:
       dry_run: true
-      runner_label: shared-medium-01
+      runner_label: shared-large-01
       service: "" # all services
     secrets: inherit

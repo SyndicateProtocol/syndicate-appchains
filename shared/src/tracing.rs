@@ -103,21 +103,26 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
         // disable spammy and unconnected jsonrpsee_server `connection` spans
         .add_directive("jsonrpsee_server=off".parse()?);
 
-    tracing_subscriber::registry()
-        // logging to stdout
-        .with(
-            tracing_subscriber::fmt::layer()
-                // output in JSON format
-                .json()
-                // include codepath origin of log
-                .with_target(true)
-                .with_test_writer(),
-        )
-        .with(env_filter)
-        // OpenTelemetry tracing + metrics layers
-        .with(OpenTelemetryLayer::new(tracer))
-        .try_init()
-        .map_err(|e| Error::DefaultLoggerInit(e.to_string()))?;
+    let disable_json = std::env::var("RUST_LOG_DISABLE_JSON").is_ok();
+    let disable_telemetry = std::env::var("RUST_LOG_DISABLE_TELEMETRY").is_ok();
+
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        // include codepath origin of log
+        .with_target(true)
+        .with_test_writer();
+
+    let tracing_subscriber = tracing_subscriber::registry().with(env_filter);
+
+    match (disable_telemetry, disable_json) {
+        (true, true) => tracing_subscriber.with(fmt_layer).try_init(),
+        (true, false) => tracing_subscriber.with(fmt_layer.json()).try_init(),
+        (false, true) => tracing_subscriber.with(OpenTelemetryLayer::new(tracer)).try_init(),
+        (false, false) => tracing_subscriber
+            .with(fmt_layer.json())
+            .with(OpenTelemetryLayer::new(tracer))
+            .try_init(),
+    }
+    .map_err(|e| Error::DefaultLoggerInit(e.to_string()))?;
 
     Ok(OtelGuard {
         tracer_provider,
@@ -128,8 +133,11 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
 /// A shorthand to set up a subscriber for tests,
 /// bypassing tracing/metrics initialization.
 pub fn setup_global_logging() -> Result<(), Error> {
+    let env_filter =
+        EnvFilter::builder().with_default_directive(filter::LevelFilter::INFO.into()).from_env()?;
+
     tracing_subscriber::fmt()
-        .json()
+        .with_env_filter(env_filter)
         .with_target(true)
         .with_test_writer()
         .try_init()

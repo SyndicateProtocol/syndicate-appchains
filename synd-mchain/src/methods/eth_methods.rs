@@ -14,10 +14,10 @@ use alloy::{
     sol_types::{SolCall, SolEvent as _, SolValue as _},
 };
 use contract_bindings::synd::{
-    ibridge::IBridge,
-    iinbox::IInbox,
-    iinboxbase::IInboxBase,
-    isequencerinbox::{self, ISequencerInbox},
+    i_bridge::IBridge,
+    i_inbox::IInbox,
+    i_inbox_base::IInboxBase,
+    i_sequencer_inbox::{self, ISequencerInbox},
 };
 use jsonrpsee::{
     core::SubscriptionError,
@@ -147,7 +147,7 @@ pub fn eth_get_logs(
                     afterAcc: block.after_batch_acc,
                     delayedAcc: block.after_message_acc(),
                     afterDelayedMessagesRead: U256::from(block.after_message_count()),
-                    timeBounds: isequencerinbox::IBridge::TimeBounds {
+                    timeBounds: i_sequencer_inbox::IBridge::TimeBounds {
                         minTimestamp: 0,
                         maxTimestamp: u64::MAX,
                         minBlockNumber: 0,
@@ -234,6 +234,8 @@ pub fn eth_get_block_by_number(
     })
 }
 
+const MAX_DATA_SIZE: u64 = 117964;
+
 /// `eth_call`
 pub fn eth_call(
     p: Params<'_>,
@@ -247,7 +249,7 @@ pub fn eth_call(
     let input = input.input.input.ok_or_else(|| err("missing calldata"))?;
     let selector = input.get(0..4).ok_or_else(|| err("missing selector"))?;
     match TryInto::<[u8; 4]>::try_into(selector).map_err(to_err)? {
-        IInboxBase::maxDataSizeCall::SELECTOR => Ok(117964.abi_encode().into()),
+        IInboxBase::maxDataSizeCall::SELECTOR => Ok(MAX_DATA_SIZE.abi_encode().into()),
         IBridge::delayedMessageCountCall::SELECTOR => {
             Ok(db.get_state().message_count.abi_encode().into())
         }
@@ -255,14 +257,13 @@ pub fn eth_call(
             Ok(db.get_state().batch_count.abi_encode().into())
         }
         IBridge::delayedInboxAccsCall::SELECTOR => {
-            let data =
-                IBridge::delayedInboxAccsCall::abi_decode(input.as_ref(), false).map_err(to_err)?;
-            let index = data._0.try_into().map_err(to_err)?;
+            let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
+            let index = data.0.try_into().map_err(to_err)?;
             Ok(db.get_message_acc(index)?.abi_encode().into())
         }
         ISequencerInbox::inboxAccsCall::SELECTOR => {
-            let data = ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref(), false)
-                .map_err(to_err)?;
+            let data =
+                ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
             let index: u64 = data.index.try_into().map_err(to_err)?;
             Ok(db.get_block(index + 1)?.after_batch_acc.abi_encode().into())
         }
@@ -397,6 +398,6 @@ mod tests {
 
         assert!(result.is_ok());
         let response = result.unwrap();
-        assert_eq!(response, Bytes::from(117964u64.abi_encode()));
+        assert_eq!(response, Bytes::from(MAX_DATA_SIZE.abi_encode()));
     }
 }

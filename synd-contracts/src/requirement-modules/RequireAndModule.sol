@@ -12,10 +12,11 @@ import {IPermissionModule} from "../interfaces/IPermissionModule.sol";
  */
 contract RequireAndModule is BaseRequirementModule {
     // Errors
-    /// @notice Thrown when a permission check fails
+    /// @notice Thrown when a permission check fails in AND logic
     /// @param requireAddress The address of the check that failed
     /// @param msgSender The address of the sender
-    error CheckFailed(address requireAddress, address msgSender);
+    /// @param data The calldata that was being checked
+    error AndPermissionCheckFailed(address requireAddress, address msgSender, bytes data);
 
     /**
      * @notice Initializes the contract with an admin address
@@ -43,7 +44,7 @@ contract RequireAndModule is BaseRequirementModule {
         while (currentCheck != address(0)) {
             //#olympix-ignore-calls-in-loop
             if (!IPermissionModule(currentCheck).isAllowed(msgSender, txOrigin, data)) {
-                revert CheckFailed(currentCheck, msgSender);
+                revert AndPermissionCheckFailed(currentCheck, msgSender, data);
             }
 
             (bool exists, address nextCheck) = AddressStructuredLinkedList.getNextNode(permissionChecks, currentCheck);

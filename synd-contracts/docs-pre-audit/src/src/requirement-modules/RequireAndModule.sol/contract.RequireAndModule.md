@@ -1,5 +1,5 @@
 # RequireAndModule
-[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/b28027a30c67e2de9f45368bdf6d7b4aecf3b0cf/src/requirement-modules/RequireAndModule.sol)
+[Git Source](https://github.com/SyndicateProtocol/syndicate-appchains/blob/e670fbd66628d486b7f0c62387b907c2a44879ed/src/requirement-modules/RequireAndModule.sol)
 
 **Inherits:**
 [BaseRequirementModule](/src/requirement-modules/BaseRequirementModule.sol/abstract.BaseRequirementModule.md)
@@ -51,12 +51,12 @@ function isAllowed(address msgSender, address txOrigin, bytes calldata data) ext
 
 
 ## Errors
-### CheckFailed
-Thrown when a permission check fails
+### AndPermissionCheckFailed
+Thrown when a permission check fails in AND logic
 
 
 ```solidity
-error CheckFailed(address requireAddress, address msgSender);
+error AndPermissionCheckFailed(address requireAddress, address msgSender, bytes data);
 ```
 
 **Parameters**
@@ -65,4 +65,5 @@ error CheckFailed(address requireAddress, address msgSender);
 |----|----|-----------|
 |`requireAddress`|`address`|The address of the check that failed|
 |`msgSender`|`address`|The address of the sender|
+|`data`|`bytes`|The calldata that was being checked|
 

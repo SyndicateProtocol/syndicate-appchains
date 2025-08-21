@@ -21,6 +21,7 @@ mod tests {
         docker::{start_valkey, E2EProcess},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
     };
+    use url::Url;
     use wiremock::{
         matchers::{body_partial_json, method},
         Mock, MockServer, ResponseTemplate,
@@ -56,8 +57,8 @@ mod tests {
         };
 
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
-        chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
+        chain_rpc_urls.insert(4, vec![Url::parse(&mock_rpc_server_4.uri()).unwrap()]);
+        chain_rpc_urls.insert(5, vec![Url::parse(&mock_rpc_server_5.uri()).unwrap()]);
 
         let (valkey, valkey_url) = start_valkey().await.unwrap();
         // Create config with mock server URL
@@ -84,7 +85,7 @@ mod tests {
             server::run(config, metrics).await.expect("Failed to start server");
         let base_url = format!("http://{addr}");
 
-        // Wait for server to be ready by checking health endpoint
+        // Wait for the server to be ready by checking health endpoint
         let client = Client::new();
         wait_until!(
             client

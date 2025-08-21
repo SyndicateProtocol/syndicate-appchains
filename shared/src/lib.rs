@@ -2,6 +2,7 @@
 //! stack.
 
 pub mod json_rpc;
+pub mod multi_rpc_provider;
 pub mod parse;
 pub mod service_start_utils;
 pub mod tracing;

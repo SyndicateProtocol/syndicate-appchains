@@ -59,6 +59,7 @@ COPY nitro/arbitrator/wasm-libraries arbitrator/wasm-libraries
 COPY nitro/arbitrator/jit arbitrator/jit
 COPY nitro/arbitrator/stylus arbitrator/stylus
 COPY nitro/arbitrator/tools/wasmer arbitrator/tools/wasmer
+COPY nitro/arbitrator/rust-kzg-bn254 arbitrator/rust-kzg-bn254
 COPY --from=brotli-wasm-export / target/
 COPY nitro/scripts/build-brotli.sh scripts/
 COPY nitro/brotli brotli
@@ -90,6 +91,7 @@ COPY nitro/arbitrator/jit/Cargo.toml arbitrator/jit/
 COPY nitro/arbitrator/stylus/Cargo.toml arbitrator/stylus/
 COPY nitro/arbitrator/tools/wasmer arbitrator/tools/wasmer
 COPY nitro/arbitrator/wasm-libraries/user-host-trait/Cargo.toml arbitrator/wasm-libraries/user-host-trait/Cargo.toml
+COPY nitro/arbitrator/rust-kzg-bn254 arbitrator/rust-kzg-bn254
 RUN bash -c 'mkdir arbitrator/{prover,jit,stylus}/src arbitrator/wasm-libraries/user-host-trait/src'
 RUN echo "fn test() {}" > arbitrator/jit/src/lib.rs && \
     echo "fn test() {}" > arbitrator/prover/src/lib.rs && \
@@ -107,6 +109,7 @@ COPY nitro/arbitrator/prover arbitrator/prover
 COPY nitro/arbitrator/wasm-libraries arbitrator/wasm-libraries
 COPY nitro/arbitrator/jit arbitrator/jit
 COPY nitro/arbitrator/stylus arbitrator/stylus
+COPY nitro/arbitrator/rust-kzg-bn254 arbitrator/rust-kzg-bn254
 COPY --from=brotli-wasm-export / target/
 COPY nitro/scripts/build-brotli.sh scripts/
 COPY nitro/brotli brotli
@@ -135,7 +138,7 @@ RUN mkdir out
 RUN nix-build --option filter-syscalls false -A kernel && cp -r result/* out/
 RUN nix-build --option filter-syscalls false -A init && cp -r result/* out/
 
-FROM golang:1.23.1-bookworm AS builder
+FROM golang:1.24.2-bookworm AS builder
 RUN go install github.com/linuxkit/linuxkit/src/cmd/linuxkit@270fd1c5aa1986977b31af6c743c6a2681f67a29
 WORKDIR /build
 ARG version=""
@@ -150,8 +153,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 COPY --parents **/go.mod **/go.sum .
 RUN go mod download
 COPY cmd/enclave/main.go cmd/enclave/main.go
+COPY cmd/enclave/g1.point cmd/enclave/g1.point
 COPY enclave enclave
 COPY nitro nitro
+COPY teemodule teemodule
+COPY teetypes teetypes
 WORKDIR /build/nitro
 COPY --from=contracts-builder workspace/contracts/build/ contracts/build/
 COPY --from=contracts-builder workspace/contracts/out/ contracts/out/
@@ -207,8 +213,25 @@ RUN ./target/release/eif_build \
 FROM scratch AS eif-bin
 COPY --from=eif /build/eif.bin .
 
-# custom target for local development
-FROM scratch AS local-dev
+# custom target for testing
+FROM scratch AS test-image
 WORKDIR /app
 COPY --from=builder /build/bin/enclave .
 ENTRYPOINT ["/app/enclave"]
+
+# custom target for testing (uses the pre-built node-builder image for faster CI)
+FROM --platform=linux/amd64 ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro-node-builder
+
+FROM --platform=linux/amd64 golang:1.24.2-bookworm as test-image-2
+WORKDIR /
+COPY --from=nitro-node-builder /workspace ./nitro
+COPY --parents **/go.mod **/go.sum .
+RUN go mod download
+COPY cmd/enclave/main.go cmd/enclave/main.go
+COPY cmd/enclave/g1.point cmd/enclave/g1.point
+COPY enclave enclave
+COPY teemodule teemodule
+COPY teetypes teetypes
+RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/enclave ./cmd/enclave
+ENTRYPOINT ["/bin/enclave"]
+

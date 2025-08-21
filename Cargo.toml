@@ -4,7 +4,6 @@ members = [
   "shared/contract-bindings",
   "shared/test-utils",
   "synd-batch-sequencer",
-  "synd-batch-sequencer/crates/batcher",
   "synd-chain-ingestor",
   "synd-maestro",
   "synd-mchain",
@@ -21,7 +20,7 @@ members = [
   "test-framework",
 ]
 
-# Default members are the services that are built by default when running `cargo build` (leveraged by docker build to build less crates)
+# Default members are the services that are built by default when running `cargo build` (leveraged by docker build to build fewer crates)
 default-members = [
   "synd-batch-sequencer",
   "synd-chain-ingestor",
@@ -30,7 +29,7 @@ default-members = [
   "synd-translator/bin/synd-translator",
 ]
 
-# Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
+# Explicitly set the resolver to version 2, which is the default for packages with an edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
 resolver = "2"
 
@@ -46,7 +45,6 @@ version      = "0.1.0"
 [workspace.dependencies]
 
 # workspace dependencies (members of the workspace)
-batcher                                   = { path = "synd-batch-sequencer/crates/batcher" }
 common                                    = { path = "synd-translator/crates/common" }
 contract-bindings                         = { path = "shared/contract-bindings" }
 metrics                                   = { path = "synd-translator/crates/metrics" }
@@ -60,12 +58,14 @@ synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-
 synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }
 synd-tee-attestation-zk-proofs-submitter  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter" }
 synd-translator                           = { path = "synd-translator/bin/synd-translator" }
+test-framework                            = { path = "test-framework" }
 test-utils                                = { path = "shared/test-utils" }
 
 # dependencies
-alloy                              = { version = "0.13.0", default-features = false }
+alloy                              = { version = "1.0.25", default-features = false }
 alloy-rlp                          = "0.3.11"
 alloy-trie                         = { version = "0.9.0" }
+arc-swap                           = "1.7.1"
 assert_matches                     = "1.5.0"
 async-trait                        = { version = "0.1" }
 axum                               = "0.8.1"
@@ -75,7 +75,7 @@ brotli                             = "8.0.1"
 byte-unit                          = "5.1.6"
 bytes                              = "1.9.0"
 clap                               = { version = "4.5.26" }
-const-oid                          = "0.9.6"                                                     # needs to be this version - newer ones are not compatible with the latest x509-cert dependency
+const-oid                          = "0.9.6"                                                                                                          # needs to be this version - newer ones are not compatible with the latest x509-cert dependency
 derivative                         = "2.2"
 dotenv                             = "0.15.0"
 eyre                               = { version = "0.6.12" }
@@ -89,13 +89,13 @@ http-body                          = "1.0.1"
 http-body-util                     = "0.1"
 humantime                          = "2.1.0"
 hyper                              = { version = "1.5.2" }
-jsonrpsee                          = { version = "0.25.1" }
+jsonrpsee                          = { git = "https://github.com/SyndicateProtocol/jsonrpsee.git", rev = "93860d90dd826ac2cfea1df3a854fce39ecf01f6" }
 opentelemetry                      = "0.30.0"
 opentelemetry-otlp                 = "0.30.0"
 opentelemetry-semantic-conventions = { version = "0.30.0", features = ["semconv_experimental"] }
 opentelemetry-stdout               = "0.30.0"
 opentelemetry_sdk                  = { version = "0.30.0", features = ["trace"] }
-p384                               = "0.13.1"                                                    # NOTE: this lib is NOT AUDITED
+p384                               = "0.13.1"                                                                                                         # NOTE: this lib is NOT AUDITED
 pin-project-lite                   = "0.2.16"
 prometheus-client                  = { version = "0.23.1" }
 rand                               = { version = "0.9.0" }
@@ -104,7 +104,7 @@ reqwest                            = "0.12.12"
 risc0-build                        = "2.1.1"
 risc0-zkvm                         = "2.0.2"
 rlp                                = "0.6.1"
-serde                              = { version = "1.0.217", default-features = false }
+serde                              = { version = "1.0.219", default-features = false }
 serde-hex                          = "0.1.0"
 serde_cbor                         = { version = "0.11.2", default-features = false }
 serde_json                         = { version = "1.0.135", default-features = false }
@@ -125,7 +125,7 @@ tracing-subscriber                 = "0.3.19"
 url                                = { version = "2.5.4" }
 wiremock                           = "0.6.3"
 x509-cert                          = "0.2.5"
-
+zeroize                            = "1.8.1"
 
 # dev dependencies
 const_format = "0.2"
@@ -134,7 +134,6 @@ ctor         = "0.4.1"
 mockall      = "0.13.1"
 mockito      = "1.7.0"
 once_cell    = "1.21.3"
-serial_test  = "3.2.0"
 temp-env     = "0.3.6"
 test-case    = "3"
 

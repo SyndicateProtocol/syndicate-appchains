@@ -5,7 +5,6 @@ use p384::{
     ecdsa::{signature::Verifier as P384Verifier, Signature as P384Signature},
     pkcs8::DecodePublicKey,
 };
-// use openssl::{error::ErrorStack, hash::MessageDigest, pkey::PKey, sign::Verifier};
 use serde::Deserialize;
 use std::collections::HashMap;
 use x509_cert::{
@@ -26,7 +25,6 @@ sol! {
       bytes32 pcr_0;
       bytes32 pcr_1;
       bytes32 pcr_2;
-      bytes32 pcr_8;
       address tee_signing_key;
   }
 }
@@ -47,7 +45,6 @@ pub enum VerificationError {
     BadPCRsLen,
     BadPCRIndex,
     BadPCRValue,
-    BadCABundleLen,
     BadCABundleItemLen,
     BadPublicKeyLen,
     BadUserDataLen,
@@ -90,7 +87,9 @@ struct AwsNitroAttestationDocument<'a> {
 }
 
 impl AwsNitroAttestationDocument<'_> {
-    fn parse_document(input: &mut [u8]) -> Result<AwsNitroAttestationDocument, VerificationError> {
+    fn parse_document(
+        input: &mut [u8],
+    ) -> Result<AwsNitroAttestationDocument<'_>, VerificationError> {
         let doc: AwsNitroAttestationDocument = serde_cbor::de::from_mut_slice(input)
             .map_err(|e| VerificationError::DocumentParseError(e.to_string()))?;
 
@@ -108,27 +107,18 @@ impl AwsNitroAttestationDocument<'_> {
             return Err(VerificationError::BadDigest);
         }
 
-        if doc.timestamp < 1 {
-            return Err(VerificationError::BadTimestamp);
-        }
-
-        if doc.pcrs.is_empty() || doc.pcrs.len() > MAX_PCR_COUNT {
+        if doc.pcrs.len() > MAX_PCR_COUNT {
             return Err(VerificationError::BadPCRsLen);
         }
 
         for (key, value) in &doc.pcrs {
             if *key > 31 {
-                // u8 key cannot be < 0
                 return Err(VerificationError::BadPCRIndex);
             }
 
-            if value.is_empty() || !(value.len() == 32 || value.len() == 48 || value.len() == 64) {
+            if value.is_empty() || value.len() != 48 {
                 return Err(VerificationError::BadPCRValue);
             }
-        }
-
-        if doc.cabundle.is_empty() {
-            return Err(VerificationError::BadCABundleLen);
         }
 
         for item in &doc.cabundle {
@@ -265,7 +255,6 @@ pub struct ValidationResult {
     pub pcr_0: Vec<u8>,
     pub pcr_1: Vec<u8>,
     pub pcr_2: Vec<u8>,
-    pub pcr_8: Vec<u8>,
 }
 
 /// https://github.com/aws/aws-nitro-enclaves-nsm-api/blob/main/docs/attestation_process.md#32-syntactical-validation
@@ -313,13 +302,12 @@ pub fn verify_aws_nitro_attestation(
 
     Ok(ValidationResult {
         // exclude the leading 0x04 byte prefix
-        tee_signing_key: Address::from_raw_public_key(&pub_key[..64]),
+        tee_signing_key: Address::from_raw_public_key(&pub_key[1..]),
         validity_window_start,
         validity_window_end,
         pcr_0: doc.pcrs.get(&0).unwrap().to_vec(),
         pcr_1: doc.pcrs.get(&1).unwrap().to_vec(),
         pcr_2: doc.pcrs.get(&2).unwrap().to_vec(),
-        pcr_8: doc.pcrs.get(&8).unwrap().to_vec(),
     })
 }
 
@@ -351,9 +339,10 @@ mod tests {
         let trusted_root_cert_der = der_from_pem(include_bytes!("testdata/aws_nitro_root.pem"));
 
         let res = verify_aws_nitro_attestation(&doc_cbor, &trusted_root_cert_der).unwrap();
+        let pub_key = &hex::decode("040697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb36").unwrap();
         assert_eq!(
             res.tee_signing_key,
-            alloy::primitives::Address::from_raw_public_key(&hex::decode("040697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb").unwrap())
+            alloy::primitives::Address::from_raw_public_key(&pub_key[1..])
         );
         assert_eq!(res.validity_window_start, 1748509950);
         assert_eq!(res.validity_window_end, 1748520753);

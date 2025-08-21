@@ -31,14 +31,16 @@ contract RequireCompositeModule is BaseRequirementModule {
     event CheckTypeUpdated(address indexed check, CheckType indexed oldType, CheckType indexed newType);
 
     // Errors
-    /// @notice Thrown when an AND permission check fails
+    /// @notice Thrown when an AND permission check fails in composite logic
     /// @param requireAddress The address of the check that failed
     /// @param msgSender The address of the sender
-    error AndCheckFailed(address requireAddress, address msgSender);
+    /// @param data The calldata that was being checked
+    error CompositeAndPermissionCheckFailed(address requireAddress, address msgSender, bytes data);
 
-    /// @notice Thrown when all OR permission checks fail
+    /// @notice Thrown when all OR permission checks fail in composite logic
     /// @param msgSender The address of the sender
-    error AllOrChecksFailed(address msgSender);
+    /// @param data The calldata that was being checked
+    error CompositeAllOrPermissionChecksFailed(address msgSender, bytes data);
 
     /**
      * @notice Initializes the contract with an admin address
@@ -167,7 +169,7 @@ contract RequireCompositeModule is BaseRequirementModule {
             if (checkType == CheckType.AND) {
                 // AND check - must pass
                 if (!IPermissionModule(currentCheck).isAllowed(msgSender, txOrigin, data)) {
-                    revert AndCheckFailed(currentCheck, msgSender);
+                    revert CompositeAndPermissionCheckFailed(currentCheck, msgSender, data);
                 }
             } else {
                 // OR check - track if we have any OR checks
@@ -187,7 +189,7 @@ contract RequireCompositeModule is BaseRequirementModule {
 
         // If we have OR checks, at least one must pass
         if (hasOrChecks && !anyOrPassed) {
-            revert AllOrChecksFailed(msgSender);
+            revert CompositeAllOrPermissionChecksFailed(msgSender, data);
         }
 
         // All AND checks passed, and either no OR checks or at least one OR check passed

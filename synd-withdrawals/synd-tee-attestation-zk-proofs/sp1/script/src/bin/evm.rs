@@ -44,7 +44,6 @@ struct SP1x509ProofFixture {
     pcr_0: String,
     pcr_1: String,
     pcr_2: String,
-    pcr_8: String,
 }
 
 fn main() {
@@ -90,7 +89,7 @@ fn create_proof_fixture(
     // Deserialize the public values.
     let public_values_bytes = proof.public_values.as_slice();
 
-    let pub_values = PublicValuesStruct::abi_decode(public_values_bytes, true).unwrap();
+    let pub_values = PublicValuesStruct::abi_decode_validate(public_values_bytes).unwrap();
 
     // Create the testing fixture so we can test things end-to-end.
     let fixture = SP1x509ProofFixture {
@@ -101,7 +100,6 @@ fn create_proof_fixture(
         pcr_0: format!("0x{}", hex::encode(pub_values.pcr_0)),
         pcr_1: format!("0x{}", hex::encode(pub_values.pcr_1)),
         pcr_2: format!("0x{}", hex::encode(pub_values.pcr_2)),
-        pcr_8: format!("0x{}", hex::encode(pub_values.pcr_8)),
     };
 
     // The verification key is used to verify that the proof corresponds to the execution of the

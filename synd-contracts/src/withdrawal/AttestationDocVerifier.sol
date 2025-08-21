@@ -13,7 +13,6 @@ struct PublicValuesStruct {
     bytes32 pcr_0;
     bytes32 pcr_1;
     bytes32 pcr_2;
-    bytes32 pcr_8;
     address tee_signing_key;
 }
 
@@ -25,6 +24,9 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
     ///      https://github.com/succinctlabs/sp1-contracts/tree/main/contracts/deployments
     address public immutable verifier;
 
+    /// @notice The commit hash of the synd-appchains repo used to generate the proof circuit.
+    string public syndCommitHash;
+
     /// @notice The verification key for the cert verifier.
     bytes32 public immutable attestationDocVerifierVKey;
 
@@ -33,7 +35,6 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
     bytes32 public immutable pcr0;
     bytes32 public immutable pcr1;
     bytes32 public immutable pcr2;
-    bytes32 public immutable pcr8;
 
     uint64 public immutable expirationTolerance;
 
@@ -44,8 +45,8 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         bytes32 _pcr0, //#olympix-ignore-no-parameter-validation-in-constructor
         bytes32 _pcr1, //#olympix-ignore-no-parameter-validation-in-constructor
         bytes32 _pcr2, //#olympix-ignore-no-parameter-validation-in-constructor
-        bytes32 _pcr8, //#olympix-ignore-no-parameter-validation-in-constructor
-        uint64 _expirationTolerance //#olympix-ignore-no-parameter-validation-in-constructor
+        uint64 _expirationTolerance, //#olympix-ignore-no-parameter-validation-in-constructor
+        string memory _syndCommitHash //#olympix-ignore-no-parameter-validation-in-constructor
     ) {
         verifier = _verifier;
         attestationDocVerifierVKey = _attestationDocVerifierVKey;
@@ -53,8 +54,8 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         pcr0 = _pcr0;
         pcr1 = _pcr1;
         pcr2 = _pcr2;
-        pcr8 = _pcr8;
         expirationTolerance = _expirationTolerance;
+        syndCommitHash = _syndCommitHash;
     }
 
     /// @notice The entrypoint for verifying the proof of a certificate.
@@ -75,7 +76,6 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         require(publicValues.pcr_0 == pcr0, "PCR0 mismatch");
         require(publicValues.pcr_1 == pcr1, "PCR1 mismatch");
         require(publicValues.pcr_2 == pcr2, "PCR2 mismatch");
-        require(publicValues.pcr_8 == pcr8, "PCR8 mismatch");
 
         ISP1Verifier(verifier).verifyProof(attestationDocVerifierVKey, _publicValues, _proofBytes);
 

@@ -97,13 +97,15 @@ pub mod Pausable {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `EnforcedPause()` and selector `0xd93c0665`.
 ```solidity
 error EnforcedPause();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct EnforcedPause {}
+    pub struct EnforcedPause;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -138,7 +140,7 @@ error EnforcedPause();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for EnforcedPause {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -159,15 +161,24 @@ error EnforcedPause();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ExpectedPause()` and selector `0x8dfc202b`.
 ```solidity
 error ExpectedPause();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct ExpectedPause {}
+    pub struct ExpectedPause;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -202,7 +213,7 @@ error ExpectedPause();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for ExpectedPause {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -223,8 +234,17 @@ error ExpectedPause();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `Paused(address)` and selector `0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258`.
 ```solidity
 event Paused(address account);
@@ -257,38 +277,9 @@ event Paused(address account);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "Paused(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                98u8,
-                231u8,
-                140u8,
-                234u8,
-                1u8,
-                190u8,
-                227u8,
-                32u8,
-                205u8,
-                78u8,
-                66u8,
-                2u8,
-                112u8,
-                181u8,
-                234u8,
-                116u8,
-                0u8,
-                13u8,
-                17u8,
-                176u8,
-                201u8,
-                247u8,
-                71u8,
-                84u8,
-                235u8,
-                219u8,
-                252u8,
-                84u8,
-                75u8,
-                5u8,
-                162u8,
-                88u8,
+                98u8, 231u8, 140u8, 234u8, 1u8, 190u8, 227u8, 32u8, 205u8, 78u8, 66u8,
+                2u8, 112u8, 181u8, 234u8, 116u8, 0u8, 13u8, 17u8, 176u8, 201u8, 247u8,
+                71u8, 84u8, 235u8, 219u8, 252u8, 84u8, 75u8, 5u8, 162u8, 88u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -357,6 +348,8 @@ event Paused(address account);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `Unpaused(address)` and selector `0x5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa`.
 ```solidity
 event Unpaused(address account);
@@ -389,38 +382,9 @@ event Unpaused(address account);
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "Unpaused(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                93u8,
-                185u8,
-                238u8,
-                10u8,
-                73u8,
-                91u8,
-                242u8,
-                230u8,
-                255u8,
-                156u8,
-                145u8,
-                167u8,
-                131u8,
-                76u8,
-                27u8,
-                164u8,
-                253u8,
-                210u8,
-                68u8,
-                165u8,
-                232u8,
-                170u8,
-                78u8,
-                83u8,
-                123u8,
-                211u8,
-                138u8,
-                234u8,
-                228u8,
-                176u8,
-                115u8,
-                170u8,
+                93u8, 185u8, 238u8, 10u8, 73u8, 91u8, 242u8, 230u8, 255u8, 156u8, 145u8,
+                167u8, 131u8, 76u8, 27u8, 164u8, 253u8, 210u8, 68u8, 165u8, 232u8, 170u8,
+                78u8, 83u8, 123u8, 211u8, 138u8, 234u8, 228u8, 176u8, 115u8, 170u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -489,13 +453,17 @@ event Unpaused(address account);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `paused()` and selector `0x5c975abb`.
 ```solidity
 function paused() external view returns (bool);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct pausedCall {}
+    pub struct pausedCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`paused()`](pausedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -538,7 +506,7 @@ function paused() external view returns (bool);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for pausedCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -579,7 +547,7 @@ function paused() external view returns (bool);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = pausedReturn;
+            type Return = bool;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -597,18 +565,40 @@ function paused() external view returns (bool);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: pausedReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: pausedReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
     ///Container for all the [`Pausable`](self) function calls.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive()]
     pub enum PausableCalls {
         #[allow(missing_docs)]
         paused(pausedCall),
@@ -647,20 +637,41 @@ function paused() external view returns (bool);
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<PausableCalls>] = &[
                 {
-                    fn paused(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<PausableCalls> {
-                        <pausedCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                    fn paused(data: &[u8]) -> alloy_sol_types::Result<PausableCalls> {
+                        <pausedCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                            .map(PausableCalls::paused)
+                    }
+                    paused
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<PausableCalls>] = &[
+                {
+                    fn paused(data: &[u8]) -> alloy_sol_types::Result<PausableCalls> {
+                        <pausedCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
-                                validate,
                             )
                             .map(PausableCalls::paused)
                     }
@@ -675,7 +686,7 @@ function paused() external view returns (bool);
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -695,6 +706,8 @@ function paused() external view returns (bool);
         }
     }
     ///Container for all the [`Pausable`](self) custom errors.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum PausableErrors {
         #[allow(missing_docs)]
         EnforcedPause(EnforcedPause),
@@ -743,20 +756,16 @@ function paused() external view returns (bool);
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<PausableErrors>] = &[
                 {
                     fn ExpectedPause(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<PausableErrors> {
                         <ExpectedPause as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(PausableErrors::ExpectedPause)
                     }
@@ -765,11 +774,9 @@ function paused() external view returns (bool);
                 {
                     fn EnforcedPause(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<PausableErrors> {
                         <EnforcedPause as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(PausableErrors::EnforcedPause)
                     }
@@ -784,7 +791,49 @@ function paused() external view returns (bool);
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<PausableErrors>] = &[
+                {
+                    fn ExpectedPause(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<PausableErrors> {
+                        <ExpectedPause as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(PausableErrors::ExpectedPause)
+                    }
+                    ExpectedPause
+                },
+                {
+                    fn EnforcedPause(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<PausableErrors> {
+                        <EnforcedPause as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(PausableErrors::EnforcedPause)
+                    }
+                    EnforcedPause
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -816,6 +865,8 @@ function paused() external view returns (bool);
         }
     }
     ///Container for all the [`Pausable`](self) events.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum PausableEvents {
         #[allow(missing_docs)]
         Paused(Paused),
@@ -832,72 +883,14 @@ function paused() external view returns (bool);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                93u8,
-                185u8,
-                238u8,
-                10u8,
-                73u8,
-                91u8,
-                242u8,
-                230u8,
-                255u8,
-                156u8,
-                145u8,
-                167u8,
-                131u8,
-                76u8,
-                27u8,
-                164u8,
-                253u8,
-                210u8,
-                68u8,
-                165u8,
-                232u8,
-                170u8,
-                78u8,
-                83u8,
-                123u8,
-                211u8,
-                138u8,
-                234u8,
-                228u8,
-                176u8,
-                115u8,
-                170u8,
+                93u8, 185u8, 238u8, 10u8, 73u8, 91u8, 242u8, 230u8, 255u8, 156u8, 145u8,
+                167u8, 131u8, 76u8, 27u8, 164u8, 253u8, 210u8, 68u8, 165u8, 232u8, 170u8,
+                78u8, 83u8, 123u8, 211u8, 138u8, 234u8, 228u8, 176u8, 115u8, 170u8,
             ],
             [
-                98u8,
-                231u8,
-                140u8,
-                234u8,
-                1u8,
-                190u8,
-                227u8,
-                32u8,
-                205u8,
-                78u8,
-                66u8,
-                2u8,
-                112u8,
-                181u8,
-                234u8,
-                116u8,
-                0u8,
-                13u8,
-                17u8,
-                176u8,
-                201u8,
-                247u8,
-                71u8,
-                84u8,
-                235u8,
-                219u8,
-                252u8,
-                84u8,
-                75u8,
-                5u8,
-                162u8,
-                88u8,
+                98u8, 231u8, 140u8, 234u8, 1u8, 190u8, 227u8, 32u8, 205u8, 78u8, 66u8,
+                2u8, 112u8, 181u8, 234u8, 116u8, 0u8, 13u8, 17u8, 176u8, 201u8, 247u8,
+                71u8, 84u8, 235u8, 219u8, 252u8, 84u8, 75u8, 5u8, 162u8, 88u8,
             ],
         ];
     }
@@ -908,23 +901,14 @@ function paused() external view returns (bool);
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<Paused as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <Paused as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                            validate,
-                        )
+                    <Paused as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
                         .map(Self::Paused)
                 }
                 Some(<Unpaused as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <Unpaused as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                            validate,
-                        )
+                    <Unpaused as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
                         .map(Self::Unpaused)
                 }
                 _ => {
@@ -970,14 +954,13 @@ function paused() external view returns (bool);
 See the [wrapper's documentation](`PausableInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> PausableInstance<T, P, N> {
-        PausableInstance::<T, P, N>::new(address, provider)
+    ) -> PausableInstance<P, N> {
+        PausableInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -986,15 +969,14 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<PausableInstance<T, P, N>>,
+        Output = alloy_contract::Result<PausableInstance<P, N>>,
     > {
-        PausableInstance::<T, P, N>::deploy(provider)
+        PausableInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -1003,11 +985,10 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
-        PausableInstance::<T, P, N>::deploy_builder(provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        PausableInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`Pausable`](self) instance.
 
@@ -1021,13 +1002,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct PausableInstance<T, P, N = alloy_contract::private::Ethereum> {
+    pub struct PausableInstance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for PausableInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for PausableInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("PausableInstance").field(&self.address).finish()
@@ -1036,10 +1017,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > PausableInstance<T, P, N> {
+    > PausableInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`Pausable`](self) contract instance.
 
 See the [wrapper's documentation](`PausableInstance`) for more details.*/
@@ -1051,7 +1031,7 @@ See the [wrapper's documentation](`PausableInstance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -1062,7 +1042,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         #[inline]
         pub async fn deploy(
             provider: P,
-        ) -> alloy_contract::Result<PausableInstance<T, P, N>> {
+        ) -> alloy_contract::Result<PausableInstance<P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
@@ -1073,7 +1053,7 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 ::core::clone::Clone::clone(&BYTECODE),
@@ -1100,24 +1080,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> PausableInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> PausableInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> PausableInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> PausableInstance<P, N> {
             PausableInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > PausableInstance<T, P, N> {
+    > PausableInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -1125,36 +1104,35 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`paused`] function.
-        pub fn paused(&self) -> alloy_contract::SolCallBuilder<T, &P, pausedCall, N> {
-            self.call_builder(&pausedCall {})
+        pub fn paused(&self) -> alloy_contract::SolCallBuilder<&P, pausedCall, N> {
+            self.call_builder(&pausedCall)
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > PausableInstance<T, P, N> {
+    > PausableInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`Paused`] event.
-        pub fn Paused_filter(&self) -> alloy_contract::Event<T, &P, Paused, N> {
+        pub fn Paused_filter(&self) -> alloy_contract::Event<&P, Paused, N> {
             self.event_filter::<Paused>()
         }
         ///Creates a new event filter for the [`Unpaused`] event.
-        pub fn Unpaused_filter(&self) -> alloy_contract::Event<T, &P, Unpaused, N> {
+        pub fn Unpaused_filter(&self) -> alloy_contract::Event<&P, Unpaused, N> {
             self.event_filter::<Unpaused>()
         }
     }

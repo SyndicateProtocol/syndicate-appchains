@@ -2,7 +2,7 @@
 //! validates them before submission into the transaction processing pipeline.
 
 use crate::{
-    config::{Config, RpcProvider},
+    config::Config,
     errors::{
         InternalErrorType::{
             Other, RpcFailedToFetchWalletBalance, RpcFailedToFetchWalletNonce, RpcMissing,
@@ -20,7 +20,9 @@ use crate::{
             wallet_nonce::WalletNonceExt,
         },
         streams::producer::{CheckFinalizationResult, StreamProducer},
+        valkey_metrics::{CacheType, Operation},
     },
+    with_cache_metrics,
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope},
@@ -28,9 +30,14 @@ use alloy::{
     primitives::{keccak256, utils::format_ether, Address, Bytes, ChainId, B256, U256},
     providers::Provider,
 };
-use redis::{aio::MultiplexedConnection, AsyncCommands};
+use derivative::Derivative;
+use redis::{aio::ConnectionManager, AsyncCommands};
 use shared::{
-    json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
+    json_rpc::{
+        Rejection::{InsufficientFunds, NonceTooLow},
+        RpcError::TransactionRejected,
+    },
+    multi_rpc_provider::MultiRpcProvider,
     tracing::SpanKind,
     tx_validation::{check_signature, decode_transaction},
 };
@@ -39,13 +46,16 @@ use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument, trace, warn, Instrument};
 
 /// The service for filtering and directing transactions
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct MaestroService {
-    valkey_conn: MultiplexedConnection,
+    #[derivative(Debug = "ignore")]
+    valkey_conn: ConnectionManager,
     // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
-    rpc_providers: HashMap<ChainId, RpcProvider>,
+    #[derivative(Debug = "ignore")]
+    rpc_providers: HashMap<ChainId, MultiRpcProvider>,
     config: Config,
     pub(crate) metrics: MaestroMetrics,
 }
@@ -53,7 +63,7 @@ pub struct MaestroService {
 impl MaestroService {
     /// Create a new instance of the Maestro service
     pub async fn new(
-        valkey_conn: MultiplexedConnection,
+        valkey_conn: ConnectionManager,
         config: Config,
         metrics: MaestroMetrics,
     ) -> Result<Self, MaestroError> {
@@ -78,6 +88,8 @@ impl MaestroService {
         for (chain_id, provider) in &self.rpc_providers {
             let provider_clone = provider.clone();
             let metrics_clone = self.metrics.clone();
+            let valkey_metrics = Arc::new(self.metrics.valkey.clone());
+
             self.producers.insert(
                 *chain_id,
                 Arc::new(
@@ -96,6 +108,7 @@ impl MaestroService {
                                     .await
                             }
                         },
+                        valkey_metrics,
                     )
                     .await,
                 ),
@@ -109,8 +122,11 @@ impl MaestroService {
         locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
     }
 
-    /// Checks if a given `chain_id` has a corresponding [`RpcProvider`] configured
-    pub fn get_rpc_provider(&self, chain_id: &ChainId) -> Result<&RpcProvider, MaestroRpcError> {
+    /// Checks if a given `chain_id` has a corresponding [`MultiRpcProvider`] configured
+    pub fn get_rpc_provider(
+        &self,
+        chain_id: &ChainId,
+    ) -> Result<&MultiRpcProvider, MaestroRpcError> {
         self.rpc_providers
             .get(chain_id)
             .map_or_else(|| Err(InternalError(RpcMissing(*chain_id))), Ok)
@@ -119,7 +135,7 @@ impl MaestroService {
     #[allow(clippy::cognitive_complexity)]
     async fn handle_finalization(
         raw_tx: Vec<u8>,
-        provider: &RpcProvider,
+        provider: &MultiRpcProvider,
         metrics: &MaestroMetrics,
     ) -> CheckFinalizationResult {
         let tx_hash = keccak256(raw_tx.clone());
@@ -134,9 +150,9 @@ impl MaestroService {
 
                 match provider.get_transaction_count(signer).await {
                     Ok(nonce) => {
-                        if nonce == tx.nonce() {
+                        if nonce <= tx.nonce() {
                             warn!(%tx_hash, "Valid transaction is not finalized, resubmitting");
-                            metrics.increment_maestro_resubmitted_transactions_total(1);
+                            metrics.increment_resubmitted_transactions(1);
                             return CheckFinalizationResult::ReSubmit;
                         }
                         warn!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
@@ -187,9 +203,7 @@ impl MaestroService {
 
         if account_balance < total_required {
             debug!(%tx_hash_str, %account_balance, %total_required, "Insufficient funds for transaction");
-            return Err(JsonRpcError(TransactionRejected(
-                shared::json_rpc::Rejection::InsufficientFunds,
-            )));
+            return Err(JsonRpcError(TransactionRejected(InsufficientFunds)));
         }
 
         trace!(%tx_hash_str, %account_balance, %total_required, "Gas check passed");
@@ -199,8 +213,8 @@ impl MaestroService {
     /// Processes a transaction based on its nonce compared to the wallet's expected nonce
     ///
     /// This method handles the transaction dispatch logic based on nonce comparison:
-    /// - If the nonce matches the expected value, the transaction is enqueued immediately and the
-    ///   system checks the cache for waiting transactions with subsequent nonces
+    /// - If the nonce matches the expected value, the transaction is enqueued immediately, and the
+    ///   system checks the cache for waiting transactions with later nonces
     /// - If the nonce is lower than expected, the transaction is rejected as it would be a
     ///   resubmission
     /// - If the nonce is higher than expected, this "waiting" transaction is stored in a cache
@@ -269,14 +283,14 @@ impl MaestroService {
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
-                        error!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
+                        debug!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
                         JsonRpcError(TransactionRejected(rejection))
                     }
                     )?;
 
                 // 2. enqueue the txn
                 self.enqueue_raw_transaction(&raw_tx, tx.hash(), chain_id).await?;
-                self.metrics.increment_maestro_enqueued_transactions_total(1);
+                self.metrics.increment_enqueued_transactions(1);
 
                 // 3. check cache for waiting txns (background task)
                 let service_clone = self.clone();
@@ -291,14 +305,14 @@ impl MaestroService {
             }
             Ordering::Less => {
                 let rejection = NonceTooLow(expected_nonce, tx_nonce);
-                warn!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Failed to submit forwarded transaction: {}", rejection);
+                debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Failed to submit forwarded transaction: {rejection}");
                 return Err(JsonRpcError(TransactionRejected(rejection)));
             }
             Ordering::Greater => {
                 debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Caching waiting transaction");
                 self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx, tx.hash())
                     .await?;
-                self.metrics.increment_maestro_waiting_transactions_total(1);
+                self.metrics.increment_waiting_transactions(1);
             }
         }
         Ok(())
@@ -306,7 +320,7 @@ impl MaestroService {
 
     /// Enqueues a raw transaction to the Valkey Stream for a specific chain
     ///
-    /// This method use Valkey stream producers to forward the transaction data.
+    /// This method uses Valkey stream producers to forward the transaction data.
     /// It creates a new producer if one doesn't exist for the specified chain.
     ///
     /// # Arguments
@@ -315,7 +329,7 @@ impl MaestroService {
     ///
     /// # Returns
     /// * `Ok(())` - If the transaction was successfully enqueued
-    /// * `Err(ErrorObjectOwned)` - If the Valkey operation fails
+    /// * `Err(MaestroRpcError)` - If the Valkey operation fails
     ///
     /// # Errors
     /// Returns an error if:
@@ -377,7 +391,10 @@ impl MaestroService {
         let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
         let mut conn = self.valkey_conn.clone();
 
-        let nonce = match conn.get_wallet_nonce(chain_id, signer).await {
+        let nonce = match with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.get_wallet_nonce(chain_id, signer)
+        ) {
             // Cache hit - we have a valid value
             Ok(Some(nonce_str)) => {
                 // Parse the nonce string to u64
@@ -399,10 +416,10 @@ impl MaestroService {
         Ok(nonce)
     }
 
-    /// Fetches a wallet's nonce from RPC provider and updates the cache
+    /// Fetches a wallet's nonce from the RPC provider and updates the cache
     ///
     /// This method is called when there is a cache miss or parsing error
-    /// when getting a nonce from the cache. It queries the RPC provider
+    /// when getting nonce from the cache. It queries the RPC provider
     /// for the current nonce and updates the Valkey cache with the result.
     ///
     /// # Arguments
@@ -414,7 +431,7 @@ impl MaestroService {
     /// * `Err(MaestroRpcError)` - If retrieving the nonce fails
     ///
     /// # Errors
-    /// Returns an error if:
+    /// Return an error if:
     /// * RPC provider is missing for the specified chain
     /// * RPC request to fetch the nonce fails
     async fn get_nonce_from_rpc_and_update_cache(
@@ -435,10 +452,15 @@ impl MaestroService {
             }
         };
 
-        // Update cache
         let mut conn = self.valkey_conn.clone();
-        match conn.set_wallet_nonce(chain_id, signer, rpc_nonce, self.config.wallet_nonce_ttl).await
-        {
+        let cache_result = with_cache_metrics!(
+            &self.metrics.valkey,
+            Operation::Write,
+            CacheType::ValkeyCache,
+            conn.set_wallet_nonce(chain_id, signer, rpc_nonce, self.config.wallet_nonce_ttl)
+        );
+
+        match cache_result {
             Ok(_) => {}
             Err(e) => {
                 error!(%chain_wallet_nonce_key, %chain_id, %rpc_nonce, %e, "unable to cache nonce");
@@ -472,7 +494,11 @@ impl MaestroService {
     ) -> Result<u64, MaestroError> {
         let mut conn = self.valkey_conn.clone();
 
-        let cached_nonce = conn.get_wallet_nonce(chain_id, wallet_address).await?;
+        let cached_nonce = with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.get_wallet_nonce(chain_id, wallet_address)
+        )?;
+
         if let Some(cached_nonce) = cached_nonce {
             let cached_nonce_parsed = cached_nonce.parse::<u64>().map_err(|_e| {
                 error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
@@ -487,10 +513,16 @@ impl MaestroService {
         }
 
         // actual increment
-        let old_nonce = conn
-            .set_wallet_nonce(chain_id, wallet_address, desired_nonce, self.config.wallet_nonce_ttl)
-            .await
-            .map_err(MaestroError::Valkey)?;
+        let old_nonce = with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.set_wallet_nonce(
+                chain_id,
+                wallet_address,
+                desired_nonce,
+                self.config.wallet_nonce_ttl
+            )
+        )
+        .map_err(MaestroError::Valkey)?;
 
         match old_nonce {
             None => {
@@ -610,7 +642,7 @@ impl MaestroService {
         Ok(())
     }
 
-    /// Checks if contiguous transactions exists in the cache for the given wallet address and nonce
+    /// Checks if contiguous transactions exist in the cache for the given wallet address and nonce
     ///
     /// This method attempts to retrieve a transaction from the waiting gap cache
     /// for a specific wallet, chain, and nonce combination. By "contiguous", we mean transactions
@@ -653,10 +685,11 @@ impl MaestroService {
         let mut txns: Vec<Bytes> = Vec::new();
         let mut current_nonce = starting_nonce;
         loop {
-            match conn
-                .get_waiting_txn(chain_id, wallet_address, current_nonce)
-                .await
-                .map_err(MaestroError::Valkey)?
+            match with_cache_metrics!(
+                &self.metrics.valkey,
+                conn.get_waiting_txn(chain_id, wallet_address, current_nonce)
+            )
+            .map_err(MaestroError::Valkey)?
             {
                 None => {
                     //
@@ -708,9 +741,17 @@ impl MaestroService {
         tx_hash: &B256,
     ) -> Result<String, MaestroRpcError> {
         let mut conn = self.valkey_conn.clone();
-        conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_tx, self.config.waiting_txn_ttl)
-            .await
-            .map_err(|_| InternalError(TransactionSubmissionFailed(tx_hash.to_string())))
+        with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.set_waiting_txn(
+                chain_id,
+                wallet_address,
+                nonce,
+                raw_tx,
+                self.config.waiting_txn_ttl
+            )
+        )
+        .map_err(|_| InternalError(TransactionSubmissionFailed(tx_hash.to_string())))
     }
 
     /// Removes an array of waiting transactions from the cache
@@ -746,15 +787,24 @@ impl MaestroService {
 
         let mut conn = self.valkey_conn.clone();
         let txn_ids = waiting_txns;
-        let result = conn.del_waiting_txn_keys(txn_ids).await.map_err(|_| InternalError(Other))?;
+
+        debug!(
+            chain_id = %txn_ids[0].chain_id,
+            wallet_address = %txn_ids[0].wallet_address,
+            removed_txns = ?txn_ids,
+            "Attempting to remove waiting transactions from cache"
+        );
+
+        let result = with_cache_metrics!(&self.metrics.valkey, conn.del_waiting_txn_keys(txn_ids))
+            .map_err(|_| InternalError(Other))?;
 
         let chain_id = waiting_txns[0].chain_id;
         let wallet_address = waiting_txns[0].wallet_address;
 
-        // Log if incorrect number of keys was removed - likely a bug
+        // Log if an incorrect number of keys was removed - likely a bug
         if result != (txn_ids.len() as u64) {
             error!(
-            %chain_id, %wallet_address, num_txns_requested = %txn_ids.len(), num_txns_requested = %result,
+            %chain_id, %wallet_address, num_txns_requested = %txn_ids.len(), num_txns_removed = %result,
             "Removed different number of waiting transactions from cache than requested"
             );
         }
@@ -826,6 +876,7 @@ mod tests {
         wait_until,
     };
     use tokio::time::sleep;
+    use url::Url;
     use wiremock::{
         matchers::{body_partial_json, method},
         Mock, MockServer, ResponseTemplate,
@@ -849,12 +900,12 @@ mod tests {
 
         // Create chain RPC URLs map
         let mut chain_rpc_urls = HashMap::new();
-        chain_rpc_urls.insert(4, mock_rpc_server_4.uri());
-        chain_rpc_urls.insert(5, mock_rpc_server_5.uri());
+        chain_rpc_urls.insert(4, vec![Url::parse(&mock_rpc_server_4.uri()).unwrap()]);
+        chain_rpc_urls.insert(5, vec![Url::parse(&mock_rpc_server_5.uri()).unwrap()]);
 
         // Create cache connection
         let client = redis::Client::open(valkey_url.as_str()).unwrap();
-        let valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Create test config
         let config = Config {
@@ -938,7 +989,7 @@ mod tests {
         let producer1 = service.producers.get(&chain_id).unwrap();
 
         // Verify stream key is correct
-        assert_eq!(producer1.stream_key, format!("maestro:transactions:{chain_id}"));
+        assert_eq!(producer1.stream_key, format!("synd-maestro:transactions:{chain_id}"));
 
         // Get producer again
         let producer2 = service.producers.get(&chain_id).unwrap();
@@ -957,7 +1008,7 @@ mod tests {
         );
 
         // Verify correct stream key
-        assert_eq!(producer3.stream_key, format!("maestro:transactions:{different_chain_id}"));
+        assert_eq!(producer3.stream_key, format!("synd-maestro:transactions:{different_chain_id}"));
     }
 
     #[tokio::test]
@@ -979,7 +1030,7 @@ mod tests {
         // Verify transaction was actually stored
         // Connect to Valkey directly to check
         let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
-        let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut conn = ConnectionManager::new(client).await.unwrap();
 
         // Check stream exists and has entries
         let stream_key = tx_stream_key(chain_id);
@@ -1185,7 +1236,7 @@ mod tests {
 
         // Create a fresh connection after the sleep
         let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
-        let mut fresh_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut fresh_conn = ConnectionManager::new(client).await.unwrap();
 
         // Verify nonce has expired using the fresh connection
         let expired_nonce = fresh_conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
@@ -1470,7 +1521,7 @@ mod tests {
         // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Get initial count of stream entries
         let initial_len: u64 = valkey_conn.xlen(&stream_key).await.unwrap();
@@ -1589,7 +1640,7 @@ mod tests {
         // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set cache nonce to be the first one
         valkey_conn
@@ -1717,7 +1768,7 @@ mod tests {
         // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -1782,7 +1833,7 @@ mod tests {
 
         // Set up Valkey
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -1844,7 +1895,7 @@ mod tests {
 
         // Set up Valkey
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -1927,7 +1978,7 @@ mod tests {
         // Set up Valkey stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -2035,7 +2086,7 @@ mod tests {
         // Set up Valkey stream
         let stream_key = tx_stream_key(chain_id);
         let client = redis::Client::open(service_arc.config.valkey_url.as_str()).unwrap();
-        let mut valkey_conn = client.get_multiplexed_async_connection().await.unwrap();
+        let mut valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Set the initial nonce value
         valkey_conn
@@ -2323,7 +2374,7 @@ mod tests {
         let result = MaestroService::balance_check(&tx, account_balance);
         assert!(result.is_err());
         match result.unwrap_err() {
-            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            JsonRpcError(TransactionRejected(InsufficientFunds)) => {}
             _ => panic!("Expected InsufficientFunds error"),
         }
     }
@@ -2337,7 +2388,7 @@ mod tests {
         let result = MaestroService::balance_check(&tx, account_balance);
         assert!(result.is_err());
         match result.unwrap_err() {
-            JsonRpcError(TransactionRejected(shared::json_rpc::Rejection::InsufficientFunds)) => {}
+            JsonRpcError(TransactionRejected(InsufficientFunds)) => {}
             _ => {
                 panic!("Expected InsufficientFunds error due to maximal gas cost and zero balance")
             }

@@ -2,7 +2,7 @@ use alloy::{
     consensus::{SignableTransaction, TxEip1559, TxLegacy},
     eips::Encodable2718,
     hex,
-    primitives::{Address, Bytes, PrimitiveSignature, TxKind, U256},
+    primitives::{Address, Bytes, Signature, TxKind, U256},
 };
 
 /// Creates a sample legacy Ethereum transaction for testing
@@ -31,7 +31,7 @@ pub fn create_legacy_transaction(chain_id: u64, nonce: u64) -> Bytes {
         16,
     )
     .unwrap();
-    let signature = PrimitiveSignature::new(r, s, true);
+    let signature = Signature::new(r, s, true);
 
     // Create the signed transaction
     let signed_tx = tx.into_signed(signature);
@@ -68,7 +68,7 @@ pub fn create_eip1559_transaction(chain_id: u64, nonce: u64) -> Bytes {
         16,
     )
     .unwrap();
-    let signature = PrimitiveSignature::new(r, s, false);
+    let signature = Signature::new(r, s, false);
 
     // Create the signed transaction
     let signed_tx = tx.into_signed(signature);
