@@ -24,6 +24,9 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
     ///      https://github.com/succinctlabs/sp1-contracts/tree/main/contracts/deployments
     address public immutable verifier;
 
+    /// @notice The commit hash of the synd-appchains repo used to generate the proof circuit.
+    string public syndCommitHash;
+
     /// @notice The verification key for the cert verifier.
     bytes32 public immutable attestationDocVerifierVKey;
 
@@ -42,7 +45,8 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         bytes32 _pcr0, //#olympix-ignore-no-parameter-validation-in-constructor
         bytes32 _pcr1, //#olympix-ignore-no-parameter-validation-in-constructor
         bytes32 _pcr2, //#olympix-ignore-no-parameter-validation-in-constructor
-        uint64 _expirationTolerance //#olympix-ignore-no-parameter-validation-in-constructor
+        uint64 _expirationTolerance, //#olympix-ignore-no-parameter-validation-in-constructor
+        string memory _syndCommitHash //#olympix-ignore-no-parameter-validation-in-constructor
     ) {
         verifier = _verifier;
         attestationDocVerifierVKey = _attestationDocVerifierVKey;
@@ -51,6 +55,7 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         pcr1 = _pcr1;
         pcr2 = _pcr2;
         expirationTolerance = _expirationTolerance;
+        syndCommitHash = _syndCommitHash;
     }
 
     /// @notice The entrypoint for verifying the proof of a certificate.
