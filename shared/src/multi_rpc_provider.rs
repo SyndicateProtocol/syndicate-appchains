@@ -228,8 +228,8 @@ impl MultiRpcProvider {
                 config.max_retries,
                 config.initial_backoff_ms,
                 config.compute_units_per_second,
-            );
-            // TODO (SEQ-1190): Add avg_unit_cost to retry layer
+            )
+            .with_avg_unit_cost(config.avg_request_cost);
             let rpc_client = RpcClient::builder().layer(retry_layer).connect(url.as_str()).await;
 
             rpc_client.map(|client| ProviderBuilder::new().wallet(wallet).connect_client(client))
@@ -368,7 +368,7 @@ impl MultiRpcProvider {
                     ControlFlow::RetryWithNextProvider => {}
                     ControlFlow::ErrAllProvidersFailed(e) => {
                         return Err(RpcError::LocalUsageError(
-                            format!("All providers failed. last error: {:?}", e).into(),
+                            format!("All providers failed - most recent error: {e:?}").into(),
                         ))
                     }
                     ControlFlow::Err(e) => return Err(e),

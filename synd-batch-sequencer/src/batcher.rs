@@ -776,7 +776,7 @@ mod tests {
 
         let _handle = run_batcher(config).await.unwrap();
 
-        let url = format!("http://0.0.0.0:{}/health", port);
+        let url = format!("http://0.0.0.0:{port}/health");
 
         let client = reqwest::Client::new();
 
@@ -1019,7 +1019,7 @@ mod tests {
 
         // Send some initial transactions
         for i in 0..count {
-            let test_data = format!("transaction {}", i).as_bytes().to_vec();
+            let test_data = format!("transaction {i}").as_bytes().to_vec();
             producer.enqueue_transaction(&test_data).await.unwrap();
             wait_until!(
                 mock_contract.count().call().await.unwrap() == U256::from(i + 1),

@@ -56,7 +56,7 @@ abstract contract BaseAttestationDocVerifierTest is Test {
         gateway.addRoute(sp1Verifier);
 
         attestationDocVerifier = new AttestationDocVerifier(
-            address(gateway), fixture.vkey, fixture.rootCertHash, fixture.pcr0, fixture.pcr1, fixture.pcr2, 0
+            address(gateway), fixture.vkey, fixture.rootCertHash, fixture.pcr0, fixture.pcr1, fixture.pcr2, 0, ""
         );
     }
 
@@ -191,7 +191,8 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            0 // zero expiration tolerance
+            0, // zero expiration tolerance
+            ""
         );
 
         // Verify it works within validity window
@@ -220,7 +221,8 @@ abstract contract BaseAttestationDocVerifierTest is Test {
             fixture.pcr0,
             fixture.pcr1,
             fixture.pcr2,
-            largeExpiration
+            largeExpiration,
+            ""
         );
 
         // Verify it works even long after validity window
