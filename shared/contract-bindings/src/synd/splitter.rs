@@ -208,13 +208,15 @@ pub mod Splitter {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80\x80`@R`\x046\x10\x15a\0\x12W_\x80\xFD[_\x90_5`\xE0\x1C\x90\x81c\x14U P\x14a\x03\xB0WP\x80c Q^\x07\x14a\x03}W\x80c\x93\xF0\xC7u\x14a\x03JW\x80c\xB3\xCDBT\x14a\x03/W\x80c\xB6\xB5_%\x14a\0\xBCW\x80c\xC51\xE2O\x14a\0\x89Wc\xE4\xE6t\r\x14a\0kW_\x80\xFD[4a\0\x86W\x80`\x03\x196\x01\x12a\0\x86W` `@Q`(\x81R\xF3[\x80\xFD[P4a\0\x86W\x80`\x03\x196\x01\x12a\0\x86Ws\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF` \x91T\x16`@Q\x90\x81R\xF3[P` `\x03\x196\x01\x12a\x02\xD6W`\x0454\x15a\x03\x07W`\x1E4\x024\x81\x04`\x1E\x03a\x02\xDAW`d\x90\x04\x90`(4\x024\x81\x04`(\x03a\x02\xDAW`d\x90\x04a\x01\n\x81a\x01\x05\x854a\x03\xC9V[a\x03\xC9V[s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF_T\x16\x80;\x15a\x02\xD6W_\x82\x91`$`@Q\x80\x94\x81\x93\x7F\xB6\xB5_%\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x83R\x89`\x04\x84\x01RZ\xF1\x80\x15a\x02\xCBWa\x02\xB6W[P\x84s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`\x01T\x16\x80;\x15a\x02\x9DW\x81\x86\x91`$`@Q\x80\x94\x81\x93\x7F\xB6\xB5_%\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x83R\x8A`\x04\x84\x01RZ\xF1\x80\x15a\x02\x92Wa\x02\xA1W[Ps\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`\x02T\x16\x80;\x15a\x02\x9DW\x81\x84\x91`$`@Q\x80\x94\x81\x93\x7F\xB6\xB5_%\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x83R\x8A`\x04\x84\x01RZ\xF1\x80\x15a\x02\x92Wa\x02sW[P\x92\x7FI:\xE8\xAF\xFD\xAD\xF8\xBC\xA5&\xBB\x93`\x1A\x9B\xE0\x16U\x08\x1D\xF8\xA9\x14\xB1\x04\xED\xCF\xAC|\xA9\x8F\x99\x92\x85`\x80\x93`@Q\x93\x84R` \x84\x01R`@\x83\x01R``\x82\x01R\xA1\x80\xF3[\x81a\x02\x81\x91\x95\x94\x93\x95a\x03\xD6V[a\x02\x8EW\x90\x91\x84_a\x022V[\x84\x80\xFD[`@Q=\x84\x82>=\x90\xFD[P\x80\xFD[\x81a\x02\xAB\x91a\x03\xD6V[a\x02\x8EW\x84_a\x01\xCFV[a\x02\xC3\x91\x95P_\x90a\x03\xD6V[_\x93_a\x01kV[`@Q=_\x82>=\x90\xFD[_\x80\xFD[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[\x7F\x9D\xCE+<\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x04_\xFD[4a\x02\xD6W_`\x03\x196\x01\x12a\x02\xD6W` `@Q`d\x81R\xF3[4a\x02\xD6W_`\x03\x196\x01\x12a\x02\xD6W` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`\x02T\x16`@Q\x90\x81R\xF3[4a\x02\xD6W_`\x03\x196\x01\x12a\x02\xD6W` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`\x01T\x16`@Q\x90\x81R\xF3[4a\x02\xD6W_`\x03\x196\x01\x12a\x02\xD6W\x80`\x1E` \x92R\xF3[\x91\x90\x82\x03\x91\x82\x11a\x02\xDAWV[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x04\x17W`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD",
     );
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `InvalidAddress()` and selector `0xe6c4247b`.
 ```solidity
 error InvalidAddress();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct InvalidAddress {}
+    pub struct InvalidAddress;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -249,7 +251,7 @@ error InvalidAddress();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for InvalidAddress {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -270,15 +272,24 @@ error InvalidAddress();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `NoValueSent()` and selector `0x9dce2b3c`.
 ```solidity
 error NoValueSent();
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct NoValueSent {}
+    pub struct NoValueSent;
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -313,7 +324,7 @@ error NoValueSent();
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for NoValueSent {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {}
+                Self
             }
         }
         #[automatically_derived]
@@ -334,8 +345,17 @@ error NoValueSent();
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
             }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `Split(uint256,uint256,uint256,uint256)` and selector `0x493ae8affdadf8bca526bb93601a9be01655081df8a914b104edcfac7ca98f99`.
 ```solidity
 event Split(uint256 epochIndex, uint256 basePoolAmount, uint256 performancePoolAmount, uint256 appchainPoolAmount);
@@ -379,38 +399,9 @@ event Split(uint256 epochIndex, uint256 basePoolAmount, uint256 performancePoolA
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
             const SIGNATURE: &'static str = "Split(uint256,uint256,uint256,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                73u8,
-                58u8,
-                232u8,
-                175u8,
-                253u8,
-                173u8,
-                248u8,
-                188u8,
-                165u8,
-                38u8,
-                187u8,
-                147u8,
-                96u8,
-                26u8,
-                155u8,
-                224u8,
-                22u8,
-                85u8,
-                8u8,
-                29u8,
-                248u8,
-                169u8,
-                20u8,
-                177u8,
-                4u8,
-                237u8,
-                207u8,
-                172u8,
-                124u8,
-                169u8,
-                143u8,
-                153u8,
+                73u8, 58u8, 232u8, 175u8, 253u8, 173u8, 248u8, 188u8, 165u8, 38u8, 187u8,
+                147u8, 96u8, 26u8, 155u8, 224u8, 22u8, 85u8, 8u8, 29u8, 248u8, 169u8,
+                20u8, 177u8, 4u8, 237u8, 207u8, 172u8, 124u8, 169u8, 143u8, 153u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -586,13 +577,17 @@ constructor(address _basePool, address _performancePool, address _appchainPool);
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `APPCHAIN_POOL_SPLIT()` and selector `0xe4e6740d`.
 ```solidity
 function APPCHAIN_POOL_SPLIT() external view returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct APPCHAIN_POOL_SPLITCall {}
+    pub struct APPCHAIN_POOL_SPLITCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`APPCHAIN_POOL_SPLIT()`](APPCHAIN_POOL_SPLITCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -637,7 +632,7 @@ function APPCHAIN_POOL_SPLIT() external view returns (uint256);
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for APPCHAIN_POOL_SPLITCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -682,7 +677,7 @@ function APPCHAIN_POOL_SPLIT() external view returns (uint256);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = APPCHAIN_POOL_SPLITReturn;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -700,24 +695,48 @@ function APPCHAIN_POOL_SPLIT() external view returns (uint256);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: APPCHAIN_POOL_SPLITReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: APPCHAIN_POOL_SPLITReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `PERCENTAGE_DENOMINATOR()` and selector `0xb3cd4254`.
 ```solidity
 function PERCENTAGE_DENOMINATOR() external view returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct PERCENTAGE_DENOMINATORCall {}
+    pub struct PERCENTAGE_DENOMINATORCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`PERCENTAGE_DENOMINATOR()`](PERCENTAGE_DENOMINATORCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -762,7 +781,7 @@ function PERCENTAGE_DENOMINATOR() external view returns (uint256);
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for PERCENTAGE_DENOMINATORCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -807,7 +826,7 @@ function PERCENTAGE_DENOMINATOR() external view returns (uint256);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = PERCENTAGE_DENOMINATORReturn;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -825,24 +844,48 @@ function PERCENTAGE_DENOMINATOR() external view returns (uint256);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: PERCENTAGE_DENOMINATORReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: PERCENTAGE_DENOMINATORReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `PERFORMANCE_POOL_SPLIT()` and selector `0x14552050`.
 ```solidity
 function PERFORMANCE_POOL_SPLIT() external view returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct PERFORMANCE_POOL_SPLITCall {}
+    pub struct PERFORMANCE_POOL_SPLITCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`PERFORMANCE_POOL_SPLIT()`](PERFORMANCE_POOL_SPLITCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -887,7 +930,7 @@ function PERFORMANCE_POOL_SPLIT() external view returns (uint256);
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for PERFORMANCE_POOL_SPLITCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -932,7 +975,7 @@ function PERFORMANCE_POOL_SPLIT() external view returns (uint256);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = PERFORMANCE_POOL_SPLITReturn;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -950,24 +993,48 @@ function PERFORMANCE_POOL_SPLIT() external view returns (uint256);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: PERFORMANCE_POOL_SPLITReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: PERFORMANCE_POOL_SPLITReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `appchainPool()` and selector `0x93f0c775`.
 ```solidity
 function appchainPool() external view returns (address);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct appchainPoolCall {}
+    pub struct appchainPoolCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`appchainPool()`](appchainPoolCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1010,7 +1077,7 @@ function appchainPool() external view returns (address);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for appchainPoolCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -1051,7 +1118,7 @@ function appchainPool() external view returns (address);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = appchainPoolReturn;
+            type Return = alloy::sol_types::private::Address;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1069,24 +1136,48 @@ function appchainPool() external view returns (address);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: appchainPoolReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: appchainPoolReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `basePool()` and selector `0xc531e24f`.
 ```solidity
 function basePool() external view returns (address);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct basePoolCall {}
+    pub struct basePoolCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`basePool()`](basePoolCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1129,7 +1220,7 @@ function basePool() external view returns (address);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for basePoolCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -1170,7 +1261,7 @@ function basePool() external view returns (address);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = basePoolReturn;
+            type Return = alloy::sol_types::private::Address;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1188,17 +1279,39 @@ function basePool() external view returns (address);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: basePoolReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: basePoolReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `deposit(uint256)` and selector `0xb6b55f25`.
 ```solidity
 function deposit(uint256 epochIndex) external payable;
@@ -1285,6 +1398,13 @@ function deposit(uint256 epochIndex) external payable;
                 }
             }
         }
+        impl depositReturn {
+            fn _tokenize(
+                &self,
+            ) -> <depositCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for depositCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
@@ -1313,24 +1433,38 @@ function deposit(uint256 epochIndex) external payable;
                 )
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                depositReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Into::into)
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `performancePool()` and selector `0x20515e07`.
 ```solidity
 function performancePool() external view returns (address);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct performancePoolCall {}
+    pub struct performancePoolCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`performancePool()`](performancePoolCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1373,7 +1507,7 @@ function performancePool() external view returns (address);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for performancePoolCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -1416,7 +1550,7 @@ function performancePool() external view returns (address);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = performancePoolReturn;
+            type Return = alloy::sol_types::private::Address;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Address,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1434,18 +1568,40 @@ function performancePool() external view returns (address);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: performancePoolReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: performancePoolReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
     ///Container for all the [`Splitter`](self) function calls.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive()]
     pub enum SplitterCalls {
         #[allow(missing_docs)]
         APPCHAIN_POOL_SPLIT(APPCHAIN_POOL_SPLITCall),
@@ -1520,20 +1676,16 @@ function performancePool() external view returns (address);
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<SplitterCalls>] = &[
                 {
                     fn PERFORMANCE_POOL_SPLIT(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SplitterCalls> {
                         <PERFORMANCE_POOL_SPLITCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SplitterCalls::PERFORMANCE_POOL_SPLIT)
                     }
@@ -1542,11 +1694,9 @@ function performancePool() external view returns (address);
                 {
                     fn performancePool(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SplitterCalls> {
                         <performancePoolCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SplitterCalls::performancePool)
                     }
@@ -1555,11 +1705,9 @@ function performancePool() external view returns (address);
                 {
                     fn appchainPool(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SplitterCalls> {
                         <appchainPoolCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SplitterCalls::appchainPool)
                     }
@@ -1568,38 +1716,24 @@ function performancePool() external view returns (address);
                 {
                     fn PERCENTAGE_DENOMINATOR(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SplitterCalls> {
                         <PERCENTAGE_DENOMINATORCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SplitterCalls::PERCENTAGE_DENOMINATOR)
                     }
                     PERCENTAGE_DENOMINATOR
                 },
                 {
-                    fn deposit(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<SplitterCalls> {
-                        <depositCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                    fn deposit(data: &[u8]) -> alloy_sol_types::Result<SplitterCalls> {
+                        <depositCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(SplitterCalls::deposit)
                     }
                     deposit
                 },
                 {
-                    fn basePool(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<SplitterCalls> {
-                        <basePoolCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                    fn basePool(data: &[u8]) -> alloy_sol_types::Result<SplitterCalls> {
+                        <basePoolCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
                             .map(SplitterCalls::basePool)
                     }
                     basePool
@@ -1607,11 +1741,9 @@ function performancePool() external view returns (address);
                 {
                     fn APPCHAIN_POOL_SPLIT(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SplitterCalls> {
                         <APPCHAIN_POOL_SPLITCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SplitterCalls::APPCHAIN_POOL_SPLIT)
                     }
@@ -1626,7 +1758,100 @@ function performancePool() external view returns (address);
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<SplitterCalls>] = &[
+                {
+                    fn PERFORMANCE_POOL_SPLIT(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SplitterCalls> {
+                        <PERFORMANCE_POOL_SPLITCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterCalls::PERFORMANCE_POOL_SPLIT)
+                    }
+                    PERFORMANCE_POOL_SPLIT
+                },
+                {
+                    fn performancePool(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SplitterCalls> {
+                        <performancePoolCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterCalls::performancePool)
+                    }
+                    performancePool
+                },
+                {
+                    fn appchainPool(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SplitterCalls> {
+                        <appchainPoolCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterCalls::appchainPool)
+                    }
+                    appchainPool
+                },
+                {
+                    fn PERCENTAGE_DENOMINATOR(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SplitterCalls> {
+                        <PERCENTAGE_DENOMINATORCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterCalls::PERCENTAGE_DENOMINATOR)
+                    }
+                    PERCENTAGE_DENOMINATOR
+                },
+                {
+                    fn deposit(data: &[u8]) -> alloy_sol_types::Result<SplitterCalls> {
+                        <depositCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterCalls::deposit)
+                    }
+                    deposit
+                },
+                {
+                    fn basePool(data: &[u8]) -> alloy_sol_types::Result<SplitterCalls> {
+                        <basePoolCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterCalls::basePool)
+                    }
+                    basePool
+                },
+                {
+                    fn APPCHAIN_POOL_SPLIT(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SplitterCalls> {
+                        <APPCHAIN_POOL_SPLITCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterCalls::APPCHAIN_POOL_SPLIT)
+                    }
+                    APPCHAIN_POOL_SPLIT
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -1710,6 +1935,8 @@ function performancePool() external view returns (address);
         }
     }
     ///Container for all the [`Splitter`](self) custom errors.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SplitterErrors {
         #[allow(missing_docs)]
         InvalidAddress(InvalidAddress),
@@ -1758,21 +1985,15 @@ function performancePool() external view returns (address);
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             static DECODE_SHIMS: &[fn(
                 &[u8],
-                bool,
             ) -> alloy_sol_types::Result<SplitterErrors>] = &[
                 {
                     fn NoValueSent(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SplitterErrors> {
-                        <NoValueSent as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
+                        <NoValueSent as alloy_sol_types::SolError>::abi_decode_raw(data)
                             .map(SplitterErrors::NoValueSent)
                     }
                     NoValueSent
@@ -1780,11 +2001,9 @@ function performancePool() external view returns (address);
                 {
                     fn InvalidAddress(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<SplitterErrors> {
                         <InvalidAddress as alloy_sol_types::SolError>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(SplitterErrors::InvalidAddress)
                     }
@@ -1799,7 +2018,49 @@ function performancePool() external view returns (address);
                     ),
                 );
             };
-            DECODE_SHIMS[idx](data, validate)
+            DECODE_SHIMS[idx](data)
+        }
+        #[inline]
+        #[allow(non_snake_case)]
+        fn abi_decode_raw_validate(
+            selector: [u8; 4],
+            data: &[u8],
+        ) -> alloy_sol_types::Result<Self> {
+            static DECODE_VALIDATE_SHIMS: &[fn(
+                &[u8],
+            ) -> alloy_sol_types::Result<SplitterErrors>] = &[
+                {
+                    fn NoValueSent(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SplitterErrors> {
+                        <NoValueSent as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterErrors::NoValueSent)
+                    }
+                    NoValueSent
+                },
+                {
+                    fn InvalidAddress(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SplitterErrors> {
+                        <InvalidAddress as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SplitterErrors::InvalidAddress)
+                    }
+                    InvalidAddress
+                },
+            ];
+            let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
+            };
+            DECODE_VALIDATE_SHIMS[idx](data)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
@@ -1833,6 +2094,8 @@ function performancePool() external view returns (address);
         }
     }
     ///Container for all the [`Splitter`](self) events.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SplitterEvents {
         #[allow(missing_docs)]
         Split(Split),
@@ -1847,38 +2110,9 @@ function performancePool() external view returns (address);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                73u8,
-                58u8,
-                232u8,
-                175u8,
-                253u8,
-                173u8,
-                248u8,
-                188u8,
-                165u8,
-                38u8,
-                187u8,
-                147u8,
-                96u8,
-                26u8,
-                155u8,
-                224u8,
-                22u8,
-                85u8,
-                8u8,
-                29u8,
-                248u8,
-                169u8,
-                20u8,
-                177u8,
-                4u8,
-                237u8,
-                207u8,
-                172u8,
-                124u8,
-                169u8,
-                143u8,
-                153u8,
+                73u8, 58u8, 232u8, 175u8, 253u8, 173u8, 248u8, 188u8, 165u8, 38u8, 187u8,
+                147u8, 96u8, 26u8, 155u8, 224u8, 22u8, 85u8, 8u8, 29u8, 248u8, 169u8,
+                20u8, 177u8, 4u8, 237u8, 207u8, 172u8, 124u8, 169u8, 143u8, 153u8,
             ],
         ];
     }
@@ -1889,15 +2123,10 @@ function performancePool() external view returns (address);
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
-            validate: bool,
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
                 Some(<Split as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
-                    <Split as alloy_sol_types::SolEvent>::decode_raw_log(
-                            topics,
-                            data,
-                            validate,
-                        )
+                    <Split as alloy_sol_types::SolEvent>::decode_raw_log(topics, data)
                         .map(Self::Split)
                 }
                 _ => {
@@ -1937,14 +2166,13 @@ function performancePool() external view returns (address);
 See the [wrapper's documentation](`SplitterInstance`) for more details.*/
     #[inline]
     pub const fn new<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
         provider: P,
-    ) -> SplitterInstance<T, P, N> {
-        SplitterInstance::<T, P, N>::new(address, provider)
+    ) -> SplitterInstance<P, N> {
+        SplitterInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -1953,8 +2181,7 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
@@ -1962,10 +2189,9 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         _performancePool: alloy::sol_types::private::Address,
         _appchainPool: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
-        Output = alloy_contract::Result<SplitterInstance<T, P, N>>,
+        Output = alloy_contract::Result<SplitterInstance<P, N>>,
     > {
         SplitterInstance::<
-            T,
             P,
             N,
         >::deploy(provider, _basePool, _performancePool, _appchainPool)
@@ -1977,17 +2203,15 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
         provider: P,
         _basePool: alloy::sol_types::private::Address,
         _performancePool: alloy::sol_types::private::Address,
         _appchainPool: alloy::sol_types::private::Address,
-    ) -> alloy_contract::RawCallBuilder<T, P, N> {
+    ) -> alloy_contract::RawCallBuilder<P, N> {
         SplitterInstance::<
-            T,
             P,
             N,
         >::deploy_builder(provider, _basePool, _performancePool, _appchainPool)
@@ -2004,13 +2228,13 @@ be used to deploy a new instance of the contract.
 
 See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
-    pub struct SplitterInstance<T, P, N = alloy_contract::private::Ethereum> {
+    pub struct SplitterInstance<P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
         provider: P,
-        _network_transport: ::core::marker::PhantomData<(N, T)>,
+        _network: ::core::marker::PhantomData<N>,
     }
     #[automatically_derived]
-    impl<T, P, N> ::core::fmt::Debug for SplitterInstance<T, P, N> {
+    impl<P, N> ::core::fmt::Debug for SplitterInstance<P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             f.debug_tuple("SplitterInstance").field(&self.address).finish()
@@ -2019,10 +2243,9 @@ See the [module-level documentation](self) for all the available methods.*/
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SplitterInstance<T, P, N> {
+    > SplitterInstance<P, N> {
         /**Creates a new wrapper around an on-chain [`Splitter`](self) contract instance.
 
 See the [wrapper's documentation](`SplitterInstance`) for more details.*/
@@ -2034,7 +2257,7 @@ See the [wrapper's documentation](`SplitterInstance`) for more details.*/
             Self {
                 address,
                 provider,
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
@@ -2048,7 +2271,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
             _basePool: alloy::sol_types::private::Address,
             _performancePool: alloy::sol_types::private::Address,
             _appchainPool: alloy::sol_types::private::Address,
-        ) -> alloy_contract::Result<SplitterInstance<T, P, N>> {
+        ) -> alloy_contract::Result<SplitterInstance<P, N>> {
             let call_builder = Self::deploy_builder(
                 provider,
                 _basePool,
@@ -2069,7 +2292,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             _basePool: alloy::sol_types::private::Address,
             _performancePool: alloy::sol_types::private::Address,
             _appchainPool: alloy::sol_types::private::Address,
-        ) -> alloy_contract::RawCallBuilder<T, P, N> {
+        ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
                 provider,
                 [
@@ -2107,24 +2330,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self.provider
         }
     }
-    impl<T, P: ::core::clone::Clone, N> SplitterInstance<T, &P, N> {
+    impl<P: ::core::clone::Clone, N> SplitterInstance<&P, N> {
         /// Clones the provider and returns a new instance with the cloned provider.
         #[inline]
-        pub fn with_cloned_provider(self) -> SplitterInstance<T, P, N> {
+        pub fn with_cloned_provider(self) -> SplitterInstance<P, N> {
             SplitterInstance {
                 address: self.address,
                 provider: ::core::clone::Clone::clone(&self.provider),
-                _network_transport: ::core::marker::PhantomData,
+                _network: ::core::marker::PhantomData,
             }
         }
     }
     /// Function calls.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SplitterInstance<T, P, N> {
+    > SplitterInstance<P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -2132,71 +2354,68 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn call_builder<C: alloy_sol_types::SolCall>(
             &self,
             call: &C,
-        ) -> alloy_contract::SolCallBuilder<T, &P, C, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
         ///Creates a new call builder for the [`APPCHAIN_POOL_SPLIT`] function.
         pub fn APPCHAIN_POOL_SPLIT(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, APPCHAIN_POOL_SPLITCall, N> {
-            self.call_builder(&APPCHAIN_POOL_SPLITCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, APPCHAIN_POOL_SPLITCall, N> {
+            self.call_builder(&APPCHAIN_POOL_SPLITCall)
         }
         ///Creates a new call builder for the [`PERCENTAGE_DENOMINATOR`] function.
         pub fn PERCENTAGE_DENOMINATOR(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, PERCENTAGE_DENOMINATORCall, N> {
-            self.call_builder(&PERCENTAGE_DENOMINATORCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, PERCENTAGE_DENOMINATORCall, N> {
+            self.call_builder(&PERCENTAGE_DENOMINATORCall)
         }
         ///Creates a new call builder for the [`PERFORMANCE_POOL_SPLIT`] function.
         pub fn PERFORMANCE_POOL_SPLIT(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, PERFORMANCE_POOL_SPLITCall, N> {
-            self.call_builder(&PERFORMANCE_POOL_SPLITCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, PERFORMANCE_POOL_SPLITCall, N> {
+            self.call_builder(&PERFORMANCE_POOL_SPLITCall)
         }
         ///Creates a new call builder for the [`appchainPool`] function.
         pub fn appchainPool(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, appchainPoolCall, N> {
-            self.call_builder(&appchainPoolCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, appchainPoolCall, N> {
+            self.call_builder(&appchainPoolCall)
         }
         ///Creates a new call builder for the [`basePool`] function.
-        pub fn basePool(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, basePoolCall, N> {
-            self.call_builder(&basePoolCall {})
+        pub fn basePool(&self) -> alloy_contract::SolCallBuilder<&P, basePoolCall, N> {
+            self.call_builder(&basePoolCall)
         }
         ///Creates a new call builder for the [`deposit`] function.
         pub fn deposit(
             &self,
             epochIndex: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<T, &P, depositCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, depositCall, N> {
             self.call_builder(&depositCall { epochIndex })
         }
         ///Creates a new call builder for the [`performancePool`] function.
         pub fn performancePool(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, performancePoolCall, N> {
-            self.call_builder(&performancePoolCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, performancePoolCall, N> {
+            self.call_builder(&performancePoolCall)
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-        T: alloy_contract::private::Transport + ::core::clone::Clone,
-        P: alloy_contract::private::Provider<T, N>,
+        P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    > SplitterInstance<T, P, N> {
+    > SplitterInstance<P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
         /// Prefer using the other methods for building type-safe event filters.
         pub fn event_filter<E: alloy_sol_types::SolEvent>(
             &self,
-        ) -> alloy_contract::Event<T, &P, E, N> {
+        ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
         }
         ///Creates a new event filter for the [`Split`] event.
-        pub fn Split_filter(&self) -> alloy_contract::Event<T, &P, Split, N> {
+        pub fn Split_filter(&self) -> alloy_contract::Event<&P, Split, N> {
             self.event_filter::<Split>()
         }
     }
