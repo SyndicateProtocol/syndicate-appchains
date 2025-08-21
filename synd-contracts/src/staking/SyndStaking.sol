@@ -418,13 +418,10 @@ contract SyndStaking is EpochTracker, ISyndStaking, ReentrancyGuard {
         if (amount == 0) {
             revert InvalidAmount();
         }
-        if (amount > userTotal[msg.sender]) {
-            revert InvalidAmount();
-        }
         if (appchainId == 0) {
             revert InvalidAppchainId();
         }
-        if (userAppchainTotal[msg.sender][appchainId] < amount) {
+        if (amount > userAppchainTotal[msg.sender][appchainId] || amount > userTotal[msg.sender]) {
             revert InsufficientStake();
         }
 
