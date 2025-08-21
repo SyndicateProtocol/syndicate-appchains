@@ -23,6 +23,22 @@ pub enum MaestroError {
     /// Error with waiting transactions
     #[error("waiting transaction error: {0}")]
     WaitingTransaction(#[from] WaitingTransactionError),
+
+    /// Internal error
+    #[error("internal error")]
+    Internal,
+}
+
+/// JSON-RPC specific error types
+#[derive(Debug, Error)]
+pub enum MaestroRpcError {
+    /// Internal Maestro error
+    #[error("internal error: {0}")]
+    InternalError(InternalErrorType),
+
+    /// Standard shared JSON-RPC Errors
+    #[error(transparent)]
+    JsonRpcError(#[from] RpcError),
 }
 
 /// Error types relating to Config
@@ -37,18 +53,6 @@ pub enum ConfigError {
 
     #[error("failed to parse config: {0}")]
     ParseConfig(#[from] ParseIntError),
-}
-
-/// JSON-RPC specific error types
-#[derive(Debug, Error)]
-pub enum MaestroRpcError {
-    /// Internal Maestro error
-    #[error("internal error: {0}")]
-    InternalError(InternalErrorType),
-
-    /// Standard shared JSON-RPC Errors
-    #[error(transparent)]
-    JsonRpcError(#[from] RpcError),
 }
 
 /// Known internal Maestro errors

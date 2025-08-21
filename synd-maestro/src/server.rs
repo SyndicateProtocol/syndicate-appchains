@@ -133,7 +133,7 @@ pub async fn send_raw_transaction_handler(
     service.metrics.increment_transaction_requests(1);
 
     let raw_tx = parse_send_raw_transaction_params(params)?;
-    let (tx, signer) = validate_transaction(&raw_tx)?;
+    let (tx, signer_wallet) = validate_transaction(&raw_tx)?;
 
     let chain_id = validate_chain_id(get_request_chain_id(&extensions), tx.chain_id())?;
 
@@ -143,13 +143,15 @@ pub async fn send_raw_transaction_handler(
     let tx_nonce = tx.nonce();
     let tx_hash = format!("0x{}", alloy::hex::encode(tx.hash()));
 
+    service.validate_max_nonce_buffer(chain_id, signer_wallet, tx_nonce).await?;
+
     info!(
         %tx_hash,
         %chain_id,
         "Submitting validated transaction",
     );
 
-    service.handle_transaction(raw_tx, &tx, signer, chain_id, tx_nonce).await?;
+    service.handle_transaction(raw_tx, &tx, signer_wallet, chain_id, tx_nonce).await?;
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
 

@@ -8,7 +8,7 @@ use crate::{
             Other, RpcFailedToFetchWalletBalance, RpcFailedToFetchWalletNonce, RpcMissing,
             TransactionSubmissionFailed,
         },
-        MaestroError::{self, WaitingTransaction},
+        MaestroError::{self, Internal, WaitingTransaction},
         MaestroRpcError::{self, InternalError, JsonRpcError},
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
@@ -34,7 +34,7 @@ use derivative::Derivative;
 use redis::{aio::ConnectionManager, AsyncCommands};
 use shared::{
     json_rpc::{
-        Rejection::{InsufficientFunds, NonceTooLow},
+        Rejection::{InsufficientFunds, NonceBufferExceeded, NonceTooLow},
         RpcError::TransactionRejected,
     },
     multi_rpc_provider::MultiRpcProvider,
@@ -470,6 +470,66 @@ impl MaestroService {
         Ok(rpc_nonce)
     }
 
+    async fn get_wallet_nonce_from_cache(
+        &self,
+        chain_id: ChainId,
+        wallet_address: Address,
+    ) -> Result<Option<u64>, MaestroError> {
+        let mut conn = self.valkey_conn.clone();
+
+        #[allow(clippy::option_if_let_else)] // clearer this way
+        match with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.get_wallet_nonce(chain_id, wallet_address)
+        )? {
+            None => Ok(None),
+            Some(nonce) => match nonce.parse::<u64>() {
+                Ok(cached_nonce_parsed) => Ok(Some(cached_nonce_parsed)),
+                Err(_e) => {
+                    error!(%nonce, %chain_id, %wallet_address,
+                            "failed to parse nonce as u64 from cache");
+                    Err(Internal)
+                }
+            },
+        }
+    }
+
+    /// Validates that the transaction nonce does not exceed the optional maximum nonce buffer
+    /// limit. This is to prevent caching an excessive number of waiting transactions for
+    /// a given wallet, like in the case of system downtime.
+    ///
+    /// # Arguments
+    /// * `chain_id` - The chain identifier for the transaction
+    /// * `wallet_address` - The wallet address sending the transaction
+    /// * `tx_nonce` - The nonce of the transaction to validate
+    ///
+    /// # Returns
+    /// * `Ok(())` - If validation passes or no validation is needed
+    /// * `Err(MaestroRpcError)` - If the nonce buffer is exceeded
+    pub async fn validate_max_nonce_buffer(
+        &self,
+        chain_id: ChainId,
+        wallet_address: Address,
+        tx_nonce: u64,
+    ) -> Result<(), MaestroRpcError> {
+        let Some(max_nonce_buffer) = self.config.max_nonce_buffer else {
+            return Ok(());
+        };
+
+        match self.get_wallet_nonce_from_cache(chain_id, wallet_address).await {
+            Ok(Some(cached_wallet_nonce)) => {
+                validate_tx_nonce(max_nonce_buffer, tx_nonce, cached_wallet_nonce)
+                    .inspect_err(|_e| {
+                        debug!(%wallet_address, %cached_wallet_nonce, %tx_nonce, %max_nonce_buffer,
+                            "Nonce buffer exceeded, rejecting transaction");
+                    })?;
+                Ok(())
+            }
+            // nothing to compare
+            Ok(None) | Err(_) => Ok(()),
+        }
+    }
+
     /// Updates a wallet's nonce in the cache
     ///
     /// This method updates the wallet's nonce in the cache to the
@@ -500,15 +560,17 @@ impl MaestroService {
         )?;
 
         if let Some(cached_nonce) = cached_nonce {
-            let cached_nonce_parsed = cached_nonce.parse::<u64>().map_err(|_e| {
-                error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
-                //TODO clear cache here?
-                WaitingTransaction(FailedToEnqueue)
-            })?;
-            if cached_nonce_parsed.cmp(&current_nonce) != Ordering::Equal {
-                error!(%desired_nonce, %cached_nonce_parsed, %current_nonce, %chain_id, %wallet_address, "unexpected cached nonce. likely a concurrency bug");
-                //TODO clear cache here?
-                return Err(WaitingTransaction(FailedToEnqueue));
+            match cached_nonce.parse::<u64>() {
+                Ok(cached_nonce_parsed) => {
+                    if cached_nonce_parsed != current_nonce {
+                        error!(%desired_nonce, %cached_nonce_parsed, %current_nonce, %chain_id, %wallet_address,
+                            "unexpected cached nonce. likely a concurrency bug");
+                    }
+                }
+                Err(_e) => {
+                    error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address,
+                        "failed to parse nonce as u64 from cache");
+                }
             }
         }
 
@@ -856,6 +918,21 @@ impl MaestroService {
     }
 }
 
+// Checks `tx_nonce` and `cached_wallet_nonce` against the configured `max_nonce_buffer`
+fn validate_tx_nonce(
+    max_nonce_buffer: u64,
+    tx_nonce: u64,
+    cached_wallet_nonce: u64,
+) -> Result<(), MaestroRpcError> {
+    if let Some(nonce_gap) = tx_nonce.checked_sub(cached_wallet_nonce) {
+        if nonce_gap > max_nonce_buffer {
+            debug!(%cached_wallet_nonce, %tx_nonce, %max_nonce_buffer, "Nonce buffer exceeded, rejecting transaction");
+            return Err(JsonRpcError(TransactionRejected(NonceBufferExceeded)))
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -921,6 +998,7 @@ mod tests {
             finalization_checker_interval: Duration::from_secs(1),
             max_transaction_retries: 3,
             skip_balance_check: false,
+            max_nonce_buffer: None,
         };
 
         let mut registry = Registry::default();
@@ -2145,6 +2223,49 @@ mod tests {
             "Transaction with gap should still be in waiting gap"
         );
     }
+
+    #[test]
+    fn test_validate_tx_nonce_success_cases() {
+        let test_cases = [
+            // (max_buffer, tx_nonce, cached_nonce, description)
+            (10, 105, 100, "nonce within buffer"),
+            (10, 110, 100, "nonce at buffer limit"),
+            (10, 100, 100, "equal nonces"),
+            (0, 100, 100, "zero buffer with equal nonces"),
+            (u64::MAX, u64::MAX, 0, "max values"),
+            (10, 50, 150, "tx_nonce < cached_nonce (underflow case)"),
+        ];
+
+        for (max_buffer, tx_nonce, cached_nonce, description) in test_cases {
+            let result = validate_tx_nonce(max_buffer, tx_nonce, cached_nonce);
+            assert!(result.is_ok(), "Failed for case: {description}",);
+        }
+    }
+
+    #[test]
+    fn test_validate_tx_nonce_failure_cases() {
+        let test_cases = [
+            // (max_buffer, tx_nonce, cached_nonce, description)
+            (10, 111, 100, "exceeds buffer by 1"),
+            (5, 200, 100, "large gap exceeds buffer"),
+            (0, 101, 100, "zero buffer with gap"),
+        ];
+
+        for (max_buffer, tx_nonce, cached_nonce, description) in test_cases {
+            let result = validate_tx_nonce(max_buffer, tx_nonce, cached_nonce);
+            assert!(result.is_err(), "Should have failed for case: {description}");
+
+            match result.unwrap_err() {
+                JsonRpcError(TransactionRejected(NonceBufferExceeded)) => {
+                    // Expected error
+                }
+                other => {
+                    panic!("Expected NonceBufferExceeded for '{description}', got: {other:?}")
+                }
+            }
+        }
+    }
+    // TODO(SEQ-1300) - write `max_nonce_buffer` tests
 
     mod handle_finalization_tests {
         use super::*; // Brings in outer test helpers and main module items

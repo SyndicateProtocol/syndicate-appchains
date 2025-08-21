@@ -161,6 +161,9 @@ pub enum Rejection {
     /// Insufficient funds
     #[error("insufficient funds for gas_limit * gas_price + value")]
     InsufficientFunds,
+    /// Transaction nonce exceeds the configured buffer
+    #[error("nonce buffer exceeded, try again later")]
+    NonceBufferExceeded,
 }
 
 /// Invalid parameter errors that can occur during request processing
