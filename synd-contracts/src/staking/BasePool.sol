@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {ISyndStaking} from "./SyndStaking.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title BasePool
@@ -13,7 +14,7 @@ import {ISyndStaking} from "./SyndStaking.sol";
  * and stakers can claim their proportional share of those rewards based on their
  * stake in the SyndStaking contract.
  */
-contract BasePool {
+contract BasePool is ReentrancyGuard {
     /// @notice The address authorized to deposit rewards into the pool
     address public immutable depositor;
 
@@ -86,7 +87,7 @@ contract BasePool {
      * @param epochIndex The epoch index for which to claim rewards
      * @param destination The address where rewards should be sent
      */
-    function claim(uint256 epochIndex, address destination) external {
+    function claim(uint256 epochIndex, address destination) external nonReentrant {
         if (epochTotal[epochIndex] == 0) {
             revert ClaimNotAvailable();
         }

@@ -234,7 +234,7 @@ contract SyndStaking is EpochTracker, ISyndStaking, ReentrancyGuard {
      * @dev Automatically finalizes epochs if needed and calculates pro-rata stake share
      * @param appchainId The ID of the appchain to stake for (must be non-zero)
      */
-    function stakeSynd(uint256 appchainId) external payable nonReentrant {
+    function stakeSynd(uint256 appchainId) external payable {
         if (msg.value == 0) {
             revert InvalidAmount();
         }
@@ -414,7 +414,7 @@ contract SyndStaking is EpochTracker, ISyndStaking, ReentrancyGuard {
      * @param appchainId The ID of the appchain to withdraw from
      * @param amount The amount of tokens to withdraw
      */
-    function initializeWithdrawal(uint256 appchainId, uint256 amount) public nonReentrant {
+    function initializeWithdrawal(uint256 appchainId, uint256 amount) public {
         if (amount == 0) {
             revert InvalidAmount();
         }
