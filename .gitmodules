@@ -32,3 +32,10 @@
 [submodule "synd-contracts/lib/crosschainERC20"]
 	path = synd-contracts/lib/crosschainERC20
 	url = https://github.com/defi-wonderland/crosschainERC20
+[submodule "synd-contracts/lib/prb-math"]
+	path = synd-contracts/lib/prb-math
+	url = https://github.com/PaulRBerg/prb-math
+[submodule "lib/prb-math"]
+	branch = release-v4
+    path = "lib/prb-math"
+    url = "https://github.com/PaulRBerg/prb-math"

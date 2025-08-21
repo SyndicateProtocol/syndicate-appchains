@@ -15,3 +15,4 @@ upgrade-executor/=lib/upgrade-executor/src/
 lib/openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/
 @eigenda/contracts/=lib/eigenda-contracts/
 lib/eigenda-contracts/lib/eigenlayer-middleware/=lib/eigenlayer-middleware/
+@prb/math/=lib/prb-math/
