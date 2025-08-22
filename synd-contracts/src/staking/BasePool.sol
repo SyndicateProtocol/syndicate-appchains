@@ -115,4 +115,14 @@ contract BasePool is IPool, ReentrancyGuard {
         // Subtract the amount the user has already claimed for this epoch
         return user_reward_share - claimed[epochIndex][user];
     }
+
+    ///////////////////////
+    // Bulk functions
+    ///////////////////////
+
+    function claim(uint256[] calldata epochIndices, address destination) external nonReentrant {
+        for (uint256 i = 0; i < epochIndices.length; i++) {
+            claim(epochIndices[i], destination);
+        }
+    }
 }

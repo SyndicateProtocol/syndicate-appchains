@@ -521,4 +521,30 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
             return epochUserAppchainTotal[epochIndex][user][appchainId];
         }
     }
+
+    ///////////////////////
+    // Bulk functions
+    ///////////////////////
+
+    function initializeWithdrawals(uint256[] calldata appchainIds, uint256[] calldata amounts) external {
+        if (appchainIds.length != amounts.length) {
+            revert InvalidWithdrawal();
+        }
+
+        for (uint256 i = 0; i < appchainIds.length; i++) {
+            initializeWithdrawal(appchainIds[i], amounts[i]);
+        }
+    }
+
+    function initializeWithdrawals(uint256[] calldata appchainIds) external {
+        for (uint256 i = 0; i < appchainIds.length; i++) {
+            initializeWithdrawal(appchainIds[i], getWithdrawalAmount(msg.sender, appchainIds[i]));
+        }
+    }
+
+    function withdraw(uint256[] calldata epochIndices, address destination) external {
+        for (uint256 i = 0; i < epochIndices.length; i++) {
+            withdraw(epochIndices[i], destination);
+        }
+    }
 }
