@@ -166,8 +166,8 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     error WithdrawalNotReady();
     /// @notice Error thrown when withdrawal data is invalid or missing
     error InvalidWithdrawal();
-    /// @notice Error thrown when caller is not authorized forwarder
-    error UnauthorizedForwarder();
+    /// @notice Error thrown when no claims are provided
+    error NoClaimsProvided();
 
     /**
      * @notice Constructor to initialize the staking contract with epoch start time
@@ -467,9 +467,6 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         uint256 epochIndex;
         address poolAddress;
     }
-
-    /// @notice Error thrown when no claims are provided
-    error NoClaimsProvided();
 
     /**
      * @notice Claim rewards from multiple pools for the caller
