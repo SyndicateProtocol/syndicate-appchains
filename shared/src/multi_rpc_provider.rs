@@ -300,6 +300,9 @@ impl MultiRpcProvider {
 
     /// Determine if an RPC error should trigger a fallback to the next provider
     fn should_failover(error: &RpcError<TransportErrorKind>) -> bool {
+        if let RpcError::Transport(_) = error {
+            return true; // move to the next provider if there is an transport layer error
+        }
         match error {
             // classes of errors that are likely to be provider-specific
             RpcError::Transport(_) |
