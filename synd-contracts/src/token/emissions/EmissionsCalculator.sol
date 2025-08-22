@@ -13,7 +13,7 @@ interface ISyndicateTokenMintable {
  * @title EmissionsCalculator
  * @notice Calculates and manages token emissions using piece-wise geometric decay
  * @dev Implements a flexible emission system where decay factors can be updated by governance
- *      while maintaining the 100M cap and 48-epoch limit constraints.
+ *      while maintaining the 80M cap and 48-epoch limit constraints.
  *
  * Formula:
  * - For epoch t < 47: E_t = R_t * (1 - r_t) / (1 - P_t)
