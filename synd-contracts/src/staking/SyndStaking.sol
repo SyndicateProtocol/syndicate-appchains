@@ -35,6 +35,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     /// @notice Total amount of SYND tokens staked across all users and appchains
     uint256 public totalStake;
 
+    /// @notice Reference to the Forwarder contract for authorization
+    address public forwarder;
+
     /// @notice Mapping from epoch index to total amount staked in that epoch
     mapping(uint256 epochIndex => uint256 total) public epochTotal;
 
@@ -161,12 +164,23 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     error WithdrawalNotReady();
     /// @notice Error thrown when withdrawal data is invalid or missing
     error InvalidWithdrawal();
+    /// @notice Error thrown when caller is not authorized forwarder
+    error UnauthorizedForwarder();
 
     /**
      * @notice Constructor to initialize the staking contract with epoch start time
      * @param _startTimestamp The timestamp when epoch counting begins
      */
     constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {}
+
+    /**
+     * @notice Set the forwarder contract address (only callable by owner)
+     * @param _forwarder Address of the Forwarder contract
+     */
+    function setForwarder(address _forwarder) external {
+        // TODO: Add owner check
+        forwarder = _forwarder;
+    }
 
     ///////////////////////
     // Staking functions
@@ -218,6 +232,59 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         userAppchainTotal[msg.sender][appchainId] += msg.value;
 
         emit Stake(epochIndex, msg.sender, msg.value, appchainId);
+    }
+
+    /**
+     * @notice Stake SYND tokens for a specific appchain on behalf of a user (only callable by authorized forwarder)
+     * @dev This function allows the forwarder to stake on behalf of a user
+     * @param user The address of the user to stake for
+     * @param appchainId The ID of the appchain to stake for (must be non-zero)
+     */
+    function stakeSyndFor(address user, uint256 appchainId) external payable {
+        if (msg.value == 0) {
+            revert InvalidAmount();
+        }
+        if (appchainId == 0) {
+            revert InvalidAppchainId();
+        }
+
+        if (msg.sender != forwarder) {
+            revert UnauthorizedForwarder();
+        }
+
+        // Finalize epoch accounting if needed
+        uint256 epochIndex = getCurrentEpoch();
+        if (finalizedEpochCount < epochIndex) {
+            finalizeEpochs();
+        }
+        if (userFinalizedEpochCount[user] < epochIndex) {
+            finalizeUserEpochs(user);
+        }
+        if (appchainFinalizedEpochCount[appchainId] < epochIndex) {
+            finalizeAppchainEpochs(appchainId);
+        }
+        if (userAppchainFinalizedEpochCount[user][appchainId] < epochIndex) {
+            finalizeUserAppchainEpochs(user, appchainId);
+        }
+
+        // Calculate stake share for current epoch
+        uint256 stakeShare = calculateStakeShare(msg.value);
+        epochStakeShare[epochIndex] += stakeShare;
+        epochUserStakeShare[epochIndex][user] += stakeShare;
+
+        epochAdditions[epochIndex] += msg.value;
+        totalStake += msg.value;
+
+        epochUserAdditions[epochIndex][user] += msg.value;
+        userTotal[user] += msg.value;
+
+        epochAppchainAdditions[epochIndex][appchainId] += msg.value;
+        appchainTotal[appchainId] += msg.value;
+
+        epochUserAppchainAdditions[epochIndex][user][appchainId] += msg.value;
+        userAppchainTotal[user][appchainId] += msg.value;
+
+        emit Stake(epochIndex, user, msg.value, appchainId);
     }
 
     /**

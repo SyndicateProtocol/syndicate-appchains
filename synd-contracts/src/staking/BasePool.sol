@@ -3,6 +3,8 @@ pragma solidity 0.8.28;
 
 import {ISyndStaking} from "./ISyndStaking.sol";
 import {IPool} from "./IPool.sol";
+import {IUserPool} from "./IUserPool.sol";
+
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -16,9 +18,12 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * and stakers can claim their proportional share of those rewards based on their
  * stake in the SyndStaking contract.
  */
-contract BasePool is IPool, ReentrancyGuard {
+contract BasePool is IPool, IUserPool, ReentrancyGuard {
     /// @notice Reference to the SyndStaking contract for stake queries
     ISyndStaking public immutable stakingContract;
+
+    /// @notice Reference to the Forwarder contract for authorization
+    address public forwarder;
 
     /// @notice Mapping from epoch index to total reward amount deposited for that epoch
     mapping(uint256 epochIndex => uint256 total) public epochRewardTotal;
@@ -44,6 +49,8 @@ contract BasePool is IPool, ReentrancyGuard {
 
     /// @notice Error thrown when trying to claim from an epoch with no rewards
     error ClaimNotAvailable();
+    /// @notice Error thrown when caller is not authorized forwarder
+    error UnauthorizedForwarder();
 
     /**
      * @notice Constructor to initialize the pool with staking contract and depositor
@@ -51,6 +58,15 @@ contract BasePool is IPool, ReentrancyGuard {
      */
     constructor(address _stakingContract) {
         stakingContract = ISyndStaking(_stakingContract);
+    }
+
+    /**
+     * @notice Set the forwarder contract address (only callable by owner)
+     * @param _forwarder Address of the Forwarder contract
+     */
+    function setForwarder(address _forwarder) external {
+        // TODO: Add owner check
+        forwarder = _forwarder;
     }
 
     /**
@@ -86,6 +102,33 @@ contract BasePool is IPool, ReentrancyGuard {
         Address.sendValue(payable(destination), claimAmount);
 
         emit ClaimSuccess(epochIndex, msg.sender, destination, claimAmount);
+    }
+
+    /**
+     * @notice Claim rewards for a specific epoch and user (only callable by authorized forwarder)
+     * @dev This function allows the forwarder to claim rewards on behalf of a user
+     * @param epochIndex The epoch index for which to claim rewards
+     * @param user The address of the user to claim rewards for
+     */
+    function claimFor(uint256 epochIndex, address user) external nonReentrant {
+        if (msg.sender != forwarder) {
+            revert UnauthorizedForwarder();
+        }
+
+        if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
+            revert ClaimNotAvailable();
+        }
+
+        uint256 claimAmount = getClaimableAmount(epochIndex, user);
+        if (claimAmount == 0) {
+            revert ClaimNotAvailable();
+        }
+        claimed[epochIndex][user] += claimAmount;
+
+        // Send synd to destination
+        Address.sendValue(payable(user), claimAmount);
+
+        emit ClaimSuccess(epochIndex, user, user, claimAmount);
     }
 
     /**
