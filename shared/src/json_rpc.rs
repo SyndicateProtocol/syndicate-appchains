@@ -162,7 +162,7 @@ pub enum Rejection {
     #[error("insufficient funds for gas_limit * gas_price + value")]
     InsufficientFunds,
     /// Transaction nonce exceeds the configured buffer
-    #[error("nonce buffer exceeded, try again later")]
+    #[error("nonce too high")]
     NonceBufferExceeded,
 }
 

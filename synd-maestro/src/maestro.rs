@@ -8,8 +8,9 @@ use crate::{
             Other, RpcFailedToFetchWalletBalance, RpcFailedToFetchWalletNonce, RpcMissing,
             TransactionSubmissionFailed,
         },
-        MaestroError::{self, Internal, WaitingTransaction},
+        MaestroError::{self, WaitingTransaction},
         MaestroRpcError::{self, InternalError, JsonRpcError},
+        OtherError::FailedToParseFromCache,
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
     metrics::MaestroMetrics,
@@ -485,11 +486,7 @@ impl MaestroService {
             None => Ok(None),
             Some(nonce) => match nonce.parse::<u64>() {
                 Ok(cached_nonce_parsed) => Ok(Some(cached_nonce_parsed)),
-                Err(_e) => {
-                    error!(%nonce, %chain_id, %wallet_address,
-                            "failed to parse nonce as u64 from cache");
-                    Err(Internal)
-                }
+                Err(_e) => Err(MaestroError::Other(FailedToParseFromCache(nonce, "u64".into()))),
             },
         }
     }
@@ -516,18 +513,20 @@ impl MaestroService {
             return Ok(());
         };
 
-        match self.get_wallet_nonce_from_cache(chain_id, wallet_address).await {
-            Ok(Some(cached_wallet_nonce)) => {
-                validate_tx_nonce(max_nonce_buffer, tx_nonce, cached_wallet_nonce)
-                    .inspect_err(|_e| {
-                        debug!(%wallet_address, %cached_wallet_nonce, %tx_nonce, %max_nonce_buffer,
+        let Some(cached_wallet_nonce) = self
+            .get_wallet_nonce_from_cache(chain_id, wallet_address)
+            .await
+            .inspect_err(|e| debug!(%e, %wallet_address, "Error getting nonce from cache"))
+            .ok() // skip validation if nonce wasn't parsed
+            .flatten()
+        else {
+            return Ok(());
+        };
+
+        check_tx_nonce_within_buffer(max_nonce_buffer, tx_nonce, cached_wallet_nonce).inspect_err(|e| {
+            debug!(%e, %wallet_address, %chain_id, %cached_wallet_nonce, %tx_nonce, %max_nonce_buffer,
                             "Nonce buffer exceeded, rejecting transaction");
-                    })?;
-                Ok(())
-            }
-            // nothing to compare
-            Ok(None) | Err(_) => Ok(()),
-        }
+        })
     }
 
     /// Updates a wallet's nonce in the cache
@@ -919,14 +918,13 @@ impl MaestroService {
 }
 
 // Checks `tx_nonce` and `cached_wallet_nonce` against the configured `max_nonce_buffer`
-fn validate_tx_nonce(
+const fn check_tx_nonce_within_buffer(
     max_nonce_buffer: u64,
     tx_nonce: u64,
     cached_wallet_nonce: u64,
 ) -> Result<(), MaestroRpcError> {
     if let Some(nonce_gap) = tx_nonce.checked_sub(cached_wallet_nonce) {
         if nonce_gap > max_nonce_buffer {
-            debug!(%cached_wallet_nonce, %tx_nonce, %max_nonce_buffer, "Nonce buffer exceeded, rejecting transaction");
             return Err(JsonRpcError(TransactionRejected(NonceBufferExceeded)))
         }
     }
@@ -2225,7 +2223,7 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_tx_nonce_success_cases() {
+    fn test_check_tx_nonce_within_buffer_success_cases() {
         let test_cases = [
             // (max_buffer, tx_nonce, cached_nonce, description)
             (10, 105, 100, "nonce within buffer"),
@@ -2237,13 +2235,13 @@ mod tests {
         ];
 
         for (max_buffer, tx_nonce, cached_nonce, description) in test_cases {
-            let result = validate_tx_nonce(max_buffer, tx_nonce, cached_nonce);
+            let result = check_tx_nonce_within_buffer(max_buffer, tx_nonce, cached_nonce);
             assert!(result.is_ok(), "Failed for case: {description}",);
         }
     }
 
     #[test]
-    fn test_validate_tx_nonce_failure_cases() {
+    fn test_check_tx_nonce_within_buffer_failure_cases() {
         let test_cases = [
             // (max_buffer, tx_nonce, cached_nonce, description)
             (10, 111, 100, "exceeds buffer by 1"),
@@ -2252,7 +2250,7 @@ mod tests {
         ];
 
         for (max_buffer, tx_nonce, cached_nonce, description) in test_cases {
-            let result = validate_tx_nonce(max_buffer, tx_nonce, cached_nonce);
+            let result = check_tx_nonce_within_buffer(max_buffer, tx_nonce, cached_nonce);
             assert!(result.is_err(), "Should have failed for case: {description}");
 
             match result.unwrap_err() {
