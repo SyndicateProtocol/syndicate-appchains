@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {SyndicateTokenCrosschain, IBridgeRateLimiter, IERC7802} from "./SyndicateTokenCrosschain.sol";
+import {SyndicateTokenCrosschain, IBridgeRateLimiter, IERC7802} from "../SyndicateTokenCrosschain.sol";
 import {TestnetSyndToken} from "./TestnetSyndToken.sol";
-
+import {IERC7802} from "../crosschain/interfaces/IERC7802.sol";
 /**
  * @title TestnetSyndTokenCrosschain
  * @notice Testnet crosschain-compatible Syndicate Protocol token
@@ -21,6 +21,7 @@ import {TestnetSyndToken} from "./TestnetSyndToken.sol";
  * - Same contract address across all chains via deterministic deployment
  *
  */
+
 contract TestnetSyndTokenCrosschain is SyndicateTokenCrosschain {
     /*//////////////////////////////////////////////////////////////
                                  ROLES

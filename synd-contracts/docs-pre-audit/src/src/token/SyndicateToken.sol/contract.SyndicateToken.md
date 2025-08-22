@@ -15,7 +15,7 @@ It provides basic ERC20 functionality with governance capabilities.
 Emissions are handled by a separate SyndicateTokenEmissionScheduler contract.
 Key Features:
 
-- ERC20 token with 1B total supply (900M initial + 100M emissions)
+- ERC20 token with 1B total supply (920M initial + 80M emissions)
 - Voting functionality via ERC20Votes for governance
 - Permit functionality for gasless approvals
 - Controlled minting for emissions (only by emission scheduler)
@@ -23,8 +23,8 @@ Key Features:
 - Airdrop manager controls for emergency actions during lock period
 - Comprehensive access controls
   Supply Distribution:
-- 900M tokens (90%): Initial mint to foundation
-- 100M tokens (10%): Available for emissions via emission scheduler\*
+- 920M tokens (90%): Initial mint to foundation
+- 80M tokens (10%): Available for emissions via emission scheduler\*
 
 **Note:**
 security-contact: security@syndicate.io

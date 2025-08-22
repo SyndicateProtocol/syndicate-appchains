@@ -20,8 +20,11 @@ contract DeploySyndicateFactoryDirect is Script {
         uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(privateKey);
 
-        // Get the bytecode for the factory
-        bytes memory bytecode = type(SyndicateFactory).creationCode;
+        // Get the bytecode for the factory with constructor arguments
+        bytes memory bytecode = abi.encodePacked(
+            type(SyndicateFactory).creationCode,
+            abi.encode(deployer) // admin = deployer
+        );
         bytes32 bytecodeHash = keccak256(bytecode);
 
         // Calculate the expected address
