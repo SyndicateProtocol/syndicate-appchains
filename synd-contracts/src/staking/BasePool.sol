@@ -71,7 +71,7 @@ contract BasePool is IPool, ReentrancyGuard {
      * @param epochIndex The epoch index for which to claim rewards
      * @param destination The address where rewards should be sent
      */
-    function claim(uint256 epochIndex, address destination) external nonReentrant {
+    function claim(uint256 epochIndex, address destination) public nonReentrant {
         if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
@@ -120,7 +120,7 @@ contract BasePool is IPool, ReentrancyGuard {
     // Bulk functions
     ///////////////////////
 
-    function claim(uint256[] calldata epochIndices, address destination) external nonReentrant {
+    function claimBulk(uint256[] calldata epochIndices, address destination) external nonReentrant {
         for (uint256 i = 0; i < epochIndices.length; i++) {
             claim(epochIndices[i], destination);
         }

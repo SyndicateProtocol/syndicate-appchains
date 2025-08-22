@@ -404,7 +404,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @param epochIndex The epoch index when withdrawal was initialized
      * @param destination The address where tokens should be sent
      */
-    function withdraw(uint256 epochIndex, address destination) external nonReentrant {
+    function withdraw(uint256 epochIndex, address destination) public nonReentrant {
         if (epochIndex >= getCurrentEpoch()) {
             revert WithdrawalNotReady();
         }
@@ -542,7 +542,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         }
     }
 
-    function withdraw(uint256[] calldata epochIndices, address destination) external {
+    function withdrawBulk(uint256[] calldata epochIndices, address destination) external {
         for (uint256 i = 0; i < epochIndices.length; i++) {
             withdraw(epochIndices[i], destination);
         }

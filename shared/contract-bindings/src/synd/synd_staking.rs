@@ -53,6 +53,8 @@ interface SyndStaking {
     function getWithdrawalAmount(address user, uint256 appchainId) external view returns (uint256);
     function initializeWithdrawal(uint256 appchainId) external;
     function initializeWithdrawal(uint256 appchainId, uint256 amount) external;
+    function initializeWithdrawals(uint256[] memory appchainIds, uint256[] memory amounts) external;
+    function initializeWithdrawals(uint256[] memory appchainIds) external;
     function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable;
     function stakeSynd(uint256 appchainId) external payable;
     function totalStake() external view returns (uint256);
@@ -61,6 +63,7 @@ interface SyndStaking {
     function userFinalizedEpochCount(address user) external view returns (uint256 finalizedEpochCount);
     function userTotal(address user) external view returns (uint256 total);
     function withdraw(uint256 epochIndex, address destination) external;
+    function withdrawBulk(uint256[] memory epochIndices, address destination) external;
 }
 ```
 
@@ -773,6 +776,37 @@ interface SyndStaking {
   },
   {
     "type": "function",
+    "name": "initializeWithdrawals",
+    "inputs": [
+      {
+        "name": "appchainIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "amounts",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "initializeWithdrawals",
+    "inputs": [
+      {
+        "name": "appchainIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "stageStakeTransfer",
     "inputs": [
       {
@@ -914,6 +948,24 @@ interface SyndStaking {
         "name": "epochIndex",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "destination",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "withdrawBulk",
+    "inputs": [
+      {
+        "name": "epochIndices",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
       },
       {
         "name": "destination",
@@ -8011,6 +8063,337 @@ function initializeWithdrawal(uint256 appchainId, uint256 amount) external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `initializeWithdrawals(uint256[],uint256[])` and selector `0x4197a4b1`.
+```solidity
+function initializeWithdrawals(uint256[] memory appchainIds, uint256[] memory amounts) external;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct initializeWithdrawals_0Call {
+        #[allow(missing_docs)]
+        pub appchainIds: alloy::sol_types::private::Vec<
+            alloy::sol_types::private::primitives::aliases::U256,
+        >,
+        #[allow(missing_docs)]
+        pub amounts: alloy::sol_types::private::Vec<
+            alloy::sol_types::private::primitives::aliases::U256,
+        >,
+    }
+    ///Container type for the return parameters of the [`initializeWithdrawals(uint256[],uint256[])`](initializeWithdrawals_0Call) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct initializeWithdrawals_0Return {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::Vec<
+                    alloy::sol_types::private::primitives::aliases::U256,
+                >,
+                alloy::sol_types::private::Vec<
+                    alloy::sol_types::private::primitives::aliases::U256,
+                >,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<initializeWithdrawals_0Call>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: initializeWithdrawals_0Call) -> Self {
+                    (value.appchainIds, value.amounts)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for initializeWithdrawals_0Call {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        appchainIds: tuple.0,
+                        amounts: tuple.1,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<initializeWithdrawals_0Return>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: initializeWithdrawals_0Return) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for initializeWithdrawals_0Return {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl initializeWithdrawals_0Return {
+            fn _tokenize(
+                &self,
+            ) -> <initializeWithdrawals_0Call as alloy_sol_types::SolCall>::ReturnToken<
+                '_,
+            > {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for initializeWithdrawals_0Call {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = initializeWithdrawals_0Return;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "initializeWithdrawals(uint256[],uint256[])";
+            const SELECTOR: [u8; 4] = [65u8, 151u8, 164u8, 177u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Uint<256>,
+                    > as alloy_sol_types::SolType>::tokenize(&self.appchainIds),
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Uint<256>,
+                    > as alloy_sol_types::SolType>::tokenize(&self.amounts),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                initializeWithdrawals_0Return::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `initializeWithdrawals(uint256[])` and selector `0xce7d8e5a`.
+```solidity
+function initializeWithdrawals(uint256[] memory appchainIds) external;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct initializeWithdrawals_1Call {
+        #[allow(missing_docs)]
+        pub appchainIds: alloy::sol_types::private::Vec<
+            alloy::sol_types::private::primitives::aliases::U256,
+        >,
+    }
+    ///Container type for the return parameters of the [`initializeWithdrawals(uint256[])`](initializeWithdrawals_1Call) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct initializeWithdrawals_1Return {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::Vec<
+                    alloy::sol_types::private::primitives::aliases::U256,
+                >,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<initializeWithdrawals_1Call>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: initializeWithdrawals_1Call) -> Self {
+                    (value.appchainIds,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for initializeWithdrawals_1Call {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { appchainIds: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<initializeWithdrawals_1Return>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: initializeWithdrawals_1Return) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for initializeWithdrawals_1Return {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl initializeWithdrawals_1Return {
+            fn _tokenize(
+                &self,
+            ) -> <initializeWithdrawals_1Call as alloy_sol_types::SolCall>::ReturnToken<
+                '_,
+            > {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for initializeWithdrawals_1Call {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = initializeWithdrawals_1Return;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "initializeWithdrawals(uint256[])";
+            const SELECTOR: [u8; 4] = [206u8, 125u8, 142u8, 90u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Uint<256>,
+                    > as alloy_sol_types::SolType>::tokenize(&self.appchainIds),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                initializeWithdrawals_1Return::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `stageStakeTransfer(uint256,uint256,uint256)` and selector `0xe58e5382`.
 ```solidity
 function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable;
@@ -9287,6 +9670,169 @@ function withdraw(uint256 epochIndex, address destination) external;
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `withdrawBulk(uint256[],address)` and selector `0x585a627a`.
+```solidity
+function withdrawBulk(uint256[] memory epochIndices, address destination) external;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct withdrawBulkCall {
+        #[allow(missing_docs)]
+        pub epochIndices: alloy::sol_types::private::Vec<
+            alloy::sol_types::private::primitives::aliases::U256,
+        >,
+        #[allow(missing_docs)]
+        pub destination: alloy::sol_types::private::Address,
+    }
+    ///Container type for the return parameters of the [`withdrawBulk(uint256[],address)`](withdrawBulkCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct withdrawBulkReturn {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+                alloy::sol_types::sol_data::Address,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::Vec<
+                    alloy::sol_types::private::primitives::aliases::U256,
+                >,
+                alloy::sol_types::private::Address,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<withdrawBulkCall> for UnderlyingRustTuple<'_> {
+                fn from(value: withdrawBulkCall) -> Self {
+                    (value.epochIndices, value.destination)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for withdrawBulkCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        epochIndices: tuple.0,
+                        destination: tuple.1,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<withdrawBulkReturn> for UnderlyingRustTuple<'_> {
+                fn from(value: withdrawBulkReturn) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for withdrawBulkReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl withdrawBulkReturn {
+            fn _tokenize(
+                &self,
+            ) -> <withdrawBulkCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for withdrawBulkCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+                alloy::sol_types::sol_data::Address,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = withdrawBulkReturn;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "withdrawBulk(uint256[],address)";
+            const SELECTOR: [u8; 4] = [88u8, 90u8, 98u8, 122u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Uint<256>,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndices),
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.destination,
+                    ),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                withdrawBulkReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
+            }
+        }
+    };
     ///Container for all the [`SyndStaking`](self) function calls.
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
@@ -9362,6 +9908,10 @@ function withdraw(uint256 epochIndex, address destination) external;
         #[allow(missing_docs)]
         initializeWithdrawal_1(initializeWithdrawal_1Call),
         #[allow(missing_docs)]
+        initializeWithdrawals_0(initializeWithdrawals_0Call),
+        #[allow(missing_docs)]
+        initializeWithdrawals_1(initializeWithdrawals_1Call),
+        #[allow(missing_docs)]
         stageStakeTransfer(stageStakeTransferCall),
         #[allow(missing_docs)]
         stakeSynd(stakeSyndCall),
@@ -9377,6 +9927,8 @@ function withdraw(uint256 epochIndex, address destination) external;
         userTotal(userTotalCall),
         #[allow(missing_docs)]
         withdraw(withdrawCall),
+        #[allow(missing_docs)]
+        withdrawBulk(withdrawBulkCall),
     }
     #[automatically_derived]
     impl SyndStakingCalls {
@@ -9399,7 +9951,9 @@ function withdraw(uint256 epochIndex, address destination) external;
             [30u8, 14u8, 132u8, 137u8],
             [59u8, 160u8, 15u8, 174u8],
             [64u8, 140u8, 50u8, 234u8],
+            [65u8, 151u8, 164u8, 177u8],
             [69u8, 54u8, 127u8, 35u8],
+            [88u8, 90u8, 98u8, 122u8],
             [89u8, 25u8, 63u8, 55u8],
             [93u8, 61u8, 140u8, 210u8],
             [98u8, 148u8, 84u8, 253u8],
@@ -9418,6 +9972,7 @@ function withdraw(uint256 epochIndex, address destination) external;
             [167u8, 11u8, 159u8, 12u8],
             [185u8, 125u8, 217u8, 226u8],
             [195u8, 221u8, 179u8, 179u8],
+            [206u8, 125u8, 142u8, 90u8],
             [213u8, 23u8, 109u8, 35u8],
             [229u8, 142u8, 83u8, 130u8],
             [230u8, 1u8, 207u8, 68u8],
@@ -9436,7 +9991,7 @@ function withdraw(uint256 epochIndex, address destination) external;
     impl alloy_sol_types::SolInterface for SyndStakingCalls {
         const NAME: &'static str = "SyndStakingCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 43usize;
+        const COUNT: usize = 46usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -9545,6 +10100,12 @@ function withdraw(uint256 epochIndex, address destination) external;
                 Self::initializeWithdrawal_1(_) => {
                     <initializeWithdrawal_1Call as alloy_sol_types::SolCall>::SELECTOR
                 }
+                Self::initializeWithdrawals_0(_) => {
+                    <initializeWithdrawals_0Call as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::initializeWithdrawals_1(_) => {
+                    <initializeWithdrawals_1Call as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::stageStakeTransfer(_) => {
                     <stageStakeTransferCall as alloy_sol_types::SolCall>::SELECTOR
                 }
@@ -9567,6 +10128,9 @@ function withdraw(uint256 epochIndex, address destination) external;
                     <userTotalCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::withdraw(_) => <withdrawCall as alloy_sol_types::SolCall>::SELECTOR,
+                Self::withdrawBulk(_) => {
+                    <withdrawBulkCall as alloy_sol_types::SolCall>::SELECTOR
+                }
             }
         }
         #[inline]
@@ -9715,6 +10279,17 @@ function withdraw(uint256 epochIndex, address destination) external;
                     getTotalStakeShare
                 },
                 {
+                    fn initializeWithdrawals_0(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SyndStakingCalls> {
+                        <initializeWithdrawals_0Call as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(SyndStakingCalls::initializeWithdrawals_0)
+                    }
+                    initializeWithdrawals_0
+                },
+                {
                     fn getTotalStake(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<SyndStakingCalls> {
@@ -9724,6 +10299,17 @@ function withdraw(uint256 epochIndex, address destination) external;
                             .map(SyndStakingCalls::getTotalStake)
                     }
                     getTotalStake
+                },
+                {
+                    fn withdrawBulk(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SyndStakingCalls> {
+                        <withdrawBulkCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(SyndStakingCalls::withdrawBulk)
+                    }
+                    withdrawBulk
                 },
                 {
                     fn getWithdrawalAmount(
@@ -9922,6 +10508,17 @@ function withdraw(uint256 epochIndex, address destination) external;
                             .map(SyndStakingCalls::getUserAppchainStake)
                     }
                     getUserAppchainStake
+                },
+                {
+                    fn initializeWithdrawals_1(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SyndStakingCalls> {
+                        <initializeWithdrawals_1Call as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(SyndStakingCalls::initializeWithdrawals_1)
+                    }
+                    initializeWithdrawals_1
                 },
                 {
                     fn getEpochEnd(
@@ -10206,6 +10803,17 @@ function withdraw(uint256 epochIndex, address destination) external;
                     getTotalStakeShare
                 },
                 {
+                    fn initializeWithdrawals_0(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SyndStakingCalls> {
+                        <initializeWithdrawals_0Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SyndStakingCalls::initializeWithdrawals_0)
+                    }
+                    initializeWithdrawals_0
+                },
+                {
                     fn getTotalStake(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<SyndStakingCalls> {
@@ -10215,6 +10823,17 @@ function withdraw(uint256 epochIndex, address destination) external;
                             .map(SyndStakingCalls::getTotalStake)
                     }
                     getTotalStake
+                },
+                {
+                    fn withdrawBulk(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SyndStakingCalls> {
+                        <withdrawBulkCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SyndStakingCalls::withdrawBulk)
+                    }
+                    withdrawBulk
                 },
                 {
                     fn getWithdrawalAmount(
@@ -10413,6 +11032,17 @@ function withdraw(uint256 epochIndex, address destination) external;
                             .map(SyndStakingCalls::getUserAppchainStake)
                     }
                     getUserAppchainStake
+                },
+                {
+                    fn initializeWithdrawals_1(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<SyndStakingCalls> {
+                        <initializeWithdrawals_1Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(SyndStakingCalls::initializeWithdrawals_1)
+                    }
+                    initializeWithdrawals_1
                 },
                 {
                     fn getEpochEnd(
@@ -10733,6 +11363,16 @@ function withdraw(uint256 epochIndex, address destination) external;
                         inner,
                     )
                 }
+                Self::initializeWithdrawals_0(inner) => {
+                    <initializeWithdrawals_0Call as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::initializeWithdrawals_1(inner) => {
+                    <initializeWithdrawals_1Call as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::stageStakeTransfer(inner) => {
                     <stageStakeTransferCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -10764,6 +11404,11 @@ function withdraw(uint256 epochIndex, address destination) external;
                 }
                 Self::withdraw(inner) => {
                     <withdrawCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
+                }
+                Self::withdrawBulk(inner) => {
+                    <withdrawBulkCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
                 }
             }
         }
@@ -10980,6 +11625,18 @@ function withdraw(uint256 epochIndex, address destination) external;
                         out,
                     )
                 }
+                Self::initializeWithdrawals_0(inner) => {
+                    <initializeWithdrawals_0Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::initializeWithdrawals_1(inner) => {
+                    <initializeWithdrawals_1Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::stageStakeTransfer(inner) => {
                     <stageStakeTransferCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
@@ -11024,6 +11681,12 @@ function withdraw(uint256 epochIndex, address destination) external;
                 }
                 Self::withdraw(inner) => {
                     <withdrawCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::withdrawBulk(inner) => {
+                    <withdrawBulkCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -12114,6 +12777,36 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
+        ///Creates a new call builder for the [`initializeWithdrawals_0`] function.
+        pub fn initializeWithdrawals_0(
+            &self,
+            appchainIds: alloy::sol_types::private::Vec<
+                alloy::sol_types::private::primitives::aliases::U256,
+            >,
+            amounts: alloy::sol_types::private::Vec<
+                alloy::sol_types::private::primitives::aliases::U256,
+            >,
+        ) -> alloy_contract::SolCallBuilder<&P, initializeWithdrawals_0Call, N> {
+            self.call_builder(
+                &initializeWithdrawals_0Call {
+                    appchainIds,
+                    amounts,
+                },
+            )
+        }
+        ///Creates a new call builder for the [`initializeWithdrawals_1`] function.
+        pub fn initializeWithdrawals_1(
+            &self,
+            appchainIds: alloy::sol_types::private::Vec<
+                alloy::sol_types::private::primitives::aliases::U256,
+            >,
+        ) -> alloy_contract::SolCallBuilder<&P, initializeWithdrawals_1Call, N> {
+            self.call_builder(
+                &initializeWithdrawals_1Call {
+                    appchainIds,
+                },
+            )
+        }
         ///Creates a new call builder for the [`stageStakeTransfer`] function.
         pub fn stageStakeTransfer(
             &self,
@@ -12195,6 +12888,21 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             self.call_builder(
                 &withdrawCall {
                     epochIndex,
+                    destination,
+                },
+            )
+        }
+        ///Creates a new call builder for the [`withdrawBulk`] function.
+        pub fn withdrawBulk(
+            &self,
+            epochIndices: alloy::sol_types::private::Vec<
+                alloy::sol_types::private::primitives::aliases::U256,
+            >,
+            destination: alloy::sol_types::private::Address,
+        ) -> alloy_contract::SolCallBuilder<&P, withdrawBulkCall, N> {
+            self.call_builder(
+                &withdrawBulkCall {
+                    epochIndices,
                     destination,
                 },
             )
