@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {EpochTracker} from "./EpochTracker.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IPool} from "./IPool.sol";
+import {BasePool} from "./BasePool.sol";
 
 /**
  * @title SyndStaking
@@ -32,11 +34,11 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * - Efficient finalization system for historical queries
  */
 contract SyndStaking is EpochTracker, ReentrancyGuard {
+    /// @notice Reference to the BasePool contract for stake queries
+    BasePool public immutable basePool;
+
     /// @notice Total amount of SYND tokens staked across all users and appchains
     uint256 public totalStake;
-
-    /// @notice Reference to the Forwarder contract for authorization
-    address public forwarder;
 
     /// @notice Mapping from epoch index to total amount staked in that epoch
     mapping(uint256 epochIndex => uint256 total) public epochTotal;
@@ -171,15 +173,8 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @notice Constructor to initialize the staking contract with epoch start time
      * @param _startTimestamp The timestamp when epoch counting begins
      */
-    constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {}
-
-    /**
-     * @notice Set the forwarder contract address (only callable by owner)
-     * @param _forwarder Address of the Forwarder contract
-     */
-    function setForwarder(address _forwarder) external {
-        // TODO: Add owner check
-        forwarder = _forwarder;
+    constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {
+        basePool = new BasePool(address(this));
     }
 
     ///////////////////////
@@ -192,7 +187,11 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @param appchainId The ID of the appchain to stake for (must be non-zero)
      */
     function stakeSynd(uint256 appchainId) external payable {
-        if (msg.value == 0) {
+        _stakeSynd(appchainId, msg.value);
+    }
+
+    function _stakeSynd(uint256 appchainId, uint256 amount) internal {
+        if (amount == 0) {
             revert InvalidAmount();
         }
         if (appchainId == 0) {
@@ -215,76 +214,35 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         }
 
         // Calculate stake share for current epoch
-        uint256 stakeShare = calculateStakeShare(msg.value);
+        uint256 stakeShare = calculateStakeShare(amount);
         epochStakeShare[epochIndex] += stakeShare;
         epochUserStakeShare[epochIndex][msg.sender] += stakeShare;
 
-        epochAdditions[epochIndex] += msg.value;
-        totalStake += msg.value;
+        epochAdditions[epochIndex] += amount;
+        totalStake += amount;
 
-        epochUserAdditions[epochIndex][msg.sender] += msg.value;
-        userTotal[msg.sender] += msg.value;
+        epochUserAdditions[epochIndex][msg.sender] += amount;
+        userTotal[msg.sender] += amount;
 
-        epochAppchainAdditions[epochIndex][appchainId] += msg.value;
-        appchainTotal[appchainId] += msg.value;
+        epochAppchainAdditions[epochIndex][appchainId] += amount;
+        appchainTotal[appchainId] += amount;
 
-        epochUserAppchainAdditions[epochIndex][msg.sender][appchainId] += msg.value;
-        userAppchainTotal[msg.sender][appchainId] += msg.value;
+        epochUserAppchainAdditions[epochIndex][msg.sender][appchainId] += amount;
+        userAppchainTotal[msg.sender][appchainId] += amount;
 
-        emit Stake(epochIndex, msg.sender, msg.value, appchainId);
+        emit Stake(epochIndex, msg.sender, amount, appchainId);
     }
 
-    /**
-     * @notice Stake SYND tokens for a specific appchain on behalf of a user (only callable by authorized forwarder)
-     * @dev This function allows the forwarder to stake on behalf of a user
-     * @param user The address of the user to stake for
-     * @param appchainId The ID of the appchain to stake for (must be non-zero)
-     */
-    function stakeSyndFor(address user, uint256 appchainId) external payable {
-        if (msg.value == 0) {
-            revert InvalidAmount();
-        }
-        if (appchainId == 0) {
+    function bulkStake(uint256[] calldata appchainIds, uint256[] calldata amounts) external payable {
+        if (appchainIds.length != amounts.length) {
             revert InvalidAppchainId();
         }
-
-        if (msg.sender != forwarder) {
-            revert UnauthorizedForwarder();
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < appchainIds.length; i++) {
+            totalAmount += amounts[i];
+            _stakeSynd(appchainIds[i], amounts[i]);
         }
-
-        // Finalize epoch accounting if needed
-        uint256 epochIndex = getCurrentEpoch();
-        if (finalizedEpochCount < epochIndex) {
-            finalizeEpochs();
-        }
-        if (userFinalizedEpochCount[user] < epochIndex) {
-            finalizeUserEpochs(user);
-        }
-        if (appchainFinalizedEpochCount[appchainId] < epochIndex) {
-            finalizeAppchainEpochs(appchainId);
-        }
-        if (userAppchainFinalizedEpochCount[user][appchainId] < epochIndex) {
-            finalizeUserAppchainEpochs(user, appchainId);
-        }
-
-        // Calculate stake share for current epoch
-        uint256 stakeShare = calculateStakeShare(msg.value);
-        epochStakeShare[epochIndex] += stakeShare;
-        epochUserStakeShare[epochIndex][user] += stakeShare;
-
-        epochAdditions[epochIndex] += msg.value;
-        totalStake += msg.value;
-
-        epochUserAdditions[epochIndex][user] += msg.value;
-        userTotal[user] += msg.value;
-
-        epochAppchainAdditions[epochIndex][appchainId] += msg.value;
-        appchainTotal[appchainId] += msg.value;
-
-        epochUserAppchainAdditions[epochIndex][user][appchainId] += msg.value;
-        userAppchainTotal[user][appchainId] += msg.value;
-
-        emit Stake(epochIndex, user, msg.value, appchainId);
+        require(totalAmount == msg.value, "Total amount mismatch");
     }
 
     /**
@@ -494,6 +452,41 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         Address.sendValue(payable(destination), amount);
 
         emit WithdrawalCompleted(msg.sender, destination, amount);
+    }
+
+    ///////////////////////
+    // Claim functions
+    ///////////////////////
+
+    /**
+     * @notice Struct for claiming rewards from multiple pools
+     * @param epochIndex The epoch index to claim rewards from
+     * @param poolAddress The address of the pool to claim from
+     */
+    struct ClaimRequest {
+        uint256 epochIndex;
+        address poolAddress;
+    }
+
+    /// @notice Error thrown when no claims are provided
+    error NoClaimsProvided();
+
+    /**
+     * @notice Claim rewards from multiple pools for the caller
+     * @dev This function calls the claimFor function on each pool contract
+     * @param claims Array of ClaimRequest structs containing claim details
+     */
+    function claimAllRewards(ClaimRequest[] calldata claims, address destination) external nonReentrant {
+        if (claims.length == 0) {
+            revert NoClaimsProvided();
+        }
+
+        for (uint256 i = 0; i < claims.length; i++) {
+            ClaimRequest memory claim = claims[i];
+            // Call the claimFor function on the pool contract
+            IPool pool = IPool(claim.poolAddress);
+            pool.claimFor(claim.epochIndex, msg.sender, destination);
+        }
     }
 
     ///////////////////////

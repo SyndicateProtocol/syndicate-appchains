@@ -10,6 +10,14 @@ contract MockPool is IPool {
     function deposit(uint256 epochIndex) external payable {
         // Do nothing
     }
+
+    function getClaimableAmount(uint256 epochIndex, address user) external view returns (uint256) {
+        return 100 ether;
+    }
+
+    function claimFor(uint256 epochIndex, address user, address destination) external {
+        // Do nothing
+    }
 }
 
 contract SplitterTest is Test {
