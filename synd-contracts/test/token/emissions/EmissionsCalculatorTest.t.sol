@@ -302,7 +302,7 @@ contract EmissionsCalculatorTest is Test {
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
-        uint256 preview = calculator.previewCurrentEmission();
+        uint256 preview = calculator.getNextEmission();
 
         vm.prank(admin);
         uint256 actual = calculator.calculateAndMintEmission(treasury, 0);
