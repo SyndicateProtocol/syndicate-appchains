@@ -88,14 +88,17 @@ pub mod ISyndicateTokenMintable {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-<<<<<<< HEAD:shared/contract-bindings/src/synd/isyndicatetokenmintable.rs
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `TOTAL_SUPPLY()` and selector `0x902d55a5`.
 ```solidity
 function TOTAL_SUPPLY() external view returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct TOTAL_SUPPLYCall {}
+    pub struct TOTAL_SUPPLYCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`TOTAL_SUPPLY()`](TOTAL_SUPPLYCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -138,7 +141,7 @@ function TOTAL_SUPPLY() external view returns (uint256);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for TOTAL_SUPPLYCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -181,7 +184,7 @@ function TOTAL_SUPPLY() external view returns (uint256);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = TOTAL_SUPPLYReturn;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -199,21 +202,39 @@ function TOTAL_SUPPLY() external view returns (uint256);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: TOTAL_SUPPLYReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: TOTAL_SUPPLYReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
-=======
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
->>>>>>> main:shared/contract-bindings/src/synd/i_syndicate_token_mintable.rs
     /**Function with signature `mint(address,uint256)` and selector `0x40c10f19`.
 ```solidity
 function mint(address to, uint256 amount) external;
@@ -371,13 +392,17 @@ function mint(address to, uint256 amount) external;
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `totalSupply()` and selector `0x18160ddd`.
 ```solidity
 function totalSupply() external view returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct totalSupplyCall {}
+    pub struct totalSupplyCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`totalSupply()`](totalSupplyCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -420,7 +445,7 @@ function totalSupply() external view returns (uint256);
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for totalSupplyCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self
                 }
             }
         }
@@ -463,7 +488,7 @@ function totalSupply() external view returns (uint256);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = totalSupplyReturn;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -481,14 +506,34 @@ function totalSupply() external view returns (uint256);
                 ()
             }
             #[inline]
-            fn abi_decode_returns(
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: totalSupplyReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
                 data: &[u8],
-                validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: totalSupplyReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
@@ -554,11 +599,9 @@ function totalSupply() external view returns (uint256);
                 {
                     fn totalSupply(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISyndicateTokenMintableCalls> {
                         <totalSupplyCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
-                                validate,
                             )
                             .map(ISyndicateTokenMintableCalls::totalSupply)
                     }
@@ -572,6 +615,17 @@ function totalSupply() external view returns (uint256);
                             .map(ISyndicateTokenMintableCalls::mint)
                     }
                     mint
+                },
+                {
+                    fn TOTAL_SUPPLY(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISyndicateTokenMintableCalls> {
+                        <TOTAL_SUPPLYCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(ISyndicateTokenMintableCalls::TOTAL_SUPPLY)
+                    }
+                    TOTAL_SUPPLY
                 },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
@@ -594,6 +648,17 @@ function totalSupply() external view returns (uint256);
                 &[u8],
             ) -> alloy_sol_types::Result<ISyndicateTokenMintableCalls>] = &[
                 {
+                    fn totalSupply(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<ISyndicateTokenMintableCalls> {
+                        <totalSupplyCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(ISyndicateTokenMintableCalls::totalSupply)
+                    }
+                    totalSupply
+                },
+                {
                     fn mint(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<ISyndicateTokenMintableCalls> {
@@ -607,11 +672,9 @@ function totalSupply() external view returns (uint256);
                 {
                     fn TOTAL_SUPPLY(
                         data: &[u8],
-                        validate: bool,
                     ) -> alloy_sol_types::Result<ISyndicateTokenMintableCalls> {
-                        <TOTAL_SUPPLYCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <TOTAL_SUPPLYCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
-                                validate,
                             )
                             .map(ISyndicateTokenMintableCalls::TOTAL_SUPPLY)
                     }
@@ -834,8 +897,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`TOTAL_SUPPLY`] function.
         pub fn TOTAL_SUPPLY(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, TOTAL_SUPPLYCall, N> {
-            self.call_builder(&TOTAL_SUPPLYCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, TOTAL_SUPPLYCall, N> {
+            self.call_builder(&TOTAL_SUPPLYCall)
         }
         ///Creates a new call builder for the [`mint`] function.
         pub fn mint(
@@ -848,8 +911,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`totalSupply`] function.
         pub fn totalSupply(
             &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, totalSupplyCall, N> {
-            self.call_builder(&totalSupplyCall {})
+        ) -> alloy_contract::SolCallBuilder<&P, totalSupplyCall, N> {
+            self.call_builder(&totalSupplyCall)
         }
     }
     /// Event filters.
