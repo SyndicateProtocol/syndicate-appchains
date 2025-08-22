@@ -492,6 +492,7 @@ impl MaestroService {
             &self.metrics.valkey,
             conn.get_wallet_nonce(chain_id, wallet_address)
         )?;
+
         wallet_nonce
             .map(|nonce| nonce.parse::<u64>().map_err(|_| {
                 error!(%nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
