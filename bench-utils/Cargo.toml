@@ -1,0 +1,15 @@
+[package]
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "bench-utils"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy = { workspace = true, features = ["providers", "sol-types"] }
+rand  = { workspace = true }
+
+[lints]
+workspace = true

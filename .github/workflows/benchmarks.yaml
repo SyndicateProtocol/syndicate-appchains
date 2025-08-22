@@ -1,0 +1,52 @@
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/benchmarks.yaml'
+      - 'bench-utils/**'
+      - 'shared/**'
+      - 'synd-*/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  benchmarks:
+    name: Run Benchmarks - CodSpeed
+    runs-on: shared-large-01
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Rust toolchain, cache and cargo-codspeed binary
+      uses: moonrepo/setup-rust@v1
+      with:
+        channel: stable
+        cache-target: release
+        bins: cargo-codspeed
+          
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y librocksdb-dev
+
+    - name: Build the benchmark target(s)
+      run: cargo codspeed build -p benchmarks
+
+    - name: Run the benchmarks
+      uses: CodSpeedHQ/action@v3
+      with:
+        run: cargo codspeed run -p benchmarks
+        token: ${{ secrets.CODSPEED_TOKEN }}
