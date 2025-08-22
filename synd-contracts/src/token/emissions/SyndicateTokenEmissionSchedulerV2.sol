@@ -21,6 +21,7 @@ import {IBridgeProxy} from "../interfaces/IBridgeProxy.sol";
  * - Automated L2 bridging via configurable bridge proxies
  * - Comprehensive access controls and emergency mechanisms
  * - Backward compatibility with existing emission scheduler interface
+ * - Emissions can be minted anytime during the active epoch window
  *
  * @author Syndicate Protocol
  */
@@ -46,11 +47,17 @@ contract SyndicateTokenEmissionSchedulerV2 is AccessControl, Pausable, Reentranc
     /// @notice Thrown when trying to start emissions without a configured bridge
     error BridgeNotConfigured();
 
-    /// @notice Thrown when trying to mint emissions too early (before buffer time)
-    error EmissionTooEarly();
+    /// @notice Thrown when trying to mint emissions outside the epoch window
+    error NotInEpochWindow();
+
+    /// @notice Thrown when trying to mint emissions for an epoch that's already been minted
+    error EpochAlreadyMinted();
 
     /// @notice Thrown when calculator is not initialized
     error CalculatorNotInitialized();
+
+    /// @notice Thrown when start time is invalid
+    error InvalidStartTime();
 
     /*//////////////////////////////////////////////////////////////
                                  ROLES
@@ -75,9 +82,6 @@ contract SyndicateTokenEmissionSchedulerV2 is AccessControl, Pausable, Reentranc
     /// @notice Total number of emission epochs: 48 (~4 years)
     uint256 public constant TOTAL_EPOCHS = 48;
 
-    /// @notice Buffer time before scheduled emission to prevent MEV/timing issues
-    uint256 public constant EMISSION_BUFFER_TIME = 1 hours;
-
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -93,6 +97,9 @@ contract SyndicateTokenEmissionSchedulerV2 is AccessControl, Pausable, Reentranc
 
     /// @notice Bridge-specific configuration data
     bytes public bridgeData;
+
+    /// @notice Tracks which epochs have been minted
+    mapping(uint256 => bool) public epochMinted;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -144,46 +151,55 @@ contract SyndicateTokenEmissionSchedulerV2 is AccessControl, Pausable, Reentranc
     /**
      * @notice Start the emissions process
      * @dev Can only be called once. Requires bridge proxy to be configured and calculator initialized.
+     *      Start time must be in the future.
+     * @param _startTime Timestamp when emissions should begin
      */
-    function startEmissions() external onlyRole(EMISSIONS_MANAGER_ROLE) {
+    function startEmissions(uint256 _startTime) external onlyRole(EMISSIONS_MANAGER_ROLE) {
         if (emissionsStartTime != 0) revert EmissionsAlreadyStarted();
         if (address(bridgeProxy) == address(0)) revert BridgeNotConfigured();
         if (!emissionsCalculator.initialized()) revert CalculatorNotInitialized();
 
-        emissionsStartTime = block.timestamp;
+        // Validate start time
+        if (_startTime < block.timestamp) revert InvalidStartTime();
 
-        emit EmissionsStarted(block.timestamp);
+        emissionsStartTime = _startTime;
+
+        emit EmissionsStarted(_startTime);
     }
 
     /**
      * @notice Mint emission tokens and bridge them to L2
-     * @dev This function can only be called by the emissions manager.
-     *      It calculates emissions using the EmissionsCalculator and bridges them.
+     * @dev This function can only be called by the emissions manager during the active epoch window.
+     *      Emissions for each epoch can only be minted once and must be minted while the epoch is active.
+     *      The epoch window starts at epochStartTime and ends at epochEndTime.
      */
     function mintEmission() external whenNotPaused nonReentrant onlyRole(EMISSIONS_MANAGER_ROLE) {
         // Validate emissions state
         if (emissionsStartTime == 0) revert EmissionsNotStarted();
         if (emissionsEnded()) revert AllEmissionsCompleted();
 
-        // Check timing constraints
-        uint256 currentEpoch_ = getCurrentEpoch();
+        // Get current time-based epoch
+        uint256 currentTimeEpoch = getCurrentEpoch();
+
+        // Get calculator's current epoch (the epoch to be minted)
         uint256 calculatorEpoch = emissionsCalculator.currentEpoch();
 
-        // Ensure we're not minting too early
-        if (block.timestamp < getNextEmissionTime() - EMISSION_BUFFER_TIME) {
-            revert EmissionTooEarly();
+        // Check if we're in the correct epoch window
+        // Minting is allowed only when time-based epoch matches calculator epoch
+        if (currentTimeEpoch != calculatorEpoch) {
+            revert NotInEpochWindow();
         }
 
-        // Ensure we don't skip epochs or mint the same epoch twice
-        if (calculatorEpoch != currentEpoch_) {
-            // Allow catching up if we're behind, but prevent double-minting
-            if (calculatorEpoch > currentEpoch_) {
-                revert AllEmissionsCompleted();
-            }
+        // Check if this epoch has already been minted
+        if (epochMinted[calculatorEpoch]) {
+            revert EpochAlreadyMinted();
         }
 
-        // Calculate and mint emission to this contract
-        uint256 emissionAmount = emissionsCalculator.calculateAndMintEmission(address(this));
+        // Mark epoch as minted
+        epochMinted[calculatorEpoch] = true;
+
+        // Calculate and mint emission to this contract, passing expected epoch for synchronization
+        uint256 emissionAmount = emissionsCalculator.calculateAndMintEmission(address(this), calculatorEpoch);
 
         // Get token interface for bridging
         IERC20 tokenInterface = IERC20(address(emissionsCalculator.syndicateToken()));
@@ -232,33 +248,50 @@ contract SyndicateTokenEmissionSchedulerV2 is AccessControl, Pausable, Reentranc
     /**
      * @notice Get comprehensive emission status information
      * @return epoch Current epoch number based on time elapsed
-     * @return nextEmissionTime Timestamp when next emission can be minted
+     * @return epochStartTime Timestamp when current epoch started
+     * @return epochEndTime Timestamp when current epoch ends
      * @return nextEmissionAmount Preview of next emission amount
      * @return canMintEmission Whether emission can be minted now
+     * @return epochAlreadyMinted Whether current epoch has been minted
      */
     function getCurrentEpochInfo()
         external
         view
-        returns (uint256 epoch, uint256 nextEmissionTime, uint256 nextEmissionAmount, bool canMintEmission)
+        returns (
+            uint256 epoch,
+            uint256 epochStartTime,
+            uint256 epochEndTime,
+            uint256 nextEmissionAmount,
+            bool canMintEmission,
+            bool epochAlreadyMinted
+        )
     {
         if (emissionsStartTime == 0) {
-            return (0, 0, 0, false);
+            return (0, 0, 0, 0, false, false);
         }
 
         uint256 currentTimeEpoch = getCurrentEpoch();
         uint256 calculatorEpoch = emissionsCalculator.currentEpoch();
 
-        uint256 nextEmissionTimestamp = getNextEmissionTime();
-        uint256 nextAmount = 0;
+        // Calculate epoch window times
+        uint256 epochStart = getEpochStartTime(currentTimeEpoch);
+        uint256 epochEnd = getEpochEndTime(currentTimeEpoch);
 
+        uint256 nextAmount = 0;
         if (!emissionsEnded() && calculatorEpoch == currentTimeEpoch) {
             nextAmount = emissionsCalculator.previewCurrentEmission();
         }
 
-        bool canMint = emissionsStartTime > 0 && currentTimeEpoch >= calculatorEpoch && !emissionsEnded()
-            && block.timestamp >= nextEmissionTimestamp - EMISSION_BUFFER_TIME && !paused();
+        // Can mint if:
+        // 1. Emissions have started
+        // 2. We're in the correct epoch window (time epoch matches calculator epoch)
+        // 3. Epoch hasn't been minted yet
+        // 4. Not paused
+        // 5. Not completed
+        bool canMint = emissionsStartTime > 0 && currentTimeEpoch == calculatorEpoch && !epochMinted[calculatorEpoch]
+            && !paused() && !emissionsEnded();
 
-        return (currentTimeEpoch, nextEmissionTimestamp, nextAmount, canMint);
+        return (currentTimeEpoch, epochStart, epochEnd, nextAmount, canMint, epochMinted[currentTimeEpoch]);
     }
 
     /**
@@ -266,8 +299,50 @@ contract SyndicateTokenEmissionSchedulerV2 is AccessControl, Pausable, Reentranc
      * @return Current epoch number (0-47)
      */
     function getCurrentEpoch() public view returns (uint256) {
+        if (emissionsStartTime == 0 || block.timestamp < emissionsStartTime) return 0;
+
+        uint256 epochsSinceStart = (block.timestamp - emissionsStartTime) / EPOCH_DURATION;
+
+        // Cap at TOTAL_EPOCHS - 1
+        if (epochsSinceStart >= TOTAL_EPOCHS) {
+            return TOTAL_EPOCHS - 1;
+        }
+
+        return epochsSinceStart;
+    }
+
+    /**
+     * @notice Get the start timestamp of a specific epoch
+     * @param epochIndex The epoch number
+     * @return Timestamp when the epoch starts
+     */
+    function getEpochStartTime(uint256 epochIndex) public view returns (uint256) {
         if (emissionsStartTime == 0) return 0;
-        return (block.timestamp - emissionsStartTime) / EPOCH_DURATION;
+        return emissionsStartTime + (epochIndex * EPOCH_DURATION);
+    }
+
+    /**
+     * @notice Get the end timestamp of a specific epoch
+     * @param epochIndex The epoch number
+     * @return Timestamp when the epoch ends
+     */
+    function getEpochEndTime(uint256 epochIndex) public view returns (uint256) {
+        if (emissionsStartTime == 0) return 0;
+        return emissionsStartTime + ((epochIndex + 1) * EPOCH_DURATION);
+    }
+
+    /**
+     * @notice Check if a specific epoch is currently active
+     * @param epochIndex The epoch number to check
+     * @return True if the epoch is currently active
+     */
+    function isEpochActive(uint256 epochIndex) public view returns (bool) {
+        if (emissionsStartTime == 0) return false;
+
+        uint256 epochStart = getEpochStartTime(epochIndex);
+        uint256 epochEnd = getEpochEndTime(epochIndex);
+
+        return block.timestamp >= epochStart && block.timestamp < epochEnd;
     }
 
     /**
@@ -284,16 +359,6 @@ contract SyndicateTokenEmissionSchedulerV2 is AccessControl, Pausable, Reentranc
      */
     function emissionsStarted() public view returns (bool) {
         return emissionsStartTime > 0;
-    }
-
-    /**
-     * @notice Get the timestamp when the next emission can be minted
-     * @return Timestamp of the next emission opportunity
-     */
-    function getNextEmissionTime() public view returns (uint256) {
-        if (emissionsStartTime == 0) return 0;
-        uint256 calculatorEpoch = emissionsCalculator.currentEpoch();
-        return emissionsStartTime + ((calculatorEpoch + 1) * EPOCH_DURATION);
     }
 
     /**

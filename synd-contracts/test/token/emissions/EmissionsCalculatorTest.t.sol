@@ -15,7 +15,7 @@ contract EmissionsCalculatorTest is Test {
     address public user = address(0x1111);
 
     uint256 public constant SCALE = 1e18;
-    uint256 public constant EMISSIONS_CAP = 100_000_000 * 10 ** 18;
+    uint256 public constant EMISSIONS_CAP = 80_000_000 * 10 ** 18;
     uint256 public constant TOTAL_EPOCHS = 48;
 
     event DecayFactorSet(uint256 indexed epoch, uint256 decayFactor, address indexed setter);
@@ -162,7 +162,7 @@ contract EmissionsCalculatorTest is Test {
         // Move to epoch 5
         for (uint256 i = 0; i < 5; i++) {
             vm.prank(admin);
-            calculator.calculateAndMintEmission(treasury);
+            calculator.calculateAndMintEmission(treasury, i);
         }
 
         // Try to modify a past epoch
@@ -210,7 +210,7 @@ contract EmissionsCalculatorTest is Test {
         emit EmissionMinted(0, expectedEmission, remainingSupply - expectedEmission, treasury);
 
         vm.prank(admin);
-        uint256 actualEmission = calculator.calculateAndMintEmission(treasury);
+        uint256 actualEmission = calculator.calculateAndMintEmission(treasury, 0);
 
         assertEq(actualEmission, expectedEmission);
         assertEq(token.balanceOf(treasury), initialBalance + expectedEmission);
@@ -225,7 +225,7 @@ contract EmissionsCalculatorTest is Test {
         // Fast forward to final epoch (47)
         for (uint256 i = 0; i < TOTAL_EPOCHS - 1; i++) {
             vm.prank(admin);
-            calculator.calculateAndMintEmission(treasury);
+            calculator.calculateAndMintEmission(treasury, i);
         }
 
         uint256 remainingSupply = calculator.getRemainingSupply();
@@ -233,7 +233,7 @@ contract EmissionsCalculatorTest is Test {
 
         // Final epoch should sweep all remaining tokens
         vm.prank(admin);
-        uint256 finalEmission = calculator.calculateAndMintEmission(treasury);
+        uint256 finalEmission = calculator.calculateAndMintEmission(treasury, TOTAL_EPOCHS - 1);
 
         assertEq(finalEmission, remainingSupply);
         assertEq(token.balanceOf(treasury), initialBalance + finalEmission);
@@ -244,7 +244,7 @@ contract EmissionsCalculatorTest is Test {
     function test_RevertWhen_CalculateAndMintEmission_NotInitialized() public {
         vm.prank(admin);
         vm.expectRevert(EmissionsCalculator.EmissionsCompleted.selector);
-        calculator.calculateAndMintEmission(treasury);
+        calculator.calculateAndMintEmission(treasury, 0);
     }
 
     function test_RevertWhen_CalculateAndMintEmission_Completed() public {
@@ -254,13 +254,13 @@ contract EmissionsCalculatorTest is Test {
         // Complete all epochs
         for (uint256 i = 0; i < TOTAL_EPOCHS; i++) {
             vm.prank(admin);
-            calculator.calculateAndMintEmission(treasury);
+            calculator.calculateAndMintEmission(treasury, i);
         }
 
         // Try to mint another epoch
         vm.prank(admin);
         vm.expectRevert(EmissionsCalculator.EmissionsCompleted.selector);
-        calculator.calculateAndMintEmission(treasury);
+        calculator.calculateAndMintEmission(treasury, TOTAL_EPOCHS);
     }
 
     function test_RevertWhen_CalculateAndMintEmission_ZeroAddress() public {
@@ -269,7 +269,7 @@ contract EmissionsCalculatorTest is Test {
 
         vm.prank(admin);
         vm.expectRevert(EmissionsCalculator.ZeroAddress.selector);
-        calculator.calculateAndMintEmission(address(0));
+        calculator.calculateAndMintEmission(address(0), 0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -305,7 +305,7 @@ contract EmissionsCalculatorTest is Test {
         uint256 preview = calculator.previewCurrentEmission();
 
         vm.prank(admin);
-        uint256 actual = calculator.calculateAndMintEmission(treasury);
+        uint256 actual = calculator.calculateAndMintEmission(treasury, 0);
 
         assertEq(preview, actual);
     }
@@ -325,7 +325,7 @@ contract EmissionsCalculatorTest is Test {
 
         // Mint one emission
         vm.prank(admin);
-        uint256 firstEmission = calculator.calculateAndMintEmission(treasury);
+        uint256 firstEmission = calculator.calculateAndMintEmission(treasury, 0);
 
         (current, total, emitted, remaining, completed) = calculator.getEmissionsInfo();
 
@@ -357,14 +357,14 @@ contract EmissionsCalculatorTest is Test {
         uint256 totalMinted = 0;
         for (uint256 i = 0; i < 10; i++) {
             vm.prank(admin);
-            uint256 emission = calculator.calculateAndMintEmission(treasury);
+            uint256 emission = calculator.calculateAndMintEmission(treasury, i);
             totalMinted += emission;
         }
 
         // Mint next epochs with modified decay factors
         for (uint256 i = 10; i < 22; i++) {
             vm.prank(admin);
-            uint256 emission = calculator.calculateAndMintEmission(treasury);
+            uint256 emission = calculator.calculateAndMintEmission(treasury, i);
             totalMinted += emission;
         }
 
@@ -381,7 +381,7 @@ contract EmissionsCalculatorTest is Test {
         // Complete all 48 epochs
         for (uint256 i = 0; i < TOTAL_EPOCHS; i++) {
             vm.prank(admin);
-            uint256 emission = calculator.calculateAndMintEmission(treasury);
+            uint256 emission = calculator.calculateAndMintEmission(treasury, i);
             totalMinted += emission;
         }
 
@@ -403,7 +403,7 @@ contract EmissionsCalculatorTest is Test {
         calculator.initializeEmissions(decayFactor);
 
         vm.prank(admin);
-        uint256 emission = calculator.calculateAndMintEmission(treasury);
+        uint256 emission = calculator.calculateAndMintEmission(treasury, 0);
 
         assertTrue(emission > 0);
         assertTrue(emission <= EMISSIONS_CAP);
@@ -418,7 +418,7 @@ contract EmissionsCalculatorTest is Test {
         uint256 totalMinted = 0;
         for (uint256 i = 0; i < epochs; i++) {
             vm.prank(admin);
-            uint256 emission = calculator.calculateAndMintEmission(treasury);
+            uint256 emission = calculator.calculateAndMintEmission(treasury, i);
             totalMinted += emission;
         }
 

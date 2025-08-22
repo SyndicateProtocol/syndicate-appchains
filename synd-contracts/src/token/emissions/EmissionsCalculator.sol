@@ -46,6 +46,9 @@ contract EmissionsCalculator is AccessControl {
     /// @notice Thrown when trying to set decay for past epochs
     error CannotModifyPastEpoch();
 
+    /// @notice Thrown when the expected epoch doesn't match current epoch
+    error EpochMismatch(uint256 expected, uint256 current);
+
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/
@@ -63,8 +66,8 @@ contract EmissionsCalculator is AccessControl {
     /// @notice Total emission epochs: 48
     uint256 public constant TOTAL_EPOCHS = 48;
 
-    /// @notice Total emissions cap: 100 million tokens
-    uint256 public constant EMISSIONS_CAP = 100_000_000 * 10 ** 18;
+    /// @notice Total emissions cap: 80 million tokens
+    uint256 public constant EMISSIONS_CAP = 80_000_000 * 10 ** 18;
 
     /// @notice Scaling factor for decay calculations (1e18)
     uint256 public constant SCALE = 1e18;
@@ -195,14 +198,23 @@ contract EmissionsCalculator is AccessControl {
     /**
      * @notice Calculate and mint emissions for current epoch
      * @param to Address to mint tokens to
+     * @param expectedEpoch The epoch number that the caller expects to mint for
      * @dev Implements the piece-wise geometric decay formula:
      *      E_t = R_t * (1 - r_t) / (1 - P_t) for t < 47
      *      E_t = R_t for t = 47 (final epoch sweeps remainder)
+     *      Requires expectedEpoch to match currentEpoch for synchronization
      */
-    function calculateAndMintEmission(address to) external onlyRole(EMISSIONS_ROLE) returns (uint256) {
+    function calculateAndMintEmission(address to, uint256 expectedEpoch)
+        external
+        onlyRole(EMISSIONS_ROLE)
+        returns (uint256)
+    {
         if (!initialized) revert EmissionsCompleted();
         if (currentEpoch >= TOTAL_EPOCHS) revert EmissionsCompleted();
         if (to == address(0)) revert ZeroAddress();
+
+        // Ensure epoch synchronization
+        if (currentEpoch != expectedEpoch) revert EpochMismatch(expectedEpoch, currentEpoch);
 
         // Calculate remaining supply (R_t)
         uint256 remainingSupply = getRemainingSupply();
@@ -217,12 +229,24 @@ contract EmissionsCalculator is AccessControl {
             uint256 rt = decayFactors[currentEpoch];
             uint256 pt = calculateCumulativeProduct(currentEpoch);
 
-            // E_t = R_t * (1 - r_t) / (1 - P_t)
-            // Note: We need to be careful with precision in fixed-point arithmetic
-            uint256 numerator = remainingSupply * (SCALE - rt);
-            uint256 denominator = SCALE - pt;
+            // Prevent division by zero and handle edge case
+            if (pt >= SCALE) {
+                // Treat as final epoch and sweep remaining
+                emissionAmount = remainingSupply;
+            } else if (SCALE - pt < 1000) {
+                // Near-zero denominator check
+                // Use minimum denominator to prevent precision issues
+                uint256 denominator = 1000; // Minimum safe denominator
+                uint256 numerator = remainingSupply * (SCALE - rt);
+                emissionAmount = numerator / denominator;
+            } else {
+                // E_t = R_t * (1 - r_t) / (1 - P_t)
+                // precision in fixed-point arithmetic
+                uint256 numerator = remainingSupply * (SCALE - rt);
+                uint256 denominator = SCALE - pt;
 
-            emissionAmount = numerator / denominator;
+                emissionAmount = numerator / denominator;
+            }
         }
 
         // Update state
@@ -291,10 +315,18 @@ contract EmissionsCalculator is AccessControl {
         uint256 rt = decayFactors[currentEpoch];
         uint256 pt = calculateCumulativeProduct(currentEpoch);
 
-        uint256 numerator = remainingSupply * (SCALE - rt);
-        uint256 denominator = SCALE - pt;
-
-        return numerator / denominator;
+        // Apply same safety checks as calculateAndMintEmission
+        if (pt >= SCALE) {
+            return remainingSupply;
+        } else if (SCALE - pt < 1000) {
+            uint256 denominator = 1000;
+            uint256 numerator = remainingSupply * (SCALE - rt);
+            return numerator / denominator;
+        } else {
+            uint256 numerator = remainingSupply * (SCALE - rt);
+            uint256 denominator = SCALE - pt;
+            return numerator / denominator;
+        }
     }
 
     /**
