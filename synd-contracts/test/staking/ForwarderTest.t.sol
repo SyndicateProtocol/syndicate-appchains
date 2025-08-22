@@ -51,11 +51,7 @@ contract ForwarderTest is Test {
 
         // Create claim requests
         Forwarder.ClaimRequest[] memory claims = new Forwarder.ClaimRequest[](1);
-        claims[0] = Forwarder.ClaimRequest({
-            epochIndex: epochIndex,
-            poolAddress: address(basePool),
-            destination: user
-        });
+        claims[0] = Forwarder.ClaimRequest({epochIndex: epochIndex, poolAddress: address(basePool), destination: user});
 
         // Call claimAllRewards directly from user
         vm.prank(user);
@@ -73,7 +69,7 @@ contract ForwarderTest is Test {
         Forwarder.RestakeRequest[] memory restakes = new Forwarder.RestakeRequest[](1);
         restakes[0] = Forwarder.RestakeRequest({
             fromAppchainId: 0, // Direct ETH restake
-            toAppchainId: 2,   // Restake to appchain 2
+            toAppchainId: 2, // Restake to appchain 2
             amount: restakeAmount
         });
 
@@ -110,7 +106,7 @@ contract ForwarderTest is Test {
         Forwarder.RestakeRequest[] memory restakes = new Forwarder.RestakeRequest[](1);
         restakes[0] = Forwarder.RestakeRequest({
             fromAppchainId: 0, // Direct ETH restake
-            toAppchainId: 2,   // Restake to appchain 2
+            toAppchainId: 2, // Restake to appchain 2
             amount: 0 // Will be determined by claimed amount
         });
 
@@ -165,11 +161,7 @@ contract ForwarderTest is Test {
 
         // Create multiple claim requests
         Forwarder.ClaimRequest[] memory claims = new Forwarder.ClaimRequest[](2);
-        claims[0] = Forwarder.ClaimRequest({
-            epochIndex: epochIndex,
-            poolAddress: address(basePool),
-            destination: user
-        });
+        claims[0] = Forwarder.ClaimRequest({epochIndex: epochIndex, poolAddress: address(basePool), destination: user});
         claims[1] = Forwarder.ClaimRequest({
             epochIndex: epochIndex,
             poolAddress: address(basePool), // Same pool, different destination
@@ -193,18 +185,19 @@ contract ForwarderTest is Test {
         Forwarder.RestakeRequest[] memory restakes = new Forwarder.RestakeRequest[](2);
         restakes[0] = Forwarder.RestakeRequest({
             fromAppchainId: 0, // Direct ETH restake
-            toAppchainId: 1,   // Restake to appchain 1
+            toAppchainId: 1, // Restake to appchain 1
             amount: restakeAmount1
         });
         restakes[1] = Forwarder.RestakeRequest({
             fromAppchainId: 0, // Direct ETH restake
-            toAppchainId: 2,   // Restake to appchain 2
+            toAppchainId: 2, // Restake to appchain 2
             amount: restakeAmount2
         });
 
         // Call restakeAllRewards
         vm.prank(user);
-        (uint256 totalRestaked, uint256 restakeCount) = forwarder.restakeAllRewards{value: restakeAmount1 + restakeAmount2}(restakes);
+        (uint256 totalRestaked, uint256 restakeCount) =
+            forwarder.restakeAllRewards{value: restakeAmount1 + restakeAmount2}(restakes);
 
         assertEq(totalRestaked, restakeAmount1 + restakeAmount2, "Should have restaked the full amount");
         assertEq(restakeCount, 2, "Should have made 2 restakes");
