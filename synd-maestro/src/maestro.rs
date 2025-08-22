@@ -471,6 +471,16 @@ impl MaestroService {
         Ok(rpc_nonce)
     }
 
+    /// Retrieves a cached wallet nonce and parses it to `u64`, if present
+    ///
+    /// # Arguments
+    /// * `chain_id` - The chain identifier to retrieve the nonce for
+    /// * `wallet_address` - The wallet address to retrieve the nonce for
+    ///
+    /// # Returns
+    /// * `Ok(Some(nonce))` - If a cached nonce exists and was successfully parsed
+    /// * `Ok(None)` - If no cached nonce exists for the given chain and wallet
+    /// * `Err(MaestroError)` - If there was an error accessing the cache or parsing the nonce
     async fn get_wallet_nonce_from_cache(
         &self,
         chain_id: ChainId,
@@ -478,17 +488,16 @@ impl MaestroService {
     ) -> Result<Option<u64>, MaestroError> {
         let mut conn = self.valkey_conn.clone();
 
-        #[allow(clippy::option_if_let_else)] // clearer this way
-        match with_cache_metrics!(
+        let wallet_nonce = with_cache_metrics!(
             &self.metrics.valkey,
             conn.get_wallet_nonce(chain_id, wallet_address)
-        )? {
-            None => Ok(None),
-            Some(nonce) => match nonce.parse::<u64>() {
-                Ok(cached_nonce_parsed) => Ok(Some(cached_nonce_parsed)),
-                Err(_e) => Err(MaestroError::Other(FailedToParseFromCache(nonce, "u64".into()))),
-            },
-        }
+        )?;
+        wallet_nonce
+            .map(|nonce| nonce.parse::<u64>().map_err(|_| {
+                error!(%nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
+                MaestroError::Other(FailedToParseFromCache(nonce, "u64".into()))
+            }))
+            .transpose()
     }
 
     /// Validates that the transaction nonce does not exceed the optional maximum nonce buffer
