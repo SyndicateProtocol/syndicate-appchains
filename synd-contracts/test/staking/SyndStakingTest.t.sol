@@ -5,7 +5,7 @@ import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-contract StakingTest is Test {
+contract SyndStakingTest is Test {
     SyndStaking public staking;
 
     address public user1;
