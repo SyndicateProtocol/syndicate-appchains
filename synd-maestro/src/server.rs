@@ -143,8 +143,6 @@ pub async fn send_raw_transaction_handler(
     let tx_nonce = tx.nonce();
     let tx_hash = format!("0x{}", alloy::hex::encode(tx.hash()));
 
-    service.validate_max_nonce_buffer(chain_id, signer_wallet, tx_nonce).await?;
-
     info!(
         %tx_hash,
         %chain_id,

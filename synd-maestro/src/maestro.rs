@@ -10,7 +10,6 @@ use crate::{
         },
         MaestroError::{self, WaitingTransaction},
         MaestroRpcError::{self, InternalError, JsonRpcError},
-        OtherError::FailedToParseFromCache,
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
     metrics::MaestroMetrics,
@@ -370,51 +369,42 @@ impl MaestroService {
     /// * `Err(MaestroRpcError)` - If retrieving the nonce fails
     ///
     /// # Errors
-    /// Returns an error if:
+    /// Return an error if:
     /// * Valkey connection fails
     /// * RPC provider is missing for the specified chain
     /// * RPC request to fetch the nonce fails
     #[instrument(
-        skip(self, signer),
+        skip(self, wallet_address),
         err,
         fields(
             otel.kind = ?SpanKind::Client,
-            wallet = %signer,
+            wallet_address = %wallet_address,
             chain_id = %chain_id,
         )
     )]
     pub async fn get_cached_or_rpc_nonce(
         &self,
-        signer: Address,
+        wallet_address: Address,
         chain_id: ChainId,
     ) -> Result<u64, MaestroRpcError> {
-        // TODO(SEQ-885): remove this once tracing makes the below logs redundant
-        let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
-        let mut conn = self.valkey_conn.clone();
+        let cached_wallet_nonce = self
+            .get_wallet_nonce_from_cache(chain_id, wallet_address)
+            .await
+            .inspect_err(
+                |e| debug!(%e, %chain_id, %wallet_address, "Error getting nonce from cache"),
+            )
+            .ok() // discard error
+            .flatten();
 
-        let nonce = match with_cache_metrics!(
-            &self.metrics.valkey,
-            conn.get_wallet_nonce(chain_id, signer)
-        ) {
-            // Cache hit - we have a valid value
-            Ok(Some(nonce_str)) => {
-                // Parse the nonce string to u64
-                match nonce_str.parse::<u64>() {
-                    Ok(nonce) => nonce,
-                    Err(e) => {
-                        warn!(%nonce_str, %chain_wallet_nonce_key, %e, "Failed to parse nonce from Valkey cache, falling back to RPC");
-                        self.get_nonce_from_rpc_and_update_cache(chain_id, signer).await?
-                    }
-                }
-            }
-            // Cache miss or error - need to get from RPC
-            _ => {
-                trace!(%signer, %chain_id, %chain_wallet_nonce_key, "No cached nonce found, fetching from RPC");
-                self.get_nonce_from_rpc_and_update_cache(chain_id, signer).await?
-            }
-        };
+        // TODO this
+        // self.validate_max_nonce_buffer(chain_id, wallet_address, tx_nonce).await?;
 
-        Ok(nonce)
+        if let Some(cached_wallet_nonce) = cached_wallet_nonce {
+            return Ok(cached_wallet_nonce)
+        }
+
+        trace!(%wallet_address, %chain_id, "No cached nonce found, fetching from RPC");
+        self.get_nonce_from_rpc_and_update_cache(chain_id, wallet_address).await
     }
 
     /// Fetches a wallet's nonce from the RPC provider and updates the cache
@@ -496,7 +486,7 @@ impl MaestroService {
         wallet_nonce
             .map(|nonce| nonce.parse::<u64>().map_err(|_| {
                 error!(%nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
-                MaestroError::Other(FailedToParseFromCache(nonce, "u64".into()))
+                MaestroError::FailedToParseFromCache(nonce, "u64".into())
             }))
             .transpose()
     }
@@ -526,7 +516,9 @@ impl MaestroService {
         let Some(cached_wallet_nonce) = self
             .get_wallet_nonce_from_cache(chain_id, wallet_address)
             .await
-            .inspect_err(|e| debug!(%e, %wallet_address, "Error getting nonce from cache"))
+            .inspect_err(
+                |e| debug!(%e, %chain_id, %wallet_address, "Error getting nonce from cache"),
+            )
             .ok() // skip validation if nonce wasn't parsed
             .flatten()
         else {
@@ -561,28 +553,15 @@ impl MaestroService {
         current_nonce: u64,
         desired_nonce: u64,
     ) -> Result<u64, MaestroError> {
-        let mut conn = self.valkey_conn.clone();
-
-        let cached_nonce = with_cache_metrics!(
-            &self.metrics.valkey,
-            conn.get_wallet_nonce(chain_id, wallet_address)
-        )?;
-
+        let cached_nonce = self.get_wallet_nonce_from_cache(chain_id, wallet_address).await?;
         if let Some(cached_nonce) = cached_nonce {
-            match cached_nonce.parse::<u64>() {
-                Ok(cached_nonce_parsed) => {
-                    if cached_nonce_parsed != current_nonce {
-                        error!(%desired_nonce, %cached_nonce_parsed, %current_nonce, %chain_id, %wallet_address,
+            if cached_nonce != current_nonce {
+                error!(%desired_nonce, %cached_nonce, %current_nonce, %chain_id, %wallet_address,
                             "unexpected cached nonce. likely a concurrency bug");
-                    }
-                }
-                Err(_e) => {
-                    error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address,
-                        "failed to parse nonce as u64 from cache");
-                }
             }
         }
 
+        let mut conn = self.valkey_conn.clone();
         // actual increment
         let old_nonce = with_cache_metrics!(
             &self.metrics.valkey,

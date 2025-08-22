@@ -23,20 +23,12 @@ pub enum MaestroError {
     #[error("waiting transaction error: {0}")]
     WaitingTransaction(#[from] WaitingTransactionError),
 
-    /// Misc non-category errors
-    #[error("internal error: {0}")]
-    Other(#[from] OtherError),
-}
-
-/// Misc non-category errors
-#[allow(missing_docs)]
-#[derive(Debug, Error)]
-pub enum OtherError {
+    /// Failed to parse from cache
     #[error("failed to parse the following from cache: {0} as: {1}")]
     FailedToParseFromCache(String, String),
 }
 
-/// JSON-RPC specific error types. These are client-facing
+/// JSON-RPC-specific error types. These are client-facing
 #[derive(Debug, Error)]
 pub enum MaestroRpcError {
     /// Internal Maestro error
