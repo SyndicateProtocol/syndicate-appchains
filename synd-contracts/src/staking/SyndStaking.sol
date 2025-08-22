@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {EpochTracker} from "./EpochTracker.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title SyndStaking
@@ -30,7 +31,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
  * - Delayed withdrawal system for security
  * - Efficient finalization system for historical queries
  */
-contract SyndStaking is EpochTracker {
+contract SyndStaking is EpochTracker, ReentrancyGuard {
     /// @notice Total amount of SYND tokens staked across all users and appchains
     uint256 public totalStake;
 
@@ -100,11 +101,11 @@ contract SyndStaking is EpochTracker {
      * Some rewards require pro-rata accounting where stake added mid-epoch receives
      * partial credit based on time remaining. For example, staking halfway through
      * an epoch might give 50% of that epoch's rewards.
-     * 
+     *
      * For this we track 2 additional variables:
      * - epochStakeShare: Total pro-rata stake for an epoch (weighted by time)
      * - epochUserStakeShare: Per-user pro-rata stake for an epoch (weighted by time)
-     * 
+     *
      * These are added to the totals from the 4-variable pattern above to get
      * complete stake accounting for both full-epoch and partial-epoch rewards.
     */
@@ -236,7 +237,11 @@ contract SyndStaking is EpochTracker {
      * @param toAppchainId The ID of the destination appchain
      * @param amount The amount of tokens to restake
      */
-    function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable {
+    function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount)
+        external
+        payable
+        nonReentrant
+    {
         if (amount == 0) {
             revert InvalidAmount();
         }
@@ -359,7 +364,7 @@ contract SyndStaking is EpochTracker {
         if (appchainId == 0) {
             revert InvalidAppchainId();
         }
-        if (userAppchainTotal[msg.sender][appchainId] < amount) {
+        if (amount > userAppchainTotal[msg.sender][appchainId] || amount > userTotal[msg.sender]) {
             revert InsufficientStake();
         }
 
@@ -405,7 +410,7 @@ contract SyndStaking is EpochTracker {
      * @param epochIndex The epoch index when withdrawal was initialized
      * @param destination The address where tokens should be sent
      */
-    function withdraw(uint256 epochIndex, address destination) external {
+    function withdraw(uint256 epochIndex, address destination) external nonReentrant {
         if (epochIndex >= getCurrentEpoch()) {
             revert WithdrawalNotReady();
         }
