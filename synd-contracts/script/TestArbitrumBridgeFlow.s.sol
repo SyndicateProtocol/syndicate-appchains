@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {SyndicateToken} from "src/token/SyndicateToken.sol";
-import {SyndicateTokenEmissionScheduler} from "src/token/SyndicateTokenEmissionScheduler.sol";
+import {SyndicateTokenEmissionScheduler} from "src/token/emissions/SyndicateTokenEmissionScheduler.sol";
 import {ArbitrumBridgeProxy} from "src/token/bridges/ArbitrumBridgeProxy.sol";
 import {IBridgeProxy} from "src/token/interfaces/IBridgeProxy.sol";
 
