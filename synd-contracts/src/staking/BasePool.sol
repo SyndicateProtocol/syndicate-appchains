@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {ISyndStaking} from "./SyndStaking.sol";
+import {ISyndStaking} from "./ISyndStaking.sol";
+import {IPool} from "./IPool.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title BasePool
@@ -9,21 +11,19 @@ import {ISyndStaking} from "./SyndStaking.sol";
  * @dev Implements a pro-rata reward distribution system where users can claim rewards
  * based on their stake share in a specific epoch
  *
- * This contract allows a designated depositor to deposit rewards for specific epochs,
+ * This contract allows anyone to deposit rewards for specific epochs,
  * and stakers can claim their proportional share of those rewards based on their
  * stake in the SyndStaking contract.
  */
-contract BasePool {
-    /// @notice The address authorized to deposit rewards into the pool
-    address public immutable depositor;
-
+contract BasePool is IPool {
     /// @notice Reference to the SyndStaking contract for stake queries
     ISyndStaking public immutable stakingContract;
 
     /// @notice Mapping from epoch index to total reward amount deposited for that epoch
-    mapping(uint256 epochIndex => uint256 total) public epochTotal;
-    /// @notice Mapping from epoch index and user address to whether they have claimed rewards
-    mapping(uint256 epochIndex => mapping(address user => bool claimed)) public claimed;
+    mapping(uint256 epochIndex => uint256 total) public epochRewardTotal;
+
+    /// @notice Mapping from epoch index and user address to the amount of rewards claimed
+    mapping(uint256 epochIndex => mapping(address user => uint256 claimed)) public claimed;
 
     /**
      * @notice Emitted when rewards are deposited for a specific epoch
@@ -41,41 +41,25 @@ contract BasePool {
      */
     event ClaimSuccess(uint256 epochIndex, address user, address destination, uint256 amount);
 
-    /// @notice Error thrown when a user tries to claim rewards without having any stake
-    error NotStaked();
-    /// @notice Error thrown when a user tries to claim rewards they have already claimed
-    error AlreadyClaimed();
     /// @notice Error thrown when trying to claim from an epoch with no rewards
     error ClaimNotAvailable();
-    /// @notice Error thrown when a non-depositor tries to deposit rewards
-    error DepositNotAllowed();
 
     /**
      * @notice Constructor to initialize the pool with staking contract and depositor
      * @param _stakingContract Address of the SyndStaking contract
-     * @param _depositor Address authorized to deposit rewards
      */
-    constructor(address _stakingContract, address _depositor) {
+    constructor(address _stakingContract) {
         stakingContract = ISyndStaking(_stakingContract);
-        depositor = _depositor;
-    }
-
-    /// @notice Restricts function access to the authorized depositor only
-    modifier onlyDepositor() {
-        if (msg.sender != depositor) {
-            revert DepositNotAllowed();
-        }
-        _;
     }
 
     /**
      * @notice Deposit rewards for a specific epoch
-     * @dev Only the designated depositor can call this function
+     * @dev Since rewards are additive, we dont care who deposits
      * @param epochIndex The epoch index for which rewards are being deposited
      */
-    function deposit(uint256 epochIndex) external payable onlyDepositor {
+    function deposit(uint256 epochIndex) external payable {
         uint256 amount = msg.value;
-        epochTotal[epochIndex] += amount;
+        epochRewardTotal[epochIndex] += amount;
 
         emit EpochDeposit(epochIndex, amount);
     }
@@ -87,27 +71,47 @@ contract BasePool {
      * @param destination The address where rewards should be sent
      */
     function claim(uint256 epochIndex, address destination) external {
-        if (epochTotal[epochIndex] == 0) {
+        if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
 
-        if (claimed[epochIndex][msg.sender]) {
-            revert AlreadyClaimed();
+        uint256 claimAmount = getClaimableAmount(epochIndex, msg.sender);
+        if (claimAmount == 0) {
+            revert ClaimNotAvailable();
         }
-        claimed[epochIndex][msg.sender] = true;
+        claimed[epochIndex][msg.sender] += claimAmount;
 
-        uint256 amount = stakingContract.getUserStake(epochIndex, msg.sender);
-        if (amount == 0) {
-            revert NotStaked();
-        }
-        uint256 total = stakingContract.getTotalStake(epochIndex);
-
-        // Calculate the amount of synd to claim
-        uint256 claimAmount = (epochTotal[epochIndex] * amount) / total;
-
-        // Send synd to user
-        payable(destination).transfer(claimAmount);
+        // Send synd to destination
+        Address.sendValue(payable(destination), claimAmount);
 
         emit ClaimSuccess(epochIndex, msg.sender, destination, claimAmount);
+    }
+
+    /**
+     * @notice Calculates the claimable reward amount for a user in a specific epoch
+     * @dev Returns the amount of rewards the user can claim for the given epoch, based on their stake share and any previously claimed amount.
+     * @param epochIndex The epoch index to query
+     * @param user The address of the user
+     * @return The amount of rewards claimable by the user for the specified epoch
+     */
+    function getClaimableAmount(uint256 epochIndex, address user) public view returns (uint256) {
+        if (epochRewardTotal[epochIndex] == 0) {
+            return 0;
+        }
+
+        uint256 user_staked_amount = stakingContract.getUserStakeShare(epochIndex, user);
+        if (user_staked_amount == 0) {
+            return 0;
+        }
+
+        uint256 total_staked_amount = stakingContract.getTotalStakeShare(epochIndex);
+        if (total_staked_amount == 0) {
+            return 0;
+        }
+
+        uint256 reward_total = epochRewardTotal[epochIndex];
+        uint256 user_reward_share = (reward_total * user_staked_amount) / total_staked_amount;
+        // Subtract the amount the user has already claimed for this epoch
+        return user_reward_share - claimed[epochIndex][user];
     }
 }
