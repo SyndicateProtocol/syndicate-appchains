@@ -123,8 +123,8 @@ pub struct TestComponents {
 pub const SEQUENCING_CHAIN_ID: u64 = 15;
 pub const SETTLEMENT_CHAIN_ID: u64 = 31337;
 
+#[allow(clippy::unwrap_used)]
 impl TestComponents {
-    #[allow(clippy::unwrap_used)]
     pub async fn run<Fut: Future<Output = Result<()>> + Send>(
         options: &ConfigurationOptions,
         test: impl FnOnce(Self) -> Fut + Send,
@@ -151,7 +151,6 @@ impl TestComponents {
         }
     }
 
-    #[allow(clippy::unwrap_used)]
     #[allow(clippy::cognitive_complexity)]
     async fn new(options: &ConfigurationOptions) -> Result<(Self, ComponentHandles)> {
         let mut options = options.clone();
@@ -662,7 +661,6 @@ impl TestComponents {
 
     /// Use this if you intend for the txn to succeed
     /// Returns [`TxHash`]
-    #[allow(clippy::unwrap_used)]
     pub async fn send_maestro_tx_successful(&self, raw_tx: &[u8]) -> Result<TxHash> {
         let client = reqwest::Client::new();
         let tx_hex = hex::encode_prefixed(raw_tx);
@@ -692,7 +690,6 @@ impl TestComponents {
     }
 
     /// Use this instead of `send_maestro_tx_successful()` to inspect the JSON `error` field
-    #[allow(clippy::unwrap_used)]
     pub async fn send_maestro_tx_could_be_unsuccessful(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
@@ -730,7 +727,6 @@ impl TestComponents {
 
     /// sequences a valid appchain raw transaction and mines the sequencing block
     /// returns the appchain's transaction receipt
-    #[allow(clippy::unwrap_used)]
     pub async fn sequence_tx(
         &self,
         tx: &[u8],
@@ -778,5 +774,37 @@ impl TestComponents {
             }
             false => Ok(None),
         }
+    }
+
+    pub async fn send_contract_tx(
+        &self,
+        gas_limit: u64,
+        max_fee_per_gas: U256,
+        to: Address,
+        value: U256,
+        data: Bytes,
+        seq_delay: u64,
+    ) -> Result<()> {
+        let raw_tx = self
+            .sequencing_contract
+            .sendContractTransaction(gas_limit, max_fee_per_gas, to, value, data)
+            .nonce(self.sequencing_provider.get_transaction_count(test_account1().address).await?)
+            .gas(10_000_000)
+            .max_fee_per_gas(100_000_000)
+            .max_priority_fee_per_gas(0)
+            .chain_id(SEQUENCING_CHAIN_ID)
+            .build_raw_transaction(test_account1().signer.clone())
+            .await?;
+        let seq_tx = self.sequencing_provider.send_raw_transaction(&raw_tx).await?;
+
+        if self.sequencing_deployment.is_none() {
+            // skip mining step when in nitro mode
+            self.mine_seq_block(seq_delay).await?;
+        }
+        let seq_receipt =
+            self.sequencing_provider.get_transaction_receipt(*seq_tx.tx_hash()).await?.unwrap();
+        assert!(seq_receipt.status(), "Sequence transaction failed");
+
+        Ok(())
     }
 }

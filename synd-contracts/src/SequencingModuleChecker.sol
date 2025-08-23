@@ -37,7 +37,8 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// 2. Then initialized with the permanent admin and requirement module
     /// 3. Once initialized, it cannot be re-initialized (immutable pattern)
     /// @param admin The address of the new admin
-    /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module
+    /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module.
+    /// Note that the zero address is allowed and corresponds to the always allowed module
     function initialize(address admin, address _permissionRequirementModule) external onlyOwner {
         if (hasBeenInitialized) revert AlreadyInitialized();
         hasBeenInitialized = true;
@@ -49,6 +50,7 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
 
     /// @notice Updates the requirement module
     /// @param _newModule The address of the new requirement module
+    /// Note that the zero address is allowed and corresponds to the always allowed module
     function updateRequirementModule(address _newModule) external onlyOwner {
         permissionRequirementModule = IPermissionModule(_newModule);
 

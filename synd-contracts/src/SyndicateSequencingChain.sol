@@ -91,9 +91,14 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         }
     }
 
-    /// This has a signature similar to the inbox function.
+    /// @notice Send a contract transaction to the appchain using applyAlias to alias msg.sender.
+    /// @param gasLimit appchain gas limit
+    /// @param maxFeePerGas appchain max gas price
+    /// @param to appchain destination address or zero to deploy a contract
+    /// @param value appchain tx value
+    /// @param data appchain tx calldata
+    /// @return requestId the request id used to determine the appchain tx hash
     /// Note that unlike the inbox function, no max data size is enforced.
-    /// Sending to the zero address creates a contract instead.
     function sendContractTransaction(
         uint64 gasLimit,
         uint256 maxFeePerGas,
@@ -118,9 +123,13 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         return requestId;
     }
 
-    /// This has a signature similar to the inbox function.
+    /// @notice Send an unsigned transaction to the appchain using applyAlias to alias msg.sender.
+    /// @param gasLimit appchain gas limit
+    /// @param maxFeePerGas appchain max gas price
+    /// @param to appchain destination address or zero to deploy a contract
+    /// @param value appchain tx value
+    /// @param data appchain tx calldata
     /// Note that unlike the inbox function, no max data size is enforced.
-    /// Sending to the zero address creates a contract instead.
     function sendUnsignedTransaction(
         uint64 gasLimit,
         uint256 maxFeePerGas,

@@ -360,8 +360,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 
             // Send l2 signed messages (unaliased address)
             // Message (not from origin)
-            let mut inner_tx = vec![];
-            TransactionRequest::default()
+            let mut tx = TransactionRequest::default()
                 .with_to(Address::ZERO)
                 .with_value(parse_ether("0.1")?)
                 .with_nonce(0)
@@ -371,9 +370,8 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .with_max_priority_fee_per_gas(0)
                 .build(components.settlement_provider.wallet())
                 .await?
-                .encode_2718(&mut inner_tx);
-            let mut tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
-            tx.append(&mut inner_tx);
+                .encoded_2718();
+            tx.insert(0, L2_MESSAGE_KIND_SIGNED_TX);
             let _ = inbox.sendL2Message(tx.into()).send().await?;
 
             // Send retryable tickets that are automatically redeemed (aliased address)
