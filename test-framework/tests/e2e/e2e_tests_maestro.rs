@@ -586,7 +586,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
                 .from(wallet_address)
                 .with_to(TEST_ADDR)
                 .with_value(U256::from(0))
-                .with_nonce(nonce + 2) // NOTE: create a nonce gap
+                .with_nonce(nonce + 2) // NOTE: creates a nonce gap
                 .with_gas_limit(100_000)
                 .with_chain_id(chain_id)
                 .with_max_fee_per_gas(100000000)

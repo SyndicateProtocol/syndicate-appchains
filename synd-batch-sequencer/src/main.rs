@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
     let config = BatcherConfig::parse();
     info!("BatcherConfig: {:?}", config);
 
-    let batcher_handle = run_batcher(&config).await?;
+    let batcher_handle = run_batcher(config).await?;
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");

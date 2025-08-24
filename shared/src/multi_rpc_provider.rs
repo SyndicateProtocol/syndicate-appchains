@@ -228,8 +228,8 @@ impl MultiRpcProvider {
                 config.max_retries,
                 config.initial_backoff_ms,
                 config.compute_units_per_second,
-            );
-            // TODO (SEQ-1190): Add avg_unit_cost to retry layer
+            )
+            .with_avg_unit_cost(config.avg_request_cost);
             let rpc_client = RpcClient::builder().layer(retry_layer).connect(url.as_str()).await;
 
             rpc_client.map(|client| ProviderBuilder::new().wallet(wallet).connect_client(client))
@@ -300,6 +300,9 @@ impl MultiRpcProvider {
 
     /// Determine if an RPC error should trigger a fallback to the next provider
     fn should_failover(error: &RpcError<TransportErrorKind>) -> bool {
+        if let RpcError::Transport(_) = error {
+            return true; // move to the next provider if there is an transport layer error
+        }
         match error {
             // classes of errors that are likely to be provider-specific
             RpcError::Transport(_) |
@@ -345,7 +348,7 @@ impl MultiRpcProvider {
         if self.next_provider(start_index) {
             ControlFlow::RetryWithNextProvider
         } else {
-            ControlFlow::ErrAllProvidersFailed
+            ControlFlow::ErrAllProvidersFailed(error)
         }
     }
 
@@ -366,9 +369,9 @@ impl MultiRpcProvider {
                 Ok(result) => return Ok(result),
                 Err(e) => match self.handle_error(e, start_index) {
                     ControlFlow::RetryWithNextProvider => {}
-                    ControlFlow::ErrAllProvidersFailed => {
+                    ControlFlow::ErrAllProvidersFailed(e) => {
                         return Err(RpcError::LocalUsageError(
-                            "All providers failed".to_string().into(),
+                            format!("All providers failed - most recent error: {e:?}").into(),
                         ))
                     }
                     ControlFlow::Err(e) => return Err(e),
@@ -417,7 +420,7 @@ pub enum ControlFlow {
     /// - A transport/connectivity error occurs
     /// - All available providers have been exhausted (we've cycled back to the starting provider)
     /// - No more failover options remain
-    ErrAllProvidersFailed,
+    ErrAllProvidersFailed(RpcError<TransportErrorKind>),
 
     /// Immediately return the provided error without attempting failover.
     ///

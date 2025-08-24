@@ -3,63 +3,7 @@ pragma solidity 0.8.28;
 
 import {EpochTracker} from "./EpochTracker.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-
-/**
- * @title ISyndStaking
- * @notice Interface for the SyndStaking contract providing stake query functionality
- * @dev Defines the core view functions for accessing stake information across different dimensions
- */
-interface ISyndStaking {
-    /**
-     * @notice Get the total stake amount for a specific user in a specific epoch
-     * @param epochIndex The epoch index to query
-     * @param user The address of the user
-     * @return The user's total stake amount for the specified epoch
-     */
-    function getUserStake(uint256 epochIndex, address user) external view returns (uint256);
-
-    /**
-     * @notice Get the pro-rata stake share for a specific user in a specific epoch
-     * @param epochIndex The epoch index to query
-     * @param user The address of the user
-     * @return The user's pro-rata stake share for the specified epoch
-     */
-    function getUserStakeShare(uint256 epochIndex, address user) external view returns (uint256);
-
-    /**
-     * @notice Get the total stake amount across all users in a specific epoch
-     * @param epochIndex The epoch index to query
-     * @return The total stake amount for the specified epoch
-     */
-    function getTotalStake(uint256 epochIndex) external view returns (uint256);
-
-    /**
-     * @notice Get the total pro-rata stake share across all users in a specific epoch
-     * @param epochIndex The epoch index to query
-     * @return The total pro-rata stake share for the specified epoch
-     */
-    function getTotalStakeShare(uint256 epochIndex) external view returns (uint256);
-
-    /**
-     * @notice Get the total stake amount for a specific appchain in a specific epoch
-     * @param epochIndex The epoch index to query
-     * @param appchainId The ID of the appchain
-     * @return The total stake amount for the specified appchain and epoch
-     */
-    function getAppchainStake(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
-
-    /**
-     * @notice Get the stake amount for a specific user on a specific appchain in a specific epoch
-     * @param epochIndex The epoch index to query
-     * @param user The address of the user
-     * @param appchainId The ID of the appchain
-     * @return The user's stake amount for the specified appchain and epoch
-     */
-    function getUserAppchainStake(uint256 epochIndex, address user, uint256 appchainId)
-        external
-        view
-        returns (uint256);
-}
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title SyndStaking
@@ -87,7 +31,7 @@ interface ISyndStaking {
  * - Delayed withdrawal system for security
  * - Efficient finalization system for historical queries
  */
-contract SyndStaking is EpochTracker, ISyndStaking {
+contract SyndStaking is EpochTracker, ReentrancyGuard {
     /// @notice Total amount of SYND tokens staked across all users and appchains
     uint256 public totalStake;
 
@@ -157,11 +101,11 @@ contract SyndStaking is EpochTracker, ISyndStaking {
      * Some rewards require pro-rata accounting where stake added mid-epoch receives
      * partial credit based on time remaining. For example, staking halfway through
      * an epoch might give 50% of that epoch's rewards.
-     * 
+     *
      * For this we track 2 additional variables:
      * - epochStakeShare: Total pro-rata stake for an epoch (weighted by time)
      * - epochUserStakeShare: Per-user pro-rata stake for an epoch (weighted by time)
-     * 
+     *
      * These are added to the totals from the 4-variable pattern above to get
      * complete stake accounting for both full-epoch and partial-epoch rewards.
     */
@@ -293,7 +237,11 @@ contract SyndStaking is EpochTracker, ISyndStaking {
      * @param toAppchainId The ID of the destination appchain
      * @param amount The amount of tokens to restake
      */
-    function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable {
+    function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount)
+        external
+        payable
+        nonReentrant
+    {
         if (amount == 0) {
             revert InvalidAmount();
         }
@@ -416,7 +364,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
         if (appchainId == 0) {
             revert InvalidAppchainId();
         }
-        if (userAppchainTotal[msg.sender][appchainId] < amount) {
+        if (amount > userAppchainTotal[msg.sender][appchainId] || amount > userTotal[msg.sender]) {
             revert InsufficientStake();
         }
 
@@ -462,7 +410,7 @@ contract SyndStaking is EpochTracker, ISyndStaking {
      * @param epochIndex The epoch index when withdrawal was initialized
      * @param destination The address where tokens should be sent
      */
-    function withdraw(uint256 epochIndex, address destination) external {
+    function withdraw(uint256 epochIndex, address destination) external nonReentrant {
         if (epochIndex >= getCurrentEpoch()) {
             revert WithdrawalNotReady();
         }

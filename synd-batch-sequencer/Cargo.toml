@@ -15,6 +15,7 @@ brotli            = { workspace = true }
 byte-unit         = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 contract-bindings = { workspace = true }
+ctor              = { workspace = true }
 derivative        = { workspace = true }
 eyre              = { workspace = true }
 humantime         = { workspace = true }
