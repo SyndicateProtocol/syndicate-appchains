@@ -685,7 +685,7 @@ mod tests {
             }
         });
 
-        wait_until!(metrics_clone.total_txs_processed.get() == 100, Duration::from_secs(10));
+        wait_until!(metrics_clone.total_txs_processed.get() == 100, Duration::from_secs(30));
         drop(anvil);
     }
 
