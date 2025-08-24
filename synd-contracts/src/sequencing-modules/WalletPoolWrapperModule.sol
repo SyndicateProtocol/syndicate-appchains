@@ -51,24 +51,6 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
      * @param data The transaction data to process.
      */
     //#olympix-ignore-reentrancy-events
-    function processTransactionUncompressed(address _SyndicateSequencingChain, bytes calldata data)
-        external
-        onlyAllowed
-        SyndicateSequencingChainNotZero(_SyndicateSequencingChain)
-    {
-        // Forward the transaction to the syndicate sequencer chain
-        ISyndicateSequencingChain(_SyndicateSequencingChain).processTransactionUncompressed(data);
-
-        // Emit an event indicating the transaction was sent
-        emit WalletPoolWrapperTransactionSent(msg.sender, _SyndicateSequencingChain);
-    }
-
-    /**
-     * @dev Function to process a raw transaction.
-     * @param _SyndicateSequencingChain The syndicate sequencer chain address
-     * @param data The transaction data to process.
-     */
-    //#olympix-ignore-reentrancy-events
     function processTransaction(address _SyndicateSequencingChain, bytes calldata data)
         external
         onlyAllowed
@@ -76,6 +58,24 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
     {
         // Forward the transaction to the syndicate sequencer chain
         ISyndicateSequencingChain(_SyndicateSequencingChain).processTransaction(data);
+
+        // Emit an event indicating the transaction was sent
+        emit WalletPoolWrapperTransactionSent(msg.sender, _SyndicateSequencingChain);
+    }
+
+    /**
+     * @dev Function to process compressed transactions.
+     * @param _SyndicateSequencingChain The syndicate sequencer chain address
+     * @param data The transaction data to process.
+     */
+    //#olympix-ignore-reentrancy-events
+    function processTransactionsCompressed(address _SyndicateSequencingChain, bytes calldata data)
+        external
+        onlyAllowed
+        SyndicateSequencingChainNotZero(_SyndicateSequencingChain)
+    {
+        // Forward the transaction to the syndicate sequencer chain
+        ISyndicateSequencingChain(_SyndicateSequencingChain).processTransactionsCompressed(data);
 
         // Emit an event indicating the transaction was sent
         emit WalletPoolWrapperTransactionSent(msg.sender, _SyndicateSequencingChain);

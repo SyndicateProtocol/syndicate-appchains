@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
+import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
 
 enum TransactionType {
     Unsigned, // an unsigned tx
@@ -45,7 +46,7 @@ enum TransactionType {
 ///
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
-contract SyndicateSequencingChain is SequencingModuleChecker {
+contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequencingChain {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
 

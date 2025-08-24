@@ -81,7 +81,7 @@ rule onlyAllowedCanProcess(bytes data) {
     require init._getInitializedVersion() > 0;
 
     // Try to process a transaction
-    processTransactionUncompressed@withrevert(e, data);
+    processTransaction@withrevert(e, data);
 
     // If the transaction succeeded
     bool success = !lastReverted;
@@ -100,10 +100,10 @@ rule processConsistency(bytes data) {
     require permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Record both outcomes
-    processTransactionUncompressed@withrevert(e, data);
+    processTransaction@withrevert(e, data);
     bool txSuccess = !lastReverted;
 
-    processTransaction@withrevert(e, data);
+    processTransactionsCompressed@withrevert(e, data);
     bool rawSuccess = !lastReverted;
 
     // If one succeeds, both should succeed under same conditions
@@ -154,7 +154,7 @@ rule stateConsistencyAfterProcessing(bytes data) {
     address oldProposerModule = permissionRequirementModule();
 
     // Process transaction
-    processTransactionUncompressed@withrevert(e, data);
+    processTransaction@withrevert(e, data);
 
     // Verify requirement modules haven't changed
     assert permissionRequirementModule() == oldProposerModule,
@@ -190,7 +190,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
     bool senderAllowed = permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Process transaction
-    processTransactionUncompressed@withrevert(e, data);
+    processTransaction@withrevert(e, data);
     bool txSucceeded = !lastReverted;
 
     // Bidirectional assertions

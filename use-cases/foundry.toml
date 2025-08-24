@@ -3,6 +3,10 @@ libs = ["lib"]
 out  = "out"
 src  = "src"
 
+remappings = [
+    "synd-contracts/=../synd-contracts/src/",
+]
+
 [rpc_endpoints]
 irl = "https://rpc.testnet.irl.syndicate.io"
 
