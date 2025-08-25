@@ -748,6 +748,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
 
         // sequence any tx
         components.sequence_tx(b"my_tx_calldata", 10, false).await?;
+        let seq_block = components.sequencing_provider.get_block_number().await?;
 
         // mine a set block to close the slot, but without any transactions
         components.mine_set_block(100000).await?;
@@ -761,7 +762,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 3);
 
@@ -769,7 +770,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 2);
 
@@ -798,7 +799,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 3);
 
@@ -806,7 +807,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 2);
         Ok(())
