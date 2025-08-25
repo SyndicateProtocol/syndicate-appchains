@@ -40,10 +40,18 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
 
+    /// @notice The address that receives emissions for this sequencing chain
+    address public emissionsReceiver;
+
     /// @notice Emitted when a new transaction is processed
     /// @param sender The address that submitted the transaction
     /// @param data The transaction data that was processed
     event TransactionProcessed(address indexed sender, bytes data);
+
+    /// @notice Emitted when the emissions receiver is updated
+    /// @param oldReceiver The previous emissions receiver address
+    /// @param newReceiver The new emissions receiver address
+    event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
 
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
@@ -95,5 +103,25 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
     /// @return bytes The transaction data with a zero byte prepended
     function prependZeroByte(bytes calldata _data) public pure returns (bytes memory) {
         return abi.encodePacked(bytes1(0x00), _data);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         EMISSIONS RECEIVER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Set the emissions receiver address
+    /// @dev Only callable by the contract owner
+    /// @param _emissionsReceiver The address to receive emissions
+    function setEmissionsReceiver(address _emissionsReceiver) external onlyOwner {
+        address oldReceiver = emissionsReceiver;
+        emissionsReceiver = _emissionsReceiver;
+        emit EmissionsReceiverUpdated(oldReceiver, _emissionsReceiver);
+    }
+
+    /// @notice Get the effective emissions receiver address
+    /// @dev Returns emissionsReceiver if set, otherwise returns the contract owner
+    /// @return The address that should receive emissions
+    function getEmissionsReceiver() external view returns (address) {
+        return emissionsReceiver == address(0) ? owner() : emissionsReceiver;
     }
 }

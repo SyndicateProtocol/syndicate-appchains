@@ -288,6 +288,23 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // This should execute without errors or events
         chain.processTransactionsBulk(emptyArray);
     }
+
+    function testEmissionsReceiver() public {
+        // Test defaults to owner
+        assertEq(chain.getEmissionsReceiver(), admin);
+
+        // Test only owner can set it
+        address newReceiver = address(0x999);
+        address nonOwner = address(0x123);
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
+        chain.setEmissionsReceiver(newReceiver);
+
+        // Test owner can set it and it returns correct value
+        vm.prank(admin);
+        chain.setEmissionsReceiver(newReceiver);
+        assertEq(chain.getEmissionsReceiver(), newReceiver);
+    }
 }
 
 contract SyndicateSequencingChainViewRequireAllTest is SyndicateSequencingChainTestSetUp {
