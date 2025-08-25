@@ -12,8 +12,10 @@
       flake = false;
     };
 
-    systems.url = "github:nix-systems/default";
+    # TODO: verify whether aarch64-linux works
+    systems.url = "github:nix-systems/x86_64-linux";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    nix-filter.url = "github:numtide/nix-filter";
 
     solc = {
       url = "github:hellwolf/solc.nix";
@@ -21,7 +23,9 @@
     };
 
     nitro = {
-      url = "git+file:./nitro?submodules=1";
+      type = "git";
+      url = "https://github.com/SyndicateProtocol/nitro.git";
+      submodules = true;
       flake = false;
     };
 
@@ -51,6 +55,7 @@
     nixpkgs-2505,
     systems,
     flake-parts,
+    nix-filter,
     solc,
     nitro,
     enclaves-sdk-bootstrap,
@@ -67,24 +72,29 @@
         pkgs-foundry100 = import nixpkgs-foundry100 {inherit system;};
         pkgs-2505 = import nixpkgs-2505 {inherit system;};
         solc-pkgs = solc.packages.${system};
+        filter = nix-filter.lib;
         build-ramdisk = {
           name,
+          src ? ./eif,
           init,
           kernel,
           linuxkit,
+          enclave,
         }:
           pkgs.stdenv.mkDerivation {
             name = "${name}-ramdisk";
+            inherit src;
             buildPhase = ''
-              mkdir -p ./bootstrap
+              mkdir -p ./bootstrap ./bin
               cp ${init}/* ./bootstrap/
               cp ${kernel}/* ./bootstrap/
+              cp ${enclave}/bin/enclave ./bin/enclave
 
               HOME=$PWD ${linuxkit}/bin/linuxkit build \
               --format kernel+initrd \
               --no-sbom \
               --name ${name}-ramdisk \
-              ${./eif/${name}-ramdisk.yaml}
+              $src/${name}-ramdisk.yaml
             '';
             installPhase = ''
               mkdir -p $out
@@ -131,6 +141,11 @@
             '';
           });
 
+          solcCompilerList = pkgs.fetchurl {
+            url = "https://solc-bin.ethereum.org/bin/list.json";
+            hash = "sha256-cwxIF5o76FqObMW0romEUKg9xksLDOzghgHBwoBawE0=";
+          };
+
           nitro-safe-smart-account = pkgs-2505.stdenv.mkDerivation (final: {
             name = "safe-smart-account";
             src = "${nitro}/${final.name}";
@@ -159,22 +174,70 @@
               src = "${nitro}/contracts";
               nativeBuildInputs = [
                 pkgs-foundry100.foundry
-                pkgs-foundry100.solc
+                solc-pkgs.solc_0_8_28
                 yarnConfigHook
-                writableTmpDirAsHomeHook
+                yarnBuildHook
                 yarnInstallHook
+                writableTmpDirAsHomeHook
                 nodejs
               ];
-              buildPhase = ''
-                runHook preBuild
-                yarn --offline build
-                yarn --offline build:forge:yul
-                runHook postBuild
-              '';
               offlineCache = fetchYarnDeps {
-                yarnLock = final.src + "/yarn.lock";
-                hash = "sha256-tg8Mk0c+x3gLOSNY+y1fBdQ0I95PAgG07qFQ/d64wIU=";
+                yarnLock = "${final.src}/yarn.lock";
+                hash = "sha256-1DqXlJvhWf7OugnTdNfqupHGyPz2AphZjTLuKjOyppY=";
               };
+              patchPhase = let
+                targetArch =
+                  if system == "x86_64-linux"
+                  then "amd64"
+                  else if system == "aarch64-linux"
+                  then "arm64"
+                  else abort "Unsupported architecture '${system}'";
+                hardhatSolcCache = "$HOME/.cache/hardhat-nodejs/compilers-v2/linux-${targetArch}";
+                solcBin = version: let
+                  cleanVersion = builtins.head (builtins.split "-" version);
+                  pkg = solc-pkgs."solc_${builtins.replaceStrings ["."] ["_"] cleanVersion}";
+                in "${pkg}/bin/solc-${cleanVersion}";
+                hardhatPatch = ''
+                  import { HardhatUserConfig, subtask } from 'hardhat/config';
+
+                  const {
+                    TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
+                  } = require('hardhat/builtin-tasks/task-names');
+
+                  subtask(
+                    TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
+                    async (
+                      args: {
+                        solcVersion: string;
+                      },
+                      hre,
+                      runSuper
+                    ) => {
+                      var compilerPath;
+                      switch (args.solcVersion) {
+                        case '0.8.17':
+                          compilerPath = '${solcBin "0.8.17"}';
+                          break;
+                        case '0.8.24':
+                          compilerPath = '${solcBin "0.8.24"}';
+                          break;
+                        default:
+                          return runSuper();
+                      }
+                      return {
+                        compilerPath,
+                        isSolcJs: false,
+                        version: args.solcVersion,
+                        // This is used as extra information in the build-info files,
+                        // but other than that is not important
+                        longVersion: args.solcVersion,
+                      };
+                    }
+                  );
+                '';
+              in ''
+                awk -v n=113 -v s="${hardhatPatch}" "NR == n {print s} {print}" hardhat.config.ts > tmp && mv tmp hardhat.config.ts
+              '';
             });
 
           nitro-arbitrator-wasm-forward-bin = pkgs-2505.rustPlatform.buildRustPackage {
@@ -195,7 +258,7 @@
             version = "0.1.0";
             src = "${nitro}/arbitrator";
             buildAndTestSubdir = "stylus";
-            cargoHash = "sha256-/57DFSr9nxNVpIyNBdFai6zKCrA/RHCoX69Cj29p1pI=";
+            cargoHash = "sha256-w38dRbXeXM5IsE/cktk9M9D29+8d+dULNzcPcx+Yzv8=";
             doCheck = false;
             preBuild = ''
               mkdir -p ../target
@@ -211,8 +274,9 @@
             '';
           };
 
-          nitro-arbitrator-prover-header = pkgs.runCommandLocal "arbitrator.h" {} ''
-            cp ${nitro-arbitrator-stylus-lib}/include/arbitrator.h $out
+          nitro-arbitrator-prover-header = pkgs.runCommandLocal "arbitrator-prover-header" {} ''
+            mkdir -p $out
+            cp ${nitro-arbitrator-stylus-lib}/include/arbitrator.h $out/arbitrator.h
           '';
 
           # TODO: stylus.overrideAttrs or DRY function
@@ -248,6 +312,42 @@
             '';
           };
 
+          nitro-solgen = pkgs-2505.buildGoModule {
+            name = "solgen";
+            src = filter {
+              root = nitro;
+              include = ["go-ethereum" "solgen" "go.mod" "go.sum"];
+            };
+            subPackages = ["solgen"];
+            patchPhase = ''
+              mkdir -p ./contracts
+              ln -s ${nitro-contracts}/lib/node_modules/@eigenda/nitro-contracts/build ./contracts/build
+            '';
+            installPhase = ''
+              mkdir $out
+              go run solgen/gen.go
+              cp -r solgen/go/* $out/
+            '';
+            vendorHash = "sha256-dJUOTd/LSeIMO2m8DmTc1tkphBn3bA2OM4Vl66PgJR8=";
+          };
+
+          nitro-src-with-generated = pkgs.runCommand "nitro-with-generated" {} ''
+            mkdir -p $out/solgen/go $out/target/include $out/target/lib
+            cp -rv ${nitro}/* $out
+            cp -rv ${nitro-solgen}/* $out/solgen/go
+            cp ${nitro-arbitrator-prover-header}/arbitrator.h $out/target/include/arbitrator.h
+            cp ${nitro-arbitrator-stylus-lib}/lib/libstylus.a $out/target/lib
+            substituteInPlace \
+              $out/arbcompress/native.go \
+              --replace-fail "''${SRCDIR}/../target" "$out/target"
+            substituteInPlace \
+              $out/validator/server_arb/prover_interface.go \
+              $out/execution/gethexec/executionengine.go \
+              $out/arbos/programs/native_api.go \
+              $out/arbos/programs/native.go \
+              --replace-fail "''${SRCDIR}/../../target" "$out/target"
+          '';
+
           synd-enclave-server = pkgs-2505.buildGoModule {
             pname = "synd-enclave";
             version = "0.1.0";
@@ -256,18 +356,25 @@
               fileset = pkgs.lib.fileset.unions [
                 ./cmd/enclave
                 ./enclave
-                ./nitro
                 ./teemodule
+                ./teetypes
                 ./go.mod
                 ./go.sum
               ];
             };
-            # preBuild = ''
-            #   sed -i 's#\./nitro#${nitro}#' go.mod
-            #   sed -i 's#\./nitro/go-ethereum#${nitro}/go-ethereum#' go.mod
-            #   cat go.mod
-            # '';
-            vendorHash = null;
+            preBuild = ''
+              substituteInPlace \
+                vendor/github.com/offchainlabs/nitro/arbcompress/native.go \
+                --replace-warn '-I''${SRCDIR}/../target/include/' '-I${nitro-arbitrator-prover-header}/' \
+                --replace-warn 'LDFLAGS: ''${SRCDIR}/../target/lib' 'LDFLAGS: ${nitro-arbitrator-stylus-lib}/lib'
+              substituteInPlace \
+                vendor/github.com/offchainlabs/nitro/execution/gethexec/executionengine.go \
+                vendor/github.com/offchainlabs/nitro/arbos/programs/native_api.go \
+                vendor/github.com/offchainlabs/nitro/arbos/programs/native.go \
+                --replace-warn '-I../../target/include/' '-I${nitro-arbitrator-prover-header}/' \
+                --replace-warn 'LDFLAGS: ''${SRCDIR}/../../target/lib' 'LDFLAGS: ${nitro-arbitrator-stylus-lib}/lib'
+            '';
+            vendorHash = "sha256-IWk71nxHQH/Uw3MfMTrJYVHndy89GZjOx1d0wN1TYek=";
             subPackages = ["cmd/enclave"];
             ldFlags = [
               "-linkmode external"
@@ -281,6 +388,7 @@
             init = enclaves-sdk-init;
             kernel = enclaves-sdk-kernel;
             inherit linuxkit;
+            enclave = synd-enclave-server;
           };
 
           user-ramdisk = build-ramdisk {
@@ -288,6 +396,7 @@
             init = enclaves-sdk-init;
             kernel = enclaves-sdk-kernel;
             inherit linuxkit;
+            enclave = synd-enclave-server;
           };
 
           eif-build = pkgs.rustPlatform.buildRustPackage {
@@ -317,6 +426,7 @@
                 --cmdline "${cmdline}" \
                 --ramdisk "${init-ramdisk}/init-ramdisk-initrd.img" \
                 --ramdisk "${user-ramdisk}/user-ramdisk-initrd.img" \
+                --build-time 1970-01-01T00:00:00Z \
                 --output $out
             '';
         };
