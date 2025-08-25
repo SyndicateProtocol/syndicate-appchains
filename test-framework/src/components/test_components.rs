@@ -152,6 +152,7 @@ impl TestComponents {
     }
 
     #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::large_stack_frames)]
     async fn new(options: &ConfigurationOptions) -> Result<(Self, ComponentHandles)> {
         let mut options = options.clone();
         let start_time = SystemTime::now();
