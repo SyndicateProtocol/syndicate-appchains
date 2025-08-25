@@ -222,7 +222,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         }
 
         // Calculate stake share for current epoch
-        uint256 stakeShare = calculateStakeShare(amount);
+        uint256 stakeShare = _calculateStakeShare(amount);
         epochStakeShare[epochIndex] += stakeShare;
         epochUserStakeShare[epochIndex][msg.sender] += stakeShare;
 
@@ -261,7 +261,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @param amount The amount of tokens being staked
      * @return The calculated stake share for the current epoch
      */
-    function calculateStakeShare(uint256 amount) internal view returns (uint256) {
+    function _calculateStakeShare(uint256 amount) internal view returns (uint256) {
         return (amount * (getEpochEnd(getCurrentEpoch()) - block.timestamp)) / EPOCH_DURATION;
     }
 
@@ -479,8 +479,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         }
 
         for (uint256 i = 0; i < claims.length; i++) {
-            IPool pool = IPool(claims[i].poolAddress);
-            pool.claimFor(claims[i].epochIndex, msg.sender, destination);
+            IPool(claims[i].poolAddress).claimFor(claims[i].epochIndex, msg.sender, destination);
         }
     }
 
