@@ -547,4 +547,115 @@ contract SyndStakingTest is Test {
         checkStake(2, user1, 100 ether, appchainId1);
         checkStake(3, user1, 100 ether, appchainId1);
     }
+
+    function test_initialize_withdrawals_bulk() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 25 ether}(111);
+        staking.stakeSynd{value: 25 ether}(222);
+        staking.stakeSynd{value: 25 ether}(333);
+        staking.stakeSynd{value: 25 ether}(444);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        uint256[] memory appchainIds = new uint256[](4);
+        appchainIds[0] = 111;
+        appchainIds[1] = 222;
+        appchainIds[2] = 333;
+        appchainIds[3] = 444;
+
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 1 ether;
+        amounts[1] = 2 ether;
+        amounts[2] = 3 ether;
+        amounts[3] = 4 ether;
+
+        vm.startPrank(user1);
+        staking.initializeWithdrawals(appchainIds, amounts);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        assertEq(staking.epochWithdrawals(2), 10 ether);
+
+        vm.startPrank(user1);
+        staking.withdraw(2, user1);
+        vm.stopPrank();
+
+        assertEq(address(user1).balance, 10 ether);
+    }
+
+    function test_initialize_withdrawals_bulk_all() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 25 ether}(111);
+        staking.stakeSynd{value: 25 ether}(222);
+        staking.stakeSynd{value: 25 ether}(333);
+        staking.stakeSynd{value: 25 ether}(444);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        uint256[] memory appchainIds = new uint256[](4);
+        appchainIds[0] = 111;
+        appchainIds[1] = 222;
+        appchainIds[2] = 333;
+        appchainIds[3] = 444;
+
+        vm.startPrank(user1);
+        staking.initializeWithdrawals(appchainIds);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        assertEq(staking.epochWithdrawals(2), 100 ether);
+
+        vm.startPrank(user1);
+        staking.withdraw(2, user1);
+        vm.stopPrank();
+
+        assertEq(address(user1).balance, 100 ether);
+    }
+
+    function test_withdraw_bulk() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 25 ether}(111);
+        staking.stakeSynd{value: 25 ether}(222);
+        staking.stakeSynd{value: 25 ether}(333);
+        staking.stakeSynd{value: 25 ether}(444);
+        vm.stopPrank();
+
+        stepEpoch(1);
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(111);
+        vm.stopPrank();
+
+        stepEpoch(1);
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(222);
+        vm.stopPrank();
+
+        stepEpoch(1);
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(333);
+        vm.stopPrank();
+
+        stepEpoch(1);
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(444);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        uint256[] memory epochIndices = new uint256[](4);
+        epochIndices[0] = 2;
+        epochIndices[1] = 3;
+        epochIndices[2] = 4;
+        epochIndices[3] = 5;
+
+        vm.startPrank(user1);
+        staking.withdrawBulk(epochIndices, user1);
+        vm.stopPrank();
+
+        assertEq(address(user1).balance, 100 ether);
+    }
 }

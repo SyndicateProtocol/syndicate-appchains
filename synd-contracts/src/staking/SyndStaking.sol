@@ -526,7 +526,13 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     // Bulk functions
     ///////////////////////
 
-    function initializeWithdrawals(uint256[] calldata appchainIds, uint256[] calldata amounts) external {
+    /**
+     * @notice Initialize withdrawals for multiple appchains with specified amounts
+     * @dev Reverts if the length of appchainIds and amounts arrays do not match
+     * @param appchainIds The array of appchain IDs to initialize withdrawals for
+     * @param amounts The array of withdrawal amounts corresponding to each appchain ID
+     */
+    function initializeWithdrawals(uint256[] calldata appchainIds, uint256[] calldata amounts) external nonReentrant {
         if (appchainIds.length != amounts.length) {
             revert InvalidWithdrawal();
         }
@@ -536,15 +542,44 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         }
     }
 
-    function initializeWithdrawals(uint256[] calldata appchainIds) external {
+    /**
+     * @notice Initialize withdrawals for multiple appchains for the caller, withdrawing the full available amount from each
+     * @dev Calls initializeWithdrawal for each appchainId with the full withdrawal amount for msg.sender
+     * @param appchainIds The array of appchain IDs to initialize withdrawals for
+     */
+    function initializeWithdrawals(uint256[] calldata appchainIds) external nonReentrant {
         for (uint256 i = 0; i < appchainIds.length; i++) {
             initializeWithdrawal(appchainIds[i], getWithdrawalAmount(msg.sender, appchainIds[i]));
         }
     }
 
+    /**
+     * @notice Withdraws funds for multiple epochs in a single transaction.
+     * @dev Iterates through the provided epoch indices, finalizes user epochs, and transfers the total amount to the specified destination.
+     *      Reverts if any epoch is not ready for withdrawal or if there is no withdrawal amount for an epoch.
+     * @param epochIndices The array of epoch indices to withdraw from.
+     * @param destination The address to receive the withdrawn funds.
+     */
     function withdrawBulk(uint256[] calldata epochIndices, address destination) external {
+        uint256 totalAmount = 0;
         for (uint256 i = 0; i < epochIndices.length; i++) {
-            withdraw(epochIndices[i], destination);
+            uint256 epochIndex = epochIndices[i];
+            if (epochIndex >= getCurrentEpoch()) {
+                revert WithdrawalNotReady();
+            }
+
+            uint256 amount = epochUserWithdrawals[epochIndex][msg.sender];
+            if (amount == 0) {
+                revert InvalidWithdrawal();
+            }
+
+            finalizeUserEpochs(msg.sender);
+            epochUserWithdrawals[epochIndex][msg.sender] = 0;
+            totalAmount += amount;
         }
+
+        Address.sendValue(payable(destination), totalAmount);
+
+        emit WithdrawalCompleted(msg.sender, destination, totalAmount);
     }
 }
