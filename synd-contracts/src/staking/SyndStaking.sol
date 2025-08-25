@@ -97,6 +97,16 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     mapping(address user => mapping(uint256 appchainId => uint256 finalizedEpochCount)) public
         userAppchainFinalizedEpochCount;
 
+    /**
+     * @notice Struct for claiming rewards
+     * @param epochIndex The epoch index to claim rewards from
+     * @param poolAddress The address of the pool to claim from
+     */
+    struct ClaimRequest {
+        uint256 epochIndex;
+        address poolAddress;
+    }
+
     /*
      * Pro-Rata Stake Tracking:
      * Some rewards require pro-rata accounting where stake added mid-epoch receives
@@ -164,6 +174,10 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     error InvalidWithdrawal();
     /// @notice Error thrown when no claims are provided
     error NoClaimsProvided();
+    /// @notice Error thrown when input is invalid
+    error InvalidInput();
+    /// @notice Error thrown when total amount of staking does not match the amount of ETH sent
+    error InvalidStakingAmount(uint256 totalAmount, uint256 sentAmount);
 
     /**
      * @notice Constructor to initialize the staking contract with epoch start time
@@ -229,14 +243,16 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
 
     function bulkStake(uint256[] calldata appchainIds, uint256[] calldata amounts) external payable {
         if (appchainIds.length != amounts.length) {
-            revert InvalidAppchainId();
+            revert InvalidInput();
         }
         uint256 totalAmount = 0;
         for (uint256 i = 0; i < appchainIds.length; i++) {
             totalAmount += amounts[i];
             _stakeSynd(appchainIds[i], amounts[i]);
         }
-        require(totalAmount == msg.value, "Total amount mismatch");
+        if (totalAmount != msg.value) {
+            revert InvalidStakingAmount(totalAmount, msg.value);
+        }
     }
 
     /**
@@ -451,16 +467,6 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     ///////////////////////
     // Claim functions
     ///////////////////////
-
-    /**
-     * @notice Struct for claiming rewards from multiple pools
-     * @param epochIndex The epoch index to claim rewards from
-     * @param poolAddress The address of the pool to claim from
-     */
-    struct ClaimRequest {
-        uint256 epochIndex;
-        address poolAddress;
-    }
 
     /**
      * @notice Claim rewards from multiple pools for the caller
