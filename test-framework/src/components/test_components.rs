@@ -31,7 +31,6 @@ use eyre::Result;
 use serde_json::{json, Value};
 use shared::types::FilledProvider;
 use std::{
-    cmp::Ordering,
     collections::HashMap,
     env,
     future::Future,
@@ -191,8 +190,9 @@ impl TestComponents {
             provider: seq_provider,
             http_url: _,
         } = match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
-                start_anvil(SEQUENCING_CHAIN_ID).await?
+            BaseChainsType::Anvil => start_anvil(SEQUENCING_CHAIN_ID).await?,
+            BaseChainsType::PreLoaded(_) => {
+                start_anvil_with_args(SEQUENCING_CHAIN_ID, &["--timestamp", "0"]).await?
             }
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let chain_id = SEQUENCING_CHAIN_ID;
@@ -267,7 +267,13 @@ impl TestComponents {
             .await?;
 
         match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+            BaseChainsType::Anvil => {
+                mine_block(&seq_provider, 0).await?;
+            }
+            BaseChainsType::PreLoaded(_) => {
+                // disable gas tracking, otherwise there will be an underflow error with anvil
+                // timstamp 0
+                let _ = sequencing_contract.disableGasTracking().send().await?;
                 mine_block(&seq_provider, 0).await?;
             }
             _ => {}
@@ -361,43 +367,22 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                let set_chain_info = start_anvil_with_args(
+                let chain_info = start_anvil_with_args(
                     SETTLEMENT_CHAIN_ID,
-                    &["--load-state", state_file.to_str().unwrap()],
+                    &["--load-state", state_file.to_str().unwrap(), "--timestamp", "0"], // snapshots expect timestamp to be 0
                 )
                 .await?;
 
                 // Sync the tips of the sequencing and settlement chains
-                let set_timestamp = set_chain_info
+                let block = chain_info
                     .provider
                     .get_block_by_number(BlockNumberOrTag::Latest)
                     .await?
-                    .unwrap()
-                    .header
-                    .timestamp;
-
-                let seq_timestamp = seq_provider
-                    .get_block_by_number(BlockNumberOrTag::Latest)
-                    .await?
-                    .unwrap()
-                    .header
-                    .timestamp;
-
-                match seq_timestamp.cmp(&set_timestamp) {
-                    Ordering::Less => {
-                        seq_provider
-                            .evm_mine(Some(MineOptions::Timestamp(Some(set_timestamp))))
-                            .await?;
-                    }
-                    Ordering::Equal => {}
-                    Ordering::Greater => {
-                        set_chain_info
-                            .provider
-                            .evm_mine(Some(MineOptions::Timestamp(Some(seq_timestamp))))
-                            .await?;
-                    }
-                }
-                set_chain_info
+                    .unwrap();
+                seq_provider
+                    .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
+                    .await?;
+                chain_info
             }
         };
 

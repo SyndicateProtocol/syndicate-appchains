@@ -46,7 +46,8 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
                 Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
-            components.mine_set_block(1).await?;
+            components.mine_seq_block(1).await?;
+            components.mine_set_block(1000).await?;
 
             // Wait for deposit to be processed
             wait_until!(
