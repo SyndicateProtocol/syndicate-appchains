@@ -23,7 +23,7 @@ interface IRelayer {
  * - Integration with EmissionsCalculator for flexible decay factors
  * - Automated bridging of funds through the relayer contract to the commons L3 chain
  * - Emissions must be minted in order, and only once per epoch
- * - Emissions can only be minted for the current epoch and those in the past that have not been minted yet
+ * - Emissions can only be minted for past epochs and the current epoch that have not been minted yet
  *
  * @author Syndicate Protocol
  */
@@ -116,7 +116,7 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(PAUSER_ROLE, pauser);
 
-        // The first epoch wont have any emissions, so we start at 2 since the EpochTracker starts at 1
+        // The EpochTracker starts at 1 and we are planning on starting emissions at epoch 2 (October 1st)
         epochStartIndex = 2;
     }
 
@@ -176,7 +176,7 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
 
     /**
      * @notice Check if emissions have been started
-     * @return True if startEmissions() has been called
+     * @return True if current epoch is greater than or equal to the start epoch index
      */
     function emissionsStarted() public view returns (bool) {
         return epochStartIndex <= getCurrentEpoch();

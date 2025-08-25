@@ -225,7 +225,7 @@ contract EmissionsCalculator is AccessControl {
         // Mint tokens
         syndicateToken.mint(to, emissionAmount);
 
-        emit EmissionMinted(currentEpoch, emissionAmount, getRemainingSupply(), to);
+        emit EmissionMinted(currentEpoch, emissionAmount, getRemainingSupply() - emissionAmount, to);
 
         // Advance to next epoch
         currentEpoch++;
