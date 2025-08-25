@@ -38,14 +38,12 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     uint256 public challengeWindow;
     uint256 public pendingEpoch;
     uint256 public pendingEpochFirstSubmissionTime;
-    uint256[] public pendingChainIDs;
-    uint256[] public pendingTokensUsed;
+    bytes32 public pendingDataHash;
     uint256 public pendingTotalTokensUsed;
 
     /// @notice last epoch that was aggregated using the offchain mechanism (this data can be used for re-submissions)
     uint256 public lastAggregatedEpoch;
-    uint256[] public lastAggregatedChainIDs;
-    uint256[] public lastAggregatedTokensUsed;
+    bytes32 public lastAggregatedDataHash;
 
     /*//////////////////////////////////////////////////////////////
       ERRORS
@@ -59,6 +57,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     error ChainIDsMustBeInAscendingOrder();
     error ZeroChallengeWindow();
     error ZeroAddress();
+    error InvalidDataHash();
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER 
@@ -149,28 +148,33 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         if (pendingEpochFirstSubmissionTime == 0) {
             pendingEpochFirstSubmissionTime = block.timestamp;
         }
-        pendingChainIDs = appchainIDs;
-        pendingTokensUsed = tokens;
+        pendingDataHash = keccak256(abi.encode(appchainIDs, tokens));
         pendingTotalTokensUsed = total;
     }
 
     /// @notice Pushes the pending data of the top appchains to the stakin appchain
     /// @dev only callable after the current epoch has ended and the challengeWindow period has elapsed
-    function pushTopChainsDataToStakingAppchain() external {
+    /// @param chainIDs The chain IDs that match the stored hash
+    /// @param tokensUsed The tokens used that match the stored hash
+    function pushTopChainsDataToStakingAppchain(uint256[] calldata chainIDs, uint256[] calldata tokensUsed) external {
         if (!fallbackToOffchainAggregation()) {
             revert MustUseAutomaticAggregation();
         }
         if (block.timestamp <= pendingEpochFirstSubmissionTime + challengeWindow) {
             revert WindowNotOver(pendingEpoch, challengeWindow);
         }
+
+        if (keccak256(abi.encode(chainIDs, tokensUsed)) != pendingDataHash) {
+            revert InvalidDataHash();
+        }
+
         if (lastAggregatedEpoch != pendingEpoch) {
             lastAggregatedEpoch = pendingEpoch;
-            lastAggregatedChainIDs = pendingChainIDs;
-            lastAggregatedTokensUsed = pendingTokensUsed;
+            lastAggregatedDataHash = pendingDataHash;
             pendingEpoch++;
             pendingEpochFirstSubmissionTime = 0;
         }
-        _pushToStakingAppchain(lastAggregatedChainIDs, lastAggregatedTokensUsed, lastAggregatedEpoch);
+        _pushToStakingAppchain(chainIDs, tokensUsed, lastAggregatedEpoch);
     }
 
     /*//////////////////////////////////////////////////////////////

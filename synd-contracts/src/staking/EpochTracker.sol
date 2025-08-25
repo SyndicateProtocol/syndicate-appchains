@@ -11,7 +11,7 @@ pragma solidity 0.8.28;
  */
 abstract contract EpochTracker {
     /// @notice The timestamp when epoch counting begins
-    uint256 public constant startTimestamp = 0; // 1751497200; // 1st October 2025 1759273200 - (90 days) 3888000
+    uint256 public constant startTimestamp = 1754089200; // 1st October 2025 1759273200 - (60 days) 5184000
 
     /// @notice Duration of each epoch in seconds (30 days)
     uint256 public constant EPOCH_DURATION = 30 days;

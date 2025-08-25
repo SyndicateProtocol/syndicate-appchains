@@ -119,8 +119,8 @@ contract GasAggregatorTest is Test {
 
     function test_Constructor_ZeroAdmin() public {
         MockStakingAppchain stakingAppchain = new MockStakingAppchain();
-        vm.expectRevert(GasAggregator.ZeroAddress.selector);
         GasAggregator testAggregator = new GasAggregator();
+        vm.expectRevert(GasAggregator.ZeroAddress.selector);
         testAggregator.initialize(mockFactory, stakingAppchain, address(0), 24 hours);
     }
 
@@ -250,10 +250,16 @@ contract GasAggregatorTest is Test {
 
         // Check pending data
         assertEq(gasAggregator.pendingTotalTokensUsed(), 300);
-        assertEq(gasAggregator.pendingChainIDs(0), 1);
-        assertEq(gasAggregator.pendingChainIDs(1), 2);
-        assertEq(gasAggregator.pendingTokensUsed(0), 100);
-        assertEq(gasAggregator.pendingTokensUsed(1), 200);
+
+        // Verify the hash is set
+        uint256[] memory expectedChainIDs = new uint256[](2);
+        expectedChainIDs[0] = 1;
+        expectedChainIDs[1] = 2;
+        uint256[] memory expectedTokens = new uint256[](2);
+        expectedTokens[0] = 100;
+        expectedTokens[1] = 200;
+        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens));
+        assertEq(gasAggregator.pendingDataHash(), expectedHash);
     }
 
     function test_SubmitOffchainTopChains_ChainIDsNotAscending() public {
@@ -342,7 +348,14 @@ contract GasAggregatorTest is Test {
         // Wait for challenge window (from submission time, not epoch end)
         vm.warp(submissionTime + CHALLENGE_WINDOW + 1);
 
-        gasAggregator.pushTopChainsDataToStakingAppchain();
+        uint256[] memory pushChainIDs = new uint256[](2);
+        pushChainIDs[0] = 1;
+        pushChainIDs[1] = 2;
+        uint256[] memory pushTokensUsed = new uint256[](2);
+        pushTokensUsed[0] = 100;
+        pushTokensUsed[1] = 200;
+
+        gasAggregator.pushTopChainsDataToStakingAppchain(pushChainIDs, pushTokensUsed);
 
         // Should increment epoch and clear pending data
         assertEq(gasAggregator.pendingEpoch(), gasAggregator.getCurrentEpoch());
@@ -355,8 +368,10 @@ contract GasAggregatorTest is Test {
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
+        uint256[] memory dummyChainIDs = new uint256[](0);
+        uint256[] memory dummyTokens = new uint256[](0);
         vm.expectRevert(GasAggregator.MustUseAutomaticAggregation.selector);
-        gasAggregator.pushTopChainsDataToStakingAppchain();
+        gasAggregator.pushTopChainsDataToStakingAppchain(dummyChainIDs, dummyTokens);
     }
 
     function test_PushTopChainsDataToStakingAppchain_ChallengeWindowNotOver() public {
@@ -377,10 +392,66 @@ contract GasAggregatorTest is Test {
         gasAggregator.submitOffchainTopChains(chainIDs);
 
         // Try to push before challenge window is over (immediately after submission)
+        uint256[] memory dummyChainIDs = new uint256[](1);
+        dummyChainIDs[0] = 1;
+        uint256[] memory dummyTokens = new uint256[](1);
+        dummyTokens[0] = 100;
         vm.expectRevert(
             abi.encodeWithSelector(GasAggregator.WindowNotOver.selector, gasAggregator.pendingEpoch(), CHALLENGE_WINDOW)
         );
-        gasAggregator.pushTopChainsDataToStakingAppchain();
+        gasAggregator.pushTopChainsDataToStakingAppchain(dummyChainIDs, dummyTokens);
+    }
+
+    function test_PushTopChainsDataToStakingAppchain_InvalidHash() public {
+        // Setup: above threshold
+        mockFactory.setTotalAppchains(3);
+        mockFactory.addAppchain(1, address(mockGasCounter1));
+        mockFactory.addAppchain(2, address(mockGasCounter2));
+
+        // Set gas usage for current pending epoch
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+        mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
+        mockGasCounter2.setTokensForEpoch(currentEpoch, 200);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Submit data
+        uint256[] memory chainIDs = new uint256[](2);
+        chainIDs[0] = 1;
+        chainIDs[1] = 2;
+        gasAggregator.submitOffchainTopChains(chainIDs);
+
+        // Wait for challenge window
+        vm.warp(block.timestamp + CHALLENGE_WINDOW + 1);
+
+        // Try to push with wrong data (different chain IDs)
+        uint256[] memory wrongChainIDs = new uint256[](2);
+        wrongChainIDs[0] = 2;
+        wrongChainIDs[1] = 1;
+        uint256[] memory tokensUsed = new uint256[](2);
+        tokensUsed[0] = 100;
+        tokensUsed[1] = 200;
+
+        vm.expectRevert(GasAggregator.InvalidDataHash.selector);
+        gasAggregator.pushTopChainsDataToStakingAppchain(wrongChainIDs, tokensUsed);
+
+        // Try to push with wrong tokens
+        uint256[] memory correctChainIDs = new uint256[](2);
+        correctChainIDs[0] = 1;
+        correctChainIDs[1] = 2;
+        uint256[] memory wrongTokens = new uint256[](2);
+        wrongTokens[0] = 999;
+        wrongTokens[1] = 888;
+
+        vm.expectRevert(GasAggregator.InvalidDataHash.selector);
+        gasAggregator.pushTopChainsDataToStakingAppchain(correctChainIDs, wrongTokens);
+
+        // Should work with correct data
+        uint256[] memory correctTokens = new uint256[](2);
+        correctTokens[0] = 100;
+        correctTokens[1] = 200;
+        gasAggregator.pushTopChainsDataToStakingAppchain(correctChainIDs, correctTokens);
     }
 
     function test_Integration_CompleteWorkflow() public {
@@ -411,7 +482,14 @@ contract GasAggregatorTest is Test {
         vm.warp(submissionTime + CHALLENGE_WINDOW + 1);
 
         // Push data
-        gasAggregator.pushTopChainsDataToStakingAppchain();
+        uint256[] memory pushChainIDs = new uint256[](2);
+        pushChainIDs[0] = 2;
+        pushChainIDs[1] = 3;
+        uint256[] memory pushTokens = new uint256[](2);
+        pushTokens[0] = 200;
+        pushTokens[1] = 300;
+
+        gasAggregator.pushTopChainsDataToStakingAppchain(pushChainIDs, pushTokens);
 
         // Verify staking appchain data
         MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
@@ -501,7 +579,14 @@ contract GasAggregatorTest is Test {
         gasAggregator.submitOffchainTopChains(chainIDs1);
 
         // But push should now work
-        gasAggregator.pushTopChainsDataToStakingAppchain();
+        uint256[] memory finalChainIDs = new uint256[](2);
+        finalChainIDs[0] = 1;
+        finalChainIDs[1] = 2;
+        uint256[] memory finalTokens = new uint256[](2);
+        finalTokens[0] = 100;
+        finalTokens[1] = 200;
+
+        gasAggregator.pushTopChainsDataToStakingAppchain(finalChainIDs, finalTokens);
 
         // Verify data was pushed
         MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
