@@ -16,7 +16,7 @@ contract SyndStakingTest is Test {
     uint256 public appchainId3;
 
     function setUp() public {
-        staking = new SyndStaking(block.timestamp);
+        staking = new SyndStaking();
 
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");

@@ -103,7 +103,8 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
                 Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
-            components.mine_set_block(1).await?;
+            components.mine_seq_block(1).await?;
+            components.mine_set_block(1000).await?;
 
             // Wait for deposit to be processed
             wait_until!(
@@ -560,12 +561,13 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
                 Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
-            components.mine_set_block(1).await?;
+            components.mine_seq_block(1).await?;
+            components.mine_set_block(1000).await?;
 
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(60)
+                Duration::from_secs(10)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;

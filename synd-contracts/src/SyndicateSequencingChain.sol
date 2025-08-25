@@ -49,7 +49,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, GasCounter {
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-missing-revert-reason-tests
-    constructor(uint256 _appchainId, uint256 epochStartTime) SequencingModuleChecker() GasCounter(epochStartTime) {
+    constructor(uint256 _appchainId) SequencingModuleChecker() {
         // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
         require(_appchainId != 0, "App chain ID cannot be 0");
         appchainId = _appchainId;

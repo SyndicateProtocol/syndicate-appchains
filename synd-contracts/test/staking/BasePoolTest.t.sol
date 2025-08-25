@@ -15,7 +15,7 @@ contract BasePoolTest is Test {
     address public user3;
 
     function setUp() public {
-        staking = new SyndStaking(block.timestamp);
+        staking = new SyndStaking();
         basePool = new BasePool(address(staking));
 
         user1 = makeAddr("user1");

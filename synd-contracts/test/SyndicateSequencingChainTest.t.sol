@@ -49,7 +49,7 @@ contract SyndicateSequencingChainTestSetUp is Test {
     function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
         vm.startPrank(admin);
-        factory = new SyndicateFactory(admin, 0);
+        factory = new SyndicateFactory(admin);
         (address chainAddress,) = factory.createSyndicateSequencingChain(
             appchainId, admin, _permissionModule, keccak256(abi.encodePacked("test-salt"))
         );
@@ -146,7 +146,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
     function testConstructorWithZeroAppChainId() public {
         vm.expectRevert("App chain ID cannot be 0");
-        new SyndicateSequencingChain(0, 0);
+        new SyndicateSequencingChain(0);
     }
 
     function testProcessTransactionsBulkAllAllowed() public {

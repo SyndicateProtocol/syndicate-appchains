@@ -11,18 +11,10 @@ pragma solidity 0.8.28;
  */
 abstract contract EpochTracker {
     /// @notice The timestamp when epoch counting begins
-    uint256 public immutable startTimestamp;
+    uint256 public constant startTimestamp = 0; // 1751497200; // 1st October 2025 1759273200 - (90 days) 3888000
 
     /// @notice Duration of each epoch in seconds (30 days)
     uint256 public constant EPOCH_DURATION = 30 days;
-
-    /**
-     * @notice Constructor to set the epoch start timestamp
-     * @param _startTimestamp The timestamp from which epoch counting begins
-     */
-    constructor(uint256 _startTimestamp) {
-        startTimestamp = _startTimestamp;
-    }
 
     /**
      * @notice Get the current epoch index based on the current block timestamp
@@ -40,7 +32,7 @@ abstract contract EpochTracker {
      * @param epochIndex The epoch index to get the start time for
      * @return The timestamp when the specified epoch begins
      */
-    function getEpochStart(uint256 epochIndex) public view returns (uint256) {
+    function getEpochStart(uint256 epochIndex) public pure returns (uint256) {
         return startTimestamp + (epochIndex - 1) * EPOCH_DURATION;
     }
 
@@ -49,7 +41,7 @@ abstract contract EpochTracker {
      * @param epochIndex The epoch index to get the end time for
      * @return The timestamp when the specified epoch ends
      */
-    function getEpochEnd(uint256 epochIndex) public view returns (uint256) {
+    function getEpochEnd(uint256 epochIndex) public pure returns (uint256) {
         return startTimestamp + epochIndex * EPOCH_DURATION;
     }
 }

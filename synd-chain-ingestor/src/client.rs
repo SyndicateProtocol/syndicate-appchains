@@ -415,6 +415,17 @@ pub trait Provider: Sync {
     }
 
     #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
+    async fn ready(&self) -> Result<bool, ClientError> {
+        #[derive(serde::Deserialize, Clone)]
+        struct ReadyResponse {
+            ready: bool,
+        }
+
+        let response: ReadyResponse = self.request("ready", ((),)).await?;
+        Ok(response.ready)
+    }
+
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
     async fn get_block_number(&self) -> Result<u64, ClientError> {
         self.request("eth_blockNumber", ((),)).await
     }

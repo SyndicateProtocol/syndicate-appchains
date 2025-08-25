@@ -31,6 +31,7 @@ use eyre::Result;
 use serde_json::{json, Value};
 use shared::types::FilledProvider;
 use std::{
+    cmp::Ordering,
     collections::HashMap,
     env,
     future::Future,
@@ -249,7 +250,6 @@ impl TestComponents {
         let _ = SyndicateSequencingChain::deploy_builder(
             &seq_provider,
             U256::from(options.appchain_chain_id),
-            U256::ZERO,
         )
         .send()
         .await?;
@@ -361,22 +361,43 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                let chain_info = start_anvil_with_args(
+                let set_chain_info = start_anvil_with_args(
                     SETTLEMENT_CHAIN_ID,
                     &["--load-state", state_file.to_str().unwrap()],
                 )
                 .await?;
 
                 // Sync the tips of the sequencing and settlement chains
-                let block = chain_info
+                let set_timestamp = set_chain_info
                     .provider
                     .get_block_by_number(BlockNumberOrTag::Latest)
                     .await?
-                    .unwrap();
-                seq_provider
-                    .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
-                    .await?;
-                chain_info
+                    .unwrap()
+                    .header
+                    .timestamp;
+
+                let seq_timestamp = seq_provider
+                    .get_block_by_number(BlockNumberOrTag::Latest)
+                    .await?
+                    .unwrap()
+                    .header
+                    .timestamp;
+
+                match seq_timestamp.cmp(&set_timestamp) {
+                    Ordering::Less => {
+                        seq_provider
+                            .evm_mine(Some(MineOptions::Timestamp(Some(set_timestamp))))
+                            .await?;
+                    }
+                    Ordering::Equal => {}
+                    Ordering::Greater => {
+                        set_chain_info
+                            .provider
+                            .evm_mine(Some(MineOptions::Timestamp(Some(seq_timestamp))))
+                            .await?;
+                    }
+                }
+                set_chain_info
             }
         };
 

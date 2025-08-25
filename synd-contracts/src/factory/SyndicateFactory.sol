@@ -43,9 +43,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     mapping(uint256 => address) public appchainContracts;
     uint256[] public chainIDs;
 
-    uint256 public epochStartTime;
-
-    constructor(address admin, uint256 _epochStartTime) {
+    constructor(address admin) {
         if (admin == address(0)) revert ZeroAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -54,7 +52,6 @@ contract SyndicateFactory is AccessControl, Pausable {
         _updateNamespaceConfig(510);
 
         nextAutoChainId = 1;
-        epochStartTime = _epochStartTime;
     }
 
     /// @notice Creates a new SyndicateSequencingChain contract
@@ -114,8 +111,8 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Returns the bytecode for deploying a SyndicateSequencingChain
     /// @param chainId The chain ID
     /// @return The bytecode with constructor parameters
-    function getBytecode(uint256 chainId) public view returns (bytes memory) {
-        return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId, epochStartTime));
+    function getBytecode(uint256 chainId) public pure returns (bytes memory) {
+        return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId));
     }
 
     /// @notice Get the next auto-generated chain ID

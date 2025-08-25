@@ -2,7 +2,8 @@
 pragma solidity 0.8.28;
 
 import {EpochTracker} from "./EpochTracker.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 interface GasCounter {
     function getTokensForEpoch(uint256 epoch) external view returns (uint256);
@@ -21,7 +22,7 @@ interface StakingAppchain {
 
 /// @title GasAggregator
 /// @notice Aggregates gas usage data from appchains and pushes it to the staking appchain
-contract GasAggregator is EpochTracker, AccessControl {
+contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -60,26 +61,27 @@ contract GasAggregator is EpochTracker, AccessControl {
     error ZeroAddress();
 
     /*//////////////////////////////////////////////////////////////
-                            CONSTRUCTOR 
+                            INITIALIZER 
     //////////////////////////////////////////////////////////////*/
-    constructor(
+    function initialize(
         AppchainFactory _factory,
         StakingAppchain _stakingAppchain,
         address admin,
-        uint256 _epochStartTimestamp,
         uint256 _challengeWindow
-    ) EpochTracker(_epochStartTimestamp) {
+    ) external initializer {
         if (address(_factory) == address(0)) revert ZeroAddress();
         if (address(_stakingAppchain) == address(0)) revert ZeroAddress();
         if (admin == address(0)) revert ZeroAddress();
         if (_challengeWindow == 0) revert ZeroChallengeWindow();
 
+        __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         // consider all past epochs ignoed
         pendingEpoch = getCurrentEpoch();
         factory = _factory;
         stakingAppchain = _stakingAppchain;
+        challengeWindow = _challengeWindow;
     }
 
     /*//////////////////////////////////////////////////////////////

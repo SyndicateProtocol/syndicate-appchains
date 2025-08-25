@@ -33,7 +33,7 @@ contract SyndicateFactoryTest is Test {
         admin = address(0x1);
         manager = address(0x2);
         nonManager = address(0x3);
-        factory = new SyndicateFactory(admin, 0);
+        factory = new SyndicateFactory(admin);
 
         // Grant manager role to the manager address
         vm.prank(admin);
@@ -447,7 +447,7 @@ contract SyndicateFactoryTest is Test {
 
     function testConstructorWithZeroAddressReverts() public {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        new SyndicateFactory(address(0), 0);
+        new SyndicateFactory(address(0));
     }
 
     function testGetNextChainIdFunction() public view {
