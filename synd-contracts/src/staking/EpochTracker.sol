@@ -16,6 +16,8 @@ abstract contract EpochTracker {
     /// @notice Duration of each epoch in seconds (30 days)
     uint256 public constant EPOCH_DURATION = 30 days;
 
+    error ZeroEpochIndex();
+
     /**
      * @notice Get the current epoch index based on the current block timestamp
      * @dev Epochs are 1-indexed to ensure proper initialization of finalization counts
@@ -33,6 +35,9 @@ abstract contract EpochTracker {
      * @return The timestamp when the specified epoch begins
      */
     function getEpochStart(uint256 epochIndex) public pure returns (uint256) {
+        if (epochIndex == 0) {
+            revert ZeroEpochIndex();
+        }
         return START_TIMESTAMP + (epochIndex - 1) * EPOCH_DURATION;
     }
 
@@ -42,6 +47,9 @@ abstract contract EpochTracker {
      * @return The timestamp when the specified epoch ends
      */
     function getEpochEnd(uint256 epochIndex) public pure returns (uint256) {
+        if (epochIndex == 0) {
+            revert ZeroEpochIndex();
+        }
         return START_TIMESTAMP + epochIndex * EPOCH_DURATION;
     }
 }
