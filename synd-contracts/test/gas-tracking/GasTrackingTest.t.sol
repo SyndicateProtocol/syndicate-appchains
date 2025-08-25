@@ -10,6 +10,8 @@ import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
 import {AlwaysAllowedModule} from "../../src/sequencing-modules/AlwaysAllowedModule.sol";
 import {RequireAndModule} from "../../src/requirement-modules/RequireAndModule.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
 contract MockGasCounter {
     mapping(uint256 => uint256) public tokensUsedPerEpoch;
@@ -99,14 +101,28 @@ contract GasAggregatorTest is Test {
         mockGasCounter2 = new MockGasCounter();
         mockGasCounter3 = new MockGasCounter();
 
-        // Deploy GasAggregator first
-        gasAggregator = new GasAggregator();
+        // Deploy using TransparentUpgradeableProxy pattern like the deployment script
 
-        // Warp to exactly the epoch start timestamp (beginning of epoch 1) BEFORE initialize
-        vm.warp(gasAggregator.START_TIMESTAMP());
+        // 1. Deploy ProxyAdmin contract
+        ProxyAdmin proxyAdmin = new ProxyAdmin(admin);
 
-        // Initialize after warping to avoid underflow
-        gasAggregator.initialize(mockFactory, new MockStakingAppchain(), admin, 24 hours);
+        // 2. Deploy GasAggregator implementation
+        GasAggregator implementation = new GasAggregator();
+
+        // 3. Warp to exactly the epoch start timestamp (beginning of epoch 1) BEFORE proxy deployment
+        vm.warp(implementation.START_TIMESTAMP());
+
+        // 4. Prepare initialization data
+        bytes memory initData = abi.encodeWithSelector(
+            GasAggregator.initialize.selector, mockFactory, new MockStakingAppchain(), admin, 24 hours
+        );
+
+        // 5. Deploy TransparentUpgradeableProxy
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), initData);
+
+        // Cast proxy to GasAggregator interface
+        gasAggregator = GasAggregator(address(proxy));
 
         // Set initial values using admin role
         vm.prank(admin);
@@ -126,9 +142,23 @@ contract GasAggregatorTest is Test {
 
     function test_Constructor_ZeroAdmin() public {
         MockStakingAppchain stakingAppchain = new MockStakingAppchain();
-        GasAggregator testAggregator = new GasAggregator();
+
+        // Deploy using proxy pattern to test initialization validation
+        ProxyAdmin proxyAdmin = new ProxyAdmin(admin);
+        GasAggregator implementation = new GasAggregator();
+
+        // Prepare initialization data with zero admin address
+        bytes memory initData = abi.encodeWithSelector(
+            GasAggregator.initialize.selector,
+            mockFactory,
+            stakingAppchain,
+            address(0), // This should trigger ZeroAddress error
+            24 hours
+        );
+
+        // Expect the ZeroAddress error when deploying the proxy
         vm.expectRevert(GasAggregator.ZeroAddress.selector);
-        testAggregator.initialize(mockFactory, stakingAppchain, address(0), 24 hours);
+        new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), initData);
     }
 
     function test_SetMaxAppchainsToQuery() public {
