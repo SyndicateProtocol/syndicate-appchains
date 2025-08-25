@@ -8,8 +8,7 @@ use std::num::ParseIntError;
 use thiserror::Error;
 use tracing::error;
 
-// Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
-/// Primary error type for the Maestro service, following JSON-RPC error code mapping
+/// Primary error type for the Maestro service
 #[derive(Debug, Error)]
 pub enum MaestroError {
     /// Error relating to Valkey
@@ -23,6 +22,22 @@ pub enum MaestroError {
     /// Error with waiting transactions
     #[error("waiting transaction error: {0}")]
     WaitingTransaction(#[from] WaitingTransactionError),
+
+    /// Failed to parse from cache
+    #[error("failed to parse the following from cache: {0} as: {1}")]
+    FailedToParseFromCache(String, String),
+}
+
+/// JSON-RPC-specific error types. These are client-facing
+#[derive(Debug, Error)]
+pub enum MaestroRpcError {
+    /// Internal Maestro error
+    #[error("internal error: {0}")]
+    InternalError(InternalErrorType),
+
+    /// Standard shared JSON-RPC Errors
+    #[error(transparent)]
+    JsonRpcError(#[from] RpcError),
 }
 
 /// Error types relating to Config
@@ -37,18 +52,6 @@ pub enum ConfigError {
 
     #[error("failed to parse config: {0}")]
     ParseConfig(#[from] ParseIntError),
-}
-
-/// JSON-RPC specific error types
-#[derive(Debug, Error)]
-pub enum MaestroRpcError {
-    /// Internal Maestro error
-    #[error("internal error: {0}")]
-    InternalError(InternalErrorType),
-
-    /// Standard shared JSON-RPC Errors
-    #[error(transparent)]
-    JsonRpcError(#[from] RpcError),
 }
 
 /// Known internal Maestro errors
@@ -92,7 +95,7 @@ impl From<MaestroRpcError> for ErrorObjectOwned {
     fn from(error: MaestroRpcError) -> Self {
         match error {
             MaestroRpcError::InternalError(e) => ErrorObjectOwned::owned(
-                ErrorCode::InternalError.code(),
+                ErrorCode::InternalError.code(), // -32603
                 format!("internal error: {e}"),
                 None::<()>,
             ),

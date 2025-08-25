@@ -1,23 +1,20 @@
 //! The `additive_compression` module provides functionality for incrementally compressing
 //! transactions using zlib.
 
-use flate2::{write::ZlibEncoder, Compression};
 use rlp::RlpStream;
-use shared::zlib_compression::is_valid_cm_bits_8_only;
-use std::io::{Error, Write};
 use tracing::instrument;
 
 /// A batch of transactions.
 #[derive(Debug, Clone)]
 pub enum SequencingBatch {
-    /// A batch of zlib compressed transactions. (also includes the uncompressed transactions, in
+    /// A batch of brotli compressed transactions. (also includes the uncompressed transactions, in
     /// case they need to be re-tried)
     Compressed(Vec<u8>, Vec<TxWithValkeyId>),
     /// A batch of uncompressed transactions.
     Uncompressed(Vec<TxWithValkeyId>),
 }
 
-/// A transaction with a vakey ID.
+/// A transaction with a valkey ID.
 pub type TxWithValkeyId = (Vec<u8>, String);
 
 impl SequencingBatch {
@@ -52,7 +49,7 @@ impl SequencingBatch {
     }
 
     /// Creates a new batch with the given transaction added.
-    pub fn create_new_with_tx(&self, tx: TxWithValkeyId) -> Result<Self, Error> {
+    pub fn create_new_with_tx(&self, tx: TxWithValkeyId) -> std::io::Result<Self> {
         match self {
             Self::Compressed(_, txs) => compress_batch(txs, tx),
             Self::Uncompressed(txs) => Ok(uncompressed_batch(txs, tx)),
@@ -85,10 +82,10 @@ fn uncompressed_batch(txs: &[TxWithValkeyId], new_tx: TxWithValkeyId) -> Sequenc
     SequencingBatch::Uncompressed(final_tx_list)
 }
 
-/// Compresses a list of transactions along with a new transaction using zlib compression.
+/// Compresses a list of transactions along with a new transaction using brotli compression.
 ///
 /// This function takes an existing list of transactions and a new transaction, combines them
-/// into an RLP-encoded list, and compresses the result using zlib compression. The compression
+/// into an RLP-encoded list, and compresses the result using brotli compression. The compression
 /// is validated to ensure it meets the required format (8-bit CM bits only).
 ///
 /// # Arguments
@@ -122,7 +119,7 @@ fn uncompressed_batch(txs: &[TxWithValkeyId], new_tx: TxWithValkeyId) -> Sequenc
 fn compress_batch(
     batch_txs: &[TxWithValkeyId],
     new_tx: TxWithValkeyId,
-) -> Result<SequencingBatch, Error> {
+) -> std::io::Result<SequencingBatch> {
     let mut batch_txs_clone = batch_txs.to_vec();
     batch_txs_clone.push(new_tx.clone());
 
@@ -132,11 +129,12 @@ fn compress_batch(
     }
     stream.append(&new_tx.0);
 
-    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(&stream.out())?;
-    let compressed = encoder.finish()?;
-
-    is_valid_cm_bits_8_only(&compressed)?;
+    let mut compressed = Vec::new();
+    brotli::enc::BrotliCompress(
+        &mut &stream.out()[..],
+        &mut compressed,
+        &brotli::enc::BrotliEncoderInitParams(),
+    )?;
 
     Ok(SequencingBatch::Compressed(compressed, batch_txs_clone))
 }
@@ -144,9 +142,7 @@ fn compress_batch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use flate2::read::ZlibDecoder;
     use rlp::Rlp;
-    use std::io::Read;
 
     #[test]
     fn test_uncompressed_batch() {
@@ -181,9 +177,8 @@ mod tests {
         };
 
         // Decompress and decode
-        let mut decoder = ZlibDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed).unwrap();
+        brotli::BrotliDecompress(&mut &compressed[..], &mut decompressed).unwrap();
 
         let rlp = Rlp::new(&decompressed);
         let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();
@@ -204,9 +199,8 @@ mod tests {
         };
 
         // Decompress and check the RLP list
-        let mut decoder = ZlibDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed).unwrap();
+        brotli::BrotliDecompress(&mut &compressed[..], &mut decompressed).unwrap();
 
         let rlp = Rlp::new(&decompressed);
         let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();
@@ -235,9 +229,9 @@ mod tests {
             SequencingBatch::Compressed(compressed, _) => compressed,
             SequencingBatch::Uncompressed(_) => panic!("Expected compressed batch"),
         };
-        let mut decoder = ZlibDecoder::new(&compressed[..]);
+
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed).unwrap();
+        brotli::BrotliDecompress(&mut &compressed[..], &mut decompressed).unwrap();
 
         let rlp = Rlp::new(&decompressed);
         let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();

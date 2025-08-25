@@ -2,9 +2,6 @@ using SyndicateSequencingChain as syndicateChain;
 
 methods {
     function syndicateChain.isAllowed(address, address, bytes) external returns (bool) envfree;
-    function mchain.processTransactionUncompressed(bytes) external;
-    function mchain.processTransaction(bytes) external;
-    function mchain.processTransactionsBulk(bytes[]) external;
 }
 
 rule emptyArraysRevert() {

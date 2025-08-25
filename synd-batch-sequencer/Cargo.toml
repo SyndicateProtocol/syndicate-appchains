@@ -11,13 +11,13 @@ version.workspace      = true
 
 [dependencies]
 alloy             = { workspace = true }
+brotli            = { workspace = true }
 byte-unit         = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 contract-bindings = { workspace = true }
 ctor              = { workspace = true }
 derivative        = { workspace = true }
 eyre              = { workspace = true }
-flate2            = { workspace = true }
 humantime         = { workspace = true }
 prometheus-client = { workspace = true }
 redis             = { workspace = true, features = ["streams", "tokio-comp"] }

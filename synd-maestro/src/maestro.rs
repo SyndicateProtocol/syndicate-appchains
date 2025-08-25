@@ -34,7 +34,7 @@ use derivative::Derivative;
 use redis::{aio::ConnectionManager, AsyncCommands};
 use shared::{
     json_rpc::{
-        Rejection::{InsufficientFunds, NonceTooLow},
+        Rejection::{InsufficientFunds, NonceBufferExceeded, NonceTooLow},
         RpcError::TransactionRejected,
     },
     multi_rpc_provider::MultiRpcProvider,
@@ -264,7 +264,8 @@ impl MaestroService {
         let _guard = chain_wallet_lock.lock().await;
         trace!(chain_id, %wallet, "got lock");
 
-        let expected_nonce = self.get_cached_or_rpc_nonce(wallet, chain_id).await?;
+        let expected_nonce =
+            self.get_expected_nonce_and_validate(wallet, chain_id, tx_nonce).await?;
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
@@ -354,7 +355,7 @@ impl MaestroService {
         Ok(())
     }
 
-    /// Gets a wallet's nonce from cache or RPC provider
+    /// Gets a wallet's nonce from cache or RPC provider, checking the optional `max_nonce_buffer`
     ///
     /// This method attempts to retrieve a wallet's nonce from the cache.
     /// If the nonce is not found or cannot be parsed, it falls back to fetching
@@ -369,51 +370,45 @@ impl MaestroService {
     /// * `Err(MaestroRpcError)` - If retrieving the nonce fails
     ///
     /// # Errors
-    /// Returns an error if:
+    /// Return an error if:
     /// * Valkey connection fails
     /// * RPC provider is missing for the specified chain
     /// * RPC request to fetch the nonce fails
+    /// * `Max_nonce_buffer` is configured and exceeded
     #[instrument(
-        skip(self, signer),
+        skip(self, wallet_address),
         err,
         fields(
             otel.kind = ?SpanKind::Client,
-            wallet = %signer,
+            wallet_address = %wallet_address,
             chain_id = %chain_id,
         )
     )]
-    pub async fn get_cached_or_rpc_nonce(
+    pub async fn get_expected_nonce_and_validate(
         &self,
-        signer: Address,
+        wallet_address: Address,
         chain_id: ChainId,
+        tx_nonce: u64,
     ) -> Result<u64, MaestroRpcError> {
-        // TODO(SEQ-885): remove this once tracing makes the below logs redundant
-        let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
-        let mut conn = self.valkey_conn.clone();
+        let cached_wallet_nonce = self
+            .get_wallet_nonce_from_cache(chain_id, wallet_address)
+            .await
+            .inspect_err(
+                |e| debug!(%e, %chain_id, %wallet_address, "Error getting nonce from cache"),
+            )
+            .ok() // discard error
+            .flatten();
 
-        let nonce = match with_cache_metrics!(
-            &self.metrics.valkey,
-            conn.get_wallet_nonce(chain_id, signer)
-        ) {
-            // Cache hit - we have a valid value
-            Ok(Some(nonce_str)) => {
-                // Parse the nonce string to u64
-                match nonce_str.parse::<u64>() {
-                    Ok(nonce) => nonce,
-                    Err(e) => {
-                        warn!(%nonce_str, %chain_wallet_nonce_key, %e, "Failed to parse nonce from Valkey cache, falling back to RPC");
-                        self.get_nonce_from_rpc_and_update_cache(chain_id, signer).await?
-                    }
-                }
-            }
-            // Cache miss or error - need to get from RPC
-            _ => {
-                trace!(%signer, %chain_id, %chain_wallet_nonce_key, "No cached nonce found, fetching from RPC");
-                self.get_nonce_from_rpc_and_update_cache(chain_id, signer).await?
-            }
-        };
+        if let Some(cached_wallet_nonce) = cached_wallet_nonce {
+            self.validate_max_nonce_buffer(tx_nonce, cached_wallet_nonce).inspect_err(|e| {
+                debug!(%e, %wallet_address, %chain_id, %cached_wallet_nonce, %tx_nonce, max_nonce_buffer = ?self.config.max_nonce_buffer,
+                            "Nonce buffer exceeded, rejecting transaction");
+            })?;
+            return Ok(cached_wallet_nonce)
+        }
 
-        Ok(nonce)
+        trace!(%wallet_address, %chain_id, "No cached nonce found, fetching from RPC");
+        self.get_nonce_from_rpc_and_update_cache(chain_id, wallet_address).await
     }
 
     /// Fetches a wallet's nonce from the RPC provider and updates the cache
@@ -470,6 +465,59 @@ impl MaestroService {
         Ok(rpc_nonce)
     }
 
+    /// Retrieves a cached wallet nonce and parses it to `u64`, if present
+    ///
+    /// # Arguments
+    /// * `chain_id` - The chain identifier to retrieve the nonce for
+    /// * `wallet_address` - The wallet address to retrieve the nonce for
+    ///
+    /// # Returns
+    /// * `Ok(Some(nonce))` - If a cached nonce exists and was successfully parsed
+    /// * `Ok(None)` - If no cached nonce exists for the given chain and wallet
+    /// * `Err(MaestroError)` - If there was an error accessing the cache or parsing the nonce
+    async fn get_wallet_nonce_from_cache(
+        &self,
+        chain_id: ChainId,
+        wallet_address: Address,
+    ) -> Result<Option<u64>, MaestroError> {
+        let mut conn = self.valkey_conn.clone();
+
+        let wallet_nonce = with_cache_metrics!(
+            &self.metrics.valkey,
+            conn.get_wallet_nonce(chain_id, wallet_address)
+        )?;
+
+        wallet_nonce
+            .map(|nonce| nonce.parse::<u64>().map_err(|_| {
+                error!(%nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
+                MaestroError::FailedToParseFromCache(nonce, "u64".into())
+            }))
+            .transpose()
+    }
+
+    /// Validates that the transaction nonce does not exceed the optional maximum nonce buffer
+    /// limit. This is to prevent caching an excessive number of waiting transactions for
+    /// a given wallet, like in the case of system downtime.
+    ///
+    /// # Arguments
+    /// * `tx_nonce` - The nonce of the transaction to validate
+    /// * `cached_wallet_nonce` - The cached nonce of the wallet
+    ///
+    /// # Returns
+    /// * `Ok(())` - If validation passes or no validation is needed
+    /// * `Err(MaestroRpcError)` - If the nonce buffer is exceeded
+    const fn validate_max_nonce_buffer(
+        &self,
+        tx_nonce: u64,
+        cached_wallet_nonce: u64,
+    ) -> Result<(), MaestroRpcError> {
+        let Some(max_nonce_buffer) = self.config.max_nonce_buffer else {
+            return Ok(());
+        };
+
+        check_tx_nonce_within_buffer(max_nonce_buffer, tx_nonce, cached_wallet_nonce)
+    }
+
     /// Updates a wallet's nonce in the cache
     ///
     /// This method updates the wallet's nonce in the cache to the
@@ -492,26 +540,15 @@ impl MaestroService {
         current_nonce: u64,
         desired_nonce: u64,
     ) -> Result<u64, MaestroError> {
-        let mut conn = self.valkey_conn.clone();
-
-        let cached_nonce = with_cache_metrics!(
-            &self.metrics.valkey,
-            conn.get_wallet_nonce(chain_id, wallet_address)
-        )?;
-
+        let cached_nonce = self.get_wallet_nonce_from_cache(chain_id, wallet_address).await?;
         if let Some(cached_nonce) = cached_nonce {
-            let cached_nonce_parsed = cached_nonce.parse::<u64>().map_err(|_e| {
-                error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from cache");
-                //TODO clear cache here?
-                WaitingTransaction(FailedToEnqueue)
-            })?;
-            if cached_nonce_parsed.cmp(&current_nonce) != Ordering::Equal {
-                error!(%desired_nonce, %cached_nonce_parsed, %current_nonce, %chain_id, %wallet_address, "unexpected cached nonce. likely a concurrency bug");
-                //TODO clear cache here?
-                return Err(WaitingTransaction(FailedToEnqueue));
+            if cached_nonce != current_nonce {
+                error!(%desired_nonce, %cached_nonce, %current_nonce, %chain_id, %wallet_address,
+                            "unexpected cached nonce. likely a concurrency bug");
             }
         }
 
+        let mut conn = self.valkey_conn.clone();
         // actual increment
         let old_nonce = with_cache_metrics!(
             &self.metrics.valkey,
@@ -856,6 +893,20 @@ impl MaestroService {
     }
 }
 
+// Checks `tx_nonce` and `cached_wallet_nonce` against the configured `max_nonce_buffer`
+const fn check_tx_nonce_within_buffer(
+    max_nonce_buffer: u64,
+    tx_nonce: u64,
+    cached_wallet_nonce: u64,
+) -> Result<(), MaestroRpcError> {
+    if let Some(nonce_gap) = tx_nonce.checked_sub(cached_wallet_nonce) {
+        if nonce_gap > max_nonce_buffer {
+            return Err(JsonRpcError(TransactionRejected(NonceBufferExceeded)))
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -888,7 +939,9 @@ mod tests {
     }
 
     // Helper to create a test service with real Valkey and mock RPC
-    async fn create_test_service() -> (MaestroService, MockServer, MockServer, E2EProcess) {
+    async fn create_test_service(
+        opt_config: Option<Config>,
+    ) -> (MaestroService, MockServer, MockServer, E2EProcess) {
         // Start cache
         let (valkey_container, valkey_url) = start_valkey().await.unwrap();
 
@@ -908,10 +961,24 @@ mod tests {
         let valkey_conn = ConnectionManager::new(client).await.unwrap();
 
         // Create test config
-        let config = Config {
+        let mut config = opt_config.unwrap_or_else(test_config);
+        config.valkey_url = valkey_url;
+        config.chain_rpc_urls = chain_rpc_urls;
+
+        let mut registry = Registry::default();
+        let metrics = MaestroMetrics::new(&mut registry);
+
+        // Create service
+        let service = MaestroService::new(valkey_conn, config, metrics).await.unwrap();
+
+        (service, mock_rpc_server_4, mock_rpc_server_5, valkey_container)
+    }
+
+    fn test_config() -> Config {
+        Config {
             port: 0,
-            valkey_url,
-            chain_rpc_urls,
+            valkey_url: Default::default(),
+            chain_rpc_urls: Default::default(),
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
             metrics_port: 8090,
@@ -921,15 +988,8 @@ mod tests {
             finalization_checker_interval: Duration::from_secs(1),
             max_transaction_retries: 3,
             skip_balance_check: false,
-        };
-
-        let mut registry = Registry::default();
-        let metrics = MaestroMetrics::new(&mut registry);
-
-        // Create service
-        let service = MaestroService::new(valkey_conn, config, metrics).await.unwrap();
-
-        (service, mock_rpc_server_4, mock_rpc_server_5, valkey_container)
+            max_nonce_buffer: None,
+        }
     }
 
     // Helper to set up default mock responses
@@ -980,7 +1040,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_producer() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test chain ID
         let chain_id = 4u64;
@@ -1014,7 +1074,7 @@ mod tests {
     #[tokio::test]
     async fn test_enqueue_raw_transaction() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1050,14 +1110,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_cached_or_rpc_nonce_cache_hit() {
+    async fn test_get_expected_nonce_and_validate_hit() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
         let expected_nonce = 42u64;
+        let tx_nonce = 42u64;
 
         // Pre-populate Valkey with nonce
         let mut conn = service.valkey_conn.clone();
@@ -1066,7 +1127,8 @@ mod tests {
             .unwrap();
 
         // Get nonce
-        let nonce_result = service.get_cached_or_rpc_nonce(wallet, chain_id).await;
+        let nonce_result =
+            service.get_expected_nonce_and_validate(wallet, chain_id, tx_nonce).await;
 
         // Verify result
         assert!(nonce_result.is_ok(), "Getting cached nonce should succeed");
@@ -1078,21 +1140,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_cached_or_rpc_nonce_cache_miss() {
+    async fn test_get_expected_nonce_and_validate_miss() {
         // Create test service
-        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service().await;
+        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
         let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let expected_nonce = 42u64;
+        let tx_nonce = 42u64;
 
         // Set up mock RPC response
         set_up_mock_transaction_count(&mock_server_4, &wallet_hex, expected_nonce).await;
 
         // Get nonce (should go to RPC since cache is empty)
-        let nonce_result = service.get_cached_or_rpc_nonce(wallet, chain_id).await;
+        let nonce_result =
+            service.get_expected_nonce_and_validate(wallet, chain_id, tx_nonce).await;
 
         // Verify result
         assert!(nonce_result.is_ok(), "Getting nonce from RPC should succeed");
@@ -1105,9 +1169,56 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_max_nonce_buffer_exceeded() {
+        // Create test service
+        let mut config = test_config();
+        config.max_nonce_buffer = Some(2); // low buffer
+        let (service, _mock_server_4, _, _valkey_container_guard) =
+            create_test_service(Some(config)).await;
+
+        // Test data
+        let chain_id = 4u64;
+        let wallet = Address::from_slice(&[0x42; 20]);
+        let expected_nonce = 42u64;
+        let tx_nonce = 42u64;
+
+        // Pre-populate Valkey with nonce
+        let mut conn = service.valkey_conn.clone();
+        conn.set_wallet_nonce(chain_id, wallet, expected_nonce, service.config.wallet_nonce_ttl)
+            .await
+            .unwrap();
+
+        // Get nonce
+        let nonce_result =
+            service.get_expected_nonce_and_validate(wallet, chain_id, tx_nonce).await;
+
+        // Verify result
+        assert!(nonce_result.is_ok(), "Getting cached nonce should succeed");
+        assert_eq!(
+            nonce_result.unwrap(),
+            expected_nonce,
+            "Retrieved nonce should match the cached value"
+        );
+
+        // Get nonce at buffer
+        let nonce_result =
+            service.get_expected_nonce_and_validate(wallet, chain_id, tx_nonce + 2).await;
+        assert!(nonce_result.is_ok(), "Getting cached nonce should succeed");
+
+        // Get nonce over buffer
+        let nonce_result =
+            service.get_expected_nonce_and_validate(wallet, chain_id, tx_nonce + 3).await;
+        assert!(nonce_result.is_err(), "Should fail over nonce buffer");
+        assert!(matches!(
+            nonce_result.unwrap_err(),
+            JsonRpcError(TransactionRejected(NonceBufferExceeded))
+        ));
+    }
+
+    #[tokio::test]
     async fn test_get_nonce_from_rpc_missing_provider() {
         // Create test service with mock servers
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data - use a chain ID that doesn't have a provider
         let chain_id = 9999u64; // Not in our config
@@ -1129,7 +1240,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_nonce_from_rpc_provider_error() {
         // Create test service
-        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service().await;
+        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1170,7 +1281,7 @@ mod tests {
     #[tokio::test]
     async fn test_increment_wallet_nonce() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1212,7 +1323,7 @@ mod tests {
     #[tokio::test]
     async fn test_nonce_ttl() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1246,7 +1357,7 @@ mod tests {
     #[tokio::test]
     async fn test_multi_chain_independence() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data for two different chains
         let chain_id1 = 4u64;
@@ -1279,7 +1390,7 @@ mod tests {
     #[tokio::test]
     async fn test_invalid_cached_nonce() {
         // Create test service
-        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service().await;
+        let (service, mock_server_4, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1287,6 +1398,7 @@ mod tests {
         let wallet_hex = format!("0x{}", hex::encode(wallet.as_slice()));
         let invalid_nonce_str = "not_a_number";
         let rpc_nonce = 42u64;
+        let tx_nonce = 42u64;
 
         // Set up invalid nonce in cache
         {
@@ -1300,7 +1412,8 @@ mod tests {
         set_up_mock_transaction_count(&mock_server_4, &wallet_hex, rpc_nonce).await;
 
         // Get nonce (should fall back to RPC due to parsing error)
-        let nonce_result = service.get_cached_or_rpc_nonce(wallet, chain_id).await;
+        let nonce_result =
+            service.get_expected_nonce_and_validate(wallet, chain_id, tx_nonce).await;
 
         // Verify result
         assert!(nonce_result.is_ok(), "Should successfully fall back to RPC");
@@ -1319,7 +1432,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_cache_for_transaction() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1359,7 +1472,7 @@ mod tests {
     #[tokio::test]
     async fn test_put_gap_transaction_on_cache() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1392,7 +1505,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_gap_transaction_from_cache() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1461,7 +1574,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_empty() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1480,7 +1593,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_with_transactions() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1601,7 +1714,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_with_non_sequential_nonces() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1698,7 +1811,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_for_and_enqueue_waiting_transactions_invalid_transaction() {
         // Create test service
-        let (service, _, _, _valkey_container_guard) = create_test_service().await;
+        let (service, _, _, _valkey_container_guard) = create_test_service(None).await;
 
         // Test data
         let chain_id = 4u64;
@@ -1749,7 +1862,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_equal_nonce() {
         // Create test service
-        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service(None).await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1814,7 +1927,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_lower_nonce() {
         // Create test service
-        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service(None).await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1876,7 +1989,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_higher_nonce() {
         // Create test service
-        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service(None).await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1938,7 +2051,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_background_processing() {
         // Create test service
-        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service(None).await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -2056,7 +2169,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_gaps() {
         // Create test service
-        let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+        let (service, mock_server, _, _valkey_container_guard) = create_test_service(None).await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -2146,6 +2259,49 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_check_tx_nonce_within_buffer_success_cases() {
+        let test_cases = [
+            // (max_buffer, tx_nonce, cached_nonce, description)
+            (10, 105, 100, "nonce within buffer"),
+            (10, 110, 100, "nonce at buffer limit"),
+            (10, 100, 100, "equal nonces"),
+            (0, 100, 100, "zero buffer with equal nonces"),
+            (u64::MAX, u64::MAX, 0, "max values"),
+            (10, 50, 150, "tx_nonce < cached_nonce (underflow case)"),
+        ];
+
+        for (max_buffer, tx_nonce, cached_nonce, description) in test_cases {
+            let result = check_tx_nonce_within_buffer(max_buffer, tx_nonce, cached_nonce);
+            assert!(result.is_ok(), "Failed for case: {description}",);
+        }
+    }
+
+    #[test]
+    fn test_check_tx_nonce_within_buffer_failure_cases() {
+        let test_cases = [
+            // (max_buffer, tx_nonce, cached_nonce, description)
+            (10, 111, 100, "exceeds buffer by 1"),
+            (5, 200, 100, "large gap exceeds buffer"),
+            (0, 101, 100, "zero buffer with gap"),
+        ];
+
+        for (max_buffer, tx_nonce, cached_nonce, description) in test_cases {
+            let result = check_tx_nonce_within_buffer(max_buffer, tx_nonce, cached_nonce);
+            assert!(result.is_err(), "Should have failed for case: {description}");
+
+            match result.unwrap_err() {
+                JsonRpcError(TransactionRejected(NonceBufferExceeded)) => {
+                    // Expected error
+                }
+                other => {
+                    panic!("Expected NonceBufferExceeded for '{description}', got: {other:?}")
+                }
+            }
+        }
+    }
+    // TODO(SEQ-1300) - write `max_nonce_buffer` tests
+
     mod handle_finalization_tests {
         use super::*; // Brings in outer test helpers and main module items
         use crate::valkey::streams::producer::CheckFinalizationResult;
@@ -2224,7 +2380,8 @@ mod tests {
 
         #[tokio::test]
         async fn test_receipt_found() {
-            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let (service, mock_server, _, _valkey_container_guard) =
+                create_test_service(None).await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 10u64;
             let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
@@ -2244,7 +2401,8 @@ mod tests {
 
         #[tokio::test]
         async fn test_receipt_not_found_nonce_matches_resubmit() {
-            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let (service, mock_server, _, _valkey_container_guard) =
+                create_test_service(None).await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 11u64;
             let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
@@ -2274,7 +2432,8 @@ mod tests {
 
         #[tokio::test]
         async fn test_receipt_not_found_nonce_differs_done() {
-            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let (service, mock_server, _, _valkey_container_guard) =
+                create_test_service(None).await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 12u64;
             let rpc_nonce = 13u64; // Different from tx_nonce
@@ -2293,7 +2452,8 @@ mod tests {
 
         #[tokio::test]
         async fn test_receipt_not_found_get_nonce_fails_done() {
-            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let (service, mock_server, _, _valkey_container_guard) =
+                create_test_service(None).await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 14u64;
             let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
@@ -2311,7 +2471,8 @@ mod tests {
 
         #[tokio::test]
         async fn test_get_receipt_fails_done() {
-            let (service, mock_server, _, _valkey_container_guard) = create_test_service().await;
+            let (service, mock_server, _, _valkey_container_guard) =
+                create_test_service(None).await;
             let rpc_provider = service.rpc_providers.get(&TEST_CHAIN_ID_U64).unwrap();
             let tx_nonce = 15u64;
             let raw_tx_bytes = create_legacy_transaction(TEST_CHAIN_ID_U64, tx_nonce);
