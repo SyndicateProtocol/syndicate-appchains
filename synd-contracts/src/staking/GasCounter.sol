@@ -21,8 +21,10 @@ abstract contract GasCounter is EpochTracker {
     mapping(uint256 => uint256) public tokensUsedPerEpoch;
 
     /*//////////////////////////////////////////////////////////////
-                              CONSTRUCTOR
+                ERRORS
     //////////////////////////////////////////////////////////////*/
+    error GasTrackingAlreadyEnabled();
+    error GasTrackingAlreadyDisabled();
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
@@ -80,12 +82,18 @@ abstract contract GasCounter is EpochTracker {
     /// @notice Disable gas tracking if needed
     /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
     function _disableGasTracking() internal {
+        if (gasTrackingEnabled == false) {
+            revert GasTrackingAlreadyDisabled();
+        }
         gasTrackingEnabled = false;
     }
 
     /// @notice Enable gas tracking
     /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
     function _enableGasTracking() internal {
+        if (gasTrackingEnabled == true) {
+            revert GasTrackingAlreadyEnabled();
+        }
         gasTrackingEnabled = true;
     }
 }
