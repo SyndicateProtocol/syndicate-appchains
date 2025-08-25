@@ -21,15 +21,13 @@ harness = false
 name    = "serialization_benches"
 
 [dependencies]
-alloy       = { workspace = true, features = ["providers", "sol-types"] }
-bench-utils = { path = "../bench-utils" }
-bincode     = { workspace = true }
-rand        = { workspace = true }
-shared      = { workspace = true }
-synd-mchain = { workspace = true }
-
-[dev-dependencies]
-divan = { workspace = true }
+alloy                = { workspace = true, features = ["providers", "sol-types"] }
+bench-utils          = { path = "../bench-utils" }
+bincode              = { workspace = true }
+rand                 = { workspace = true }
+shared               = { workspace = true }
+synd-batch-sequencer = { workspace = true }
+synd-mchain          = { workspace = true }
 
 [lints.clippy]
 expect_used = "allow"

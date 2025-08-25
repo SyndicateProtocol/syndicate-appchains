@@ -23,8 +23,24 @@ impl DataSize {
     }
 }
 
-/// Generate test transactions of varying sizes
-pub fn generate_test_transactions(count: usize) -> Vec<Bytes> {
+/// Type alias for transactions with valkey IDs, matching the sequencing batch API
+pub type TxWithValkeyId = (Vec<u8>, String);
+
+/// Generate test transactions of varying sizes as `TxWithValkeyId` tuples
+pub fn generate_test_transactions(count: usize) -> Vec<TxWithValkeyId> {
+    let mut rng = rand::rng();
+    (0..count)
+        .map(|i| {
+            let size = rng.random_range(100..2000); // Realistic transaction sizes
+            let tx_data = generate_random_bytes(size).to_vec();
+            let valkey_id = format!("tx_{i}");
+            (tx_data, valkey_id)
+        })
+        .collect()
+}
+
+/// Generate test transactions of varying sizes as Bytes (legacy function)
+pub fn generate_test_transactions_bytes(count: usize) -> Vec<Bytes> {
     let mut rng = rand::rng();
     (0..count)
         .map(|_| {
@@ -34,11 +50,18 @@ pub fn generate_test_transactions(count: usize) -> Vec<Bytes> {
         .collect()
 }
 
-/// Generate transactions with specific total data size
-pub fn generate_transactions_with_size(total_size: usize) -> Vec<Bytes> {
+/// Generate transactions with specific total data size as `TxWithValkeyId` tuples
+pub fn generate_transactions_with_size(total_size: usize) -> Vec<TxWithValkeyId> {
     let avg_tx_size = 500; // Average transaction size
     let count = total_size / avg_tx_size;
     generate_test_transactions(count)
+}
+
+/// Generate transactions with specific total data size as Bytes (legacy function)
+pub fn generate_transactions_with_size_bytes(total_size: usize) -> Vec<Bytes> {
+    let avg_tx_size = 500; // Average transaction size
+    let count = total_size / avg_tx_size;
+    generate_test_transactions_bytes(count)
 }
 
 /// Generate random bytes of specified length
@@ -69,7 +92,7 @@ pub fn generate_test_block(size: DataSize) -> TestBlock {
         parent_hash: generate_random_hash(),
         number: rng.random_range(1..1_000_000),
         timestamp: rng.random_range(1_600_000_000..1_700_000_000),
-        transactions: generate_test_transactions(tx_count),
+        transactions: generate_test_transactions_bytes(tx_count),
         state_root: generate_random_hash(),
         receipts_root: generate_random_hash(),
     }
@@ -115,7 +138,7 @@ pub fn generate_test_batch_data(size: usize) -> TestBatchData {
     let mut rng = rand::rng();
 
     TestBatchData {
-        transactions: generate_test_transactions(size),
+        transactions: generate_test_transactions_bytes(size),
         block_hashes: (0..size).map(|_| generate_random_hash()).collect(),
         timestamps: (0..size).map(|_| rng.random_range(1_600_000_000..1_700_000_000)).collect(),
         state_data: (0..size).map(|_| generate_random_bytes(rng.random_range(100..1000))).collect(),
@@ -129,4 +152,24 @@ pub struct TestBatchData {
     pub block_hashes: Vec<TxHash>,
     pub timestamps: Vec<u64>,
     pub state_data: Vec<Bytes>,
+}
+
+/// Generate transactions with specific pattern for realistic testing
+pub fn generate_transactions_with_pattern(pattern: &str, count: usize) -> Vec<TxWithValkeyId> {
+    let mut rng = rand::rng();
+
+    (0..count)
+        .map(|i| {
+            let size = match pattern {
+                "small_uniform" => rng.random_range(200..300),
+                "large_uniform" => rng.random_range(1800..2200),
+                "mixed_sizes" => rng.random_range(100..3000),
+                "tiny_many" => rng.random_range(50..150),
+                _ => 500,
+            };
+            let tx_data = generate_random_bytes(size).to_vec();
+            let valkey_id = format!("{pattern}_tx_{i}");
+            (tx_data, valkey_id)
+        })
+        .collect()
 }

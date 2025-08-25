@@ -105,9 +105,9 @@ fn uncompressed_batch(txs: &[TxWithValkeyId], new_tx: TxWithValkeyId) -> Sequenc
 /// use alloy::primitives::Bytes;
 /// use synd_batch_sequencer::sequencing_batch::compress_batch;
 ///
-/// let existing_txs = [Bytes::from(vec![1, 2, 3])];
-/// let new_tx = Bytes::from(vec![4, 5, 6]);
-/// let compressed = compress_batch(&existing_txs, &new_tx).unwrap();
+/// let existing_txs = vec![(vec![1, 2, 3], "stuff".to_string())];
+/// let new_tx = (vec![4, 5, 6], "new_id".to_string());
+/// let compressed = compress_batch(&existing_txs, new_tx).unwrap();
 /// ```
 #[instrument(
     skip_all,
@@ -116,7 +116,7 @@ fn uncompressed_batch(txs: &[TxWithValkeyId], new_tx: TxWithValkeyId) -> Sequenc
         tx_count = batch_txs.len() + 1,
     )
 )]
-fn compress_batch(
+pub fn compress_batch(
     batch_txs: &[TxWithValkeyId],
     new_tx: TxWithValkeyId,
 ) -> std::io::Result<SequencingBatch> {
