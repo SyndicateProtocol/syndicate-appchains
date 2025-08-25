@@ -462,11 +462,6 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         address poolAddress;
     }
 
-    function _claimReward(uint256 epochIndex, address poolAddress, address destination) internal {
-        IPool pool = IPool(poolAddress);
-        pool.claimFor(epochIndex, msg.sender, destination);
-    }
-
     /**
      * @notice Claim rewards from multiple pools for the caller
      * @dev This function calls the claimFor function on each pool contract
@@ -478,7 +473,8 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         }
 
         for (uint256 i = 0; i < claims.length; i++) {
-            _claimReward(claims[i].epochIndex, claims[i].poolAddress, destination);
+            IPool pool = IPool(claims[i].poolAddress);
+            pool.claimFor(claims[i].epochIndex, msg.sender, destination);
         }
     }
 
