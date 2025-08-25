@@ -58,6 +58,9 @@ contract SyndicateSequencingChainTestSetUp is Test {
     }
 
     function setUp() public virtual {
+        // Warp to START_TIMESTAMP to avoid underflow in epoch calculations
+        vm.warp(1754089200); // START_TIMESTAMP from EpochTracker.sol
+
         admin = address(0x1);
         permissionModule = new RequireAndModule(admin);
         permissionModuleAny = new RequireOrModule(admin);

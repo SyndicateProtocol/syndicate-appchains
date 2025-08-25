@@ -188,7 +188,7 @@ contract SyndicateFactoryTest is Test {
     function testGetBytecode() public view {
         bytes memory bytecode = factory.getBytecode(appchainId);
         bytes memory expectedBytecode =
-            abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(appchainId, 0));
+            abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(appchainId));
         assertEq(bytecode, expectedBytecode);
     }
 

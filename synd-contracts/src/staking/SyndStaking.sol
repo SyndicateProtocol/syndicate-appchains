@@ -162,7 +162,6 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     /// @notice Error thrown when withdrawal data is invalid or missing
     error InvalidWithdrawal();
 
-
     ///////////////////////
     // Staking functions
     ///////////////////////

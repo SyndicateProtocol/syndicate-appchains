@@ -2,7 +2,9 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import {GasAggregator, AppchainFactory, StakingAppchain} from "../../src/staking/GasAggregator.sol";
+import {EpochTracker} from "../../src/staking/EpochTracker.sol";
 import {SyndicateFactory} from "../../src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
 import {AlwaysAllowedModule} from "../../src/sequencing-modules/AlwaysAllowedModule.sol";
@@ -97,8 +99,13 @@ contract GasAggregatorTest is Test {
         mockGasCounter2 = new MockGasCounter();
         mockGasCounter3 = new MockGasCounter();
 
-        // Deploy GasAggregator with mock factory
+        // Deploy GasAggregator first
         gasAggregator = new GasAggregator();
+
+        // Warp to exactly the epoch start timestamp (beginning of epoch 1) BEFORE initialize
+        vm.warp(gasAggregator.START_TIMESTAMP());
+
+        // Initialize after warping to avoid underflow
         gasAggregator.initialize(mockFactory, new MockStakingAppchain(), admin, 24 hours);
 
         // Set initial values using admin role
@@ -549,8 +556,8 @@ contract GasAggregatorTest is Test {
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
-        // Capture the first submission time IMMEDIATELY after warp
-        uint256 firstSubmissionTime = block.timestamp;
+        // Expected first submission time after the warp
+        uint256 expectedFirstSubmissionTime = gasAggregator.START_TIMESTAMP() + EPOCH_DURATION + 1;
 
         uint256[] memory chainIDs1 = new uint256[](1);
         chainIDs1[0] = 1;
@@ -561,18 +568,18 @@ contract GasAggregatorTest is Test {
 
         // First submission should work (starts challenge window)
         gasAggregator.submitOffchainTopChains(chainIDs1);
-        assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), firstSubmissionTime);
+        assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), expectedFirstSubmissionTime);
         assertEq(gasAggregator.pendingTotalTokensUsed(), 100);
 
         // Second submission during challenge window should work if higher total
-        vm.warp(firstSubmissionTime + CHALLENGE_WINDOW / 2);
+        vm.warp(expectedFirstSubmissionTime + CHALLENGE_WINDOW / 2);
         gasAggregator.submitOffchainTopChains(chainIDs2);
         assertEq(gasAggregator.pendingTotalTokensUsed(), 300);
         // First submission time should not change (it records the FIRST submission)
-        assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), 2592002);
+        assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), expectedFirstSubmissionTime);
 
         // Third submission after challenge window should fail
-        vm.warp(firstSubmissionTime + CHALLENGE_WINDOW + 1);
+        vm.warp(expectedFirstSubmissionTime + CHALLENGE_WINDOW + 1);
         vm.expectRevert(
             abi.encodeWithSelector(GasAggregator.WindowOver.selector, gasAggregator.pendingEpoch(), CHALLENGE_WINDOW)
         );

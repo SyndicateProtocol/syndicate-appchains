@@ -31,6 +31,9 @@ contract AtomicSequencerTest is Test {
     event TransactionProcessed(address indexed sender, bytes data);
 
     function setUp() public {
+        // Warp to START_TIMESTAMP to avoid underflow in epoch calculations
+        vm.warp(1754089200); // START_TIMESTAMP from EpochTracker.sol
+
         admin = address(0x1);
         originalCaller = address(0x2);
         uint256 appchainIdA = 10042001;
