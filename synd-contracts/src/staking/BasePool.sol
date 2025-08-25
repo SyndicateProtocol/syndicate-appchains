@@ -56,6 +56,13 @@ contract BasePool is IPool, ReentrancyGuard {
         stakingContract = ISyndStaking(_stakingContract);
     }
 
+    modifier onlyStakingContract() {
+        if (msg.sender != address(stakingContract)) {
+            revert UnauthorizedCaller();
+        }
+        _;
+    }
+
     /**
      * @notice Deposit rewards for a specific epoch
      * @dev Since rewards are additive, we dont care who deposits
@@ -97,11 +104,11 @@ contract BasePool is IPool, ReentrancyGuard {
      * @param epochIndex The epoch index for which to claim rewards
      * @param user The address of the user to claim rewards for
      */
-    function claimFor(uint256 epochIndex, address user, address destination) external nonReentrant {
-        if (msg.sender != address(stakingContract)) {
-            revert UnauthorizedCaller();
-        }
-
+    function claimFor(uint256 epochIndex, address user, address destination)
+        external
+        nonReentrant
+        onlyStakingContract
+    {
         if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
@@ -130,19 +137,19 @@ contract BasePool is IPool, ReentrancyGuard {
             return 0;
         }
 
-        uint256 user_staked_amount = stakingContract.getUserStakeShare(epochIndex, user);
-        if (user_staked_amount == 0) {
+        uint256 userStakedAmount = stakingContract.getUserStakeShare(epochIndex, user);
+        if (userStakedAmount == 0) {
             return 0;
         }
 
-        uint256 total_staked_amount = stakingContract.getTotalStakeShare(epochIndex);
-        if (total_staked_amount == 0) {
+        uint256 totalStakedAmount = stakingContract.getTotalStakeShare(epochIndex);
+        if (totalStakedAmount == 0) {
             return 0;
         }
 
-        uint256 reward_total = epochRewardTotal[epochIndex];
-        uint256 user_reward_share = (reward_total * user_staked_amount) / total_staked_amount;
+        uint256 rewardTotal = epochRewardTotal[epochIndex];
+        uint256 userRewardShare = (rewardTotal * userStakedAmount) / totalStakedAmount;
         // Subtract the amount the user has already claimed for this epoch
-        return user_reward_share - claimed[epochIndex][user];
+        return userRewardShare - claimed[epochIndex][user];
     }
 }
