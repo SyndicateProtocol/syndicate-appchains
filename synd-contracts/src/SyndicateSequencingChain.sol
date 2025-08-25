@@ -107,7 +107,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         address to,
         uint256 value,
         bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) returns (uint256) {
+    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage returns (uint256) {
         uint256 requestId = contractNonce[msg.sender]++;
         emit TransactionProcessed(
             msg.sender,
@@ -139,7 +139,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         address to,
         uint256 value,
         bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) {
+    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage {
         emit TransactionProcessed(
             msg.sender,
             abi.encodePacked(
@@ -170,7 +170,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice Process a signed transaction.
     /// @param data Transaction data
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
+    function processTransaction(bytes calldata data)
+        external
+        onlyWhenAllowed(msg.sender, tx.origin, data)
+        trackGasUsage
+    {
         require(data.length > 0, NoTxData());
         emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data));
     }
