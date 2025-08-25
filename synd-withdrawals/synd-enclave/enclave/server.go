@@ -1,16 +1,13 @@
 package enclave
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/binary"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/ecies"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
@@ -37,51 +35,23 @@ import (
 	"github.com/offchainlabs/nitro/execution"
 )
 
-const (
-	// DefaultCARoots contains the PEM encoded roots for verifying Nitro
-	// Enclave attestation signatures. You can download them from
-	// https://docs.aws.amazon.com/enclaves/latest/user/verify-root.html
-	DefaultCARoots       = "UEsDBBQAAAAIALkYV1GVtvolRwIAAAkDAAAIABwAcm9vdC5wZW1VVAkAA10ekl9dHpJfdXgLAAEESHEtDwQUAAAAZZJLk6JQDIX3/IrZW10Igo2LWdwXiBoE5HXZCSq0iNgKfYVfP9guJ8tTqS85Ofn4GAszy3b+EOYHtmkTFLCX+CGBbRMWEILSfYGEjVFh+8itnoe4yKq1XC7DDNptcJ2YXJCC2+smtYfzlCEBYhewjQSospASMlwCiSJ40gE5uHAijBrAldny5PaTnRkAan77iBDUiw4B+A9heZxKkedRilflYQZdVl+meW20aayfM8tU0wTEsswdCKonUFuDAPotRUo8ag59axIE3ls84xV4D0FG6gi1mFhF4cBcQNP35GIcGCvlsV504ImXnVffRqLjxpECT2tA6Xt1AFabs7zXu33i91mvXLLaefAkveQDVgEjC/ff1g60BSqYJeFdhzFCX0i1EXYFibZdTWA57Jf0q26/vZ+Ka3BbDVlz2chy2qv8wnYK9vVgVz1OWSZpBjFi3PTtp6li8Xlk7X7vTprSUrNr+FgspofpKlGNIHe9hDA3nWGE7WPgcsEaEqdMKo2LzhtPBHkoL9YOgTEgKkZ//jRA3lLGKBRIMCwP6PCyuPQ0ZhZeWJFYoYfKlPzJMRZ6Ns9vM7feX087nQta/ALcN8CjqLCsV4yEvL2Pd6JIrRBYnEjgkfOpn/hNXi+S7qjxq4hrZxUhTTuhqavH6vbGG7HYchL5e3b82RjdVkn4vdOfLbixdD8BGSFfhv6IcbYS63Vy2M3xrfXMLs2Cz1kjF7hUvsPnRb46d0UNtwY/iftcuJtsMnckW2yGmcz/Sr+fzRz637f/A1BLAQIeAxQAAAAIALkYV1GVtvolRwIAAAkDAAAIABgAAAAAAAEAAACkgQAAAAByb290LnBlbVVUBQADXR6SX3V4CwABBEhxLQ8EFAAAAFBLBQYAAAAAAQABAE4AAACJAgAAAAA="
-	DefaultCARootsSHA256 = "8cf60e2b2efca96c6a9e71e851d00c1b6991cc09eadbe64a6a1d1b1eb9faff7c"
-)
-
-var defaultRoot = createAWSNitroRoot()
-
-func createAWSNitroRoot() *x509.CertPool {
-	roots, err := base64.StdEncoding.DecodeString(DefaultCARoots)
-	if err != nil {
-		panic("error decoding AWS root cert")
-	}
-	sha := sha256.Sum256(roots)
-	expected := common.HexToHash(DefaultCARootsSHA256)
-	if !bytes.Equal(sha[:], expected[:]) {
-		panic("DefaultCARoots checksum failed")
-	}
-	reader, err := zip.NewReader(bytes.NewReader(roots), int64(len(roots)))
-	if err != nil {
-		panic(fmt.Errorf("error creating zip reader: %w", err))
-	}
-	ca, err := reader.File[0].Open()
-	if err != nil {
-		panic(fmt.Errorf("error reading AWS root cert zip: %w", err))
-	}
-	pem, err := io.ReadAll(ca)
-	if err != nil {
-		panic(fmt.Errorf("error reading AWS root cert: %w", err))
-	}
-	pool := x509.NewCertPool()
-	ok := pool.AppendCertsFromPEM(pem)
-	if !ok {
-		panic("error parsing AWS root cert")
-	}
-	return pool
-}
-
 type Server struct {
 	// https://docs.aws.amazon.com/enclaves/latest/user/set-up-attestation.html lists the pcr values
-	pcrs          [3][]byte
-	signerKey     *ecdsa.PrivateKey
-	decryptionKey *rsa.PrivateKey
+	pcrs      [3][]byte
+	signerKey *ecdsa.PrivateKey
+}
+
+func init() {
+	block, rest := pem.Decode([]byte(nitrite.DefaultCARoots))
+	if block == nil || len(rest) != 0 || block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+		panic("failed to parse nitrite root ca")
+	}
+
+	// fingerprint is taken from https://docs.aws.amazon.com/enclaves/latest/user/verify-root.html
+	fingerprint := common.HexToHash("641a0321a3e244efe456463195d606317ed7cdcc3c1756e09893f3c68f79bb5b")
+	if sha256.Sum256(block.Bytes) != fingerprint {
+		panic(fmt.Errorf("root ca has invalid hash: got %s, expected %s", sha256.Sum256(block.Bytes), fingerprint))
+	}
 }
 
 func NewServer() (*Server, error) {
@@ -116,10 +86,6 @@ func NewServer() (*Server, error) {
 		random = session
 	}
 
-	decryptionKey, err := rsa.GenerateKey(random, 4096)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate decryption key: %w", err)
-	}
 	signerKey, err := ecdsa.GenerateKey(crypto.S256(), random)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate signer key: %w", err)
@@ -132,29 +98,34 @@ func NewServer() (*Server, error) {
 	}
 	log.Info("Generated signer key", "address", crypto.PubkeyToAddress(signerKey.PublicKey).Hex())
 	return &Server{
-		pcrs:          pcrs,
-		signerKey:     signerKey,
-		decryptionKey: decryptionKey,
+		pcrs:      pcrs,
+		signerKey: signerKey,
 	}, nil
 }
 
-func (s *Server) SignerPublicKey(ctx context.Context) (hexutil.Bytes, error) {
-	return crypto.FromECDSAPub(&s.signerKey.PublicKey), nil
+func (s *Server) SignerPublicKey() hexutil.Bytes {
+	return crypto.FromECDSAPub(&s.signerKey.PublicKey)
 }
 
-func (s *Server) SignerAttestation(ctx context.Context) (hexutil.Bytes, error) {
-	return s.publicKeyAttestation(ctx, s.SignerPublicKey)
+func (s *Server) VerifyAttestation(attestation []byte) (*nitrite.Document, error) {
+	verification, err := nitrite.Verify(
+		attestation,
+		nitrite.VerifyOptions{
+			CurrentTime: time.Now(),
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify attestation: %w", err)
+	}
+	for i, pcr := range s.pcrs {
+		if !bytes.Equal(verification.Document.PCRs[uint(i)], pcr) {
+			return nil, fmt.Errorf("attestation does not match PCR %d: got %s, expected %s", i, common.Bytes2Hex(verification.Document.PCRs[uint(i)]), common.Bytes2Hex(pcr))
+		}
+	}
+	return verification.Document, nil
 }
 
-func (s *Server) DecryptionPublicKey(ctx context.Context) (hexutil.Bytes, error) {
-	return x509.MarshalPKIXPublicKey(s.decryptionKey.Public())
-}
-
-func (s *Server) DecryptionAttestation(ctx context.Context) (hexutil.Bytes, error) {
-	return s.publicKeyAttestation(ctx, s.DecryptionPublicKey)
-}
-
-func (s *Server) publicKeyAttestation(ctx context.Context, publicKey func(ctx context.Context) (hexutil.Bytes, error)) (hexutil.Bytes, error) {
+func (s *Server) SignerAttestation(attestation *hexutil.Bytes) (hexutil.Bytes, error) {
 	session, err := nsm.OpenDefaultSession()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open session: %w", err)
@@ -162,12 +133,29 @@ func (s *Server) publicKeyAttestation(ctx context.Context, publicKey func(ctx co
 	defer func() {
 		_ = session.Close()
 	}()
-	public, err := publicKey(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public key: %w", err)
+
+	var userData []byte
+	if attestation != nil {
+		document, err := s.VerifyAttestation(*attestation)
+		if err != nil {
+			return nil, err
+		}
+		publicKey, err := crypto.UnmarshalPubkey(document.PublicKey)
+		if err != nil {
+			return nil, err
+		}
+		if publicKey.Equal(s.signerKey.PublicKey) {
+			return nil, errors.New("attesting to self is forbidden")
+		}
+		userData, err = ecies.Encrypt(session, ecies.ImportECDSAPublic(publicKey), crypto.FromECDSA(s.signerKey), nil, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	res, err := session.Send(&request.Attestation{
-		PublicKey: public,
+		PublicKey: s.SignerPublicKey(),
+		UserData:  userData,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get attestation: %w", err)
@@ -181,61 +169,23 @@ func (s *Server) publicKeyAttestation(ctx context.Context, publicKey func(ctx co
 	return res.Attestation.Document, nil
 }
 
-func (s *Server) EncryptedSignerKey(ctx context.Context, attestation hexutil.Bytes) (hexutil.Bytes, error) {
-	verification, err := nitrite.Verify(
-		attestation,
-		nitrite.VerifyOptions{
-			Roots:       defaultRoot,
-			CurrentTime: time.Now(),
-		},
-	)
+func (s *Server) SetSignerKey(attestation hexutil.Bytes) error {
+	document, err := s.VerifyAttestation(attestation)
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify attestation: %w", err)
+		return err
 	}
-	for i, pcr := range s.pcrs {
-		if !bytes.Equal(verification.Document.PCRs[uint(i)], pcr) {
-			return nil, fmt.Errorf("attestation does not match PCR %d: got %s, expected %s", i, common.Bytes2Hex(verification.Document.PCRs[uint(i)]), common.Bytes2Hex(pcr))
-		}
+	if len(document.UserData) == 0 {
+		return errors.New("attestation is missing user data")
 	}
-	publicKey, err := x509.ParsePKIXPublicKey(verification.Document.PublicKey)
+	privateKey, err := ecies.ImportECDSA(s.signerKey).Decrypt(document.UserData, nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse public key: %w", err)
+		return err
 	}
-	public, ok := publicKey.(*rsa.PublicKey)
-	if !ok {
-		return nil, errors.New("public key is not RSA")
-	}
-	session, err := nsm.OpenDefaultSession()
+	signerKey, err := crypto.ToECDSA(privateKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open session: %w", err)
+		return err
 	}
-	defer func() {
-		_ = session.Close()
-	}()
-	ciphertext, err := rsa.EncryptPKCS1v15(session, public, crypto.FromECDSA(s.signerKey))
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt key: %w", err)
-	}
-	return ciphertext, nil
-}
-
-func (s *Server) SetSignerKey(ctx context.Context, encrypted hexutil.Bytes) error {
-	session, err := nsm.OpenDefaultSession()
-	if err != nil {
-		return fmt.Errorf("failed to open session: %w", err)
-	}
-	defer func() {
-		_ = session.Close()
-	}()
-	decrypted, err := rsa.DecryptPKCS1v15(session, s.decryptionKey, encrypted)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt key: %w", err)
-	}
-	key, err := crypto.ToECDSA(decrypted)
-	if err != nil {
-		return fmt.Errorf("failed to convert key: %w", err)
-	}
-	s.signerKey = key
+	s.signerKey = signerKey
 	return nil
 }
 

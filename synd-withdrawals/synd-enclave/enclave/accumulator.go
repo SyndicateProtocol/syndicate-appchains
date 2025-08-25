@@ -2,7 +2,6 @@ package enclave
 
 import (
 	"bytes"
-	"compress/zlib"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -21,31 +20,36 @@ import (
 	"github.com/offchainlabs/nitro/daprovider"
 )
 
-// TODO: make sure spurious errors eg out of memory are not returned by the zlib reader and rlp decoder
+var allowedSeqMsgs = map[byte]struct{}{
+	arbos.L2MessageKind_UnsignedUserTx: {},
+	arbos.L2MessageKind_ContractTx:     {},
+	arbos.L2MessageKind_Batch:          {},
+	arbos.L2MessageKind_SignedTx:       {},
+}
+
+// TODO: make sure spurious errors eg out of memory are not returned by the brotli reader and rlp decoder
 // These functions should panic if the compressed data is valid but decoding fails
 func processEvent(data []byte) [][]byte {
 	if len(data) == 0 {
 		return nil
 	}
-	if data[0] == 0 {
-		return [][]byte{data[1:]}
+	if _, ok := allowedSeqMsgs[data[0]]; !ok {
+		panic(fmt.Errorf("unexpected event header byte: %d", data[0]))
 	}
-	version := data[0] & 15
-	if version != 8 && version != 15 {
-		return nil
+	if data[0] != arbos.L2MessageKind_Batch {
+		return [][]byte{data}
 	}
-	r, err := zlib.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return nil
-	}
-	defer r.Close()
-	data, err = io.ReadAll(r)
+	r := brotli.NewReader(bytes.NewReader(data[1:]))
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil
 	}
 	var txs [][]byte
 	if err := rlp.DecodeBytes(data, &txs); err != nil {
 		return nil
+	}
+	for i := range txs {
+		txs[i] = append([]byte{arbos.L2MessageKind_SignedTx}, txs[i]...)
 	}
 	return txs
 }
@@ -79,15 +83,13 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 
 	var l2Message []byte
 	if len(txs) == 1 {
-		l2Message = append(l2Message, arbos.L2MessageKind_SignedTx)
 		l2Message = append(l2Message, txs[0]...)
 	} else {
 		l2Message = append(l2Message, arbos.L2MessageKind_Batch)
 		var sizeBuf [8]byte
 		for _, tx := range txs {
-			binary.BigEndian.PutUint64(sizeBuf[:], uint64(len(tx)+1))
+			binary.BigEndian.PutUint64(sizeBuf[:], uint64(len(tx)))
 			l2Message = append(l2Message, sizeBuf[:]...)
-			l2Message = append(l2Message, arbos.L2MessageKind_SignedTx)
 			l2Message = append(l2Message, tx...)
 		}
 	}
@@ -101,7 +103,7 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 	data = append(data, segment...)
 
 	var buffer bytes.Buffer
-	writer := brotli.NewWriter(&buffer)
+	writer := brotli.NewWriterLevel(&buffer, brotli.BestSpeed)
 	lenWritten, err := writer.Write(data)
 	if err != nil {
 		return nil, err

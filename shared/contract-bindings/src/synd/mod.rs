@@ -188,7 +188,6 @@ pub mod r#syndicate_factory_wrapper;
 pub mod r#syndicate_sequencing_chain;
 pub mod r#direct_mock_module;
 pub mod r#mock_is_allowed_with_invalid_data;
-pub mod r#syndicate_sequencing_chain_with_decaying_priority;
 pub mod r#syndicate_storage;
 pub mod r#syndicate_token;
 pub mod r#syndicate_token_crosschain;
