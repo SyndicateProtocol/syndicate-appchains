@@ -171,7 +171,7 @@ async fn e2e_unsigned_tx() -> Result<()> {
             .send()
             .await?;
         components.mine_both(0).await?;
-        components.mine_set_block(1).await?;
+        components.mine_set_block(1000000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately
 
         // Send unsigned tx
         let _ = components
@@ -260,7 +260,7 @@ async fn e2e_contract_tx() -> Result<()> {
             .send()
             .await?;
         components.mine_both(0).await?;
-        components.mine_set_block(1).await?;
+        components.mine_set_block(1000000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately
 
         // Send contract tx
         let _ = components
