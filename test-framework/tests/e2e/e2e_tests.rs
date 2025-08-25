@@ -171,7 +171,7 @@ async fn e2e_unsigned_tx() -> Result<()> {
             .send()
             .await?;
         components.mine_both(0).await?;
-        components.mine_set_block(1000000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately
+        components.mine_set_block(1).await?;
 
         // Send unsigned tx
         let _ = components
@@ -218,7 +218,7 @@ async fn e2e_unsigned_tx() -> Result<()> {
         // Wait for the tx to arrive
         components.mine_seq_block(0).await?;
         wait_until!(
-            components.appchain_provider.get_block_number().await? >= 2,
+            components.appchain_provider.get_block_number().await? == 2,
             Duration::from_secs(20)
         );
 
@@ -260,7 +260,7 @@ async fn e2e_contract_tx() -> Result<()> {
             .send()
             .await?;
         components.mine_both(0).await?;
-        components.mine_set_block(1000000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately
+        components.mine_set_block(1).await?;
 
         // Send contract tx
         let _ = components
@@ -304,7 +304,7 @@ async fn e2e_contract_tx() -> Result<()> {
         // Wait for the txs to arrive
         components.mine_seq_block(0).await?;
         wait_until!(
-            components.appchain_provider.get_block_number().await? >= 2,
+            components.appchain_provider.get_block_number().await? == 2,
             Duration::from_secs(20)
         );
 

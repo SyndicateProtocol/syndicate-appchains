@@ -367,22 +367,11 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                let chain_info = start_anvil_with_args(
+                start_anvil_with_args(
                     SETTLEMENT_CHAIN_ID,
                     &["--load-state", state_file.to_str().unwrap(), "--timestamp", "0"], // snapshots expect timestamp to be 0
                 )
-                .await?;
-
-                // Sync the tips of the sequencing and settlement chains
-                let block = chain_info
-                    .provider
-                    .get_block_by_number(BlockNumberOrTag::Latest)
-                    .await?
-                    .unwrap();
-                seq_provider
-                    .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
-                    .await?;
-                chain_info
+                .await?
             }
         };
 
@@ -612,6 +601,37 @@ impl TestComponents {
         let l1_provider = l1_info.as_ref().map(|info| info.provider.clone());
         let l1_ws_rpc_url = l1_info.as_ref().map(|info| info.ws_url.clone()).unwrap_or_default();
         let l1_instance = l1_info.map(|info| info.instance);
+
+        if matches!(options.base_chains_type, BaseChainsType::Anvil | BaseChainsType::PreLoaded(_))
+        {
+            // Sync the tips of the sequencing and settlement chains
+            let seq_timestamp = seq_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap()
+                .header
+                .timestamp;
+            let set_timestamp = set_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap()
+                .header
+                .timestamp;
+
+            match seq_timestamp.cmp(&set_timestamp) {
+                std::cmp::Ordering::Less => {
+                    seq_provider
+                        .evm_mine(Some(MineOptions::Timestamp(Some(set_timestamp))))
+                        .await?;
+                }
+                std::cmp::Ordering::Greater => {
+                    set_provider
+                        .evm_mine(Some(MineOptions::Timestamp(Some(seq_timestamp))))
+                        .await?;
+                }
+                std::cmp::Ordering::Equal => {}
+            }
+        }
 
         Ok((
             Self {
