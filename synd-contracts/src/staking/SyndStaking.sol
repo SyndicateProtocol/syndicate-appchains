@@ -5,7 +5,6 @@ import {EpochTracker} from "./EpochTracker.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IPool} from "./IPool.sol";
-import {BasePool} from "./BasePool.sol";
 
 /**
  * @title SyndStaking
@@ -34,9 +33,6 @@ import {BasePool} from "./BasePool.sol";
  * - Efficient finalization system for historical queries
  */
 contract SyndStaking is EpochTracker, ReentrancyGuard {
-    /// @notice Reference to the BasePool contract for stake queries
-    BasePool public immutable basePool;
-
     /// @notice Total amount of SYND tokens staked across all users and appchains
     uint256 public totalStake;
 
@@ -173,9 +169,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @notice Constructor to initialize the staking contract with epoch start time
      * @param _startTimestamp The timestamp when epoch counting begins
      */
-    constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {
-        basePool = new BasePool(address(this));
-    }
+    constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {}
 
     ///////////////////////
     // Staking functions
@@ -468,6 +462,11 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         address poolAddress;
     }
 
+    function _claimReward(uint256 epochIndex, address poolAddress, address destination) internal {
+        IPool pool = IPool(poolAddress);
+        pool.claimFor(epochIndex, msg.sender, destination);
+    }
+
     /**
      * @notice Claim rewards from multiple pools for the caller
      * @dev This function calls the claimFor function on each pool contract
@@ -479,10 +478,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         }
 
         for (uint256 i = 0; i < claims.length; i++) {
-            ClaimRequest memory claim = claims[i];
-            // Call the claimFor function on the pool contract
-            IPool pool = IPool(claim.poolAddress);
-            pool.claimFor(claim.epochIndex, msg.sender, destination);
+            _claimReward(claims[i].epochIndex, claims[i].poolAddress, destination);
         }
     }
 
