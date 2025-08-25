@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-
 import {L1Relayer} from "src/staking/L1Relayer.sol";
 import {L2Relayer} from "src/staking/L2Relayer.sol";
 
@@ -33,7 +32,9 @@ contract RelayersTest is Test {
         dummyToken = new DummyToken();
 
         l2Relayer = new L2Relayer(arbBridge, address(dummyToken), admin);
-        l1Relayer = new L1Relayer(opBridge, opMessageRelayer, address(dummyToken), address(dummyToken), address(l2Relayer), admin);
+        l1Relayer = new L1Relayer(
+            opBridge, opMessageRelayer, address(dummyToken), address(dummyToken), address(l2Relayer), admin
+        );
     }
 
     function test_admin_L2Relayer() public {
