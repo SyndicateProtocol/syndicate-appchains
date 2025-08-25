@@ -4,13 +4,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
     nixpkgs-2505.url = "github:NixOS/nixpkgs/nixos-25.05";
-    nixpkgs-foundry100 = {
-      type = "github";
-      owner = "NixOS";
-      repo = "nixpkgs";
-      rev = "6a0960ad4b3d13bff34bd78e9fcefc4310507707";
-      flake = false;
-    };
 
     # TODO: verify whether aarch64-linux works
     systems.url = "github:nix-systems/x86_64-linux";
@@ -51,7 +44,6 @@
   };
 
   outputs = inputs @ {
-    nixpkgs-foundry100,
     nixpkgs-2505,
     systems,
     flake-parts,
@@ -69,7 +61,6 @@
         system,
         ...
       }: let
-        pkgs-foundry100 = import nixpkgs-foundry100 {inherit system;};
         pkgs-2505 = import nixpkgs-2505 {inherit system;};
         solc-pkgs = solc.packages.${system};
         filter = nix-filter.lib;
@@ -141,39 +132,12 @@
             '';
           });
 
-          solcCompilerList = pkgs.fetchurl {
-            url = "https://solc-bin.ethereum.org/bin/list.json";
-            hash = "sha256-cwxIF5o76FqObMW0romEUKg9xksLDOzghgHBwoBawE0=";
-          };
-
-          nitro-safe-smart-account = pkgs-2505.stdenv.mkDerivation (final: {
-            name = "safe-smart-account";
-            src = "${nitro}/${final.name}";
-            nativeBuildInputs =
-              (with solc-pkgs; [solc_0_7_6 solc_0_6_12])
-              ++ (with pkgs-2505; [
-                nodejs
-                yarnConfigHook
-                writableTmpDirAsHomeHook
-                yarnInstallHook
-              ]);
-            buildPhase = ''
-              runHook preBuild
-              yarn --offline build
-              runHook postBuild
-            '';
-            offlineCache = pkgs.fetchYarnDeps {
-              yarnLock = final.src + "/yarn.lock";
-              hash = "sha256-J836BIf/OJmKiruXt6HhtQzhkn0KL6hbs2Tf8se1kAY=";
-            };
-          });
-
           nitro-contracts = with pkgs-2505;
             stdenv.mkDerivation (final: {
               name = "nitro-contracts";
               src = "${nitro}/contracts";
               nativeBuildInputs = [
-                pkgs-foundry100.foundry
+                foundry
                 solc-pkgs.solc_0_8_28
                 yarnConfigHook
                 yarnBuildHook
@@ -279,39 +243,6 @@
             cp ${nitro-arbitrator-stylus-lib}/include/arbitrator.h $out/arbitrator.h
           '';
 
-          # TODO: stylus.overrideAttrs or DRY function
-          nitro-arbitrator-prover = pkgs.rustPlatform.buildRustPackage {
-            pname = "prover";
-            version = "0.1.0";
-            src = "${nitro}/arbitrator";
-            buildAndTestSubdir = "prover";
-            cargoHash = "sha256-ah/bZj4X40Q1l2O9vLpGE0E0AHi2CMpKTBFj8HyE66k=";
-            preBuild = ''
-              mkdir -p ../target
-              cp -r ${brotli-lib}/{include,lib} ../target/
-              cp -r ${brotli-wasm}/lib-wasm ../target/
-
-              # forward_stub.wasm -> forward.wasm
-              sed -i 's#../../../target/machines/latest/forward_stub.wasm#${nitro-arbitrator-forward-wasm}#' prover/src/{machine,test}.rs
-            '';
-          };
-
-          nitro-arbitrator-jit = pkgs.rustPlatform.buildRustPackage {
-            pname = "jit";
-            version = "0.1.0";
-            src = "${nitro}/arbitrator";
-            buildAndTestSubdir = "jit";
-            cargoHash = "sha256-CsbZhKxa6lf+VbeSw7CBFYOKcHkzvvtOTK/F+lsbty4=";
-            preBuild = ''
-              mkdir -p ../target
-              cp -r ${brotli-lib}/{include,lib} ../target/
-              cp -r ${brotli-wasm}/lib-wasm ../target/
-
-              # forward_stub.wasm -> forward.wasm
-              sed -i 's#../../../target/machines/latest/forward_stub.wasm#${nitro-arbitrator-forward-wasm}#' prover/src/{machine,test}.rs
-            '';
-          };
-
           nitro-solgen = pkgs-2505.buildGoModule {
             name = "solgen";
             src = filter {
@@ -331,27 +262,8 @@
             vendorHash = "sha256-dJUOTd/LSeIMO2m8DmTc1tkphBn3bA2OM4Vl66PgJR8=";
           };
 
-          nitro-src-with-generated = pkgs.runCommand "nitro-with-generated" {} ''
-            mkdir -p $out/solgen/go $out/target/include $out/target/lib
-            cp -rv ${nitro}/* $out
-            cp -rv ${nitro-solgen}/* $out/solgen/go
-            cp ${nitro-arbitrator-prover-header}/arbitrator.h $out/target/include/arbitrator.h
-            cp ${nitro-arbitrator-stylus-lib}/lib/libstylus.a $out/target/lib
-            substituteInPlace \
-              $out/arbcompress/native.go \
-              --replace-fail "''${SRCDIR}/../target" "$out/target"
-            substituteInPlace \
-              $out/validator/server_arb/prover_interface.go \
-              $out/execution/gethexec/executionengine.go \
-              $out/arbos/programs/native_api.go \
-              $out/arbos/programs/native.go \
-              --replace-fail "''${SRCDIR}/../../target" "$out/target"
-          '';
-
-          synd-enclave-server = pkgs-2505.buildGoModule {
-            pname = "synd-enclave";
-            version = "0.1.0";
-            src = pkgs.lib.fileset.toSource {
+          enclave-src-with-generated = let
+            enclave-src = pkgs.lib.fileset.toSource {
               root = ./.;
               fileset = pkgs.lib.fileset.unions [
                 ./cmd/enclave
@@ -362,17 +274,29 @@
                 ./go.sum
               ];
             };
+          in
+          pkgs.runCommand "enclave-src-with-generated" {} ''
+            mkdir -p $out/nitro/solgen/go
+            cp -rv ${enclave-src}/* $out/
+            cp -rv ${nitro}/* $out/nitro/
+            cp -rv ${nitro-solgen}/* $out/nitro/solgen/go
+          '';
+
+          synd-enclave-server = pkgs-2505.buildGoModule {
+            pname = "synd-enclave";
+            version = "0.1.0";
+            src = enclave-src-with-generated;
             preBuild = ''
               substituteInPlace \
                 vendor/github.com/offchainlabs/nitro/arbcompress/native.go \
-                --replace-warn '-I''${SRCDIR}/../target/include/' '-I${nitro-arbitrator-prover-header}/' \
-                --replace-warn 'LDFLAGS: ''${SRCDIR}/../target/lib' 'LDFLAGS: ${nitro-arbitrator-stylus-lib}/lib'
+                --replace-fail $\{SRCDIR\}/../target/include ${nitro-arbitrator-prover-header} \
+                --replace-fail $\{SRCDIR\}/../target/lib ${nitro-arbitrator-stylus-lib}/lib
               substituteInPlace \
-                vendor/github.com/offchainlabs/nitro/execution/gethexec/executionengine.go \
                 vendor/github.com/offchainlabs/nitro/arbos/programs/native_api.go \
+                vendor/github.com/offchainlabs/nitro/execution/gethexec/executionengine.go \
                 vendor/github.com/offchainlabs/nitro/arbos/programs/native.go \
-                --replace-warn '-I../../target/include/' '-I${nitro-arbitrator-prover-header}/' \
-                --replace-warn 'LDFLAGS: ''${SRCDIR}/../../target/lib' 'LDFLAGS: ${nitro-arbitrator-stylus-lib}/lib'
+                --replace-fail -I../../target/include -I${nitro-arbitrator-prover-header} \
+                --replace-fail $\{SRCDIR\}/../../target/lib ${nitro-arbitrator-stylus-lib}/lib
             '';
             vendorHash = "sha256-IWk71nxHQH/Uw3MfMTrJYVHndy89GZjOx1d0wN1TYek=";
             subPackages = ["cmd/enclave"];
