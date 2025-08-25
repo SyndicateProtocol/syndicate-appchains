@@ -62,6 +62,11 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER 
     //////////////////////////////////////////////////////////////*/
+
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         AppchainFactory _factory,
         StakingAppchain _stakingAppchain,
