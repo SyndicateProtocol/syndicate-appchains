@@ -29,6 +29,9 @@ shared               = { workspace = true }
 synd-batch-sequencer = { workspace = true }
 synd-mchain          = { workspace = true }
 
+[dev-dependencies]
+divan = { workspace = true }
+
 [lints.clippy]
 expect_used = "allow"
 
