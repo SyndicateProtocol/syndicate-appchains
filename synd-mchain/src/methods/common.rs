@@ -83,7 +83,7 @@ pub fn appchain_config(chain_id: u64) -> String {
             }},
             "arbitrum": {{
             "EnableArbOS": true,
-            "GenesisBlockNum": 0
+            "Syndicate": true
             }}
         }}"#
     );

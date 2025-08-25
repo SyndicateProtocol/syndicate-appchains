@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
+import {SyndicateSequencingChain, TransactionType, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -77,7 +78,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), validTxn);
+        emit SyndicateSequencingChain.TransactionProcessed(
+            address(this), abi.encodePacked(TransactionType.Signed, validTxn)
+        );
 
         chain.processTransaction(validTxn);
     }
@@ -113,17 +116,18 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testProcessTransaction() public {
-        bytes memory _data = abi.encode("raw transaction");
-        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _data);
+        bytes memory data = abi.encode("raw transaction");
 
         vm.startPrank(admin);
         permissionModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), expectedTx);
+        emit SyndicateSequencingChain.TransactionProcessed(
+            address(this), abi.encodePacked(TransactionType.Signed, data)
+        );
 
-        chain.processTransactionUncompressed(_data);
+        chain.processTransaction(data);
     }
 
     function testProcessTransactionsBulk() public {
@@ -140,7 +144,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             vm.expectEmit(true, false, false, true);
 
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(bytes1(0x00), validTxns[i])
+                address(this), abi.encodePacked(TransactionType.Signed, validTxns[i])
             );
         }
 
@@ -175,7 +179,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Expect events for all transactions
         for (uint256 i = 0; i < txns.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), txns[i]));
+            emit SyndicateSequencingChain.TransactionProcessed(
+                address(this), abi.encodePacked(TransactionType.Signed, txns[i])
+            );
         }
 
         // Process all transactions
@@ -213,7 +219,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         for (uint256 i = 0; i < successTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(bytes1(0x00), successTxns[i])
+                address(this), abi.encodePacked(TransactionType.Signed, successTxns[i])
             );
         }
 
@@ -277,17 +283,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Test 2: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), allowedData);
+        emit SyndicateSequencingChain.TransactionProcessed(
+            address(this), abi.encodePacked(TransactionType.Signed, allowedData)
+        );
         chain.processTransaction(allowedData);
-
-        // Test 3: Failure path of onlyWhenAllowed (processTransaction)
-        vm.expectRevert(SequencingModuleChecker.TransactionOrSenderNotAllowed.selector);
-        chain.processTransactionUncompressed(disallowedData);
-
-        // Test 4: Success path of onlyWhenAllowed (processTransaction)
-        vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), allowedData));
-        chain.processTransactionUncompressed(allowedData);
     }
 
     function testProcessTransactionsBulkWithEmptyArray() public {

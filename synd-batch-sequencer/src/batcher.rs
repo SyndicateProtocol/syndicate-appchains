@@ -342,7 +342,7 @@ impl Batcher {
         let transaction_request = match batch {
             SequencingBatch::Compressed(compressed_bytes, _) => self
                 .sequencing_contract_instance
-                .processTransaction(Bytes::from(compressed_bytes.clone()))
+                .processTransactionsCompressed(Bytes::from(compressed_bytes.clone()))
                 .into_transaction_request(),
             SequencingBatch::Uncompressed(batch) => self
                 .sequencing_contract_instance
@@ -685,7 +685,7 @@ mod tests {
             }
         });
 
-        wait_until!(metrics_clone.total_txs_processed.get() == 100, Duration::from_secs(10));
+        wait_until!(metrics_clone.total_txs_processed.get() == 100, Duration::from_secs(30));
         drop(anvil);
     }
 

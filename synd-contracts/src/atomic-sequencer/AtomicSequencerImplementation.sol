@@ -75,9 +75,9 @@ contract AtomicSequencerImplementation {
 
         for (uint256 i = 0; i < chains.length; i++) {
             if (isRaw[i]) {
-                chains[i].processTransaction(transactions[i]);
+                chains[i].processTransactionsCompressed(transactions[i]);
             } else {
-                chains[i].processTransactionUncompressed(transactions[i]);
+                chains[i].processTransaction(transactions[i]);
             }
         }
     }
