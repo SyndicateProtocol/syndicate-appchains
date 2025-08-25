@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IPool} from "./IPool.sol";
 
 interface IArbBridge {
@@ -30,10 +31,7 @@ interface IArbBridge {
  *
  * @custom:security This contract has admin controls and should be used with caution
  */
-contract L2Relayer {
-    /// @notice Admin address with privileged access to contract functions
-    address public admin;
-
+contract L2Relayer is AccessControl {
     /// @notice Minimum gas limit for Arbitrum Bridge operations (default: 210000)
     uint256 public gasLimit;
 
@@ -52,51 +50,26 @@ contract L2Relayer {
 
     /**
      * @notice Error thrown when the contract has insufficient token balance for a relay operation
-     * @param required The amount required for the operation
-     * @param available The amount currently available
      */
     error InsufficientBalance();
-
-    /**
-     * @notice Error thrown when a non-admin address attempts to call admin-only functions
-     * @param caller The address that attempted the call
-     * @param admin The current admin address
-     */
-    error NotAdmin();
 
     /**
      * @notice Initializes the L2Relayer contract
      * @param _arbBridge The address of the Arbitrum Bridge contract
      * @param _tokenAddress The address of the ERC20 token to be relayed
+     * @param _defaultAdmin The address of the default admin
      * @dev Sets the deployer as admin and configures default gas settings
      *      Approves the bridge contract to spend tokens on behalf of this contract
      */
-    constructor(address _arbBridge, address _tokenAddress) {
-        admin = msg.sender;
-        setGasSettings(210000, 1 gwei);
+    constructor(address _arbBridge, address _tokenAddress, address _defaultAdmin) {
+        _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
+        gasLimit = 210000;
+        maxFeePerGas = 1 gwei;
 
         arbBridge = _arbBridge;
         tokenAddress = _tokenAddress;
 
         IERC20(tokenAddress).approve(arbBridge, type(uint256).max);
-    }
-
-    /**
-     * @notice Modifier that restricts function access to admin only
-     * @dev Reverts with NotAdmin error if caller is not the admin
-     */
-    modifier onlyAdmin() {
-        if (msg.sender != admin) revert NotAdmin();
-        _;
-    }
-
-    /**
-     * @notice Updates the admin address
-     * @param _admin The new admin address
-     * @dev Only callable by the current admin
-     */
-    function setAdmin(address _admin) external onlyAdmin {
-        admin = _admin;
     }
 
     /**
@@ -106,7 +79,7 @@ contract L2Relayer {
      * @dev Only callable by admin
      * @dev These settings affect the cost and reliability of bridge operations
      */
-    function setGasSettings(uint256 _gasLimit, uint256 _maxFeePerGas) external onlyAdmin {
+    function setGasSettings(uint256 _gasLimit, uint256 _maxFeePerGas) external onlyRole(DEFAULT_ADMIN_ROLE) {
         gasLimit = _gasLimit;
         maxFeePerGas = _maxFeePerGas;
     }

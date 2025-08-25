@@ -34,20 +34,20 @@ contract RelayTester is Script {
     }
 
     function deployL1Relayer() public {
-        L1Relayer l1Relayer = new L1Relayer(opBridge, opMessageRelayer, l1Token, l2Token, l2Relayer);
+        L1Relayer l1Relayer = new L1Relayer(opBridge, opMessageRelayer, l1Token, l2Token, l2Relayer, msg.sender);
 
         console2.log("L1Relayer deployed to:", address(l1Relayer));
     }
 
     function deployL2Relayer() public {
-        L2Relayer l2Relayer = new L2Relayer(arbBridge, l2Token, l3Pool);
+        L2Relayer l2Relayer = new L2Relayer(arbBridge, l2Token, msg.sender);
 
         console2.log("L2Relayer deployed to:", address(l2Relayer));
     }
 
     function deployL3Pool() public {
-        DummyPool l3Pool = new DummyPool();
+        DummyPool _l3Pool = new DummyPool();
 
-        console2.log("L3Pool deployed to:", address(l3Pool));
+        console2.log("L3Pool deployed to:", address(_l3Pool));
     }
 }

@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 interface IOPBridge {
     function depositERC20To(
@@ -31,12 +32,9 @@ interface IOPMessageRelayer {
  * - Cross-chain message relaying to L2
  * - Integration with L2Relayer for complete cross-chain operations
  */
-contract L1Relayer {
-    /// @notice Admin address with privileged access to contract functions
-    address public admin;
-
+contract L1Relayer is AccessControl {
     /// @notice Minimum gas limit for Optimism operations (default: 200000)
-    uint256 public minGasLimit;
+    uint32 public minGasLimit;
 
     ////////////////////////////
     // Contracts Deployed on L1
@@ -63,17 +61,8 @@ contract L1Relayer {
 
     /**
      * @notice Error thrown when the contract has insufficient token balance for a relay operation
-     * @param required The amount required for the operation
-     * @param available The amount currently available
      */
     error InsufficientBalance();
-
-    /**
-     * @notice Error thrown when a non-admin address attempts to call admin-only functions
-     * @param caller The address that attempted the call
-     * @param admin The current admin address
-     */
-    error NotAdmin();
 
     /**
      * @notice Initializes the L1Relayer contract
@@ -82,12 +71,20 @@ contract L1Relayer {
      * @param _l1Token The address of the L1 ERC20 token to be relayed
      * @param _l2Token The address of the corresponding L2 token
      * @param _l2Relayer The address of the L2Relayer contract on L2
+     * @param _defaultAdmin The address of the default admin
      * @dev Sets the deployer as admin and configures default gas settings
      *      Approves the bridge contract to spend L1 tokens on behalf of this contract
      */
-    constructor(address _opBridge, address _opMessageRelayer, address _l1Token, address _l2Token, address _l2Relayer) {
-        admin = msg.sender;
-        setMinGasLimit(200000);
+    constructor(
+        address _opBridge,
+        address _opMessageRelayer,
+        address _l1Token,
+        address _l2Token,
+        address _l2Relayer,
+        address _defaultAdmin
+    ) {
+        _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
+        minGasLimit = 200000;
 
         opBridge = _opBridge;
         opMessageRelayer = _opMessageRelayer;
@@ -99,31 +96,12 @@ contract L1Relayer {
     }
 
     /**
-     * @notice Modifier that restricts function access to admin only
-     * @dev Reverts with NotAdmin error if caller is not the admin
-     */
-    modifier onlyAdmin() {
-        if (msg.sender != admin) revert NotAdmin();
-        _;
-    }
-
-    /**
-     * @notice Updates the admin address
-     * @param _admin The new admin address
-     * @dev Only callable by the current admin
-     * @custom:security Critical function - ensure new admin is correct
-     */
-    function setAdmin(address _admin) external onlyAdmin {
-        admin = _admin;
-    }
-
-    /**
      * @notice Updates the minimum gas limit for Optimism operations
      * @param _minGasLimit The new minimum gas limit for bridge and message operations
      * @dev Only callable by admin
      * @dev This setting affects the cost and reliability of cross-chain operations
      */
-    function setMinGasLimit(uint256 _minGasLimit) external onlyAdmin {
+    function setMinGasLimit(uint32 _minGasLimit) external onlyRole(DEFAULT_ADMIN_ROLE) {
         minGasLimit = _minGasLimit;
     }
 
