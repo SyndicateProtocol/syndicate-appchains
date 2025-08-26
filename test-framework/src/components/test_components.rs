@@ -122,6 +122,7 @@ pub struct TestComponents {
 
 pub const SEQUENCING_CHAIN_ID: u64 = 15;
 pub const SETTLEMENT_CHAIN_ID: u64 = 31337;
+pub const GENESIS_TIMESTAMP: u64 = 1756209109; // some time after EPOCH_START_TIME (see GasAggregator.sol)
 
 #[allow(clippy::unwrap_used)]
 impl TestComponents {
@@ -190,7 +191,13 @@ impl TestComponents {
             provider: seq_provider,
             http_url: _,
         } = match options.base_chains_type {
-            BaseChainsType::Anvil => start_anvil(SEQUENCING_CHAIN_ID).await?,
+            BaseChainsType::Anvil => {
+                start_anvil_with_args(
+                    SEQUENCING_CHAIN_ID,
+                    &["--timestamp", 1756209109.to_string().as_str()],
+                )
+                .await?
+            }
             BaseChainsType::PreLoaded(_) => {
                 start_anvil_with_args(SEQUENCING_CHAIN_ID, &["--timestamp", "0"]).await?
             }
@@ -289,7 +296,11 @@ impl TestComponents {
             http_url: set_rpc_http_url,
         } = match options.base_chains_type {
             BaseChainsType::Anvil => {
-                let chain_info = start_anvil(SETTLEMENT_CHAIN_ID).await?;
+                let chain_info = start_anvil_with_args(
+                    SETTLEMENT_CHAIN_ID,
+                    &["--timestamp", 1756209109.to_string().as_str()],
+                )
+                .await?;
                 // Use the mock rollup contract for the test instead of deploying all the nitro
                 // rollup contracts
                 let _ = Rollup::deploy_builder(

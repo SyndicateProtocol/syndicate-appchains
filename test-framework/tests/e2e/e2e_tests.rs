@@ -107,7 +107,7 @@ async fn e2e_send_transaction() -> Result<()> {
 
         // Wait for the tx to arrive
         wait_until!(
-            components.appchain_provider.get_block_number().await? >= 2,
+            components.appchain_provider.get_block_number().await? == 2,
             Duration::from_secs(20)
         );
 
@@ -467,7 +467,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 
             // Process the slot - wait for block 16 to be reached
             wait_until!(
-                components.appchain_provider.get_block_number().await? >= 16,
+                components.appchain_provider.get_block_number().await? == 16,
                 Duration::from_secs(10)
             );
 
