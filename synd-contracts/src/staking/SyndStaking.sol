@@ -162,12 +162,6 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     /// @notice Error thrown when withdrawal data is invalid or missing
     error InvalidWithdrawal();
 
-    /**
-     * @notice Constructor to initialize the staking contract with epoch start time
-     * @param _startTimestamp The timestamp when epoch counting begins
-     */
-    constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {}
-
     ///////////////////////
     // Staking functions
     ///////////////////////

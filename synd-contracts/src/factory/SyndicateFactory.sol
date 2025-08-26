@@ -15,7 +15,7 @@ enum NamespaceState {
 }
 
 /// @title SyndicateFactory
-/// @notice Factory contract for creating SyndicateSequencingChain contracts
+/// @notice Factory contract for creating SyndicateSequencingChain contracts with centralized gas tracking
 /// @dev Uses CREATE2 pattern for deterministic deployments - users deploy permission modules separately
 contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Emitted when a new SyndicateSequencingChain is created
@@ -37,8 +37,11 @@ contract SyndicateFactory is AccessControl, Pausable {
     // Namespace configuration - made public for frontend access
     uint256 public namespacePrefix;
     uint256 public nextAutoChainId;
-    mapping(uint256 => bool) public usedChainIds;
     mapping(uint256 => NamespaceState) public usedNamespaces;
+
+    /// @notice Mapping from appchain ID to the sequencing contract address
+    mapping(uint256 => address) public appchainContracts;
+    uint256[] public chainIDs;
 
     constructor(address admin) {
         if (admin == address(0)) revert ZeroAddress();
@@ -47,6 +50,7 @@ contract SyndicateFactory is AccessControl, Pausable {
         _grantRole(MANAGER_ROLE, admin);
 
         _updateNamespaceConfig(510);
+
         nextAutoChainId = 1;
     }
 
@@ -72,12 +76,10 @@ contract SyndicateFactory is AccessControl, Pausable {
         actualChainId = appchainId == 0 ? getNextChainId() : appchainId;
 
         // Validate chain ID is not already used
-        if (usedChainIds[actualChainId]) {
+        if (appchainContracts[actualChainId] != address(0)) {
             revert ChainIdAlreadyExists();
         }
 
-        // Reserve the chain ID
-        usedChainIds[actualChainId] = true;
         if (appchainId == 0) {
             nextAutoChainId++;
         }
@@ -85,6 +87,10 @@ contract SyndicateFactory is AccessControl, Pausable {
         // Deploy the sequencing chain using CREATE2
         bytes memory bytecode = getBytecode(actualChainId);
         sequencingChain = Create2.deploy(0, salt, bytecode);
+
+        // Store the mapping of appchain ID to contract address
+        appchainContracts[actualChainId] = sequencingChain;
+        chainIDs.push(actualChainId);
 
         // Initialize the contract
         SyndicateSequencingChain(sequencingChain).initialize(admin, address(permissionModule));
@@ -127,19 +133,39 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Check if a chain ID has been used
     /// @param chainId The chain ID to check
     /// @return 1 if used, 0 if available
-    function isChainIdUsed(uint256 chainId) external view returns (uint256) {
-        return usedChainIds[chainId] ? 1 : 0;
+    function isChainIdUsed(uint256 chainId) public view returns (bool) {
+        return appchainContracts[chainId] != address(0);
     }
 
-    /// @notice Manually mark a chain ID as used to reserve it
-    /// @param chainId The chain ID to mark as used
-    /// @dev Useful for reserving specific chain IDs or marking externally deployed chains
-    function markChainIdAsUsed(uint256 chainId) external onlyRole(MANAGER_ROLE) {
-        if (usedChainIds[chainId]) {
-            revert ChainIdAlreadyExists();
+    /// @notice returns the number of appchains
+    function getTotalAppchains() external view returns (uint256) {
+        return chainIDs.length;
+    }
+
+    /// @notice returns the contracts for a given list of appchain chainIDs
+    /// @param _chainIDs the list of chain IDs
+    /// @return _contracts contracts for the given chain IDs
+    function getContractsForAppchains(uint256[] memory _chainIDs) external view returns (address[] memory _contracts) {
+        address[] memory contracts = new address[](_chainIDs.length);
+        for (uint256 i = 0; i < _chainIDs.length; i++) {
+            contracts[i] = appchainContracts[_chainIDs[i]];
         }
-        usedChainIds[chainId] = true;
-        emit ChainIdManuallyMarked(chainId);
+        return contracts;
+    }
+
+    /// @notice returns all appchains chainIDs and associated contracts
+    /// @return _chainIDs
+    /// @return _contracts
+    function getAppchainsAndContracts()
+        external
+        view
+        returns (uint256[] memory _chainIDs, address[] memory _contracts)
+    {
+        address[] memory contracts = new address[](chainIDs.length);
+        for (uint256 i = 0; i < chainIDs.length; i++) {
+            contracts[i] = appchainContracts[i];
+        }
+        return (chainIDs, contracts);
     }
 
     /// @notice Update namespace configuration (manager only)

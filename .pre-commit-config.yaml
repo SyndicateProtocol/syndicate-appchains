@@ -52,7 +52,7 @@ repos:
         types: [solidity]
       - id: forge-test-synd-contracts
         name: forge test syndicate contracts
-        entry: forge test
+        entry: env ETH_MAINNET_RPC_URL=https://ethereum-rpc.publicnode.com forge test
         args: ["--root", "synd-contracts"]
         language: system
         types: [solidity]

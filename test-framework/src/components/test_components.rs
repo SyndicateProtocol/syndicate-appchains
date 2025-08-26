@@ -122,6 +122,7 @@ pub struct TestComponents {
 
 pub const SEQUENCING_CHAIN_ID: u64 = 15;
 pub const SETTLEMENT_CHAIN_ID: u64 = 31337;
+pub const GENESIS_TIMESTAMP: u64 = 1756209109; // some time after EPOCH_START_TIME (see GasAggregator.sol)
 
 #[allow(clippy::unwrap_used)]
 impl TestComponents {
@@ -152,6 +153,7 @@ impl TestComponents {
     }
 
     #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::large_stack_frames)]
     async fn new(options: &ConfigurationOptions) -> Result<(Self, ComponentHandles)> {
         let mut options = options.clone();
         let start_time = SystemTime::now();
@@ -189,8 +191,15 @@ impl TestComponents {
             provider: seq_provider,
             http_url: _,
         } = match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
-                start_anvil(SEQUENCING_CHAIN_ID).await?
+            BaseChainsType::Anvil => {
+                start_anvil_with_args(
+                    SEQUENCING_CHAIN_ID,
+                    &["--timestamp", 1756209109.to_string().as_str()],
+                )
+                .await?
+            }
+            BaseChainsType::PreLoaded(_) => {
+                start_anvil_with_args(SEQUENCING_CHAIN_ID, &["--timestamp", "0"]).await?
             }
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let chain_id = SEQUENCING_CHAIN_ID;
@@ -265,7 +274,13 @@ impl TestComponents {
             .await?;
 
         match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+            BaseChainsType::Anvil => {
+                mine_block(&seq_provider, 0).await?;
+            }
+            BaseChainsType::PreLoaded(_) => {
+                // disable gas tracking, otherwise there will be an underflow error with anvil
+                // timstamp 0
+                let _ = sequencing_contract.disableGasTracking().send().await?;
                 mine_block(&seq_provider, 0).await?;
             }
             _ => {}
@@ -281,7 +296,11 @@ impl TestComponents {
             http_url: set_rpc_http_url,
         } = match options.base_chains_type {
             BaseChainsType::Anvil => {
-                let chain_info = start_anvil(SETTLEMENT_CHAIN_ID).await?;
+                let chain_info = start_anvil_with_args(
+                    SETTLEMENT_CHAIN_ID,
+                    &["--timestamp", 1756209109.to_string().as_str()],
+                )
+                .await?;
                 // Use the mock rollup contract for the test instead of deploying all the nitro
                 // rollup contracts
                 let _ = Rollup::deploy_builder(
@@ -359,22 +378,11 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                let chain_info = start_anvil_with_args(
+                start_anvil_with_args(
                     SETTLEMENT_CHAIN_ID,
-                    &["--load-state", state_file.to_str().unwrap()],
+                    &["--load-state", state_file.to_str().unwrap(), "--timestamp", "0"], // snapshots expect timestamp to be 0
                 )
-                .await?;
-
-                // Sync the tips of the sequencing and settlement chains
-                let block = chain_info
-                    .provider
-                    .get_block_by_number(BlockNumberOrTag::Latest)
-                    .await?
-                    .unwrap();
-                seq_provider
-                    .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
-                    .await?;
-                chain_info
+                .await?
             }
         };
 
@@ -604,6 +612,37 @@ impl TestComponents {
         let l1_provider = l1_info.as_ref().map(|info| info.provider.clone());
         let l1_ws_rpc_url = l1_info.as_ref().map(|info| info.ws_url.clone()).unwrap_or_default();
         let l1_instance = l1_info.map(|info| info.instance);
+
+        if matches!(options.base_chains_type, BaseChainsType::Anvil | BaseChainsType::PreLoaded(_))
+        {
+            // Sync the tips of the sequencing and settlement chains
+            let seq_timestamp = seq_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap()
+                .header
+                .timestamp;
+            let set_timestamp = set_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap()
+                .header
+                .timestamp;
+
+            match seq_timestamp.cmp(&set_timestamp) {
+                std::cmp::Ordering::Less => {
+                    seq_provider
+                        .evm_mine(Some(MineOptions::Timestamp(Some(set_timestamp))))
+                        .await?;
+                }
+                std::cmp::Ordering::Greater => {
+                    set_provider
+                        .evm_mine(Some(MineOptions::Timestamp(Some(seq_timestamp))))
+                        .await?;
+                }
+                std::cmp::Ordering::Equal => {}
+            }
+        }
 
         Ok((
             Self {

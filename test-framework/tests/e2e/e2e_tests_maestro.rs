@@ -565,7 +565,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
             // Wait for deposit to be processed
             wait_until!(
                 components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
-                Duration::from_secs(60)
+                Duration::from_secs(10)
             );
 
             let chain_id = components.appchain_provider.get_chain_id().await?;
