@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {TestnetSyndToken} from "src/token/TestnetSyndToken.sol";
+import {TestnetSyndToken} from "src/token/testnet-synd-token/TestnetSyndToken.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract TestnetSyndTokenTest is Test {

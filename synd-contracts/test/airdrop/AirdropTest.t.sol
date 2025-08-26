@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {Airdrop} from "src/airdrop/Airdrop.sol";
-import {TestnetSyndToken} from "src/token/TestnetSyndToken.sol";
+import {TestnetSyndToken} from "src/token/testnet-synd-token/TestnetSyndToken.sol";
 
 contract AirdropTest is Test {
     Airdrop public airdrop;

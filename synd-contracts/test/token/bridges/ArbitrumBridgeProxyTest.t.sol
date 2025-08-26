@@ -636,9 +636,15 @@ contract ArbitrumBridgeProxyTest is Test {
     function testFuzz_WithdrawEth_DifferentRecipients(address recipient_) public {
         vm.assume(recipient_ != address(0));
         vm.assume(recipient_.code.length == 0); // Not a contract
+
+        vm.assume(uint160(recipient_) > 0x09); // Exclude precompiles (0x01-0x09)
+
         // Exclude precompiles (0x01-0x0a) - https://www.evm.codes/precompiled
         vm.assume(uint160(recipient_) > 0x0a);
 
+        uint256 withdrawAmount = 1 ether;
+        uint256 initialBridgeBalance = address(bridgeProxy).balance;
+        uint256 initialRecipientBalance = recipient_.balance;
         // Additional filtering for special addresses that might cause issues
         // Exclude forge/foundry specific addresses
         vm.assume(recipient_ != address(0x000000000000000000636F6e736F6c652e6c6f67)); // "console.log"

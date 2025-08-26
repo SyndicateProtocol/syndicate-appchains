@@ -19,7 +19,7 @@
     url = https://github.com/OffchainLabs/upgrade-executor
 [submodule "synd-withdrawals/nitro"]
     path = synd-withdrawals/synd-enclave/nitro
-    url = https://github.com/Layr-Labs/nitro.git
+    url = https://github.com/SyndicateProtocol/nitro.git
 [submodule "synd-contracts/lib/sp1-contracts"]
     path = synd-contracts/lib/sp1-contracts
     url = https://github.com/succinctlabs/sp1-contracts
