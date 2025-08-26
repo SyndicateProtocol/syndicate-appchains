@@ -74,41 +74,17 @@ contract BasePool is IPool, ReentrancyGuard {
 
         emit EpochDeposit(epochIndex, amount);
     }
-
     /**
-     * @notice Claim rewards for a specific epoch based on user's stake proportion
-     * @dev Users can only claim once per epoch and must have stake in the SyndStaking contract
-     * @param epochIndex The epoch index for which to claim rewards
-     * @param destination The address where rewards should be sent
+     * @notice Claim rewards for a given epoch on behalf of a user
+     * @dev Ensures that rewards are available for the epoch, calculates the user's claimable amount,
+     *      and transfers the rewards to the provided destination address. Updates the claimed state
+     *      to prevent double-claims and emits a `ClaimSuccess` event.
+     * @param epochIndex The index of the epoch to claim rewards from
+     * @param user The address of the user claiming rewards
+     * @param destination The address where the claimed rewards will be sent
      */
-    function claim(uint256 epochIndex, address destination) external nonReentrant {
-        if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
-            revert ClaimNotAvailable();
-        }
 
-        uint256 claimAmount = getClaimableAmount(epochIndex, msg.sender);
-        if (claimAmount == 0) {
-            revert ClaimNotAvailable();
-        }
-        claimed[epochIndex][msg.sender] += claimAmount;
-
-        // Send synd to destination
-        Address.sendValue(payable(destination), claimAmount);
-
-        emit ClaimSuccess(epochIndex, msg.sender, destination, claimAmount);
-    }
-
-    /**
-     * @notice Claim rewards for a specific epoch and user (only callable by authorized forwarder)
-     * @dev This function allows the forwarder to claim rewards on behalf of a user
-     * @param epochIndex The epoch index for which to claim rewards
-     * @param user The address of the user to claim rewards for
-     */
-    function claimFor(uint256 epochIndex, address user, address destination)
-        external
-        nonReentrant
-        onlyStakingContract
-    {
+    function _claim(uint256 epochIndex, address user, address destination) internal {
         if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
@@ -123,6 +99,30 @@ contract BasePool is IPool, ReentrancyGuard {
         Address.sendValue(payable(destination), claimAmount);
 
         emit ClaimSuccess(epochIndex, user, destination, claimAmount);
+    }
+
+    /**
+     * @notice Claim rewards for a specific epoch based on user's stake proportion
+     * @dev Users can only claim once per epoch and must have stake in the SyndStaking contract
+     * @param epochIndex The epoch index for which to claim rewards
+     * @param destination The address where rewards should be sent
+     */
+    function claim(uint256 epochIndex, address destination) external nonReentrant {
+        _claim(epochIndex, msg.sender, destination);
+    }
+
+    /**
+     * @notice Claim rewards for a specific epoch and user (only callable by authorized forwarder)
+     * @dev This function allows the forwarder to claim rewards on behalf of a user
+     * @param epochIndex The epoch index for which to claim rewards
+     * @param user The address of the user to claim rewards for
+     */
+    function claimFor(uint256 epochIndex, address user, address destination)
+        external
+        nonReentrant
+        onlyStakingContract
+    {
+        _claim(epochIndex, user, destination);
     }
 
     /**

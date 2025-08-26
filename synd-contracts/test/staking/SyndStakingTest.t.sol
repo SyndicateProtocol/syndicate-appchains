@@ -546,17 +546,17 @@ contract SyndStakingTest is Test {
     }
 
     ///////////////////////
-    // bulkStake tests
+    // stakeMultipleAppchains tests
     ///////////////////////
 
-    function test_bulkStake_single_appchain() public {
+    function test_stakeMultipleAppchains_single_appchain() public {
         uint256[] memory appchainIds = new uint256[](1);
         uint256[] memory amounts = new uint256[](1);
         appchainIds[0] = appchainId1;
         amounts[0] = 50 ether;
 
         vm.startPrank(user1);
-        staking.bulkStake{value: 50 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 50 ether}(appchainIds, amounts);
         vm.stopPrank();
 
         checkStake(1, user1, 0 ether, appchainId1);
@@ -566,7 +566,7 @@ contract SyndStakingTest is Test {
         checkStake(2, user1, 50 ether, appchainId1);
     }
 
-    function test_bulkStake_multiple_appchains() public {
+    function test_stakeMultipleAppchains_multiple_appchains() public {
         uint256[] memory appchainIds = new uint256[](3);
         uint256[] memory amounts = new uint256[](3);
         appchainIds[0] = appchainId1;
@@ -577,7 +577,7 @@ contract SyndStakingTest is Test {
         amounts[2] = 30 ether;
 
         vm.startPrank(user1);
-        staking.bulkStake{value: 100 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 100 ether}(appchainIds, amounts);
         vm.stopPrank();
 
         stepEpoch(1);
@@ -592,7 +592,7 @@ contract SyndStakingTest is Test {
         assertEq(staking.getAppchainStake(2, appchainId3), 30 ether);
     }
 
-    function test_bulkStake_invalid_input() public {
+    function test_stakeMultipleAppchains_invalid_input() public {
         uint256[] memory appchainIds = new uint256[](2);
         uint256[] memory amounts = new uint256[](1);
         appchainIds[0] = appchainId1;
@@ -601,11 +601,11 @@ contract SyndStakingTest is Test {
 
         vm.startPrank(user1);
         vm.expectRevert(SyndStaking.InvalidInput.selector);
-        staking.bulkStake{value: 50 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 50 ether}(appchainIds, amounts);
         vm.stopPrank();
     }
 
-    function test_bulkStake_total_amount_mismatch() public {
+    function test_stakeMultipleAppchains_total_amount_mismatch() public {
         uint256[] memory appchainIds = new uint256[](2);
         uint256[] memory amounts = new uint256[](2);
         appchainIds[0] = appchainId1;
@@ -615,16 +615,16 @@ contract SyndStakingTest is Test {
 
         vm.startPrank(user1);
         vm.expectRevert(abi.encodeWithSelector(SyndStaking.InvalidStakingAmount.selector, 70 ether, 50 ether));
-        staking.bulkStake{value: 50 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 50 ether}(appchainIds, amounts);
         vm.stopPrank();
     }
 
-    function test_bulkStake_empty_arrays() public {
+    function test_stakeMultipleAppchains_empty_arrays() public {
         uint256[] memory appchainIds = new uint256[](0);
         uint256[] memory amounts = new uint256[](0);
 
         vm.startPrank(user1);
-        staking.bulkStake{value: 0 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 0 ether}(appchainIds, amounts);
         vm.stopPrank();
 
         stepEpoch(1);
@@ -633,7 +633,7 @@ contract SyndStakingTest is Test {
         assertEq(staking.getTotalStake(2), 0 ether);
     }
 
-    function test_bulkStake_with_zero_amounts() public {
+    function test_stakeMultipleAppchains_with_zero_amounts() public {
         uint256[] memory appchainIds = new uint256[](2);
         uint256[] memory amounts = new uint256[](2);
         appchainIds[0] = appchainId1;
@@ -643,11 +643,11 @@ contract SyndStakingTest is Test {
 
         vm.startPrank(user1);
         vm.expectRevert(SyndStaking.InvalidAmount.selector);
-        staking.bulkStake{value: 0 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 0 ether}(appchainIds, amounts);
         vm.stopPrank();
     }
 
-    function test_bulkStake_with_invalid_appchain_id() public {
+    function test_stakeMultipleAppchains_with_invalid_appchain_id() public {
         uint256[] memory appchainIds = new uint256[](1);
         uint256[] memory amounts = new uint256[](1);
         appchainIds[0] = 0; // Invalid appchain ID
@@ -655,11 +655,11 @@ contract SyndStakingTest is Test {
 
         vm.startPrank(user1);
         vm.expectRevert(SyndStaking.InvalidAppchainId.selector);
-        staking.bulkStake{value: 50 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 50 ether}(appchainIds, amounts);
         vm.stopPrank();
     }
 
-    function test_bulkStake_multiple_users() public {
+    function test_stakeMultipleAppchains_multiple_users() public {
         uint256[] memory appchainIds = new uint256[](2);
         uint256[] memory amounts = new uint256[](2);
         appchainIds[0] = appchainId1;
@@ -668,11 +668,11 @@ contract SyndStakingTest is Test {
         amounts[1] = 25 ether;
 
         vm.startPrank(user1);
-        staking.bulkStake{value: 50 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 50 ether}(appchainIds, amounts);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        staking.bulkStake{value: 50 ether}(appchainIds, amounts);
+        staking.stakeMultipleAppchains{value: 50 ether}(appchainIds, amounts);
         vm.stopPrank();
 
         stepEpoch(1);

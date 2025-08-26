@@ -241,7 +241,14 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         emit Stake(epochIndex, msg.sender, amount, appchainId);
     }
 
-    function bulkStake(uint256[] calldata appchainIds, uint256[] calldata amounts) external payable {
+    /**
+     * @notice Stake tokens across multiple appchains in a single transaction
+     * @dev Iterates over the provided appchain IDs and amounts, calling `_stakeSynd` for each.
+     *      The total sum of all amounts must equal `msg.value` or the transaction reverts.
+     * @param appchainIds The list of appchain IDs to stake into
+     * @param amounts The list of corresponding stake amounts for each appchain ID
+     */
+    function stakeMultipleAppchains(uint256[] calldata appchainIds, uint256[] calldata amounts) external payable {
         if (appchainIds.length != amounts.length) {
             revert InvalidInput();
         }
