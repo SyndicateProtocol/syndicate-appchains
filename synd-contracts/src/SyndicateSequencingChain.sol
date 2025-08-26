@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
+import {GasCounter} from "./staking/GasCounter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
 
 enum TransactionType {
@@ -46,7 +47,7 @@ enum TransactionType {
 ///
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
-contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequencingChain {
+contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequencingChain, GasCounter {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
 
@@ -106,7 +107,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         address to,
         uint256 value,
         bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) returns (uint256) {
+    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage returns (uint256) {
         uint256 requestId = contractNonce[msg.sender]++;
         emit TransactionProcessed(
             msg.sender,
@@ -138,7 +139,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         address to,
         uint256 value,
         bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) {
+    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage {
         emit TransactionProcessed(
             msg.sender,
             abi.encodePacked(
@@ -160,6 +161,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     function processTransactionsCompressed(bytes calldata data)
         external
         onlyWhenAllowedCompressed(msg.sender, tx.origin)
+        trackGasUsage
     {
         require(data.length > 0, NoTxData());
         emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Compressed, data));
@@ -168,7 +170,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice Process a signed transaction.
     /// @param data Transaction data
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
+    function processTransaction(bytes calldata data)
+        external
+        onlyWhenAllowed(msg.sender, tx.origin, data)
+        trackGasUsage
+    {
         require(data.length > 0, NoTxData());
         emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data));
     }
@@ -176,7 +182,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice Processes multiple signed transactions in bulk.
     /// @param data An array of transaction data.
     //#olympix-ignore
-    function processTransactionsBulk(bytes[] calldata data) external {
+    function processTransactionsBulk(bytes[] calldata data) external trackGasUsage {
         uint256 dataCount = data.length;
 
         // Process all transactions
@@ -188,5 +194,21 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
                 emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data[i]));
             }
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         GAS TRACKING ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Disable gas tracking if needed
+    /// @dev Only callable by the contract owner
+    function disableGasTracking() external onlyOwner {
+        _disableGasTracking();
+    }
+
+    /// @notice Enable gas tracking
+    /// @dev Only callable by the contract owner
+    function enableGasTracking() external onlyOwner {
+        _enableGasTracking();
     }
 }

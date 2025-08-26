@@ -8,7 +8,7 @@ use alloy::{
         Address, U160, U256,
     },
     providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::{Block, TransactionRequest},
+    rpc::types::{anvil::MineOptions, Block, TransactionRequest},
     sol,
 };
 use contract_bindings::synd::{dummy_poster::DummyPoster, i_inbox::IInbox, rollup::Rollup};
@@ -44,7 +44,19 @@ async fn e2e_send_transaction() -> Result<()> {
             .depositEth(wallet_address, wallet_address, parse_ether("1")?)
             .send()
             .await?;
-        components.mine_seq_block(config.settlement_delay).await?;
+
+        let set_timestamp = components
+            .settlement_provider
+            .get_block_by_number(BlockNumberOrTag::Latest)
+            .await?
+            .unwrap()
+            .header
+            .timestamp;
+
+        components
+            .sequencing_provider
+            .evm_mine(Some(MineOptions::Timestamp(Some(set_timestamp + config.settlement_delay))))
+            .await?;
         components.mine_set_block(0).await?;
         // mine 1 set block to close the opened slot that contains the other deposit
         let test_addr: Address = "0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA".parse()?;
@@ -59,12 +71,10 @@ async fn e2e_send_transaction() -> Result<()> {
         );
 
         // check the first appchain block
-        let appchain_block: Block = components
-            .appchain_provider
-            .get_block_by_number(BlockNumberOrTag::Number(1))
-            .await?
-            .unwrap();
-        assert_eq!(appchain_block.header.timestamp, config.settlement_delay);
+        let appchain_block: Block =
+            components.appchain_provider.get_block_by_number(1.into()).await?.unwrap();
+
+        assert_eq!(appchain_block.header.timestamp, set_timestamp + config.settlement_delay);
         // the first transaction is the startBlock transaction
         assert_eq!(appchain_block.transactions.len(), 2);
         assert_eq!(
@@ -102,12 +112,10 @@ async fn e2e_send_transaction() -> Result<()> {
         );
 
         // check the second appchain block
-        let appchain_block: Block = components
-            .appchain_provider
-            .get_block_by_number(BlockNumberOrTag::Number(2))
-            .await?
-            .unwrap();
-        assert_eq!(appchain_block.header.timestamp, config.settlement_delay);
+        let appchain_block: Block =
+            components.appchain_provider.get_block_by_number(2.into()).await?.unwrap();
+
+        assert_eq!(appchain_block.header.timestamp, set_timestamp + config.settlement_delay);
         // the first transaction is the startBlock transaction
         assert_eq!(appchain_block.transactions.len(), 2);
         // tx hash should match
@@ -134,12 +142,9 @@ async fn e2e_send_transaction() -> Result<()> {
             components.appchain_provider.get_block_number().await? == 3,
             Duration::from_secs(10)
         );
-        let appchain_block: Block = components
-            .appchain_provider
-            .get_block_by_number(BlockNumberOrTag::Number(3))
-            .await?
-            .unwrap();
-        assert_eq!(appchain_block.header.timestamp, config.settlement_delay + 1);
+        let appchain_block: Block =
+            components.appchain_provider.get_block_by_number(3.into()).await?.unwrap();
+        assert_eq!(appchain_block.header.timestamp, set_timestamp + config.settlement_delay + 1);
         // the first transaction is the startBlock transaction
         assert_eq!(appchain_block.transactions.len(), 2);
         // balance should match
@@ -743,6 +748,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
 
         // sequence any tx
         components.sequence_tx(b"my_tx_calldata", 10, false).await?;
+        let seq_block = components.sequencing_provider.get_block_number().await?;
 
         // mine a set block to close the slot, but without any transactions
         components.mine_set_block(100000).await?;
@@ -756,7 +762,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 3);
 
@@ -764,7 +770,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 2);
 
@@ -793,7 +799,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 3);
 
@@ -801,7 +807,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 2);
         Ok(())
@@ -823,7 +829,8 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
                 Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
-            components.mine_set_block(1).await?;
+            components.mine_seq_block(1).await?;
+            components.mine_set_block(1000).await?;
 
             // Wait for deposit to be processed
             wait_until!(

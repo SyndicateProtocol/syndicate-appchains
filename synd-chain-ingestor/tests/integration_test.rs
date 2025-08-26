@@ -16,7 +16,6 @@ use test_utils::{
     utils::test_path,
     wait_until,
 };
-use tokio::time::sleep;
 use tracing::info;
 
 mod tests {
@@ -82,21 +81,16 @@ mod tests {
 
         let ingestor_ws_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
 
-        Ok((chain_info, sequencing_chain_ingestor, ingestor_ws_url))
-    }
-
-    #[tokio::test]
-    async fn test_ingestor_start() -> eyre::Result<()> {
-        let (_anvil, _ingestor, ingestor_ws_url) = setup(None).await?;
-
         let client =
             IngestorProvider::new(&ingestor_ws_url, IngestorProviderConfig::default()).await;
-        sleep(Duration::from_secs(1)).await;
 
+        wait_until!(client.ready().await?, Duration::from_secs(10));
+
+        #[allow(clippy::unwrap_used)]
         let block_number = client.get_block_number().await.unwrap();
         assert_eq!(block_number, 0);
 
-        Ok(())
+        Ok((chain_info, sequencing_chain_ingestor, ingestor_ws_url))
     }
 
     #[tokio::test]
