@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
+import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain, TransactionType, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
@@ -40,20 +42,30 @@ contract DirectMockModule is IPermissionModule {
 
 contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateSequencingChain public chain;
+    SyndicateFactory public factory;
     RequireAndModule public permissionModule;
     RequireOrModule public permissionModuleAny;
     address public admin;
 
-    function setUp() public virtual {
-        admin = address(0x1);
+    function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
-
         vm.startPrank(admin);
+        factory = new SyndicateFactory(admin);
+        (address chainAddress,) = factory.createSyndicateSequencingChain(
+            appchainId, admin, _permissionModule, keccak256(abi.encodePacked("test-salt"))
+        );
+        vm.stopPrank();
+        return SyndicateSequencingChain(chainAddress);
+    }
+
+    function setUp() public virtual {
+        // Warp to START_TIMESTAMP to avoid underflow in epoch calculations
+        vm.warp(1754089200); // START_TIMESTAMP from EpochTracker.sol
+
+        admin = address(0x1);
         permissionModule = new RequireAndModule(admin);
         permissionModuleAny = new RequireOrModule(admin);
-        chain = new SyndicateSequencingChain(appchainId);
-        chain.initialize(admin, address(permissionModule));
-        vm.stopPrank();
+        chain = deployFromFactory(permissionModule);
     }
 }
 
@@ -215,10 +227,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testProcessTransactionsBulkOnlyEmitsValidTransactionsAsEvents() public {
-        vm.startPrank(admin);
-        SyndicateSequencingChain chainWithInvalidDataPermissionModule = new SyndicateSequencingChain(10042002);
-        chainWithInvalidDataPermissionModule.initialize(admin, address(new MockIsAllowedWithInvalidData()));
-        vm.stopPrank();
+        chain = deployFromFactory(RequireAndModule(address(new MockIsAllowedWithInvalidData())));
 
         bytes[] memory txns = new bytes[](3);
         txns[0] = abi.encode("valid");
@@ -226,7 +235,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         txns[2] = abi.encode("valid");
 
         vm.recordLogs();
-        chainWithInvalidDataPermissionModule.processTransactionsBulk(txns);
+        chain.processTransactionsBulk(txns);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         bytes32 expectedSig = keccak256("TransactionProcessed(address,bytes)");

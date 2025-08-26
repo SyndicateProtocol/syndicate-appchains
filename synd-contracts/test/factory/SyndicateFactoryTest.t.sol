@@ -273,74 +273,20 @@ contract SyndicateFactoryTest is Test {
         RequireOrModule permissionModule2 = new RequireOrModule(admin);
 
         // Initially no chain IDs used
-        assertEq(factory.isChainIdUsed(appchainId), 0);
+        assertEq(factory.isChainIdUsed(appchainId), false);
 
         // Create chain
         bytes32 salt1 = keccak256(abi.encodePacked("salt-for-used-1"));
         factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule1)), salt1);
 
         // Now chain ID should be marked as used
-        assertEq(factory.isChainIdUsed(appchainId), 1);
+        assertEq(factory.isChainIdUsed(appchainId), true);
 
         // Auto-incremented ID should also be marked as used
         bytes32 salt2 = keccak256(abi.encodePacked("salt-for-used-2"));
         (, uint256 id2) =
             factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)), salt2);
-        assertEq(factory.isChainIdUsed(id2), 1);
-    }
-
-    // Manual Chain ID Marking Tests
-    function testMarkChainIdAsUsed() public {
-        uint256 chainIdToMark = 12345;
-
-        // Initially not used
-        assertEq(factory.isChainIdUsed(chainIdToMark), 0);
-
-        // Mark as used
-        vm.prank(manager);
-        vm.expectEmit(true, false, false, true);
-        emit ChainIdManuallyMarked(chainIdToMark);
-        factory.markChainIdAsUsed(chainIdToMark);
-
-        // Now should be marked as used
-        assertEq(factory.isChainIdUsed(chainIdToMark), 1);
-    }
-
-    function testMarkChainIdAsUsedAlreadyUsedReverts() public {
-        uint256 chainIdToMark = 12345;
-
-        // Mark as used first time
-        vm.prank(manager);
-        factory.markChainIdAsUsed(chainIdToMark);
-
-        // Try to mark again should revert
-        vm.prank(manager);
-        vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
-        factory.markChainIdAsUsed(chainIdToMark);
-    }
-
-    function testMarkChainIdAsUsedNonManagerReverts() public {
-        uint256 chainIdToMark = 12345;
-
-        vm.prank(nonManager);
-        vm.expectRevert(); // AccessControl will revert with a specific message
-        factory.markChainIdAsUsed(chainIdToMark);
-    }
-
-    function testMarkChainIdAsUsedPreventsFutureDeployment() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-        uint256 chainIdToMark = 99999;
-
-        // Mark chain ID as used
-        vm.prank(manager);
-        factory.markChainIdAsUsed(chainIdToMark);
-
-        // Try to deploy with that chain ID should fail
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-marked-id"));
-        vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
-        factory.createSyndicateSequencingChain(
-            chainIdToMark, admin, IRequirementModule(address(permissionModule)), salt
-        );
+        assertEq(factory.isChainIdUsed(id2), true);
     }
 
     // Pausability Tests
@@ -441,7 +387,7 @@ contract SyndicateFactoryTest is Test {
         // Test that variables are publicly accessible
         assertEq(factory.namespacePrefix(), 510);
         assertEq(factory.nextAutoChainId(), 1);
-        assertEq(factory.usedChainIds(appchainId), false);
+        assertEq(factory.appchainContracts(appchainId), address(0));
     }
 
     function testUpdateNamespaceConfig() public {
@@ -579,7 +525,7 @@ contract SyndicateFactoryTest is Test {
         // Skip first auto-generated ID based on current formula
         uint256 firstAutoId = (factory.namespacePrefix() * 10) + 1;
         vm.assume(chainId != firstAutoId);
-        vm.assume(factory.isChainIdUsed(chainId) == 0);
+        vm.assume(factory.isChainIdUsed(chainId) == false);
 
         RequireAndModule permissionModule = new RequireAndModule(admin);
         bytes32 salt = keccak256(abi.encodePacked("fuzz-test", chainId));
@@ -589,7 +535,7 @@ contract SyndicateFactoryTest is Test {
 
         assertTrue(sequencingChainAddress != address(0));
         assertEq(actualChainId, chainId);
-        assertEq(factory.isChainIdUsed(chainId), 1);
+        assertEq(factory.isChainIdUsed(chainId), true);
     }
 
     function testFuzzSalts(bytes32 salt) public {
@@ -643,5 +589,48 @@ contract SyndicateFactoryTest is Test {
         assertTrue(chainId1 != chainId2);
         assertEq(chainId1, (12 * 10) + 1);
         assertEq(chainId2, (133 * 10) + 1);
+    }
+
+    function testGetContractsForAppchains() public {
+        // Create a few chains with non-sequential chain IDs
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-test-9a"));
+        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-test-9b"));
+        bytes32 salt3 = keccak256(abi.encodePacked("salt-for-test-9c"));
+
+        uint256 appchainId1 = 100;
+        uint256 appchainId2 = 200;
+        uint256 appchainId3 = 300;
+
+        vm.prank(nonManager);
+        (address chain1,) = factory.createSyndicateSequencingChain(appchainId1, admin, permissionModule, salt1);
+
+        vm.prank(nonManager);
+        (address chain2,) = factory.createSyndicateSequencingChain(appchainId2, admin, permissionModule, salt2);
+
+        vm.prank(nonManager);
+        (address chain3,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule, salt3);
+
+        // Test getContractsForAppchains with specific chain IDs
+        uint256[] memory chainIDs = new uint256[](2);
+        chainIDs[0] = appchainId2; // 200
+        chainIDs[1] = appchainId1; // 100
+
+        address[] memory contracts = factory.getContractsForAppchains(chainIDs);
+
+        // Verify that the correct contracts are returned for each chain ID
+        // This is the regression test for the bug where it was using the loop index instead of the chain ID
+        assertEq(contracts.length, 2);
+        assertEq(contracts[0], chain2); // Contract for chain ID 200
+        assertEq(contracts[1], chain1); // Contract for chain ID 100
+
+        // Test with a single chain ID
+        uint256[] memory singleChainID = new uint256[](1);
+        singleChainID[0] = appchainId3; // 300
+
+        address[] memory singleContract = factory.getContractsForAppchains(singleChainID);
+
+        assertEq(singleContract.length, 1);
+        assertEq(singleContract[0], chain3); // Contract for chain ID 300
     }
 }

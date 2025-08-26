@@ -19,8 +19,7 @@ pub async fn start_anvil(chain_id: u64) -> Result<ChainInfo> {
 
 pub async fn start_anvil_with_args(chain_id: u64, args: &[&str]) -> Result<ChainInfo> {
     let port = PortManager::instance().next_port().await;
-    let mut cmd =
-        vec!["--base-fee", "0", "--gas-limit", "30000000", "--timestamp", "0", "--no-mining"];
+    let mut cmd = vec!["--base-fee", "0", "--gas-limit", "30000000", "--no-mining"];
     cmd.extend_from_slice(args);
     let anvil = Anvil::new().port(port).chain_id(chain_id).args(cmd).try_spawn()?;
 

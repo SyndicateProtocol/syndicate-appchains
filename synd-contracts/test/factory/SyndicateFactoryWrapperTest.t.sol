@@ -173,7 +173,7 @@ contract SyndicateFactoryWrapperTest is Test {
         assertEq(actualChainId, expectedChainId);
 
         // Verify chain ID is marked as used
-        assertEq(wrapper.isChainIdUsed(actualChainId), 1);
+        assertEq(wrapper.isChainIdUsed(actualChainId), true);
     }
 
     // Address computation tests
@@ -311,7 +311,7 @@ contract SyndicateFactoryWrapperTest is Test {
 
     function testIsChainIdUsed() public {
         // Initially not used
-        assertEq(wrapper.isChainIdUsed(appchainId), 0);
+        assertEq(wrapper.isChainIdUsed(appchainId), false);
 
         // Deploy something
         bytes32 moduleSalt = keccak256(abi.encodePacked("used-module"));
@@ -322,7 +322,7 @@ contract SyndicateFactoryWrapperTest is Test {
         );
 
         // Now should be used
-        assertEq(wrapper.isChainIdUsed(appchainId), 1);
+        assertEq(wrapper.isChainIdUsed(appchainId), true);
     }
 
     // Constructor tests
@@ -400,7 +400,7 @@ contract SyndicateFactoryWrapperTest is Test {
         vm.assume(_admin != address(0));
         vm.assume(_chainId != 0);
         vm.assume(_chainId < type(uint256).max / 2); // Avoid overflow in chain ID logic
-        vm.assume(wrapper.isChainIdUsed(_chainId) == 0); // Not already used
+        vm.assume(wrapper.isChainIdUsed(_chainId) == false); // Not already used
 
         (address sequencingChain, address permissionModule, uint256 actualChainId) = wrapper.deployCompleteSyndicate(
             _chainId, _admin, SyndicateFactoryWrapper.ModuleType.RequireAnd, _moduleSalt, _chainSalt

@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {BasePool} from "src/staking/BasePool.sol";
+import {EpochTracker} from "src/staking/EpochTracker.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -17,7 +18,7 @@ contract SyndStakingTest is Test {
     uint256 public appchainId3;
 
     function setUp() public {
-        staking = new SyndStaking(block.timestamp);
+        staking = new SyndStaking();
 
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
@@ -28,6 +29,9 @@ contract SyndStakingTest is Test {
         appchainId1 = 111;
         appchainId2 = 222;
         appchainId3 = 333;
+
+        // Warp to exactly the epoch start timestamp (beginning of epoch 1)
+        vm.warp(staking.START_TIMESTAMP());
     }
 
     function stepEpoch(uint256 epochsToStep) public {
@@ -546,6 +550,67 @@ contract SyndStakingTest is Test {
     }
 
     ///////////////////////
+    // withdrawal bulk tests
+    ///////////////////////
+
+    function test_initialize_withdrawals_bulk() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 25 ether}(111);
+        staking.stakeSynd{value: 25 ether}(222);
+        staking.stakeSynd{value: 25 ether}(333);
+        staking.stakeSynd{value: 25 ether}(444);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        uint256[] memory appchainIds = new uint256[](4);
+        appchainIds[0] = 111;
+        appchainIds[1] = 222;
+        appchainIds[2] = 333;
+        appchainIds[3] = 444;
+
+        uint256[] memory amounts = new uint256[](4);
+        amounts[0] = 1 ether;
+        amounts[1] = 2 ether;
+        amounts[2] = 3 ether;
+        amounts[3] = 4 ether;
+
+        vm.startPrank(user1);
+        staking.initializeWithdrawals(appchainIds, amounts);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        assertEq(staking.epochWithdrawals(2), 10 ether);
+
+        vm.startPrank(user1);
+        staking.withdraw(2, user1);
+        vm.stopPrank();
+
+        assertEq(address(user1).balance, 10 ether);
+    }
+
+    function test_initialize_withdrawals_bulk_all() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 25 ether}(111);
+        staking.stakeSynd{value: 25 ether}(222);
+        staking.stakeSynd{value: 25 ether}(333);
+        staking.stakeSynd{value: 25 ether}(444);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        assertEq(staking.getUserStake(2, user1), 100 ether);
+        assertEq(staking.getTotalStake(2), 100 ether);
+        assertEq(staking.getUserAppchainStake(2, user1, appchainId1), 30 ether);
+        assertEq(staking.getUserAppchainStake(2, user1, appchainId2), 40 ether);
+        assertEq(staking.getUserAppchainStake(2, user1, appchainId3), 30 ether);
+        assertEq(staking.getAppchainStake(2, appchainId1), 30 ether);
+        assertEq(staking.getAppchainStake(2, appchainId2), 40 ether);
+        assertEq(staking.getAppchainStake(2, appchainId3), 30 ether);
+    }
+
+    ///////////////////////
     // stakeMultipleAppchains tests
     ///////////////////////
 
@@ -582,14 +647,9 @@ contract SyndStakingTest is Test {
 
         stepEpoch(1);
 
-        assertEq(staking.getUserStake(2, user1), 100 ether);
-        assertEq(staking.getTotalStake(2), 100 ether);
-        assertEq(staking.getUserAppchainStake(2, user1, appchainId1), 30 ether);
-        assertEq(staking.getUserAppchainStake(2, user1, appchainId2), 40 ether);
-        assertEq(staking.getUserAppchainStake(2, user1, appchainId3), 30 ether);
-        assertEq(staking.getAppchainStake(2, appchainId1), 30 ether);
-        assertEq(staking.getAppchainStake(2, appchainId2), 40 ether);
-        assertEq(staking.getAppchainStake(2, appchainId3), 30 ether);
+        checkStake(2, user1, 100 ether, appchainId1);
+        checkStake(2, user1, 100 ether, appchainId2);
+        checkStake(2, user1, 100 ether, appchainId3);
     }
 
     function test_stakeMultipleAppchains_invalid_input() public {
@@ -980,5 +1040,67 @@ contract SyndStakingTest is Test {
 
         // User should get rewards based on their stake share (50 ether full stake + stake share)
         assertEq(address(user1).balance, initialBalance + 60 ether);
+        uint256[] memory appchainIds = new uint256[](4);
+        appchainIds[0] = 111;
+        appchainIds[1] = 222;
+        appchainIds[2] = 333;
+        appchainIds[3] = 444;
+
+        vm.startPrank(user1);
+        staking.initializeWithdrawals(appchainIds);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        assertEq(staking.epochWithdrawals(2), 100 ether);
+
+        vm.startPrank(user1);
+        staking.withdraw(2, user1);
+        vm.stopPrank();
+
+        assertEq(address(user1).balance, 100 ether);
+    }
+
+    function test_withdraw_bulk() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 25 ether}(111);
+        staking.stakeSynd{value: 25 ether}(222);
+        staking.stakeSynd{value: 25 ether}(333);
+        staking.stakeSynd{value: 25 ether}(444);
+        vm.stopPrank();
+
+        stepEpoch(1);
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(111);
+        vm.stopPrank();
+
+        stepEpoch(1);
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(222);
+        vm.stopPrank();
+
+        stepEpoch(1);
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(333);
+        vm.stopPrank();
+
+        stepEpoch(1);
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(444);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        uint256[] memory epochIndices = new uint256[](4);
+        epochIndices[0] = 2;
+        epochIndices[1] = 3;
+        epochIndices[2] = 4;
+        epochIndices[3] = 5;
+
+        vm.startPrank(user1);
+        staking.withdrawBulk(epochIndices, user1);
+        vm.stopPrank();
+
+        assertEq(address(user1).balance, 100 ether);
     }
 }
