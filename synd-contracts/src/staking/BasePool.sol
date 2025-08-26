@@ -115,38 +115,4 @@ contract BasePool is IPool, ReentrancyGuard {
         // Subtract the amount the user has already claimed for this epoch
         return user_reward_share - claimed[epochIndex][user];
     }
-
-    ///////////////////////
-    // Bulk functions
-    ///////////////////////
-
-    /**
-     * @notice Claims rewards for multiple epochs in a single transaction
-     * @dev Iterates through the provided epoch indices, checks claimability, accumulates the total claimable amount,
-     *      marks each epoch as claimed, and transfers the total rewards to the destination address.
-     *      Emits a ClaimSuccess event for each successful epoch claim.
-     *      Reverts if any epoch is not claimable or if the claim amount is zero for any epoch.
-     * @param epochIndices An array of epoch indices to claim rewards from
-     * @param destination The address to receive the claimed rewards
-     */
-    function claimBulk(uint256[] calldata epochIndices, address destination) external nonReentrant {
-        uint256 totalClaimAmount = 0;
-        for (uint256 i = 0; i < epochIndices.length; i++) {
-            uint256 epochIndex = epochIndices[i];
-            if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
-                revert ClaimNotAvailable();
-            }
-
-            uint256 claimAmount = getClaimableAmount(epochIndex, msg.sender);
-            if (claimAmount == 0) {
-                revert ClaimNotAvailable();
-            }
-            claimed[epochIndex][msg.sender] += claimAmount;
-            totalClaimAmount += claimAmount;
-
-            emit ClaimSuccess(epochIndex, msg.sender, destination, claimAmount);
-        }
-
-        Address.sendValue(payable(destination), totalClaimAmount);
-    }
 }
