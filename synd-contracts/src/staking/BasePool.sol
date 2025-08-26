@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {ISyndStaking} from "./ISyndStaking.sol";
 import {IPool} from "./IPool.sol";
+
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -44,6 +45,8 @@ contract BasePool is IPool, ReentrancyGuard {
 
     /// @notice Error thrown when trying to claim from an epoch with no rewards
     error ClaimNotAvailable();
+    /// @notice Error thrown when caller is not authorized forwarder
+    error UnauthorizedCaller();
 
     /**
      * @notice Constructor to initialize the pool with staking contract and depositor
@@ -51,6 +54,13 @@ contract BasePool is IPool, ReentrancyGuard {
      */
     constructor(address _stakingContract) {
         stakingContract = ISyndStaking(_stakingContract);
+    }
+
+    modifier onlyStakingContract() {
+        if (msg.sender != address(stakingContract)) {
+            revert UnauthorizedCaller();
+        }
+        _;
     }
 
     /**
@@ -64,6 +74,32 @@ contract BasePool is IPool, ReentrancyGuard {
 
         emit EpochDeposit(epochIndex, amount);
     }
+    /**
+     * @notice Claim rewards for a given epoch on behalf of a user
+     * @dev Ensures that rewards are available for the epoch, calculates the user's claimable amount,
+     *      and transfers the rewards to the provided destination address. Updates the claimed state
+     *      to prevent double-claims and emits a `ClaimSuccess` event.
+     * @param epochIndex The index of the epoch to claim rewards from
+     * @param user The address of the user claiming rewards
+     * @param destination The address where the claimed rewards will be sent
+     */
+
+    function _claim(uint256 epochIndex, address user, address destination) internal {
+        if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
+            revert ClaimNotAvailable();
+        }
+
+        uint256 claimAmount = getClaimableAmount(epochIndex, user);
+        if (claimAmount == 0) {
+            revert ClaimNotAvailable();
+        }
+        claimed[epochIndex][user] += claimAmount;
+
+        // Send synd to destination
+        Address.sendValue(payable(destination), claimAmount);
+
+        emit ClaimSuccess(epochIndex, user, destination, claimAmount);
+    }
 
     /**
      * @notice Claim rewards for a specific epoch based on user's stake proportion
@@ -71,21 +107,22 @@ contract BasePool is IPool, ReentrancyGuard {
      * @param epochIndex The epoch index for which to claim rewards
      * @param destination The address where rewards should be sent
      */
-    function claim(uint256 epochIndex, address destination) public nonReentrant {
-        if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
-            revert ClaimNotAvailable();
-        }
+    function claim(uint256 epochIndex, address destination) external nonReentrant {
+        _claim(epochIndex, msg.sender, destination);
+    }
 
-        uint256 claimAmount = getClaimableAmount(epochIndex, msg.sender);
-        if (claimAmount == 0) {
-            revert ClaimNotAvailable();
-        }
-        claimed[epochIndex][msg.sender] += claimAmount;
-
-        // Send synd to destination
-        Address.sendValue(payable(destination), claimAmount);
-
-        emit ClaimSuccess(epochIndex, msg.sender, destination, claimAmount);
+    /**
+     * @notice Claim rewards for a specific epoch and user (only callable by authorized forwarder)
+     * @dev This function allows the forwarder to claim rewards on behalf of a user
+     * @param epochIndex The epoch index for which to claim rewards
+     * @param user The address of the user to claim rewards for
+     */
+    function claimFor(uint256 epochIndex, address user, address destination)
+        external
+        nonReentrant
+        onlyStakingContract
+    {
+        _claim(epochIndex, user, destination);
     }
 
     /**
@@ -100,19 +137,19 @@ contract BasePool is IPool, ReentrancyGuard {
             return 0;
         }
 
-        uint256 user_staked_amount = stakingContract.getUserStakeShare(epochIndex, user);
-        if (user_staked_amount == 0) {
+        uint256 userStakedAmount = stakingContract.getUserStakeShare(epochIndex, user);
+        if (userStakedAmount == 0) {
             return 0;
         }
 
-        uint256 total_staked_amount = stakingContract.getTotalStakeShare(epochIndex);
-        if (total_staked_amount == 0) {
+        uint256 totalStakedAmount = stakingContract.getTotalStakeShare(epochIndex);
+        if (totalStakedAmount == 0) {
             return 0;
         }
 
-        uint256 reward_total = epochRewardTotal[epochIndex];
-        uint256 user_reward_share = (reward_total * user_staked_amount) / total_staked_amount;
+        uint256 rewardTotal = epochRewardTotal[epochIndex];
+        uint256 userRewardShare = (rewardTotal * userStakedAmount) / totalStakedAmount;
         // Subtract the amount the user has already claimed for this epoch
-        return user_reward_share - claimed[epochIndex][user];
+        return userRewardShare - claimed[epochIndex][user];
     }
 }

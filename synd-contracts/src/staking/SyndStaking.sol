@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {EpochTracker} from "./EpochTracker.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IPool} from "./IPool.sol";
 
 /**
  * @title SyndStaking
@@ -96,6 +97,16 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     mapping(address user => mapping(uint256 appchainId => uint256 finalizedEpochCount)) public
         userAppchainFinalizedEpochCount;
 
+    /**
+     * @notice Struct for claiming rewards
+     * @param epochIndex The epoch index to claim rewards from
+     * @param poolAddress The address of the pool to claim from
+     */
+    struct ClaimRequest {
+        uint256 epochIndex;
+        address poolAddress;
+    }
+
     /*
      * Pro-Rata Stake Tracking:
      * Some rewards require pro-rata accounting where stake added mid-epoch receives
@@ -161,6 +172,12 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     error WithdrawalNotReady();
     /// @notice Error thrown when withdrawal data is invalid or missing
     error InvalidWithdrawal();
+    /// @notice Error thrown when no claims are provided
+    error NoClaimsProvided();
+    /// @notice Error thrown when input is invalid
+    error InvalidInput();
+    /// @notice Error thrown when total amount of staking does not match the amount of ETH sent
+    error InvalidStakingAmount(uint256 totalAmount, uint256 sentAmount);
 
     ///////////////////////
     // Staking functions
@@ -172,7 +189,11 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @param appchainId The ID of the appchain to stake for (must be non-zero)
      */
     function stakeSynd(uint256 appchainId) external payable {
-        if (msg.value == 0) {
+        _stakeSynd(appchainId, msg.value);
+    }
+
+    function _stakeSynd(uint256 appchainId, uint256 amount) internal {
+        if (amount == 0) {
             revert InvalidAmount();
         }
         if (appchainId == 0) {
@@ -195,23 +216,44 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         }
 
         // Calculate stake share for current epoch
-        uint256 stakeShare = calculateStakeShare(msg.value);
+        uint256 stakeShare = _calculateStakeShare(amount);
         epochStakeShare[epochIndex] += stakeShare;
         epochUserStakeShare[epochIndex][msg.sender] += stakeShare;
 
-        epochAdditions[epochIndex] += msg.value;
-        totalStake += msg.value;
+        epochAdditions[epochIndex] += amount;
+        totalStake += amount;
 
-        epochUserAdditions[epochIndex][msg.sender] += msg.value;
-        userTotal[msg.sender] += msg.value;
+        epochUserAdditions[epochIndex][msg.sender] += amount;
+        userTotal[msg.sender] += amount;
 
-        epochAppchainAdditions[epochIndex][appchainId] += msg.value;
-        appchainTotal[appchainId] += msg.value;
+        epochAppchainAdditions[epochIndex][appchainId] += amount;
+        appchainTotal[appchainId] += amount;
 
-        epochUserAppchainAdditions[epochIndex][msg.sender][appchainId] += msg.value;
-        userAppchainTotal[msg.sender][appchainId] += msg.value;
+        epochUserAppchainAdditions[epochIndex][msg.sender][appchainId] += amount;
+        userAppchainTotal[msg.sender][appchainId] += amount;
 
-        emit Stake(epochIndex, msg.sender, msg.value, appchainId);
+        emit Stake(epochIndex, msg.sender, amount, appchainId);
+    }
+
+    /**
+     * @notice Stake tokens across multiple appchains in a single transaction
+     * @dev Iterates over the provided appchain IDs and amounts, calling `_stakeSynd` for each.
+     *      The total sum of all amounts must equal `msg.value` or the transaction reverts.
+     * @param appchainIds The list of appchain IDs to stake into
+     * @param amounts The list of corresponding stake amounts for each appchain ID
+     */
+    function stakeMultipleAppchains(uint256[] calldata appchainIds, uint256[] calldata amounts) external payable {
+        if (appchainIds.length != amounts.length) {
+            revert InvalidInput();
+        }
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < appchainIds.length; i++) {
+            totalAmount += amounts[i];
+            _stakeSynd(appchainIds[i], amounts[i]);
+        }
+        if (totalAmount != msg.value) {
+            revert InvalidStakingAmount(totalAmount, msg.value);
+        }
     }
 
     /**
@@ -220,7 +262,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @param amount The amount of tokens being staked
      * @return The calculated stake share for the current epoch
      */
-    function calculateStakeShare(uint256 amount) internal view returns (uint256) {
+    function _calculateStakeShare(uint256 amount) internal view returns (uint256) {
         return (amount * (getEpochEnd(getCurrentEpoch()) - block.timestamp)) / EPOCH_DURATION;
     }
 
@@ -421,6 +463,25 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         Address.sendValue(payable(destination), amount);
 
         emit WithdrawalCompleted(msg.sender, destination, amount);
+    }
+
+    ///////////////////////
+    // Claim functions
+    ///////////////////////
+
+    /**
+     * @notice Claim rewards from multiple pools for the caller
+     * @dev This function calls the claimFor function on each pool contract
+     * @param claims Array of ClaimRequest structs containing claim details
+     */
+    function claimAllRewards(ClaimRequest[] calldata claims, address destination) external nonReentrant {
+        if (claims.length == 0) {
+            revert NoClaimsProvided();
+        }
+
+        for (uint256 i = 0; i < claims.length; i++) {
+            IPool(claims[i].poolAddress).claimFor(claims[i].epochIndex, msg.sender, destination);
+        }
     }
 
     ///////////////////////
