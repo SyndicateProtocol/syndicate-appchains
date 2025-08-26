@@ -25,8 +25,8 @@ This document outlines the architecture and interaction patterns of the Syndicat
 
 **Supply Distribution**:
 
-- **Initial Supply**: 900M tokens (90%) - minted to foundation at deployment
-- **Emission Supply**: 100M tokens (10%) - minted over 4 years via emission scheduler
+- **Initial Supply**: 920M tokens (92%) - minted to foundation at deployment
+- **Emission Supply**: 80M tokens (8%) - minted over 4 years via emission scheduler
 
 **Access Control Roles**:
 
@@ -161,7 +161,7 @@ bytes32 public constant EMISSION_BUDGET_MANAGER_ROLE = keccak256("EMISSION_BUDGE
 **Emission Schedule**:
 
 - **Total Epochs**: 48 epochs × 30 days = ~4 years
-- **Total Emissions**: 100M tokens distributed across 8 periods of 6 epochs each
+- **Total Emissions**: 80M tokens distributed across 8 periods of 6 epochs each
 - **Decay Pattern**: Each period emits decreasing amounts
 - **Bridge Integration**: All emissions automatically bridged to configured L2
 

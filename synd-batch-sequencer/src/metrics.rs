@@ -9,10 +9,12 @@ use synd_maestro::valkey::valkey_metrics::ValkeyMetrics;
 pub struct BatcherMetrics {
     pub batch_transactions_count: Gauge,
     pub batch_size_bytes: Gauge,
-    pub batch_compression_ratio: Gauge,
+    /// 0-100% with 100% as ideal. See <https://en.wikipedia.org/wiki/Data_compression_ratio>
+    pub batch_compression_space_saving_pct: Gauge,
     pub batch_processing_time_ms: Gauge,
     pub batch_submission_latency_ms: Gauge,
     pub total_txs_processed: Gauge,
+    pub outstanding_txs: Gauge,
     pub wallet_balance: Gauge,
     /// Cache metrics for Valkey cache operations (stream reads, etc.)
     pub valkey: ValkeyMetrics,
@@ -23,10 +25,11 @@ impl BatcherMetrics {
         let metrics = Self {
             batch_transactions_count: Gauge::default(),
             batch_size_bytes: Gauge::default(),
-            batch_compression_ratio: Gauge::default(),
+            batch_compression_space_saving_pct: Gauge::default(),
             batch_processing_time_ms: Gauge::default(),
             batch_submission_latency_ms: Gauge::default(),
             total_txs_processed: Gauge::default(),
+            outstanding_txs: Gauge::default(),
             wallet_balance: Gauge::default(),
             valkey: ValkeyMetrics::new(registry),
         };
@@ -44,8 +47,8 @@ impl BatcherMetrics {
         );
         registry.register(
             "batch_compression_ratio",
-            "Compression ratio of the current batch",
-            metrics.batch_compression_ratio.clone(),
+            "Percentage of space saved via compression for the current batch",
+            metrics.batch_compression_space_saving_pct.clone(),
         );
 
         registry.register(
@@ -72,6 +75,12 @@ impl BatcherMetrics {
             metrics.wallet_balance.clone(),
         );
 
+        registry.register(
+            "outstanding_txs",
+            "Number of outstanding transactions",
+            metrics.outstanding_txs.clone(),
+        );
+
         metrics
     }
 
@@ -84,10 +93,14 @@ impl BatcherMetrics {
         self.batch_size_bytes.set(size as i64);
     }
 
-    pub fn record_compression_ratio(&self, original_size: usize, compressed_size: usize) {
+    pub fn record_compression_space_saving_pct(
+        &self,
+        original_size: usize,
+        compressed_size: usize,
+    ) {
         if original_size > 0 {
-            let ratio = (original_size as f64 / compressed_size as f64 * 100.0) as i64;
-            self.batch_compression_ratio.set(ratio);
+            let ratio = ((1.0 - compressed_size as f64 / original_size as f64) * 100.0) as i64;
+            self.batch_compression_space_saving_pct.set(ratio);
             self.record_batch_size(compressed_size);
         }
     }
@@ -106,6 +119,10 @@ impl BatcherMetrics {
 
     pub fn record_wallet_balance(&self, balance: u128) {
         self.wallet_balance.set(balance as i64);
+    }
+
+    pub fn record_outstanding_txs(&self, count: usize) {
+        self.outstanding_txs.set(count as i64);
     }
 }
 
@@ -145,8 +162,17 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
-        metrics.record_compression_ratio(1000, 500);
-        assert_eq!(metrics.batch_compression_ratio.get(), 200);
+        metrics.record_compression_space_saving_pct(1000, 500);
+        assert_eq!(metrics.batch_compression_space_saving_pct.get(), 50);
+
+        metrics.record_compression_space_saving_pct(100, 25);
+        assert_eq!(metrics.batch_compression_space_saving_pct.get(), 75);
+
+        metrics.record_compression_space_saving_pct(200, 196);
+        assert_eq!(metrics.batch_compression_space_saving_pct.get(), 2);
+
+        metrics.record_compression_space_saving_pct(100, 101);
+        assert_eq!(metrics.batch_compression_space_saving_pct.get(), -1);
     }
 
     #[test]

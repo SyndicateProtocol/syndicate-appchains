@@ -2,7 +2,7 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.88.0+-blue.svg)](https://www.rust-lang.org/)
 [![Go](https://img.shields.io/badge/go-1.24.3+-blue.svg)](https://golang.org/)
-[![Foundry](https://img.shields.io/badge/foundry-1.2.3--nightly+-orange.svg)](https://getfoundry.sh/)
+[![Foundry](https://img.shields.io/badge/foundry-1.3.1--stable+-green.svg)](https://getfoundry.sh/)
 [![Docker](https://img.shields.io/badge/docker-28.2.2+-blue.svg)](https://www.docker.com/)
 <!-- [![License](https://img.shields.io/badge/license-XXX-green.svg)](LICENSE) -->
 
@@ -32,7 +32,7 @@ Ensure you have the following dependencies installed:
 | ------------------ | ----------------- | -------------------------------------------------------------- |
 | **Rust Toolchain** | `1.88.0+`         | [rustup.rs](https://rustup.rs/)                                |
 | **Go**             | `1.24.3+`         | [golang.org](https://golang.org/dl/)                           |
-| **Foundry/Forge**  | `1.2.3-nightly+`  | [getfoundry.sh](https://getfoundry.sh/)                        |
+| **Foundry/Forge**  | `1.3.1-stable`    | [getfoundry.sh](https://getfoundry.sh/)                        |
 | **Docker**         | `28.2.2+`         | [docker.com](https://www.docker.com/products/docker-desktop/)  |
 | **abigen**         | `1.15.11-stable+` | `go install github.com/ethereum/go-ethereum/cmd/abigen@latest` |
 | **SP1 Toolchain**  | `v5.0.5+`         | [SP1 Documentation](https://docs.supranational.net/)           |

@@ -2,10 +2,11 @@
 pragma solidity 0.8.28;
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
+import {EpochTracker} from "src/staking/EpochTracker.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-contract StakingTest is Test {
+contract SyndStakingTest is Test {
     SyndStaking public staking;
 
     address public user1;
@@ -16,7 +17,7 @@ contract StakingTest is Test {
     uint256 public appchainId3;
 
     function setUp() public {
-        staking = new SyndStaking(block.timestamp);
+        staking = new SyndStaking();
 
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
@@ -27,6 +28,9 @@ contract StakingTest is Test {
         appchainId1 = 111;
         appchainId2 = 222;
         appchainId3 = 333;
+
+        // Warp to exactly the epoch start timestamp (beginning of epoch 1)
+        vm.warp(staking.START_TIMESTAMP());
     }
 
     function stepEpoch(uint256 epochsToStep) public {

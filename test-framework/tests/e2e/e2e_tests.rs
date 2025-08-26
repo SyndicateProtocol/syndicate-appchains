@@ -2,12 +2,16 @@
 use alloy::{
     eips::{BlockId, BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
-    primitives::{address, utils::parse_ether, Address, U256},
+    primitives::{
+        address,
+        utils::{parse_ether, parse_units},
+        Address, U160, U256,
+    },
     providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::{Block, TransactionRequest},
+    rpc::types::{anvil::MineOptions, Block, TransactionRequest},
     sol,
 };
-use contract_bindings::synd::{i_inbox::IInbox, rollup::Rollup};
+use contract_bindings::synd::{dummy_poster::DummyPoster, i_inbox::IInbox, rollup::Rollup};
 use eyre::Result;
 use std::time::Duration;
 use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig};
@@ -40,7 +44,19 @@ async fn e2e_send_transaction() -> Result<()> {
             .depositEth(wallet_address, wallet_address, parse_ether("1")?)
             .send()
             .await?;
-        components.mine_seq_block(config.settlement_delay).await?;
+
+        let set_timestamp = components
+            .settlement_provider
+            .get_block_by_number(BlockNumberOrTag::Latest)
+            .await?
+            .unwrap()
+            .header
+            .timestamp;
+
+        components
+            .sequencing_provider
+            .evm_mine(Some(MineOptions::Timestamp(Some(set_timestamp + config.settlement_delay))))
+            .await?;
         components.mine_set_block(0).await?;
         // mine 1 set block to close the opened slot that contains the other deposit
         let test_addr: Address = "0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA".parse()?;
@@ -55,12 +71,10 @@ async fn e2e_send_transaction() -> Result<()> {
         );
 
         // check the first appchain block
-        let appchain_block: Block = components
-            .appchain_provider
-            .get_block_by_number(BlockNumberOrTag::Number(1))
-            .await?
-            .unwrap();
-        assert_eq!(appchain_block.header.timestamp, config.settlement_delay);
+        let appchain_block: Block =
+            components.appchain_provider.get_block_by_number(1.into()).await?.unwrap();
+
+        assert_eq!(appchain_block.header.timestamp, set_timestamp + config.settlement_delay);
         // the first transaction is the startBlock transaction
         assert_eq!(appchain_block.transactions.len(), 2);
         assert_eq!(
@@ -81,12 +95,12 @@ async fn e2e_send_transaction() -> Result<()> {
             .await?;
         _ = components
             .sequencing_contract
-            .processTransactionUncompressed(tx.encoded_2718().into())
+            .processTransaction(tx.encoded_2718().into())
             .send()
             .await?;
         _ = components
             .sequencing_contract
-            .processTransactionUncompressed(tx.encoded_2718().into())
+            .processTransaction(tx.encoded_2718().into())
             .send()
             .await?;
         components.mine_seq_block(0).await?;
@@ -98,12 +112,10 @@ async fn e2e_send_transaction() -> Result<()> {
         );
 
         // check the second appchain block
-        let appchain_block: Block = components
-            .appchain_provider
-            .get_block_by_number(BlockNumberOrTag::Number(2))
-            .await?
-            .unwrap();
-        assert_eq!(appchain_block.header.timestamp, config.settlement_delay);
+        let appchain_block: Block =
+            components.appchain_provider.get_block_by_number(2.into()).await?.unwrap();
+
+        assert_eq!(appchain_block.header.timestamp, set_timestamp + config.settlement_delay);
         // the first transaction is the startBlock transaction
         assert_eq!(appchain_block.transactions.len(), 2);
         // tx hash should match
@@ -130,16 +142,188 @@ async fn e2e_send_transaction() -> Result<()> {
             components.appchain_provider.get_block_number().await? == 3,
             Duration::from_secs(10)
         );
-        let appchain_block: Block = components
-            .appchain_provider
-            .get_block_by_number(BlockNumberOrTag::Number(3))
-            .await?
-            .unwrap();
-        assert_eq!(appchain_block.header.timestamp, config.settlement_delay + 1);
+        let appchain_block: Block =
+            components.appchain_provider.get_block_by_number(3.into()).await?.unwrap();
+        assert_eq!(appchain_block.header.timestamp, set_timestamp + config.settlement_delay + 1);
         // the first transaction is the startBlock transaction
         assert_eq!(appchain_block.transactions.len(), 2);
         // balance should match
         assert_eq!(components.appchain_provider.get_balance(test_addr).await?, parse_ether("1")?);
+
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test]
+async fn e2e_unsigned_tx() -> Result<()> {
+    TestComponents::run(&Default::default(), |components| async move {
+        let offset = components.sequencing_contract.OFFSET().call().await?;
+
+        // Send a deposit
+        let set_appchain =
+            Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
+        let wallet_address = components.settlement_provider.default_signer_address();
+        let alias_address =
+            Address::from(U160::from_be_slice(&wallet_address[..]).wrapping_add(offset));
+        let _ = set_appchain
+            .depositEth(wallet_address, alias_address, parse_ether("1")?)
+            .send()
+            .await?;
+        components.mine_both(0).await?;
+        components.mine_set_block(1).await?;
+
+        // Send unsigned tx
+        let _ = components
+            .sequencing_contract
+            .sendUnsignedTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                U256::ZERO,
+                TEST_ADDR,
+                parse_ether("0.1")?,
+                Default::default(),
+            )
+            .send()
+            .await?;
+
+        // Send unsigned tx with the wrong nonce
+        let _ = components
+            .sequencing_contract
+            .sendUnsignedTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                U256::from(2),
+                TEST_ADDR,
+                parse_ether("0.1")?,
+                Default::default(),
+            )
+            .send()
+            .await?;
+
+        // Try deploying a contract via an unsigned tx with the correct nonce
+        let _ = components
+            .sequencing_contract
+            .sendUnsignedTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                U256::ONE,
+                Address::ZERO,
+                Default::default(),
+                DummyPoster::BYTECODE.clone(),
+            )
+            .send()
+            .await?;
+
+        // Wait for the tx to arrive
+        components.mine_seq_block(0).await?;
+        wait_until!(
+            components.appchain_provider.get_block_number().await? == 2,
+            Duration::from_secs(20)
+        );
+
+        // Check balance & nonce
+        assert_eq!(components.appchain_provider.get_balance(TEST_ADDR).await?, parse_ether("0.1")?);
+        assert_eq!(
+            components.appchain_provider.get_code_at(alias_address.create(1)).await?,
+            DummyPoster::DEPLOYED_BYTECODE
+        );
+        assert_eq!(components.appchain_provider.get_transaction_count(wallet_address).await?, 0);
+        assert_eq!(
+            components.sequencing_contract.contractNonce(wallet_address).call().await?,
+            U256::ZERO
+        );
+        assert_eq!(
+            components.sequencing_contract.contractNonce(alias_address).call().await?,
+            U256::ZERO
+        );
+        assert_eq!(components.appchain_provider.get_transaction_count(alias_address).await?, 2);
+
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test]
+async fn e2e_contract_tx() -> Result<()> {
+    TestComponents::run(&Default::default(), |components| async move {
+        let offset = components.sequencing_contract.OFFSET().call().await?;
+
+        // Send a deposit
+        let set_appchain =
+            Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
+        let wallet_address = components.settlement_provider.default_signer_address();
+        let alias_address =
+            Address::from(U160::from_be_slice(&wallet_address[..]).wrapping_add(offset));
+        let _ = set_appchain
+            .depositEth(wallet_address, alias_address, parse_ether("1")?)
+            .send()
+            .await?;
+        components.mine_both(0).await?;
+        components.mine_set_block(1).await?;
+
+        // Send contract tx
+        let _ = components
+            .sequencing_contract
+            .sendContractTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                TEST_ADDR,
+                parse_ether("0.1")?,
+                Default::default(),
+            )
+            .send()
+            .await?;
+
+        // Send contract tx with the wrong balance
+        let _ = components
+            .sequencing_contract
+            .sendContractTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                TEST_ADDR,
+                parse_ether("10")?,
+                Default::default(),
+            )
+            .send()
+            .await?;
+
+        // Try deploying a contract via a contract tx
+        let _ = components
+            .sequencing_contract
+            .sendContractTransaction(
+                1e6 as u64,
+                parse_units("1", "gwei")?.into(),
+                Address::ZERO,
+                Default::default(),
+                DummyPoster::BYTECODE.clone(),
+            )
+            .send()
+            .await?;
+
+        // Wait for the txs to arrive
+        components.mine_seq_block(0).await?;
+        wait_until!(
+            components.appchain_provider.get_block_number().await? == 2,
+            Duration::from_secs(20)
+        );
+
+        // Check balance, nonce, and code
+        assert_eq!(components.appchain_provider.get_balance(TEST_ADDR).await?, parse_ether("0.1")?);
+        assert_eq!(
+            components.appchain_provider.get_code_at(alias_address.create(1)).await?,
+            DummyPoster::DEPLOYED_BYTECODE
+        );
+        assert_eq!(components.appchain_provider.get_transaction_count(wallet_address).await?, 0);
+        assert_eq!(
+            components.sequencing_contract.contractNonce(wallet_address).call().await?,
+            U256::from(3)
+        );
+        assert_eq!(
+            components.sequencing_contract.contractNonce(alias_address).call().await?,
+            U256::ZERO
+        );
+        assert_eq!(components.appchain_provider.get_transaction_count(alias_address).await?, 2);
 
         Ok(())
     })
@@ -181,8 +365,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 
             // Send l2 signed messages (unaliased address)
             // Message (not from origin)
-            let mut inner_tx = vec![];
-            TransactionRequest::default()
+            let mut tx = TransactionRequest::default()
                 .with_to(Address::ZERO)
                 .with_value(parse_ether("0.1")?)
                 .with_nonce(0)
@@ -192,9 +375,8 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .with_max_priority_fee_per_gas(0)
                 .build(components.settlement_provider.wallet())
                 .await?
-                .encode_2718(&mut inner_tx);
-            let mut tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
-            tx.append(&mut inner_tx);
+                .encoded_2718();
+            tx.insert(0, L2_MESSAGE_KIND_SIGNED_TX);
             let _ = inbox.sendL2Message(tx.into()).send().await?;
 
             // Send retryable tickets that are automatically redeemed (aliased address)
@@ -566,6 +748,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
 
         // sequence any tx
         components.sequence_tx(b"my_tx_calldata", 10, false).await?;
+        let seq_block = components.sequencing_provider.get_block_number().await?;
 
         // mine a set block to close the slot, but without any transactions
         components.mine_set_block(100000).await?;
@@ -579,7 +762,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 3);
 
@@ -587,7 +770,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 2);
 
@@ -616,7 +799,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 3);
 
@@ -624,7 +807,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             .mchain_provider
             .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
             .await?;
-        assert_eq!(slot.seq_block_number, 2);
+        assert_eq!(slot.seq_block_number, seq_block);
         assert_eq!(slot.set_block_number, 1 + set_offset);
         assert_eq!(block_number, 2);
         Ok(())
@@ -646,7 +829,8 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
                 Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
-            components.mine_set_block(1).await?;
+            components.mine_seq_block(1).await?;
+            components.mine_set_block(1000).await?;
 
             // Wait for deposit to be processed
             wait_until!(

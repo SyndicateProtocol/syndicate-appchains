@@ -90,6 +90,10 @@ pub struct Config {
     /// Skip sender wallet balance check
     #[arg(long, env = "SKIP_BALANCE_CHECK", default_value_t = false)]
     pub skip_balance_check: bool,
+
+    /// Max number of waiting transactions to store for a wallet on a chain
+    #[arg(long, env = "MAX_NONCE_BUFFER")]
+    pub max_nonce_buffer: Option<u64>,
 }
 
 /// Parse the chain ID to URL mappings from the JSON string

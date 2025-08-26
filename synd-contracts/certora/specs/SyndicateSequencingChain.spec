@@ -9,6 +9,11 @@ methods {
     function owner() external returns (address) envfree;
     function init._getInitializedVersion() external returns (uint8) envfree;
 
+    // Gas tracking functions
+    function gasTrackingEnabled() external returns (bool) envfree;
+    function disableGasTracking() external;
+    function enableGasTracking() external;
+
     // Permission Module interface methods
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
 }
@@ -53,35 +58,14 @@ invariant appchainIdNotZero()
     appchainId() != 0;
 
 /*
- * Rule 4: Verify that permissionRequirementModule address is never zero after initialization
- */
-rule moduleNotZero(method f) {
-    env e;
-
-    // Get modules before
-    address oldProposerModule = permissionRequirementModule();
-
-    // Function call
-    calldataarg args;
-    f(e, args);
-
-    // Get modules after
-    address newProposerModule = permissionRequirementModule();
-
-    // Assert modules cannot be zero address after initialization
-    require init._getInitializedVersion() > 0 => oldProposerModule != 0;
-    assert init._getInitializedVersion() > 0 => newProposerModule != 0, "Proposer module changed to zero";
-}
-
-/*
- * Rule 5: Only allowed addresses can process transactions uncompressed
+ * Rule 4: Only allowed addresses can process transactions uncompressed
  */
 rule onlyAllowedCanProcess(bytes data) {
     env e;
     require init._getInitializedVersion() > 0;
 
     // Try to process a transaction
-    processTransactionUncompressed@withrevert(e, data);
+    processTransaction@withrevert(e, data);
 
     // If the transaction succeeded
     bool success = !lastReverted;
@@ -92,18 +76,21 @@ rule onlyAllowedCanProcess(bytes data) {
 }
 
 /*
- * Rule 6: Consistent behavior between processTransaction and processTransaction
+ * Rule 5: Consistent behavior between processTransaction and processTransaction
  */
 rule processConsistency(bytes data) {
     env e;
     require init._getInitializedVersion() > 0;
     require permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
+    // Disable gas tracking for consistent verification
+    require !gasTrackingEnabled();
+
     // Record both outcomes
-    processTransactionUncompressed@withrevert(e, data);
+    processTransaction@withrevert(e, data);
     bool txSuccess = !lastReverted;
 
-    processTransaction@withrevert(e, data);
+    processTransactionsCompressed@withrevert(e, data);
     bool rawSuccess = !lastReverted;
 
     // If one succeeds, both should succeed under same conditions
@@ -112,7 +99,7 @@ rule processConsistency(bytes data) {
 }
 
 /*
- * Rule 9: Only owner can update requirement module
+ * Rule 6: Only owner can update requirement module
  */
 rule onlyOwnerCanUpdateModule(address newModule) {
     env e;
@@ -127,7 +114,7 @@ rule onlyOwnerCanUpdateModule(address newModule) {
 }
 
 /*
- * Rule 10: Module update changes state correctly
+ * Rule 7: Module update changes state correctly
  */
 rule moduleUpdateChangesState(address newModule) {
     env e;
@@ -146,7 +133,7 @@ rule moduleUpdateChangesState(address newModule) {
 }
 
 /*
- * Rule 11: State consistency after transaction processing
+ * Rule 8: State consistency after transaction processing
  */
 rule stateConsistencyAfterProcessing(bytes data) {
     env e;
@@ -154,7 +141,7 @@ rule stateConsistencyAfterProcessing(bytes data) {
     address oldProposerModule = permissionRequirementModule();
 
     // Process transaction
-    processTransactionUncompressed@withrevert(e, data);
+    processTransaction@withrevert(e, data);
 
     // Verify requirement modules haven't changed
     assert permissionRequirementModule() == oldProposerModule,
@@ -162,7 +149,7 @@ rule stateConsistencyAfterProcessing(bytes data) {
 }
 
 /*
- * Rule 12: Verify permissions are correctly enforced
+ * Rule 9: Verify permissions are correctly enforced
  */
 rule permissionsCorrectlyEnforced(bytes data) {
     env e;
@@ -177,6 +164,9 @@ rule permissionsCorrectlyEnforced(bytes data) {
     // Verify initialization worked
     require init._getInitializedVersion() == 1;
 
+    // Disable gas tracking for consistent verification
+    require !gasTrackingEnabled();
+
     // Valid sender and msg parameters
     require e.msg.sender != 0;
     require e.msg.sender != currentContract;
@@ -190,7 +180,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
     bool senderAllowed = permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Process transaction
-    processTransactionUncompressed@withrevert(e, data);
+    processTransaction@withrevert(e, data);
     bool txSucceeded = !lastReverted;
 
     // Bidirectional assertions

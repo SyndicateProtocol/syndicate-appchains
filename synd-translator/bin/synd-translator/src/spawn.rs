@@ -19,7 +19,7 @@ use tracing::{error, instrument, log::info};
 use url::Url;
 
 /// Entry point for the async runtime
-#[instrument(err, fields(otel.kind = ?SpanKind::Internal))]
+#[instrument(skip(config), err, fields(otel.kind = ?SpanKind::Internal))]
 pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
     info!("Initializing Syndicate Translator components");
 

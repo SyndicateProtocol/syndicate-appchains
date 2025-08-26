@@ -62,8 +62,6 @@ function hash_object(PendingAssertion calldata a) pure returns (bytes32) {
     return keccak256(abi.encodePacked(a.appBlockHash, a.appSendRoot, a.seqBlockHash, a.l1BatchAcc));
 }
 
-event TeeConfigHash(bytes32 configHash);
-
 event TeeHacked(uint256);
 
 event ChallengeResolved(PendingAssertion);
@@ -71,6 +69,12 @@ event ChallengeResolved(PendingAssertion);
 event TeeInput(TeeTrustedInput input);
 
 event KeyManagerUpdate(ITeeKeyManager newTeeKeyManager, ITeeKeyManager oldTeeKeyManager);
+
+event ChallengeWindowDurationUpdate(uint64 newChallengeWindowDuration, uint64 oldChallengeWindowDuration);
+
+event FundsTransferred(address dest);
+
+event AssertionPosterTransferred(address dest);
 
 /**
  * @title TeeModule Contract
@@ -121,11 +125,11 @@ contract TeeModule is Ownable(msg.sender) {
         uint64 challengeWindowDuration_, //#olympix-ignore-no-parameter-validation-in-constructor
         ITeeKeyManager teeKeyManager_
     ) {
+        require(challengeWindowDuration_ < 7 * 24 * 3600, "challenge window must be less than a week");
         challengeWindowDuration = challengeWindowDuration_;
         l1BlockOrBridge = l1BlockOrBridge_;
         isL1Chain = isL1Chain_;
         teeTrustedInput.configHash = configHash_;
-        emit TeeConfigHash(configHash_);
 
         if (isL1Chain) {
             require(
@@ -210,8 +214,8 @@ contract TeeModule is Ownable(msg.sender) {
     {
         require(signature.length == 65, "invalid signature length");
         bytes32 assertionHash = hash_object(assertion);
-        bytes32 payload_hash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
-        require(teeKeyManager.isKeyValid(payload_hash.recover(signature)), "invalid tee signature");
+        bytes32 payloadHash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
+        require(teeKeyManager.isKeyValid(payloadHash.recover(signature)), "invalid tee signature");
         require(!isL1Chain || assertion.l1BatchAcc == teeTrustedInput.l1EndHash, "unexpected l1 end batch acc");
         pendingAssertions.push(assertion);
         if (pendingAssertions.length == 1) {
@@ -242,11 +246,13 @@ contract TeeModule is Ownable(msg.sender) {
     }
 
     function transferAssertionPosterOwner(address newOwner) external onlyOwner {
+        emit AssertionPosterTransferred(newOwner);
         Ownable(address(poster)).transferOwnership(newOwner);
     }
 
     function transferFunds(address dest) external onlyOwner {
         require(dest != address(0), "destination address is zero");
+        emit FundsTransferred(dest);
 
         //#olympix-ignore-low-level-call-params-verified
         (bool success,) = payable(dest).call{value: address(this).balance}("");
@@ -257,5 +263,11 @@ contract TeeModule is Ownable(msg.sender) {
         require(address(newTeeKeyManager).code.length > 0, "teeKeyManager address does not have any code");
         emit KeyManagerUpdate(newTeeKeyManager, teeKeyManager);
         teeKeyManager = newTeeKeyManager;
+    }
+
+    function updateChallengeWindowDuration(uint64 challengeWindowDuration_) external onlyOwner {
+        require(challengeWindowDuration_ < 7 * 24 * 3600, "challenge window must be less than a week");
+        emit ChallengeWindowDurationUpdate(challengeWindowDuration_, challengeWindowDuration);
+        challengeWindowDuration = challengeWindowDuration_;
     }
 }
