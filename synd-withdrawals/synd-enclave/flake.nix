@@ -276,27 +276,26 @@
             };
           in
           pkgs.runCommand "enclave-src-with-generated" {} ''
-            mkdir -p $out/nitro/solgen/go
+            mkdir -p $out/nitro/solgen/go $out/nitro/target/include $out/nitro/target/lib
             cp -rv ${enclave-src}/* $out/
             cp -rv ${nitro}/* $out/nitro/
             cp -rv ${nitro-solgen}/* $out/nitro/solgen/go
+            cp -v ${nitro-arbitrator-prover-header}/arbitrator.h $out/nitro/target/include
+            cp -rv ${nitro-arbitrator-stylus-lib}/lib/* $out/nitro/target/lib
           '';
 
           synd-enclave-server = pkgs-2505.buildGoModule {
             pname = "synd-enclave";
             version = "0.1.0";
             src = enclave-src-with-generated;
+            dontCheck = true;
             preBuild = ''
-              substituteInPlace \
-                vendor/github.com/offchainlabs/nitro/arbcompress/native.go \
-                --replace-fail $\{SRCDIR\}/../target/include ${nitro-arbitrator-prover-header} \
-                --replace-fail $\{SRCDIR\}/../target/lib ${nitro-arbitrator-stylus-lib}/lib
-              substituteInPlace \
-                vendor/github.com/offchainlabs/nitro/arbos/programs/native_api.go \
-                vendor/github.com/offchainlabs/nitro/execution/gethexec/executionengine.go \
-                vendor/github.com/offchainlabs/nitro/arbos/programs/native.go \
-                --replace-fail -I../../target/include -I${nitro-arbitrator-prover-header} \
-                --replace-fail $\{SRCDIR\}/../../target/lib ${nitro-arbitrator-stylus-lib}/lib
+              if [ -d vendor ]; then
+                chmod +w vendor/github.com/offchainlabs/nitro
+                mkdir -p vendor/github.com/offchainlabs/nitro/target/{include,lib}
+                cp -v ${nitro-arbitrator-prover-header}/arbitrator.h vendor/github.com/offchainlabs/nitro/target/include
+                cp -rv ${nitro-arbitrator-stylus-lib}/lib/* vendor/github.com/offchainlabs/nitro/target/lib
+              fi
             '';
             vendorHash = "sha256-IWk71nxHQH/Uw3MfMTrJYVHndy89GZjOx1d0wN1TYek=";
             subPackages = ["cmd/enclave"];
