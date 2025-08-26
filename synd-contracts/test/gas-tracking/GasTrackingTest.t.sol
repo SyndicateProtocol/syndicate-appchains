@@ -226,7 +226,7 @@ contract GasAggregatorTest is Test {
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
-        gasAggregator.aggregateTokensUsed(epoch);
+        gasAggregator.aggregateTokensUsed();
 
         // Should increment epoch
         assertEq(gasAggregator.pendingEpoch(), epoch + 1);
@@ -248,16 +248,18 @@ contract GasAggregatorTest is Test {
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
         vm.expectRevert(GasAggregator.MustUseOffchainAggregation.selector);
-        gasAggregator.aggregateTokensUsed(1);
+        gasAggregator.aggregateTokensUsed();
     }
 
     function test_AggregateTokensUsed_EpochNotCompleted() public {
         // Try to aggregate before epoch is complete
-        uint256 badEpoch = 2 ** 256 - 1;
+        // pendingEpoch should be the current epoch, so it's not completed yet
         vm.expectRevert(
-            abi.encodeWithSelector(GasAggregator.EpochNotOver.selector, badEpoch, gasAggregator.getCurrentEpoch())
+            abi.encodeWithSelector(
+                GasAggregator.EpochNotOver.selector, gasAggregator.pendingEpoch(), gasAggregator.getCurrentEpoch()
+            )
         );
-        gasAggregator.aggregateTokensUsed(badEpoch);
+        gasAggregator.aggregateTokensUsed();
     }
 
     function test_SubmitOffchainTopChains_Success() public {
@@ -360,7 +362,7 @@ contract GasAggregatorTest is Test {
         gasAggregator.submitOffchainTopChains(chainIDs);
     }
 
-    function test_PushTopChainsDataToStakingAppchain_Success() public {
+    function test_PushEpochDataToStakingAppchain_Success() public {
         // Setup: above threshold
         mockFactory.setTotalAppchains(3);
         mockFactory.addAppchain(1, address(mockGasCounter1));
@@ -392,26 +394,13 @@ contract GasAggregatorTest is Test {
         pushTokensUsed[0] = 100;
         pushTokensUsed[1] = 200;
 
-        gasAggregator.pushTopChainsDataToStakingAppchain(pushChainIDs, pushTokensUsed);
+        gasAggregator.pushEpochDataToStakingAppchain(pushChainIDs, pushTokensUsed, currentEpoch);
 
         // Should increment epoch and clear pending data
         assertEq(gasAggregator.pendingEpoch(), gasAggregator.getCurrentEpoch());
     }
 
-    function test_PushTopChainsDataToStakingAppchain_BelowThreshold() public {
-        // Setup: below threshold
-        mockFactory.setTotalAppchains(1);
-
-        // Move to next epoch
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
-
-        uint256[] memory dummyChainIDs = new uint256[](0);
-        uint256[] memory dummyTokens = new uint256[](0);
-        vm.expectRevert(GasAggregator.MustUseAutomaticAggregation.selector);
-        gasAggregator.pushTopChainsDataToStakingAppchain(dummyChainIDs, dummyTokens);
-    }
-
-    function test_PushTopChainsDataToStakingAppchain_ChallengeWindowNotOver() public {
+    function test_PushEpochDataToStakingAppchain_ChallengeWindowNotOver() public {
         // Setup: above threshold
         mockFactory.setTotalAppchains(3);
         mockFactory.addAppchain(1, address(mockGasCounter1));
@@ -436,10 +425,10 @@ contract GasAggregatorTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(GasAggregator.WindowNotOver.selector, gasAggregator.pendingEpoch(), CHALLENGE_WINDOW)
         );
-        gasAggregator.pushTopChainsDataToStakingAppchain(dummyChainIDs, dummyTokens);
+        gasAggregator.pushEpochDataToStakingAppchain(dummyChainIDs, dummyTokens, currentEpoch);
     }
 
-    function test_PushTopChainsDataToStakingAppchain_InvalidHash() public {
+    function test_PushEpochDataToStakingAppchain_InvalidHash() public {
         // Setup: above threshold
         mockFactory.setTotalAppchains(3);
         mockFactory.addAppchain(1, address(mockGasCounter1));
@@ -471,7 +460,7 @@ contract GasAggregatorTest is Test {
         tokensUsed[1] = 200;
 
         vm.expectRevert(GasAggregator.InvalidDataHash.selector);
-        gasAggregator.pushTopChainsDataToStakingAppchain(wrongChainIDs, tokensUsed);
+        gasAggregator.pushEpochDataToStakingAppchain(wrongChainIDs, tokensUsed, currentEpoch);
 
         // Try to push with wrong tokens
         uint256[] memory correctChainIDs = new uint256[](2);
@@ -482,13 +471,13 @@ contract GasAggregatorTest is Test {
         wrongTokens[1] = 888;
 
         vm.expectRevert(GasAggregator.InvalidDataHash.selector);
-        gasAggregator.pushTopChainsDataToStakingAppchain(correctChainIDs, wrongTokens);
+        gasAggregator.pushEpochDataToStakingAppchain(correctChainIDs, wrongTokens, currentEpoch);
 
         // Should work with correct data
         uint256[] memory correctTokens = new uint256[](2);
         correctTokens[0] = 100;
         correctTokens[1] = 200;
-        gasAggregator.pushTopChainsDataToStakingAppchain(correctChainIDs, correctTokens);
+        gasAggregator.pushEpochDataToStakingAppchain(correctChainIDs, correctTokens, currentEpoch);
     }
 
     function test_Integration_CompleteWorkflow() public {
@@ -526,7 +515,7 @@ contract GasAggregatorTest is Test {
         pushTokens[0] = 200;
         pushTokens[1] = 300;
 
-        gasAggregator.pushTopChainsDataToStakingAppchain(pushChainIDs, pushTokens);
+        gasAggregator.pushEpochDataToStakingAppchain(pushChainIDs, pushTokens, epoch1);
 
         // Verify staking appchain data
         MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
@@ -566,7 +555,7 @@ contract GasAggregatorTest is Test {
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
         // Should work with empty arrays
-        gasAggregator.aggregateTokensUsed(1);
+        gasAggregator.aggregateTokensUsed();
 
         // Should increment epoch
         assertEq(gasAggregator.pendingEpoch(), gasAggregator.getCurrentEpoch());
@@ -623,7 +612,7 @@ contract GasAggregatorTest is Test {
         finalTokens[0] = 100;
         finalTokens[1] = 200;
 
-        gasAggregator.pushTopChainsDataToStakingAppchain(finalChainIDs, finalTokens);
+        gasAggregator.pushEpochDataToStakingAppchain(finalChainIDs, finalTokens, currentEpoch);
 
         // Verify data was pushed
         MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
@@ -635,5 +624,140 @@ contract GasAggregatorTest is Test {
         // Epoch should be incremented and submission time reset
         assertEq(gasAggregator.pendingEpoch(), currentEpoch + 1);
         assertEq(gasAggregator.pendingEpochFirstSubmissionTime(), 0);
+    }
+
+    function test_ResubmissionOfHistoricalData() public {
+        // Setup: above threshold for offchain aggregation
+        mockFactory.setTotalAppchains(3);
+        mockFactory.addAppchain(1, address(mockGasCounter1));
+        mockFactory.addAppchain(2, address(mockGasCounter2));
+
+        // Set gas usage for epoch 1
+        uint256 epoch1 = gasAggregator.pendingEpoch();
+        mockGasCounter1.setTokensForEpoch(epoch1, 100);
+        mockGasCounter2.setTokensForEpoch(epoch1, 200);
+
+        // Move to next epoch so epoch1 is completed
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Submit offchain data for epoch1
+        uint256[] memory chainIDs = new uint256[](2);
+        chainIDs[0] = 1;
+        chainIDs[1] = 2;
+        uint256 submissionTime = block.timestamp;
+        gasAggregator.submitOffchainTopChains(chainIDs);
+
+        // Wait for challenge window to pass
+        vm.warp(submissionTime + CHALLENGE_WINDOW + 1);
+
+        // Push data for epoch1 (this will store it in aggregatedEpochDataHash)
+        uint256[] memory tokens = new uint256[](2);
+        tokens[0] = 100;
+        tokens[1] = 200;
+        gasAggregator.pushEpochDataToStakingAppchain(chainIDs, tokens, epoch1);
+
+        // Verify the data was stored in aggregatedEpochDataHash
+        bytes32 expectedHash = keccak256(abi.encode(chainIDs, tokens));
+        assertEq(gasAggregator.aggregatedEpochDataHash(epoch1), expectedHash);
+
+        // Move forward some time to simulate a later point where we want to re-submit historical data
+        vm.warp(block.timestamp + EPOCH_DURATION * 3 + 1);
+
+        // Now test re-submission of historical data (epoch1)
+        // This should succeed since the data matches the stored hash
+        gasAggregator.pushEpochDataToStakingAppchain(chainIDs, tokens, epoch1);
+
+        // Verify the staking appchain received the re-submitted data
+        MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
+        assertEq(stakingAppchain.epoch(), epoch1); // Should show epoch1 as the last pushed epoch
+        assertEq(stakingAppchain.getChainIDs()[0], 1);
+        assertEq(stakingAppchain.getChainIDs()[1], 2);
+        assertEq(stakingAppchain.getTokens()[0], 100);
+        assertEq(stakingAppchain.getTokens()[1], 200);
+
+        // Test re-submission with wrong data should fail
+        uint256[] memory wrongTokens = new uint256[](2);
+        wrongTokens[0] = 999;
+        wrongTokens[1] = 888;
+        vm.expectRevert(GasAggregator.InvalidDataHash.selector);
+        gasAggregator.pushEpochDataToStakingAppchain(chainIDs, wrongTokens, epoch1);
+
+        // Test re-submission with wrong chainIDs should fail
+        uint256[] memory wrongChainIDs = new uint256[](2);
+        wrongChainIDs[0] = 2;
+        wrongChainIDs[1] = 1;
+        vm.expectRevert(GasAggregator.InvalidDataHash.selector);
+        gasAggregator.pushEpochDataToStakingAppchain(wrongChainIDs, tokens, epoch1);
+
+        // Test re-submission of non-existent historical epoch should fail
+        // Use epoch1 itself but with data that doesn't match the stored hash
+        uint256[] memory someTokens = new uint256[](1);
+        someTokens[0] = 50;
+        uint256[] memory someChainIDs = new uint256[](1);
+        someChainIDs[0] = 1;
+        vm.expectRevert(GasAggregator.InvalidDataHash.selector);
+        gasAggregator.pushEpochDataToStakingAppchain(someChainIDs, someTokens, epoch1); // Different data structure
+    }
+
+    function test_ResubmissionOfAutomaticAggregationData() public {
+        // Setup: below threshold for automatic aggregation
+        mockFactory.setTotalAppchains(1);
+        mockFactory.addAppchain(1, address(mockGasCounter1));
+        mockFactory.addAppchain(2, address(mockGasCounter2));
+
+        // Set gas usage for epoch 1
+        uint256 epoch1 = gasAggregator.pendingEpoch();
+        mockGasCounter1.setTokensForEpoch(epoch1, 100);
+        mockGasCounter2.setTokensForEpoch(epoch1, 200);
+
+        // Move to next epoch so epoch1 is completed
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Use automatic aggregation for epoch1
+        gasAggregator.aggregateTokensUsed();
+
+        // Verify the data was stored in aggregatedEpochDataHash
+        uint256[] memory expectedChainIDs = new uint256[](2);
+        expectedChainIDs[0] = 1;
+        expectedChainIDs[1] = 2;
+        uint256[] memory expectedTokens = new uint256[](2);
+        expectedTokens[0] = 100;
+        expectedTokens[1] = 200;
+        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens));
+        assertEq(gasAggregator.aggregatedEpochDataHash(epoch1), expectedHash);
+
+        // Move forward in time to simulate a later point where we want to re-submit historical data
+        vm.warp(block.timestamp + EPOCH_DURATION * 3 + 1);
+
+        // Now test re-submission of historical data that was originally aggregated automatically
+        // This should succeed since the data matches the stored hash
+        gasAggregator.pushEpochDataToStakingAppchain(expectedChainIDs, expectedTokens, epoch1);
+
+        // Verify the staking appchain received the re-submitted data
+        MockStakingAppchain stakingAppchain = MockStakingAppchain(address(gasAggregator.stakingAppchain()));
+        assertEq(stakingAppchain.epoch(), epoch1); // Should show epoch1 as the last pushed epoch
+        assertEq(stakingAppchain.getChainIDs().length, 2);
+        assertEq(stakingAppchain.getChainIDs()[0], 1);
+        assertEq(stakingAppchain.getChainIDs()[1], 2);
+        assertEq(stakingAppchain.getTokens()[0], 100);
+        assertEq(stakingAppchain.getTokens()[1], 200);
+
+        // Test re-submission with wrong data should fail
+        uint256[] memory wrongTokens = new uint256[](2);
+        wrongTokens[0] = 999;
+        wrongTokens[1] = 888;
+        vm.expectRevert(GasAggregator.InvalidDataHash.selector);
+        gasAggregator.pushEpochDataToStakingAppchain(expectedChainIDs, wrongTokens, epoch1);
+
+        // Test re-submission with different chain order should fail
+        uint256[] memory wrongOrderChainIDs = new uint256[](2);
+        wrongOrderChainIDs[0] = 2;
+        wrongOrderChainIDs[1] = 1;
+        vm.expectRevert(GasAggregator.InvalidDataHash.selector);
+        gasAggregator.pushEpochDataToStakingAppchain(wrongOrderChainIDs, expectedTokens, epoch1);
+
+        // Test that we can still re-submit with correct data multiple times
+        gasAggregator.pushEpochDataToStakingAppchain(expectedChainIDs, expectedTokens, epoch1);
+        assertEq(stakingAppchain.epoch(), epoch1); // Still should show epoch1
     }
 }
