@@ -298,10 +298,52 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
         chain.setEmissionsReceiver(newReceiver);
 
-        // Test owner can set it and it returns correct value
+        // Test owner can set it and it returns correct value with proper event
         vm.prank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateSequencingChain.EmissionsReceiverUpdated(address(0), newReceiver);
         chain.setEmissionsReceiver(newReceiver);
         assertEq(chain.getEmissionsReceiver(), newReceiver);
+    }
+
+    function testTransferOwnershipEmitsEmissionsReceiverUpdated() public {
+        // Test that transferOwnership emits EmissionsReceiverUpdated when emissionsReceiver is not set
+        address newOwner = address(0x888);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateSequencingChain.EmissionsReceiverUpdated(admin, newOwner);
+        chain.transferOwnership(newOwner);
+
+        // Verify the emissions receiver changed
+        assertEq(chain.getEmissionsReceiver(), newOwner);
+        assertEq(chain.owner(), newOwner);
+
+        // Test that transferOwnership does NOT emit EmissionsReceiverUpdated when emissionsReceiver is explicitly set
+        address explicitReceiver = address(0x777);
+        vm.prank(newOwner);
+        chain.setEmissionsReceiver(explicitReceiver);
+
+        address anotherNewOwner = address(0x666);
+        vm.prank(newOwner);
+        // Should NOT emit EmissionsReceiverUpdated
+        vm.recordLogs();
+        chain.transferOwnership(anotherNewOwner);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        // Should only have OwnershipTransferred event, not EmissionsReceiverUpdated
+        bool foundEmissionsEvent = false;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == keccak256("EmissionsReceiverUpdated(address,address)")) {
+                foundEmissionsEvent = true;
+                break;
+            }
+        }
+        assertFalse(foundEmissionsEvent, "Should not emit EmissionsReceiverUpdated when explicit receiver is set");
+
+        // Verify emissions receiver stayed the same
+        assertEq(chain.getEmissionsReceiver(), explicitReceiver);
+        assertEq(chain.owner(), anotherNewOwner);
     }
 }
 

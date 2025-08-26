@@ -225,4 +225,15 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     function getEmissionsReceiver() external view returns (address) {
         return emissionsReceiver == address(0) ? owner() : emissionsReceiver;
     }
+
+    /// @notice Override transferOwnership to emit EmissionsReceiverUpdated event when appropriate
+    /// @dev When emissionsReceiver is not explicitly set (address(0)), transferring ownership
+    /// effectively changes the emissions receiver, so we emit the event for transparency
+    /// @param newOwner The address of the new owner
+    function transferOwnership(address newOwner) public override onlyOwner {
+        if (emissionsReceiver == address(0)) {
+            emit EmissionsReceiverUpdated(owner(), newOwner);
+        }
+        super.transferOwnership(newOwner);
+    }
 }
