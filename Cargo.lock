@@ -6187,7 +6187,6 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "arc-swap",
  "async-trait",
  "axum 0.8.4",
  "byte-unit",
