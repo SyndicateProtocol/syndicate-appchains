@@ -204,14 +204,6 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         }
     }
 
-    /// @notice Prepends a zero byte to the transaction data
-    /// @dev This helps op-translator identify uncompressed data
-    /// @param _data The original transaction data
-    /// @return bytes The transaction data with a zero byte prepended
-    function prependZeroByte(bytes calldata _data) public pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), _data);
-    }
-
     /*//////////////////////////////////////////////////////////////
                          EMISSIONS RECEIVER ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
