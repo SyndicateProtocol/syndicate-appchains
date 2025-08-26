@@ -275,14 +275,14 @@
               ];
             };
           in
-          pkgs.runCommand "enclave-src-with-generated" {} ''
-            mkdir -p $out/nitro/solgen/go $out/nitro/target/include $out/nitro/target/lib
-            cp -rv ${enclave-src}/* $out/
-            cp -rv ${nitro}/* $out/nitro/
-            cp -rv ${nitro-solgen}/* $out/nitro/solgen/go
-            cp -v ${nitro-arbitrator-prover-header}/arbitrator.h $out/nitro/target/include
-            cp -rv ${nitro-arbitrator-stylus-lib}/lib/* $out/nitro/target/lib
-          '';
+            pkgs.runCommand "enclave-src-with-generated" {} ''
+              mkdir -p $out/nitro/solgen/go $out/nitro/target/include $out/nitro/target/lib
+              cp -rv ${enclave-src}/* $out/
+              cp -rv ${nitro}/* $out/nitro/
+              cp -rv ${nitro-solgen}/* $out/nitro/solgen/go
+              cp -v ${nitro-arbitrator-prover-header}/arbitrator.h $out/nitro/target/include
+              cp -rv ${nitro-arbitrator-stylus-lib}/lib/* $out/nitro/target/lib
+            '';
 
           synd-enclave-server = pkgs-2505.buildGoModule {
             pname = "synd-enclave";
