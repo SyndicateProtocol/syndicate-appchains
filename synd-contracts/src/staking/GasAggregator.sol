@@ -15,11 +15,6 @@ interface AppchainFactory {
     function getAppchainsAndContracts() external view returns (uint256[] memory chainIDs, address[] memory contracts);
 }
 
-// TODO SEQ-1283: this is just a placeholder until we have the actual usage designed
-interface StakingAppchain {
-    function pushData(uint256[] memory chainIDs, uint256[] memory tokens, uint256 epoch) external;
-}
-
 /// @title GasAggregator
 /// @notice Aggregates gas usage data from appchains and pushes it to the staking appchain
 contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable {
@@ -28,7 +23,6 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     //////////////////////////////////////////////////////////////*/
 
     AppchainFactory public factory;
-    StakingAppchain public stakingAppchain;
 
     uint256 public maxAppchainsToQuery;
 
@@ -66,14 +60,8 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         _disableInitializers();
     }
 
-    function initialize(
-        AppchainFactory _factory,
-        StakingAppchain _stakingAppchain,
-        address admin,
-        uint256 _challengeWindow
-    ) external initializer {
+    function initialize(AppchainFactory _factory, address admin, uint256 _challengeWindow) external initializer {
         if (address(_factory) == address(0)) revert ZeroAddress();
-        if (address(_stakingAppchain) == address(0)) revert ZeroAddress();
         if (admin == address(0)) revert ZeroAddress();
         if (_challengeWindow == 0) revert ZeroChallengeWindow();
 
@@ -83,7 +71,6 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         // consider all past epochs ignoed
         pendingEpoch = getCurrentEpoch();
         factory = _factory;
-        stakingAppchain = _stakingAppchain;
         challengeWindow = _challengeWindow;
     }
 
@@ -97,14 +84,6 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
             revert EpochNotOver(epoch, currentEpoch);
         }
         _;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            INTERNAL FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    function _pushToStakingAppchain(uint256[] memory appchainIDs, uint256[] memory tokens, uint256 epoch) internal {
-        stakingAppchain.pushData(appchainIDs, tokens, epoch);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -124,7 +103,6 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         }
         aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(appchains, tokens));
         pendingEpoch++;
-        _pushToStakingAppchain(appchains, tokens, pendingEpoch - 1);
     }
 
     /// @notice Submission of top appchains aggregated off-chain
@@ -158,36 +136,17 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         pendingTotalTokensUsed = total;
     }
 
-    /// @notice Pushes the data of a given epoch to the staking appchain
-    /// @dev only callable for the pending epoch after it has ended and the challengeWindow period has elapsed
-    /// @dev this function can be used for re-submissions, provided data must matches the stored hash
-    /// @param chainIDs The chain IDs that match the stored hash
-    /// @param tokensUsed The tokens used that match the stored hash
-    /// @param epoch The epoch to push the data to
-    function pushEpochDataToStakingAppchain(uint256[] calldata chainIDs, uint256[] calldata tokensUsed, uint256 epoch)
-        external
-        onlyCompletedEpoch(epoch)
-    {
-        bytes32 hash = keccak256(abi.encode(chainIDs, tokensUsed));
-        if (epoch == pendingEpoch) {
-            if (block.timestamp <= pendingEpochFirstSubmissionTime + challengeWindow) {
-                revert WindowNotOver(pendingEpoch, challengeWindow);
-            }
-
-            if (hash != pendingDataHash) {
-                revert InvalidDataHash();
-            }
-            aggregatedEpochDataHash[epoch] = pendingDataHash;
-            pendingEpoch++;
-            pendingEpochFirstSubmissionTime = 0;
-            pendingDataHash = bytes32(0);
-            pendingTotalTokensUsed = 0;
-        } else {
-            if (hash != aggregatedEpochDataHash[epoch]) {
-                revert InvalidDataHash();
-            }
+    function sealPendingEpoch() external onlyCompletedEpoch(pendingEpoch) {
+        if (
+            pendingEpochFirstSubmissionTime == 0 || block.timestamp <= pendingEpochFirstSubmissionTime + challengeWindow
+        ) {
+            revert WindowNotOver(pendingEpoch, challengeWindow);
         }
-        _pushToStakingAppchain(chainIDs, tokensUsed, epoch);
+        aggregatedEpochDataHash[pendingEpoch] = pendingDataHash;
+        pendingEpoch++;
+        pendingEpochFirstSubmissionTime = 0;
+        pendingDataHash = bytes32(0);
+        pendingTotalTokensUsed = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
