@@ -226,6 +226,7 @@ error InvalidAddress();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -299,6 +300,7 @@ error NoValueSent();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -504,6 +506,7 @@ constructor(address _basePool, address _performancePool, address _appchainPool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -605,6 +608,7 @@ function APPCHAIN_POOL_SPLIT() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -638,6 +642,7 @@ function APPCHAIN_POOL_SPLIT() external view returns (uint256);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -754,6 +759,7 @@ function PERCENTAGE_DENOMINATOR() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -787,6 +793,7 @@ function PERCENTAGE_DENOMINATOR() external view returns (uint256);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -903,6 +910,7 @@ function PERFORMANCE_POOL_SPLIT() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -936,6 +944,7 @@ function PERFORMANCE_POOL_SPLIT() external view returns (uint256);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1052,6 +1061,7 @@ function appchainPool() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1083,6 +1093,7 @@ function appchainPool() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1195,6 +1206,7 @@ function basePool() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1226,6 +1238,7 @@ function basePool() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1336,6 +1349,7 @@ function deposit(uint256 epochIndex) external payable;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1369,6 +1383,7 @@ function deposit(uint256 epochIndex) external payable;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1482,6 +1497,7 @@ function performancePool() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1513,6 +1529,7 @@ function performancePool() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -2170,9 +2187,9 @@ See the [wrapper's documentation](`SplitterInstance`) for more details.*/
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> SplitterInstance<P, N> {
-        SplitterInstance::<P, N>::new(address, provider)
+        SplitterInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -2184,7 +2201,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _basePool: alloy::sol_types::private::Address,
         _performancePool: alloy::sol_types::private::Address,
         _appchainPool: alloy::sol_types::private::Address,
@@ -2194,7 +2211,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         SplitterInstance::<
             P,
             N,
-        >::deploy(provider, _basePool, _performancePool, _appchainPool)
+        >::deploy(__provider, _basePool, _performancePool, _appchainPool)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -2206,7 +2223,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _basePool: alloy::sol_types::private::Address,
         _performancePool: alloy::sol_types::private::Address,
         _appchainPool: alloy::sol_types::private::Address,
@@ -2214,7 +2231,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         SplitterInstance::<
             P,
             N,
-        >::deploy_builder(provider, _basePool, _performancePool, _appchainPool)
+        >::deploy_builder(__provider, _basePool, _performancePool, _appchainPool)
     }
     /**A [`Splitter`](self) instance.
 
@@ -2252,11 +2269,11 @@ See the [wrapper's documentation](`SplitterInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -2267,13 +2284,13 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
             _basePool: alloy::sol_types::private::Address,
             _performancePool: alloy::sol_types::private::Address,
             _appchainPool: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<SplitterInstance<P, N>> {
             let call_builder = Self::deploy_builder(
-                provider,
+                __provider,
                 _basePool,
                 _performancePool,
                 _appchainPool,
@@ -2288,13 +2305,13 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            provider: P,
+            __provider: P,
             _basePool: alloy::sol_types::private::Address,
             _performancePool: alloy::sol_types::private::Address,
             _appchainPool: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(

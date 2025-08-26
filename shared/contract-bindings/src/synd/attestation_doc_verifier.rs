@@ -254,6 +254,7 @@ constructor(address _verifier, bytes32 _attestationDocVerifierVKey, bytes32 _roo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -401,6 +402,7 @@ function attestationDocVerifierVKey() external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -434,6 +436,7 @@ function attestationDocVerifierVKey() external view returns (bytes32);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -548,6 +551,7 @@ function expirationTolerance() external view returns (uint64);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -581,6 +585,7 @@ function expirationTolerance() external view returns (uint64);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -695,6 +700,7 @@ function pcr0() external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -726,6 +732,7 @@ function pcr0() external view returns (bytes32);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -838,6 +845,7 @@ function pcr1() external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -869,6 +877,7 @@ function pcr1() external view returns (bytes32);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -981,6 +990,7 @@ function pcr2() external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1012,6 +1022,7 @@ function pcr2() external view returns (bytes32);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -1124,6 +1135,7 @@ function rootCertHash() external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1155,6 +1167,7 @@ function rootCertHash() external view returns (bytes32);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -1267,6 +1280,7 @@ function syndCommitHash() external view returns (string memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1298,6 +1312,7 @@ function syndCommitHash() external view returns (string memory);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -1412,6 +1427,7 @@ function verifier() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1443,6 +1459,7 @@ function verifier() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1560,6 +1577,7 @@ function verifyAttestationDocProof(bytes memory _publicValues, bytes memory _pro
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Bytes,
@@ -1602,6 +1620,7 @@ function verifyAttestationDocProof(bytes memory _publicValues, bytes memory _pro
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -2111,9 +2130,9 @@ See the [wrapper's documentation](`AttestationDocVerifierInstance`) for more det
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> AttestationDocVerifierInstance<P, N> {
-        AttestationDocVerifierInstance::<P, N>::new(address, provider)
+        AttestationDocVerifierInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -2125,7 +2144,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _verifier: alloy::sol_types::private::Address,
         _attestationDocVerifierVKey: alloy::sol_types::private::FixedBytes<32>,
         _rootCertHash: alloy::sol_types::private::FixedBytes<32>,
@@ -2141,7 +2160,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
             P,
             N,
         >::deploy(
-            provider,
+            __provider,
             _verifier,
             _attestationDocVerifierVKey,
             _rootCertHash,
@@ -2162,7 +2181,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _verifier: alloy::sol_types::private::Address,
         _attestationDocVerifierVKey: alloy::sol_types::private::FixedBytes<32>,
         _rootCertHash: alloy::sol_types::private::FixedBytes<32>,
@@ -2176,7 +2195,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             P,
             N,
         >::deploy_builder(
-            provider,
+            __provider,
             _verifier,
             _attestationDocVerifierVKey,
             _rootCertHash,
@@ -2223,11 +2242,11 @@ See the [wrapper's documentation](`AttestationDocVerifierInstance`) for more det
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -2238,7 +2257,7 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
             _verifier: alloy::sol_types::private::Address,
             _attestationDocVerifierVKey: alloy::sol_types::private::FixedBytes<32>,
             _rootCertHash: alloy::sol_types::private::FixedBytes<32>,
@@ -2249,7 +2268,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
             _syndCommitHash: alloy::sol_types::private::String,
         ) -> alloy_contract::Result<AttestationDocVerifierInstance<P, N>> {
             let call_builder = Self::deploy_builder(
-                provider,
+                __provider,
                 _verifier,
                 _attestationDocVerifierVKey,
                 _rootCertHash,
@@ -2269,7 +2288,7 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            provider: P,
+            __provider: P,
             _verifier: alloy::sol_types::private::Address,
             _attestationDocVerifierVKey: alloy::sol_types::private::FixedBytes<32>,
             _rootCertHash: alloy::sol_types::private::FixedBytes<32>,
@@ -2280,7 +2299,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             _syndCommitHash: alloy::sol_types::private::String,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(

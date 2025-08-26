@@ -39,6 +39,7 @@ struct G1Point { uint256 X; uint256 Y; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Uint<256>,
@@ -252,6 +253,7 @@ struct G2Point { uint256[2] X; uint256[2] Y; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::FixedArray<
                 alloy::sol_types::sol_data::Uint<256>,
@@ -467,8 +469,8 @@ See the [wrapper's documentation](`BN254Instance`) for more details.*/
     pub const fn new<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(address: alloy_sol_types::private::Address, provider: P) -> BN254Instance<P, N> {
-        BN254Instance::<P, N>::new(address, provider)
+    >(address: alloy_sol_types::private::Address, __provider: P) -> BN254Instance<P, N> {
+        BN254Instance::<P, N>::new(address, __provider)
     }
     /**A [`BN254`](self) instance.
 
@@ -506,11 +508,11 @@ See the [wrapper's documentation](`BN254Instance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -2321,6 +2323,7 @@ struct Attestation { BN254.G1Point[] nonSignerPubkeys; BN254.G1Point[] quorumApk
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Array<BN254::G1Point>,
             alloy::sol_types::sol_data::Array<BN254::G1Point>,
@@ -2645,6 +2648,7 @@ struct BatchHeader { bytes32 blobHeadersRoot; bytes quorumNumbers; bytes signedS
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::FixedBytes<32>,
             alloy::sol_types::sol_data::Bytes,
@@ -2916,6 +2920,7 @@ struct BatchHeaderV2 { bytes32 batchRoot; uint32 referenceBlockNumber; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::FixedBytes<32>,
             alloy::sol_types::sol_data::Uint<32>,
@@ -3145,6 +3150,7 @@ struct BatchMetadata { BatchHeader batchHeader; bytes32 signatoryRecordHash; uin
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             BatchHeader,
             alloy::sol_types::sol_data::FixedBytes<32>,
@@ -3407,6 +3413,7 @@ struct BlobCertificate { BlobHeaderV2 blobHeader; bytes signature; uint32[] rela
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             BlobHeaderV2,
             alloy::sol_types::sol_data::Bytes,
@@ -3657,6 +3664,7 @@ struct BlobCommitment { BN254.G1Point commitment; BN254.G2Point lengthCommitment
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             BN254::G1Point,
             BN254::G2Point,
@@ -3945,6 +3953,7 @@ struct BlobHeader { BN254.G1Point commitment; uint32 dataLength; QuorumBlobParam
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             BN254::G1Point,
             alloy::sol_types::sol_data::Uint<32>,
@@ -4211,6 +4220,7 @@ struct BlobHeaderV2 { uint16 version; bytes quorumNumbers; BlobCommitment commit
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<16>,
             alloy::sol_types::sol_data::Bytes,
@@ -4487,6 +4497,7 @@ struct BlobInclusionInfo { BlobCertificate blobCertificate; uint32 blobIndex; by
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             BlobCertificate,
             alloy::sol_types::sol_data::Uint<32>,
@@ -4739,6 +4750,7 @@ struct BlobVerificationProof { uint32 batchId; uint32 blobIndex; BatchMetadata b
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<32>,
             alloy::sol_types::sol_data::Uint<32>,
@@ -5047,6 +5059,7 @@ struct NonSignerStakesAndSignature { uint32[] nonSignerQuorumBitmapIndices; BN25
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<32>>,
             alloy::sol_types::sol_data::Array<BN254::G1Point>,
@@ -5460,6 +5473,7 @@ struct QuorumBlobParam { uint8 quorumNumber; uint8 adversaryThresholdPercentage;
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<8>,
             alloy::sol_types::sol_data::Uint<8>,
@@ -5738,6 +5752,7 @@ struct SecurityThresholds { uint8 confirmationThreshold; uint8 adversaryThreshol
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<8>,
             alloy::sol_types::sol_data::Uint<8>,
@@ -5969,6 +5984,7 @@ struct SignedBatch { BatchHeaderV2 batchHeader; Attestation attestation; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (BatchHeaderV2, Attestation);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (
@@ -6201,6 +6217,7 @@ struct VersionedBlobParams { uint32 maxNumOperators; uint32 numChunks; uint8 cod
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<32>,
             alloy::sol_types::sol_data::Uint<32>,
@@ -7051,6 +7068,7 @@ function getBlobParams(uint16 version) external view returns (VersionedBlobParam
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<16>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u16,);
@@ -7082,6 +7100,7 @@ function getBlobParams(uint16 version) external view returns (VersionedBlobParam
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VersionedBlobParams,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -7199,6 +7218,7 @@ function getIsQuorumRequired(uint8 quorumNumber) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -7232,6 +7252,7 @@ function getIsQuorumRequired(uint8 quorumNumber) external view returns (bool);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -7353,6 +7374,7 @@ function getNonSignerStakesAndSignature(SignedBatch memory signedBatch) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (SignedBatch,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -7388,6 +7410,7 @@ function getNonSignerStakesAndSignature(SignedBatch memory signedBatch) external
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (NonSignerStakesAndSignature,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -7507,6 +7530,7 @@ function getQuorumAdversaryThresholdPercentage(uint8 quorumNumber) external view
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -7540,6 +7564,7 @@ function getQuorumAdversaryThresholdPercentage(uint8 quorumNumber) external view
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -7661,6 +7686,7 @@ function getQuorumConfirmationThresholdPercentage(uint8 quorumNumber) external v
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -7694,6 +7720,7 @@ function getQuorumConfirmationThresholdPercentage(uint8 quorumNumber) external v
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -7812,6 +7839,7 @@ function quorumAdversaryThresholdPercentages() external view returns (bytes memo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7845,6 +7873,7 @@ function quorumAdversaryThresholdPercentages() external view returns (bytes memo
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -7959,6 +7988,7 @@ function quorumConfirmationThresholdPercentages() external view returns (bytes m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7992,6 +8022,7 @@ function quorumConfirmationThresholdPercentages() external view returns (bytes m
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -8106,6 +8137,7 @@ function quorumNumbersRequired() external view returns (bytes memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -8139,6 +8171,7 @@ function quorumNumbersRequired() external view returns (bytes memory);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -8253,6 +8286,7 @@ function verifyDACertSecurityParams(VersionedBlobParams memory blobParams, Secur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VersionedBlobParams, SecurityThresholds);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -8292,6 +8326,7 @@ function verifyDACertSecurityParams(VersionedBlobParams memory blobParams, Secur
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -8412,6 +8447,7 @@ function verifyDACertSecurityParams(uint16 version, SecurityThresholds memory se
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<16>,
                 SecurityThresholds,
@@ -8454,6 +8490,7 @@ function verifyDACertSecurityParams(uint16 version, SecurityThresholds memory se
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -8577,6 +8614,7 @@ function verifyDACertV1(BlobHeader memory blobHeader, BlobVerificationProof memo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (BlobHeader, BlobVerificationProof);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -8614,6 +8652,7 @@ function verifyDACertV1(BlobHeader memory blobHeader, BlobVerificationProof memo
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -8734,6 +8773,7 @@ function verifyDACertV2(BatchHeaderV2 memory batchHeader, BlobInclusionInfo memo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 BatchHeaderV2,
                 BlobInclusionInfo,
@@ -8785,6 +8825,7 @@ function verifyDACertV2(BatchHeaderV2 memory batchHeader, BlobInclusionInfo memo
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -8923,6 +8964,7 @@ function verifyDACertV2ForZKProof(BatchHeaderV2 memory batchHeader, BlobInclusio
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 BatchHeaderV2,
                 BlobInclusionInfo,
@@ -8976,6 +9018,7 @@ function verifyDACertV2ForZKProof(BatchHeaderV2 memory batchHeader, BlobInclusio
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -9108,6 +9151,7 @@ function verifyDACertV2FromSignedBatch(SignedBatch memory signedBatch, BlobInclu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (SignedBatch, BlobInclusionInfo);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -9147,6 +9191,7 @@ function verifyDACertV2FromSignedBatch(SignedBatch memory signedBatch, BlobInclu
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -9271,6 +9316,7 @@ function verifyDACertsV1(BlobHeader[] memory blobHeaders, BlobVerificationProof[
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<BlobHeader>,
                 alloy::sol_types::sol_data::Array<BlobVerificationProof>,
@@ -9315,6 +9361,7 @@ function verifyDACertsV1(BlobHeader[] memory blobHeaders, BlobVerificationProof[
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -10282,9 +10329,9 @@ See the [wrapper's documentation](`IEigenDACertVerifierInstance`) for more detai
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> IEigenDACertVerifierInstance<P, N> {
-        IEigenDACertVerifierInstance::<P, N>::new(address, provider)
+        IEigenDACertVerifierInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -10296,11 +10343,11 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<IEigenDACertVerifierInstance<P, N>>,
     > {
-        IEigenDACertVerifierInstance::<P, N>::deploy(provider)
+        IEigenDACertVerifierInstance::<P, N>::deploy(__provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -10311,8 +10358,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     pub fn deploy_builder<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        IEigenDACertVerifierInstance::<P, N>::deploy_builder(provider)
+    >(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        IEigenDACertVerifierInstance::<P, N>::deploy_builder(__provider)
     }
     /**A [`IEigenDACertVerifier`](self) instance.
 
@@ -10350,11 +10397,11 @@ See the [wrapper's documentation](`IEigenDACertVerifierInstance`) for more detai
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -10365,9 +10412,9 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
         ) -> alloy_contract::Result<IEigenDACertVerifierInstance<P, N>> {
-            let call_builder = Self::deploy_builder(provider);
+            let call_builder = Self::deploy_builder(__provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -10377,9 +10424,9 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 ::core::clone::Clone::clone(&BYTECODE),
             )
         }
