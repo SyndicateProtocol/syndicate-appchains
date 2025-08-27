@@ -44,6 +44,7 @@ contract EmissionsSchedulerTest is Test {
         emissionScheduler = new EmissionsScheduler(
             address(emissionsCalculator), address(relayer), relayDestination, defaultAdmin, pauser
         );
+        vm.warp(emissionScheduler.START_TIMESTAMP());
 
         // Grant necessary roles
         token.grantRole(token.EMISSION_MINTER_ROLE(), address(emissionsCalculator));
