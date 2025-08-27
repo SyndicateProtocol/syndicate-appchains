@@ -14,7 +14,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
  */
 contract Refunder is AccessControl {
     /// @notice The address of the pool contract where recovered funds are deposited
-    address public immutable pool;
+    address public pool;
 
     /// @notice The address of the syndicate staking contract used to get current epoch
     address public immutable syndStaking;
