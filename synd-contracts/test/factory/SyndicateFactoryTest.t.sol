@@ -633,4 +633,31 @@ contract SyndicateFactoryTest is Test {
         assertEq(singleContract.length, 1);
         assertEq(singleContract[0], chain3); // Contract for chain ID 300
     }
+
+    function testGetAppchainsAndContracts() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-bug-test-1"));
+        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-bug-test-2"));
+        bytes32 salt3 = keccak256(abi.encodePacked("salt-for-bug-test-3"));
+
+        uint256 appchainId1 = 1000;
+        uint256 appchainId2 = 2000;
+        uint256 appchainId3 = 3000;
+
+        (address chain1Addr,) = factory.createSyndicateSequencingChain(appchainId1, admin, permissionModule, salt1);
+        (address chain2Addr,) = factory.createSyndicateSequencingChain(appchainId2, admin, permissionModule, salt2);
+        (address chain3Addr,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule, salt3);
+
+        (uint256[] memory chainIDs, address[] memory contracts) = factory.getAppchainsAndContracts();
+        assertEq(chainIDs.length, 3);
+        assertEq(contracts.length, 3);
+        assertEq(contracts[0], chain1Addr);
+        assertEq(contracts[1], chain2Addr);
+        assertEq(contracts[2], chain3Addr);
+
+        // ensure the mapping is consistent
+        for (uint256 i = 0; i < chainIDs.length; i++) {
+            assertEq(contracts[i], factory.appchainContracts(chainIDs[i]));
+        }
+    }
 }

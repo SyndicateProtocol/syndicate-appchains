@@ -163,7 +163,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     {
         address[] memory contracts = new address[](chainIDs.length);
         for (uint256 i = 0; i < chainIDs.length; i++) {
-            contracts[i] = appchainContracts[i];
+            contracts[i] = appchainContracts[chainIDs[i]];
         }
         return (chainIDs, contracts);
     }
