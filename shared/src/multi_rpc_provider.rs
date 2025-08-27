@@ -49,7 +49,7 @@ use url::Url;
 pub struct MultiRpcProvider {
     /// List of RPC providers for this chain, ordered by priority
     providers: Vec<Arc<FilledProvider>>,
-    /// Index of currently active provider
+/// Index of the currently active provider
     active_provider_index: Arc<AtomicUsize>,
 }
 
