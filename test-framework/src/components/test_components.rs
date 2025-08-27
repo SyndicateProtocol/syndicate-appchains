@@ -20,6 +20,7 @@ use alloy::{
 use contract_bindings::synd::{
     always_allowed_module::AlwaysAllowedModule,
     assertion_poster::AssertionPoster,
+    erc1967_proxy::ERC1967Proxy,
     i_inbox::IInbox,
     i_upgrade_executor::IUpgradeExecutor,
     rollup::Rollup,
@@ -242,8 +243,8 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    seq_chain_info.provider.get_balance(test_account1().address).await? >=
-                        parse_ether("10")?,
+                    seq_chain_info.provider.get_balance(test_account1().address).await?
+                        >= parse_ether("10")?,
                     Duration::from_secs(10)
                 );
 
@@ -254,22 +255,31 @@ impl TestComponents {
 
         info!("Sequencing chain Nitro URL: {}", seq_rpc_ws_url);
 
-        let _ = SyndicateSequencingChain::deploy_builder(
+        let _ = SyndicateSequencingChain::deploy_builder(&seq_provider).send().await?;
+        let sequencing_contract_address_impl = seq_provider.default_signer_address().create(0);
+
+        let result = ERC1967Proxy::deploy_builder(
             &seq_provider,
-            U256::from(options.appchain_chain_id),
+            sequencing_contract_address_impl,
+            Bytes::new(),
         )
         .send()
         .await?;
-        let sequencing_contract_address = seq_provider.default_signer_address().create(0);
+        let sequencing_contract_address = seq_provider.default_signer_address().create(1);
+
         let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-        let always_allowed_module_address = seq_provider.default_signer_address().create(1);
+        let always_allowed_module_address = seq_provider.default_signer_address().create(2);
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
             SyndicateSequencingChain::new(sequencing_contract_address, provider_clone);
         let _ = sequencing_contract
-            .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
+            .initialize(
+                seq_provider.default_signer_address(),
+                always_allowed_module_address,
+                U256::from(options.appchain_chain_id),
+            )
             .send()
             .await?;
 
@@ -364,8 +374,8 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    set_chain_info.provider.get_balance(test_account1().address).await? >=
-                        parse_ether("10")?,
+                    set_chain_info.provider.get_balance(test_account1().address).await?
+                        >= parse_ether("10")?,
                     Duration::from_secs(10)
                 );
                 settlement_deployment = Some(set_deployment);
