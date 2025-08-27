@@ -4,15 +4,13 @@ pragma solidity 0.8.28;
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 import {GasCounter} from "./staking/GasCounter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
+import {
+    L2MessageType_unsignedEOATx,
+    L2MessageType_unsignedContractTx
+} from "@arbitrum/nitro-contracts/src/libraries/MessageTypes.sol";
 
-enum TransactionType {
-    Unsigned, // an unsigned tx
-    Contract, // a contract tx (unsigned, nonceless)
-    _Reserved,
-    Compressed, // compressed batch of transactions (signed)
-    Signed // a regular signed tx
-
-}
+uint8 constant L2MessageType_Batch = 3; // compressed batch of transactions (signed)
+uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
 
 /// @title SyndicateSequencingChain
 /// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
@@ -51,6 +49,8 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
 
+    bool public syndicateForkEnabled;
+
     /// @notice Emitted when a new transaction is processed
     /// @param sender The address that submitted the transaction
     /// @param data The transaction data that was processed
@@ -59,10 +59,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-missing-revert-reason-tests
-    constructor(uint256 _appchainId) SequencingModuleChecker() {
+    constructor(uint256 _appchainId, bool _syndicateForkEnabled) SequencingModuleChecker() {
         // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
         require(_appchainId != 0, "App chain ID cannot be 0");
         appchainId = _appchainId;
+        syndicateForkEnabled = _syndicateForkEnabled;
     }
 
     // We use per-address contract nonces instead of a global one to increase the predictability of the request id
@@ -72,6 +73,8 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
 
     /// this is intentionally different from the standard offset used by rollups to prevent collisions
     uint160 public constant OFFSET = uint160(0x1000000000000000000000000000000000000001);
+
+    error SyndicateForkDisabled();
 
     /// @notice Utility function that converts the address in the sequencing chain
     /// that submitted a tx to the inbox to the msg.sender viewed in the appchain.
@@ -108,11 +111,12 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         uint256 value,
         bytes calldata data
     ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage returns (uint256) {
+        require(syndicateForkEnabled, SyndicateForkDisabled());
         uint256 requestId = contractNonce[msg.sender]++;
         emit TransactionProcessed(
             msg.sender,
             abi.encodePacked(
-                TransactionType.Contract,
+                L2MessageType_unsignedContractTx,
                 applyAlias(msg.sender),
                 requestId,
                 uint256(gasLimit),
@@ -140,10 +144,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         uint256 value,
         bytes calldata data
     ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage {
+        require(syndicateForkEnabled, SyndicateForkDisabled());
         emit TransactionProcessed(
             msg.sender,
             abi.encodePacked(
-                TransactionType.Unsigned,
+                L2MessageType_unsignedEOATx,
                 applyAlias(msg.sender),
                 uint256(gasLimit),
                 maxFeePerGas,
@@ -164,7 +169,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         trackGasUsage
     {
         require(data.length > 0, NoTxData());
-        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Compressed, data));
+        emit TransactionProcessed(msg.sender, abi.encodePacked(L2MessageType_Batch, data));
     }
 
     /// @notice Process a signed transaction.
@@ -176,7 +181,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         trackGasUsage
     {
         require(data.length > 0, NoTxData());
-        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data));
+        emit TransactionProcessed(msg.sender, abi.encodePacked(L2MessageType_SignedTx, data));
     }
 
     /// @notice Processes multiple signed transactions in bulk.
@@ -191,9 +196,13 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
             bool isAllowed = data.length > 0 && isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed
-                emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data[i]));
+                emit TransactionProcessed(msg.sender, abi.encodePacked(L2MessageType_SignedTx, data[i]));
             }
         }
+    }
+
+    function enableSyndicateFork() external onlyOwner {
+        syndicateForkEnabled = true;
     }
 
     /*//////////////////////////////////////////////////////////////

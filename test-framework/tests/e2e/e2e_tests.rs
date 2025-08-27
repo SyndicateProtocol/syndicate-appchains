@@ -304,7 +304,7 @@ async fn e2e_contract_tx() -> Result<()> {
         // Wait for the txs to arrive
         components.mine_seq_block(0).await?;
         wait_until!(
-            components.appchain_provider.get_block_number().await? == 2,
+            components.appchain_provider.get_block_number().await? >= 2,
             Duration::from_secs(20)
         );
 

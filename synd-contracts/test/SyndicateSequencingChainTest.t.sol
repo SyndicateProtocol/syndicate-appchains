@@ -3,7 +3,9 @@ pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
-import {SyndicateSequencingChain, TransactionType, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
+import {
+    SyndicateSequencingChain, L2MessageType_SignedTx, SequencingModuleChecker
+} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -79,7 +81,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(
-            address(this), abi.encodePacked(TransactionType.Signed, validTxn)
+            address(this), abi.encodePacked(L2MessageType_SignedTx, validTxn)
         );
 
         chain.processTransaction(validTxn);
@@ -124,7 +126,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(
-            address(this), abi.encodePacked(TransactionType.Signed, data)
+            address(this), abi.encodePacked(L2MessageType_SignedTx, data)
         );
 
         chain.processTransaction(data);
@@ -144,7 +146,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             vm.expectEmit(true, false, false, true);
 
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(TransactionType.Signed, validTxns[i])
+                address(this), abi.encodePacked(L2MessageType_SignedTx, validTxns[i])
             );
         }
 
@@ -153,7 +155,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
     function testConstructorWithZeroAppChainId() public {
         vm.expectRevert("App chain ID cannot be 0");
-        new SyndicateSequencingChain(0);
+        new SyndicateSequencingChain(0, false);
     }
 
     function testProcessTransactionsBulkAllAllowed() public {
@@ -180,7 +182,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         for (uint256 i = 0; i < txns.length; i++) {
             vm.expectEmit(true, false, false, true);
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(TransactionType.Signed, txns[i])
+                address(this), abi.encodePacked(L2MessageType_SignedTx, txns[i])
             );
         }
 
@@ -219,7 +221,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         for (uint256 i = 0; i < successTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(TransactionType.Signed, successTxns[i])
+                address(this), abi.encodePacked(L2MessageType_SignedTx, successTxns[i])
             );
         }
 
@@ -284,7 +286,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Test 2: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(
-            address(this), abi.encodePacked(TransactionType.Signed, allowedData)
+            address(this), abi.encodePacked(L2MessageType_SignedTx, allowedData)
         );
         chain.processTransaction(allowedData);
     }

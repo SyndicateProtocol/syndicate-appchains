@@ -257,6 +257,7 @@ impl TestComponents {
         let _ = SyndicateSequencingChain::deploy_builder(
             &seq_provider,
             U256::from(options.appchain_chain_id),
+            true,
         )
         .send()
         .await?;

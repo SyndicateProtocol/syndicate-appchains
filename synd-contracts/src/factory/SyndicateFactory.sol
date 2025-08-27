@@ -112,7 +112,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @param chainId The chain ID
     /// @return The bytecode with constructor parameters
     function getBytecode(uint256 chainId) public pure returns (bytes memory) {
-        return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId));
+        return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId, false));
     }
 
     /// @notice Get the next auto-generated chain ID

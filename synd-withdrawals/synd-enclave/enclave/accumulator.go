@@ -37,6 +37,10 @@ func processEvent(data []byte) [][]byte {
 		panic(fmt.Errorf("unexpected event header byte: %d", data[0]))
 	}
 	if data[0] != arbos.L2MessageKind_Batch {
+		if data[0] == arbos.L2MessageKind_SignedTx && parseSignedTx(data[1:]) != nil {
+			return nil
+		}
+		// The sequencing contract ensures that unsigned transactions are valid
 		return [][]byte{data}
 	}
 	r := brotli.NewReader(bytes.NewReader(data[1:]))
@@ -48,11 +52,48 @@ func processEvent(data []byte) [][]byte {
 	if err := rlp.DecodeBytes(data, &txs); err != nil {
 		return nil
 	}
-	for i := range txs {
-		txs[i] = append([]byte{arbos.L2MessageKind_SignedTx}, txs[i]...)
+	var out [][]byte
+	for _, tx := range txs {
+		if parseSignedTx(tx) == nil {
+			out = append(out, append([]byte{arbos.L2MessageKind_SignedTx}, tx...))
+		}
 	}
-	return txs
+	return out
 }
+
+func parseSignedTx(data []byte) error {
+	var tx types.Transaction
+	if err := tx.UnmarshalBinary(data); err != nil {
+		return err
+	}
+	if tx.Type() >= types.ArbitrumDepositTxType || tx.Type() == types.BlobTxType {
+		// Should be unreachable for Arbitrum types due to UnmarshalBinary not accepting Arbitrum internal txs
+		// and we want to disallow BlobTxType since Arbitrum doesn't support EIP-4844 txs yet.
+		return types.ErrTxTypeNotSupported
+	}
+	return nil
+}
+
+func buildL2MessageSegment(txs [][]byte) ([]byte, error) {
+	var l2Message []byte
+	if len(txs) == 1 {
+		l2Message = txs[0]
+	} else {
+		l2Message = []byte{arbos.L2MessageKind_Batch}
+		var sizeBuf [8]byte
+		for _, tx := range txs {
+			binary.BigEndian.PutUint64(sizeBuf[:], uint64(len(tx)))
+			l2Message = append(l2Message, sizeBuf[:]...)
+			l2Message = append(l2Message, tx...)
+		}
+	}
+	if len(l2Message) > arbostypes.MaxL2MessageSize {
+		return nil, errors.New("l2message too long")
+	}
+	return rlp.EncodeToBytes(append([]byte{arbstate.BatchSegmentKindL2Message}, l2Message...))
+}
+
+const TX_PER_BLOCK = 100
 
 func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 	var data []byte
@@ -81,26 +122,32 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 		data = append(data, segment...)
 	}
 
-	var l2Message []byte
-	if len(txs) == 1 {
-		l2Message = append(l2Message, txs[0]...)
-	} else {
-		l2Message = append(l2Message, arbos.L2MessageKind_Batch)
-		var sizeBuf [8]byte
-		for _, tx := range txs {
-			binary.BigEndian.PutUint64(sizeBuf[:], uint64(len(tx)))
-			l2Message = append(l2Message, sizeBuf[:]...)
-			l2Message = append(l2Message, tx...)
+	var block [][]byte
+	size := 1
+	for _, tx := range txs {
+		if len(tx) > arbostypes.MaxL2MessageSize {
+			continue;
 		}
+		txSize := len(tx) + 8
+		size += txSize
+		if len(block) >= TX_PER_BLOCK || (len(block) > 0 && size > arbostypes.MaxL2MessageSize) {
+			segment, err := buildL2MessageSegment(block)
+			if err != nil {
+				return nil, err
+			}
+			data = append(data, segment...)
+			block = nil
+			size = 1 + txSize
+		}
+		block = append(block, tx)
 	}
-	if len(l2Message) > arbostypes.MaxL2MessageSize {
-		return nil, errors.New("l2message too long")
+	if len(block) > 0 {
+		segment, err := buildL2MessageSegment(block)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, segment...)
 	}
-	segment, err := rlp.EncodeToBytes(append([]byte{arbstate.BatchSegmentKindL2Message}, l2Message...))
-	if err != nil {
-		return nil, err
-	}
-	data = append(data, segment...)
 
 	var buffer bytes.Buffer
 	writer := brotli.NewWriterLevel(&buffer, brotli.BestSpeed)

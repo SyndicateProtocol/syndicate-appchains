@@ -3,6 +3,7 @@
 //! This module provides functionality for encoding batches of transactions
 //! that can be submitted by the batcher.
 
+use crate::appchains::shared::sequencing_transaction_parser::L2MessageKind;
 use alloy::{primitives::Bytes, rlp};
 use base64::prelude::*;
 use eyre::Result;
@@ -30,9 +31,6 @@ enum BatchSegmentKind {
     AdvanceL1BlockNumber = 4,
 }
 
-// See arbos/parse_l2.go for details.
-const L2_MESSAGE_KIND_BATCH: u8 = 3;
-
 /// Arbitrum batch
 #[derive(Debug, Serialize)]
 pub struct Batch(pub Vec<BatchMessage>);
@@ -57,8 +55,11 @@ pub struct L1IncomingMessageHeader {
     pub timestamp: u64,
 }
 
+/// See `/arbos/arbostypes/incomingmessage.go` for the nitro version of this constant
+pub const MAX_L2_MESSAGE_SIZE: usize = 256 * 1024; // 256 KiB
+
 // See `/arbstate/inbox.go` for the nitro version of these constants
-const MAX_DECOMPRESSED_LEN: usize = 1024 * 1024 * 16; // 16 MiB
+const MAX_DECOMPRESSED_LEN: usize = 1024 * 1024 * 40; // 40 MiB
 const MAX_SEGMENTS_PER_SEQUENCER_MESSAGE: usize = 100 * 1024;
 
 impl Batch {
@@ -75,23 +76,24 @@ impl Batch {
                     let mut data = vec![];
                     if ts != x.header.timestamp {
                         segments += 1;
-                        let mut buffer = vec![];
-                        buffer.push(BatchSegmentKind::AdvanceTimestamp as u8);
+                        let mut buffer = vec![BatchSegmentKind::AdvanceTimestamp as u8];
                         buffer.append(&mut rlp::encode(x.header.timestamp.wrapping_sub(ts)));
                         data.append(&mut rlp::encode(buffer.as_slice()));
                         ts = x.header.timestamp;
                     }
                     if block != x.header.block_number {
                         segments += 1;
-                        let mut buffer = vec![];
-                        buffer.push(BatchSegmentKind::AdvanceL1BlockNumber as u8);
+                        let mut buffer = vec![BatchSegmentKind::AdvanceL1BlockNumber as u8];
                         buffer.append(&mut rlp::encode(x.header.block_number.wrapping_sub(block)));
                         data.append(&mut rlp::encode(buffer.as_slice()));
                         block = x.header.block_number;
                     }
-                    let mut buffer = vec![];
-                    buffer.push(BatchSegmentKind::L2Message as u8);
-                    buffer.append(&mut l2_msg_to_bytes(&x.l2_msg)?.into());
+                    let mut buffer = vec![BatchSegmentKind::L2Message as u8];
+                    let l2_msg = l2_msg_to_bytes(&x.l2_msg)?;
+                    if l2_msg.len() > MAX_L2_MESSAGE_SIZE {
+                        return Err(eyre::eyre!("l2 message exceeds the 256 kb limit"));
+                    }
+                    buffer.append(&mut l2_msg.into());
                     data.append(&mut rlp::encode(buffer.as_slice()));
                     data
                 }
@@ -100,7 +102,7 @@ impl Batch {
         }
         // TODO(SEQ-815): add logic to split large batches which exceed these limits into multiple
         // batches
-        if segments > MAX_SEGMENTS_PER_SEQUENCER_MESSAGE {
+        if segments >= MAX_SEGMENTS_PER_SEQUENCER_MESSAGE {
             return Err(eyre::eyre!("too many batch segments"));
         }
         if input.len() > MAX_DECOMPRESSED_LEN {
@@ -148,20 +150,18 @@ impl Batch {
 }
 
 fn l2_msg_to_bytes(msg: &Vec<Bytes>) -> Result<Bytes> {
-    let mut data = Vec::new();
-    if msg.is_empty() {
-        return Err(eyre::eyre!("Cannot serialize empty l2 msg"));
-    }
-    if msg.len() > 1 {
-        data.push(L2_MESSAGE_KIND_BATCH);
-        for tx in msg {
-            data.extend_from_slice(&(tx.len()).to_be_bytes());
-            data.extend(tx);
+    match msg.len() {
+        0 => Err(eyre::eyre!("Cannot serialize empty l2 msg")),
+        1 => Ok(msg[0].clone()),
+        _ => {
+            let mut data = vec![L2MessageKind::Batch as u8];
+            for tx in msg {
+                data.extend_from_slice(&(tx.len() as u64).to_be_bytes());
+                data.extend(tx);
+            }
+            Ok(data.into())
         }
-    } else {
-        data.extend(&msg[0]);
     }
-    Ok(data.into())
 }
 
 fn serialize_l2_msg<S>(msg: &Vec<Bytes>, s: S) -> Result<S::Ok, S::Error>

@@ -89,7 +89,6 @@ pub mod r#gas_aggregator;
 pub mod r#gas_counter;
 pub mod r#mock_appchain_factory;
 pub mod r#mock_gas_counter;
-pub mod r#mock_staking_appchain;
 pub mod r#global_state_lib;
 pub mod r#groth16_verifier;
 pub mod r#i_access_control;
