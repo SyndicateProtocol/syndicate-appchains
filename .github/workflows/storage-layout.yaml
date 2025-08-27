@@ -48,7 +48,7 @@ jobs:
           echo "Comparing expected vs actual storage layouts..."
           if ! diff -u expected_storage_layout.norm.json actual_storage_layout.norm.json; then
             echo
-            echo "❌ Storage layout changed. If intentional, update syndicateSequencingChainLayout.json."
+            echo "❌ Storage layout changed. If intentional, update syndicate_sequencing_chain_layout.json."
             exit 1
           fi
           echo "✅ Storage layout matches."

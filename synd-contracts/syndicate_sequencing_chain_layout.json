@@ -23,14 +23,6 @@
       "offset": 0,
       "slot": "2",
       "type": "t_mapping(t_address,t_uint256)"
-    },
-    {
-      "astId": 1728,
-      "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
-      "label": "dummy",
-      "offset": 0,
-      "slot": "3",
-      "type": "t_address"
     }
   ],
   "types": {
