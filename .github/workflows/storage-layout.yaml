@@ -27,22 +27,22 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Build contracts
-        working-directory: syn-contracts
+        working-directory: synd-contracts
         run: forge build --sizes
 
       - name: Inspect storage layout
-        working-directory: syn-contracts
+        working-directory: synd-contracts
         run: |
           forge inspect SyndicateSequencingChain storageLayout --json > actual_storage_layout.json
           jq -S . actual_storage_layout.json > actual_storage_layout.norm.json
 
       - name: Normalize expected layout
-        working-directory: syn-contracts
+        working-directory: synd-contracts
         run: |
           jq -S . syndicate_sequencing_chain_layout.json > expected_storage_layout.norm.json
 
       - name: Compare layouts
-        working-directory: syn-contracts
+        working-directory: synd-contracts
         run: |
           set -e
           echo "Comparing expected vs actual storage layouts..."
