@@ -116,11 +116,12 @@ contract L1Relayer is AccessControl {
      * @dev Reverts if contract has insufficient token balance
      * @dev The L2Relayer contract must implement the relay function to handle the message
      */
-    function relay(uint256 amount, address destination, uint256 epochIndex) external {
-        if (IERC20(l1Token).balanceOf(address(this)) < amount) revert InsufficientBalance();
+    function relay(address destination, uint256 epochIndex) external {
+        uint256 amount = IERC20(l1Token).balanceOf(address(this));
+        if (amount == 0) revert InsufficientBalance();
 
         _deposit(amount);
-        _relay(amount, destination, epochIndex);
+        _relay(destination, epochIndex);
     }
 
     /**
@@ -144,7 +145,7 @@ contract L1Relayer is AccessControl {
      */
     function _relay(uint256 amount, address destination, uint256 epochIndex) internal {
         IOPMessageRelayer(opMessageRelayer).sendMessage(
-            l2Relayer, abi.encodeWithSelector(this.relay.selector, amount, destination, epochIndex), minGasLimit
+            l2Relayer, abi.encodeWithSelector(this.relay.selector, destination, epochIndex), minGasLimit
         );
     }
 }

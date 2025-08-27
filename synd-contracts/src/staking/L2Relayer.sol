@@ -6,12 +6,15 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IPool} from "./IPool.sol";
 
 interface IArbBridge {
-    function depositERC20(uint256 amount) external returns (uint256);
-    function sendContractTransaction(
+    function unsafeCreateRetryableTicket(
+        address to,
+        uint256 l2CallValue,
+        uint256 maxSubmissionCost,
+        address excessFeeRefundAddress,
+        address callValueRefundAddress,
         uint256 gasLimit,
         uint256 maxFeePerGas,
-        address to,
-        uint256 value,
+        uint256 tokenTotalFeeAmount,
         bytes calldata data
     ) external returns (uint256);
 }
@@ -25,9 +28,7 @@ interface IArbBridge {
  *
  * Key features:
  * - Admin-controlled gas settings for bridge operations
- * - ERC20 token bridging through Arbitrum
- * - Contract transaction execution on destination chain
- * - Batch operations for staking and other L2 interactions
+ * - ERC20 token bridging and contract callthrough Arbitrum with retryable ticket
  *
  * @custom:security This contract has admin controls and should be used with caution
  */
@@ -48,6 +49,11 @@ contract L2Relayer is AccessControl {
     /// @notice The L2 token address that can be bridged and relayed
     address public immutable tokenAddress;
 
+    ////////////////////////////
+    // Contracts Deployed on L3
+    ////////////////////////////
+    address public immutable refunder;
+
     /**
      * @notice Error thrown when the contract has insufficient token balance for a relay operation
      */
@@ -61,13 +67,14 @@ contract L2Relayer is AccessControl {
      * @dev Sets the deployer as admin and configures default gas settings
      *      Approves the bridge contract to spend tokens on behalf of this contract
      */
-    constructor(address _arbBridge, address _tokenAddress, address _defaultAdmin) {
+    constructor(address _arbBridge, address _tokenAddress, address _refunder, address _defaultAdmin) {
         _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
         gasLimit = 210000;
         maxFeePerGas = 1 gwei;
 
         arbBridge = _arbBridge;
         tokenAddress = _tokenAddress;
+        refunder = _refunder;
 
         IERC20(tokenAddress).approve(arbBridge, type(uint256).max);
     }
@@ -86,42 +93,41 @@ contract L2Relayer is AccessControl {
 
     /**
      * @notice Relays tokens to the destination chain and executes a deposit operation
-     * @param amount The amount of tokens to relay
-     * @param destination The destination contract address on L2
+     * @param destination The destination contract address on L3
      * @param epochIndex The epoch index for the deposit operation
-     * @dev This function performs two operations:
-     *      1. Deposits tokens to the Arbitrum bridge
-     *      2. Sends a contract transaction to execute deposit on destination
-     * @dev Reverts if contract has insufficient token balance
+     * @dev This function gets the current balance of the token and creates a retryable ticket to deposit and send to a pool contract on the L3
+     * @dev The retryable ticket is created with the refunder address as the call value refund address
      * @dev The destination contract must implement IPool.deposit function
      */
-    function relay(uint256 amount, address destination, uint256 epochIndex) external {
-        if (IERC20(tokenAddress).balanceOf(address(this)) < amount) revert InsufficientBalance();
+    function relay(address destination, uint256 epochIndex) external {
+        uint256 amount = IERC20(tokenAddress).balanceOf(address(this));
+        if (amount == 0) revert InsufficientBalance();
 
-        _deposit(amount);
         _relay(amount, destination, epochIndex);
-    }
-
-    /**
-     * @notice Internal function to deposit tokens to the Arbitrum bridge
-     * @param amount The amount of tokens to deposit
-     * @dev This is the first step in the relay process
-     */
-    function _deposit(uint256 amount) internal {
-        IArbBridge(arbBridge).depositERC20(amount);
     }
 
     /**
      * @notice Internal function to relay the operation to the destination contract
      * @param amount The amount of tokens being relayed
-     * @param destination The destination contract address
+     * @param destination The destination contract address on L3
      * @param epochIndex The epoch index for the deposit operation
      * @dev Sends a contract transaction through the bridge to execute IPool.deposit
      * @dev Uses the configured gas settings for the bridge transaction
      */
     function _relay(uint256 amount, address destination, uint256 epochIndex) internal {
-        IArbBridge(arbBridge).sendContractTransaction(
-            gasLimit, maxFeePerGas, destination, amount, abi.encodeWithSelector(IPool.deposit.selector, epochIndex)
+        uint256 callValue = amount - (gasLimit * maxFeePerGas);
+
+        // We use unsafe so the refunder address doesnt get aliased
+        IArbBridge(arbBridge).unsafeCreateRetryableTicket(
+            destination,
+            callValue,
+            0, // Always 0 for custom gas token chains
+            refunder,
+            refunder,
+            gasLimit,
+            maxFeePerGas,
+            amount,
+            abi.encodeWithSelector(IPool.deposit.selector, epochIndex)
         );
     }
 }
