@@ -49,7 +49,7 @@ use url::Url;
 pub struct MultiRpcProvider {
     /// List of RPC providers for this chain, ordered by priority
     providers: Vec<Arc<FilledProvider>>,
-/// Index of the currently active provider
+    /// Index of the currently active provider
     active_provider_index: Arc<AtomicUsize>,
 }
 
@@ -268,7 +268,7 @@ impl MultiRpcProvider {
     }
 
     /// Try to switch to the next available provider, returns false if we've completed a full cycle
-    fn next_provider(&self, start_index: usize) -> Option<Arc<FilledProvider>> {
+    fn try_next_provider(&self, start_index: usize) -> Option<Arc<FilledProvider>> {
         let current = self.active_provider_index.load(Ordering::Acquire);
         let next = (current + 1) % self.providers.len();
 
@@ -329,7 +329,7 @@ impl MultiRpcProvider {
             error = %error,
             "Transport/connectivity error, trying next provider"
         );
-        self.next_provider(start_index).map_or_else(
+        self.try_next_provider(start_index).map_or_else(
             || ControlFlow::ErrAllProvidersFailed(error),
             ControlFlow::RetryWithNextProvider,
         )
@@ -1096,11 +1096,6 @@ mod tests {
 
         // Make a call that should trigger failover due to transport error
         let result = multi_provider.get_block_number().await;
-
-        // Should succeed after failover
-        if result.is_err() {
-            println!("Error: {:?}", result.as_ref().err());
-        }
         assert!(result.is_ok(), "Expected result to be Ok after failover, got: {result:?}");
 
         // Should have switched to second provider (index 1)
