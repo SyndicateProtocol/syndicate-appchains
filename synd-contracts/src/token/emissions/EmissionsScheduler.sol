@@ -97,9 +97,7 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
         address _relayDestination,
         address defaultAdmin,
         address pauser
-    ) EpochTracker(block.timestamp) {
-        // TODO: Remove use of block.timestamp once starttime is hardcoded ^^
-
+    ) {
         // Input validation
         if (_emissionsCalculator == address(0)) revert ZeroAddress();
         if (_relayer == address(0)) revert ZeroAddress();
