@@ -313,6 +313,13 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         emit SyndicateSequencingChain.EmissionsReceiverUpdated(address(0), newReceiver);
         chain.setEmissionsReceiver(newReceiver);
         assertEq(chain.getEmissionsReceiver(), newReceiver);
+
+        // falls back to owner if emissionsReceiver is set to address(0)
+        vm.prank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateSequencingChain.EmissionsReceiverUpdated(newReceiver, admin);
+        chain.setEmissionsReceiver(address(0));
+        assertEq(chain.getEmissionsReceiver(), admin);
     }
 
     function testTransferOwnershipEmitsEmissionsReceiverUpdated() public {

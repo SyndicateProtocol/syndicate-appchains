@@ -214,7 +214,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     function setEmissionsReceiver(address _emissionsReceiver) external onlyOwner {
         address oldReceiver = emissionsReceiver;
         emissionsReceiver = _emissionsReceiver;
-        emit EmissionsReceiverUpdated(oldReceiver, _emissionsReceiver);
+        if (emissionsReceiver != address(0)) {
+            emit EmissionsReceiverUpdated(oldReceiver, _emissionsReceiver);
+        } else {
+            emit EmissionsReceiverUpdated(oldReceiver, owner());
+        }
     }
 
     /// @notice Get the effective emissions receiver address
