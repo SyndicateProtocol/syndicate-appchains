@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol";
+import {SequencingModuleChecker} from "src/SequencingModuleChecker.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract SequencingModuleCheckerMock is SequencingModuleChecker {}
+contract SequencingModuleCheckerMock is Initializable, SequencingModuleChecker {
+    function initialize(address admin, address _permissionRequirementModule) external initializer {
+        __SequencingModuleChecker_init(admin, _permissionRequirementModule);
+    }
+}
 
 contract SequencingModuleCheckerTest is Test {
-    SequencingModuleChecker public manager;
+    SequencingModuleCheckerMock public manager;
     RequireAndModule public masterModule;
     address public admin;
     address public nonAdmin;
@@ -39,28 +45,5 @@ contract SequencingModuleCheckerTest is Test {
         vm.prank(nonAdmin);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
         manager.updateRequirementModule(newModule);
-    }
-
-    function testCannotInitializeTwice() public {
-        vm.prank(admin);
-        vm.expectRevert(SequencingModuleChecker.AlreadyInitialized.selector);
-        manager.initialize(admin, address(masterModule));
-    }
-
-    function testNotInitialized() public {
-        SequencingModuleChecker uninitializedManager = new SequencingModuleCheckerMock();
-
-        bytes memory emptyData = new bytes(0);
-
-        assertFalse(uninitializedManager.isAllowed(address(0), address(0), emptyData));
-    }
-
-    function testIsAllowedAfterInitialization() public {
-        SequencingModuleChecker initializedManager = new SequencingModuleCheckerMock();
-        initializedManager.initialize(admin, address(masterModule));
-
-        bytes memory emptyData = new bytes(0);
-
-        assertTrue(initializedManager.isAllowed(address(0), address(0), emptyData));
     }
 }

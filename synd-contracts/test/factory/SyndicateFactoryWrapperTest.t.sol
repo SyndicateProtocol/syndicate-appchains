@@ -60,11 +60,10 @@ contract SyndicateFactoryWrapperTest is Test {
     // Basic deployment tests
     function testDeployCompleteSyndicateWithRequireAndModule() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("module-salt-and"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("chain-salt-and"));
 
         // Compute expected addresses
         address expectedModuleAddr = andFactory.computeModuleAddress(user1, moduleSalt);
-        address expectedChainAddr = syndicateFactory.computeSequencingChainAddress(chainSalt, appchainId);
+        address expectedChainAddr = syndicateFactory.computeSequencingChainAddress(appchainId);
 
         vm.expectEmit(true, true, true, true);
         emit CompleteSyndicateDeployed(
@@ -72,7 +71,7 @@ contract SyndicateFactoryWrapperTest is Test {
         );
 
         (address sequencingChain, address permissionModule, uint256 actualChainId) = wrapper.deployCompleteSyndicate(
-            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, chainSalt
+            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt
         );
 
         // Verify addresses match expectations
@@ -91,20 +90,18 @@ contract SyndicateFactoryWrapperTest is Test {
 
     function testDeployCompleteSyndicateWithRequireOrModule() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("module-salt-or"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("chain-salt-or"));
 
         // Compute expected addresses
         address expectedModuleAddr = orFactory.computeModuleAddress(user1, moduleSalt);
-        address expectedChainAddr = syndicateFactory.computeSequencingChainAddress(chainSalt, appchainId);
+        address expectedChainAddr = syndicateFactory.computeSequencingChainAddress(appchainId);
 
         vm.expectEmit(true, true, true, true);
         emit CompleteSyndicateDeployed(
             appchainId, expectedChainAddr, expectedModuleAddr, SyndicateFactoryWrapper.ModuleType.RequireOr, user1
         );
 
-        (address sequencingChain, address permissionModule, uint256 actualChainId) = wrapper.deployCompleteSyndicate(
-            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireOr, moduleSalt, chainSalt
-        );
+        (address sequencingChain, address permissionModule, uint256 actualChainId) =
+            wrapper.deployCompleteSyndicate(appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireOr, moduleSalt);
 
         // Verify addresses match expectations
         assertEq(sequencingChain, expectedChainAddr);
@@ -123,10 +120,9 @@ contract SyndicateFactoryWrapperTest is Test {
     // Convenience function tests
     function testDeployWithRequireAndModule() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("convenience-and-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("convenience-and-chain"));
 
         (address sequencingChain, address permissionModule, uint256 actualChainId) =
-            wrapper.deployWithRequireAndModule(appchainId, user1, moduleSalt, chainSalt);
+            wrapper.deployWithRequireAndModule(appchainId, user1, moduleSalt);
 
         assertTrue(sequencingChain != address(0));
         assertTrue(permissionModule != address(0));
@@ -139,10 +135,9 @@ contract SyndicateFactoryWrapperTest is Test {
 
     function testDeployWithRequireOrModule() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("convenience-or-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("convenience-or-chain"));
 
         (address sequencingChain, address permissionModule, uint256 actualChainId) =
-            wrapper.deployWithRequireOrModule(appchainId, user1, moduleSalt, chainSalt);
+            wrapper.deployWithRequireOrModule(appchainId, user1, moduleSalt);
 
         assertTrue(sequencingChain != address(0));
         assertTrue(permissionModule != address(0));
@@ -156,7 +151,6 @@ contract SyndicateFactoryWrapperTest is Test {
     // Auto-increment chain ID tests
     function testDeployWithAutoIncrementChainId() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("auto-increment-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("auto-increment-chain"));
 
         uint256 expectedChainId = wrapper.getNextAutoChainId();
 
@@ -164,8 +158,7 @@ contract SyndicateFactoryWrapperTest is Test {
             0, // Auto-increment
             user1,
             SyndicateFactoryWrapper.ModuleType.RequireAnd,
-            moduleSalt,
-            chainSalt
+            moduleSalt
         );
 
         assertTrue(sequencingChain != address(0));
@@ -179,15 +172,14 @@ contract SyndicateFactoryWrapperTest is Test {
     // Address computation tests
     function testComputeCompleteSyndicateAddresses() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("compute-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("compute-chain"));
 
         (address expectedModuleAddr, address expectedChainAddr) = wrapper.computeCompleteSyndicateAddresses(
-            user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, chainSalt, appchainId
+            user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, appchainId
         );
 
         // Deploy and verify addresses match
         (address sequencingChain, address permissionModule,) = wrapper.deployCompleteSyndicate(
-            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, chainSalt
+            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt
         );
 
         assertEq(permissionModule, expectedModuleAddr);
@@ -196,14 +188,13 @@ contract SyndicateFactoryWrapperTest is Test {
 
     function testComputeAddressesForDifferentModuleTypes() public view {
         bytes32 moduleSalt = keccak256(abi.encodePacked("diff-types-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("diff-types-chain"));
 
         (address andModuleAddr, address chainAddr1) = wrapper.computeCompleteSyndicateAddresses(
-            user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, chainSalt, appchainId
+            user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, appchainId
         );
 
         (address orModuleAddr, address chainAddr2) = wrapper.computeCompleteSyndicateAddresses(
-            user1, SyndicateFactoryWrapper.ModuleType.RequireOr, moduleSalt, chainSalt, appchainId
+            user1, SyndicateFactoryWrapper.ModuleType.RequireOr, moduleSalt, appchainId
         );
 
         // Module addresses should be different (different contract types)
@@ -215,11 +206,10 @@ contract SyndicateFactoryWrapperTest is Test {
     // Error handling tests
     function testDeployWithZeroAddressReverts() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("zero-addr-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("zero-addr-chain"));
 
         vm.expectRevert(SyndicateFactoryWrapper.ZeroAddress.selector);
         wrapper.deployCompleteSyndicate(
-            appchainId, address(0), SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, chainSalt
+            appchainId, address(0), SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt
         );
     }
 
@@ -251,7 +241,6 @@ contract SyndicateFactoryWrapperTest is Test {
 
     function testDeployWhenPausedReverts() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("paused-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("paused-chain"));
 
         // Pause the wrapper
         vm.prank(admin);
@@ -259,14 +248,11 @@ contract SyndicateFactoryWrapperTest is Test {
 
         // Try to deploy
         vm.expectRevert(); // Pausable will revert
-        wrapper.deployCompleteSyndicate(
-            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, chainSalt
-        );
+        wrapper.deployCompleteSyndicate(appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt);
     }
 
     function testDeployAfterUnpauseWorks() public {
         bytes32 moduleSalt = keccak256(abi.encodePacked("unpause-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("unpause-chain"));
 
         // Pause then unpause
         vm.prank(admin);
@@ -276,7 +262,7 @@ contract SyndicateFactoryWrapperTest is Test {
 
         // Should work after unpause
         (address sequencingChain, address permissionModule, uint256 actualChainId) = wrapper.deployCompleteSyndicate(
-            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, chainSalt
+            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt
         );
 
         assertTrue(sequencingChain != address(0));
@@ -315,11 +301,8 @@ contract SyndicateFactoryWrapperTest is Test {
 
         // Deploy something
         bytes32 moduleSalt = keccak256(abi.encodePacked("used-module"));
-        bytes32 chainSalt = keccak256(abi.encodePacked("used-chain"));
 
-        wrapper.deployCompleteSyndicate(
-            appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt, chainSalt
-        );
+        wrapper.deployCompleteSyndicate(appchainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt);
 
         // Now should be used
         assertEq(wrapper.isChainIdUsed(appchainId), true);
@@ -363,19 +346,15 @@ contract SyndicateFactoryWrapperTest is Test {
     // Integration tests
     function testMultipleDeploymentsDifferentTypes() public {
         bytes32 moduleSalt1 = keccak256(abi.encodePacked("multi-module-1"));
-        bytes32 chainSalt1 = keccak256(abi.encodePacked("multi-chain-1"));
         bytes32 moduleSalt2 = keccak256(abi.encodePacked("multi-module-2"));
-        bytes32 chainSalt2 = keccak256(abi.encodePacked("multi-chain-2"));
 
         // Deploy with RequireAndModule
-        (address chain1, address module1, uint256 chainId1) = wrapper.deployCompleteSyndicate(
-            12001, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt1, chainSalt1
-        );
+        (address chain1, address module1, uint256 chainId1) =
+            wrapper.deployCompleteSyndicate(12001, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt1);
 
         // Deploy with RequireOrModule
-        (address chain2, address module2, uint256 chainId2) = wrapper.deployCompleteSyndicate(
-            12002, user2, SyndicateFactoryWrapper.ModuleType.RequireOr, moduleSalt2, chainSalt2
-        );
+        (address chain2, address module2, uint256 chainId2) =
+            wrapper.deployCompleteSyndicate(12002, user2, SyndicateFactoryWrapper.ModuleType.RequireOr, moduleSalt2);
 
         // All addresses should be different
         assertTrue(chain1 != chain2);
@@ -391,19 +370,14 @@ contract SyndicateFactoryWrapperTest is Test {
     }
 
     // Fuzz testing
-    function testFuzzDeployWithDifferentParameters(
-        address _admin,
-        uint256 _chainId,
-        bytes32 _moduleSalt,
-        bytes32 _chainSalt
-    ) public {
+    function testFuzzDeployWithDifferentParameters(address _admin, uint256 _chainId, bytes32 _moduleSalt) public {
         vm.assume(_admin != address(0));
         vm.assume(_chainId != 0);
         vm.assume(_chainId < type(uint256).max / 2); // Avoid overflow in chain ID logic
         vm.assume(wrapper.isChainIdUsed(_chainId) == false); // Not already used
 
         (address sequencingChain, address permissionModule, uint256 actualChainId) = wrapper.deployCompleteSyndicate(
-            _chainId, _admin, SyndicateFactoryWrapper.ModuleType.RequireAnd, _moduleSalt, _chainSalt
+            _chainId, _admin, SyndicateFactoryWrapper.ModuleType.RequireAnd, _moduleSalt
         );
 
         assertTrue(sequencingChain != address(0));

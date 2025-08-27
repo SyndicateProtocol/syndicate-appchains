@@ -3,7 +3,8 @@ pragma solidity 0.8.28;
 
 import {IPermissionModule} from "./interfaces/IPermissionModule.sol";
 import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /// @title SequencingModuleChecker
 /// @notice A contract that delegates permission checks to modular permission systems
@@ -12,7 +13,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// 2. The permissionRequirementModule (typically RequireAndModule or RequireOrModule) handles the actual permission logic
 /// 3. This design allows for complex permission structures (AND/OR logic) that can be upgraded over time
 /// 4. The initialization pattern allows for proper setup of the permission system after deployment
-abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
+abstract contract SequencingModuleChecker is Initializable, OwnableUpgradeable, IPermissionModule {
     /// @notice The requirement module that handles checks
     IPermissionModule public permissionRequirementModule;
 
@@ -23,29 +24,12 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     error AlreadyInitialized();
     error NoTxData();
 
-    bool internal hasBeenInitialized = false;
-
-    /// @dev Constructor function
-    // [Olympix Warning: no parameter validation in constructor] Admin validation handled by OpenZeppelin's Ownable
-    constructor() Ownable(msg.sender) {
-        permissionRequirementModule = new NotInitializedModule();
-    }
-
-    /// @notice Initializes the contract with a new admin and a requirement module
-    /// @dev This two-step initialization process allows for proper setup of the contract:
-    /// 1. First deployed with a temporary admin (deployer)
-    /// 2. Then initialized with the permanent admin and requirement module
-    /// 3. Once initialized, it cannot be re-initialized (immutable pattern)
-    /// @param admin The address of the new admin
-    /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module.
-    /// Note that the zero address is allowed and corresponds to the always allowed module
-    function initialize(address admin, address _permissionRequirementModule) external onlyOwner {
-        if (hasBeenInitialized) revert AlreadyInitialized();
-        hasBeenInitialized = true;
-
+    function __SequencingModuleChecker_init(address admin, address _permissionRequirementModule)
+        internal
+        onlyInitializing
+    {
+        __Ownable_init(admin);
         permissionRequirementModule = IPermissionModule(_permissionRequirementModule);
-
-        transferOwnership(admin);
     }
 
     /// @notice Updates the requirement module

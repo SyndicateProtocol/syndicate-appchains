@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 import {GasCounter} from "./staking/GasCounter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 enum TransactionType {
     Unsigned, // an unsigned tx
@@ -47,9 +49,15 @@ enum TransactionType {
 ///
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
-contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequencingChain, GasCounter {
+contract SyndicateSequencingChain is
+    Initializable,
+    SequencingModuleChecker,
+    ISyndicateSequencingChain,
+    GasCounter,
+    UUPSUpgradeable
+{
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
-    uint256 public immutable appchainId;
+    uint256 public appchainId;
 
     /// @notice The address that receives emissions for this sequencing chain
     address public emissionsReceiver;
@@ -64,13 +72,31 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @param newReceiver The new emissions receiver address
     event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
 
-    /// @notice Constructs the SyndicateSequencingChain contract.
-    /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
-    //#olympix-ignore-missing-revert-reason-tests
-    constructor(uint256 _appchainId) SequencingModuleChecker() {
-        // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
+    /// @notice Disables initializers to prevent the implementation contract from being initialized
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice Initializes the SyndicateSequencingChain contract
+    /// @dev This function can only be called once. It sets the admin, permission requirement module, and appchain ID.
+    /// @param admin The address to be set as the contract owner
+    /// @param _permissionRequirementModule The address of the permission requirement module (e.g., RequireAndModule)
+    /// @param _appchainId The unique identifier for the application chain this contract sequences for (must not be 0)
+    function initialize(address admin, address _permissionRequirementModule, uint256 _appchainId)
+        external
+        initializer
+    {
         require(_appchainId != 0, "App chain ID cannot be 0");
+        __SequencingModuleChecker_init(admin, _permissionRequirementModule);
+        __UUPSUpgradeable_init();
         appchainId = _appchainId;
+    }
+
+    /// @notice Authorizes contract upgrades. Only callable by the contract owner.
+    /// @dev Required by UUPSUpgradeable to restrict upgradeability to the owner.
+    /// @param _newImplementation The address of the new implementation contract.
+    function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
+        // TODO: Confirm implementation is a allowlisted SyndicateSequencingChain contract
     }
 
     // We use per-address contract nonces instead of a global one to increase the predictability of the request id

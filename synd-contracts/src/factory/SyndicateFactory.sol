@@ -7,6 +7,8 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 enum NamespaceState {
     Available,
@@ -43,6 +45,8 @@ contract SyndicateFactory is AccessControl, Pausable {
     mapping(uint256 => address) public appchainContracts;
     uint256[] public chainIDs;
 
+    address public syndicateChainImpl;
+
     constructor(address admin) {
         if (admin == address(0)) revert ZeroAddress();
 
@@ -52,22 +56,22 @@ contract SyndicateFactory is AccessControl, Pausable {
         _updateNamespaceConfig(510);
 
         nextAutoChainId = 1;
+
+        syndicateChainImpl = address(new SyndicateSequencingChain());
     }
 
     /// @notice Creates a new SyndicateSequencingChain contract
     /// @param appchainId The app chain ID (0 for auto-increment)
     /// @param admin The admin address for the new chain
     /// @param permissionModule The pre-deployed permission module
-    /// @param salt The salt for CREATE2 deployment
     /// @return sequencingChain The deployed sequencing chain address
     /// @return actualChainId The chain ID that was used
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChain(
-        uint256 appchainId,
-        address admin,
-        IRequirementModule permissionModule,
-        bytes32 salt
-    ) external whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
+    function createSyndicateSequencingChain(uint256 appchainId, address admin, IRequirementModule permissionModule)
+        external
+        whenNotPaused
+        returns (address sequencingChain, uint256 actualChainId)
+    {
         if (admin == address(0) || address(permissionModule) == address(0)) {
             revert ZeroAddress();
         }
@@ -85,15 +89,15 @@ contract SyndicateFactory is AccessControl, Pausable {
         }
 
         // Deploy the sequencing chain using CREATE2
-        bytes memory bytecode = getBytecode(actualChainId);
-        sequencingChain = Create2.deploy(0, salt, bytecode);
+        bytes memory bytecode = getImplBytecode(syndicateChainImpl);
+        sequencingChain = Create2.deploy(0, bytes32(actualChainId), bytecode);
 
         // Store the mapping of appchain ID to contract address
         appchainContracts[actualChainId] = sequencingChain;
         chainIDs.push(actualChainId);
 
         // Initialize the contract
-        SyndicateSequencingChain(sequencingChain).initialize(admin, address(permissionModule));
+        SyndicateSequencingChain(sequencingChain).initialize(admin, address(permissionModule), actualChainId);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 
@@ -101,18 +105,18 @@ contract SyndicateFactory is AccessControl, Pausable {
     }
 
     /// @notice Computes the address where a sequencing chain will be deployed
-    /// @param salt The salt for CREATE2 deployment
-    /// @param chainId The chain ID
+    /// @param chainId The chain ID to compute the address for
     /// @return The computed address
-    function computeSequencingChainAddress(bytes32 salt, uint256 chainId) external view returns (address) {
-        return Create2.computeAddress(salt, keccak256(getBytecode(chainId)));
+    function computeSequencingChainAddress(uint256 chainId) external view returns (address) {
+        return Create2.computeAddress(bytes32(chainId), keccak256(getImplBytecode(syndicateChainImpl)));
     }
 
-    /// @notice Returns the bytecode for deploying a SyndicateSequencingChain
-    /// @param chainId The chain ID
-    /// @return The bytecode with constructor parameters
-    function getBytecode(uint256 chainId) public pure returns (bytes memory) {
-        return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId));
+    /// @notice Returns the creation bytecode for an ERC1967Proxy with the given implementation address.
+    /// @dev Used for deterministic deployment of proxy contracts via CREATE2.
+    /// @param impl The address of the implementation contract.
+    /// @return The bytecode to be used for deployment.
+    function getImplBytecode(address impl) public pure returns (bytes memory) {
+        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(impl, ""));
     }
 
     /// @notice Get the next auto-generated chain ID

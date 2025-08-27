@@ -8,6 +8,7 @@ import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {RequireCompositeModule} from "src/requirement-modules/RequireCompositeModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract SyndicateFactoryTest is Test {
     SyndicateFactory public factory;
@@ -44,14 +45,13 @@ contract SyndicateFactoryTest is Test {
         RequireAndModule permissionModule = new RequireAndModule(admin);
         address permissionModuleAddress = address(permissionModule);
 
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-test-1"));
-        address expectedAddress = factory.computeSequencingChainAddress(salt, appchainId);
+        address expectedAddress = factory.computeSequencingChainAddress(appchainId);
 
         vm.expectEmit(true, true, true, true);
         emit SyndicateSequencingChainCreated(appchainId, expectedAddress, permissionModuleAddress);
 
         (address sequencingChainAddress, uint256 actualChainId) =
-            factory.createSyndicateSequencingChain(appchainId, admin, permissionModule, salt);
+            factory.createSyndicateSequencingChain(appchainId, admin, permissionModule);
 
         assertTrue(sequencingChainAddress != address(0));
         assertTrue(permissionModuleAddress != address(0));
@@ -73,14 +73,13 @@ contract SyndicateFactoryTest is Test {
         RequireOrModule permissionModule = new RequireOrModule(admin);
         address permissionModuleAddress = address(permissionModule);
 
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-test-2"));
-        address expectedAddress = factory.computeSequencingChainAddress(salt, appchainId);
+        address expectedAddress = factory.computeSequencingChainAddress(appchainId);
 
         vm.expectEmit(true, true, true, true);
         emit SyndicateSequencingChainCreated(appchainId, expectedAddress, permissionModuleAddress);
 
         (address sequencingChainAddress, uint256 actualChainId) =
-            factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(permissionModule), salt);
+            factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(permissionModule));
 
         assertTrue(sequencingChainAddress != address(0));
         assertTrue(permissionModuleAddress != address(0));
@@ -102,9 +101,8 @@ contract SyndicateFactoryTest is Test {
         RequireCompositeModule permissionModule = new RequireCompositeModule(admin);
         address permissionModuleAddress = address(permissionModule);
 
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-test-composite"));
         (address sequencingChainAddress, uint256 actualChainId) =
-            factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(permissionModule), salt);
+            factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(permissionModule));
 
         assertTrue(sequencingChainAddress != address(0));
         assertEq(actualChainId, appchainId);
@@ -120,14 +118,10 @@ contract SyndicateFactoryTest is Test {
         RequireOrModule permissionModule2 = new RequireOrModule(admin);
         uint256 differentChainId = 10042002;
 
-        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-test-7"));
-        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-test-8"));
-
-        (address sequencingChain1, uint256 actualChainId1) = factory.createSyndicateSequencingChain(
-            appchainId, admin, IRequirementModule(address(permissionModule)), salt1
-        );
+        (address sequencingChain1, uint256 actualChainId1) =
+            factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule)));
         (address sequencingChain2, uint256 actualChainId2) = factory.createSyndicateSequencingChain(
-            differentChainId, admin, IRequirementModule(address(permissionModule2)), salt2
+            differentChainId, admin, IRequirementModule(address(permissionModule2))
         );
 
         assertEq(SyndicateSequencingChain(sequencingChain1).appchainId(), appchainId);
@@ -138,19 +132,14 @@ contract SyndicateFactoryTest is Test {
 
     function testRevertsOnZeroAdmin() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-test-9"));
 
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChain(
-            appchainId, address(0), IRequirementModule(address(permissionModule)), salt
-        );
+        factory.createSyndicateSequencingChain(appchainId, address(0), IRequirementModule(address(permissionModule)));
     }
 
     function testRevertsOnZeroPermissionModule() public {
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-test-10"));
-
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(0)), salt);
+        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(0)));
     }
 
     function testAutoIncrementOnZeroChainId() public {
@@ -160,9 +149,8 @@ contract SyndicateFactoryTest is Test {
         uint256 namespacePrefix = factory.namespacePrefix();
         uint256 expectedChainId = (namespacePrefix * 10) + 1;
 
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-auto-increment"));
         (address sequencingChainAddress, uint256 actualChainId) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule)), salt);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule)));
 
         assertTrue(sequencingChainAddress != address(0));
         assertEq(actualChainId, expectedChainId);
@@ -175,20 +163,18 @@ contract SyndicateFactoryTest is Test {
 
     function testCreateSequencingChainAddressIsDeterministic() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-deterministic"));
 
-        address expectedAddress = factory.computeSequencingChainAddress(salt, appchainId);
-        (address sequencingChainAddress,) = factory.createSyndicateSequencingChain(
-            appchainId, admin, IRequirementModule(address(permissionModule)), salt
-        );
+        address expectedAddress = factory.computeSequencingChainAddress(appchainId);
+        (address sequencingChainAddress,) =
+            factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule)));
 
         assertEq(sequencingChainAddress, expectedAddress);
     }
 
-    function testGetBytecode() public view {
-        bytes memory bytecode = factory.getBytecode(appchainId);
-        bytes memory expectedBytecode =
-            abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(appchainId));
+    function testGetBytecode() public {
+        address impl = address(new SyndicateSequencingChain());
+        bytes memory bytecode = factory.getImplBytecode(impl);
+        bytes memory expectedBytecode = abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(impl, ""));
         assertEq(bytecode, expectedBytecode);
     }
 
@@ -198,9 +184,8 @@ contract SyndicateFactoryTest is Test {
         RequireCompositeModule permissionModule3 = new RequireCompositeModule(admin);
 
         // First auto-incremented chain ID
-        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-auto-1"));
         (, uint256 id1) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)), salt1);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)));
 
         // Fetch dynamic values from contract
         uint256 namespacePrefix = factory.namespacePrefix();
@@ -208,16 +193,14 @@ contract SyndicateFactoryTest is Test {
         assertEq(id1, expectedId1);
 
         // Second auto-incremented chain ID
-        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-auto-2"));
         (, uint256 id2) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)), salt2);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)));
         uint256 expectedId2 = (namespacePrefix * 10) + 2;
         assertEq(id2, expectedId2);
 
         // Third auto-incremented chain ID
-        bytes32 salt3 = keccak256(abi.encodePacked("salt-for-auto-3"));
         (, uint256 id3) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule3)), salt3);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule3)));
         uint256 expectedId3 = (namespacePrefix * 10) + 3;
         assertEq(id3, expectedId3);
     }
@@ -228,9 +211,8 @@ contract SyndicateFactoryTest is Test {
         RequireCompositeModule permissionModule3 = new RequireCompositeModule(admin);
 
         // Auto chain ID
-        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-mixed-1"));
         (, uint256 id1) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)), salt1);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)));
 
         // Fetch dynamic values from contract
         uint256 namespacePrefix = factory.namespacePrefix();
@@ -239,16 +221,13 @@ contract SyndicateFactoryTest is Test {
 
         // Manual chain ID
         uint256 manualId = 42000;
-        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-mixed-2"));
-        (, uint256 id2) = factory.createSyndicateSequencingChain(
-            manualId, admin, IRequirementModule(address(permissionModule2)), salt2
-        );
+        (, uint256 id2) =
+            factory.createSyndicateSequencingChain(manualId, admin, IRequirementModule(address(permissionModule2)));
         assertEq(id2, manualId);
 
         // Back to auto chain ID
-        bytes32 salt3 = keccak256(abi.encodePacked("salt-for-mixed-3"));
         (, uint256 id3) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule3)), salt3);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule3)));
         // Should be next auto ID since we only used one auto ID so far
         uint256 expectedId3 = (namespacePrefix * 10) + 2;
         assertEq(id3, expectedId3);
@@ -259,13 +238,11 @@ contract SyndicateFactoryTest is Test {
         RequireOrModule permissionModule2 = new RequireOrModule(admin);
 
         // Create first chain
-        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-duplicate-1"));
-        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule1)), salt1);
+        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule1)));
 
         // Try to create another with same chain ID
-        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-duplicate-2"));
         vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
-        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule2)), salt2);
+        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule2)));
     }
 
     function testIsChainIdUsed() public {
@@ -276,16 +253,14 @@ contract SyndicateFactoryTest is Test {
         assertEq(factory.isChainIdUsed(appchainId), false);
 
         // Create chain
-        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-used-1"));
-        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule1)), salt1);
+        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule1)));
 
         // Now chain ID should be marked as used
         assertEq(factory.isChainIdUsed(appchainId), true);
 
         // Auto-incremented ID should also be marked as used
-        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-used-2"));
         (, uint256 id2) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)), salt2);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)));
         assertEq(factory.isChainIdUsed(id2), true);
     }
 
@@ -331,7 +306,6 @@ contract SyndicateFactoryTest is Test {
 
     function testCreateSequencingChainWhenPausedReverts() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-paused"));
 
         // Pause the factory
         vm.prank(admin);
@@ -339,12 +313,11 @@ contract SyndicateFactoryTest is Test {
 
         // Try to create sequencing chain
         vm.expectRevert(); // Pausable will revert with "Pausable: paused"
-        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule)), salt);
+        factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule)));
     }
 
     function testCreateSequencingChainAfterUnpauseWorks() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
-        bytes32 salt = keccak256(abi.encodePacked("salt-for-unpause"));
 
         // Pause then unpause
         vm.prank(admin);
@@ -353,9 +326,8 @@ contract SyndicateFactoryTest is Test {
         factory.unpause();
 
         // Should work after unpause
-        (address sequencingChainAddress, uint256 actualChainId) = factory.createSyndicateSequencingChain(
-            appchainId, admin, IRequirementModule(address(permissionModule)), salt
-        );
+        (address sequencingChainAddress, uint256 actualChainId) =
+            factory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(address(permissionModule)));
 
         assertTrue(sequencingChainAddress != address(0));
         assertEq(actualChainId, appchainId);
@@ -420,9 +392,8 @@ contract SyndicateFactoryTest is Test {
         RequireOrModule permissionModule2 = new RequireOrModule(admin);
 
         // Create a chain with old namespace
-        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-namespace-1"));
         (, uint256 id1) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)), salt1);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)));
 
         // Verify chain ID follows current formula
         uint256 namespacePrefix = factory.namespacePrefix();
@@ -436,9 +407,8 @@ contract SyndicateFactoryTest is Test {
         factory.updateNamespaceConfig(newPrefix);
 
         // Create a chain with new namespace
-        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-namespace-2"));
         (, uint256 id2) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)), salt2);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)));
 
         // New namespace: (600 * 10) + 2 (counter is at 2 now)
         uint256 expectedId2 = (newPrefix * 10) + 2;
@@ -468,24 +438,21 @@ contract SyndicateFactoryTest is Test {
         // First: dynamic calculation
         uint256 namespacePrefix = factory.namespacePrefix();
 
-        bytes32 salt1 = keccak256(abi.encodePacked("arithmetic-1"));
         (, uint256 id1) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)), salt1);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule1)));
         uint256 expectedId1 = (namespacePrefix * 10) + 1;
         assertEq(id1, expectedId1);
 
         // Second: dynamic calculation
-        bytes32 salt2 = keccak256(abi.encodePacked("arithmetic-2"));
         (, uint256 id2) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)), salt2);
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule2)));
         uint256 expectedId2 = (namespacePrefix * 10) + 2;
         assertEq(id2, expectedId2);
 
         // Create several more to test sequential generation
         for (uint256 i = 3; i <= 5; i++) {
             RequireAndModule pm = new RequireAndModule(admin);
-            bytes32 salt = keccak256(abi.encodePacked("arithmetic-loop", i));
-            (, uint256 id) = factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(pm)), salt);
+            (, uint256 id) = factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(pm)));
 
             // Expected: (namespacePrefix * 10) + i
             uint256 expectedId = (namespacePrefix * 10) + i;
@@ -504,17 +471,14 @@ contract SyndicateFactoryTest is Test {
         uint256 newNamespacePrefix = factory.namespacePrefix(); // 999 after update
         uint256 expectedId = (newNamespacePrefix * 10) + 1;
 
-        bytes32 salt = keccak256(abi.encodePacked("large-number"));
-        (, uint256 id) =
-            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule)), salt);
+        (, uint256 id) = factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule)));
         assertEq(id, expectedId);
     }
 
     function testSequencingChainImplementationAddress() public view {
         // Test that implementation address is set and not zero
-        bytes32 salt = keccak256(abi.encodePacked("impl-test"));
         uint256 chainId = 510_000_000_001; // Use an auto-generated ID
-        address impl = factory.computeSequencingChainAddress(salt, chainId);
+        address impl = factory.computeSequencingChainAddress(chainId);
         assertTrue(impl != address(0));
     }
 
@@ -528,25 +492,13 @@ contract SyndicateFactoryTest is Test {
         vm.assume(factory.isChainIdUsed(chainId) == false);
 
         RequireAndModule permissionModule = new RequireAndModule(admin);
-        bytes32 salt = keccak256(abi.encodePacked("fuzz-test", chainId));
 
         (address sequencingChainAddress, uint256 actualChainId) =
-            factory.createSyndicateSequencingChain(chainId, admin, IRequirementModule(address(permissionModule)), salt);
+            factory.createSyndicateSequencingChain(chainId, admin, IRequirementModule(address(permissionModule)));
 
         assertTrue(sequencingChainAddress != address(0));
         assertEq(actualChainId, chainId);
         assertEq(factory.isChainIdUsed(chainId), true);
-    }
-
-    function testFuzzSalts(bytes32 salt) public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        (address sequencingChainAddress,) = factory.createSyndicateSequencingChain(
-            appchainId, admin, IRequirementModule(address(permissionModule)), salt
-        );
-
-        assertTrue(sequencingChainAddress != address(0));
-        assertEq(sequencingChainAddress, factory.computeSequencingChainAddress(salt, appchainId));
     }
 
     function testNewChainIdGenerationFormat() public view {
@@ -594,22 +546,19 @@ contract SyndicateFactoryTest is Test {
     function testGetContractsForAppchains() public {
         // Create a few chains with non-sequential chain IDs
         RequireAndModule permissionModule = new RequireAndModule(admin);
-        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-test-9a"));
-        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-test-9b"));
-        bytes32 salt3 = keccak256(abi.encodePacked("salt-for-test-9c"));
 
         uint256 appchainId1 = 100;
         uint256 appchainId2 = 200;
         uint256 appchainId3 = 300;
 
         vm.prank(nonManager);
-        (address chain1,) = factory.createSyndicateSequencingChain(appchainId1, admin, permissionModule, salt1);
+        (address chain1,) = factory.createSyndicateSequencingChain(appchainId1, admin, permissionModule);
 
         vm.prank(nonManager);
-        (address chain2,) = factory.createSyndicateSequencingChain(appchainId2, admin, permissionModule, salt2);
+        (address chain2,) = factory.createSyndicateSequencingChain(appchainId2, admin, permissionModule);
 
         vm.prank(nonManager);
-        (address chain3,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule, salt3);
+        (address chain3,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule);
 
         // Test getContractsForAppchains with specific chain IDs
         uint256[] memory chainIDs = new uint256[](2);
@@ -636,17 +585,14 @@ contract SyndicateFactoryTest is Test {
 
     function testGetAppchainsAndContracts() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
-        bytes32 salt1 = keccak256(abi.encodePacked("salt-for-bug-test-1"));
-        bytes32 salt2 = keccak256(abi.encodePacked("salt-for-bug-test-2"));
-        bytes32 salt3 = keccak256(abi.encodePacked("salt-for-bug-test-3"));
 
         uint256 appchainId1 = 1000;
         uint256 appchainId2 = 2000;
         uint256 appchainId3 = 3000;
 
-        (address chain1Addr,) = factory.createSyndicateSequencingChain(appchainId1, admin, permissionModule, salt1);
-        (address chain2Addr,) = factory.createSyndicateSequencingChain(appchainId2, admin, permissionModule, salt2);
-        (address chain3Addr,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule, salt3);
+        (address chain1Addr,) = factory.createSyndicateSequencingChain(appchainId1, admin, permissionModule);
+        (address chain2Addr,) = factory.createSyndicateSequencingChain(appchainId2, admin, permissionModule);
+        (address chain3Addr,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule);
 
         (uint256[] memory chainIDs, address[] memory contracts) = factory.getAppchainsAndContracts();
         assertEq(chainIDs.length, 3);

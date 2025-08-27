@@ -7,6 +7,8 @@ import {SyndicateSequencingChain, TransactionType, SequencingModuleChecker} from
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -51,9 +53,7 @@ contract SyndicateSequencingChainTestSetUp is Test {
         uint256 appchainId = 10042001;
         vm.startPrank(admin);
         factory = new SyndicateFactory(admin);
-        (address chainAddress,) = factory.createSyndicateSequencingChain(
-            appchainId, admin, _permissionModule, keccak256(abi.encodePacked("test-salt"))
-        );
+        (address chainAddress,) = factory.createSyndicateSequencingChain(appchainId, admin, _permissionModule);
         vm.stopPrank();
         return SyndicateSequencingChain(chainAddress);
     }
@@ -152,8 +152,31 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testConstructorWithZeroAppChainId() public {
+        address chainImpl = address(new SyndicateSequencingChain());
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+
         vm.expectRevert("App chain ID cannot be 0");
-        new SyndicateSequencingChain(0);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 0);
+    }
+
+    function testUpgradeBadguy() public {
+        address chainImpl = address(new SyndicateSequencingChain());
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
+
+        address badguy = makeAddr("badguy");
+        vm.prank(badguy);
+        vm.expectRevert();
+        UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
+    }
+
+    function testUpgradeOwner() public {
+        address chainImpl = address(new SyndicateSequencingChain());
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
+
+        vm.prank(admin);
+        UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
     }
 
     function testProcessTransactionsBulkAllAllowed() public {

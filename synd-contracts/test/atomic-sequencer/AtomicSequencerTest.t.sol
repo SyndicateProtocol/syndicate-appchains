@@ -50,9 +50,7 @@ contract AtomicSequencerTest is Test {
 
     function deployFromFactory(uint256 appchainId) public returns (SyndicateSequencingChain) {
         SyndicateFactory factory = new SyndicateFactory(admin);
-        (address chainAddress,) = factory.createSyndicateSequencingChain(
-            appchainId, admin, permissionModule, keccak256(abi.encodePacked("test-salt"))
-        );
+        (address chainAddress,) = factory.createSyndicateSequencingChain(appchainId, admin, permissionModule);
         return SyndicateSequencingChain(chainAddress);
     }
 
@@ -106,8 +104,7 @@ contract AtomicSequencerTest is Test {
     }
 
     function testProcessMultipleChains() public {
-        SyndicateSequencingChain chainC = new SyndicateSequencingChain(10042003);
-        chainC.initialize(admin, address(permissionModule));
+        SyndicateSequencingChain chainC = deployFromFactory(10042003);
 
         SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](3);
         chains[0] = chainA;

@@ -28,17 +28,14 @@ contract DeploySyndicateFactory is Script {
         requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
 
-        bytes32 salt = bytes32(appchainId);
-
-        address module = requireAndModuleFactory.createRequireAndModule(admin, salt);
+        address module = requireAndModuleFactory.createRequireAndModule(admin, bytes32(appchainId));
         console.log("Deployed RequireAndModule", module);
 
         // create SyndicateSequencingChain with the permission module
         (address sequencingChain, uint256 chainId) = syndicateFactory.createSyndicateSequencingChain(
             0, // auto-increment
             admin,
-            IRequirementModule(module),
-            salt
+            IRequirementModule(module)
         );
 
         console.log("Deployed SyndicateSequencingChain", sequencingChain);
@@ -65,8 +62,8 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
         console.log("Deployed RequireAndModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencingChain = new SyndicateSequencingChain(appchainId);
-        sequencingChain.initialize(admin, address(permissionModule));
+        sequencingChain = new SyndicateSequencingChain();
+        sequencingChain.initialize(admin, address(permissionModule), appchainId);
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 
         // Deploy and add always allowed module
