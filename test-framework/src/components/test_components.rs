@@ -243,8 +243,8 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    seq_chain_info.provider.get_balance(test_account1().address).await?
-                        >= parse_ether("10")?,
+                    seq_chain_info.provider.get_balance(test_account1().address).await? >=
+                        parse_ether("10")?,
                     Duration::from_secs(10)
                 );
 
@@ -258,7 +258,7 @@ impl TestComponents {
         let _ = SyndicateSequencingChain::deploy_builder(&seq_provider).send().await?;
         let sequencing_contract_address_impl = seq_provider.default_signer_address().create(0);
 
-        let result = ERC1967Proxy::deploy_builder(
+        let _ = ERC1967Proxy::deploy_builder(
             &seq_provider,
             sequencing_contract_address_impl,
             Bytes::new(),
@@ -374,8 +374,8 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    set_chain_info.provider.get_balance(test_account1().address).await?
-                        >= parse_ether("10")?,
+                    set_chain_info.provider.get_balance(test_account1().address).await? >=
+                        parse_ether("10")?,
                     Duration::from_secs(10)
                 );
                 settlement_deployment = Some(set_deployment);

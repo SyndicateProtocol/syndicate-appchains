@@ -49,6 +49,8 @@ enum TransactionType {
 ///
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
+///
+/// To view the storage layout, run "forge inspect SyndicateSequencingChain storageLayout"
 contract SyndicateSequencingChain is
     Initializable,
     SequencingModuleChecker,
@@ -56,11 +58,27 @@ contract SyndicateSequencingChain is
     GasCounter,
     UUPSUpgradeable
 {
+    /*//////////////////////////////////////////////////////////////
+                STATE VARIABLES - DO NOT REORDER
+    //////////////////////////////////////////////////////////////*/
+
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
+    /// Storage slot 0
     uint256 public appchainId;
 
     /// @notice The address that receives emissions for this sequencing chain
+    /// Storage slot 1
     address public emissionsReceiver;
+
+    // We use per-address contract nonces instead of a global one to increase the predictability of the request id
+    // and store per-address contract tx counts for debugging purposes.
+    // Note that gaps are allowed in the request id, unlike a regular nonce.
+    /// Storage slot 2
+    mapping(address => uint256) public contractNonce;
+
+    /*//////////////////////////////////////////////////////////////
+                            EVENTS
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Emitted when a new transaction is processed
     /// @param sender The address that submitted the transaction
@@ -71,6 +89,10 @@ contract SyndicateSequencingChain is
     /// @param oldReceiver The previous emissions receiver address
     /// @param newReceiver The new emissions receiver address
     event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
+
+    /*//////////////////////////////////////////////////////////////
+                            FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Disables initializers to prevent the implementation contract from being initialized
     constructor() {
@@ -98,11 +120,6 @@ contract SyndicateSequencingChain is
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
         // TODO: Confirm implementation is a allowlisted SyndicateSequencingChain contract
     }
-
-    // We use per-address contract nonces instead of a global one to increase the predictability of the request id
-    // and store per-address contract tx counts for debugging purposes.
-    // Note that gaps are allowed in the request id, unlike a regular nonce.
-    mapping(address => uint256) public contractNonce;
 
     /// this is intentionally different from the standard offset used by rollups to prevent collisions
     uint160 public constant OFFSET = uint160(0x1000000000000000000000000000000000000001);
