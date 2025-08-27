@@ -1,0 +1,55 @@
+{
+  "storage": [
+    {
+      "astId": 1718,
+      "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
+      "label": "appchainId",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 1721,
+      "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
+      "label": "emissionsReceiver",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_address"
+    },
+    {
+      "astId": 1726,
+      "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
+      "label": "contractNonce",
+      "offset": 0,
+      "slot": "2",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 1728,
+      "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
+      "label": "dummy",
+      "offset": 0,
+      "slot": "3",
+      "type": "t_address"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": "20"
+    },
+    "t_mapping(t_address,t_uint256)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => uint256)",
+      "numberOfBytes": "32",
+      "value": "t_uint256"
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": "32"
+    }
+  }
+}
