@@ -107,7 +107,6 @@ contract L1Relayer is AccessControl {
 
     /**
      * @notice Relays tokens to L2 and sends a message to execute operations
-     * @param amount The amount of tokens to relay
      * @param destination The destination contract address on L2
      * @param epochIndex The epoch index for the operation
      * @dev This function performs two operations:
@@ -136,14 +135,13 @@ contract L1Relayer is AccessControl {
 
     /**
      * @notice Internal function to relay the operation message to L2
-     * @param amount The amount of tokens being relayed
      * @param destination The destination contract address on L2
      * @param epochIndex The epoch index for the operation
      * @dev Sends a cross-chain message to the L2Relayer contract
      * @dev The message contains the relay function call with parameters
      * @dev Uses the configured minimum gas limit for the message execution
      */
-    function _relay(uint256 amount, address destination, uint256 epochIndex) internal {
+    function _relay(address destination, uint256 epochIndex) internal {
         IOPMessageRelayer(opMessageRelayer).sendMessage(
             l2Relayer, abi.encodeWithSelector(this.relay.selector, destination, epochIndex), minGasLimit
         );
