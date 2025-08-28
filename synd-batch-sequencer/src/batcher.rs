@@ -266,7 +266,6 @@ impl Batcher {
             true => SequencingBatch::Compressed(vec![], vec![]),
             false => SequencingBatch::Uncompressed(vec![]),
         };
-        let mut uncompressed_size = 0;
         let mut last_included_id = "0-0".to_string();
 
         'outer: loop {
@@ -305,7 +304,6 @@ impl Batcher {
                     break 'outer;
                 }
 
-                uncompressed_size += tx_bytes.len();
                 debug!(
                     %self.config.chain_id, %tx_id, batch_size = %proposed_batch.len(), "Adding transaction to batch",
                 );
@@ -319,7 +317,8 @@ impl Batcher {
             if batch.len() > batch.uncompressed_size() {
                 debug!(%self.config.chain_id, "Batch compressed size is larger than uncompressed size.");
             }
-            self.metrics.record_compression_space_saving_pct(batch.uncompressed_size(), batch.len());
+            self.metrics
+                .record_compression_space_saving_pct(batch.uncompressed_size(), batch.len());
         }
         Ok((batch, last_included_id))
     }
