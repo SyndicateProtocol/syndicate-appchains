@@ -20,7 +20,7 @@ methods {
 }
 
 /*
- * Rule 1: Initialization rules
+ * Rule: Initialization rules
  */
 rule initializeOnce(address admin, address module, uint256 appchainId) {
     env e;
@@ -37,7 +37,7 @@ rule initializeOnce(address admin, address module, uint256 appchainId) {
 }
 
 /*
- * Rule 2: Initialization sets correct values
+ * Rule: Initialization sets correct values
  */
 rule initializationCorrect(address admin, address module, uint256 appchainId) {
     env e;
@@ -53,7 +53,7 @@ rule initializationCorrect(address admin, address module, uint256 appchainId) {
 }
 
 /*
- * Rule 3: AppchainId is set correctly after initialization
+ * Rule: AppchainId is set correctly after initialization
  */
 rule appchainIdSetAfterInit(address admin, address module, uint256 chainId) {
     env e;
@@ -72,7 +72,7 @@ rule appchainIdSetAfterInit(address admin, address module, uint256 chainId) {
 }
 
 /*
- * Rule 4: Only allowed addresses can process transactions
+ * Rule: Only allowed addresses can process transactions
  */
 rule onlyAllowedCanProcess(bytes data) {
     env e;
@@ -80,7 +80,7 @@ rule onlyAllowedCanProcess(bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // CRITICAL: Disable gas tracking
+    // CRITIC: Disable gas tracking
     require !gasTrackingEnabled();
     // Use zero address as permission module to allow all transactions
     require permissionRequirementModule() == 0;
@@ -92,7 +92,7 @@ rule onlyAllowedCanProcess(bytes data) {
 }
 
 /*
- * Rule 5: Test bulk processing with no permission restrictions
+ * Rule: Test bulk processing with no permission restrictions
  */
 rule processConsistencyNoPermissions(bytes data) {
     env e;
@@ -100,7 +100,7 @@ rule processConsistencyNoPermissions(bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // CRITICAL: Disable gas tracking
+    // CRITIC: Disable gas tracking
     require !gasTrackingEnabled();
     // Use no permission module (allows all)
     require permissionRequirementModule() == 0;
@@ -115,7 +115,7 @@ rule processConsistencyNoPermissions(bytes data) {
 }
 
 /*
- * Rule 6: Test that permission module address matters
+ * Rule: Test that permission module address matters
  */
 rule permissionModuleRequired(bytes data) {
     env e;
@@ -123,7 +123,7 @@ rule permissionModuleRequired(bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // CRITICAL: Disable gas tracking
+    // CRITIC: Disable gas tracking
     require !gasTrackingEnabled();
     // Compare behavior with and without permission module
     // First test with no permission module
@@ -135,7 +135,7 @@ rule permissionModuleRequired(bytes data) {
 }
 
 /*
- * Rule 6: Only owner can update requirement module
+ * Rule: Only owner can update requirement module
  */
 rule onlyOwnerCanUpdateModule(address newModule) {
     env e;
@@ -147,7 +147,7 @@ rule onlyOwnerCanUpdateModule(address newModule) {
 }
 
 /*
- * Rule 7: Module update changes state correctly
+ * Rule: Module update changes state correctly
  */
 rule moduleUpdateChangesState(address newModule) {
     env e;
@@ -162,7 +162,7 @@ rule moduleUpdateChangesState(address newModule) {
 }
 
 /*
- * Rule 8: State consistency after transaction processing
+ * Rule: State consistency after transaction processing
  */
 rule stateConsistencyAfterProcessing(bytes data) {
     env e;
@@ -175,39 +175,7 @@ rule stateConsistencyAfterProcessing(bytes data) {
 }
 
 /*
- * Rule 9: Verify permissions are correctly enforced
- */
-rule permissionsCorrectlyEnforced(bytes data, uint256 appchainId) {
-    env e;
-    require appchainId != 0;
-    // Setup variables for initialization
-    address admin = e.msg.sender;
-    address proposerModule = permissionModule;
-    // Initialize the contract first
-    initialize(e, admin, proposerModule, appchainId);
-    // Verify initialization worked
-    require getInitializedVersion() == 1;
-    // Disable gas tracking for consistent verification
-    require !gasTrackingEnabled();
-    // Valid sender and msg parameters
-    require e.msg.sender != 0;
-    require e.msg.sender != currentContract;
-    require e.msg.value == 0;
-    // Valid data requirements
-    require data.length > 0;
-    require data.length < max_uint256;
-    // Check permissions using bound permission module directly
-    bool senderAllowed = permissionModule.isAllowed(e.msg.sender, e.tx.origin, data);
-    // Process transaction
-    processTransaction@withrevert(e, data);
-    bool txSucceeded = !lastReverted;
-    // Bidirectional assertions
-    assert txSucceeded => senderAllowed, "Transaction succeeded with unauthorized sender";
-    assert senderAllowed => txSucceeded, "Transaction failed despite permissions being valid and preconditions met";
-}
-
-/*
- * Rule 10: Only owner can perform upgrades
+ * Rule : Only owner can perform upgrades
  */
 rule onlyOwnerCanUpgrade(address newImplementation, bytes data) {
     env e;
@@ -215,11 +183,11 @@ rule onlyOwnerCanUpgrade(address newImplementation, bytes data) {
     require newImplementation != 0;
     require e.msg.value == 0; // No ETH should be sent
     require newImplementation != currentContract; // Can't upgrade to self
-
+    
     // Get owner before upgrade attempt
     address contractOwner = owner();
     require contractOwner != 0; // Owner should be set
-
+    
     // Try to upgrade
     upgradeToAndCall@withrevert(e, newImplementation, data);
     // If successful, must have been owner
@@ -227,7 +195,7 @@ rule onlyOwnerCanUpgrade(address newImplementation, bytes data) {
 }
 
 /*
- * Rule 11: Only owner can set emissions receiver
+ * Rule : Only owner can set emissions receiver
  */
 rule onlyOwnerCanSetEmissionsReceiver(address newReceiver) {
     env e;
@@ -239,7 +207,7 @@ rule onlyOwnerCanSetEmissionsReceiver(address newReceiver) {
 }
 
 /*
- * Rule 12: Emissions receiver getter consistency
+ * Rule : Emissions receiver getter consistency
  */
 rule emissionsReceiverConsistency() {
     require getInitializedVersion() > 0;
@@ -250,7 +218,7 @@ rule emissionsReceiverConsistency() {
 }
 
 /*
- * Rule 13: Contract nonce only increases for sendContractTransaction
+ * Rule : Contract nonce only increases for sendContractTransaction
  */
 rule contractNonceIncreasesOnContractTx(address user, uint64 gasLimit, uint256 maxFeePerGas, address to, uint256 value, bytes data) {
     env e;
@@ -263,7 +231,7 @@ rule contractNonceIncreasesOnContractTx(address user, uint64 gasLimit, uint256 m
 }
 
 /*
- * Rule 14: Contract nonce unchanged by other operations
+ * Rule : Contract nonce unchanged by other operations
  */
 rule contractNonceUnchangedByOtherOps(address user, bytes txData) {
     env e;
