@@ -11,7 +11,7 @@ import {EpochTracker} from "../../staking/EpochTracker.sol";
 
 // TODO: Use the real Relayer contract when everything is ready
 interface IRelayer {
-    function relay(uint256 amount, address destination, uint256 epochIndex) external;
+    function relay(address destinationL3, uint256 epochIndex) external;
 }
 
 /**
@@ -60,17 +60,17 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
     /// @notice The EmissionsCalculator that handles emission calculations
     EmissionsCalculator public immutable emissionsCalculator;
 
+    /// @notice The epoch index when emissions started
+    uint256 public immutable epochStartIndex;
+
     /// @notice The Relayer contract
-    IRelayer public immutable relayer;
+    IRelayer public relayer;
 
     /// @notice The destination address for the relayer (ON THE COMMONS L3 CHAIN)
-    address public relayDestination;
-
-    /// @notice The epoch index when emissions started
-    uint256 public epochStartIndex;
+    address public relayDestinationL3;
 
     /// @notice Tracks which epochs have been minted
-    mapping(uint256 => bool) public epochMinted;
+    mapping(uint256 epochIndex => bool isMinted) public epochMinted;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -87,28 +87,28 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
      * @notice Initialize the emission scheduler contract
      * @param _emissionsCalculator Address of the EmissionsCalculator contract
      * @param _relayer Address of the Relayer contract
-     * @param _relayDestination Address of the relay destination on the commons L3 chain
+     * @param _relayDestinationL3 Address of the relay destination on the commons L3 chain
      * @param defaultAdmin Address that will have default admin privileges
      * @param pauser Address that can pause the contract in emergencies
      */
     constructor(
         address _emissionsCalculator,
         address _relayer,
-        address _relayDestination,
+        address _relayDestinationL3,
         address defaultAdmin,
         address pauser
     ) {
         // Input validation
         if (_emissionsCalculator == address(0)) revert ZeroAddress();
         if (_relayer == address(0)) revert ZeroAddress();
-        if (_relayDestination == address(0)) revert ZeroAddress();
+        if (_relayDestinationL3 == address(0)) revert ZeroAddress();
         if (defaultAdmin == address(0)) revert ZeroAddress();
         if (pauser == address(0)) revert ZeroAddress();
 
         emissionsCalculator = EmissionsCalculator(_emissionsCalculator);
 
         relayer = IRelayer(_relayer);
-        relayDestination = _relayDestination;
+        relayDestinationL3 = _relayDestinationL3;
 
         // Grant roles
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
@@ -122,11 +122,21 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
      * @notice Set the relay destination
      * @dev This function can only be called by the DEFAULT_ADMIN_ROLE.
      * NOTE: THIS IS AN ADDRESS ON THE COMMONS L3 CHAIN.
-     * @param _relayDestination The new relay destination
+     * @param _relayDestinationL3 The new relay destination
      */
-    function setRelayDestination(address _relayDestination) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (_relayDestination == address(0)) revert ZeroAddress();
-        relayDestination = _relayDestination;
+    function setRelayDestinationL3(address _relayDestinationL3) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_relayDestinationL3 == address(0)) revert ZeroAddress();
+        relayDestinationL3 = _relayDestinationL3;
+    }
+
+    /**
+     * @notice Set the relayer contract address
+     * @dev This function can only be called by the DEFAULT_ADMIN_ROLE.
+     * @param _relayer The new relayer contract address
+     */
+    function setRelayer(address _relayer) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_relayer == address(0)) revert ZeroAddress();
+        relayer = IRelayer(_relayer);
     }
 
     /**
@@ -155,7 +165,7 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
         uint256 emissionAmount = emissionsCalculator.calculateAndMintEmission(address(relayer), relativeEpoch);
 
         // Bridge the emission to the commons L3 chain
-        relayer.relay(emissionAmount, relayDestination, epochIndex);
+        relayer.relay(relayDestinationL3, epochIndex);
 
         emit EmissionMinted(epochIndex, emissionAmount);
     }

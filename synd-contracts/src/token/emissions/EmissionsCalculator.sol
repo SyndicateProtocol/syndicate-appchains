@@ -279,20 +279,27 @@ contract EmissionsCalculator is AccessControl {
         uint256 remainingSupply = getRemainingSupply();
 
         if (currentEpoch == TOTAL_EPOCHS - 1) {
+            // Final epoch: sweep all remaining tokens
             return remainingSupply;
         }
 
+        // Calculate emission for current epoch
         uint256 rt = decayFactors[currentEpoch];
         uint256 pt = calculateCumulativeProduct(currentEpoch);
 
-        // Apply same safety checks as calculateAndMintEmission
+        // Prevent division by zero and handle edge case
         if (pt >= SCALE) {
+            // Treat as final epoch and sweep remaining supply
             return remainingSupply;
         } else if (SCALE - pt < 1000) {
+            // Near-zero denominator check
+            // Use minimum denominator to prevent precision issues
             uint256 denominator = 1000;
             uint256 numerator = remainingSupply * (SCALE - rt);
             return numerator / denominator;
         } else {
+            // E_t = R_t * (1 - r_t) / (1 - P_t)
+            // precision in fixed-point arithmetic
             uint256 numerator = remainingSupply * (SCALE - rt);
             uint256 denominator = SCALE - pt;
             return numerator / denominator;

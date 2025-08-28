@@ -8,7 +8,7 @@ import {EmissionsScheduler} from "src/token/emissions/EmissionsScheduler.sol";
 import {IRelayer} from "src/token/emissions/EmissionsScheduler.sol";
 
 contract Relayer is IRelayer {
-    function relay(uint256 amount, address destination, uint256 epochIndex) external override {}
+    function relay(address destinationL3, uint256 epochIndex) external override {}
 }
 
 contract EmissionsSchedulerTest is Test {
@@ -18,7 +18,7 @@ contract EmissionsSchedulerTest is Test {
     Relayer public relayer;
 
     address public defaultAdmin = address(0x1234);
-    address public relayDestination = address(0x5678);
+    address public relayDestinationL3 = address(0x5678);
     address public pauser = address(0xDEF0);
     address public user = address(0x1111);
 
@@ -42,7 +42,7 @@ contract EmissionsSchedulerTest is Test {
 
         // Deploy emission scheduler V2
         emissionScheduler = new EmissionsScheduler(
-            address(emissionsCalculator), address(relayer), relayDestination, defaultAdmin, pauser
+            address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, pauser
         );
         vm.warp(emissionScheduler.START_TIMESTAMP());
 
@@ -61,7 +61,7 @@ contract EmissionsSchedulerTest is Test {
     function test_Constructor_InitialSetup() public view {
         assertEq(address(emissionScheduler.emissionsCalculator()), address(emissionsCalculator));
         assertEq(address(emissionScheduler.relayer()), address(relayer));
-        assertEq(emissionScheduler.relayDestination(), relayDestination);
+        assertEq(emissionScheduler.relayDestinationL3(), relayDestinationL3);
         assertEq(emissionScheduler.epochStartIndex(), 2);
         assertEq(emissionScheduler.getCurrentEpoch(), 1);
         assertEq(emissionScheduler.totalEmissionsMinted(), 0);
@@ -75,18 +75,18 @@ contract EmissionsSchedulerTest is Test {
 
     function test_RevertWhen_Constructor_ZeroEmissionsCalculator() public {
         vm.expectRevert(EmissionsScheduler.ZeroAddress.selector);
-        new EmissionsScheduler(address(0), address(relayer), relayDestination, defaultAdmin, pauser);
+        new EmissionsScheduler(address(0), address(relayer), relayDestinationL3, defaultAdmin, pauser);
     }
 
     function test_RevertWhen_Constructor_ZeroAdmin() public {
         vm.expectRevert(EmissionsScheduler.ZeroAddress.selector);
-        new EmissionsScheduler(address(emissionsCalculator), address(relayer), relayDestination, address(0), pauser);
+        new EmissionsScheduler(address(emissionsCalculator), address(relayer), relayDestinationL3, address(0), pauser);
     }
 
     function test_RevertWhen_Constructor_ZeroPauser() public {
         vm.expectRevert(EmissionsScheduler.ZeroAddress.selector);
         new EmissionsScheduler(
-            address(emissionsCalculator), address(relayer), relayDestination, defaultAdmin, address(0)
+            address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, address(0)
         );
     }
 
@@ -322,7 +322,11 @@ contract EmissionsSchedulerTest is Test {
         // Test all critical functions require proper roles
         vm.prank(user);
         vm.expectRevert();
-        emissionScheduler.setRelayDestination(address(0x1234));
+        emissionScheduler.setRelayDestinationL3(address(0x1234));
+
+        vm.prank(user);
+        vm.expectRevert();
+        emissionScheduler.setRelayer(address(0x1234));
 
         vm.prank(user);
         vm.expectRevert();
