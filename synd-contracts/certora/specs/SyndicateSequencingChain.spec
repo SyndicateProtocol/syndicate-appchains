@@ -11,8 +11,8 @@ methods {
 
     // Gas tracking functions
     function gasTrackingEnabled() external returns (bool) envfree;
-    function disableGasTracking() external;
-    function enableGasTracking() external;
+    function disableGasTracking() external envfree;
+    function enableGasTracking() external envfree;
 
     // Permission Module interface methods
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
@@ -54,10 +54,10 @@ rule initializationCorrect(address admin, address module, uint256 appchainId) {
 }
 
 /*
- * Rule 3: Verify that appchainId cannot be zero
+ * Rule 3: Verify that appchainId is zero before initialization and non-zero after
  */
 invariant appchainIdNotZero()
-    appchainId() != 0;
+    init._getInitializedVersion() > 0 ? appchainId() != 0 : appchainId() == 0;
 
 /*
  * Rule 4: Only allowed addresses can process transactions uncompressed
@@ -73,17 +73,16 @@ rule onlyAllowedCanProcess(bytes data) {
     bool success = !lastReverted;
 
     // Then the sender must have been allowed
-    assert success => permissionModule.isAllowed(e.msg.sender, e.msg.sender, data),
+    assert success => permissionRequirementModule() == 0 || permissionModule.isAllowed(e.msg.sender, e.msg.sender, data),
         "Unauthorized sender processed transaction";
 }
 
 /*
- * Rule 5: Consistent behavior between processTransaction and processTransaction
+ * Rule 5: Consistent behavior between processTransaction and processTransactionsBulk
  */
 rule processConsistency(bytes data) {
     env e;
     require init._getInitializedVersion() > 0;
-    require permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Disable gas tracking for consistent verification
     require !gasTrackingEnabled();
@@ -92,11 +91,11 @@ rule processConsistency(bytes data) {
     processTransaction@withrevert(e, data);
     bool txSuccess = !lastReverted;
 
-    processTransactionsCompressed@withrevert(e, data);
-    bool rawSuccess = !lastReverted;
+    processTransactionsBulk@withrevert(e, [data]);
+    bool bulkSuccess = !lastReverted;
 
     // If one succeeds, both should succeed under same conditions
-    assert txSuccess == rawSuccess,
+    assert txSuccess == bulkSuccess,
         "Inconsistent behavior between process methods";
 }
 
@@ -180,7 +179,7 @@ rule permissionsCorrectlyEnforced(bytes data, uint256 appchainId) {
     require data.length < max_uint256;
 
     // Check permissions
-    bool senderAllowed = permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
+    bool senderAllowed = permissionRequirementModule() == 0 || permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Process transaction
     processTransaction@withrevert(e, data);

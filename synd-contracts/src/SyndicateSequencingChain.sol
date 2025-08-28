@@ -111,6 +111,7 @@ contract SyndicateSequencingChain is
         require(_appchainId != 0, "App chain ID cannot be 0");
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
         __UUPSUpgradeable_init();
+        _enableGasTracking();
         appchainId = _appchainId;
     }
 
