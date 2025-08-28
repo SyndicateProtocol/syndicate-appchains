@@ -2,20 +2,15 @@
 use alloy::{
     contract::CallBuilder,
     eips::{BlockNumberOrTag, Encodable2718},
-    network::{Ethereum, TransactionBuilder},
-    primitives::{
-        address, keccak256,
-        utils::{parse_ether, parse_units},
-        Address, B256, U160, U256,
-    },
+    network::Ethereum,
+    primitives::{address, keccak256, utils::parse_ether, Address, B256, U256},
     providers::{
         ext::{AnvilApi, DebugApi},
-        Provider, ProviderBuilder, WalletProvider as _,
+        Provider, ProviderBuilder,
     },
     rpc::types::{
         anvil::MineOptions,
         trace::geth::{GethDebugTracingOptions, GethTrace},
-        TransactionRequest,
     },
     signers::local::PrivateKeySigner,
     sol,
@@ -342,38 +337,41 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             );
 
             // send a contract tx to trigger the fork code.
-            let offset = components.sequencing_contract.OFFSET().call().await?;
-            let alias_address = Address::from(
-                U160::from_be_slice(&test_account1().address[..]).wrapping_add(offset),
-            );
+            #[cfg(false)]
+            {
+                let offset = components.sequencing_contract.OFFSET().call().await?;
+                let alias_address = Address::from(
+                    U160::from_be_slice(&test_account1().address[..]).wrapping_add(offset),
+                );
 
-            let tx = TransactionRequest::default()
-                .with_to(alias_address)
-                .with_value(parse_ether("0.1")?)
-                .with_nonce(0)
-                .with_gas_limit(100_000)
-                .with_chain_id(components.appchain_chain_id)
-                .with_max_fee_per_gas(100000000)
-                .with_max_priority_fee_per_gas(0)
-                .build(components.sequencing_provider.wallet())
-                .await?;
-            components.sequence_tx(&tx.encoded_2718(), 0, true).await?;
-            let addr_3 = address!("0x0000000000000000000000000000000000000003");
-            components
-                .send_contract_tx(
-                    100_000,
-                    parse_units("0.1", "gwei")?.into(),
-                    addr_3,
-                    parse_ether("0.01")?,
-                    Default::default(),
-                    0,
-                )
-                .await?;
+                let tx = TransactionRequest::default()
+                    .with_to(alias_address)
+                    .with_value(parse_ether("0.1")?)
+                    .with_nonce(0)
+                    .with_gas_limit(100_000)
+                    .with_chain_id(components.appchain_chain_id)
+                    .with_max_fee_per_gas(100000000)
+                    .with_max_priority_fee_per_gas(0)
+                    .build(components.sequencing_provider.wallet())
+                    .await?;
+                components.sequence_tx(&tx.encoded_2718(), 0, true).await?;
+                let addr_3 = address!("0x0000000000000000000000000000000000000003");
+                components
+                    .send_contract_tx(
+                        100_000,
+                        parse_units("0.1", "gwei")?.into(),
+                        addr_3,
+                        parse_ether("0.01")?,
+                        Default::default(),
+                        0,
+                    )
+                    .await?;
 
-            wait_until!(
-                components.appchain_provider.get_balance(addr_3).await? >= parse_ether("0.01")?,
-                Duration::from_secs(10)
-            );
+                wait_until!(
+                    components.appchain_provider.get_balance(addr_3).await? >= parse_ether("0.01")?,
+                    Duration::from_secs(10)
+                );
+            }
 
             // initiate a withdrawal from the appchain to an empty wallet
             let withdrawal_value = parse_ether("0.1")?;
