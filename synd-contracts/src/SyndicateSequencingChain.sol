@@ -58,6 +58,9 @@ contract SyndicateSequencingChain is
     GasCounter,
     UUPSUpgradeable
 {
+    error NoTxData();
+    error TransactionOrSenderNotAllowed();
+
     /*//////////////////////////////////////////////////////////////
                 STATE VARIABLES - DO NOT REORDER
     //////////////////////////////////////////////////////////////*/
@@ -99,10 +102,14 @@ contract SyndicateSequencingChain is
         _disableInitializers();
     }
 
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
     /// @notice Initializes the SyndicateSequencingChain contract
     /// @dev This function can only be called once. It sets the admin, permission requirement module, and appchain ID.
     /// @param admin The address to be set as the contract owner
-    /// @param _permissionRequirementModule The address of the permission requirement module (e.g., RequireAndModule)
+    /// @param _permissionRequirementModule The address of the permission requirement module (e.g., RequireAndModule) or 0 to allow tranasctions
     /// @param _appchainId The unique identifier for the application chain this contract sequences for (must not be 0)
     function initialize(address admin, address _permissionRequirementModule, uint256 _appchainId)
         external
@@ -159,21 +166,20 @@ contract SyndicateSequencingChain is
         address to,
         uint256 value,
         bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage returns (uint256) {
+    ) external trackGasUsage returns (uint256) {
         uint256 requestId = contractNonce[msg.sender]++;
-        emit TransactionProcessed(
-            msg.sender,
-            abi.encodePacked(
-                TransactionType.Contract,
-                applyAlias(msg.sender),
-                requestId,
-                uint256(gasLimit),
-                maxFeePerGas,
-                uint256(uint160(to)),
-                value,
-                data
-            )
+        bytes memory transaction = abi.encodePacked(
+            TransactionType.Contract,
+            applyAlias(msg.sender),
+            requestId,
+            uint256(gasLimit),
+            maxFeePerGas,
+            uint256(uint160(to)),
+            value,
+            data
         );
+        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
+        emit TransactionProcessed(msg.sender, transaction);
         return requestId;
     }
 
@@ -191,44 +197,44 @@ contract SyndicateSequencingChain is
         address to,
         uint256 value,
         bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage {
-        emit TransactionProcessed(
-            msg.sender,
-            abi.encodePacked(
-                TransactionType.Unsigned,
-                applyAlias(msg.sender),
-                uint256(gasLimit),
-                maxFeePerGas,
-                nonce,
-                uint256(uint160(to)),
-                value,
-                data
-            )
+    ) external trackGasUsage {
+        bytes memory transaction = abi.encodePacked(
+            TransactionType.Unsigned,
+            applyAlias(msg.sender),
+            uint256(gasLimit),
+            maxFeePerGas,
+            nonce,
+            uint256(uint160(to)),
+            value,
+            data
         );
+        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
+        emit TransactionProcessed(msg.sender, transaction);
     }
 
     /// @notice Processes a compressed batch of signed transactions.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
-    function processTransactionsCompressed(bytes calldata data)
-        external
-        onlyWhenAllowedCompressed(msg.sender, tx.origin)
-        trackGasUsage
-    {
+    function processTransactionsCompressed(bytes calldata data) external trackGasUsage {
         require(data.length > 0, NoTxData());
+
+        // ignore tx data as the tx is compressed
+        require(
+            isAllowed(msg.sender, tx.origin, abi.encodePacked(TransactionType.Compressed)),
+            TransactionOrSenderNotAllowed()
+        );
         emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Compressed, data));
     }
 
     /// @notice Process a signed transaction.
     /// @param data Transaction data
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data)
-        external
-        onlyWhenAllowed(msg.sender, tx.origin, data)
-        trackGasUsage
-    {
+    function processTransaction(bytes calldata data) external trackGasUsage {
         require(data.length > 0, NoTxData());
-        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data));
+
+        bytes memory transaction = abi.encodePacked(TransactionType.Signed, data);
+        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
+        emit TransactionProcessed(msg.sender, transaction);
     }
 
     /// @notice Processes multiple signed transactions in bulk.
@@ -236,14 +242,17 @@ contract SyndicateSequencingChain is
     //#olympix-ignore
     function processTransactionsBulk(bytes[] calldata data) external trackGasUsage {
         uint256 dataCount = data.length;
+        require(dataCount > 0, NoTxData());
 
         // Process all transactions
         uint256 i;
         for (i = 0; i < dataCount; i++) {
-            bool isAllowed = data.length > 0 && isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
+            require(data[i].length > 0, NoTxData());
+            bytes memory transaction = abi.encodePacked(TransactionType.Signed, data[i]);
+            bool isAllowed = isAllowed(msg.sender, tx.origin, transaction); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed
-                emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data[i]));
+                emit TransactionProcessed(msg.sender, transaction);
             }
         }
     }

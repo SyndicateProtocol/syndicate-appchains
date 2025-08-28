@@ -1,20 +1,15 @@
 using PermissionModuleBasic as permissionModule;
-using InitializableHarness as init;
 
 methods {
-    // View functions
+    // Envfree view functions
     function appchainId() external returns (uint256) envfree;
     function permissionRequirementModule() external returns (address) envfree;
     function isAllowed(address, address, bytes) external returns (bool) envfree;
     function owner() external returns (address) envfree;
-    function init._getInitializedVersion() external returns (uint8) envfree;
-
-    // Gas tracking functions
+    function getInitializedVersion() external returns (uint64) envfree;
     function gasTrackingEnabled() external returns (bool) envfree;
-    function disableGasTracking() external envfree;
-    function enableGasTracking() external envfree;
 
-    // Permission Module interface methods
+    // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
 }
 
@@ -56,15 +51,20 @@ rule initializationCorrect(address admin, address module, uint256 appchainId) {
 /*
  * Rule 3: Verify that appchainId is zero before initialization and non-zero after
  */
-invariant appchainIdNotZero()
-    init._getInitializedVersion() > 0 ? appchainId() != 0 : appchainId() == 0;
+invariant appchainIdNotZero() getInitializedVersion() > 0 ? appchainId() != 0 : appchainId() == 0 {
+    preserved {
+        upgradeToAndCall(address addr, bytes data) {
+            require addr == currentContract
+        }
+    }
+}
 
 /*
- * Rule 4: Only allowed addresses can process transactions uncompressed
+ * Rule 4: Only allowed addresses can process transactions
  */
 rule onlyAllowedCanProcess(bytes data) {
     env e;
-    require init._getInitializedVersion() > 0;
+    require getInitializedVersion() > 0;
 
     // Try to process a transaction
     processTransaction@withrevert(e, data);
@@ -73,7 +73,7 @@ rule onlyAllowedCanProcess(bytes data) {
     bool success = !lastReverted;
 
     // Then the sender must have been allowed
-    assert success => permissionRequirementModule() == 0 || permissionModule.isAllowed(e.msg.sender, e.msg.sender, data),
+    assert success => isAllowed(e.msg.sender, e.msg.sender, data),
         "Unauthorized sender processed transaction";
 }
 
@@ -82,7 +82,7 @@ rule onlyAllowedCanProcess(bytes data) {
  */
 rule processConsistency(bytes data) {
     env e;
-    require init._getInitializedVersion() > 0;
+    require getInitializedVersion() > 0;
 
     // Disable gas tracking for consistent verification
     require !gasTrackingEnabled();
@@ -104,7 +104,7 @@ rule processConsistency(bytes data) {
  */
 rule onlyOwnerCanUpdateModule(address newModule) {
     env e;
-    require init._getInitializedVersion() > 0;
+    require getInitializedVersion() > 0;
 
     // Try to update the module
     updateRequirementModule@withrevert(e, newModule);
@@ -119,7 +119,7 @@ rule onlyOwnerCanUpdateModule(address newModule) {
  */
 rule moduleUpdateChangesState(address newModule) {
     env e;
-    require init._getInitializedVersion() > 0;
+    require getInitializedVersion() > 0;
     require newModule != 0;
 
     // Store old module
@@ -138,7 +138,7 @@ rule moduleUpdateChangesState(address newModule) {
  */
 rule stateConsistencyAfterProcessing(bytes data) {
     env e;
-    require init._getInitializedVersion() > 0;
+    require getInitializedVersion() > 0;
     address oldProposerModule = permissionRequirementModule();
 
     // Process transaction
@@ -164,7 +164,7 @@ rule permissionsCorrectlyEnforced(bytes data, uint256 appchainId) {
     initialize(e, admin, proposerModule, appchainId);
 
     // Verify initialization worked
-    require init._getInitializedVersion() == 1;
+    require getInitializedVersion() == 1;
 
     // Disable gas tracking for consistent verification
     require !gasTrackingEnabled();
@@ -179,7 +179,7 @@ rule permissionsCorrectlyEnforced(bytes data, uint256 appchainId) {
     require data.length < max_uint256;
 
     // Check permissions
-    bool senderAllowed = permissionRequirementModule() == 0 || permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
+    bool senderAllowed = isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Process transaction
     processTransaction@withrevert(e, data);
