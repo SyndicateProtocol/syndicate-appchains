@@ -13,9 +13,6 @@ on:
       - main
   # Only run on PRs that touch shared contracts
   pull_request:
-    paths:
-      - "synd-contracts/**"
-      - "shared/contract-bindings/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
