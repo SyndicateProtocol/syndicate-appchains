@@ -26,7 +26,7 @@ contract MockIsAllowed is IPermissionModule {
 
 contract MockIsAllowedWithInvalidData is IPermissionModule {
     function isAllowed(address, address, bytes calldata data) external pure override returns (bool) {
-        return keccak256(data) != keccak256(abi.encode("invalid"));
+        return keccak256(data) != keccak256(abi.encodePacked(TransactionType.Signed, "invalid"));
     }
 }
 
@@ -95,7 +95,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                RequireAndModule.AndPermissionCheckFailed.selector, mockRequireAll, address(this), validTxn
+                RequireAndModule.AndPermissionCheckFailed.selector,
+                mockRequireAll,
+                address(this),
+                abi.encodePacked(TransactionType.Signed, validTxn)
             )
         );
         chain.processTransaction(validTxn);
@@ -110,7 +113,11 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(
-            abi.encodeWithSelector(RequireOrModule.AllOrPermissionChecksFailed.selector, address(this), validTxn)
+            abi.encodeWithSelector(
+                RequireOrModule.AllOrPermissionChecksFailed.selector,
+                address(this),
+                abi.encodePacked(TransactionType.Signed, validTxn)
+            )
         );
         chain.processTransaction(validTxn);
     }
@@ -195,9 +202,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         txns[2] = abi.encode("transaction 3");
 
         // Configure mock to allow all transactions
-        directMock.setAllowed(txns[0], true);
-        directMock.setAllowed(txns[1], true);
-        directMock.setAllowed(txns[2], true);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, txns[0]), true);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, txns[1]), true);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, txns[2]), true);
 
         // Expect events for all transactions
         for (uint256 i = 0; i < txns.length; i++) {
@@ -225,8 +232,8 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         failingTxns[0] = abi.encode("allowed tx");
         failingTxns[1] = abi.encode("disallowed tx");
 
-        directMock.setAllowed(failingTxns[0], true);
-        directMock.setAllowed(failingTxns[1], false);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, failingTxns[0]), true);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, failingTxns[1]), false);
 
         chain.processTransactionsBulk(failingTxns);
 
@@ -235,8 +242,8 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         successTxns[0] = abi.encode("allowed tx 1");
         successTxns[1] = abi.encode("allowed tx 2");
 
-        directMock.setAllowed(successTxns[0], true);
-        directMock.setAllowed(successTxns[1], true);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, successTxns[0]), true);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, successTxns[1]), true);
 
         // Expect events for successful transactions
         for (uint256 i = 0; i < successTxns.length; i++) {
@@ -253,9 +260,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         chain = deployFromFactory(RequireAndModule(address(new MockIsAllowedWithInvalidData())));
 
         bytes[] memory txns = new bytes[](3);
-        txns[0] = abi.encode("valid");
-        txns[1] = abi.encode("invalid");
-        txns[2] = abi.encode("valid");
+        txns[0] = abi.encodePacked("valid");
+        txns[1] = abi.encodePacked("invalid");
+        txns[2] = abi.encodePacked("valid");
 
         vm.recordLogs();
         chain.processTransactionsBulk(txns);
@@ -270,10 +277,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             Vm.Log memory log = logs[i];
 
             if (log.topics.length > 0 && log.topics[0] == expectedSig) {
-                // Decode data to make sure it's not for the "invalid" txn
-                (, bytes memory emittedData) = abi.decode(log.data, (address, bytes));
-
-                if (keccak256(emittedData) == keccak256(abi.encodePacked(bytes1(0x00), abi.encode("invalid")))) {
+                if (keccak256(log.data) == keccak256(abi.encodePacked(TransactionType.Signed, "invalid"))) {
                     fail();
                 }
 
@@ -297,11 +301,11 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         bytes memory disallowedData = abi.encode("disallowed data");
 
         // Configure permissions
-        directMock.setAllowed(allowedData, true);
-        directMock.setAllowed(disallowedData, false);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, allowedData), true);
+        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, disallowedData), false);
 
         // Test 1: Failure path of onlyWhenAllowed (processTransaction)
-        vm.expectRevert(SequencingModuleChecker.TransactionOrSenderNotAllowed.selector);
+        vm.expectRevert(SyndicateSequencingChain.TransactionOrSenderNotAllowed.selector);
         chain.processTransaction(disallowedData);
 
         // Test 2: Success path of onlyWhenAllowed (processTransaction)
@@ -314,8 +318,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
     function testProcessTransactionsBulkWithEmptyArray() public {
         bytes[] memory emptyArray = new bytes[](0);
-
-        // This should execute without errors or events
+        vm.expectRevert(SyndicateSequencingChain.NoTxData.selector);
         chain.processTransactionsBulk(emptyArray);
     }
 
