@@ -21,17 +21,18 @@ methods {
 /*
  * Rule 1: Initialization rules
  */
-rule initializeOnce(address admin, address module) {
+rule initializeOnce(address admin, address module, uint256 appchainId) {
     env e;
     require admin != 0;
     require module != 0;
+    require appchainId != 0;
 
     // First initialization
-    initialize@withrevert(e, admin, module);
+    initialize@withrevert(e, admin, module, appchainId);
     bool firstInit = !lastReverted;
 
     // Try to initialize again
-    initialize@withrevert(e, admin, module);
+    initialize@withrevert(e, admin, module, appchainId);
 
     assert firstInit => lastReverted,
         "Contract initialized more than once";
@@ -40,12 +41,13 @@ rule initializeOnce(address admin, address module) {
 /*
  * Rule 2: Initialization sets correct values
  */
-rule initializationCorrect(address admin, address module) {
+rule initializationCorrect(address admin, address module, uint256 appchainId) {
     env e;
     require admin != 0;
     require module != 0;
+    require appchainId != 0;
 
-    initialize(e, admin, module);
+    initialize(e, admin, module, appchainId);
 
     assert permissionRequirementModule() == module, "Proposer module not set correctly";
     assert owner() == admin, "Admin not set correctly";
@@ -151,15 +153,16 @@ rule stateConsistencyAfterProcessing(bytes data) {
 /*
  * Rule 9: Verify permissions are correctly enforced
  */
-rule permissionsCorrectlyEnforced(bytes data) {
+rule permissionsCorrectlyEnforced(bytes data, uint256 appchainId) {
     env e;
+    require appchainId != 0;
 
     // Setup variables for initialization
     address admin = e.msg.sender;
     address proposerModule = permissionModule;
 
     // Initialize the contract first
-    initialize(e, admin, proposerModule);
+    initialize(e, admin, proposerModule, appchainId);
 
     // Verify initialization worked
     require init._getInitializedVersion() == 1;
