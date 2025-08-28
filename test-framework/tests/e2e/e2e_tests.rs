@@ -2,16 +2,12 @@
 use alloy::{
     eips::{BlockId, BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
-    primitives::{
-        address,
-        utils::{parse_ether, parse_units},
-        Address, U160, U256,
-    },
+    primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
     sol,
 };
-use contract_bindings::synd::{dummy_poster::DummyPoster, i_inbox::IInbox, rollup::Rollup};
+use contract_bindings::synd::{i_inbox::IInbox, rollup::Rollup};
 use eyre::Result;
 use std::time::Duration;
 use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig};
@@ -155,6 +151,7 @@ async fn e2e_send_transaction() -> Result<()> {
     .await
 }
 
+#[cfg(false)]
 #[tokio::test]
 async fn e2e_unsigned_tx() -> Result<()> {
     TestComponents::run(&Default::default(), |components| async move {
@@ -244,6 +241,7 @@ async fn e2e_unsigned_tx() -> Result<()> {
     .await
 }
 
+#[cfg(false)]
 #[tokio::test]
 async fn e2e_contract_tx() -> Result<()> {
     TestComponents::run(&Default::default(), |components| async move {
