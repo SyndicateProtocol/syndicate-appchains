@@ -480,7 +480,7 @@ mod tests {
             .unwrap();
 
             // Set balance at 100 ETH using the underlying provider
-            let provider = multi_provider.active_provider();
+            let provider = multi_provider.active_provider().0;
             let balance = U256::from(100) * U256::from(10).pow(U256::from(18));
             provider.anvil_set_balance(signer_address, balance).await.unwrap();
             multi_provider
