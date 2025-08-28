@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {EpochTracker} from "./EpochTracker.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPool} from "./IPool.sol";
 
 /**
@@ -32,7 +34,7 @@ import {IPool} from "./IPool.sol";
  * - Delayed withdrawal system for security
  * - Efficient finalization system for historical queries
  */
-contract SyndStaking is EpochTracker, ReentrancyGuard {
+contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
     /// @notice Total amount of SYND tokens staked across all users and appchains
     uint256 public totalStake;
 
@@ -179,6 +181,28 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
     /// @notice Error thrown when total amount of staking does not match the amount of ETH sent
     error InvalidStakingAmount(uint256 totalAmount, uint256 sentAmount);
 
+    /**
+     * @notice Constructs the SyndStaking contract and sets the default admin (owner)
+     * @param _defaultAdmin The address to be set as the contract owner
+     */
+    constructor(address _defaultAdmin) Ownable(_defaultAdmin) {}
+
+    /**
+     * @notice Pause the contract, disabling staking and withdrawal operations
+     * @dev Only callable by the contract owner. Triggers the emergency stop mechanism.
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract, re-enabling staking and withdrawal operations
+     * @dev Only callable by the contract owner. Lifts the emergency stop mechanism.
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     ///////////////////////
     // Staking functions
     ///////////////////////
@@ -188,7 +212,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @dev Automatically finalizes epochs if needed and calculates pro-rata stake share
      * @param appchainId The ID of the appchain to stake for (must be non-zero)
      */
-    function stakeSynd(uint256 appchainId) external payable {
+    function stakeSynd(uint256 appchainId) external payable whenNotPaused {
         _stakeSynd(appchainId, msg.value);
     }
 
@@ -242,7 +266,11 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
      * @param appchainIds The list of appchain IDs to stake into
      * @param amounts The list of corresponding stake amounts for each appchain ID
      */
-    function stakeMultipleAppchains(uint256[] calldata appchainIds, uint256[] calldata amounts) external payable {
+    function stakeMultipleAppchains(uint256[] calldata appchainIds, uint256[] calldata amounts)
+        external
+        payable
+        whenNotPaused
+    {
         if (appchainIds.length != amounts.length) {
             revert InvalidInput();
         }
@@ -277,6 +305,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard {
         external
         payable
         nonReentrant
+        whenNotPaused
     {
         if (amount == 0) {
             revert InvalidAmount();

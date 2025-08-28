@@ -10,6 +10,7 @@ import {Vm} from "forge-std/Vm.sol";
 contract SyndStakingTest is Test {
     SyndStaking public staking;
 
+    address public owner;
     address public user1;
     address public user2;
 
@@ -18,8 +19,7 @@ contract SyndStakingTest is Test {
     uint256 public appchainId3;
 
     function setUp() public {
-        staking = new SyndStaking();
-
+        owner = makeAddr("owner");
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
 
@@ -29,6 +29,8 @@ contract SyndStakingTest is Test {
         appchainId1 = 111;
         appchainId2 = 222;
         appchainId3 = 333;
+
+        staking = new SyndStaking(owner);
 
         // Warp to exactly the epoch start timestamp (beginning of epoch 1)
         vm.warp(staking.START_TIMESTAMP());
@@ -1099,5 +1101,127 @@ contract SyndStakingTest is Test {
 
         // User should get rewards based on their stake share (50 ether full stake + stake share)
         assertEq(address(user1).balance, initialBalance + 60 ether);
+    }
+
+    // ==================== PAUSABLE FUNCTIONALITY TESTS ====================
+
+    function test_pause_unpause_only_owner() public {
+        address nonOwner = makeAddr("nonOwner");
+
+        // Test that non-owner cannot pause
+        vm.startPrank(nonOwner);
+        vm.expectRevert();
+        staking.pause();
+        vm.stopPrank();
+
+        // Test that non-owner cannot unpause
+        vm.startPrank(nonOwner);
+        vm.expectRevert();
+        staking.unpause();
+        vm.stopPrank();
+
+        // Test that owner can pause
+        vm.startPrank(owner);
+        staking.pause();
+        assertTrue(staking.paused());
+
+        // Test that owner can unpause
+        staking.unpause();
+        assertFalse(staking.paused());
+        vm.stopPrank();
+    }
+
+    function test_pausable_functions_revert_when_paused() public {
+        // Setup initial stake
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Pause the contract
+        vm.startPrank(owner);
+        staking.pause();
+        assertTrue(staking.paused());
+        vm.stopPrank();
+
+        // Test stakeSynd reverts when paused
+        vm.startPrank(user2);
+        vm.expectRevert();
+        staking.stakeSynd{value: 50 ether}(appchainId2);
+        vm.stopPrank();
+
+        // Test stakeMultipleAppchains reverts when paused
+        uint256[] memory appchainIds = new uint256[](1);
+        uint256[] memory amounts = new uint256[](1);
+        appchainIds[0] = appchainId2;
+        amounts[0] = 50 ether;
+
+        vm.startPrank(user2);
+        vm.expectRevert();
+        staking.stakeMultipleAppchains{value: 50 ether}(appchainIds, amounts);
+        vm.stopPrank();
+
+        // Test stageStakeTransfer reverts when paused
+        vm.startPrank(user1);
+        vm.expectRevert();
+        staking.stageStakeTransfer{value: 0}(appchainId1, appchainId2, 25 ether);
+        vm.stopPrank();
+
+        // Unpause the contract
+        vm.startPrank(owner);
+        staking.unpause();
+        assertFalse(staking.paused());
+        vm.stopPrank();
+
+        // Test that functions work again after unpausing
+        vm.startPrank(user2);
+        staking.stakeSynd{value: 50 ether}(appchainId2);
+        vm.stopPrank();
+    }
+
+    function test_owner_transfer() public {
+        address newOwner = makeAddr("newOwner");
+
+        // Test initial owner
+        assertEq(staking.owner(), owner);
+
+        // Test that non-owner cannot transfer ownership
+        address nonOwner = makeAddr("nonOwner");
+        vm.startPrank(nonOwner);
+        vm.expectRevert();
+        staking.transferOwnership(newOwner);
+        vm.stopPrank();
+
+        // Test that owner can transfer ownership
+        vm.startPrank(owner);
+        staking.transferOwnership(newOwner);
+        vm.stopPrank();
+        assertEq(staking.owner(), newOwner);
+
+        // Test that old owner can no longer call owner functions
+        vm.expectRevert();
+        staking.pause();
+
+        // Test that new owner can call owner functions
+        vm.startPrank(newOwner);
+        staking.pause();
+        assertTrue(staking.paused());
+        staking.unpause();
+        assertFalse(staking.paused());
+        vm.stopPrank();
+
+        // Test that new owner can transfer ownership back
+        vm.startPrank(newOwner);
+        staking.transferOwnership(owner);
+        vm.stopPrank();
+
+        assertEq(staking.owner(), owner);
+
+        // Test that old owner can call owner functions again
+        vm.startPrank(owner);
+        staking.pause();
+        assertTrue(staking.paused());
+        vm.stopPrank();
     }
 }
