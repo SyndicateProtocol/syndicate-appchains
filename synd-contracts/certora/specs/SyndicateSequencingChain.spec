@@ -80,7 +80,7 @@ rule onlyAllowedCanProcess(bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // CRITIC: Disable gas tracking
+    // Disable gas tracking
     require !gasTrackingEnabled();
     // Use zero address as permission module to allow all transactions
     require permissionRequirementModule() == 0;
@@ -100,7 +100,7 @@ rule processConsistencyNoPermissions(bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // CRITIC: Disable gas tracking
+    // Disable gas tracking
     require !gasTrackingEnabled();
     // Use no permission module (allows all)
     require permissionRequirementModule() == 0;
@@ -123,7 +123,7 @@ rule permissionModuleRequired(bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // CRITIC: Disable gas tracking
+    // Disable gas tracking
     require !gasTrackingEnabled();
     // Compare behavior with and without permission module
     // First test with no permission module
