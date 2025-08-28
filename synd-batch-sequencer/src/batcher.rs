@@ -316,10 +316,10 @@ impl Batcher {
         }
         self.metrics.record_batch_transactions(batch.txs().len());
         if self.config.compression_enabled {
-            if batch.len() > uncompressed_size {
-                warn!(%self.config.chain_id, "Batch compressed size is larger than uncompressed size.");
+            if batch.len() > batch.uncompressed_size() {
+                debug!(%self.config.chain_id, "Batch compressed size is larger than uncompressed size.");
             }
-            self.metrics.record_compression_space_saving_pct(uncompressed_size, batch.len());
+            self.metrics.record_compression_space_saving_pct(batch.uncompressed_size(), batch.len());
         }
         Ok((batch, last_included_id))
     }

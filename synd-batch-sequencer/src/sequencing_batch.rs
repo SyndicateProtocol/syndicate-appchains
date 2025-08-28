@@ -26,6 +26,11 @@ impl SequencingBatch {
         }
     }
 
+    /// Returns the uncompressed size of batch content (sum of transaction bytes)
+    pub fn uncompressed_size(&self) -> usize {
+        self.txs().iter().map(|tx| tx.0.len()).sum()
+    }
+
     /// Returns true if the batch is empty.
     pub const fn is_empty(&self) -> bool {
         match self {
