@@ -12,13 +12,12 @@ use crate::components::{
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
-    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U256},
+    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U160, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, TransactionReceipt},
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
-    always_allowed_module::AlwaysAllowedModule,
     assertion_poster::AssertionPoster,
     i_inbox::IInbox,
     i_upgrade_executor::IUpgradeExecutor,
@@ -262,17 +261,14 @@ impl TestComponents {
         .send()
         .await?;
         let sequencing_contract_address = seq_provider.default_signer_address().create(0);
-        let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-        let always_allowed_module_address = seq_provider.default_signer_address().create(1);
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
             SyndicateSequencingChain::new(sequencing_contract_address, provider_clone);
-        let _ = sequencing_contract
-            .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
-            .send()
-            .await?;
+
+        // Set the requirement module to address(1) to allow all transactions
+        let _ = sequencing_contract.updateRequirementModule(U160::from(1).into()).send().await?;
 
         match options.base_chains_type {
             BaseChainsType::Anvil => {

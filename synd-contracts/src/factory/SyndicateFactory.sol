@@ -7,6 +7,7 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 enum NamespaceState {
     Available,
@@ -92,8 +93,11 @@ contract SyndicateFactory is AccessControl, Pausable {
         appchainContracts[actualChainId] = sequencingChain;
         chainIDs.push(actualChainId);
 
-        // Initialize the contract
-        SyndicateSequencingChain(sequencingChain).initialize(admin, address(permissionModule));
+        // Set sequencing module
+        SyndicateSequencingChain(sequencingChain).updateRequirementModule(address(permissionModule));
+
+        // Transfer owner
+        Ownable(sequencingChain).transferOwnership(admin);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 

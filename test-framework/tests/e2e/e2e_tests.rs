@@ -1,7 +1,7 @@
 //! e2e tests for the `synd-appchains` stack
 use alloy::{
     eips::{BlockId, BlockNumberOrTag, Encodable2718},
-    network::TransactionBuilder,
+    network::{EthereumWallet, TransactionBuilder},
     primitives::{
         address,
         utils::{parse_ether, parse_units},
@@ -9,6 +9,7 @@ use alloy::{
     },
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
+    signers::local::PrivateKeySigner,
     sol,
 };
 use contract_bindings::synd::{dummy_poster::DummyPoster, i_inbox::IInbox, rollup::Rollup};
@@ -721,9 +722,18 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             // reorg the sequencing chain by 1 block
             components.sequencing_provider.anvil_rollback(Some(1)).await?;
 
-            // build the sequencing chain to a height above the reorg (so it is detected)
-            components.sequence_tx(b"potato", 10, false).await?;
-            components.sequence_tx(b"potato", 10, false).await?;
+            // sequence a valid tx so that an appchain batch is created - nitro will not reorg until
+            // the new batch is created.
+            let appchain_tx = TransactionRequest::default()
+                .nonce(0)
+                .gas_limit(0)
+                .to(Address::ZERO)
+                .gas_price(0)
+                .build(&EthereumWallet::from(PrivateKeySigner::random()))
+                .await?
+                .encoded_2718();
+
+            components.sequence_tx(&appchain_tx, 10, false).await?;
 
             // state is correctly rolled back
             wait_until!(storage.get().call().await? == U256::from(42), Duration::from_secs(10));
@@ -746,8 +756,16 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
         // synd-mchain is on genesis (block 1)
         assert_eq!(components.mchain_provider.get_block_number().await, 1);
 
-        // sequence any tx
-        components.sequence_tx(b"my_tx_calldata", 10, false).await?;
+        // sequence a valid tx so that an appchain batch & mchain block is created
+        let appchain_tx = TransactionRequest::default()
+            .nonce(0)
+            .gas_limit(0)
+            .to(Address::ZERO)
+            .gas_price(0)
+            .build(&EthereumWallet::from(PrivateKeySigner::random()))
+            .await?
+            .encoded_2718();
+        components.sequence_tx(&appchain_tx, 10, false).await?;
         let seq_block = components.sequencing_provider.get_block_number().await?;
 
         // mine a set block to close the slot, but without any transactions

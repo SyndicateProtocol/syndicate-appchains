@@ -14,17 +14,11 @@ abstract contract GasCounter is EpochTracker {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Whether gas tracking is enabled
-    bool public gasTrackingEnabled = true;
+    /// @notice Whether gas tracking is disabled
+    bool public gasTrackingDisabled;
 
     /// @notice Mapping of epoch to gas data
     mapping(uint256 => uint256) public tokensUsedPerEpoch;
-
-    /*//////////////////////////////////////////////////////////////
-                ERRORS
-    //////////////////////////////////////////////////////////////*/
-    error GasTrackingAlreadyEnabled();
-    error GasTrackingAlreadyDisabled();
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
@@ -32,7 +26,7 @@ abstract contract GasCounter is EpochTracker {
 
     /// @notice Modifier that tracks gas usage for a function call
     modifier trackGasUsage() {
-        if (!gasTrackingEnabled) {
+        if (gasTrackingDisabled) {
             _;
             return;
         }
@@ -73,27 +67,5 @@ abstract contract GasCounter is EpochTracker {
     /// @param epoch The epoch to query
     function getTokensForEpoch(uint256 epoch) external view returns (uint256) {
         return tokensUsedPerEpoch[epoch];
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                         ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Disable gas tracking if needed
-    /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
-    function _disableGasTracking() internal {
-        if (gasTrackingEnabled == false) {
-            revert GasTrackingAlreadyDisabled();
-        }
-        gasTrackingEnabled = false;
-    }
-
-    /// @notice Enable gas tracking
-    /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
-    function _enableGasTracking() internal {
-        if (gasTrackingEnabled == true) {
-            revert GasTrackingAlreadyEnabled();
-        }
-        gasTrackingEnabled = true;
     }
 }

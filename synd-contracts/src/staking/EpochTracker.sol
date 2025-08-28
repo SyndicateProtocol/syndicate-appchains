@@ -47,9 +47,6 @@ abstract contract EpochTracker {
      * @return The timestamp when the specified epoch ends
      */
     function getEpochEnd(uint256 epochIndex) public pure returns (uint256) {
-        if (epochIndex == 0) {
-            revert ZeroEpochIndex();
-        }
         return START_TIMESTAMP + epochIndex * EPOCH_DURATION;
     }
 }

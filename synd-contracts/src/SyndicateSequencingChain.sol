@@ -46,15 +46,28 @@ uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
 contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequencingChain, GasCounter {
-    /// @notice The ID of the App chain that this contract is sequencing transactions for.
-    uint256 public immutable appchainId;
+    /// this is intentionally different from the standard offset used by rollups to prevent collisions
+    uint160 public constant OFFSET = uint160(0x1000000000000000000000000000000000000001);
 
-    bool public syndicateForkEnabled;
+    error NoTxData();
+    error TransactionOrSenderNotAllowed();
+    error SyndicateForkDisabled();
+    error GasTrackingAlreadyEnabled();
+    error GasTrackingAlreadyDisabled();
 
     /// @notice Emitted when a new transaction is processed
     /// @param sender The address that submitted the transaction
     /// @param data The transaction data that was processed
     event TransactionProcessed(address indexed sender, bytes data);
+
+    uint256 public immutable appchainId;
+
+    bool public syndicateForkEnabled;
+
+    // We use per-address contract nonces instead of a global one to increase the predictability of the request id
+    // and store per-address contract tx counts for debugging purposes.
+    // Note that gaps are allowed in the request id, unlike a regular nonce.
+    mapping(address => uint256) public contractNonce;
 
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
@@ -65,16 +78,6 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         appchainId = _appchainId;
         syndicateForkEnabled = _syndicateForkEnabled;
     }
-
-    // We use per-address contract nonces instead of a global one to increase the predictability of the request id
-    // and store per-address contract tx counts for debugging purposes.
-    // Note that gaps are allowed in the request id, unlike a regular nonce.
-    mapping(address => uint256) public contractNonce;
-
-    /// this is intentionally different from the standard offset used by rollups to prevent collisions
-    uint160 public constant OFFSET = uint160(0x1000000000000000000000000000000000000001);
-
-    error SyndicateForkDisabled();
 
     /// @notice Utility function that converts the address in the sequencing chain
     /// that submitted a tx to the inbox to the msg.sender viewed in the appchain.
@@ -110,22 +113,21 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         address to,
         uint256 value,
         bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage returns (uint256) {
+    ) external trackGasUsage returns (uint256) {
         require(syndicateForkEnabled, SyndicateForkDisabled());
         uint256 requestId = contractNonce[msg.sender]++;
-        emit TransactionProcessed(
-            msg.sender,
-            abi.encodePacked(
-                L2MessageType_unsignedContractTx,
-                applyAlias(msg.sender),
-                requestId,
-                uint256(gasLimit),
-                maxFeePerGas,
-                uint256(uint160(to)),
-                value,
-                data
-            )
+        bytes memory transaction = abi.encodePacked(
+            L2MessageType_unsignedContractTx,
+            applyAlias(msg.sender),
+            requestId,
+            uint256(gasLimit),
+            maxFeePerGas,
+            uint256(uint160(to)),
+            value,
+            data
         );
+        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
+        emit TransactionProcessed(msg.sender, transaction);
         return requestId;
     }
 
@@ -143,45 +145,44 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         address to,
         uint256 value,
         bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage {
+    ) external trackGasUsage {
         require(syndicateForkEnabled, SyndicateForkDisabled());
-        emit TransactionProcessed(
-            msg.sender,
-            abi.encodePacked(
-                L2MessageType_unsignedEOATx,
-                applyAlias(msg.sender),
-                uint256(gasLimit),
-                maxFeePerGas,
-                nonce,
-                uint256(uint160(to)),
-                value,
-                data
-            )
+        bytes memory transaction = abi.encodePacked(
+            L2MessageType_unsignedEOATx,
+            applyAlias(msg.sender),
+            uint256(gasLimit),
+            maxFeePerGas,
+            nonce,
+            uint256(uint160(to)),
+            value,
+            data
         );
+        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
+        emit TransactionProcessed(msg.sender, transaction);
     }
 
     /// @notice Processes a compressed batch of signed transactions.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
-    function processTransactionsCompressed(bytes calldata data)
-        external
-        onlyWhenAllowedCompressed(msg.sender, tx.origin)
-        trackGasUsage
-    {
+    function processTransactionsCompressed(bytes calldata data) external trackGasUsage {
         require(data.length > 0, NoTxData());
+
+        // ignore tx data as the tx is compressed
+        require(
+            isAllowed(msg.sender, tx.origin, abi.encodePacked(L2MessageType_Batch)), TransactionOrSenderNotAllowed()
+        );
         emit TransactionProcessed(msg.sender, abi.encodePacked(L2MessageType_Batch, data));
     }
 
     /// @notice Process a signed transaction.
     /// @param data Transaction data
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data)
-        external
-        onlyWhenAllowed(msg.sender, tx.origin, data)
-        trackGasUsage
-    {
+    function processTransaction(bytes calldata data) external trackGasUsage {
         require(data.length > 0, NoTxData());
-        emit TransactionProcessed(msg.sender, abi.encodePacked(L2MessageType_SignedTx, data));
+
+        bytes memory transaction = abi.encodePacked(L2MessageType_SignedTx, data);
+        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
+        emit TransactionProcessed(msg.sender, transaction);
     }
 
     /// @notice Processes multiple signed transactions in bulk.
@@ -189,14 +190,17 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     //#olympix-ignore
     function processTransactionsBulk(bytes[] calldata data) external trackGasUsage {
         uint256 dataCount = data.length;
+        require(dataCount > 0, NoTxData());
 
         // Process all transactions
         uint256 i;
         for (i = 0; i < dataCount; i++) {
-            bool isAllowed = data.length > 0 && isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
+            require(data[i].length > 0, NoTxData());
+            bytes memory transaction = abi.encodePacked(L2MessageType_SignedTx, data[i]);
+            bool isAllowed = isAllowed(msg.sender, tx.origin, transaction); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed
-                emit TransactionProcessed(msg.sender, abi.encodePacked(L2MessageType_SignedTx, data[i]));
+                emit TransactionProcessed(msg.sender, transaction);
             }
         }
     }
@@ -212,12 +216,14 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice Disable gas tracking if needed
     /// @dev Only callable by the contract owner
     function disableGasTracking() external onlyOwner {
-        _disableGasTracking();
+        require(!gasTrackingDisabled, GasTrackingAlreadyDisabled());
+        gasTrackingDisabled = true;
     }
 
     /// @notice Enable gas tracking
     /// @dev Only callable by the contract owner
     function enableGasTracking() external onlyOwner {
-        _enableGasTracking();
+        require(gasTrackingDisabled, GasTrackingAlreadyEnabled());
+        gasTrackingDisabled = false;
     }
 }

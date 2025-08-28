@@ -1,68 +1,30 @@
 using PermissionModuleBasic as permissionModule;
-using InitializableHarness as init;
 
 methods {
-    // View functions
+    // Envfree view functions
     function appchainId() external returns (uint256) envfree;
     function permissionRequirementModule() external returns (address) envfree;
     function isAllowed(address, address, bytes) external returns (bool) envfree;
     function owner() external returns (address) envfree;
-    function init._getInitializedVersion() external returns (uint8) envfree;
-
-    // Gas tracking functions
+    function getInitializedVersion() external returns (uint64) envfree;
     function gasTrackingEnabled() external returns (bool) envfree;
-    function disableGasTracking() external;
-    function enableGasTracking() external;
 
-    // Permission Module interface methods
+    // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
 }
 
 /*
- * Rule 1: Initialization rules
- */
-rule initializeOnce(address admin, address module) {
-    env e;
-    require admin != 0;
-    require module != 0;
-
-    // First initialization
-    initialize@withrevert(e, admin, module);
-    bool firstInit = !lastReverted;
-
-    // Try to initialize again
-    initialize@withrevert(e, admin, module);
-
-    assert firstInit => lastReverted,
-        "Contract initialized more than once";
-}
-
-/*
- * Rule 2: Initialization sets correct values
- */
-rule initializationCorrect(address admin, address module) {
-    env e;
-    require admin != 0;
-    require module != 0;
-
-    initialize(e, admin, module);
-
-    assert permissionRequirementModule() == module, "Proposer module not set correctly";
-    assert owner() == admin, "Admin not set correctly";
-}
-
-/*
- * Rule 3: Verify that appchainId cannot be zero
+ * Rule 1: Verify that appchainId cannot be zero
  */
 invariant appchainIdNotZero()
     appchainId() != 0;
 
 /*
- * Rule 4: Only allowed addresses can process transactions uncompressed
+ * Rule 2: Only allowed addresses can process transactions
  */
 rule onlyAllowedCanProcess(bytes data) {
     env e;
-    require init._getInitializedVersion() > 0;
+    require getInitializedVersion() > 0;
 
     // Try to process a transaction
     processTransaction@withrevert(e, data);
@@ -71,26 +33,21 @@ rule onlyAllowedCanProcess(bytes data) {
     bool success = !lastReverted;
 
     // Then the sender must have been allowed
-    assert success => permissionModule.isAllowed(e.msg.sender, e.msg.sender, data),
+    assert success => isAllowed(e.msg.sender, e.msg.sender, data),
         "Unauthorized sender processed transaction";
 }
 
 /*
- * Rule 5: Consistent behavior between processTransaction and processTransaction
+ * Rule 3: Consistent behavior between processTransaction and processTransactionsBulk
  */
 rule processConsistency(bytes data) {
     env e;
-    require init._getInitializedVersion() > 0;
-    require permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
-
-    // Disable gas tracking for consistent verification
-    require !gasTrackingEnabled();
 
     // Record both outcomes
     processTransaction@withrevert(e, data);
     bool txSuccess = !lastReverted;
 
-    processTransactionsCompressed@withrevert(e, data);
+    processTransactionsBulk@withrevert(e, [data]);
     bool rawSuccess = !lastReverted;
 
     // If one succeeds, both should succeed under same conditions
@@ -99,26 +56,25 @@ rule processConsistency(bytes data) {
 }
 
 /*
- * Rule 6: Only owner can update requirement module
+ * Rule 4: Only owner can update requirement module
  */
 rule onlyOwnerCanUpdateModule(address newModule) {
     env e;
-    require init._getInitializedVersion() > 0;
 
     // Try to update the module
     updateRequirementModule@withrevert(e, newModule);
 
-    // If successful, must have been owner
-    assert !lastReverted => e.msg.sender == owner(),
-        "Non-owner updated requirement module";
+    // Should succeed if owner and fail otherwise
+    assert lastReverted == (e.msg.sender == owner()),
+        "Non-owner updated requirement module or owner failed to update requirement module";
 }
 
 /*
- * Rule 7: Module update changes state correctly
+ * Rule 5: Module update changes state correctly
  */
 rule moduleUpdateChangesState(address newModule) {
     env e;
-    require init._getInitializedVersion() > 0;
+    require getInitializedVersion() > 0;
     require newModule != 0;
 
     // Store old module
@@ -133,11 +89,11 @@ rule moduleUpdateChangesState(address newModule) {
 }
 
 /*
- * Rule 8: State consistency after transaction processing
+ * Rule 6: State consistency after transaction processing
  */
 rule stateConsistencyAfterProcessing(bytes data) {
     env e;
-    require init._getInitializedVersion() > 0;
+    require getInitializedVersion() > 0;
     address oldProposerModule = permissionRequirementModule();
 
     // Process transaction
@@ -149,24 +105,15 @@ rule stateConsistencyAfterProcessing(bytes data) {
 }
 
 /*
- * Rule 9: Verify permissions are correctly enforced
+ * Rule 7: Verify permissions are correctly enforced
  */
 rule permissionsCorrectlyEnforced(bytes data) {
     env e;
 
-    // Setup variables for initialization
-    address admin = e.msg.sender;
-    address proposerModule = permissionModule;
-
-    // Initialize the contract first
-    initialize(e, admin, proposerModule);
-
-    // Verify initialization worked
-    require init._getInitializedVersion() == 1;
-
-    // Disable gas tracking for consistent verification
-    require !gasTrackingEnabled();
-
+    // Require the contract to be initialized
+    require permissionRequirementModule() == permissionModule;
+    require owner() == e.msg.sender;
+    
     // Valid sender and msg parameters
     require e.msg.sender != 0;
     require e.msg.sender != currentContract;
@@ -177,7 +124,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
     require data.length < max_uint256;
 
     // Check permissions
-    bool senderAllowed = permissionModule.isAllowed(e.msg.sender, e.msg.sender, data);
+    bool senderAllowed = isAllowed(e.msg.sender, e.msg.sender, data);
 
     // Process transaction
     processTransaction@withrevert(e, data);
