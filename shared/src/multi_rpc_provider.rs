@@ -158,7 +158,14 @@ impl MultiRpcProvider {
             {
                 providers.push(Arc::new(provider));
                 working_urls.push(url.clone());
-            }
+            } else {
+                warn!(
+                    chain_id = chain_id,
+                    url = %sanitize_url_for_logging(url),
+                    index,
+                    "Failed to connect to RPC provider"
+                );
+            };
         }
 
         if providers.is_empty() {
@@ -304,7 +311,7 @@ impl MultiRpcProvider {
 
         // Try each provider exactly once, starting from current active
         for i in 0..self.providers.len() {
-            let provider_index = (start_provider_index + i) % self.providers.len();
+            let provider_index = (start_provider_index + i) % self.provider_count();
             let provider = self.providers[provider_index].clone();
 
             match operation(provider).await {
@@ -1111,7 +1118,6 @@ mod tests {
             final_indices.push(handle.await.unwrap());
         }
 
-        // All threads should observe the same final provider index after switching
         let unique_indices: HashSet<usize> = final_indices.into_iter().collect();
         assert_eq!(
             unique_indices.len(),
