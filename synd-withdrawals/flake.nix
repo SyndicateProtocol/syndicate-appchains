@@ -1,5 +1,5 @@
 {
-  description = "Nix flake for synd-enclave";
+  description = "Nix flake for synd-withdrawals";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";

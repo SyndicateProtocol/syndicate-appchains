@@ -213,14 +213,14 @@
 
   enclave-src-with-generated = let
     enclave-src = pkgs.lib.fileset.toSource {
-      root = ../.;
+      root = ../synd-enclave;
       fileset = pkgs.lib.fileset.unions [
-        ../cmd/enclave
-        ../enclave
-        ../teemodule
-        ../teetypes
-        ../go.mod
-        ../go.sum
+        ../synd-enclave/cmd/enclave
+        ../synd-enclave/enclave
+        ../synd-enclave/teemodule
+        ../synd-enclave/teetypes
+        ../synd-enclave/go.mod
+        ../synd-enclave/go.sum
       ];
     };
   in

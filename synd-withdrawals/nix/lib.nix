@@ -15,10 +15,10 @@
     else if system == "aarch64-linux"
     then "arm64"
     else abort "Unsupported architecture '${system}'";
-  eifBuildCmdline = builtins.readFile ../eif/cmdline-${targetArch};
+  eifBuildCmdline = builtins.readFile ../synd-enclave/eif/cmdline-${targetArch};
 
   build-ramdisk = name: {
-    src ? ../eif,
+    src ? ../synd-enclave/eif,
     init,
     kernel,
     linuxkit,
