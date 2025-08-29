@@ -216,38 +216,8 @@ contract EmissionsCalculator is AccessControl {
         // Ensure epoch synchronization
         if (currentEpoch != expectedEpoch) revert EpochMismatch(expectedEpoch, currentEpoch);
 
-        // Calculate remaining supply (R_t)
-        uint256 remainingSupply = getRemainingSupply();
-
-        uint256 emissionAmount;
-
-        if (currentEpoch == TOTAL_EPOCHS - 1) {
-            // Final epoch: sweep all remaining tokens
-            emissionAmount = remainingSupply;
-        } else {
-            // Calculate emission using geometric decay formula
-            uint256 rt = decayFactors[currentEpoch];
-            uint256 pt = calculateCumulativeProduct(currentEpoch);
-
-            // Prevent division by zero and handle edge case
-            if (pt >= SCALE) {
-                // Treat as final epoch and sweep remaining
-                emissionAmount = remainingSupply;
-            } else if (SCALE - pt < 1000) {
-                // Near-zero denominator check
-                // Use minimum denominator to prevent precision issues
-                uint256 denominator = 1000; // Minimum safe denominator
-                uint256 numerator = remainingSupply * (SCALE - rt);
-                emissionAmount = numerator / denominator;
-            } else {
-                // E_t = R_t * (1 - r_t) / (1 - P_t)
-                // precision in fixed-point arithmetic
-                uint256 numerator = remainingSupply * (SCALE - rt);
-                uint256 denominator = SCALE - pt;
-
-                emissionAmount = numerator / denominator;
-            }
-        }
+        uint256 emissionAmount = getNextEmission();
+        if (emissionAmount == 0) revert EmissionsCompleted();
 
         // Update state
         totalEmitted += emissionAmount;
@@ -255,7 +225,7 @@ contract EmissionsCalculator is AccessControl {
         // Mint tokens
         syndicateToken.mint(to, emissionAmount);
 
-        emit EmissionMinted(currentEpoch, emissionAmount, remainingSupply - emissionAmount, to);
+        emit EmissionMinted(currentEpoch, emissionAmount, getRemainingSupply(), to);
 
         // Advance to next epoch
         currentEpoch++;
@@ -300,29 +270,36 @@ contract EmissionsCalculator is AccessControl {
     }
 
     /**
-     * @notice Preview emission amount for current epoch without minting
+     * @notice Get emission amount for current epoch without minting
      * @return Emission amount that would be minted for current epoch
      */
-    function previewCurrentEmission() external view returns (uint256) {
+    function getNextEmission() public view returns (uint256) {
         if (!initialized || currentEpoch >= TOTAL_EPOCHS) return 0;
 
         uint256 remainingSupply = getRemainingSupply();
 
         if (currentEpoch == TOTAL_EPOCHS - 1) {
+            // Final epoch: sweep all remaining tokens
             return remainingSupply;
         }
 
+        // Calculate emission for current epoch
         uint256 rt = decayFactors[currentEpoch];
         uint256 pt = calculateCumulativeProduct(currentEpoch);
 
-        // Apply same safety checks as calculateAndMintEmission
+        // Prevent division by zero and handle edge case
         if (pt >= SCALE) {
+            // Treat as final epoch and sweep remaining supply
             return remainingSupply;
         } else if (SCALE - pt < 1000) {
+            // Near-zero denominator check
+            // Use minimum denominator to prevent precision issues
             uint256 denominator = 1000;
             uint256 numerator = remainingSupply * (SCALE - rt);
             return numerator / denominator;
         } else {
+            // E_t = R_t * (1 - r_t) / (1 - P_t)
+            // precision in fixed-point arithmetic
             uint256 numerator = remainingSupply * (SCALE - rt);
             uint256 denominator = SCALE - pt;
             return numerator / denominator;

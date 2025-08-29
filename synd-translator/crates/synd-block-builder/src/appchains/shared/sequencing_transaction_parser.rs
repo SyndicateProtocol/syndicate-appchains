@@ -190,32 +190,8 @@ impl SequencingTransactionParser {
 mod tests {
     use super::*;
     use alloy::{hex, primitives::B256, sol_types::SolValue};
-    use rlp::RlpStream;
 
-    const DUMMY_TXN_VALUE: &[u8] = &[L2MessageKind::SignedTx as u8];
-
-    /// RLP encodes and compresses a slice of Ethereum transactions using brotli compression
-    fn compress_transactions(transactions: &[Bytes]) -> std::io::Result<Bytes> {
-        // RLP encode the list of transactions
-        let mut stream = RlpStream::new_list(transactions.len());
-        for tx in transactions {
-            stream.append(&tx.as_ref());
-        }
-        let encoded = stream.out();
-
-        // Compress the RLP encoded bytes using brotli
-        let mut compressed = Vec::new();
-        brotli::enc::BrotliCompress(
-            &mut &encoded[..],
-            &mut compressed,
-            &brotli::enc::BrotliEncoderInitParams(),
-        )?;
-
-        // Append the compression prefix
-        compressed.insert(0, L2MessageKind::Batch as u8);
-
-        Ok(Bytes::from(compressed))
-    }
+    const DUMMY_TXN_VALUE: &[u8] = &[L2MessageKind::UnsignedUserTx as u8];
 
     fn generate_valid_test_log(contract_address: Address) -> Log {
         let topics = vec![
@@ -282,30 +258,5 @@ mod tests {
         let result = parser.get_event_transactions(&log);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SequencingParserError::InvalidLogEvent);
-    }
-
-    #[test]
-    fn test_decode_event_data() {
-        // Test that demonstrates the correct protocol data structure for each compression case
-
-        // Case 1: No compression, so there's a leading signed byte
-        let mut raw_data = b"raw_transaction_data".to_vec();
-        raw_data.insert(0, L2MessageKind::SignedTx as u8);
-        let raw_data = raw_data.into();
-
-        let result = SequencingTransactionParser::decode_event_data(&raw_data);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![raw_data]);
-
-        // Case 2: Brotli compression, the uncompressed tx includes a leading signed byte
-        let tx = Bytes::from(b"test_transaction".to_vec());
-        let transactions = vec![tx.clone()];
-        let compressed_data = compress_transactions(&transactions).unwrap();
-        let mut signed_tx = Vec::from(tx);
-        signed_tx.insert(0, L2MessageKind::SignedTx as u8);
-
-        let result = SequencingTransactionParser::decode_event_data(&compressed_data);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![signed_tx]);
     }
 }

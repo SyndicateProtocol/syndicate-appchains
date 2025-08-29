@@ -9,7 +9,7 @@ import {IPool} from "./IPool.sol";
  * @notice Contract for splitting pool rewards between base, performance, and appchain pools
  * @dev This contract manages the distribution of rewards to different pools: base 30%, performance 30%, and appchain 40%.
  */
-contract Splitter is IPool {
+contract Splitter {
     /// @notice Percentage of the reward for the performance pool
     uint256 public constant PERFORMANCE_POOL_SPLIT = 30; // 30%
 

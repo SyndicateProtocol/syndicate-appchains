@@ -60,7 +60,15 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @param data The transaction data that was processed
     event TransactionProcessed(address indexed sender, bytes data);
 
+    /// @notice Emitted when the emissions receiver is updated
+    /// @param oldReceiver The previous emissions receiver address
+    /// @param newReceiver The new emissions receiver address
+    event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
+
     uint256 public immutable appchainId;
+
+    /// @notice The address that receives emissions for this sequencing chain
+    address public emissionsReceiver;
 
     bool public syndicateForkEnabled;
 
@@ -209,6 +217,40 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         syndicateForkEnabled = true;
     }
 
+    /*//////////////////////////////////////////////////////////////
+                         EMISSIONS RECEIVER ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Set the emissions receiver address
+    /// @dev Only callable by the contract owner
+    /// @param _emissionsReceiver The address to receive emissions
+    function setEmissionsReceiver(address _emissionsReceiver) external onlyOwner {
+        address oldReceiver = emissionsReceiver;
+        emissionsReceiver = _emissionsReceiver;
+        if (emissionsReceiver != address(0)) {
+            emit EmissionsReceiverUpdated(oldReceiver, _emissionsReceiver);
+        } else {
+            emit EmissionsReceiverUpdated(oldReceiver, owner());
+        }
+    }
+
+    /// @notice Get the effective emissions receiver address
+    /// @dev Returns emissionsReceiver if set, otherwise returns the contract owner
+    /// @return The address that should receive emissions
+    function getEmissionsReceiver() external view returns (address) {
+        return emissionsReceiver == address(0) ? owner() : emissionsReceiver;
+    }
+
+    /// @notice Override transferOwnership to emit EmissionsReceiverUpdated event when appropriate
+    /// @dev When emissionsReceiver is not explicitly set (address(0)), transferring ownership
+    /// effectively changes the emissions receiver, so we emit the event for transparency
+    /// @param newOwner The address of the new owner
+    function transferOwnership(address newOwner) public override onlyOwner {
+        if (emissionsReceiver == address(0)) {
+            emit EmissionsReceiverUpdated(owner(), newOwner);
+        }
+        super.transferOwnership(newOwner);
+    }
     /*//////////////////////////////////////////////////////////////
                          GAS TRACKING ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/

@@ -2,7 +2,7 @@
 use alloy::{
     contract::CallBuilder,
     eips::{BlockNumberOrTag, Encodable2718},
-    network::{Ethereum, TransactionBuilder},
+    network::{Ethereum, TransactionBuilder as _},
     primitives::{
         address, keccak256,
         utils::{parse_ether, parse_units},

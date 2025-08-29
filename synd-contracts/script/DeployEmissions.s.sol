@@ -4,13 +4,13 @@ pragma solidity 0.8.28;
 import {Script, console} from "forge-std/Script.sol";
 import {SyndicateToken} from "src/token/SyndicateToken.sol";
 import {EmissionsCalculator} from "src/token/emissions/EmissionsCalculator.sol";
-import {SyndicateTokenEmissionSchedulerV2} from "src/token/emissions/SyndicateTokenEmissionSchedulerV2.sol";
+import {EmissionsScheduler} from "src/token/emissions/EmissionsScheduler.sol";
 
 /**
- * @title Deploy Emissions V2 System
+ * @title Deploy Emissions System
  * @notice Deploy the new piece-wise geometric decay emissions system
  */
-contract DeployEmissionsV2 is Script {
+contract DeployEmissions is Script {
     function run() public {
         vm.startBroadcast();
 
@@ -20,13 +20,16 @@ contract DeployEmissionsV2 is Script {
         require(admin != address(0), "ADMIN_ADDR not set");
         require(treasury != address(0), "MANAGER_ADDR not set");
 
-        console.log("Deploying Emissions V2 System...");
+        console.log("Deploying Emissions System...");
         console.log("Admin:", admin);
         console.log("Treasury:", treasury);
 
-        // 1. Deploy SyndicateToken (if not already deployed)
-        SyndicateToken token = new SyndicateToken(admin, treasury);
+        address tokenAddr = vm.envAddress("TOKEN_ADDR");
+        SyndicateToken token = SyndicateToken(tokenAddr);
         console.log("SyndicateToken deployed at:", address(token));
+
+        address relayerAddr = vm.envAddress("RELAYER_ADDR");
+        address relayDestinationAddr = vm.envAddress("RELAY_DESTINATION_ADDR");
 
         // 2. Deploy EmissionsCalculator
         EmissionsCalculator calculator = new EmissionsCalculator(
@@ -36,14 +39,15 @@ contract DeployEmissionsV2 is Script {
         );
         console.log("EmissionsCalculator deployed at:", address(calculator));
 
-        // 3. Deploy EmissionSchedulerV2
-        SyndicateTokenEmissionSchedulerV2 scheduler = new SyndicateTokenEmissionSchedulerV2(
+        // 3. Deploy EmissionsScheduler
+        EmissionsScheduler scheduler = new EmissionsScheduler(
             address(calculator),
-            admin, // admin
-            admin, // emissions manager
+            relayerAddr,
+            relayDestinationAddr,
+            admin, // default admin
             admin // pauser
         );
-        console.log("EmissionSchedulerV2 deployed at:", address(scheduler));
+        console.log("EmissionsScheduler deployed at:", address(scheduler));
 
         // 4. Setup permissions
         console.log("Setting up permissions...");
@@ -64,7 +68,7 @@ contract DeployEmissionsV2 is Script {
  * @title Initialize Emissions V2
  * @notice Initialize the emissions system with default decay factor
  */
-contract InitializeEmissionsV2 is Script {
+contract InitializeEmissions is Script {
     function run() public {
         vm.startBroadcast();
 
@@ -106,7 +110,7 @@ contract DemoDecayUpdates is Script {
         console.log("Is completed:", calculator.isCompleted());
 
         // Preview current emission
-        uint256 preview = calculator.previewCurrentEmission();
+        uint256 preview = calculator.getNextEmission();
         console.log("Next emission preview:", preview);
 
         // Show cumulative product calculation
