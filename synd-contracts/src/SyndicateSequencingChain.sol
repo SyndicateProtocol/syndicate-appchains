@@ -4,10 +4,6 @@ pragma solidity 0.8.28;
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 import {GasCounter} from "./staking/GasCounter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
-import {
-    L2MessageType_unsignedEOATx,
-    L2MessageType_unsignedContractTx
-} from "@arbitrum/nitro-contracts/src/libraries/MessageTypes.sol";
 
 uint8 constant L2MessageType_Batch = 3; // compressed batch of transactions (signed)
 uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
