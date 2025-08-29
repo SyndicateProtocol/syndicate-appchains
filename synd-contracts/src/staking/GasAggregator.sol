@@ -7,6 +7,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 
 interface GasCounter {
     function getTokensForEpoch(uint256 epoch) external view returns (uint256);
+    function getEmissionsReceiver() external view returns (address);
 }
 
 interface AppchainFactory {
@@ -98,10 +99,12 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         }
         (uint256[] memory appchains, address[] memory contracts) = factory.getAppchainsAndContracts();
         uint256[] memory tokens = new uint256[](appchains.length);
+        address[] memory emissionsReceivers = new address[](appchains.length);
         for (uint256 i = 0; i < appchains.length; i++) {
             tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(pendingEpoch);
+            emissionsReceivers[i] = GasCounter(contracts[i]).getEmissionsReceiver();
         }
-        aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(appchains, tokens));
+        aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(appchains, tokens, emissionsReceivers));
         pendingEpoch++;
     }
 
@@ -119,11 +122,13 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         uint256 total = 0;
         address[] memory contracts = factory.getContractsForAppchains(appchainIDs);
         uint256[] memory tokens = new uint256[](appchainIDs.length);
+        address[] memory emissionsReceivers = new address[](appchainIDs.length);
         for (uint256 i = 0; i < appchainIDs.length; i++) {
             if (i > 0 && appchainIDs[i] <= appchainIDs[i - 1]) {
                 revert ChainIDsMustBeInAscendingOrder();
             }
             tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(pendingEpoch);
+            emissionsReceivers[i] = GasCounter(contracts[i]).getEmissionsReceiver();
             total += tokens[i];
         }
         if (total <= pendingTotalTokensUsed) {
@@ -132,7 +137,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         if (pendingEpochFirstSubmissionTime == 0) {
             pendingEpochFirstSubmissionTime = block.timestamp;
         }
-        pendingDataHash = keccak256(abi.encode(appchainIDs, tokens));
+        pendingDataHash = keccak256(abi.encode(appchainIDs, tokens, emissionsReceivers));
         pendingTotalTokensUsed = total;
     }
 
