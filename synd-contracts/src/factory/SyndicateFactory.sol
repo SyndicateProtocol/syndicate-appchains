@@ -11,6 +11,24 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+/// @title MinimalUUPSStub
+/// @notice Minimal UUPS implementation stub for deterministic proxy deployments
+/// @dev This contract will NEVER change to ensure deterministic CREATE2 addresses across all deployments
+contract MinimalUUPSStub is UUPSUpgradeable {
+    /// @notice this is only used to get a reliably deterministic address, the proxy will immediately be upgraded
+    function _authorizeUpgrade(address) internal view override {}
+
+    /// @notice Receive function that reverts - this stub should not receive ETH
+    receive() external payable {
+        revert("Stub: ETH not accepted");
+    }
+
+    /// @notice Fallback that reverts - this stub has no logic
+    fallback() external payable {
+        revert("Stub: no logic implemented");
+    }
+}
+
 enum NamespaceState {
     Available,
     Used,
@@ -43,6 +61,10 @@ contract SyndicateFactory is AccessControl, Pausable {
     error ZeroAddress();
     error ChainIdAlreadyExists();
     error ImplementationNotAllowed();
+    error ImplementationAlreadyAllowed();
+    error OnlyChainCanNotifyUpgrade();
+    error CannotRemoveDefaultImplementation();
+    error FailedToUpgradeToLatestImplementation();
 
     // Namespace configuration - made public for frontend access
     uint256 public namespacePrefix;
@@ -77,13 +99,14 @@ contract SyndicateFactory is AccessControl, Pausable {
 
         nextAutoChainId = 1;
 
-        // Deploy stub implementation first
-        stubImplementation = address(new SyndicateSequencingChain());
+        // Deploy minimal stub implementation using CREATE2 for deterministic address
+        bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
+        stubImplementation = Create2.deploy(0, bytes32("SYNDICATE_STUB_V1"), stubBytecode);
 
-        // Use stub as the initial current implementation too
-        syndicateChainImpl = stubImplementation;
+        // Deploy the real implementation and make it the default
+        syndicateChainImpl = address(new SyndicateSequencingChain());
 
-        // Add initial implementation to allowed list
+        // Add real implementation to allowed list
         allowedImplementations.push(syndicateChainImpl);
         isImplementationAllowed[syndicateChainImpl] = true;
         emit ImplementationAdded(syndicateChainImpl);
@@ -125,18 +148,18 @@ contract SyndicateFactory is AccessControl, Pausable {
         appchainContracts[actualChainId] = sequencingChain;
         chainIDs.push(actualChainId);
 
-        // Step 1: Initialize with factory as temporary owner to enable upgrade
-        SyndicateSequencingChain(sequencingChain).initialize(address(this), address(permissionModule), actualChainId);
-
-        // Step 2: If we have a newer implementation, upgrade to it immediately
-        if (syndicateChainImpl != stubImplementation) {
-            // Factory is owner at this point, so we can authorize and upgrade
-            (bool success,) =
-                sequencingChain.call(abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, ""));
-            require(success, "Failed to upgrade to latest implementation");
+        // Upgrade the proxy to use the latest implementation (instead of the stub)
+        bytes memory initData = abi.encodeWithSignature(
+            "initialize(address,address,uint256)", address(this), address(permissionModule), actualChainId
+        );
+        (bool upgradeSuccess,) = sequencingChain.call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
+        );
+        if (!upgradeSuccess) {
+            revert FailedToUpgradeToLatestImplementation();
         }
 
-        // Step 3: Transfer ownership to the intended admin
+        // Transfer ownership to the intended admin
         SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
@@ -164,6 +187,14 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @return The bytecode to be used for deployment.
     function getImplBytecode(address impl) public pure returns (bytes memory) {
         return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(impl, ""));
+    }
+
+    /// @notice Computes the deterministic stub implementation address
+    /// @dev This allows computing the stub address before factory deployment
+    /// @return The computed stub implementation address
+    function computeStubImplementationAddress() public view returns (address) {
+        bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
+        return Create2.computeAddress(bytes32("SYNDICATE_STUB_V1"), keccak256(stubBytecode));
     }
 
     /// @notice Get the next auto-generated chain ID
@@ -270,8 +301,8 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @param implementation The implementation address to allow
     /// @param makeDefault Whether to make this the default for new deployments
     function addAllowedImplementation(address implementation, bool makeDefault) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(implementation != address(0), "Zero address implementation");
-        require(!isImplementationAllowed[implementation], "Implementation already allowed");
+        if (implementation == address(0)) revert ZeroAddress();
+        if (isImplementationAllowed[implementation]) revert ImplementationAlreadyAllowed();
 
         allowedImplementations.push(implementation);
         isImplementationAllowed[implementation] = true;
@@ -283,10 +314,25 @@ contract SyndicateFactory is AccessControl, Pausable {
         emit ImplementationAdded(implementation);
     }
 
+    /// @notice Remove an allowed implementation (admin only)
+    /// @param implementation The implementation address to remove
+    function removeAllowedImplementation(address implementation) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (!isImplementationAllowed[implementation]) revert ImplementationNotAllowed();
+        if (implementation == syndicateChainImpl) revert CannotRemoveDefaultImplementation();
+        for (uint256 i = 0; i < allowedImplementations.length; i++) {
+            if (allowedImplementations[i] == implementation) {
+                allowedImplementations[i] = allowedImplementations[allowedImplementations.length - 1];
+                allowedImplementations.pop();
+                break;
+            }
+        }
+        isImplementationAllowed[implementation] = false;
+    }
+
     /// @notice Set the default implementation for new deployments (admin only)
     /// @param implementation The implementation address to use as default
     function setDefaultImplementation(address implementation) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(isImplementationAllowed[implementation], "Implementation not allowed");
+        if (!isImplementationAllowed[implementation]) revert ImplementationNotAllowed();
         syndicateChainImpl = implementation;
     }
 
@@ -328,7 +374,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @param chainId The chain ID that is upgrading
     /// @param newImplementation The address of the new implementation
     function notifyChainUpgrade(uint256 chainId, address newImplementation) external {
-        require(appchainContracts[chainId] == msg.sender, "Only chain can notify upgrade");
+        if (appchainContracts[chainId] != msg.sender) revert OnlyChainCanNotifyUpgrade();
 
         if (!isImplementationAllowed[newImplementation]) {
             _banChainFromGasTracking(chainId);

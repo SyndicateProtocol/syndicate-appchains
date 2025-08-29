@@ -661,7 +661,7 @@ contract SyndicateFactoryTest is Test {
         factory.addAllowedImplementation(address(mockImpl), false);
 
         vm.prank(admin);
-        vm.expectRevert("Implementation already allowed");
+        vm.expectRevert(SyndicateFactory.ImplementationAlreadyAllowed.selector);
         factory.addAllowedImplementation(address(mockImpl), false);
     }
 
@@ -716,7 +716,7 @@ contract SyndicateFactoryTest is Test {
 
         // Non-chain address cannot notify
         vm.prank(admin);
-        vm.expectRevert("Only chain can notify upgrade");
+        vm.expectRevert(SyndicateFactory.OnlyChainCanNotifyUpgrade.selector);
         factory.notifyChainUpgrade(chainId, address(someImpl));
     }
 
@@ -770,12 +770,12 @@ contract SyndicateFactoryTest is Test {
     function testNewChainsUseLatestImplementation() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
 
-        // Deploy first chain - should use stub implementation (since syndicateChainImpl == stubImplementation)
+        // Deploy first chain - should use current default implementation
         (address chain1,) = factory.createSyndicateSequencingChain(1001, admin, permissionModule);
         // Read implementation from proxy storage (ERC1967 standard slot)
         bytes32 IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
         address impl1 = address(uint160(uint256(vm.load(chain1, IMPLEMENTATION_SLOT))));
-        assertEq(impl1, factory.stubImplementation());
+        assertEq(impl1, factory.syndicateChainImpl());
 
         // Add new implementation and make it default
         SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
@@ -800,10 +800,10 @@ contract SyndicateFactoryTest is Test {
         // Deploy a chain using the factory
         (address chainAddr, uint256 chainId) = factory.createSyndicateSequencingChain(2001, admin, permissionModule);
 
-        // Verify chain was deployed with stub implementation initially
+        // Verify chain was deployed with current default implementation
         bytes32 IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
         address initialImpl = address(uint160(uint256(vm.load(chainAddr, IMPLEMENTATION_SLOT))));
-        assertEq(initialImpl, factory.stubImplementation());
+        assertEq(initialImpl, factory.syndicateChainImpl());
 
         // Create new implementations
         SyndicateSequencingChain goodImpl = new SyndicateSequencingChain();
@@ -879,5 +879,168 @@ contract SyndicateFactoryTest is Test {
         assertEq(contracts.length, 2);
         assertEq(contracts[0], address(0)); // banned chain returns zero address
         assertEq(contracts[1], goodChainAddr); // good chain returns actual address
+    }
+
+    function testRemoveAllowedImplementation() public {
+        SyndicateSequencingChain impl1 = new SyndicateSequencingChain();
+        SyndicateSequencingChain impl2 = new SyndicateSequencingChain();
+
+        // Add implementations
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl1), false);
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl2), false);
+
+        // Verify they are allowed
+        assertTrue(factory.isImplementationAllowed(address(impl1)));
+        assertTrue(factory.isImplementationAllowed(address(impl2)));
+
+        address[] memory allowedBefore = factory.getAllowedImplementations();
+        uint256 lengthBefore = allowedBefore.length;
+
+        // Remove impl1
+        vm.prank(admin);
+        factory.removeAllowedImplementation(address(impl1));
+
+        // Verify impl1 is no longer allowed
+        assertFalse(factory.isImplementationAllowed(address(impl1)));
+        // Verify impl2 is still allowed
+        assertTrue(factory.isImplementationAllowed(address(impl2)));
+
+        // Verify array length decreased
+        address[] memory allowedAfter = factory.getAllowedImplementations();
+        assertEq(allowedAfter.length, lengthBefore - 1);
+
+        // Verify impl1 is not in the array
+        bool found = false;
+        for (uint256 i = 0; i < allowedAfter.length; i++) {
+            if (allowedAfter[i] == address(impl1)) {
+                found = true;
+                break;
+            }
+        }
+        assertFalse(found);
+    }
+
+    function testRemoveAllowedImplementationNonAdminReverts() public {
+        SyndicateSequencingChain impl = new SyndicateSequencingChain();
+
+        // Add implementation first
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl), false);
+
+        // Non-admin cannot remove
+        vm.prank(manager);
+        vm.expectRevert(); // AccessControl revert
+        factory.removeAllowedImplementation(address(impl));
+
+        vm.prank(nonManager);
+        vm.expectRevert(); // AccessControl revert
+        factory.removeAllowedImplementation(address(impl));
+    }
+
+    function testRemoveNonAllowedImplementationReverts() public {
+        SyndicateSequencingChain impl = new SyndicateSequencingChain();
+
+        // Try to remove implementation that was never added
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ImplementationNotAllowed.selector);
+        factory.removeAllowedImplementation(address(impl));
+    }
+
+    function testRemoveDefaultImplementationReverts() public {
+        // Get the current default implementation (stubImplementation from constructor)
+        address defaultImpl = factory.syndicateChainImpl();
+        assertTrue(factory.isImplementationAllowed(defaultImpl));
+
+        // Try to remove the default implementation
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.CannotRemoveDefaultImplementation.selector);
+        factory.removeAllowedImplementation(defaultImpl);
+
+        // Verify it's still allowed and still the default
+        assertTrue(factory.isImplementationAllowed(defaultImpl));
+        assertEq(factory.syndicateChainImpl(), defaultImpl);
+    }
+
+    function testRemoveImplementationFromMiddleOfArray() public {
+        SyndicateSequencingChain impl1 = new SyndicateSequencingChain();
+        SyndicateSequencingChain impl2 = new SyndicateSequencingChain();
+        SyndicateSequencingChain impl3 = new SyndicateSequencingChain();
+
+        // Add three implementations
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl1), false);
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl2), false);
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl3), false);
+
+        address[] memory beforeRemoval = factory.getAllowedImplementations();
+        assertEq(beforeRemoval.length, 4); // 1 from constructor + 3 added
+
+        // Remove impl2 (middle element)
+        vm.prank(admin);
+        factory.removeAllowedImplementation(address(impl2));
+
+        // Verify array integrity
+        address[] memory afterRemoval = factory.getAllowedImplementations();
+        assertEq(afterRemoval.length, 3);
+
+        // Verify impl2 is not in array
+        bool foundImpl2 = false;
+        for (uint256 i = 0; i < afterRemoval.length; i++) {
+            if (afterRemoval[i] == address(impl2)) {
+                foundImpl2 = true;
+                break;
+            }
+        }
+        assertFalse(foundImpl2);
+
+        // Verify other implementations are still there
+        assertTrue(factory.isImplementationAllowed(address(impl1)));
+        assertFalse(factory.isImplementationAllowed(address(impl2)));
+        assertTrue(factory.isImplementationAllowed(address(impl3)));
+    }
+
+    function testSetDefaultImplementation() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Add implementation first
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(newImpl), false);
+
+        // Set as default
+        vm.prank(admin);
+        factory.setDefaultImplementation(address(newImpl));
+
+        // Verify it's the current implementation
+        assertEq(factory.syndicateChainImpl(), address(newImpl));
+    }
+
+    function testSetDefaultImplementationNotAllowedReverts() public {
+        SyndicateSequencingChain impl = new SyndicateSequencingChain();
+
+        // Try to set as default without adding to allowed list first
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ImplementationNotAllowed.selector);
+        factory.setDefaultImplementation(address(impl));
+    }
+
+    function testSetDefaultImplementationNonAdminReverts() public {
+        SyndicateSequencingChain impl = new SyndicateSequencingChain();
+
+        // Add implementation first
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl), false);
+
+        // Non-admin cannot set default
+        vm.prank(manager);
+        vm.expectRevert(); // AccessControl revert
+        factory.setDefaultImplementation(address(impl));
+
+        vm.prank(nonManager);
+        vm.expectRevert(); // AccessControl revert
+        factory.setDefaultImplementation(address(impl));
     }
 }

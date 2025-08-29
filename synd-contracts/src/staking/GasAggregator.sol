@@ -106,6 +106,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         }
         aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(appchains, tokens));
         pendingEpoch++;
+        pendingEpochFirstSubmissionTime = 0;
+        pendingDataHash = bytes32(0);
+        pendingTotalTokensUsed = 0;
     }
 
     /// @notice Submission of top appchains aggregated off-chain

@@ -135,7 +135,7 @@ contract SyndicateSequencingChain is
         _enableGasTracking();
         appchainId = _appchainId;
         factory = msg.sender;
-        allowGasTrackingBanOnUpgrade = true; // Default to true for backwards compatibility
+        allowGasTrackingBanOnUpgrade = false;
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
