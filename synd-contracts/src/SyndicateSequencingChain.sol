@@ -83,10 +83,14 @@ contract SyndicateSequencingChain is
     /// Storage slot 2
     address public factory;
 
+    /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
+    /// Storage slot 3
+    bool public allowGasTrackingBanOnUpgrade;
+
     // We use per-address contract nonces instead of a global one to increase the predictability of the request id
     // and store per-address contract tx counts for debugging purposes.
     // Note that gaps are allowed in the request id, unlike a regular nonce.
-    /// Storage slot 3
+    /// Storage slot 4
     mapping(address => uint256) public contractNonce;
 
     /*//////////////////////////////////////////////////////////////
@@ -131,38 +135,17 @@ contract SyndicateSequencingChain is
         _enableGasTracking();
         appchainId = _appchainId;
         factory = msg.sender;
-    }
-
-    /// @notice Check if an upgrade would result in gas tracking ban without executing it
-    /// @param _newImplementation The address of the new implementation contract
-    /// @return wouldBeBanned True if the upgrade would result in gas tracking ban
-    function checkUpgradeImpact(address _newImplementation) external view returns (bool wouldBeBanned) {
-        if (factory == address(0)) return false;
-        return !ISyndicateFactory(factory).isImplementationAllowed(_newImplementation);
-    }
-
-    /// @notice Authorizes contract upgrades with optional gas tracking ban protection
-    /// @param _newImplementation The address of the new implementation contract
-    /// @param allowGasTrackingBan If false, reverts when factory would ban this chain from gas tracking
-    function authorizeUpgrade(address _newImplementation, bool allowGasTrackingBan) external onlyOwner {
-        _authorizeUpgradeInternal(_newImplementation, allowGasTrackingBan);
+        allowGasTrackingBanOnUpgrade = true; // Default to true for backwards compatibility
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
     /// @dev Required by UUPSUpgradeable to restrict upgradeability to the owner.
     /// @param _newImplementation The address of the new implementation contract.
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
-        _authorizeUpgradeInternal(_newImplementation, true);
-    }
-
-    /// @notice Internal upgrade authorization logic
-    /// @param _newImplementation The address of the new implementation contract
-    /// @param allowGasTrackingBan Whether to allow upgrades that result in gas tracking ban
-    function _authorizeUpgradeInternal(address _newImplementation, bool allowGasTrackingBan) internal {
         bool isAllowed = ISyndicateFactory(factory).isImplementationAllowed(_newImplementation);
 
         if (!isAllowed) {
-            require(allowGasTrackingBan, "Upgrade would result in gas tracking ban");
+            require(allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
         }
 
         // Notify factory about the upgrade
@@ -345,5 +328,12 @@ contract SyndicateSequencingChain is
     /// @dev Only callable by the contract owner
     function enableGasTracking() external onlyOwner {
         _enableGasTracking();
+    }
+
+    /// @notice Set whether to allow gas tracking ban on upgrade
+    /// @dev Only callable by the contract owner
+    /// @param _allowGasTrackingBanOnUpgrade Whether to allow gas tracking ban on upgrade
+    function setAllowGasTrackingBanOnUpgrade(bool _allowGasTrackingBanOnUpgrade) external onlyOwner {
+        allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
     }
 }

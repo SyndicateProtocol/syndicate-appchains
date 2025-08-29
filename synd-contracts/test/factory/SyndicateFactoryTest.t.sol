@@ -818,10 +818,11 @@ contract SyndicateFactoryTest is Test {
         SyndicateSequencingChain chain = SyndicateSequencingChain(chainAddr);
 
         // Test 1: Upgrade to good (allowed) implementation should succeed
+        // First set allowGasTrackingBanOnUpgrade to false
         vm.prank(admin);
-        chain.authorizeUpgrade(address(goodImpl), false); // allowGasTrackingBan = false
+        chain.setAllowGasTrackingBanOnUpgrade(false);
 
-        // The upgrade itself happens in a separate call (this is UUPS pattern)
+        // Now perform the upgrade (authorization happens internally)
         vm.prank(admin);
         chain.upgradeToAndCall(address(goodImpl), "");
 
@@ -833,18 +834,20 @@ contract SyndicateFactoryTest is Test {
         assertFalse(factory.isChainBannedFromGasTracking(chainId));
 
         // Test 2: Try to upgrade to bad (not allowed) implementation with allowGasTrackingBan = false
+        // allowGasTrackingBanOnUpgrade is still false from previous test
         vm.prank(admin);
         vm.expectRevert("Upgrade would result in gas tracking ban");
-        chain.authorizeUpgrade(address(badImpl), false); // allowGasTrackingBan = false
+        chain.upgradeToAndCall(address(badImpl), ""); // Should fail because allowGasTrackingBanOnUpgrade = false
 
         // Test 3: Upgrade to bad implementation with allowGasTrackingBan = true should succeed but ban the chain
+        // First set allowGasTrackingBanOnUpgrade to true
+        vm.prank(admin);
+        chain.setAllowGasTrackingBanOnUpgrade(true);
+
         vm.expectEmit(true, true, false, false);
         emit SyndicateFactory.ChainBannedFromGasTracking(chainId, address(badImpl));
 
-        vm.prank(admin);
-        chain.authorizeUpgrade(address(badImpl), true); // allowGasTrackingBan = true
-
-        // Perform the actual upgrade
+        // Perform the actual upgrade (should succeed now)
         vm.prank(admin);
         chain.upgradeToAndCall(address(badImpl), "");
 
