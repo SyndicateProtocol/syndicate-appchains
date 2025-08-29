@@ -17,17 +17,17 @@ contract Refunder is AccessControl {
     address public pool;
 
     /// @notice The address of the syndicate staking contract used to get current epoch
-    address public immutable syndStaking;
+    ISyndStaking public immutable syndStaking;
 
     /**
      * @notice Constructs the Refunder contract
      * @param _pool The address of the pool contract for deposits
      * @param _syndStaking The address of the syndicate staking contract
-     * @dev Both addresses are set as immutable to ensure contract security and gas efficiency
+     * @param _defaultAdmin The address to be granted the DEFAULT_ADMIN_ROLE
      */
     constructor(address _pool, address _syndStaking, address _defaultAdmin) {
         pool = _pool;
-        syndStaking = _syndStaking;
+        syndStaking = ISyndStaking(_syndStaking);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
     }
@@ -51,7 +51,7 @@ contract Refunder is AccessControl {
      */
     function recover() external {
         uint256 amount = address(this).balance;
-        uint256 currentEpoch = ISyndStaking(syndStaking).getCurrentEpoch();
+        uint256 currentEpoch = syndStaking.getCurrentEpoch();
 
         IPool(pool).deposit{value: amount}(currentEpoch);
     }
