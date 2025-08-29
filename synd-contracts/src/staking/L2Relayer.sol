@@ -52,7 +52,7 @@ contract L2Relayer is AccessControl {
     ////////////////////////////
     // Contracts Deployed on L3
     ////////////////////////////
-    
+
     /// @notice The refunder contract address on L3 that handles excess funds
     address public immutable refunder;
 
