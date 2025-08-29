@@ -98,6 +98,17 @@ fn uncompressed_batch(txs: &[TxWithValkeyId], new_tx: TxWithValkeyId) -> Sequenc
 /// * `Ok(Vec<u8>)` - The compressed data if successful
 /// * `Err(Error)` - An IO error if compression fails or if the compressed data doesn't meet format
 ///   requirements
+///
+/// # Example
+///
+/// ```
+/// use alloy::primitives::Bytes;
+/// use synd_batch_sequencer::sequencing_batch::compress_batch;
+///
+/// let existing_txs = [Bytes::from(vec![1, 2, 3])];
+/// let new_tx = Bytes::from(vec![4, 5, 6]);
+/// let compressed = compress_batch(&existing_txs, &new_tx).unwrap();
+/// ```
 #[instrument(
     skip_all,
     err,

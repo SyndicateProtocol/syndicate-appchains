@@ -290,7 +290,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage {
             header: Default::default(),
-            l2_msg: vec![tx.clone().into(), tx.into(), tx2.into()],
+            l2_msg: vec![tx.clone().into(), tx.into(), vec![4].into(), tx2.into()],
         },
     )]);
     mchain

@@ -815,7 +815,6 @@ impl TestComponents {
         }
     }
 
-    #[cfg(false)]
     pub async fn send_contract_tx(
         &self,
         gas_limit: u64,
