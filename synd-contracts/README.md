@@ -163,47 +163,52 @@ $ make deploy-syndicate-factory
 
 ### Deployed Contracts
 
+### Syndicate Network
+
+| Contract Name                 | Address                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| SyndicateFactoryWrapper       | [0x6f970AD6AD70acb9990CDb499fc70FbcE81aACD7](https://synd-mainnet.explorer.alchemy.com/address/0x6f970AD6AD70acb9990CDb499fc70FbcE81aACD7) |
+| SyndicateFactory              | [0x453348A58443B2Ede5c62480C47cf91c750BA41f](https://synd-mainnet.explorer.alchemy.com/address/0x453348A58443B2Ede5c62480C47cf91c750BA41f) |
+| RequireAndModuleFactory       | [0xD3A9d539fe3Fb2838fF73C652EB94dAE050d873a](https://synd-mainnet.explorer.alchemy.com/address/0xD3A9d539fe3Fb2838fF73C652EB94dAE050d873a) |
+| RequireOrModuleFactory        | [0x715595259b492Dbc3ad9298F66E9F917eeD6d013](https://synd-mainnet.explorer.alchemy.com/address/0x715595259b492Dbc3ad9298F66E9F917eeD6d013) |
+| RequireCompositeModuleFactory | [0xDC57Da2B7C11C4CEc933910EfD4c0479cbB24434](https://synd-mainnet.explorer.alchemy.com/address/0xDC57Da2B7C11C4CEc933910EfD4c0479cbB24434) |
+
 ### Mainnet
-| Contract Name                 | Address                                                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ArbConfigManagerFactory       | [0x52e02554e63801ec66d2D72fdD2c679D18a117dE](https://etherscan.io/address/0x52e02554e63801ec66d2D72fdD2c679D18a117dE)                         |
-| ArbConfigManager              | [0x9a525431620B2B3C808684BFFE6738307921f19d](https://etherscan.io/address/0x9a525431620B2B3C808684BFFE6738307921f19d)                         |
-| AttestationDocVerifier        | [0xC9E070caa1C8F231D5f3fa265AAb61A6A1fD0466](https://etherscan.io/address/0xC9E070caa1C8F231D5f3fa265AAb61A6A1fD0466)                         |
+
+| Contract Name                 | Address                                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| ArbConfigManagerFactory       | [0x52e02554e63801ec66d2D72fdD2c679D18a117dE](https://etherscan.io/address/0x52e02554e63801ec66d2D72fdD2c679D18a117dE) |
+| ArbConfigManager              | [0x9a525431620B2B3C808684BFFE6738307921f19d](https://etherscan.io/address/0x9a525431620B2B3C808684BFFE6738307921f19d) |
+| AttestationDocVerifier        | [0xC9E070caa1C8F231D5f3fa265AAb61A6A1fD0466](https://etherscan.io/address/0xC9E070caa1C8F231D5f3fa265AAb61A6A1fD0466) |
 | TeeKeyManager                 | [0xFB7a527Af1C80dEA95b174FBfa2662B36006b90e](https://etherscan.io/address/0xFB7a527Af1C80dEA95b174FBfa2662B36006b90e) |
 
 ### Base
-| Contract Name                 | Address                                                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ArbConfigManagerFactory       | [0x1e05910C82027f2E0e4733cba5ba41f528cAefE1](https://basescan.org/address/0x1e05910C82027f2E0e4733cba5ba41f528cAefE1)                         |
-| ArbConfigManager              | [0xE37CfB1520F5F33F829d5f990D7AA3C563AbBF18](https://basescan.org/address/0xE37CfB1520F5F33F829d5f990D7AA3C563AbBF18)                         |
-| AttestationDocVerifier        | [0xd55483B303B8a9b1327e954043f19E18692FA293](https://basescan.org/address/0xd55483B303B8a9b1327e954043f19E18692FA293)                         |
+
+| Contract Name                 | Address                                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| ArbConfigManagerFactory       | [0x1e05910C82027f2E0e4733cba5ba41f528cAefE1](https://basescan.org/address/0x1e05910C82027f2E0e4733cba5ba41f528cAefE1) |
+| ArbConfigManager              | [0xE37CfB1520F5F33F829d5f990D7AA3C563AbBF18](https://basescan.org/address/0xE37CfB1520F5F33F829d5f990D7AA3C563AbBF18) |
+| AttestationDocVerifier        | [0xd55483B303B8a9b1327e954043f19E18692FA293](https://basescan.org/address/0xd55483B303B8a9b1327e954043f19E18692FA293) |
 | TeeKeyManager                 | [0xC12BB72B44286b3EAF8A065402A102C3719C8cA1](https://basescan.org/address/0xC12BB72B44286b3EAF8A065402A102C3719C8cA1) |
 
 ### Base Sepolia
-| Contract Name                 | Address                                                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ArbConfigManagerFactory       | [0xcf733FD99A9E7052F126C01bf033159775bEcF0B](https://sepolia.basescan.org/address/0xcf733FD99A9E7052F126C01bf033159775bEcF0B)                         |
-| ArbConfigManager              | [0x647e0da79BBEF0e3B076a59cfB3a42429273CE52](https://sepolia.basescan.org/address/0x647e0da79BBEF0e3B076a59cfB3a42429273CE52)                         |
-| AttestationDocVerifier        | [0x8B586B9fe1076d63723f5324aB42854A4DC145C0](https://sepolia.basescan.org/address/0x8B586B9fe1076d63723f5324aB42854A4DC145C0)                         |
+
+| Contract Name                 | Address                                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| ArbConfigManagerFactory       | [0xcf733FD99A9E7052F126C01bf033159775bEcF0B](https://sepolia.basescan.org/address/0xcf733FD99A9E7052F126C01bf033159775bEcF0B)  |
+| ArbConfigManager              | [0x647e0da79BBEF0e3B076a59cfB3a42429273CE52](https://sepolia.basescan.org/address/0x647e0da79BBEF0e3B076a59cfB3a42429273CE52)  |
+| AttestationDocVerifier        | [0xC1A11c77AAfCd663945ea234345ffc6EF53dC12c](https://sepolia.basescan.org/address/0xC1A11c77AAfCd663945ea234345ffc6EF53dC12c)  |
+| TeeKeyManager                 | [0x9bFA7C84fF3816a2Ca9F72865036e8998385147b](https://sepolia.basescan.org/address/0x9bFA7C84fF3816a2Ca9F72865036e8998385147b)  |
 
 ### Risa
 
-| Contract Name                 | Address                                                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract Name                 | Address                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | SyndicateFactoryWrapper       | [0x99d2b60FD2dBdF08CDA18165D20f4E713768b07E](https://risa-testnet.explorer.alchemy.com/address/0x99d2b60FD2dBdF08CDA18165D20f4E713768b07E) |
 | SyndicateFactory              | [0x33aB24E0a47A7aAe869755420950A6326e3CB9F3](https://risa-testnet.explorer.alchemy.com/address/0x33aB24E0a47A7aAe869755420950A6326e3CB9F3) |
 | RequireAndModuleFactory       | [0x2f3CC13661A95DD616311a7bddB9cDB4bA67C4d2](https://risa-testnet.explorer.alchemy.com/address/0x2f3CC13661A95DD616311a7bddB9cDB4bA67C4d2) |
 | RequireOrModuleFactory        | [0x61fC28cf640235d560bd89350033cAee9642F8E5](https://risa-testnet.explorer.alchemy.com/address/0x61fC28cf640235d560bd89350033cAee9642F8E5) |
 | RequireCompositeModuleFactory | [0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603](https://risa-testnet.explorer.alchemy.com/address/0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603) |
-
-### Risa Devnet
-
-| Contract Name                 | Address                                                                                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SyndicateFactory              | [0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba](https://explorer-1205614516323464.devnet.alchemy.com/address/0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba) |
-| RequireAndModuleFactory       | [0x19aaf160dA8985c54bb97adAF9304B5aC7890421](https://explorer-1205614516323464.devnet.alchemy.com/address/0x19aaf160dA8985c54bb97adAF9304B5aC7890421) |
-| RequireOrModuleFactory        | [0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d](https://explorer-1205614516323464.devnet.alchemy.com/address/0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d) |
-| RequireCompositeModuleFactory | [0x471584f0B8e35faEB2a618BD58A62316D8882d63](https://explorer-1205614516323464.devnet.alchemy.com/address/0x471584f0B8e35faEB2a618BD58A62316D8882d63) |
 
 
 ### ETH Holesky
