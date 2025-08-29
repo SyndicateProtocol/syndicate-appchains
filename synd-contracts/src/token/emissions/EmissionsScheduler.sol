@@ -85,6 +85,7 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
 
     /**
      * @notice Initialize the emission scheduler contract
+     * @param _epochStartIndex The epoch index when emissions started
      * @param _emissionsCalculator Address of the EmissionsCalculator contract
      * @param _relayer Address of the Relayer contract
      * @param _relayDestinationL3 Address of the relay destination on the commons L3 chain
@@ -92,6 +93,7 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
      * @param pauser Address that can pause the contract in emergencies
      */
     constructor(
+        uint256 _epochStartIndex,
         address _emissionsCalculator,
         address _relayer,
         address _relayDestinationL3,
@@ -99,6 +101,8 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
         address pauser
     ) {
         // Input validation
+        // Epoch start index must be greater than 0
+        if (_epochStartIndex == 0) revert InvalidEpoch();
         if (_emissionsCalculator == address(0)) revert ZeroAddress();
         if (_relayer == address(0)) revert ZeroAddress();
         if (_relayDestinationL3 == address(0)) revert ZeroAddress();
@@ -114,8 +118,7 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(PAUSER_ROLE, pauser);
 
-        // The EpochTracker starts at 1 and we are planning on starting emissions at epoch 2 (October 1st)
-        epochStartIndex = 2;
+        epochStartIndex = _epochStartIndex;
     }
 
     /**

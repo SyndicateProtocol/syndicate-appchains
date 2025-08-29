@@ -52,6 +52,8 @@ contract L2Relayer is AccessControl {
     ////////////////////////////
     // Contracts Deployed on L3
     ////////////////////////////
+
+    /// @notice The refunder contract address on L3 that handles excess funds
     address public immutable refunder;
 
     /**
@@ -63,6 +65,7 @@ contract L2Relayer is AccessControl {
      * @notice Initializes the L2Relayer contract
      * @param _arbBridge The address of the Arbitrum Bridge contract
      * @param _tokenAddress The address of the ERC20 token to be relayed
+     * @param _refunder The address of the refunder contract on L3
      * @param _defaultAdmin The address of the default admin
      * @dev Sets the deployer as admin and configures default gas settings
      *      Approves the bridge contract to spend tokens on behalf of this contract

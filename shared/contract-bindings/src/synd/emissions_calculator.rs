@@ -30,7 +30,7 @@ interface EmissionsCalculator {
     function calculateAndMintEmission(address to, uint256 expectedEpoch) external returns (uint256);
     function calculateCumulativeProduct(uint256 fromEpoch) external view returns (uint256);
     function currentEpoch() external view returns (uint256);
-    function decayFactors(uint256) external view returns (uint256);
+    function decayFactors(uint256 epochIndex) external view returns (uint256 decayFactor);
     function getDecayFactor(uint256 epoch) external view returns (uint256);
     function getEmissionsInfo() external view returns (uint256 current, uint256 total, uint256 emitted, uint256 remaining, bool completed);
     function getNextEmission() external view returns (uint256);
@@ -214,14 +214,14 @@ interface EmissionsCalculator {
     "name": "decayFactors",
     "inputs": [
       {
-        "name": "",
+        "name": "epochIndex",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
     "outputs": [
       {
-        "name": "",
+        "name": "decayFactor",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -3580,13 +3580,14 @@ function currentEpoch() external view returns (uint256);
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `decayFactors(uint256)` and selector `0xafca7405`.
 ```solidity
-function decayFactors(uint256) external view returns (uint256);
+function decayFactors(uint256 epochIndex) external view returns (uint256 decayFactor);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct decayFactorsCall(
-        pub alloy::sol_types::private::primitives::aliases::U256,
-    );
+    pub struct decayFactorsCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+    }
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`decayFactors(uint256)`](decayFactorsCall) function.
@@ -3594,7 +3595,7 @@ function decayFactors(uint256) external view returns (uint256);
     #[derive(Clone)]
     pub struct decayFactorsReturn {
         #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+        pub decayFactor: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
         non_camel_case_types,
@@ -3626,14 +3627,14 @@ function decayFactors(uint256) external view returns (uint256);
             #[doc(hidden)]
             impl ::core::convert::From<decayFactorsCall> for UnderlyingRustTuple<'_> {
                 fn from(value: decayFactorsCall) -> Self {
-                    (value.0,)
+                    (value.epochIndex,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for decayFactorsCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self(tuple.0)
+                    Self { epochIndex: tuple.0 }
                 }
             }
         }
@@ -3659,14 +3660,14 @@ function decayFactors(uint256) external view returns (uint256);
             #[doc(hidden)]
             impl ::core::convert::From<decayFactorsReturn> for UnderlyingRustTuple<'_> {
                 fn from(value: decayFactorsReturn) -> Self {
-                    (value._0,)
+                    (value.decayFactor,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for decayFactorsReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
+                    Self { decayFactor: tuple.0 }
                 }
             }
         }
@@ -3694,7 +3695,7 @@ function decayFactors(uint256) external view returns (uint256);
                 (
                     <alloy::sol_types::sol_data::Uint<
                         256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.0),
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
                 )
             }
             #[inline]
@@ -3712,7 +3713,7 @@ function decayFactors(uint256) external view returns (uint256);
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
                     .map(|r| {
                         let r: decayFactorsReturn = r.into();
-                        r._0
+                        r.decayFactor
                     })
             }
             #[inline]
@@ -3724,7 +3725,7 @@ function decayFactors(uint256) external view returns (uint256);
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
                         let r: decayFactorsReturn = r.into();
-                        r._0
+                        r.decayFactor
                     })
             }
         }
@@ -8320,9 +8321,9 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`decayFactors`] function.
         pub fn decayFactors(
             &self,
-            _0: alloy::sol_types::private::primitives::aliases::U256,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, decayFactorsCall, N> {
-            self.call_builder(&decayFactorsCall(_0))
+            self.call_builder(&decayFactorsCall { epochIndex })
         }
         ///Creates a new call builder for the [`getDecayFactor`] function.
         pub fn getDecayFactor(
