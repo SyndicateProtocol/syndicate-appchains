@@ -4,10 +4,10 @@ pragma solidity 0.8.28;
 import {Script} from "forge-std/Script.sol";
 
 import {SyndicateStorage} from "../src/backfill/SyndicateStorage.sol";
-import {AccessRoledERC20} from "../src/token/AccessRoledERC20.sol";
+import {AccessControlledERC20} from "../src/token/AccessControlledERC20.sol";
 
-contract DeployAccessRoledERC20 is Script {
-    AccessRoledERC20 public accessRoledERC20;
+contract DeployAccessControlledERC20 is Script {
+    AccessControlledERC20 public accessControlledERC20;
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -15,7 +15,7 @@ contract DeployAccessRoledERC20 is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        accessRoledERC20 = new AccessRoledERC20("TestMON", "TESTMON", admin);
+        accessControlledERC20 = new AccessControlledERC20("TestMON", "TESTMON", admin);
 
         address[3] memory addressesToAllowlist = [
             0x5E2F16dF1550e49aA44aF99Ed3cdF1be72913118,
@@ -24,7 +24,7 @@ contract DeployAccessRoledERC20 is Script {
         ];
 
         for (uint256 i = 0; i < addressesToAllowlist.length; i++) {
-            accessRoledERC20.grantRole(accessRoledERC20.MINTER_ROLE(), addressesToAllowlist[i]);
+            accessControlledERC20.grantRole(accessControlledERC20.MINTER_ROLE(), addressesToAllowlist[i]);
         }
 
         vm.stopBroadcast();
