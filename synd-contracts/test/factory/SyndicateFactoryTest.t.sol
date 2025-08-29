@@ -793,4 +793,88 @@ contract SyndicateFactoryTest is Test {
         assertEq(chain1, expectedAddr1);
         assertEq(chain2, expectedAddr2);
     }
+
+    function testEndToEndUpgradeFlow() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Deploy a chain using the factory
+        (address chainAddr, uint256 chainId) = factory.createSyndicateSequencingChain(2001, admin, permissionModule);
+
+        // Verify chain was deployed with stub implementation initially
+        bytes32 IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+        address initialImpl = address(uint160(uint256(vm.load(chainAddr, IMPLEMENTATION_SLOT))));
+        assertEq(initialImpl, factory.stubImplementation());
+
+        // Create new implementations
+        SyndicateSequencingChain goodImpl = new SyndicateSequencingChain();
+        SyndicateSequencingChain badImpl = new SyndicateSequencingChain();
+
+        // Add the good implementation to allowed list
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(goodImpl), false);
+
+        // Note: badImpl is NOT added to allowed list, making it "bad"
+
+        SyndicateSequencingChain chain = SyndicateSequencingChain(chainAddr);
+
+        // Test 1: Upgrade to good (allowed) implementation should succeed
+        vm.prank(admin);
+        chain.authorizeUpgrade(address(goodImpl), false); // allowGasTrackingBan = false
+
+        // The upgrade itself happens in a separate call (this is UUPS pattern)
+        vm.prank(admin);
+        chain.upgradeToAndCall(address(goodImpl), "");
+
+        // Verify upgrade succeeded
+        address currentImpl = address(uint160(uint256(vm.load(chainAddr, IMPLEMENTATION_SLOT))));
+        assertEq(currentImpl, address(goodImpl));
+
+        // Chain should not be banned from gas tracking
+        assertFalse(factory.isChainBannedFromGasTracking(chainId));
+
+        // Test 2: Try to upgrade to bad (not allowed) implementation with allowGasTrackingBan = false
+        vm.prank(admin);
+        vm.expectRevert("Upgrade would result in gas tracking ban");
+        chain.authorizeUpgrade(address(badImpl), false); // allowGasTrackingBan = false
+
+        // Test 3: Upgrade to bad implementation with allowGasTrackingBan = true should succeed but ban the chain
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateFactory.ChainBannedFromGasTracking(chainId, address(badImpl));
+
+        vm.prank(admin);
+        chain.authorizeUpgrade(address(badImpl), true); // allowGasTrackingBan = true
+
+        // Perform the actual upgrade
+        vm.prank(admin);
+        chain.upgradeToAndCall(address(badImpl), "");
+
+        // Verify upgrade succeeded
+        currentImpl = address(uint160(uint256(vm.load(chainAddr, IMPLEMENTATION_SLOT))));
+        assertEq(currentImpl, address(badImpl));
+
+        // Chain should now be banned from gas tracking
+        assertTrue(factory.isChainBannedFromGasTracking(chainId));
+
+        // Test 4: Check that gas tracking methods exclude banned chains
+        uint256 totalBefore = factory.getTotalAppchainsForGasTracking();
+
+        // Create another chain that won't be banned
+        (address goodChainAddr, uint256 goodChainId) =
+            factory.createSyndicateSequencingChain(2002, admin, permissionModule);
+
+        uint256 totalAfter = factory.getTotalAppchainsForGasTracking();
+
+        // Only the good chain should be counted (bad chain is banned)
+        assertEq(totalAfter, totalBefore + 1);
+
+        // Test getContractsForGasTracking with banned chain
+        uint256[] memory testChainIds = new uint256[](2);
+        testChainIds[0] = chainId; // banned chain
+        testChainIds[1] = goodChainId; // good chain
+
+        address[] memory contracts = factory.getContractsForGasTracking(testChainIds);
+        assertEq(contracts.length, 2);
+        assertEq(contracts[0], address(0)); // banned chain returns zero address
+        assertEq(contracts[1], goodChainAddr); // good chain returns actual address
+    }
 }

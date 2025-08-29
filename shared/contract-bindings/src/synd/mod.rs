@@ -198,6 +198,7 @@ pub mod r#strings;
 pub mod r#synd_staking;
 pub mod r#syndicate_factory;
 pub mod r#syndicate_factory_wrapper;
+pub mod r#i_syndicate_factory;
 pub mod r#syndicate_sequencing_chain;
 pub mod r#direct_mock_module;
 pub mod r#mock_is_allowed_with_invalid_data;
