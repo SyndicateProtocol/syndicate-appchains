@@ -71,10 +71,6 @@ contract AppchainPool is IPool {
         emit EpochDeposit(epochIndex, amount);
     }
 
-    function claimFor(uint256 epochIndex, address user, address destination) external {
-        revert("Can't claim for appchain pool");
-    }
-
     /**
      * @notice Claim rewards for a specific epoch based on appchain's stake proportion
      * @dev Appchains can only claim once per epoch and must have stake in the SyndStaking contract

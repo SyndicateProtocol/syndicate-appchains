@@ -6,7 +6,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IPool} from "./IPool.sol";
+import {IUserPool} from "./IPool.sol";
 
 /**
  * @title SyndStaking
@@ -509,7 +509,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
         }
 
         for (uint256 i = 0; i < claims.length; i++) {
-            IPool(claims[i].poolAddress).claimFor(claims[i].epochIndex, msg.sender, destination);
+            IUserPool(claims[i].poolAddress).claimFor(claims[i].epochIndex, msg.sender, destination);
         }
     }
 
