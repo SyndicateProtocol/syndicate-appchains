@@ -6,7 +6,6 @@ methods {
     function permissionRequirementModule() external returns (address) envfree;
     function isAllowed(address, address, bytes) external returns (bool) envfree;
     function owner() external returns (address) envfree;
-    function getInitializedVersion() external returns (uint64) envfree;
     function gasTrackingEnabled() external returns (bool) envfree;
 
     // Permission module envfree view functions
@@ -24,7 +23,6 @@ invariant appchainIdNotZero()
  */
 rule onlyAllowedCanProcess(bytes data) {
     env e;
-    require getInitializedVersion() > 0;
 
     // Try to process a transaction
     processTransaction@withrevert(e, data);
@@ -74,7 +72,6 @@ rule onlyOwnerCanUpdateModule(address newModule) {
  */
 rule moduleUpdateChangesState(address newModule) {
     env e;
-    require getInitializedVersion() > 0;
     require newModule != 0;
 
     // Store old module
@@ -93,7 +90,6 @@ rule moduleUpdateChangesState(address newModule) {
  */
 rule stateConsistencyAfterProcessing(bytes data) {
     env e;
-    require getInitializedVersion() > 0;
     address oldProposerModule = permissionRequirementModule();
 
     // Process transaction
