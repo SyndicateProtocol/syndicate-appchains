@@ -122,8 +122,9 @@ contract L2Relayer is AccessControl {
         uint256 gasCost = gasLimit * maxFeePerGas;
 
         // Validate that the gas cost is less than the amount being relayed
+        // If the gas cost is greater than the amount, set the gas cost to 0
         if (gasCost >= amount) {
-            revert InsufficientBalance();
+            gasCost = 0;
         }
 
         // Calculate the call value to be sent to the destination contract

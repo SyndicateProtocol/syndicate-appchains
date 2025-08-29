@@ -487,6 +487,8 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
             revert WithdrawalNotReady();
         }
 
+        if (destination == address(0)) revert InvalidDestination();
+
         uint256 amount = epochUserWithdrawals[epochIndex][msg.sender];
         if (amount == 0) {
             revert InvalidWithdrawal();
