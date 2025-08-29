@@ -206,6 +206,7 @@ pub mod r#stack_frame_lib;
 pub mod r#storage_slot;
 pub mod r#strings;
 pub mod r#synd_staking;
+pub mod r#reentrant_contract;
 pub mod r#syndicate_factory;
 pub mod r#syndicate_factory_wrapper;
 pub mod r#syndicate_sequencing_chain;
