@@ -171,7 +171,14 @@ contract SyndicateFactoryTest is Test {
         assertEq(sequencingChainAddress, expectedAddress);
     }
 
-    function testGetBytecode() public {
+    function testGetProxyBytecode() public {
+        bytes memory bytecode = factory.getProxyBytecode();
+        bytes memory expectedBytecode =
+            abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(factory.stubImplementation(), ""));
+        assertEq(bytecode, expectedBytecode);
+    }
+
+    function testGetImplBytecode() public {
         address impl = address(new SyndicateSequencingChain());
         bytes memory bytecode = factory.getImplBytecode(impl);
         bytes memory expectedBytecode = abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(impl, ""));
@@ -560,12 +567,12 @@ contract SyndicateFactoryTest is Test {
         vm.prank(nonManager);
         (address chain3,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule);
 
-        // Test getContractsForAppchains with specific chain IDs
+        // Test getContractsForGasTracking with specific chain IDs
         uint256[] memory chainIDs = new uint256[](2);
         chainIDs[0] = appchainId2; // 200
         chainIDs[1] = appchainId1; // 100
 
-        address[] memory contracts = factory.getContractsForAppchains(chainIDs);
+        address[] memory contracts = factory.getContractsForGasTracking(chainIDs);
 
         // Verify that the correct contracts are returned for each chain ID
         // This is the regression test for the bug where it was using the loop index instead of the chain ID
@@ -577,7 +584,7 @@ contract SyndicateFactoryTest is Test {
         uint256[] memory singleChainID = new uint256[](1);
         singleChainID[0] = appchainId3; // 300
 
-        address[] memory singleContract = factory.getContractsForAppchains(singleChainID);
+        address[] memory singleContract = factory.getContractsForGasTracking(singleChainID);
 
         assertEq(singleContract.length, 1);
         assertEq(singleContract[0], chain3); // Contract for chain ID 300
@@ -594,7 +601,7 @@ contract SyndicateFactoryTest is Test {
         (address chain2Addr,) = factory.createSyndicateSequencingChain(appchainId2, admin, permissionModule);
         (address chain3Addr,) = factory.createSyndicateSequencingChain(appchainId3, admin, permissionModule);
 
-        (uint256[] memory chainIDs, address[] memory contracts) = factory.getAppchainsAndContracts();
+        (uint256[] memory chainIDs, address[] memory contracts) = factory.getAppchainsAndContractsForGasTracking();
         assertEq(chainIDs.length, 3);
         assertEq(contracts.length, 3);
         assertEq(contracts[0], chain1Addr);
@@ -605,5 +612,185 @@ contract SyndicateFactoryTest is Test {
         for (uint256 i = 0; i < chainIDs.length; i++) {
             assertEq(contracts[i], factory.appchainContracts(chainIDs[i]));
         }
+    }
+
+    // Implementation Allowlist Tests
+    function testAddAllowedImplementation() public {
+        SyndicateSequencingChain mockImpl = new SyndicateSequencingChain();
+
+        // Initially not allowed
+        assertFalse(factory.isImplementationAllowed(address(mockImpl)));
+
+        vm.expectEmit(true, false, false, false);
+        emit SyndicateFactory.ImplementationAdded(address(mockImpl));
+
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(mockImpl), false);
+
+        // Now should be allowed
+        assertTrue(factory.isImplementationAllowed(address(mockImpl)));
+
+        // Check that it was added to the array
+        address[] memory allowedImplementations = factory.getAllowedImplementations();
+        bool found = false;
+        for (uint256 i = 0; i < allowedImplementations.length; i++) {
+            if (allowedImplementations[i] == address(mockImpl)) {
+                found = true;
+                break;
+            }
+        }
+        assertTrue(found);
+    }
+
+    function testAddAllowedImplementationNonAdminReverts() public {
+        SyndicateSequencingChain mockImpl = new SyndicateSequencingChain();
+
+        vm.prank(manager);
+        vm.expectRevert(); // AccessControl revert
+        factory.addAllowedImplementation(address(mockImpl), false);
+
+        vm.prank(nonManager);
+        vm.expectRevert(); // AccessControl revert
+        factory.addAllowedImplementation(address(mockImpl), false);
+    }
+
+    function testAddDuplicateImplementationReverts() public {
+        SyndicateSequencingChain mockImpl = new SyndicateSequencingChain();
+
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(mockImpl), false);
+
+        vm.prank(admin);
+        vm.expectRevert("Implementation already allowed");
+        factory.addAllowedImplementation(address(mockImpl), false);
+    }
+
+    function testNotifyChainUpgradeWithAllowedImplementation() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Create a chain
+        (address chainAddr, uint256 chainId) =
+            factory.createSyndicateSequencingChain(appchainId, admin, permissionModule);
+
+        // Add allowed implementation
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(newImpl), false);
+
+        // Chain should be able to notify about upgrade with allowed implementation
+        vm.prank(chainAddr);
+        factory.notifyChainUpgrade(chainId, address(newImpl));
+
+        // Chain should not be banned
+        assertFalse(factory.isChainBannedFromGasTracking(chainId));
+    }
+
+    function testNotifyChainUpgradeWithDisallowedImplementation() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Create a chain
+        (address chainAddr, uint256 chainId) =
+            factory.createSyndicateSequencingChain(appchainId, admin, permissionModule);
+
+        // Create implementation that is not allowed
+        SyndicateSequencingChain disallowedImpl = new SyndicateSequencingChain();
+
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateFactory.ChainBannedFromGasTracking(chainId, address(disallowedImpl));
+
+        // Chain notifies about upgrade with disallowed implementation
+        vm.prank(chainAddr);
+        factory.notifyChainUpgrade(chainId, address(disallowedImpl));
+
+        // Chain should be banned from gas tracking
+        assertTrue(factory.isChainBannedFromGasTracking(chainId));
+    }
+
+    function testNotifyChainUpgradeUnauthorizedReverts() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Create a chain
+        (, uint256 chainId) = factory.createSyndicateSequencingChain(appchainId, admin, permissionModule);
+
+        SyndicateSequencingChain someImpl = new SyndicateSequencingChain();
+
+        // Non-chain address cannot notify
+        vm.prank(admin);
+        vm.expectRevert("Only chain can notify upgrade");
+        factory.notifyChainUpgrade(chainId, address(someImpl));
+    }
+
+    function testBanChainFromGasTracking() public {
+        SyndicateSequencingChain notAllowedImpl = new SyndicateSequencingChain();
+
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateFactory.ChainBannedFromGasTracking(appchainId, address(notAllowedImpl));
+
+        vm.prank(admin);
+        factory.banChainFromGasTracking(appchainId, address(notAllowedImpl));
+
+        assertTrue(factory.isChainBannedFromGasTracking(appchainId));
+    }
+
+    function testBanChainFromGasTrackingNonAdminReverts() public {
+        SyndicateSequencingChain notAllowedImpl = new SyndicateSequencingChain();
+
+        vm.prank(manager);
+        vm.expectRevert(); // AccessControl revert
+        factory.banChainFromGasTracking(appchainId, address(notAllowedImpl));
+
+        vm.prank(nonManager);
+        vm.expectRevert(); // AccessControl revert
+        factory.banChainFromGasTracking(appchainId, address(notAllowedImpl));
+    }
+
+    function testGetAllowedImplementations() public {
+        SyndicateSequencingChain impl1 = new SyndicateSequencingChain();
+        SyndicateSequencingChain impl2 = new SyndicateSequencingChain();
+
+        // Initially has one implementation (from constructor)
+        address[] memory allowedImplementations = factory.getAllowedImplementations();
+        assertEq(allowedImplementations.length, 1);
+
+        // Add first implementation
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl1), false);
+
+        allowedImplementations = factory.getAllowedImplementations();
+        assertEq(allowedImplementations.length, 2);
+
+        // Add second implementation
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(impl2), false);
+
+        allowedImplementations = factory.getAllowedImplementations();
+        assertEq(allowedImplementations.length, 3);
+    }
+
+    function testNewChainsUseLatestImplementation() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Deploy first chain - should use stub implementation (since syndicateChainImpl == stubImplementation)
+        (address chain1,) = factory.createSyndicateSequencingChain(1001, admin, permissionModule);
+        // Read implementation from proxy storage (ERC1967 standard slot)
+        bytes32 IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+        address impl1 = address(uint160(uint256(vm.load(chain1, IMPLEMENTATION_SLOT))));
+        assertEq(impl1, factory.stubImplementation());
+
+        // Add new implementation and make it default
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(newImpl), true); // makeDefault = true
+
+        // Deploy second chain - should use new implementation
+        (address chain2,) = factory.createSyndicateSequencingChain(1002, admin, permissionModule);
+        address impl2 = address(uint160(uint256(vm.load(chain2, IMPLEMENTATION_SLOT))));
+        assertEq(impl2, address(newImpl));
+
+        // Both chains should have same predictable addresses (same bytecode template)
+        address expectedAddr1 = factory.computeSequencingChainAddress(1001);
+        address expectedAddr2 = factory.computeSequencingChainAddress(1002);
+        assertEq(chain1, expectedAddr1);
+        assertEq(chain2, expectedAddr2);
     }
 }

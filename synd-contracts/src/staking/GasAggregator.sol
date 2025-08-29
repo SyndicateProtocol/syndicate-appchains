@@ -10,9 +10,12 @@ interface GasCounter {
 }
 
 interface AppchainFactory {
-    function getTotalAppchains() external view returns (uint256);
-    function getContractsForAppchains(uint256[] memory chainIDs) external view returns (address[] memory);
-    function getAppchainsAndContracts() external view returns (uint256[] memory chainIDs, address[] memory contracts);
+    function getTotalAppchainsForGasTracking() external view returns (uint256);
+    function getContractsForGasTracking(uint256[] memory chainIDs) external view returns (address[] memory);
+    function getAppchainsAndContractsForGasTracking()
+        external
+        view
+        returns (uint256[] memory chainIDs, address[] memory contracts);
 }
 
 /// @title GasAggregator
@@ -96,7 +99,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         if (fallbackToOffchainAggregation()) {
             revert MustUseOffchainAggregation();
         }
-        (uint256[] memory appchains, address[] memory contracts) = factory.getAppchainsAndContracts();
+        (uint256[] memory appchains, address[] memory contracts) = factory.getAppchainsAndContractsForGasTracking();
         uint256[] memory tokens = new uint256[](appchains.length);
         for (uint256 i = 0; i < appchains.length; i++) {
             tokens[i] = GasCounter(contracts[i]).getTokensForEpoch(pendingEpoch);
@@ -117,7 +120,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
             revert WindowOver(pendingEpoch, challengeWindow);
         }
         uint256 total = 0;
-        address[] memory contracts = factory.getContractsForAppchains(appchainIDs);
+        address[] memory contracts = factory.getContractsForGasTracking(appchainIDs);
         uint256[] memory tokens = new uint256[](appchainIDs.length);
         for (uint256 i = 0; i < appchainIDs.length; i++) {
             if (i > 0 && appchainIDs[i] <= appchainIDs[i - 1]) {
@@ -154,7 +157,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     //////////////////////////////////////////////////////////////*/
 
     function fallbackToOffchainAggregation() public view returns (bool) {
-        uint256 totalAppchains = factory.getTotalAppchains();
+        uint256 totalAppchains = factory.getTotalAppchainsForGasTracking();
         return totalAppchains >= maxAppchainsToQuery;
     }
 

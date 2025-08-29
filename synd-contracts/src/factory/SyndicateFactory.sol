@@ -9,6 +9,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 enum NamespaceState {
     Available,
@@ -31,10 +32,17 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Emitted when a chain ID is manually marked as used
     event ChainIdManuallyMarked(uint256 indexed chainId);
 
+    /// @notice Emitted when a new implementation is added to allowed list
+    event ImplementationAdded(address indexed implementation);
+
+    /// @notice Emitted when a chain is banned from gas tracking
+    event ChainBannedFromGasTracking(uint256 indexed chainId, address indexed notAllowedImplementation);
+
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     error ZeroAddress();
     error ChainIdAlreadyExists();
+    error ImplementationNotAllowed();
 
     // Namespace configuration - made public for frontend access
     uint256 public namespacePrefix;
@@ -45,7 +53,19 @@ contract SyndicateFactory is AccessControl, Pausable {
     mapping(uint256 => address) public appchainContracts;
     uint256[] public chainIDs;
 
+    /// @notice Stub implementation for consistent proxy deployment
+    address public immutable stubImplementation;
+
+    /// @notice Current implementation address used for new deployments
     address public syndicateChainImpl;
+
+    /// @notice List of allowed implementation addresses for sequencing chains
+    address[] public allowedImplementations;
+    mapping(address => bool) public isImplementationAllowed;
+
+    /// @notice Chains banned from gas tracking due to not allowed implementation
+    mapping(uint256 => bool) public gasTrackingBanlist;
+    uint256 public numberOfChainsBannedFromGasTracking;
 
     constructor(address admin) {
         if (admin == address(0)) revert ZeroAddress();
@@ -57,7 +77,16 @@ contract SyndicateFactory is AccessControl, Pausable {
 
         nextAutoChainId = 1;
 
-        syndicateChainImpl = address(new SyndicateSequencingChain());
+        // Deploy stub implementation first
+        stubImplementation = address(new SyndicateSequencingChain());
+
+        // Use stub as the initial current implementation too
+        syndicateChainImpl = stubImplementation;
+
+        // Add initial implementation to allowed list
+        allowedImplementations.push(syndicateChainImpl);
+        isImplementationAllowed[syndicateChainImpl] = true;
+        emit ImplementationAdded(syndicateChainImpl);
     }
 
     /// @notice Creates a new SyndicateSequencingChain contract
@@ -88,16 +117,27 @@ contract SyndicateFactory is AccessControl, Pausable {
             nextAutoChainId++;
         }
 
-        // Deploy the sequencing chain using CREATE2
-        bytes memory bytecode = getImplBytecode(syndicateChainImpl);
-        sequencingChain = Create2.deploy(0, bytes32(actualChainId), bytecode);
+        // Deploy the sequencing chain using consistent proxy bytecode
+        bytes memory consistentBytecode = getProxyBytecode();
+        sequencingChain = Create2.deploy(0, bytes32(actualChainId), consistentBytecode);
 
         // Store the mapping of appchain ID to contract address
         appchainContracts[actualChainId] = sequencingChain;
         chainIDs.push(actualChainId);
 
-        // Initialize the contract
-        SyndicateSequencingChain(sequencingChain).initialize(admin, address(permissionModule), actualChainId);
+        // Step 1: Initialize with factory as temporary owner to enable upgrade
+        SyndicateSequencingChain(sequencingChain).initialize(address(this), address(permissionModule), actualChainId);
+
+        // Step 2: If we have a newer implementation, upgrade to it immediately
+        if (syndicateChainImpl != stubImplementation) {
+            // Factory is owner at this point, so we can authorize and upgrade
+            (bool success,) =
+                sequencingChain.call(abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, ""));
+            require(success, "Failed to upgrade to latest implementation");
+        }
+
+        // Step 3: Transfer ownership to the intended admin
+        SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 
@@ -108,7 +148,14 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @param chainId The chain ID to compute the address for
     /// @return The computed address
     function computeSequencingChainAddress(uint256 chainId) external view returns (address) {
-        return Create2.computeAddress(bytes32(chainId), keccak256(getImplBytecode(syndicateChainImpl)));
+        return Create2.computeAddress(bytes32(chainId), keccak256(getProxyBytecode()));
+    }
+
+    /// @notice Returns the consistent proxy bytecode used for all deployments
+    /// @dev Always returns the same bytecode for predictable CREATE2 addresses
+    /// @return The bytecode to be used for deployment
+    function getProxyBytecode() public view returns (bytes memory) {
+        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(stubImplementation, ""));
     }
 
     /// @notice Returns the creation bytecode for an ERC1967Proxy with the given implementation address.
@@ -141,35 +188,50 @@ contract SyndicateFactory is AccessControl, Pausable {
         return appchainContracts[chainId] != address(0);
     }
 
-    /// @notice returns the number of appchains
-    function getTotalAppchains() external view returns (uint256) {
-        return chainIDs.length;
+    /// @notice returns the number of appchains not banned from gas tracking
+    function getTotalAppchainsForGasTracking() external view returns (uint256) {
+        return chainIDs.length - numberOfChainsBannedFromGasTracking;
     }
 
-    /// @notice returns the contracts for a given list of appchain chainIDs
+    /// @notice returns the contracts for a given list of appchain chainIDs that are not banned from gas tracking
     /// @param _chainIDs the list of chain IDs
-    /// @return _contracts contracts for the given chain IDs
-    function getContractsForAppchains(uint256[] memory _chainIDs) external view returns (address[] memory _contracts) {
+    /// @return _contracts contracts for the given chain IDs (zero address if banned)
+    function getContractsForGasTracking(uint256[] memory _chainIDs)
+        external
+        view
+        returns (address[] memory _contracts)
+    {
         address[] memory contracts = new address[](_chainIDs.length);
         for (uint256 i = 0; i < _chainIDs.length; i++) {
-            contracts[i] = appchainContracts[_chainIDs[i]];
+            if (!gasTrackingBanlist[_chainIDs[i]]) {
+                contracts[i] = appchainContracts[_chainIDs[i]];
+            }
         }
         return contracts;
     }
 
-    /// @notice returns all appchains chainIDs and associated contracts
-    /// @return _chainIDs
-    /// @return _contracts
-    function getAppchainsAndContracts()
+    /// @notice returns all appchains chainIDs and associated contracts that are not banned from gas tracking
+    /// @return _chainIDs chain IDs not banned from gas tracking
+    /// @return _contracts contracts for non-banned chains
+    function getAppchainsAndContractsForGasTracking()
         external
         view
         returns (uint256[] memory _chainIDs, address[] memory _contracts)
     {
-        address[] memory contracts = new address[](chainIDs.length);
+        uint256 validCount = chainIDs.length - numberOfChainsBannedFromGasTracking;
+        uint256[] memory validChainIDs = new uint256[](validCount);
+        address[] memory validContracts = new address[](validCount);
+        uint256 index = 0;
+
         for (uint256 i = 0; i < chainIDs.length; i++) {
-            contracts[i] = appchainContracts[chainIDs[i]];
+            if (!gasTrackingBanlist[chainIDs[i]]) {
+                validChainIDs[index] = chainIDs[i];
+                validContracts[index] = appchainContracts[chainIDs[i]];
+                index++;
+            }
         }
-        return (chainIDs, contracts);
+
+        return (validChainIDs, validContracts);
     }
 
     /// @notice Update namespace configuration (manager only)
@@ -202,5 +264,75 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Unpause the factory (admin only)
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
+    }
+
+    /// @notice Add a new allowed implementation (admin only)
+    /// @param implementation The implementation address to allow
+    /// @param makeDefault Whether to make this the default for new deployments
+    function addAllowedImplementation(address implementation, bool makeDefault) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(implementation != address(0), "Zero address implementation");
+        require(!isImplementationAllowed[implementation], "Implementation already allowed");
+
+        allowedImplementations.push(implementation);
+        isImplementationAllowed[implementation] = true;
+
+        if (makeDefault) {
+            syndicateChainImpl = implementation;
+        }
+
+        emit ImplementationAdded(implementation);
+    }
+
+    /// @notice Set the default implementation for new deployments (admin only)
+    /// @param implementation The implementation address to use as default
+    function setDefaultImplementation(address implementation) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(isImplementationAllowed[implementation], "Implementation not allowed");
+        syndicateChainImpl = implementation;
+    }
+
+    /// @notice Ban a chain from gas tracking due to not allowed implementation (admin only)
+    /// @param chainId The chain ID to ban
+    /// @param notAllowedImplementation The address of the not allowed implementation
+    function banChainFromGasTracking(uint256 chainId, address notAllowedImplementation)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _banChainFromGasTracking(chainId);
+        emit ChainBannedFromGasTracking(chainId, notAllowedImplementation);
+    }
+
+    /// @notice Check if a chain is banned from gas tracking
+    /// @param chainId The chain ID to check
+    /// @return True if the chain is banned from gas tracking
+    function isChainBannedFromGasTracking(uint256 chainId) external view returns (bool) {
+        return gasTrackingBanlist[chainId];
+    }
+
+    /// @notice Get all allowed implementation addresses
+    /// @return Array of allowed implementation addresses
+    function getAllowedImplementations() external view returns (address[] memory) {
+        return allowedImplementations;
+    }
+
+    /// @notice Internal function to ban a chain from gas tracking
+    /// @param chainId The chain ID to ban
+    function _banChainFromGasTracking(uint256 chainId) internal {
+        if (!gasTrackingBanlist[chainId]) {
+            gasTrackingBanlist[chainId] = true;
+            numberOfChainsBannedFromGasTracking++;
+        }
+    }
+
+    /// @notice Called by sequencing chains to notify about upgrades
+    /// @dev Automatically bans chain from gas tracking if implementation is not allowed
+    /// @param chainId The chain ID that is upgrading
+    /// @param newImplementation The address of the new implementation
+    function notifyChainUpgrade(uint256 chainId, address newImplementation) external {
+        require(appchainContracts[chainId] == msg.sender, "Only chain can notify upgrade");
+
+        if (!isImplementationAllowed[newImplementation]) {
+            _banChainFromGasTracking(chainId);
+            emit ChainBannedFromGasTracking(chainId, newImplementation);
+        }
     }
 }
