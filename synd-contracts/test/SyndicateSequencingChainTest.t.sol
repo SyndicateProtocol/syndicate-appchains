@@ -2,6 +2,8 @@
 pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
+import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
+import {SyndicateSequencingChain, TransactionType, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -40,20 +42,30 @@ contract DirectMockModule is IPermissionModule {
 
 contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateSequencingChain public chain;
+    SyndicateFactory public factory;
     RequireAndModule public permissionModule;
     RequireOrModule public permissionModuleAny;
     address public admin;
 
-    function setUp() public virtual {
-        admin = address(0x1);
+    function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
-
         vm.startPrank(admin);
+        factory = new SyndicateFactory(admin);
+        (address chainAddress,) = factory.createSyndicateSequencingChain(
+            appchainId, admin, _permissionModule, keccak256(abi.encodePacked("test-salt"))
+        );
+        vm.stopPrank();
+        return SyndicateSequencingChain(chainAddress);
+    }
+
+    function setUp() public virtual {
+        // Warp to START_TIMESTAMP to avoid underflow in epoch calculations
+        vm.warp(1754089200); // START_TIMESTAMP from EpochTracker.sol
+
+        admin = address(0x1);
         permissionModule = new RequireAndModule(admin);
         permissionModuleAny = new RequireOrModule(admin);
-        chain = new SyndicateSequencingChain(appchainId);
-        chain.initialize(admin, address(permissionModule));
-        vm.stopPrank();
+        chain = deployFromFactory(permissionModule);
     }
 }
 
@@ -66,7 +78,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), validTxn);
+        emit SyndicateSequencingChain.TransactionProcessed(
+            address(this), abi.encodePacked(TransactionType.Signed, validTxn)
+        );
 
         chain.processTransaction(validTxn);
     }
@@ -102,17 +116,18 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testProcessTransaction() public {
-        bytes memory _data = abi.encode("raw transaction");
-        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _data);
+        bytes memory data = abi.encode("raw transaction");
 
         vm.startPrank(admin);
         permissionModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), expectedTx);
+        emit SyndicateSequencingChain.TransactionProcessed(
+            address(this), abi.encodePacked(TransactionType.Signed, data)
+        );
 
-        chain.processTransactionUncompressed(_data);
+        chain.processTransaction(data);
     }
 
     function testProcessTransactionsBulk() public {
@@ -129,7 +144,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             vm.expectEmit(true, false, false, true);
 
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(bytes1(0x00), validTxns[i])
+                address(this), abi.encodePacked(TransactionType.Signed, validTxns[i])
             );
         }
 
@@ -164,7 +179,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Expect events for all transactions
         for (uint256 i = 0; i < txns.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), txns[i]));
+            emit SyndicateSequencingChain.TransactionProcessed(
+                address(this), abi.encodePacked(TransactionType.Signed, txns[i])
+            );
         }
 
         // Process all transactions
@@ -202,7 +219,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         for (uint256 i = 0; i < successTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(bytes1(0x00), successTxns[i])
+                address(this), abi.encodePacked(TransactionType.Signed, successTxns[i])
             );
         }
 
@@ -210,10 +227,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testProcessTransactionsBulkOnlyEmitsValidTransactionsAsEvents() public {
-        vm.startPrank(admin);
-        SyndicateSequencingChain chainWithInvalidDataPermissionModule = new SyndicateSequencingChain(10042002);
-        chainWithInvalidDataPermissionModule.initialize(admin, address(new MockIsAllowedWithInvalidData()));
-        vm.stopPrank();
+        chain = deployFromFactory(RequireAndModule(address(new MockIsAllowedWithInvalidData())));
 
         bytes[] memory txns = new bytes[](3);
         txns[0] = abi.encode("valid");
@@ -221,7 +235,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         txns[2] = abi.encode("valid");
 
         vm.recordLogs();
-        chainWithInvalidDataPermissionModule.processTransactionsBulk(txns);
+        chain.processTransactionsBulk(txns);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         bytes32 expectedSig = keccak256("TransactionProcessed(address,bytes)");
@@ -269,17 +283,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Test 2: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), allowedData);
+        emit SyndicateSequencingChain.TransactionProcessed(
+            address(this), abi.encodePacked(TransactionType.Signed, allowedData)
+        );
         chain.processTransaction(allowedData);
-
-        // Test 3: Failure path of onlyWhenAllowed (processTransaction)
-        vm.expectRevert(SequencingModuleChecker.TransactionOrSenderNotAllowed.selector);
-        chain.processTransactionUncompressed(disallowedData);
-
-        // Test 4: Success path of onlyWhenAllowed (processTransaction)
-        vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(address(this), abi.encodePacked(bytes1(0x00), allowedData));
-        chain.processTransactionUncompressed(allowedData);
     }
 
     function testProcessTransactionsBulkWithEmptyArray() public {
@@ -287,6 +294,72 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // This should execute without errors or events
         chain.processTransactionsBulk(emptyArray);
+    }
+
+    function testEmissionsReceiver() public {
+        // Test defaults to owner
+        assertEq(chain.getEmissionsReceiver(), admin);
+
+        // Test only owner can set it
+        address newReceiver = address(0x999);
+        address nonOwner = address(0x123);
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
+        chain.setEmissionsReceiver(newReceiver);
+
+        // Test owner can set it and it returns correct value with proper event
+        vm.prank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateSequencingChain.EmissionsReceiverUpdated(address(0), newReceiver);
+        chain.setEmissionsReceiver(newReceiver);
+        assertEq(chain.getEmissionsReceiver(), newReceiver);
+
+        // falls back to owner if emissionsReceiver is set to address(0)
+        vm.prank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateSequencingChain.EmissionsReceiverUpdated(newReceiver, admin);
+        chain.setEmissionsReceiver(address(0));
+        assertEq(chain.getEmissionsReceiver(), admin);
+    }
+
+    function testTransferOwnershipEmitsEmissionsReceiverUpdated() public {
+        // Test that transferOwnership emits EmissionsReceiverUpdated when emissionsReceiver is not set
+        address newOwner = address(0x888);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit SyndicateSequencingChain.EmissionsReceiverUpdated(admin, newOwner);
+        chain.transferOwnership(newOwner);
+
+        // Verify the emissions receiver changed
+        assertEq(chain.getEmissionsReceiver(), newOwner);
+        assertEq(chain.owner(), newOwner);
+
+        // Test that transferOwnership does NOT emit EmissionsReceiverUpdated when emissionsReceiver is explicitly set
+        address explicitReceiver = address(0x777);
+        vm.prank(newOwner);
+        chain.setEmissionsReceiver(explicitReceiver);
+
+        address anotherNewOwner = address(0x666);
+        vm.prank(newOwner);
+        // Should NOT emit EmissionsReceiverUpdated
+        vm.recordLogs();
+        chain.transferOwnership(anotherNewOwner);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        // Should only have OwnershipTransferred event, not EmissionsReceiverUpdated
+        bool foundEmissionsEvent = false;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == keccak256("EmissionsReceiverUpdated(address,address)")) {
+                foundEmissionsEvent = true;
+                break;
+            }
+        }
+        assertFalse(foundEmissionsEvent, "Should not emit EmissionsReceiverUpdated when explicit receiver is set");
+
+        // Verify emissions receiver stayed the same
+        assertEq(chain.getEmissionsReceiver(), explicitReceiver);
+        assertEq(chain.owner(), anotherNewOwner);
     }
 }
 

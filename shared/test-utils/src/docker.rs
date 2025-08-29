@@ -361,7 +361,8 @@ pub struct NitroNodeArgs {
 
 /// Starts nitro instance
 pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
-    let tag = env::var("NITRO_TAG").unwrap_or("eigenda-v3.6.4-dev.4".to_string());
+    const NITRO_DEFAULT_TAG: &str = "eigenda-v3.6.4-rc.2";
+    let tag = env::var("NITRO_TAG").unwrap_or(NITRO_DEFAULT_TAG.to_string());
     let port = PortManager::instance().next_port().await;
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());

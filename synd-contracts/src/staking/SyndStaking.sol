@@ -3,6 +3,10 @@ pragma solidity 0.8.28;
 
 import {EpochTracker} from "./EpochTracker.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IPool} from "./IPool.sol";
 
 /**
  * @title SyndStaking
@@ -30,7 +34,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
  * - Delayed withdrawal system for security
  * - Efficient finalization system for historical queries
  */
-contract SyndStaking is EpochTracker {
+contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
     /// @notice Total amount of SYND tokens staked across all users and appchains
     uint256 public totalStake;
 
@@ -95,16 +99,26 @@ contract SyndStaking is EpochTracker {
     mapping(address user => mapping(uint256 appchainId => uint256 finalizedEpochCount)) public
         userAppchainFinalizedEpochCount;
 
+    /**
+     * @notice Struct for claiming rewards
+     * @param epochIndex The epoch index to claim rewards from
+     * @param poolAddress The address of the pool to claim from
+     */
+    struct ClaimRequest {
+        uint256 epochIndex;
+        address poolAddress;
+    }
+
     /*
      * Pro-Rata Stake Tracking:
      * Some rewards require pro-rata accounting where stake added mid-epoch receives
      * partial credit based on time remaining. For example, staking halfway through
      * an epoch might give 50% of that epoch's rewards.
-     * 
+     *
      * For this we track 2 additional variables:
      * - epochStakeShare: Total pro-rata stake for an epoch (weighted by time)
      * - epochUserStakeShare: Per-user pro-rata stake for an epoch (weighted by time)
-     * 
+     *
      * These are added to the totals from the 4-variable pattern above to get
      * complete stake accounting for both full-epoch and partial-epoch rewards.
     */
@@ -160,12 +174,34 @@ contract SyndStaking is EpochTracker {
     error WithdrawalNotReady();
     /// @notice Error thrown when withdrawal data is invalid or missing
     error InvalidWithdrawal();
+    /// @notice Error thrown when no claims are provided
+    error NoClaimsProvided();
+    /// @notice Error thrown when input is invalid
+    error InvalidInput();
+    /// @notice Error thrown when total amount of staking does not match the amount of ETH sent
+    error InvalidStakingAmount(uint256 totalAmount, uint256 sentAmount);
 
     /**
-     * @notice Constructor to initialize the staking contract with epoch start time
-     * @param _startTimestamp The timestamp when epoch counting begins
+     * @notice Constructs the SyndStaking contract and sets the default admin (owner)
+     * @param _defaultAdmin The address to be set as the contract owner
      */
-    constructor(uint256 _startTimestamp) EpochTracker(_startTimestamp) {}
+    constructor(address _defaultAdmin) Ownable(_defaultAdmin) {}
+
+    /**
+     * @notice Pause the contract, disabling staking and withdrawal operations
+     * @dev Only callable by the contract owner. Triggers the emergency stop mechanism.
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract, re-enabling staking and withdrawal operations
+     * @dev Only callable by the contract owner. Lifts the emergency stop mechanism.
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
     ///////////////////////
     // Staking functions
@@ -176,8 +212,12 @@ contract SyndStaking is EpochTracker {
      * @dev Automatically finalizes epochs if needed and calculates pro-rata stake share
      * @param appchainId The ID of the appchain to stake for (must be non-zero)
      */
-    function stakeSynd(uint256 appchainId) external payable {
-        if (msg.value == 0) {
+    function stakeSynd(uint256 appchainId) external payable whenNotPaused {
+        _stakeSynd(appchainId, msg.value);
+    }
+
+    function _stakeSynd(uint256 appchainId, uint256 amount) internal {
+        if (amount == 0) {
             revert InvalidAmount();
         }
         if (appchainId == 0) {
@@ -200,23 +240,48 @@ contract SyndStaking is EpochTracker {
         }
 
         // Calculate stake share for current epoch
-        uint256 stakeShare = calculateStakeShare(msg.value);
+        uint256 stakeShare = _calculateStakeShare(amount);
         epochStakeShare[epochIndex] += stakeShare;
         epochUserStakeShare[epochIndex][msg.sender] += stakeShare;
 
-        epochAdditions[epochIndex] += msg.value;
-        totalStake += msg.value;
+        epochAdditions[epochIndex] += amount;
+        totalStake += amount;
 
-        epochUserAdditions[epochIndex][msg.sender] += msg.value;
-        userTotal[msg.sender] += msg.value;
+        epochUserAdditions[epochIndex][msg.sender] += amount;
+        userTotal[msg.sender] += amount;
 
-        epochAppchainAdditions[epochIndex][appchainId] += msg.value;
-        appchainTotal[appchainId] += msg.value;
+        epochAppchainAdditions[epochIndex][appchainId] += amount;
+        appchainTotal[appchainId] += amount;
 
-        epochUserAppchainAdditions[epochIndex][msg.sender][appchainId] += msg.value;
-        userAppchainTotal[msg.sender][appchainId] += msg.value;
+        epochUserAppchainAdditions[epochIndex][msg.sender][appchainId] += amount;
+        userAppchainTotal[msg.sender][appchainId] += amount;
 
-        emit Stake(epochIndex, msg.sender, msg.value, appchainId);
+        emit Stake(epochIndex, msg.sender, amount, appchainId);
+    }
+
+    /**
+     * @notice Stake tokens across multiple appchains in a single transaction
+     * @dev Iterates over the provided appchain IDs and amounts, calling `_stakeSynd` for each.
+     *      The total sum of all amounts must equal `msg.value` or the transaction reverts.
+     * @param appchainIds The list of appchain IDs to stake into
+     * @param amounts The list of corresponding stake amounts for each appchain ID
+     */
+    function stakeMultipleAppchains(uint256[] calldata appchainIds, uint256[] calldata amounts)
+        external
+        payable
+        whenNotPaused
+    {
+        if (appchainIds.length != amounts.length) {
+            revert InvalidInput();
+        }
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < appchainIds.length; i++) {
+            totalAmount += amounts[i];
+            _stakeSynd(appchainIds[i], amounts[i]);
+        }
+        if (totalAmount != msg.value) {
+            revert InvalidStakingAmount(totalAmount, msg.value);
+        }
     }
 
     /**
@@ -225,7 +290,7 @@ contract SyndStaking is EpochTracker {
      * @param amount The amount of tokens being staked
      * @return The calculated stake share for the current epoch
      */
-    function calculateStakeShare(uint256 amount) internal view returns (uint256) {
+    function _calculateStakeShare(uint256 amount) internal view returns (uint256) {
         return (amount * (getEpochEnd(getCurrentEpoch()) - block.timestamp)) / EPOCH_DURATION;
     }
 
@@ -236,7 +301,12 @@ contract SyndStaking is EpochTracker {
      * @param toAppchainId The ID of the destination appchain
      * @param amount The amount of tokens to restake
      */
-    function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount) external payable {
+    function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+    {
         if (amount == 0) {
             revert InvalidAmount();
         }
@@ -359,7 +429,7 @@ contract SyndStaking is EpochTracker {
         if (appchainId == 0) {
             revert InvalidAppchainId();
         }
-        if (userAppchainTotal[msg.sender][appchainId] < amount) {
+        if (amount > userAppchainTotal[msg.sender][appchainId] || amount > userTotal[msg.sender]) {
             revert InsufficientStake();
         }
 
@@ -405,7 +475,7 @@ contract SyndStaking is EpochTracker {
      * @param epochIndex The epoch index when withdrawal was initialized
      * @param destination The address where tokens should be sent
      */
-    function withdraw(uint256 epochIndex, address destination) external {
+    function withdraw(uint256 epochIndex, address destination) public nonReentrant {
         if (epochIndex >= getCurrentEpoch()) {
             revert WithdrawalNotReady();
         }
@@ -422,6 +492,25 @@ contract SyndStaking is EpochTracker {
         Address.sendValue(payable(destination), amount);
 
         emit WithdrawalCompleted(msg.sender, destination, amount);
+    }
+
+    ///////////////////////
+    // Claim functions
+    ///////////////////////
+
+    /**
+     * @notice Claim rewards from multiple pools for the caller
+     * @dev This function calls the claimFor function on each pool contract
+     * @param claims Array of ClaimRequest structs containing claim details
+     */
+    function claimAllRewards(ClaimRequest[] calldata claims, address destination) external nonReentrant {
+        if (claims.length == 0) {
+            revert NoClaimsProvided();
+        }
+
+        for (uint256 i = 0; i < claims.length; i++) {
+            IPool(claims[i].poolAddress).claimFor(claims[i].epochIndex, msg.sender, destination);
+        }
     }
 
     ///////////////////////
@@ -521,5 +610,66 @@ contract SyndStaking is EpochTracker {
         } else {
             return epochUserAppchainTotal[epochIndex][user][appchainId];
         }
+    }
+
+    ///////////////////////
+    // Bulk functions
+    ///////////////////////
+
+    /**
+     * @notice Initialize withdrawals for multiple appchains with specified amounts
+     * @dev Reverts if the length of appchainIds and amounts arrays do not match
+     * @param appchainIds The array of appchain IDs to initialize withdrawals for
+     * @param amounts The array of withdrawal amounts corresponding to each appchain ID
+     */
+    function initializeWithdrawals(uint256[] calldata appchainIds, uint256[] calldata amounts) external nonReentrant {
+        if (appchainIds.length != amounts.length) {
+            revert InvalidWithdrawal();
+        }
+
+        for (uint256 i = 0; i < appchainIds.length; i++) {
+            initializeWithdrawal(appchainIds[i], amounts[i]);
+        }
+    }
+
+    /**
+     * @notice Initialize withdrawals for multiple appchains for the caller, withdrawing the full available amount from each
+     * @dev Calls initializeWithdrawal for each appchainId with the full withdrawal amount for msg.sender
+     * @param appchainIds The array of appchain IDs to initialize withdrawals for
+     */
+    function initializeWithdrawals(uint256[] calldata appchainIds) external nonReentrant {
+        for (uint256 i = 0; i < appchainIds.length; i++) {
+            initializeWithdrawal(appchainIds[i], getWithdrawalAmount(msg.sender, appchainIds[i]));
+        }
+    }
+
+    /**
+     * @notice Withdraws funds for multiple epochs in a single transaction.
+     * @dev Iterates through the provided epoch indices, finalizes user epochs, and transfers the total amount to the specified destination.
+     *      Reverts if any epoch is not ready for withdrawal or if there is no withdrawal amount for an epoch.
+     * @param epochIndices The array of epoch indices to withdraw from.
+     * @param destination The address to receive the withdrawn funds.
+     */
+    function withdrawBulk(uint256[] calldata epochIndices, address destination) external {
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < epochIndices.length; i++) {
+            uint256 epochIndex = epochIndices[i];
+            if (epochIndex >= getCurrentEpoch()) {
+                revert WithdrawalNotReady();
+            }
+
+            uint256 amount = epochUserWithdrawals[epochIndex][msg.sender];
+            if (amount == 0) {
+                revert InvalidWithdrawal();
+            }
+
+            finalizeUserEpochs(msg.sender);
+            epochUserWithdrawals[epochIndex][msg.sender] = 0;
+            totalAmount += amount;
+        }
+
+        Address.sendValue(payable(destination), totalAmount);
+
+        emit WithdrawalCompleted(msg.sender, destination, totalAmount);
     }
 }

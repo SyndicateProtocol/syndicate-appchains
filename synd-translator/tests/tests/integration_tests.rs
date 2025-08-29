@@ -191,6 +191,7 @@ async fn test_nitro_batch() -> Result<()> {
         .await?;
 
     inner_tx.encode_2718(&mut tx);
+    tx.insert(0, 4);
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);
@@ -282,8 +283,10 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
         .await?;
 
     second_tx.encode_2718(&mut tx2);
+    tx2.insert(0, 4);
 
     inner_tx.encode_2718(&mut tx);
+    tx.insert(0, 4);
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage {
             header: Default::default(),
@@ -402,6 +405,7 @@ async fn test_nitro_delayed_message_after_batch() -> Result<()> {
         .await?;
 
     inner_tx.encode_2718(&mut tx);
+    tx.insert(0, 4);
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);

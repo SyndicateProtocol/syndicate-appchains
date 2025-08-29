@@ -75,6 +75,7 @@ mod tests {
             finalization_checker_interval: Duration::from_secs(5 * 60),
             max_transaction_retries: 3,
             skip_balance_check: false,
+            max_nonce_buffer: None,
         };
 
         let mut registry = Registry::default();

@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {BasePool} from "src/staking/BasePool.sol";
+import {EpochTracker} from "src/staking/EpochTracker.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -15,7 +16,7 @@ contract BasePoolTest is Test {
     address public user3;
 
     function setUp() public {
-        staking = new SyndStaking(block.timestamp);
+        staking = new SyndStaking(msg.sender);
         basePool = new BasePool(address(staking));
 
         user1 = makeAddr("user1");
@@ -25,6 +26,9 @@ contract BasePoolTest is Test {
         vm.deal(user1, 100 ether);
         vm.deal(user2, 100 ether);
         vm.deal(user3, 100 ether);
+
+        // Warp to exactly the epoch start timestamp (beginning of epoch 1)
+        vm.warp(staking.START_TIMESTAMP());
     }
 
     function setupStake(uint256 user1Stake, uint256 user2Stake, uint256 user3Stake) public {

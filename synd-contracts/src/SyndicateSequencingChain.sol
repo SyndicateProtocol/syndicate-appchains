@@ -2,6 +2,17 @@
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
+import {GasCounter} from "./staking/GasCounter.sol";
+import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
+
+enum TransactionType {
+    Unsigned, // an unsigned tx
+    Contract, // a contract tx (unsigned, nonceless)
+    _Reserved,
+    Compressed, // compressed batch of transactions (signed)
+    Signed // a regular signed tx
+
+}
 
 /// @title SyndicateSequencingChain
 /// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
@@ -27,7 +38,7 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 /// └─────────────────────────────────────────────────────────────────────────┘
 ///
 /// @dev Transaction Lifecycle:
-/// 1. Transaction is submitted via processTransaction, processTransactionUncompressed, or processTransactionsBulk
+/// 1. Transaction is submitted via processTransaction, processTransactionsCompressed, or processTransactionsBulk
 /// 2. onlyWhenAllowed modifier passes both msg.sender AND tx.origin to SequencingModuleChecker
 /// 3. SequencingModuleChecker delegates to the configured permissionRequirementModule
 /// 4. Permission module evaluates BOTH addresses using custom logic (developer responsibility)
@@ -36,14 +47,22 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 ///
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
-contract SyndicateSequencingChain is SequencingModuleChecker {
+contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequencingChain, GasCounter {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
+
+    /// @notice The address that receives emissions for this sequencing chain
+    address public emissionsReceiver;
 
     /// @notice Emitted when a new transaction is processed
     /// @param sender The address that submitted the transaction
     /// @param data The transaction data that was processed
     event TransactionProcessed(address indexed sender, bytes data);
+
+    /// @notice Emitted when the emissions receiver is updated
+    /// @param oldReceiver The previous emissions receiver address
+    /// @param newReceiver The new emissions receiver address
+    event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
 
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
@@ -54,46 +73,94 @@ contract SyndicateSequencingChain is SequencingModuleChecker {
         appchainId = _appchainId;
     }
 
-    /// @notice Processes a compressed transaction.
+    /// @notice Processes a compressed batch of signed transactions.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
-        emit TransactionProcessed(msg.sender, data);
+    function processTransactionsCompressed(bytes calldata data)
+        external
+        onlyWhenAllowedCompressed(msg.sender, tx.origin)
+        trackGasUsage
+    {
+        require(data.length > 0, NoTxData());
+        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Compressed, data));
     }
 
-    /// @notice Processes multiple uncompressed transactions in bulk.
-    /// @param data An array of transaction data without prepended zero bytes.
+    /// @notice Process a signed transaction.
+    /// @param data Transaction data
     //#olympix-ignore-required-tx-origin
-    function processTransactionUncompressed(bytes calldata data)
+    function processTransaction(bytes calldata data)
         external
         onlyWhenAllowed(msg.sender, tx.origin, data)
+        trackGasUsage
     {
-        emit TransactionProcessed(msg.sender, prependZeroByte(data));
+        require(data.length > 0, NoTxData());
+        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data));
     }
 
-    /// @notice Processes multiple transactions in bulk.
-    /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
+    /// @notice Processes multiple signed transactions in bulk.
     /// @param data An array of transaction data.
     //#olympix-ignore
-    function processTransactionsBulk(bytes[] calldata data) external {
+    function processTransactionsBulk(bytes[] calldata data) external trackGasUsage {
         uint256 dataCount = data.length;
 
         // Process all transactions
         uint256 i;
         for (i = 0; i < dataCount; i++) {
-            bool isAllowed = isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
+            bool isAllowed = data.length > 0 && isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed
-                emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
+                emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data[i]));
             }
         }
     }
 
-    /// @notice Prepends a zero byte to the transaction data
-    /// @dev This helps op-translator identify uncompressed data
-    /// @param _data The original transaction data
-    /// @return bytes The transaction data with a zero byte prepended
-    function prependZeroByte(bytes calldata _data) public pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), _data);
+    /*//////////////////////////////////////////////////////////////
+                         EMISSIONS RECEIVER ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Set the emissions receiver address
+    /// @dev Only callable by the contract owner
+    /// @param _emissionsReceiver The address to receive emissions
+    function setEmissionsReceiver(address _emissionsReceiver) external onlyOwner {
+        address oldReceiver = emissionsReceiver;
+        emissionsReceiver = _emissionsReceiver;
+        if (emissionsReceiver != address(0)) {
+            emit EmissionsReceiverUpdated(oldReceiver, _emissionsReceiver);
+        } else {
+            emit EmissionsReceiverUpdated(oldReceiver, owner());
+        }
+    }
+
+    /// @notice Get the effective emissions receiver address
+    /// @dev Returns emissionsReceiver if set, otherwise returns the contract owner
+    /// @return The address that should receive emissions
+    function getEmissionsReceiver() external view returns (address) {
+        return emissionsReceiver == address(0) ? owner() : emissionsReceiver;
+    }
+
+    /// @notice Override transferOwnership to emit EmissionsReceiverUpdated event when appropriate
+    /// @dev When emissionsReceiver is not explicitly set (address(0)), transferring ownership
+    /// effectively changes the emissions receiver, so we emit the event for transparency
+    /// @param newOwner The address of the new owner
+    function transferOwnership(address newOwner) public override onlyOwner {
+        if (emissionsReceiver == address(0)) {
+            emit EmissionsReceiverUpdated(owner(), newOwner);
+        }
+        super.transferOwnership(newOwner);
+    }
+    /*//////////////////////////////////////////////////////////////
+                         GAS TRACKING ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Disable gas tracking if needed
+    /// @dev Only callable by the contract owner
+    function disableGasTracking() external onlyOwner {
+        _disableGasTracking();
+    }
+
+    /// @notice Enable gas tracking
+    /// @dev Only callable by the contract owner
+    function enableGasTracking() external onlyOwner {
+        _enableGasTracking();
     }
 }

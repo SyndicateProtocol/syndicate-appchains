@@ -4,16 +4,18 @@ pragma solidity 0.8.28;
 /// @title ISyndicateSequencingChain
 /// @notice Interface for the SyndicateSequencingChain contract
 interface ISyndicateSequencingChain {
-    /// @notice Processes an uncompressed transaction.
-    /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param data An array of transaction data without prepended zero bytes.
-    function processTransactionUncompressed(bytes calldata data) external;
+    /// @notice The ID of the App chain that this contract is sequencing transactions for
+    function appchainId() external view returns (uint256);
 
-    //// @notice Processes a compressed transaction.
+    /// @notice Processes a compressed batch of signed transactions.
     /// @param data The compressed transaction data.
+    function processTransactionsCompressed(bytes calldata data) external;
+
+    /// @notice Process a signed transaction.
+    /// @param data Transaction data
     function processTransaction(bytes calldata data) external;
 
-    /// @notice Process bulk transactions
-    /// @param data The array of transaction data to process
+    /// @notice Processes multiple signed transactions in bulk.
+    /// @param data An array of transaction data.
     function processTransactionsBulk(bytes[] calldata data) external;
 }

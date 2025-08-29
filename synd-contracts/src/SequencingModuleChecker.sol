@@ -21,6 +21,7 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     error InvalidModuleAddress();
     error TransactionOrSenderNotAllowed();
     error AlreadyInitialized();
+    error NoTxData();
 
     bool internal hasBeenInitialized = false;
 
@@ -36,11 +37,10 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// 2. Then initialized with the permanent admin and requirement module
     /// 3. Once initialized, it cannot be re-initialized (immutable pattern)
     /// @param admin The address of the new admin
-    /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module
+    /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module.
+    /// Note that the zero address is allowed and corresponds to the always allowed module
     function initialize(address admin, address _permissionRequirementModule) external onlyOwner {
         if (hasBeenInitialized) revert AlreadyInitialized();
-        if (_permissionRequirementModule == address(0)) revert InvalidModuleAddress();
-
         hasBeenInitialized = true;
 
         permissionRequirementModule = IPermissionModule(_permissionRequirementModule);
@@ -50,8 +50,8 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
 
     /// @notice Updates the requirement module
     /// @param _newModule The address of the new requirement module
+    /// Note that the zero address is allowed and corresponds to the always allowed module
     function updateRequirementModule(address _newModule) external onlyOwner {
-        if (_newModule == address(0)) revert InvalidModuleAddress();
         permissionRequirementModule = IPermissionModule(_newModule);
 
         emit RequirementModuleUpdated(_newModule);
@@ -66,12 +66,37 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
         _;
     }
 
+    /// @notice tx data is ignored as it is compressed and replaced with empty bytes
+    modifier onlyWhenAllowedCompressed(address msgSender, address txOrigin) {
+        if (!isAllowedCompressed(msgSender, txOrigin)) revert TransactionOrSenderNotAllowed();
+        _;
+    }
+
+    /// @notice tx data is set to the 0 byte to indicate that this is an unsigned tx and msgSender is the tx source address
+    modifier onlyWhenAllowedUnsigned(address msgSender, address txOrigin) {
+        if (!isAllowedUnsigned(msgSender, txOrigin)) revert TransactionOrSenderNotAllowed();
+        _;
+    }
+
     /// @notice Checks if both the proposer and calldata are allowed
     /// @param proposer The address to check
     /// @param originator The address of tx.origin.
     /// @param data The calldata to check
     /// @return bool indicating if both the proposer and calldata are allowed
     function isAllowed(address proposer, address originator, bytes calldata data) public view returns (bool) {
-        return permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
+        return address(permissionRequirementModule) == address(0)
+            || permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
+    }
+
+    /// @notice tx data is ignored as it is compressed and replaced with empty bytes
+    function isAllowedCompressed(address proposer, address originator) public view returns (bool) {
+        return address(permissionRequirementModule) == address(0)
+            || permissionRequirementModule.isAllowed(proposer, originator, ""); //#olympix-ignore-calls-in-loop
+    }
+
+    /// @notice tx data is set to the 0 byte to indicate that this is an unsigned tx and msgSender is the tx source address
+    function isAllowedUnsigned(address proposer, address originator) public view returns (bool) {
+        return address(permissionRequirementModule) == address(0)
+            || permissionRequirementModule.isAllowed(proposer, originator, hex"00"); //#olympix-ignore-calls-in-loop
     }
 }

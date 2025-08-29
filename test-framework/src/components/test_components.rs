@@ -122,9 +122,10 @@ pub struct TestComponents {
 
 pub const SEQUENCING_CHAIN_ID: u64 = 15;
 pub const SETTLEMENT_CHAIN_ID: u64 = 31337;
+pub const GENESIS_TIMESTAMP: u64 = 1756209109; // some time after EPOCH_START_TIME (see GasAggregator.sol)
 
+#[allow(clippy::unwrap_used)]
 impl TestComponents {
-    #[allow(clippy::unwrap_used)]
     pub async fn run<Fut: Future<Output = Result<()>> + Send>(
         options: &ConfigurationOptions,
         test: impl FnOnce(Self) -> Fut + Send,
@@ -151,8 +152,8 @@ impl TestComponents {
         }
     }
 
-    #[allow(clippy::unwrap_used)]
     #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::large_stack_frames)]
     async fn new(options: &ConfigurationOptions) -> Result<(Self, ComponentHandles)> {
         let mut options = options.clone();
         let start_time = SystemTime::now();
@@ -190,8 +191,15 @@ impl TestComponents {
             provider: seq_provider,
             http_url: _,
         } = match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
-                start_anvil(SEQUENCING_CHAIN_ID).await?
+            BaseChainsType::Anvil => {
+                start_anvil_with_args(
+                    SEQUENCING_CHAIN_ID,
+                    &["--timestamp", 1756209109.to_string().as_str()],
+                )
+                .await?
+            }
+            BaseChainsType::PreLoaded(_) => {
+                start_anvil_with_args(SEQUENCING_CHAIN_ID, &["--timestamp", "0"]).await?
             }
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let chain_id = SEQUENCING_CHAIN_ID;
@@ -266,7 +274,13 @@ impl TestComponents {
             .await?;
 
         match options.base_chains_type {
-            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+            BaseChainsType::Anvil => {
+                mine_block(&seq_provider, 0).await?;
+            }
+            BaseChainsType::PreLoaded(_) => {
+                // disable gas tracking, otherwise there will be an underflow error with anvil
+                // timstamp 0
+                let _ = sequencing_contract.disableGasTracking().send().await?;
                 mine_block(&seq_provider, 0).await?;
             }
             _ => {}
@@ -282,7 +296,11 @@ impl TestComponents {
             http_url: set_rpc_http_url,
         } = match options.base_chains_type {
             BaseChainsType::Anvil => {
-                let chain_info = start_anvil(SETTLEMENT_CHAIN_ID).await?;
+                let chain_info = start_anvil_with_args(
+                    SETTLEMENT_CHAIN_ID,
+                    &["--timestamp", 1756209109.to_string().as_str()],
+                )
+                .await?;
                 // Use the mock rollup contract for the test instead of deploying all the nitro
                 // rollup contracts
                 let _ = Rollup::deploy_builder(
@@ -360,22 +378,11 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                let chain_info = start_anvil_with_args(
+                start_anvil_with_args(
                     SETTLEMENT_CHAIN_ID,
-                    &["--load-state", state_file.to_str().unwrap()],
+                    &["--load-state", state_file.to_str().unwrap(), "--timestamp", "0"], // snapshots expect timestamp to be 0
                 )
-                .await?;
-
-                // Sync the tips of the sequencing and settlement chains
-                let block = chain_info
-                    .provider
-                    .get_block_by_number(BlockNumberOrTag::Latest)
-                    .await?
-                    .unwrap();
-                seq_provider
-                    .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
-                    .await?;
-                chain_info
+                .await?
             }
         };
 
@@ -606,6 +613,37 @@ impl TestComponents {
         let l1_ws_rpc_url = l1_info.as_ref().map(|info| info.ws_url.clone()).unwrap_or_default();
         let l1_instance = l1_info.map(|info| info.instance);
 
+        if matches!(options.base_chains_type, BaseChainsType::Anvil | BaseChainsType::PreLoaded(_))
+        {
+            // Sync the tips of the sequencing and settlement chains
+            let seq_timestamp = seq_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap()
+                .header
+                .timestamp;
+            let set_timestamp = set_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap()
+                .header
+                .timestamp;
+
+            match seq_timestamp.cmp(&set_timestamp) {
+                std::cmp::Ordering::Less => {
+                    seq_provider
+                        .evm_mine(Some(MineOptions::Timestamp(Some(set_timestamp))))
+                        .await?;
+                }
+                std::cmp::Ordering::Greater => {
+                    set_provider
+                        .evm_mine(Some(MineOptions::Timestamp(Some(seq_timestamp))))
+                        .await?;
+                }
+                std::cmp::Ordering::Equal => {}
+            }
+        }
+
         Ok((
             Self {
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
@@ -662,7 +700,6 @@ impl TestComponents {
 
     /// Use this if you intend for the txn to succeed
     /// Returns [`TxHash`]
-    #[allow(clippy::unwrap_used)]
     pub async fn send_maestro_tx_successful(&self, raw_tx: &[u8]) -> Result<TxHash> {
         let client = reqwest::Client::new();
         let tx_hex = hex::encode_prefixed(raw_tx);
@@ -692,7 +729,6 @@ impl TestComponents {
     }
 
     /// Use this instead of `send_maestro_tx_successful()` to inspect the JSON `error` field
-    #[allow(clippy::unwrap_used)]
     pub async fn send_maestro_tx_could_be_unsuccessful(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
@@ -730,7 +766,6 @@ impl TestComponents {
 
     /// sequences a valid appchain raw transaction and mines the sequencing block
     /// returns the appchain's transaction receipt
-    #[allow(clippy::unwrap_used)]
     pub async fn sequence_tx(
         &self,
         tx: &[u8],
@@ -741,14 +776,14 @@ impl TestComponents {
         let tx_bytes = Bytes::from(tx.to_vec());
 
         // NOTE: build the tx manually, instead of using the much simpler
-        // `self.sequencing_contract.processTransactionUncompressed(tx_bytes).send().await?;`
+        // `self.sequencing_contract.processTransaction(tx_bytes).send().await?;`
         // this is because the contract_instance gets confused after a reorg and fails the tests...
         // re-creating the contract instance after reorg did not help.
         // (this is a bug in alloy.)
         // https://github.com/alloy-rs/alloy/issues/2668
         let raw_tx = self
             .sequencing_contract
-            .processTransactionUncompressed(tx_bytes)
+            .processTransaction(tx_bytes)
             .nonce(self.sequencing_provider.get_transaction_count(test_account1().address).await?)
             .gas(10_000_000)
             .max_fee_per_gas(100_000_000)
@@ -778,5 +813,38 @@ impl TestComponents {
             }
             false => Ok(None),
         }
+    }
+
+    #[cfg(false)]
+    pub async fn send_contract_tx(
+        &self,
+        gas_limit: u64,
+        max_fee_per_gas: U256,
+        to: Address,
+        value: U256,
+        data: Bytes,
+        seq_delay: u64,
+    ) -> Result<()> {
+        let raw_tx = self
+            .sequencing_contract
+            .sendContractTransaction(gas_limit, max_fee_per_gas, to, value, data)
+            .nonce(self.sequencing_provider.get_transaction_count(test_account1().address).await?)
+            .gas(10_000_000)
+            .max_fee_per_gas(100_000_000)
+            .max_priority_fee_per_gas(0)
+            .chain_id(SEQUENCING_CHAIN_ID)
+            .build_raw_transaction(test_account1().signer.clone())
+            .await?;
+        let seq_tx = self.sequencing_provider.send_raw_transaction(&raw_tx).await?;
+
+        if self.sequencing_deployment.is_none() {
+            // skip mining step when in nitro mode
+            self.mine_seq_block(seq_delay).await?;
+        }
+        let seq_receipt =
+            self.sequencing_provider.get_transaction_receipt(*seq_tx.tx_hash()).await?.unwrap();
+        assert!(seq_receipt.status(), "Sequence transaction failed");
+
+        Ok(())
     }
 }

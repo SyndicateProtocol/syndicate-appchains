@@ -41,12 +41,6 @@ contract SequencingModuleCheckerTest is Test {
         manager.updateRequirementModule(newModule);
     }
 
-    function testUpdateMasterModuleZeroAddress() public {
-        vm.prank(admin);
-        vm.expectRevert(SequencingModuleChecker.InvalidModuleAddress.selector);
-        manager.updateRequirementModule(address(0));
-    }
-
     function testCannotInitializeTwice() public {
         vm.prank(admin);
         vm.expectRevert(SequencingModuleChecker.AlreadyInitialized.selector);

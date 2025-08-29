@@ -415,6 +415,17 @@ pub trait Provider: Sync {
     }
 
     #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
+    async fn ready(&self) -> Result<bool, ClientError> {
+        #[derive(serde::Deserialize, Clone)]
+        struct ReadyResponse {
+            ready: bool,
+        }
+
+        let response: ReadyResponse = self.request("ready", ((),)).await?;
+        Ok(response.ready)
+    }
+
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
     async fn get_block_number(&self) -> Result<u64, ClientError> {
         self.request("eth_blockNumber", ((),)).await
     }
@@ -482,6 +493,7 @@ impl IngestorProvider {
             config.timeout,
             WsClientBuilder::new()
                 .max_response_size(config.max_response_size)
+                .max_frame_size(config.max_response_size)
                 .max_buffer_capacity_per_subscription(config.max_buffer_capacity_per_subscription)
                 .request_timeout(config.timeout)
                 .enable_ws_ping(PingConfig::default())

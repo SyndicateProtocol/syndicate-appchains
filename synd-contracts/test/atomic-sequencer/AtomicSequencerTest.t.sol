@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequencer/AtomicSequencer.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
@@ -30,6 +31,9 @@ contract AtomicSequencerTest is Test {
     event TransactionProcessed(address indexed sender, bytes data);
 
     function setUp() public {
+        // Warp to START_TIMESTAMP to avoid underflow in epoch calculations
+        vm.warp(1754089200); // START_TIMESTAMP from EpochTracker.sol
+
         admin = address(0x1);
         originalCaller = address(0x2);
         uint256 appchainIdA = 10042001;
@@ -37,13 +41,19 @@ contract AtomicSequencerTest is Test {
 
         vm.startPrank(admin);
         permissionModule = new RequireAndModule(admin);
-        chainA = new SyndicateSequencingChain(appchainIdA);
-        chainA.initialize(admin, address(permissionModule));
-        chainB = new SyndicateSequencingChain(appchainIdB);
-        chainB.initialize(admin, address(permissionModule));
+        chainA = deployFromFactory(appchainIdA);
+        chainB = deployFromFactory(appchainIdB);
         atomicSequencer = new AtomicSequencer();
         permissionModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
+    }
+
+    function deployFromFactory(uint256 appchainId) public returns (SyndicateSequencingChain) {
+        SyndicateFactory factory = new SyndicateFactory(admin);
+        (address chainAddress,) = factory.createSyndicateSequencingChain(
+            appchainId, admin, permissionModule, keccak256(abi.encodePacked("test-salt"))
+        );
+        return SyndicateSequencingChain(chainAddress);
     }
 
     function testMsgSenderPreservedInSingleTransaction() public {

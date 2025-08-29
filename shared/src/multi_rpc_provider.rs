@@ -31,7 +31,6 @@ use alloy::{
     },
     transports::{layers::RetryBackoffLayer, RpcError, TransportErrorKind, TransportResult},
 };
-use arc_swap::ArcSwap;
 use serde_json::value::RawValue;
 use std::{
     borrow::Cow,
@@ -50,9 +49,7 @@ use url::Url;
 pub struct MultiRpcProvider {
     /// List of RPC providers for this chain, ordered by priority
     providers: Vec<Arc<FilledProvider>>,
-    /// Currently active provider
-    active_provider: ArcSwap<FilledProvider>,
-    /// Index of currently active provider
+    /// Index of the currently active provider
     active_provider_index: Arc<AtomicUsize>,
 }
 
@@ -60,7 +57,6 @@ impl Clone for MultiRpcProvider {
     fn clone(&self) -> Self {
         Self {
             providers: self.providers.clone(),
-            active_provider: ArcSwap::new(self.active_provider()),
             active_provider_index: Arc::clone(&self.active_provider_index),
         }
     }
@@ -162,7 +158,14 @@ impl MultiRpcProvider {
             {
                 providers.push(Arc::new(provider));
                 working_urls.push(url.clone());
-            }
+            } else {
+                warn!(
+                    chain_id = chain_id,
+                    url = %sanitize_url_for_logging(url),
+                    index,
+                    "Failed to connect to RPC provider"
+                );
+            };
         }
 
         if providers.is_empty() {
@@ -175,11 +178,7 @@ impl MultiRpcProvider {
             "Working URLs for chain"
         );
 
-        Ok(Self {
-            active_provider: ArcSwap::new(providers[0].clone()),
-            providers,
-            active_provider_index: Arc::new(AtomicUsize::new(0)),
-        })
+        Ok(Self { providers, active_provider_index: Arc::new(AtomicUsize::new(0)) })
     }
 
     /// Verify that a provider's chain ID matches the expected chain ID
@@ -255,16 +254,12 @@ impl MultiRpcProvider {
 
     /// Get the default signer address for the active provider
     pub fn signer_address(&self) -> Address {
-        self.active_provider().default_signer_address()
+        self.active_provider().0.default_signer_address()
     }
 
     /// Create from already instantiated providers
     pub fn from_providers(providers: Vec<Arc<FilledProvider>>) -> Self {
-        Self {
-            active_provider: ArcSwap::new(providers[0].clone()),
-            providers,
-            active_provider_index: Arc::new(AtomicUsize::new(0)),
-        }
+        Self { providers, active_provider_index: Arc::new(AtomicUsize::new(0)) }
     }
 
     /// Get the number of providers
@@ -273,29 +268,10 @@ impl MultiRpcProvider {
     }
 
     /// Get the currently active provider
-    pub fn active_provider(&self) -> Arc<FilledProvider> {
-        (*self.active_provider.load()).clone()
-    }
-
-    /// Try to switch to the next available provider, returns false if we've completed a full cycle
-    fn next_provider(&self, start_index: usize) -> bool {
-        let current = self.active_provider_index.load(Ordering::Acquire);
-        let next = (current + 1) % self.providers.len();
-
-        // If we've made a full circle back to where we started the iteration, we're done
-        if next == start_index {
-            return false;
-        }
-
-        self.active_provider_index.store(next, Ordering::SeqCst);
-        self.active_provider.store(self.providers[next].clone());
-        debug!(
-            from_index = current,
-            to_index = next,
-            start_index = start_index,
-            "Switched to fallback provider"
-        );
-        true
+    pub fn active_provider(&self) -> (Arc<FilledProvider>, usize) {
+        let index = self.active_provider_index.load(Ordering::Acquire);
+        let provider = self.providers[index].clone();
+        (provider, index)
     }
 
     /// Determine if an RPC error should trigger a fallback to the next provider
@@ -322,33 +298,6 @@ impl MultiRpcProvider {
         }
     }
 
-    /// Handle an error and determine if we should try the next provider
-    fn handle_error(&self, error: RpcError<TransportErrorKind>, start_index: usize) -> ControlFlow {
-        let current_index = self.active_provider_index.load(Ordering::Relaxed);
-
-        if !Self::should_failover(&error) {
-            debug!(
-                provider_index = current_index,
-                error = %error,
-                "RPC error response, returning immediately"
-            );
-
-            // Error is related to the RPC call itself, not the provider
-            return ControlFlow::Err(error)
-        }
-
-        debug!(
-            provider_index = current_index,
-            error = %error,
-            "Transport/connectivity error, trying next provider"
-        );
-        if self.next_provider(start_index) {
-            ControlFlow::RetryWithNextProvider
-        } else {
-            ControlFlow::ErrAllProvidersFailed(error)
-        }
-    }
-
     /// Helper method to retry an operation with automatic failover
     async fn execute_with_provider_failover<T, F, Fut>(
         &self,
@@ -358,23 +307,53 @@ impl MultiRpcProvider {
         F: Fn(Arc<FilledProvider>) -> Fut + Send,
         Fut: Future<Output = Result<T, RpcError<TransportErrorKind>>>,
     {
-        let start_index = self.active_provider_index.load(Ordering::Relaxed);
+        let start_provider_index = self.active_provider_index.load(Ordering::Acquire);
 
-        loop {
-            let provider = self.active_provider();
+        // Try each provider exactly once, starting from current active
+        for i in 0..self.providers.len() {
+            let provider_index = (start_provider_index + i) % self.provider_count();
+            let provider = self.providers[provider_index].clone();
+
             match operation(provider).await {
-                Ok(result) => return Ok(result),
-                Err(e) => match self.handle_error(e, start_index) {
-                    ControlFlow::RetryWithNextProvider => {}
-                    ControlFlow::ErrAllProvidersFailed(e) => {
-                        return Err(RpcError::LocalUsageError(
-                            format!("All providers failed - most recent error: {e:?}").into(),
-                        ))
+                Ok(result) => {
+                    debug!(
+                        start_index = start_provider_index,
+                        successful_index = provider_index,
+                        "Request succeeded with provider"
+                    );
+
+                    // update the active provider if different that the starting one
+                    if i > 0 {
+                        let _ = self.active_provider_index.compare_exchange_weak(
+                            start_provider_index,
+                            provider_index,
+                            Ordering::Release,
+                            Ordering::Acquire,
+                        );
                     }
-                    ControlFlow::Err(e) => return Err(e),
-                },
+                    return Ok(result);
+                }
+                Err(e) => {
+                    if !Self::should_failover(&e) {
+                        debug!(
+                            provider_index = provider_index,
+                            error = %e,
+                            "RPC error response, returning immediately"
+                        );
+                        return Err(e);
+                    }
+
+                    debug!(
+                        provider_index = provider_index,
+                        error = %e,
+                        "Transport/connectivity error, trying next provider"
+                    );
+                    // Continue to next provider
+                }
             }
         }
+
+        Err(RpcError::LocalUsageError("All providers failed - exhausted all options".into()))
     }
 
     fn with_failover<Params, Resp, Output, Map, Fut, F>(
@@ -394,38 +373,6 @@ impl MultiRpcProvider {
         > = Box::pin(async move { multi_provider.execute_with_provider_failover(operation).await });
         ProviderCall::from(future)
     }
-}
-
-/// Controls the flow of RPC provider failover logic.
-///
-/// This enum determines how the multi-provider system should handle errors encountered
-/// during RPC operations. It guides whether to retry with another provider, abort due
-/// to exhausted options, or immediately return specific errors.
-#[derive(Debug)]
-pub enum ControlFlow {
-    /// Continue the retry loop by attempting the operation with the next available provider.
-    ///
-    /// This variant is returned when:
-    /// - A transport/connectivity error occurs (e.g., network timeout, connection refused)
-    /// - The error is considered recoverable by trying a different provider
-    /// - There are remaining providers to try in the failover sequence
-    RetryWithNextProvider,
-
-    /// Stop retrying and return an "all providers failed" error.
-    ///
-    /// This variant is returned when:
-    /// - A transport/connectivity error occurs
-    /// - All available providers have been exhausted (we've cycled back to the starting provider)
-    /// - No more failover options remain
-    ErrAllProvidersFailed(RpcError<TransportErrorKind>),
-
-    /// Immediately return the provided error without attempting failover.
-    ///
-    /// This variant is returned when:
-    /// - The error is related to the RPC call itself, not provider connectivity
-    /// - The error code indicates a client-side issue (invalid request, method not found, etc.)
-    /// - Retrying with a different provider would not resolve the issue
-    Err(RpcError<TransportErrorKind>),
 }
 
 // Implement Provider trait with REAL failover logic that cycles through providers
@@ -466,7 +413,7 @@ impl Provider<Ethereum> for MultiRpcProvider {
     ) -> RpcWithBlock<&'req SimulatePayload, Vec<SimulatedBlock<Block>>> {
         // For complex RpcWithBlock methods with lifetime parameters, delegate to active provider
         // This is still better than always using the first provider
-        self.active_provider().simulate(payload)
+        self.active_provider().0.simulate(payload)
     }
 
     fn get_chain_id(&self) -> ProviderCall<NoParams, U64, u64> {
@@ -479,7 +426,7 @@ impl Provider<Ethereum> for MultiRpcProvider {
     ) -> RpcWithBlock<&'a TransactionRequest, alloy::rpc::types::AccessListResult> {
         // For complex RpcWithBlock methods with lifetime parameters, delegate to active provider
         // This is still better than always using the first provider
-        self.active_provider().create_access_list(request)
+        self.active_provider().0.create_access_list(request)
     }
 
     fn estimate_gas(&self, tx: TransactionRequest) -> EthCall<Ethereum, U64, u64> {
@@ -1029,25 +976,14 @@ mod tests {
         ]);
 
         // Verify initial state - should be using first provider (index 0)
-        assert_eq!(multi_provider.active_provider_index.load(Ordering::Relaxed), 0);
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::SeqCst), 0);
 
         // Make a call that should trigger failover due to transport error
         let result = multi_provider.get_block_number().await;
-
-        println!("Result: {result:?}");
-        println!(
-            "Active provider index after call: {}",
-            multi_provider.active_provider_index.load(Ordering::Relaxed)
-        );
-
-        // Should succeed after failover
-        if result.is_err() {
-            println!("Error: {:?}", result.as_ref().err());
-        }
         assert!(result.is_ok(), "Expected result to be Ok after failover, got: {result:?}");
 
         // Should have switched to second provider (index 1)
-        assert_eq!(multi_provider.active_provider_index.load(Ordering::Relaxed), 1);
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::SeqCst), 1);
     }
 
     #[tokio::test]
@@ -1067,7 +1003,7 @@ mod tests {
         ]);
 
         // Verify initial state
-        assert_eq!(multi_provider.active_provider_index.load(Ordering::Relaxed), 0);
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::SeqCst), 0);
 
         // Make a call that should NOT trigger failover due to RPC error response
         let result = multi_provider.get_block_number().await;
@@ -1075,8 +1011,8 @@ mod tests {
         // Should fail with the RPC error
         assert!(result.is_err(), "Expected result to be Err after failover, got: {result:?}");
 
-        // index 0 should have failed over to index 1
-        assert_eq!(multi_provider.active_provider_index.load(Ordering::Relaxed), 1);
+        // index 0 should be kept as the active provider
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::SeqCst), 0);
     }
 
     #[tokio::test]
@@ -1100,6 +1036,99 @@ mod tests {
         if let Err(error) = result {
             assert!(matches!(error, RpcError::LocalUsageError(_)));
         }
+    }
+
+    #[tokio::test]
+    async fn test_cloned_provider_failover() {
+        // Create mock providers that simulate transport errors
+        let (failing_provider, _failing_server) = create_mock_provider_with_transport_error().await;
+        let (working_provider, _working_server) = create_mock_provider_working().await;
+
+        let multi_provider = MultiRpcProvider::from_providers(vec![
+            Arc::new(failing_provider),
+            Arc::new(working_provider),
+        ]);
+
+        let cloned_provider = multi_provider.clone();
+
+        // Verify initial state - should be using first provider (index 0)
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::SeqCst), 0);
+
+        // Make a call that should trigger failover due to transport error
+        let result = multi_provider.get_block_number().await;
+        assert!(result.is_ok(), "Expected result to be Ok after failover, got: {result:?}");
+
+        // Should have switched to second provider (index 1)
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::SeqCst), 1);
+        // assert the cloned provider also has switched to second provider (index 1)
+        assert_eq!(cloned_provider.active_provider_index.load(Ordering::SeqCst), 1);
+
+        assert!(multi_provider.active_provider().0.get_block_number().await.is_ok());
+        assert!(cloned_provider.active_provider().0.get_block_number().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_provider_switching() {
+        use std::collections::HashSet;
+        use tokio::sync::Barrier;
+
+        // Create three providers: one failing, two working
+        let (failing_provider, _failing_server) = create_mock_provider_with_transport_error().await;
+        let (working_provider1, _working_server1) = create_mock_provider_working().await;
+        let (working_provider2, _working_server2) = create_mock_provider_working().await;
+
+        let multi_provider = Arc::new(MultiRpcProvider::from_providers(vec![
+            Arc::new(failing_provider),
+            Arc::new(working_provider1),
+            Arc::new(working_provider2),
+        ]));
+
+        // Verify initial state - should be using first provider (index 0)
+        assert_eq!(multi_provider.active_provider_index.load(Ordering::SeqCst), 0);
+
+        // Use a barrier to ensure all threads start simultaneously
+        let num_threads = 10;
+        let barrier = Arc::new(Barrier::new(num_threads));
+        let mut handles = Vec::new();
+
+        for i in 0..num_threads {
+            let provider_clone = multi_provider.clone();
+            let barrier_clone = barrier.clone();
+
+            let handle = tokio::spawn(async move {
+                barrier_clone.wait().await;
+
+                let result = provider_clone.get_block_number().await;
+                assert!(
+                    result.is_ok(),
+                    "Thread {}: Expected result to be Ok after failover, got: {:?}",
+                    i,
+                    result
+                );
+                // Return the final provider index each thread observed
+                provider_clone.active_provider_index.load(Ordering::SeqCst)
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all tasks to complete and collect results
+        let mut final_indices = Vec::new();
+        for handle in handles {
+            final_indices.push(handle.await.unwrap());
+        }
+
+        let unique_indices: HashSet<usize> = final_indices.into_iter().collect();
+        assert_eq!(
+            unique_indices.len(),
+            1,
+            "All threads should observe the same final provider index after switching"
+        );
+        assert_eq!(
+            multi_provider.active_provider_index.load(Ordering::SeqCst),
+            1,
+            "Should have switched away from failing provider"
+        );
     }
 
     // Helper functions to create test providers

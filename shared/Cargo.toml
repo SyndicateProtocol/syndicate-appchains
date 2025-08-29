@@ -24,13 +24,11 @@ alloy = { workspace = true, features = [
   "signers",
 ] }
 
-arc-swap                           = { workspace = true }
 async-trait                        = { workspace = true }
 axum                               = { workspace = true }
 byte-unit                          = { workspace = true, features = ["default"] }
 bytes                              = { workspace = true }
 eyre                               = { workspace = true }
-flate2                             = { workspace = true }
 http                               = { workspace = true }
 jsonrpsee                          = { workspace = true, features = ["client", "jsonrpsee-types"] }
 opentelemetry                      = { workspace = true }
