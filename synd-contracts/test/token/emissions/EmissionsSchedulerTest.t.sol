@@ -40,9 +40,9 @@ contract EmissionsSchedulerTest is Test {
         // Deploy relayer
         relayer = new Relayer();
 
-        // Deploy emission scheduler V2
+        // Deploy emission scheduler
         emissionScheduler = new EmissionsScheduler(
-            address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, pauser
+            2, address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, pauser
         );
         vm.warp(emissionScheduler.START_TIMESTAMP());
 
@@ -73,20 +73,29 @@ contract EmissionsSchedulerTest is Test {
         assertTrue(emissionScheduler.hasRole(emissionScheduler.PAUSER_ROLE(), pauser));
     }
 
+    function test_Constructor_RevertWhen_InvalidEpoch() public {
+        vm.expectRevert(EmissionsScheduler.InvalidEpoch.selector);
+        new EmissionsScheduler(
+            0, address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, pauser
+        );
+    }
+
     function test_RevertWhen_Constructor_ZeroEmissionsCalculator() public {
         vm.expectRevert(EmissionsScheduler.ZeroAddress.selector);
-        new EmissionsScheduler(address(0), address(relayer), relayDestinationL3, defaultAdmin, pauser);
+        new EmissionsScheduler(1, address(0), address(relayer), relayDestinationL3, defaultAdmin, pauser);
     }
 
     function test_RevertWhen_Constructor_ZeroAdmin() public {
         vm.expectRevert(EmissionsScheduler.ZeroAddress.selector);
-        new EmissionsScheduler(address(emissionsCalculator), address(relayer), relayDestinationL3, address(0), pauser);
+        new EmissionsScheduler(
+            1, address(emissionsCalculator), address(relayer), relayDestinationL3, address(0), pauser
+        );
     }
 
     function test_RevertWhen_Constructor_ZeroPauser() public {
         vm.expectRevert(EmissionsScheduler.ZeroAddress.selector);
         new EmissionsScheduler(
-            address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, address(0)
+            1, address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, address(0)
         );
     }
 
