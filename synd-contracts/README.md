@@ -163,6 +163,22 @@ $ make deploy-syndicate-factory
 
 ### Deployed Contracts
 
+### Mainnet
+| Contract Name                 | Address                                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ArbConfigManagerFactory       | [0x52e02554e63801ec66d2D72fdD2c679D18a117dE](https://etherscan.io/address/0x52e02554e63801ec66d2D72fdD2c679D18a117dE)                         |
+| ArbConfigManager              | [0x9a525431620B2B3C808684BFFE6738307921f19d](https://etherscan.io/address/0x9a525431620B2B3C808684BFFE6738307921f19d)                         |
+| AttestationDocVerifier        | [0xC9E070caa1C8F231D5f3fa265AAb61A6A1fD0466](https://etherscan.io/address/0xC9E070caa1C8F231D5f3fa265AAb61A6A1fD0466)                         |
+| TeeKeyManager                 | [0xFB7a527Af1C80dEA95b174FBfa2662B36006b90e](https://etherscan.io/address/0xFB7a527Af1C80dEA95b174FBfa2662B36006b90e) |
+
+### Base
+| Contract Name                 | Address                                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ArbConfigManagerFactory       | [0x1e05910C82027f2E0e4733cba5ba41f528cAefE1](https://basescan.org/address/0x1e05910C82027f2E0e4733cba5ba41f528cAefE1)                         |
+| ArbConfigManager              | [0xE37CfB1520F5F33F829d5f990D7AA3C563AbBF18](https://basescan.org/address/0xE37CfB1520F5F33F829d5f990D7AA3C563AbBF18)                         |
+| AttestationDocVerifier        | [0xd55483B303B8a9b1327e954043f19E18692FA293](https://basescan.org/address/0xd55483B303B8a9b1327e954043f19E18692FA293)                         |
+| TeeKeyManager                 | [0xC12BB72B44286b3EAF8A065402A102C3719C8cA1](https://basescan.org/address/0xC12BB72B44286b3EAF8A065402A102C3719C8cA1) |
+
 ### Base Sepolia
 | Contract Name                 | Address                                                                                                                                               |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
