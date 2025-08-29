@@ -204,11 +204,11 @@ $ make deploy-syndicate-factory
 
 | Contract Name                 | Address                                                                                                                                    |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| SyndicateFactoryWrapper       | [0x99d2b60FD2dBdF08CDA18165D20f4E713768b07E](https://risa-testnet.explorer.alchemy.com/address/0x99d2b60FD2dBdF08CDA18165D20f4E713768b07E) |
-| SyndicateFactory              | [0x33aB24E0a47A7aAe869755420950A6326e3CB9F3](https://risa-testnet.explorer.alchemy.com/address/0x33aB24E0a47A7aAe869755420950A6326e3CB9F3) |
-| RequireAndModuleFactory       | [0x2f3CC13661A95DD616311a7bddB9cDB4bA67C4d2](https://risa-testnet.explorer.alchemy.com/address/0x2f3CC13661A95DD616311a7bddB9cDB4bA67C4d2) |
-| RequireOrModuleFactory        | [0x61fC28cf640235d560bd89350033cAee9642F8E5](https://risa-testnet.explorer.alchemy.com/address/0x61fC28cf640235d560bd89350033cAee9642F8E5) |
-| RequireCompositeModuleFactory | [0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603](https://risa-testnet.explorer.alchemy.com/address/0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603) |
+| SyndicateFactoryWrapper       | [0x184DFCf23ee7ad155484b2Cf5Fa8bfAD9035A13e](https://risa-testnet.explorer.alchemy.com/address/0x184DFCf23ee7ad155484b2Cf5Fa8bfAD9035A13e) |
+| SyndicateFactory              | [0x1f5B81798ff2B569EEcbA4e778588A93d296A8C5](https://risa-testnet.explorer.alchemy.com/address/0x1f5B81798ff2B569EEcbA4e778588A93d296A8C5) |
+| RequireAndModuleFactory       | [0xE3474659df8DCFF61C27C1aa71C5298271f1bBb7](https://risa-testnet.explorer.alchemy.com/address/0xE3474659df8DCFF61C27C1aa71C5298271f1bBb7) |
+| RequireOrModuleFactory        | [0xad26a94Fc38Bd3ba9888eb785790586Eb33C8dE0](https://risa-testnet.explorer.alchemy.com/address/0xad26a94Fc38Bd3ba9888eb785790586Eb33C8dE0) |
+| RequireCompositeModuleFactory | [0x50246Eb7a28A7028E7C5fbb68e9A6e2fd45a7139](https://risa-testnet.explorer.alchemy.com/address/0x50246Eb7a28A7028E7C5fbb68e9A6e2fd45a7139) |
 
 
 ### ETH Holesky
