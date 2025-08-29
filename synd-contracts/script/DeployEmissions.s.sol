@@ -41,6 +41,7 @@ contract DeployEmissions is Script {
 
         // 3. Deploy EmissionsScheduler
         EmissionsScheduler scheduler = new EmissionsScheduler(
+            3,
             address(calculator),
             relayerAddr,
             relayDestinationAddr,
