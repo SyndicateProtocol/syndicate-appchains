@@ -17,8 +17,8 @@ abstract contract GasCounter is EpochTracker {
     /// @notice Whether gas tracking is enabled
     bool public gasTrackingEnabled = true;
 
-    /// @notice Mapping of epoch to gas data
-    mapping(uint256 => uint256) public tokensUsedPerEpoch;
+    /// @notice Mapping from epoch index to total tokens used in gas fees for that epoch
+    mapping(uint256 epochIndex => uint256 tokensUsed) public tokensUsedPerEpoch;
 
     /*//////////////////////////////////////////////////////////////
                 ERRORS
@@ -69,10 +69,11 @@ abstract contract GasCounter is EpochTracker {
                            VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice get the gas usage for a given epoch
-    /// @param epoch The epoch to query
-    function getTokensForEpoch(uint256 epoch) external view returns (uint256) {
-        return tokensUsedPerEpoch[epoch];
+    /// @notice Get the total tokens used in gas fees for a given epoch
+    /// @param epochIndex The epoch index to query
+    /// @return The total tokens used in gas fees for the specified epoch
+    function getTokensForEpoch(uint256 epochIndex) external view returns (uint256) {
+        return tokensUsedPerEpoch[epochIndex];
     }
 
     /*//////////////////////////////////////////////////////////////

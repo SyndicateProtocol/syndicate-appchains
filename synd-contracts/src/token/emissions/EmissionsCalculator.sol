@@ -81,7 +81,7 @@ contract EmissionsCalculator is AccessControl {
 
     /// @notice Decay factor for each epoch (scaled by 1e18)
     /// @dev r[epoch] where 0 < r < 1, represented as r * 1e18
-    mapping(uint256 => uint256) public decayFactors;
+    mapping(uint256 epochIndex => uint256 decayFactor) public decayFactors;
 
     /// @notice Current epoch index (0-47)
     uint256 public currentEpoch;
