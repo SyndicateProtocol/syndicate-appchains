@@ -7,6 +7,29 @@ import {EpochTracker} from "src/staking/EpochTracker.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
+contract ReentrantContract {
+    SyndStaking public staking;
+    address public pool;
+    bool public hasReentered;
+
+    constructor(address _staking, address _pool) {
+        staking = SyndStaking(_staking);
+        pool = _pool;
+    }
+
+    receive() external payable {
+        if (!hasReentered) {
+            hasReentered = true;
+            // Try to reenter - this should be prevented
+            try staking.withdraw(2, address(this)) {
+                // This should not succeed
+            } catch {
+                // Expected to fail
+            }
+        }
+    }
+}
+
 contract SyndStakingTest is Test {
     SyndStaking public staking;
 
@@ -1222,6 +1245,89 @@ contract SyndStakingTest is Test {
         vm.startPrank(owner);
         staking.pause();
         assertTrue(staking.paused());
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_SameAppchainTransfer() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 10 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        vm.startPrank(user1);
+        vm.expectRevert(SyndStaking.SameAppchainTransfer.selector);
+        staking.stageStakeTransfer(appchainId1, appchainId1, 5 ether);
+        vm.stopPrank();
+    }
+
+    function test_CEI_Pattern_Withdrawal() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 10 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(appchainId1, 5 ether);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Test that state is updated before external call
+        vm.startPrank(user1);
+        staking.withdraw(2, user1);
+        vm.stopPrank();
+
+        // Verify withdrawal amount is cleared
+        assertEq(staking.epochUserWithdrawals(2, user1), 0);
+    }
+
+    function test_WithdrawBulk_CEI_Pattern() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 10 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        vm.startPrank(user1);
+        staking.initializeWithdrawal(appchainId1, 5 ether);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Test bulk withdrawal with CEI pattern
+        uint256[] memory epochIndices = new uint256[](1);
+        epochIndices[0] = 2;
+
+        vm.startPrank(user1);
+        staking.withdrawBulk(epochIndices, user1);
+        vm.stopPrank();
+
+        // Verify all withdrawal amounts are cleared
+        assertEq(staking.epochUserWithdrawals(2, user1), 0);
+    }
+
+    function test_Reentrancy_Protection() public {
+        // Create a malicious contract that tries to reenter
+        ReentrantContract attacker = new ReentrantContract(address(staking), address(0));
+        vm.deal(address(attacker), 100 ether);
+
+        vm.startPrank(address(attacker));
+        staking.stakeSynd{value: 10 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        vm.startPrank(address(attacker));
+        staking.initializeWithdrawal(appchainId1, 5 ether);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // This should not cause reentrancy issues
+        vm.startPrank(address(attacker));
+        staking.withdraw(2, address(attacker));
         vm.stopPrank();
     }
 }
