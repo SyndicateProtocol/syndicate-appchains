@@ -46,12 +46,8 @@ uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
 contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequencingChain, GasCounter {
-    /// this is intentionally different from the standard offset used by rollups to prevent collisions
-    uint160 public constant OFFSET = uint160(0x1000000000000000000000000000000000000001);
-
     error NoTxData();
     error TransactionOrSenderNotAllowed();
-    error SyndicateForkDisabled();
     error GasTrackingAlreadyEnabled();
     error GasTrackingAlreadyDisabled();
 
@@ -70,103 +66,13 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice The address that receives emissions for this sequencing chain
     address public emissionsReceiver;
 
-    bool public syndicateForkEnabled;
-
-    // We use per-address contract nonces instead of a global one to increase the predictability of the request id
-    // and store per-address contract tx counts for debugging purposes.
-    // Note that gaps are allowed in the request id, unlike a regular nonce.
-    mapping(address => uint256) public contractNonce;
-
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-missing-revert-reason-tests
-    constructor(uint256 _appchainId, bool _syndicateForkEnabled) SequencingModuleChecker() {
+    constructor(uint256 _appchainId) SequencingModuleChecker() {
         // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
         require(_appchainId != 0, "App chain ID cannot be 0");
         appchainId = _appchainId;
-        syndicateForkEnabled = _syndicateForkEnabled;
-    }
-
-    /// @notice Utility function that converts the address in the sequencing chain
-    /// that submitted a tx to the inbox to the msg.sender viewed in the appchain.
-    /// @param seqAddress the address in the sequencing chain that triggered the tx to appchain
-    /// @return appAddress appchain address as viewed in msg.sender
-    function applyAlias(address seqAddress) public pure returns (address appAddress) {
-        unchecked {
-            appAddress = address(uint160(seqAddress) + OFFSET);
-        }
-    }
-
-    /// @notice Utility function that converts the msg.sender viewed in the appchain
-    /// to the address in the sequencing chain that submitted a tx to the inbox.
-    /// @param appAddress appchain address as viewed in msg.sender
-    /// @return seqAddress the address in the sequencing chain that triggered the tx to appchain
-    function undoAlias(address appAddress) public pure returns (address seqAddress) {
-        unchecked {
-            seqAddress = address(uint160(appAddress) - OFFSET);
-        }
-    }
-
-    /// @notice Send a contract transaction to the appchain using applyAlias to alias msg.sender.
-    /// @param gasLimit appchain gas limit
-    /// @param maxFeePerGas appchain max gas price
-    /// @param to appchain destination address or zero to deploy a contract
-    /// @param value appchain tx value
-    /// @param data appchain tx calldata
-    /// @return requestId the request id used to determine the appchain tx hash
-    /// Note that unlike the inbox function, no max data size is enforced.
-    function sendContractTransaction(
-        uint64 gasLimit,
-        uint256 maxFeePerGas,
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external trackGasUsage returns (uint256) {
-        require(syndicateForkEnabled, SyndicateForkDisabled());
-        uint256 requestId = contractNonce[msg.sender]++;
-        bytes memory transaction = abi.encodePacked(
-            L2MessageType_unsignedContractTx,
-            applyAlias(msg.sender),
-            requestId,
-            uint256(gasLimit),
-            maxFeePerGas,
-            uint256(uint160(to)),
-            value,
-            data
-        );
-        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
-        emit TransactionProcessed(msg.sender, transaction);
-        return requestId;
-    }
-
-    /// @notice Send an unsigned transaction to the appchain using applyAlias to alias msg.sender.
-    /// @param gasLimit appchain gas limit
-    /// @param maxFeePerGas appchain max gas price
-    /// @param to appchain destination address or zero to deploy a contract
-    /// @param value appchain tx value
-    /// @param data appchain tx calldata
-    /// Note that unlike the inbox function, no max data size is enforced.
-    function sendUnsignedTransaction(
-        uint64 gasLimit,
-        uint256 maxFeePerGas,
-        uint256 nonce,
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external trackGasUsage {
-        require(syndicateForkEnabled, SyndicateForkDisabled());
-        bytes memory transaction = abi.encodePacked(
-            L2MessageType_unsignedEOATx,
-            applyAlias(msg.sender),
-            uint256(gasLimit),
-            maxFeePerGas,
-            nonce,
-            uint256(uint160(to)),
-            value,
-            data
-        );
-        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
-        emit TransactionProcessed(msg.sender, transaction);
     }
 
     /// @notice Processes a compressed batch of signed transactions.
@@ -211,10 +117,6 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
                 emit TransactionProcessed(msg.sender, transaction);
             }
         }
-    }
-
-    function enableSyndicateFork() external onlyOwner {
-        syndicateForkEnabled = true;
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -106,7 +106,7 @@ contract AtomicSequencerTest is Test {
     }
 
     function testProcessMultipleChains() public {
-        SyndicateSequencingChain chainC = new SyndicateSequencingChain(10042003, false);
+        SyndicateSequencingChain chainC = new SyndicateSequencingChain(10042003);
         chainC.updateRequirementModule(address(permissionModule));
         chainC.transferOwnership(admin);
 

@@ -6,7 +6,7 @@ methods {
     function permissionRequirementModule() external returns (address) envfree;
     function isAllowed(address, address, bytes) external returns (bool) envfree;
     function owner() external returns (address) envfree;
-    function gasTrackingEnabled() external returns (bool) envfree;
+    function gasTrackingDisabled() external returns (bool) envfree;
 
     // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;

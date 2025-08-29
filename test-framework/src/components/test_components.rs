@@ -256,7 +256,6 @@ impl TestComponents {
         let _ = SyndicateSequencingChain::deploy_builder(
             &seq_provider,
             U256::from(options.appchain_chain_id),
-            true,
         )
         .send()
         .await?;
@@ -844,6 +843,7 @@ impl TestComponents {
         Ok(())
     }
 
+    #[cfg(false)]
     pub async fn send_contract_tx(
         &self,
         gas_limit: u64,

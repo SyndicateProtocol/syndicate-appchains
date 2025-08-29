@@ -162,7 +162,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
     function testConstructorWithZeroAppChainId() public {
         vm.expectRevert("App chain ID cannot be 0");
-        new SyndicateSequencingChain(0, false);
+        new SyndicateSequencingChain(0);
     }
 
     function testProcessTransactionsBulkAllAllowed() public {
