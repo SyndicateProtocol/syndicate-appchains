@@ -21,7 +21,7 @@ contract AppchainPoolTest is Test {
     address public destinationAddress;
 
     function setUp() public {
-        staking = new SyndStaking(block.timestamp);
+        staking = new SyndStaking(msg.sender);
         appchainPool = new AppchainPool(address(staking));
 
         user1 = makeAddr("user1");
