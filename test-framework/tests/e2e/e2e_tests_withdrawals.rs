@@ -28,6 +28,7 @@ use contract_bindings::synd::{
 use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, time::Duration};
+use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     proposer::ProposerConfig,
@@ -341,23 +342,59 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 Duration::from_secs(60)
             );
 
-            // send a contract tx to trigger the fork code.
+            // send 101 valid txs plus some invalid ones to trigger the block splitting code which
+            // does not require the nitro fork to be enabled
+            let latest = components.appchain_provider.get_block_number().await?;
             let offset = components.sequencing_contract.OFFSET().call().await?;
             let alias_address = Address::from(
                 U160::from_be_slice(&test_account1().address[..]).wrapping_add(offset),
             );
+            let dummy_tx = vec![L2MessageKind::SignedTx as u8, 0xc0];
+            let mut txs = vec![];
+            for _ in 0..100 {
+                txs.push(dummy_tx.clone().into());
+            }
+            for i in 0..101 {
+                txs.push(
+                    TransactionRequest::default()
+                        .with_to(alias_address)
+                        .with_value(parse_ether("0.001")?)
+                        .with_nonce(i)
+                        .with_gas_limit(100_000)
+                        .with_chain_id(components.appchain_chain_id)
+                        .with_max_fee_per_gas(100000000)
+                        .with_max_priority_fee_per_gas(0)
+                        .build(components.sequencing_provider.wallet())
+                        .await?
+                        .encoded_2718()
+                        .into(),
+                );
+                if i % 10 == 0 {
+                    txs.push(dummy_tx.clone().into());
+                }
+            }
+            for _ in 0..100 {
+                txs.push(dummy_tx.clone().into());
+            }
+            components.sequence_batch(txs, 0).await?;
+            wait_until!(
+                components.appchain_provider.get_balance(alias_address).await? >=
+                    parse_ether("0.101")?,
+                Duration::from_secs(10)
+            );
+            assert_eq!(components.appchain_provider.get_block_number().await?, latest + 2);
+            let block_1 =
+                components.appchain_provider.get_block_by_number((latest + 1).into()).await?;
+            assert_eq!(block_1.map(|x| x.transactions.len()), Some(101));
+            let block_2 =
+                components.appchain_provider.get_block_by_number((latest + 2).into()).await?;
+            assert_eq!(block_2.map(|x| x.transactions.len()), Some(2));
+            assert_eq!(
+                components.appchain_provider.get_balance(alias_address).await?,
+                parse_ether("0.101")?
+            );
 
-            let tx = TransactionRequest::default()
-                .with_to(alias_address)
-                .with_value(parse_ether("0.1")?)
-                .with_nonce(0)
-                .with_gas_limit(100_000)
-                .with_chain_id(components.appchain_chain_id)
-                .with_max_fee_per_gas(100000000)
-                .with_max_priority_fee_per_gas(0)
-                .build(components.sequencing_provider.wallet())
-                .await?;
-            components.sequence_tx(&tx.encoded_2718(), 0, true).await?;
+            // send a contract tx to trigger the nitro fork code.
             let addr_3 = address!("0x0000000000000000000000000000000000000003");
             components
                 .send_contract_tx(
@@ -373,6 +410,10 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             wait_until!(
                 components.appchain_provider.get_balance(addr_3).await? >= parse_ether("0.01")?,
                 Duration::from_secs(10)
+            );
+            assert_eq!(
+                components.appchain_provider.get_balance(addr_3).await?,
+                parse_ether("0.01")?
             );
 
             // initiate a withdrawal from the appchain to an empty wallet

@@ -15,6 +15,7 @@ use alloy::{
 use contract_bindings::synd::{dummy_poster::DummyPoster, i_inbox::IInbox, rollup::Rollup};
 use eyre::Result;
 use std::time::Duration;
+use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
 use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig};
 use synd_mchain::client::Provider as _;
 use test_framework::components::{
@@ -360,7 +361,6 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
-            const L2_MESSAGE_KIND_SIGNED_TX: u8 = 4;
             let gas_limit: u64 = 100_000;
             let max_fee_per_gas: u128 = 100_000_000;
 
@@ -377,7 +377,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .build(components.settlement_provider.wallet())
                 .await?
                 .encoded_2718();
-            tx.insert(0, L2_MESSAGE_KIND_SIGNED_TX);
+            tx.insert(0, L2MessageKind::SignedTx as u8);
             let _ = inbox.sendL2Message(tx.into()).send().await?;
 
             // Send retryable tickets that are automatically redeemed (aliased address)
