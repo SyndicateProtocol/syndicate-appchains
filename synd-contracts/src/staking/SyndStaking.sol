@@ -180,6 +180,10 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
     error InvalidInput();
     /// @notice Error thrown when total amount of staking does not match the amount of ETH sent
     error InvalidStakingAmount(uint256 totalAmount, uint256 sentAmount);
+    /// @notice Error thrown when attempting to transfer stake to the same appchain
+    error SameAppchainTransfer();
+    /// @notice Error thrown when attempting to send to the zero address
+    error InvalidDestination();
 
     /**
      * @notice Constructs the SyndStaking contract and sets the default admin (owner)
@@ -312,6 +316,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
         }
         if (fromAppchainId == 0 || toAppchainId == 0) {
             revert InvalidAppchainId();
+        }
+        if (fromAppchainId == toAppchainId) {
+            revert SameAppchainTransfer();
         }
         if (userAppchainTotal[msg.sender][fromAppchainId] < amount) {
             revert InsufficientStake();
@@ -485,10 +492,11 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
             revert InvalidWithdrawal();
         }
 
+        // Effectively finalize the user's epochs
         finalizeUserEpochs(msg.sender);
-
         epochUserWithdrawals[epochIndex][msg.sender] = 0;
 
+        // Send the tokens to the destination
         Address.sendValue(payable(destination), amount);
 
         emit WithdrawalCompleted(msg.sender, destination, amount);
@@ -650,10 +658,17 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
      * @param epochIndices The array of epoch indices to withdraw from.
      * @param destination The address to receive the withdrawn funds.
      */
-    function withdrawBulk(uint256[] calldata epochIndices, address destination) external {
+    function withdrawBulk(uint256[] calldata epochIndices, address destination) external nonReentrant {
+        uint256 len = epochIndices.length;
+        if (len == 0) revert InvalidInput();
+        if (destination == address(0)) revert InvalidDestination();
+
+        finalizeUserEpochs(msg.sender);
+
         uint256 totalAmount = 0;
-        for (uint256 i = 0; i < epochIndices.length; i++) {
+        for (uint256 i = 0; i < len; i++) {
             uint256 epochIndex = epochIndices[i];
+
             if (epochIndex >= getCurrentEpoch()) {
                 revert WithdrawalNotReady();
             }
@@ -663,10 +678,11 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
                 revert InvalidWithdrawal();
             }
 
-            finalizeUserEpochs(msg.sender);
             epochUserWithdrawals[epochIndex][msg.sender] = 0;
             totalAmount += amount;
         }
+
+        if (totalAmount == 0) revert InvalidWithdrawal();
 
         Address.sendValue(payable(destination), totalAmount);
 
