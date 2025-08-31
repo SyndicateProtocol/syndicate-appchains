@@ -73,11 +73,11 @@
     "nitro": {
       "flake": false,
       "locked": {
-        "lastModified": 1755193042,
-        "narHash": "sha256-Qkm51TzV5uRkiS1SVz0d26P1yM9qWRGvY+HtT1MSiS0=",
+        "lastModified": 1756246380,
+        "narHash": "sha256-9fbaBu/G9KiKk3kOr1EZmTGlwYL93tcEmyOz34dz0bw=",
         "ref": "refs/heads/eigenda-v3.6.4",
-        "rev": "5d4b2fd07906b126428e11efe2916543af443ce3",
-        "revCount": 18609,
+        "rev": "bc953dbfa2d4a2780d92c1bc9666b109aa3053a3",
+        "revCount": 18595,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/SyndicateProtocol/nitro.git"
