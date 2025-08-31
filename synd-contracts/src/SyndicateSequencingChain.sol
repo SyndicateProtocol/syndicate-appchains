@@ -51,10 +51,18 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 public immutable appchainId;
 
+    /// @notice The address that receives emissions for this sequencing chain
+    address public emissionsReceiver;
+
     /// @notice Emitted when a new transaction is processed
     /// @param sender The address that submitted the transaction
     /// @param data The transaction data that was processed
     event TransactionProcessed(address indexed sender, bytes data);
+
+    /// @notice Emitted when the emissions receiver is updated
+    /// @param oldReceiver The previous emissions receiver address
+    /// @param newReceiver The new emissions receiver address
+    event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
 
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
@@ -63,96 +71,6 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
         require(_appchainId != 0, "App chain ID cannot be 0");
         appchainId = _appchainId;
-    }
-
-    // We use per-address contract nonces instead of a global one to increase the predictability of the request id
-    // and store per-address contract tx counts for debugging purposes.
-    // Note that gaps are allowed in the request id, unlike a regular nonce.
-    mapping(address => uint256) public contractNonce;
-
-    /// this is intentionally different from the standard offset used by rollups to prevent collisions
-    uint160 public constant OFFSET = uint160(0x1000000000000000000000000000000000000001);
-
-    /// @notice Utility function that converts the address in the sequencing chain
-    /// that submitted a tx to the inbox to the msg.sender viewed in the appchain.
-    /// @param seqAddress the address in the sequencing chain that triggered the tx to appchain
-    /// @return appAddress appchain address as viewed in msg.sender
-    function applyAlias(address seqAddress) public pure returns (address appAddress) {
-        unchecked {
-            appAddress = address(uint160(seqAddress) + OFFSET);
-        }
-    }
-
-    /// @notice Utility function that converts the msg.sender viewed in the appchain
-    /// to the address in the sequencing chain that submitted a tx to the inbox.
-    /// @param appAddress appchain address as viewed in msg.sender
-    /// @return seqAddress the address in the sequencing chain that triggered the tx to appchain
-    function undoAlias(address appAddress) public pure returns (address seqAddress) {
-        unchecked {
-            seqAddress = address(uint160(appAddress) - OFFSET);
-        }
-    }
-
-    /// @notice Send a contract transaction to the appchain using applyAlias to alias msg.sender.
-    /// @param gasLimit appchain gas limit
-    /// @param maxFeePerGas appchain max gas price
-    /// @param to appchain destination address or zero to deploy a contract
-    /// @param value appchain tx value
-    /// @param data appchain tx calldata
-    /// @return requestId the request id used to determine the appchain tx hash
-    /// Note that unlike the inbox function, no max data size is enforced.
-    function sendContractTransaction(
-        uint64 gasLimit,
-        uint256 maxFeePerGas,
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage returns (uint256) {
-        uint256 requestId = contractNonce[msg.sender]++;
-        emit TransactionProcessed(
-            msg.sender,
-            abi.encodePacked(
-                TransactionType.Contract,
-                applyAlias(msg.sender),
-                requestId,
-                uint256(gasLimit),
-                maxFeePerGas,
-                uint256(uint160(to)),
-                value,
-                data
-            )
-        );
-        return requestId;
-    }
-
-    /// @notice Send an unsigned transaction to the appchain using applyAlias to alias msg.sender.
-    /// @param gasLimit appchain gas limit
-    /// @param maxFeePerGas appchain max gas price
-    /// @param to appchain destination address or zero to deploy a contract
-    /// @param value appchain tx value
-    /// @param data appchain tx calldata
-    /// Note that unlike the inbox function, no max data size is enforced.
-    function sendUnsignedTransaction(
-        uint64 gasLimit,
-        uint256 maxFeePerGas,
-        uint256 nonce,
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external onlyWhenAllowedUnsigned(msg.sender, tx.origin) trackGasUsage {
-        emit TransactionProcessed(
-            msg.sender,
-            abi.encodePacked(
-                TransactionType.Unsigned,
-                applyAlias(msg.sender),
-                uint256(gasLimit),
-                maxFeePerGas,
-                nonce,
-                uint256(uint160(to)),
-                value,
-                data
-            )
-        );
     }
 
     /// @notice Processes a compressed batch of signed transactions.
@@ -196,6 +114,40 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         }
     }
 
+    /*//////////////////////////////////////////////////////////////
+                         EMISSIONS RECEIVER ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Set the emissions receiver address
+    /// @dev Only callable by the contract owner
+    /// @param _emissionsReceiver The address to receive emissions
+    function setEmissionsReceiver(address _emissionsReceiver) external onlyOwner {
+        address oldReceiver = emissionsReceiver;
+        emissionsReceiver = _emissionsReceiver;
+        if (emissionsReceiver != address(0)) {
+            emit EmissionsReceiverUpdated(oldReceiver, _emissionsReceiver);
+        } else {
+            emit EmissionsReceiverUpdated(oldReceiver, owner());
+        }
+    }
+
+    /// @notice Get the effective emissions receiver address
+    /// @dev Returns emissionsReceiver if set, otherwise returns the contract owner
+    /// @return The address that should receive emissions
+    function getEmissionsReceiver() external view returns (address) {
+        return emissionsReceiver == address(0) ? owner() : emissionsReceiver;
+    }
+
+    /// @notice Override transferOwnership to emit EmissionsReceiverUpdated event when appropriate
+    /// @dev When emissionsReceiver is not explicitly set (address(0)), transferring ownership
+    /// effectively changes the emissions receiver, so we emit the event for transparency
+    /// @param newOwner The address of the new owner
+    function transferOwnership(address newOwner) public override onlyOwner {
+        if (emissionsReceiver == address(0)) {
+            emit EmissionsReceiverUpdated(owner(), newOwner);
+        }
+        super.transferOwnership(newOwner);
+    }
     /*//////////////////////////////////////////////////////////////
                          GAS TRACKING ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
