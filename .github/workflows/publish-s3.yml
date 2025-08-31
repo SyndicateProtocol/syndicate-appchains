@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'S3 object version tag (e.g., v1.2.3, v0.10.15-dev.1)'
+        description: "S3 object version tag (e.g., v1.2.3, v0.10.15-dev.1)"
         required: true
         type: string
 
@@ -14,37 +14,31 @@ jobs:
   build:
     name: Build artifacts
     runs-on: shared-medium-01
+    defaults:
+      run:
+        working-directory: ./synd-withdrawals
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Download Nix flake dependencies
+        run: nix flake archive
 
       - name: Build synd-withdrawals/server
-        run: |
-          cd synd-withdrawals/server
-          docker build --output=. .
-
-      - name: Pull submodules
-        run: |
-          cd synd-withdrawals/synd-enclave && \
-          git submodule update --init --recursive
+        run: nix build .#synd-withdrawals-server --out-link ./out/synd-withdrawals-server
 
       - name: Build eif.bin file
-        run: |
-          cd synd-withdrawals/synd-enclave
-          docker build --target eif-bin --output=out .
+        run: nix build .#eif-bin --out-link ./out/eif.bin
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: built-artifacts
           path: |
-            synd-withdrawals/synd-enclave/out/eif.bin
-            synd-withdrawals/server/app/server
+            out/eif.bin
+            out/synd-withdrawals-server/bin/server
           retention-days: 1
 
   publish-testnet-s3:
