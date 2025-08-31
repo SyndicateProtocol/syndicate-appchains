@@ -5,6 +5,20 @@
   inputs,
   ...
 }: rec {
+  synd-withdrawals-server = lib.pkgs-2505.buildGoModule {
+    pname = "synd-withdrawals-server";
+    version = "0.1.0";
+    src = pkgs.lib.fileset.toSource {
+      root = ../server;
+      fileset = pkgs.lib.fileset.unions [
+        ../server/main.go
+        ../server/go.mod
+        ../server/go.sum
+      ];
+    };
+    vendorHash = "sha256-2Qz6GSZJaFclof3R+Qgn5sB7dQS7lF9sXR27Z0TEm4w=";
+  };
+
   synd-enclave-server = lib.pkgs-2505.buildGoModule {
     pname = "synd-enclave";
     version = "0.1.0";

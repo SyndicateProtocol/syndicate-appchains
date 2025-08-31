@@ -57,7 +57,14 @@
         lib = import ./nix/lib.nix {inherit pkgs system inputs;};
         myPackages = import ./nix/packages.nix {inherit lib system inputs;};
       in {
-        packages = {inherit (myPackages) synd-enclave-server eif-bin;};
+        packages = {
+          inherit
+            (myPackages)
+            synd-withdrawals-server
+            synd-enclave-server
+            eif-bin
+            ;
+        };
       };
     });
 }
