@@ -180,7 +180,7 @@ This architecture ensures secure, verifiable withdrawals while maintaining decen
 
 ### 🔹 `Synd-Proposer`
 
-**Role:** Orchestrates the full withdrawal flow.  
+**Role:** Orchestrates the full withdrawal flow.
 **Main responsibilities:**
 
 - **Data Aggregation**: Collects data from all source chains
@@ -204,7 +204,7 @@ This architecture ensures secure, verifiable withdrawals while maintaining decen
 
 ### 🔹 `Synd-Enclave`
 
-**Role:** Secure enclave runtime that performs the core logic for withdrawal proof validation.  
+**Role:** Secure enclave runtime that performs the core logic for withdrawal proof validation.
 **Codebase:** Forked from [base/op-enclave](https://github.com/base/op-enclave)
 
 **Main responsibilities:**
@@ -278,5 +278,35 @@ To build a Docker image for the `synd-enclave` in a compatible environment:
 ```bash
 docker build -f synd-withdrawals/synd-enclave/Dockerfile . --platform linux/amd64
 ```
+
+---
+
+## Reproducible builds with Nix
+
+1. Install Nix using https://github.com/DeterminateSystems/nix-installer:
+
+```sh
+curl -fsSL https://install.determinate.systems/nix | sh -s -- install
+```
+
+2. Change to the `synd-withdrawals` directory (containing `flake.nix` file).
+
+3. Because Nix might take a long time (5-10 minutes on a MBP M3) to fetch all the dependencies (like nitro and its submodules),
+I recommend running `nix flake archive` first, so you know you're not stuck on a build, but rather fetching dependencies.
+
+4. Run the following command to build the `eif.bin` file:
+
+```sh
+nix build .#eif-bin --print-out-paths
+```
+
+In the end, you should get a Nix path for `eif.bin` with a hash in the name, e.g.
+`/nix/store/b0v83kjd7r5993gl4mk96zcrlaam7swq-eif.bin`.
+
+The path should be the same for everyone building on all machines with the same architecture.
+E.g., when using a fixed commit of this repo, the resulting path should be the same for `x86_64-linux` or `aarch64-linux` respectively.
+- In the event of differing hashes between machines, start by running the build again with `--print-build-logs`. `eif.bin` build should report the hashes of the resulting file in the form of `PCR0`/`PCR1`/`PCR2` hashes. Compare these hashes between machines.
+  - If only the Nix store path differs, but the PCR hashes are the same, then the resulting file is identical, but Nix noticed a change of dependency code used to build it. Consider using the same technique to see whether the dependencies used to build `eif.bin` are reproducible (especially ones based on the code from this repo, like `synd-enclave-server` and `enclave-src-with-generated`).
+  - If the PCR hashes differ, then there is an issue with the reproducibility of the build.
 
 ---
