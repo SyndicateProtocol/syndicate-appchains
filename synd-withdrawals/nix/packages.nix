@@ -1,7 +1,6 @@
 {
   lib,
   pkgs ? lib.pkgs,
-  system,
   inputs,
   ...
 }: rec {
@@ -119,7 +118,6 @@
       hash = "sha256-1DqXlJvhWf7OugnTdNfqupHGyPz2AphZjTLuKjOyppY=";
     };
     patchPhase = let
-      hardhatSolcCache = "$HOME/.cache/hardhat-nodejs/compilers-v2/linux-${lib.targetArch}";
       solcBin = version: let
         cleanVersion = builtins.head (builtins.split "-" version);
         pkg = lib.solc-pkgs."solc_${builtins.replaceStrings ["."] ["_"] cleanVersion}";
