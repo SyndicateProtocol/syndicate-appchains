@@ -49,7 +49,7 @@ func processEvent(data []byte) [][]byte {
 		return nil
 	}
 	// ignore data with a compression ratio > 10 to prevent spam
-	if len(raw) > len(data)*10 {
+	if len(raw) > (len(data)-1)*10 {
 		return nil
 	}
 	var txs [][]byte

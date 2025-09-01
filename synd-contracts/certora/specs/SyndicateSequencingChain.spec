@@ -61,11 +61,12 @@ rule onlyOwnerCanUpdateModule(address newModule) {
 
     // Try to update the module
     updateRequirementModule@withrevert(e, newModule);
+    bool txSucceeded = !lastReverted;
 
     // Bidirectional assertions
-    assert !lastReverted => e.msg.sender == owner(),
+    assert txSucceeded => e.msg.sender == owner(),
         "Non-owner updated requirement module";
-    assert lastReverted => e.msg.sender != owner(),
+    assert !txSucceeded => e.msg.sender != owner(),
         "Owner failed to update requirement module";
 }
 

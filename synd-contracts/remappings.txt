@@ -4,4 +4,5 @@
 @uniswap/v2-core/=lib/nitro-contracts/node_modules/@uniswap/v2-core/contracts/
 @sp1-contracts/=lib/sp1-contracts/contracts/src/
 @arbitrum/nitro-contracts/=lib/nitro-contracts/
+@eigenda/contracts/=lib/eigenda-contracts/
 @offchainlabs/upgrade-executor/=lib/upgrade-executor/
