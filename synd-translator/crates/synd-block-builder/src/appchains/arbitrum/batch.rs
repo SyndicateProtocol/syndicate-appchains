@@ -106,7 +106,10 @@ impl Batch {
             return Err(eyre::eyre!("too many batch segments"));
         }
         if input.len() > MAX_DECOMPRESSED_LEN {
-            return Err(eyre::eyre!("batch data exceeds the 16 mb size limit"));
+            return Err(eyre::eyre!(
+                "batch data exceeds the size limit of {}",
+                MAX_DECOMPRESSED_LEN
+            ));
         }
         let mut out: Vec<u8> = vec![];
         //TODO(SEQ-806): configure brotli compression settings & try to make compression
