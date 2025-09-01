@@ -41,7 +41,7 @@ struct PendingAssertion {
     bytes32 l1BatchAcc;
 }
 
-function hash_object(TeeTrustedInput storage a) view returns (bytes32) {
+function hashObject(TeeTrustedInput storage a) view returns (bytes32) {
     return keccak256(
         abi.encodePacked(
             a.configHash,
@@ -54,11 +54,11 @@ function hash_object(TeeTrustedInput storage a) view returns (bytes32) {
     );
 }
 
-function hash_object(PendingAssertion storage a) view returns (bytes32) {
+function hashObject(PendingAssertion storage a) view returns (bytes32) {
     return keccak256(abi.encodePacked(a.appBlockHash, a.appSendRoot, a.seqBlockHash, a.l1BatchAcc));
 }
 
-function hash_object(PendingAssertion calldata a) pure returns (bytes32) {
+function hashObject(PendingAssertion calldata a) pure returns (bytes32) {
     return keccak256(abi.encodePacked(a.appBlockHash, a.appSendRoot, a.seqBlockHash, a.l1BatchAcc));
 }
 
@@ -213,8 +213,8 @@ contract TeeModule is Ownable(msg.sender) {
         public
     {
         require(signature.length == 65, "invalid signature length");
-        bytes32 assertionHash = hash_object(assertion);
-        bytes32 payloadHash = keccak256(abi.encodePacked(hash_object(teeTrustedInput), assertionHash));
+        bytes32 assertionHash = hashObject(assertion);
+        bytes32 payloadHash = keccak256(abi.encodePacked(hashObject(teeTrustedInput), assertionHash));
         require(teeKeyManager.isKeyValid(payloadHash.recover(signature)), "invalid tee signature");
         require(!isL1Chain || assertion.l1BatchAcc == teeTrustedInput.l1EndHash, "unexpected l1 end batch acc");
         pendingAssertions.push(assertion);
@@ -223,7 +223,7 @@ contract TeeModule is Ownable(msg.sender) {
             return;
         }
         require(pendingAssertions.length == 2, "TeeModule: Too many pending assertions");
-        require(assertionHash != hash_object(pendingAssertions[0]), "assertion already exists");
+        require(assertionHash != hashObject(pendingAssertions[0]), "assertion already exists");
         teeHackCount += 1;
         emit TeeHacked(teeHackCount);
         if (rewardAddr == address(0)) {

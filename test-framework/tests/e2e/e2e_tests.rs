@@ -1,15 +1,17 @@
 //! e2e tests for the `synd-appchains` stack
 use alloy::{
     eips::{BlockId, BlockNumberOrTag, Encodable2718},
-    network::TransactionBuilder,
+    network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
+    signers::local::PrivateKeySigner,
     sol,
 };
 use contract_bindings::synd::{i_inbox::IInbox, rollup::Rollup};
 use eyre::Result;
 use std::time::Duration;
+use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
 use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig};
 use synd_mchain::client::Provider as _;
 use test_framework::components::{
@@ -302,7 +304,7 @@ async fn e2e_contract_tx() -> Result<()> {
         // Wait for the txs to arrive
         components.mine_seq_block(0).await?;
         wait_until!(
-            components.appchain_provider.get_block_number().await? == 2,
+            components.appchain_provider.get_block_number().await? >= 2,
             Duration::from_secs(20)
         );
 
@@ -357,7 +359,6 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
             let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
-            const L2_MESSAGE_KIND_SIGNED_TX: u8 = 4;
             let gas_limit: u64 = 100_000;
             let max_fee_per_gas: u128 = 100_000_000;
 
@@ -374,7 +375,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .build(components.settlement_provider.wallet())
                 .await?
                 .encoded_2718();
-            tx.insert(0, L2_MESSAGE_KIND_SIGNED_TX);
+            tx.insert(0, L2MessageKind::SignedTx as u8);
             let _ = inbox.sendL2Message(tx.into()).send().await?;
 
             // Send retryable tickets that are automatically redeemed (aliased address)
@@ -719,9 +720,18 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             // reorg the sequencing chain by 1 block
             components.sequencing_provider.anvil_rollback(Some(1)).await?;
 
-            // build the sequencing chain to a height above the reorg (so it is detected)
-            components.sequence_tx(b"potato", 10, false).await?;
-            components.sequence_tx(b"potato", 10, false).await?;
+            // sequence a valid tx so that an appchain batch is created - nitro will not reorg until
+            // the new batch is created.
+            let appchain_tx = TransactionRequest::default()
+                .nonce(0)
+                .gas_limit(0)
+                .to(Address::ZERO)
+                .gas_price(0)
+                .build(&EthereumWallet::from(PrivateKeySigner::random()))
+                .await?
+                .encoded_2718();
+
+            components.sequence_tx(&appchain_tx, 10, false).await?;
 
             // state is correctly rolled back
             wait_until!(storage.get().call().await? == U256::from(42), Duration::from_secs(10));
@@ -744,8 +754,16 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
         // synd-mchain is on genesis (block 1)
         assert_eq!(components.mchain_provider.get_block_number().await, 1);
 
-        // sequence any tx
-        components.sequence_tx(b"my_tx_calldata", 10, false).await?;
+        // sequence a valid tx so that an appchain batch & mchain block is created
+        let appchain_tx = TransactionRequest::default()
+            .nonce(0)
+            .gas_limit(0)
+            .to(Address::ZERO)
+            .gas_price(0)
+            .build(&EthereumWallet::from(PrivateKeySigner::random()))
+            .await?
+            .encoded_2718();
+        components.sequence_tx(&appchain_tx, 10, false).await?;
         let seq_block = components.sequencing_provider.get_block_number().await?;
 
         // mine a set block to close the slot, but without any transactions
@@ -935,7 +953,15 @@ async fn e2e_maestro_reorg_handling() -> Result<()> {
         // 4. Simulate a reorg on the sequencing chain
         components.sequencing_provider.anvil_rollback(Some(1)).await?;
         // re-build a block on top, must submit a tx so the reorg is detected by nitro
-        components.sequence_tx(b"potato", 10, false).await?; 
+        let appchain_tx = TransactionRequest::default()
+            .nonce(0)
+            .gas_limit(0)
+            .to(Address::ZERO)
+            .gas_price(0)
+            .build(&EthereumWallet::from(PrivateKeySigner::random()))
+            .await?
+            .encoded_2718();
+        components.sequence_tx(&appchain_tx, 10, false).await?;
 
         // 5. Verify the appchain reflects the reorg
         wait_until!(

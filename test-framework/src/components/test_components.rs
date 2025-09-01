@@ -12,13 +12,12 @@ use crate::components::{
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
-    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U256},
+    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U160, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, TransactionReceipt},
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
-    always_allowed_module::AlwaysAllowedModule,
     assertion_poster::AssertionPoster,
     i_inbox::IInbox,
     i_upgrade_executor::IUpgradeExecutor,
@@ -261,17 +260,14 @@ impl TestComponents {
         .send()
         .await?;
         let sequencing_contract_address = seq_provider.default_signer_address().create(0);
-        let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-        let always_allowed_module_address = seq_provider.default_signer_address().create(1);
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
             SyndicateSequencingChain::new(sequencing_contract_address, provider_clone);
-        let _ = sequencing_contract
-            .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
-            .send()
-            .await?;
+
+        // Set the requirement module to address(1) to allow all transactions
+        let _ = sequencing_contract.updateRequirementModule(U160::from(1).into()).send().await?;
 
         match options.base_chains_type {
             BaseChainsType::Anvil => {
@@ -815,6 +811,38 @@ impl TestComponents {
         }
     }
 
+    /// sequences a batch of txs and mines the sequencing block
+    /// returns the appchain's transaction receipt
+    pub async fn sequence_batch(&self, txs: Vec<Bytes>, seq_delay: u64) -> Result<()> {
+        // NOTE: build the tx manually, instead of using the much simpler
+        // `self.sequencing_contract.processTransaction(tx_bytes).send().await?;`
+        // this is because the contract_instance gets confused after a reorg and fails the tests...
+        // re-creating the contract instance after reorg did not help.
+        // (this is a bug in alloy.)
+        // https://github.com/alloy-rs/alloy/issues/2668
+        let raw_tx = self
+            .sequencing_contract
+            .processTransactionsBulk(txs)
+            .nonce(self.sequencing_provider.get_transaction_count(test_account1().address).await?)
+            .gas(10_000_000)
+            .max_fee_per_gas(100_000_000)
+            .max_priority_fee_per_gas(0)
+            .chain_id(SEQUENCING_CHAIN_ID)
+            .build_raw_transaction(test_account1().signer.clone())
+            .await?;
+        let seq_tx = self.sequencing_provider.send_raw_transaction(&raw_tx).await?;
+
+        if self.sequencing_deployment.is_none() {
+            // skip mining step when in nitro mode
+            self.mine_seq_block(seq_delay).await?;
+        }
+        let seq_receipt =
+            self.sequencing_provider.get_transaction_receipt(*seq_tx.tx_hash()).await?.unwrap();
+        assert!(seq_receipt.status(), "Sequence transaction failed");
+
+        Ok(())
+    }
+
     #[cfg(false)]
     pub async fn send_contract_tx(
         &self,
@@ -825,6 +853,12 @@ impl TestComponents {
         data: Bytes,
         seq_delay: u64,
     ) -> Result<()> {
+        // NOTE: build the tx manually, instead of using the much simpler
+        // `self.sequencing_contract.processTransaction(tx_bytes).send().await?;`
+        // this is because the contract_instance gets confused after a reorg and fails the tests...
+        // re-creating the contract instance after reorg did not help.
+        // (this is a bug in alloy.)
+        // https://github.com/alloy-rs/alloy/issues/2668
         let raw_tx = self
             .sequencing_contract
             .sendContractTransaction(gas_limit, max_fee_per_gas, to, value, data)
