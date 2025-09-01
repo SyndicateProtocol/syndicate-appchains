@@ -71,6 +71,10 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         appchainId = _appchainId;
     }
 
+    function encodeTransactionsCompressed(bytes calldata data) public pure returns (bytes memory) {
+        return abi.encodePacked(L2MessageType_Batch, data);
+    }
+
     /// @notice Processes a compressed batch of signed transactions.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
@@ -81,7 +85,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         require(
             isAllowed(msg.sender, tx.origin, abi.encodePacked(L2MessageType_Batch)), TransactionOrSenderNotAllowed()
         );
-        emit TransactionProcessed(msg.sender, abi.encodePacked(L2MessageType_Batch, data));
+        emit TransactionProcessed(msg.sender, encodeTransactionsCompressed(data));
+    }
+
+    function encodeTransaction(bytes calldata data) public pure returns (bytes memory) {
+        return abi.encodePacked(L2MessageType_SignedTx, data);
     }
 
     /// @notice Process a signed transaction.
@@ -90,7 +98,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     function processTransaction(bytes calldata data) external trackGasUsage {
         require(data.length > 0, NoTxData());
 
-        bytes memory transaction = abi.encodePacked(L2MessageType_SignedTx, data);
+        bytes memory transaction = encodeTransaction(data);
         require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
         emit TransactionProcessed(msg.sender, transaction);
     }
@@ -106,7 +114,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         uint256 i;
         for (i = 0; i < dataCount; i++) {
             require(data[i].length > 0, NoTxData());
-            bytes memory transaction = abi.encodePacked(L2MessageType_SignedTx, data[i]);
+            bytes memory transaction = encodeTransaction(data[i]);
             bool isAllowed = isAllowed(msg.sender, tx.origin, transaction); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed

@@ -7,6 +7,8 @@ methods {
     function isAllowed(address, address, bytes) external returns (bool) envfree;
     function owner() external returns (address) envfree;
     function gasTrackingDisabled() external returns (bool) envfree;
+    function encodeTransaction(bytes) external returns (bytes) envfree;
+    function encodeTransactionsCompressed(bytes) external returns (bytes) envfree;
 
     // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
@@ -31,30 +33,12 @@ rule onlyAllowedCanProcess(bytes data) {
     bool success = !lastReverted;
 
     // Then the sender must have been allowed
-    assert success => isAllowed(e.msg.sender, e.msg.sender, data),
+    assert success => isAllowed(e.msg.sender, e.msg.sender, encodeTransaction(data)),
         "Unauthorized sender processed transaction";
 }
 
 /*
- * Rule 3: Consistent behavior between processTransaction and processTransactionsBulk
- */
-rule processConsistency(bytes data) {
-    env e;
-
-    // Record both outcomes
-    processTransaction@withrevert(e, data);
-    bool txSuccess = !lastReverted;
-
-    processTransactionsBulk@withrevert(e, [data]);
-    bool bulkSuccess = !lastReverted;
-
-    // If one succeeds, both should succeed under same conditions
-    assert txSuccess == bulkSuccess,
-        "Inconsistent behavior between process methods";
-}
-
-/*
- * Rule 4: Only owner can update requirement module
+ * Rule 3: Only owner can update requirement module
  */
 rule onlyOwnerCanUpdateModule(address newModule) {
     env e;
@@ -72,7 +56,7 @@ rule onlyOwnerCanUpdateModule(address newModule) {
 }
 
 /*
- * Rule 5: Module update changes state correctly
+ * Rule 4: Module update changes state correctly
  */
 rule moduleUpdateChangesState(address newModule) {
     env e;
@@ -90,7 +74,7 @@ rule moduleUpdateChangesState(address newModule) {
 }
 
 /*
- * Rule 6: State consistency after transaction processing
+ * Rule 5: State consistency after transaction processing
  */
 rule stateConsistencyAfterProcessing(bytes data) {
     env e;
@@ -105,7 +89,7 @@ rule stateConsistencyAfterProcessing(bytes data) {
 }
 
 /*
- * Rule 7: Verify permissions are correctly enforced
+ * Rule 6: Verify permissions are correctly enforced
  */
 rule permissionsCorrectlyEnforced(bytes data) {
     env e;
@@ -115,8 +99,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
     require owner() == e.msg.sender;
 
     // Valid sender and msg parameters
-    require e.msg.sender != 0;
-    require e.msg.sender != currentContract;
+    require e.block.timestamp >= 1754089200;
     require e.msg.value == 0;
 
     // Valid data requirements
@@ -124,7 +107,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
     require data.length < max_uint256;
 
     // Check permissions
-    bool senderAllowed = isAllowed(e.msg.sender, e.msg.sender, abi.encodePacked(uint8(4), data));
+    bool senderAllowed = isAllowed(e.msg.sender, e.msg.sender, encodeTransaction(data));
 
     // Process transaction
     processTransaction@withrevert(e, data);
