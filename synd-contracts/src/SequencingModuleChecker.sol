@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {IPermissionModule} from "./interfaces/IPermissionModule.sol";
 import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {DataTooLarge} from "@arbitrum/nitro-contracts/src/libraries/Error.sol";
 
 /// @title SequencingModuleChecker
 /// @notice A contract that delegates permission checks to modular permission systems
@@ -14,6 +15,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// 4. Proper setup of the permission system after deployment involves setting a sequencing module and transferring ownership
 ///    via the Ownable transferOwnership() function
 abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
+    // Just in case, limit the amount of tx data sent to the isAllowed function.
+    // Note that this limit does not apply to compressed transactions.
+    uint256 public constant maxDataSize = 200000;
+
     /// @notice The requirement module that handles checks
     IPermissionModule public permissionRequirementModule;
 
@@ -25,9 +30,9 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
 
     /// @notice Updates the requirement module
     /// @param _newModule The address of the new requirement module
-    /// Note that the zero address is allowed and corresponds to a forbid all module.
-    /// Similarly, address one corresponds to the always allowed module.
-    /// Addresses without code cause all transaction types to be forbidden.
+    /// Note that the zero address is allowed and corresponds to a forbid all module which reverts.
+    /// All addresses without code cause all transaction types to be forbidden by reverting.
+    /// Address one corresponds to the always allowed module.
     function updateRequirementModule(address _newModule) external onlyOwner {
         permissionRequirementModule = IPermissionModule(_newModule);
 
@@ -40,6 +45,7 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// @param data The calldata to check
     /// @return bool indicating if both the proposer and calldata are allowed
     function isAllowed(address proposer, address originator, bytes memory data) public view returns (bool) {
+        require(data.length <= maxDataSize, DataTooLarge(data.length, maxDataSize));
         return address(permissionRequirementModule) == address(1)
             || permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
     }

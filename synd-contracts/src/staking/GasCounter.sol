@@ -56,7 +56,9 @@ abstract contract GasCounter is EpochTracker {
         }
 
         // Add gas and cost to current epoch
-        tokensUsedPerEpoch[currentEpoch] += gasUsed * gasPrice;
+        unchecked {
+            tokensUsedPerEpoch[currentEpoch] += gasUsed * gasPrice;
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

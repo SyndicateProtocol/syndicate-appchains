@@ -290,43 +290,20 @@ impl ArbitrumAdapter {
         mchain_block_number: u64,
         mchain_timestamp: u64,
     ) -> Result<Bytes> {
+        debug!("Sequenced transactions: {:?}", txs);
+
         let mut messages = vec![];
-
-        if !txs.is_empty() {
-            debug!("Sequenced transactions: {:?}", txs);
-
-            let mut block = vec![];
-            // Start with the batch header byte - see l2_msg_to_bytes in batch.rs for more
-            // infomation.
-            let mut size = 1;
-            for tx in txs {
-                if tx.len() > MAX_L2_MESSAGE_SIZE {
-                    debug!("large message rejected: {} > {}", tx.len(), MAX_L2_MESSAGE_SIZE);
-                    continue;
-                }
-                // When multiple txs are included in the block, then each tx is prefixed a uint64
-                // value indicating with the size of the tx.
-                // See l2_msg_to_bytes in batch.rs for more infomation.
-                let tx_size = 8 + tx.len();
-                size += tx_size;
-                if block.len() >= TX_PER_BLOCK || (!block.is_empty() && size > MAX_L2_MESSAGE_SIZE)
-                {
-                    messages.push(BatchMessage::L2(L1IncomingMessage {
-                        header: L1IncomingMessageHeader {
-                            block_number: mchain_block_number,
-                            timestamp: mchain_timestamp,
-                        },
-                        l2_msg: block,
-                    }));
-                    block = vec![];
-                    // When multiple transactions are in the block, then the batch of transactions
-                    // is prefixed with a batch header byte.
-                    // See l2_msg_to_bytes in batch.rs for more infomation.
-                    size = 1 + tx_size;
-                }
-                block.push(tx);
-            }
-            if !block.is_empty() {
+        let mut block = vec![];
+        // Start with the batch header byte - see l2_msg_to_bytes in batch.rs for more
+        // infomation.
+        let mut size = 1;
+        for tx in txs {
+            // When multiple txs are included in the block, then each tx is prefixed a uint64
+            // value indicating with the size of the tx.
+            // See l2_msg_to_bytes in batch.rs for more infomation.
+            let tx_size = 8 + tx.len();
+            size += tx_size;
+            if block.len() >= TX_PER_BLOCK || (!block.is_empty() && size > MAX_L2_MESSAGE_SIZE) {
                 messages.push(BatchMessage::L2(L1IncomingMessage {
                     header: L1IncomingMessageHeader {
                         block_number: mchain_block_number,
@@ -334,8 +311,23 @@ impl ArbitrumAdapter {
                     },
                     l2_msg: block,
                 }));
+                block = vec![];
+                // When multiple transactions are in the block, then the batch of transactions
+                // is prefixed with a batch header byte.
+                // See l2_msg_to_bytes in batch.rs for more infomation.
+                size = 1 + tx_size;
             }
-        };
+            block.push(tx);
+        }
+        if !block.is_empty() {
+            messages.push(BatchMessage::L2(L1IncomingMessage {
+                header: L1IncomingMessageHeader {
+                    block_number: mchain_block_number,
+                    timestamp: mchain_timestamp,
+                },
+                l2_msg: block,
+            }));
+        }
 
         let batch = Batch(messages);
         debug!("New Batch: {:?}", batch);

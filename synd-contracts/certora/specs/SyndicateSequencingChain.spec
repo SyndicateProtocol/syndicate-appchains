@@ -46,10 +46,10 @@ rule processConsistency(bytes data) {
     bool txSuccess = !lastReverted;
 
     processTransactionsBulk@withrevert(e, [data]);
-    bool rawSuccess = !lastReverted;
+    bool bulkSuccess = !lastReverted;
 
     // If one succeeds, both should succeed under same conditions
-    assert txSuccess == rawSuccess,
+    assert txSuccess == bulkSuccess,
         "Inconsistent behavior between process methods";
 }
 
@@ -62,9 +62,11 @@ rule onlyOwnerCanUpdateModule(address newModule) {
     // Try to update the module
     updateRequirementModule@withrevert(e, newModule);
 
-    // Should succeed if owner and fail otherwise
-    assert lastReverted == (e.msg.sender == owner()),
-        "Non-owner updated requirement module or owner failed to update requirement module";
+    // Bidirectional assertions
+    assert !lastReverted => e.msg.sender == owner(),
+        "Non-owner updated requirement module";
+    assert lastReverted => e.msg.sender != owner(),
+        "Owner failed to update requirement module";
 }
 
 /*
@@ -109,7 +111,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
     // Require the contract to be initialized
     require permissionRequirementModule() == permissionModule;
     require owner() == e.msg.sender;
-    
+
     // Valid sender and msg parameters
     require e.msg.sender != 0;
     require e.msg.sender != currentContract;

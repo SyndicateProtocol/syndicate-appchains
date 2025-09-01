@@ -1,19 +1,17 @@
 package enclave
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
-	"github.com/andybalholm/brotli"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/offchainlabs/nitro/arbcompress"
 	"github.com/offchainlabs/nitro/arbos"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
 	"github.com/offchainlabs/nitro/arbstate"
@@ -37,41 +35,47 @@ func processEvent(data []byte) [][]byte {
 		panic(fmt.Errorf("unexpected event header byte: %d", data[0]))
 	}
 	if data[0] != arbos.L2MessageKind_Batch {
-		if data[0] == arbos.L2MessageKind_SignedTx && parseSignedTx(data[1:]) != nil {
+		if len(data) > arbostypes.MaxL2MessageSize {
+			return nil
+		}
+		if data[0] == arbos.L2MessageKind_SignedTx && !isSignedTxValid(data[1:]) {
 			return nil
 		}
 		// The sequencing contract ensures that unsigned transactions are valid
 		return [][]byte{data}
 	}
-	r := brotli.NewReader(bytes.NewReader(data[1:]))
-	data, err := io.ReadAll(r)
+	raw, err := arbcompress.Decompress(data[1:], arbostypes.MaxL2MessageSize)
 	if err != nil {
 		return nil
 	}
+	// ignore data with a compression ratio > 10 to prevent spam
+	if len(raw) > len(data)*10 {
+		return nil
+	}
 	var txs [][]byte
-	if err := rlp.DecodeBytes(data, &txs); err != nil {
+	if err := rlp.DecodeBytes(raw, &txs); err != nil {
 		return nil
 	}
 	var out [][]byte
 	for _, tx := range txs {
-		if parseSignedTx(tx) == nil {
+		if len(tx) < arbostypes.MaxL2MessageSize && isSignedTxValid(tx) {
 			out = append(out, append([]byte{arbos.L2MessageKind_SignedTx}, tx...))
 		}
 	}
 	return out
 }
 
-func parseSignedTx(data []byte) error {
+func isSignedTxValid(data []byte) bool {
 	var tx types.Transaction
 	if err := tx.UnmarshalBinary(data); err != nil {
-		return err
+		return false
 	}
 	if tx.Type() >= types.ArbitrumDepositTxType || tx.Type() == types.BlobTxType {
 		// Should be unreachable for Arbitrum types due to UnmarshalBinary not accepting Arbitrum internal txs
 		// and we want to disallow BlobTxType since Arbitrum doesn't support EIP-4844 txs yet.
-		return types.ErrTxTypeNotSupported
+		return false
 	}
-	return nil
+	return true
 }
 
 func buildL2MessageSegment(txs [][]byte) ([]byte, error) {
@@ -125,9 +129,6 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 	var block [][]byte
 	size := 1
 	for _, tx := range txs {
-		if len(tx) > arbostypes.MaxL2MessageSize {
-			continue;
-		}
 		txSize := len(tx) + 8
 		size += txSize
 		if len(block) >= TX_PER_BLOCK || (len(block) > 0 && size > arbostypes.MaxL2MessageSize) {
@@ -149,19 +150,12 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 		data = append(data, segment...)
 	}
 
-	var buffer bytes.Buffer
-	writer := brotli.NewWriterLevel(&buffer, brotli.BestSpeed)
-	lenWritten, err := writer.Write(data)
+	// 0 is the fastest brotli compression level
+	buffer, err := arbcompress.CompressLevel(data, 0)
 	if err != nil {
 		return nil, err
 	}
-	if lenWritten != len(data) {
-		return nil, errors.New("write failed")
-	}
-	if err := writer.Close(); err != nil {
-		return nil, err
-	}
-	return append([]byte{daprovider.BrotliMessageHeaderByte}, buffer.Bytes()...), nil
+	return append([]byte{daprovider.BrotliMessageHeaderByte}, buffer...), nil
 }
 
 type SyndicateAccumulator struct {

@@ -3,6 +3,7 @@
 //! This module provides the core [`SequencingTransactionParser`] trait that defines how
 //! sequencing transactions are captured and parsed.
 
+use crate::appchains::arbitrum::batch::MAX_L2_MESSAGE_SIZE;
 use alloy::{
     consensus::{transaction::RlpEcdsaDecodableTx as _, TxEip1559, TxEip2930, TxEip7702, TxLegacy},
     primitives::{keccak256, Address, Bytes, Log},
@@ -10,6 +11,7 @@ use alloy::{
 };
 use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
 use rlp::Rlp;
+use std::io::Cursor;
 use thiserror::Error;
 use tracing::{debug, error};
 
@@ -108,18 +110,25 @@ fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, SequencingParserEr
         return Err(SequencingParserError::DecompressionError("Empty compressed data".to_string()));
     }
 
-    let mut decoded_bytes = Vec::new();
+    let mut buffer = vec![0u8; MAX_L2_MESSAGE_SIZE];
+    let mut decoded_bytes = Cursor::new(buffer.as_mut_slice());
     brotli::BrotliDecompress(&mut &data[..], &mut decoded_bytes)
         .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))?;
 
+    if decoded_bytes.position() as usize > data.len() * 10 {
+        return Err(SequencingParserError::DecompressionError(
+            "Compression ratio above 10".to_string(),
+        ));
+    }
+
     // Decode RLP
-    Rlp::new(&decoded_bytes)
+    Rlp::new(&decoded_bytes.get_ref()[..decoded_bytes.position() as usize])
         .as_list::<Vec<u8>>()
         .map(|vec_list| {
             vec_list
                 .into_iter()
                 .filter_map(|mut tx| {
-                    is_signed_tx_valid(&tx).then(|| {
+                    (tx.len() < MAX_L2_MESSAGE_SIZE && is_signed_tx_valid(&tx)).then(|| {
                         tx.insert(0, L2MessageKind::SignedTx as u8);
                         Bytes::from(tx)
                     })
@@ -154,13 +163,15 @@ impl SequencingTransactionParser {
         match data[0].try_into().map_err(|_| SequencingParserError::UnexpectedDataType)? {
             L2MessageKind::Batch => transactions.append(&mut decompress_transactions(&data[1..])?),
             L2MessageKind::SignedTx => {
-                if is_signed_tx_valid(&data[1..]) {
+                if data.len() <= MAX_L2_MESSAGE_SIZE && is_signed_tx_valid(&data[1..]) {
                     transactions.push(data.clone());
                 }
             }
             // The sequencing contract ensures that unsigned transactions are valid
             L2MessageKind::UnsignedUserTx | L2MessageKind::ContractTx => {
-                transactions.push(data.clone())
+                if data.len() <= MAX_L2_MESSAGE_SIZE {
+                    transactions.push(data.clone());
+                }
             }
         }
 
