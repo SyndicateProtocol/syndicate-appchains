@@ -58,6 +58,7 @@ rule processConsistency(bytes data) {
  */
 rule onlyOwnerCanUpdateModule(address newModule) {
     env e;
+    require e.msg.value == 0;
 
     // Try to update the module
     updateRequirementModule@withrevert(e, newModule);
@@ -123,7 +124,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
     require data.length < max_uint256;
 
     // Check permissions
-    bool senderAllowed = isAllowed(e.msg.sender, e.msg.sender, data);
+    bool senderAllowed = isAllowed(e.msg.sender, e.msg.sender, abi.encodePacked(uint8(4), data));
 
     // Process transaction
     processTransaction@withrevert(e, data);

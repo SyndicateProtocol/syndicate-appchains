@@ -33,9 +33,11 @@ abstract contract GasCounter is EpochTracker {
 
         uint256 gasStart = gasleft();
         _;
-        uint256 gasUsed = gasStart - gasleft();
 
-        _trackGas(gasUsed);
+        // workaround: certora thinks gasStart - gasleft() can underflow even though it is safe
+        unchecked {
+            _trackGas(gasStart - gasleft());
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
