@@ -34,7 +34,7 @@
                 "MaxCodeSize": 0,
                 "MaxInitCodeSize": 0,
                 "Syndicate": true,
-                "InitialChainOwner": "0xreplaceme"
+                "InitialChainOwner": "0xREPLACEME"
             },
             "chainId": 510525
         },
@@ -44,7 +44,7 @@
             "sequencer-inbox": "0x0000000000000000000000000000000000511000",
             "deployed-at": 1,
             "rollup": "0x0000000000000000000000000000000000000000",
-            "native-token": "0xreplaceme",
+            "native-token": "0xREPLACEME",
             "upgrade-executor": "0x0000000000000000000000000000000000000000",
             "validator-wallet-creator": "0x0000000000000000000000000000000000000000"
         }
