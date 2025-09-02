@@ -99,6 +99,7 @@ contract L2Relayer is AccessControl {
      * @param destination The destination contract address on L3
      * @param epochIndex The epoch index for the deposit operation
      * @dev This function gets the current balance of the token and creates a retryable ticket to deposit and send to a pool contract on the L3
+     * @dev The relay will revert if the gas cost is greater than the amount being relayed
      * @dev The retryable ticket is created with the refunder address as the call value refund address
      * @dev The destination contract must implement IPool.deposit function
      */
@@ -118,7 +119,16 @@ contract L2Relayer is AccessControl {
      * @dev Uses the configured gas settings for the bridge transaction
      */
     function _relay(uint256 amount, address destination, uint256 epochIndex) internal {
-        uint256 callValue = amount - (gasLimit * maxFeePerGas);
+        uint256 gasCost = gasLimit * maxFeePerGas;
+
+        // Validate that the gas cost is less than the amount being relayed
+        // If the gas cost is greater than the amount, set the gas cost to 0
+        if (gasCost >= amount) {
+            gasCost = 0;
+        }
+
+        // Calculate the call value to be sent to the destination contract
+        uint256 callValue = amount - gasCost;
 
         // We use unsafe so the refunder address doesnt get aliased
         IArbBridge(arbBridge).unsafeCreateRetryableTicket(

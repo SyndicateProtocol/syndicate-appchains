@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {IPermissionModule} from "./interfaces/IPermissionModule.sol";
 import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {DataTooLarge} from "@arbitrum/nitro-contracts/src/libraries/Error.sol";
 
 /// @title SequencingModuleChecker
 /// @notice A contract that delegates permission checks to modular permission systems
@@ -11,71 +12,31 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// 1. The SequencingModuleChecker manages the core permission interface
 /// 2. The permissionRequirementModule (typically RequireAndModule or RequireOrModule) handles the actual permission logic
 /// 3. This design allows for complex permission structures (AND/OR logic) that can be upgraded over time
-/// 4. The initialization pattern allows for proper setup of the permission system after deployment
+/// 4. Proper setup of the permission system after deployment involves setting a sequencing module and transferring ownership
+///    via the Ownable transferOwnership() function
 abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
+    // Just in case, limit the amount of tx data sent to the isAllowed function.
+    // Note that this limit does not apply to compressed transactions.
+    uint256 public constant maxDataSize = 200000;
+
     /// @notice The requirement module that handles checks
     IPermissionModule public permissionRequirementModule;
 
     event RequirementModuleUpdated(address indexed newModule);
 
-    error InvalidModuleAddress();
-    error TransactionOrSenderNotAllowed();
-    error AlreadyInitialized();
-    error NoTxData();
-
-    bool internal hasBeenInitialized = false;
-
     /// @dev Constructor function
     // [Olympix Warning: no parameter validation in constructor] Admin validation handled by OpenZeppelin's Ownable
-    constructor() Ownable(msg.sender) {
-        permissionRequirementModule = new NotInitializedModule();
-    }
-
-    /// @notice Initializes the contract with a new admin and a requirement module
-    /// @dev This two-step initialization process allows for proper setup of the contract:
-    /// 1. First deployed with a temporary admin (deployer)
-    /// 2. Then initialized with the permanent admin and requirement module
-    /// 3. Once initialized, it cannot be re-initialized (immutable pattern)
-    /// @param admin The address of the new admin
-    /// @param _permissionRequirementModule The address of the RequireAll or RequireAny module.
-    /// Note that the zero address is allowed and corresponds to the always allowed module
-    function initialize(address admin, address _permissionRequirementModule) external onlyOwner {
-        if (hasBeenInitialized) revert AlreadyInitialized();
-        hasBeenInitialized = true;
-
-        permissionRequirementModule = IPermissionModule(_permissionRequirementModule);
-
-        transferOwnership(admin);
-    }
+    constructor() Ownable(msg.sender) {}
 
     /// @notice Updates the requirement module
     /// @param _newModule The address of the new requirement module
-    /// Note that the zero address is allowed and corresponds to the always allowed module
+    /// Note that the zero address is allowed and corresponds to a forbid all module which reverts.
+    /// All addresses without code cause all transaction types to be forbidden by reverting.
+    /// Address one corresponds to the always allowed module.
     function updateRequirementModule(address _newModule) external onlyOwner {
         permissionRequirementModule = IPermissionModule(_newModule);
 
         emit RequirementModuleUpdated(_newModule);
-    }
-
-    /// @notice Modifier to check if an address is allowed to submit txs based on the sender, origin and data
-    /// @param msgSender The address calling the function (msg.sender)
-    /// @param txOrigin The address that initiated the transaction (tx.origin)
-    /// @param data The calldata to check
-    modifier onlyWhenAllowed(address msgSender, address txOrigin, bytes calldata data) {
-        if (!isAllowed(msgSender, txOrigin, data)) revert TransactionOrSenderNotAllowed();
-        _;
-    }
-
-    /// @notice tx data is ignored as it is compressed and replaced with empty bytes
-    modifier onlyWhenAllowedCompressed(address msgSender, address txOrigin) {
-        if (!isAllowedCompressed(msgSender, txOrigin)) revert TransactionOrSenderNotAllowed();
-        _;
-    }
-
-    /// @notice tx data is set to the 0 byte to indicate that this is an unsigned tx and msgSender is the tx source address
-    modifier onlyWhenAllowedUnsigned(address msgSender, address txOrigin) {
-        if (!isAllowedUnsigned(msgSender, txOrigin)) revert TransactionOrSenderNotAllowed();
-        _;
     }
 
     /// @notice Checks if both the proposer and calldata are allowed
@@ -83,20 +44,9 @@ abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     /// @param originator The address of tx.origin.
     /// @param data The calldata to check
     /// @return bool indicating if both the proposer and calldata are allowed
-    function isAllowed(address proposer, address originator, bytes calldata data) public view returns (bool) {
-        return address(permissionRequirementModule) == address(0)
+    function isAllowed(address proposer, address originator, bytes memory data) public view returns (bool) {
+        require(data.length <= maxDataSize, DataTooLarge(data.length, maxDataSize));
+        return address(permissionRequirementModule) == address(1)
             || permissionRequirementModule.isAllowed(proposer, originator, data); //#olympix-ignore-calls-in-loop
-    }
-
-    /// @notice tx data is ignored as it is compressed and replaced with empty bytes
-    function isAllowedCompressed(address proposer, address originator) public view returns (bool) {
-        return address(permissionRequirementModule) == address(0)
-            || permissionRequirementModule.isAllowed(proposer, originator, ""); //#olympix-ignore-calls-in-loop
-    }
-
-    /// @notice tx data is set to the 0 byte to indicate that this is an unsigned tx and msgSender is the tx source address
-    function isAllowedUnsigned(address proposer, address originator) public view returns (bool) {
-        return address(permissionRequirementModule) == address(0)
-            || permissionRequirementModule.isAllowed(proposer, originator, hex"00"); //#olympix-ignore-calls-in-loop
     }
 }
