@@ -70,6 +70,14 @@ contract SyndicateSequencingChainTestSetUp is Test {
 }
 
 contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
+    function isImplementationAllowed(address) external pure returns (bool) {
+        return true;
+    }
+
+    function notifyChainUpgrade(uint256, address) external {
+        // Mock implementation - no-op
+    }
+
     function testProcessRawTransaction() public {
         bytes memory validTxn = abi.encode("valid transaction");
 
@@ -184,6 +192,126 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.prank(admin);
         UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
+    }
+
+    function testUpgradeWithAllowedImplementation() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Deploy chain through factory to get proper factory setup
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory testFactory = new SyndicateFactory(admin);
+
+        vm.startPrank(admin);
+        testFactory.addAllowedImplementation(address(newImpl), false);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        // Upgrade should succeed since implementation is allowed
+        // Set allowGasTrackingBanOnUpgrade to false (default is true)
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
+
+        // Perform the upgrade
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
+    }
+
+    function testUpgradeWithDisallowedImplementationAllowBan() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Deploy chain through factory
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory testFactory = new SyndicateFactory(admin);
+
+        vm.startPrank(admin);
+        (address chainAddr, uint256 chainId) =
+            testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        // Upgrade should succeed with allowGasTrackingBan=true even though implementation not allowed
+        // Set allowGasTrackingBanOnUpgrade to true (this is the default)
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(true);
+
+        // Perform the upgrade
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
+
+        // Chain should be banned from gas tracking
+        assertTrue(testFactory.isChainBannedFromGasTracking(chainId));
+    }
+
+    function testUpgradeWithDisallowedImplementationRevertsBan() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Deploy chain through factory
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory testFactory = new SyndicateFactory(admin);
+
+        vm.startPrank(admin);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        // Upgrade should revert with allowGasTrackingBan=false
+        // Set allowGasTrackingBanOnUpgrade to false
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
+
+        // Attempt upgrade - should fail
+        vm.prank(admin);
+        vm.expectRevert("Upgrade would result in gas tracking ban");
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
+    }
+
+    function testUpgradeAuthorizationOnlyOwner() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Deploy chain through factory
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory testFactory = new SyndicateFactory(admin);
+
+        vm.startPrank(admin);
+        testFactory.addAllowedImplementation(address(newImpl), false);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        address nonOwner = makeAddr("nonOwner");
+
+        // Non-owner should not be able to perform upgrade
+        vm.prank(nonOwner);
+        vm.expectRevert(); // Ownable revert from _authorizeUpgrade
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
+    }
+
+    function testUpgradeChecksImplementationCorrectly() public {
+        // Deploy chain through factory
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory testFactory = new SyndicateFactory(admin);
+
+        vm.startPrank(admin);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        // Create two different implementations
+        SyndicateSequencingChain impl1 = new SyndicateSequencingChain();
+        SyndicateSequencingChain impl2 = new SyndicateSequencingChain();
+
+        // Allow only impl1
+        vm.prank(admin);
+        testFactory.addAllowedImplementation(address(impl1), false);
+
+        // Verify impl1 upgrade works
+        // Set allowGasTrackingBanOnUpgrade to false first
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl1), "");
+
+        // Verify impl2 upgrade fails with allowGasTrackingBan=false
+        vm.prank(admin);
+        vm.expectRevert("Upgrade would result in gas tracking ban");
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
     }
 
     function testProcessTransactionsBulkAllAllowed() public {

@@ -6,9 +6,9 @@ interface MockAppchainFactory {
     function addAppchain(uint256 chainId, address contractAddr) external;
     function appchainChainIDs(uint256) external view returns (uint256);
     function appchainContracts(uint256) external view returns (address);
-    function getAppchainsAndContracts() external view returns (uint256[] memory, address[] memory);
-    function getContractsForAppchains(uint256[] memory chainIDs) external view returns (address[] memory);
-    function getTotalAppchains() external view returns (uint256);
+    function getAppchainsAndContractsForGasTracking() external view returns (uint256[] memory, address[] memory);
+    function getContractsForGasTracking(uint256[] memory chainIDs) external view returns (address[] memory);
+    function getTotalAppchainsForGasTracking() external view returns (uint256);
     function setTotalAppchains(uint256 count) external;
     function totalAppchains() external view returns (uint256);
 }
@@ -75,7 +75,7 @@ interface MockAppchainFactory {
   },
   {
     "type": "function",
-    "name": "getAppchainsAndContracts",
+    "name": "getAppchainsAndContractsForGasTracking",
     "inputs": [],
     "outputs": [
       {
@@ -93,7 +93,7 @@ interface MockAppchainFactory {
   },
   {
     "type": "function",
-    "name": "getContractsForAppchains",
+    "name": "getContractsForGasTracking",
     "inputs": [
       {
         "name": "chainIDs",
@@ -112,7 +112,7 @@ interface MockAppchainFactory {
   },
   {
     "type": "function",
-    "name": "getTotalAppchains",
+    "name": "getTotalAppchainsForGasTracking",
     "inputs": [],
     "outputs": [
       {
@@ -164,22 +164,22 @@ pub mod MockAppchainFactory {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60808060405234601557610565908161001a8239f35b5f80fdfe60806040526004361015610011575f80fd5b5f3560e01c806330af8fe21461032a5780635c0f888e146102f2578063601b546c146101d95780636ff6f6c014610199578063b31884c014610181578063bc109dd614610165578063cd121e04146101655763e59d037614610071575f80fd5b346101615760206003193601126101615760043567ffffffffffffffff81116101615736602382011215610161578060040135906100ae826104ea565b916100bc60405193846104a9565b8083526024602084019160051b8301019136831161016157602401905b82821061015157836100eb8151610502565b905f5b8151811015610137578061010460019284610551565b515f528160205273ffffffffffffffffffffffffffffffffffffffff60405f2054166101308286610551565b52016100ee565b6040516020808252819061014d90820186610460565b0390f35b81358152602091820191016100d9565b5f80fd5b34610161575f6003193601126101615760205f54604051908152f35b34610161576020600319360112610161576004355f55005b34610161576020600319360112610161576004355f526001602052602073ffffffffffffffffffffffffffffffffffffffff60405f205416604051908152f35b34610161575f600319360112610161576002546101f581610502565b5f5b8281106102ad5750604051906020828481520192828460025f527f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace925f5b81811061029457505061024a925003836104a9565b60405191604083019060408452518091526060830193905f5b81811061027e57848061014d88878382036020850152610460565b8251865260209586019590920191600101610263565b8454835260019485019487945060209093019201610235565b806102b960019261041b565b90549060031b1c5f528160205273ffffffffffffffffffffffffffffffffffffffff60405f2054166102eb8285610551565b52016101f7565b34610161576020600319360112610161576004356002548110156101615761031b60209161041b565b90549060031b1c604051908152f35b346101615760406003193601126101615760043560243573ffffffffffffffffffffffffffffffffffffffff811680910361016157815f52600160205260405f20907fffffffffffffffffffffffff0000000000000000000000000000000000000000825416179055600254680100000000000000008110156103ee578060016103b7920160025561041b565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff829392549160031b92831b921b19161790555f80f35b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b6002548110156104335760025f5260205f2001905f90565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b90602080835192838152019201905f5b81811061047d5750505090565b825173ffffffffffffffffffffffffffffffffffffffff16845260209384019390920191600101610470565b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff8211176103ee57604052565b67ffffffffffffffff81116103ee5760051b60200190565b9061050c826104ea565b61051960405191826104a9565b8281527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe061054782946104ea565b0190602036910137565b80518210156104335760209160051b01019056
+    ///0x60808060405234601557610565908161001a8239f35b5f80fdfe60806040526004361015610011575f80fd5b5f3560e01c806330af8fe21461032a5780635bd6588b146102115780635c0f888e146101d95780636ae7e703146100715780636ff6f6c014610199578063aae7238c146100a9578063b31884c0146100915763cd121e0414610071575f80fd5b3461008d575f60031936011261008d5760205f54604051908152f35b5f80fd5b3461008d57602060031936011261008d576004355f55005b3461008d57602060031936011261008d5760043567ffffffffffffffff811161008d573660238201121561008d578060040135906100e6826104ea565b916100f460405193846104a9565b8083526024602084019160051b8301019136831161008d57602401905b82821061018957836101238151610502565b905f5b815181101561016f578061013c60019284610551565b515f528160205273ffffffffffffffffffffffffffffffffffffffff60405f2054166101688286610551565b5201610126565b604051602080825281906101859082018661041b565b0390f35b8135815260209182019101610111565b3461008d57602060031936011261008d576004355f526001602052602073ffffffffffffffffffffffffffffffffffffffff60405f205416604051908152f35b3461008d57602060031936011261008d5760043560025481101561008d57610202602091610464565b90549060031b1c604051908152f35b3461008d575f60031936011261008d5760025461022d81610502565b5f5b8281106102e55750604051906020828481520192828460025f527f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace925f5b8181106102cc575050610282925003836104a9565b60405191604083019060408452518091526060830193905f5b8181106102b65784806101858887838203602085015261041b565b825186526020958601959092019160010161029b565b845483526001948501948794506020909301920161026d565b806102f1600192610464565b90549060031b1c5f528160205273ffffffffffffffffffffffffffffffffffffffff60405f2054166103238285610551565b520161022f565b3461008d57604060031936011261008d5760043560243573ffffffffffffffffffffffffffffffffffffffff811680910361008d57815f52600160205260405f20907fffffffffffffffffffffffff0000000000000000000000000000000000000000825416179055600254680100000000000000008110156103ee578060016103b79201600255610464565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff829392549160031b92831b921b19161790555f80f35b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b90602080835192838152019201905f5b8181106104385750505090565b825173ffffffffffffffffffffffffffffffffffffffff1684526020938401939092019160010161042b565b60025481101561047c5760025f5260205f2001905f90565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff8211176103ee57604052565b67ffffffffffffffff81116103ee5760051b60200190565b9061050c826104ea565b61051960405191826104a9565b8281527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe061054782946104ea565b0190602036910137565b805182101561047c5760209160051b01019056
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x15Wa\x05e\x90\x81a\0\x1A\x829\xF3[_\x80\xFD\xFE`\x80`@R`\x046\x10\x15a\0\x11W_\x80\xFD[_5`\xE0\x1C\x80c0\xAF\x8F\xE2\x14a\x03*W\x80c\\\x0F\x88\x8E\x14a\x02\xF2W\x80c`\x1BTl\x14a\x01\xD9W\x80co\xF6\xF6\xC0\x14a\x01\x99W\x80c\xB3\x18\x84\xC0\x14a\x01\x81W\x80c\xBC\x10\x9D\xD6\x14a\x01eW\x80c\xCD\x12\x1E\x04\x14a\x01eWc\xE5\x9D\x03v\x14a\0qW_\x80\xFD[4a\x01aW` `\x03\x196\x01\x12a\x01aW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01aW6`#\x82\x01\x12\x15a\x01aW\x80`\x04\x015\x90a\0\xAE\x82a\x04\xEAV[\x91a\0\xBC`@Q\x93\x84a\x04\xA9V[\x80\x83R`$` \x84\x01\x91`\x05\x1B\x83\x01\x01\x916\x83\x11a\x01aW`$\x01\x90[\x82\x82\x10a\x01QW\x83a\0\xEB\x81Qa\x05\x02V[\x90_[\x81Q\x81\x10\x15a\x017W\x80a\x01\x04`\x01\x92\x84a\x05QV[Q_R\x81` Rs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16a\x010\x82\x86a\x05QV[R\x01a\0\xEEV[`@Q` \x80\x82R\x81\x90a\x01M\x90\x82\x01\x86a\x04`V[\x03\x90\xF3[\x815\x81R` \x91\x82\x01\x91\x01a\0\xD9V[_\x80\xFD[4a\x01aW_`\x03\x196\x01\x12a\x01aW` _T`@Q\x90\x81R\xF3[4a\x01aW` `\x03\x196\x01\x12a\x01aW`\x045_U\0[4a\x01aW` `\x03\x196\x01\x12a\x01aW`\x045_R`\x01` R` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16`@Q\x90\x81R\xF3[4a\x01aW_`\x03\x196\x01\x12a\x01aW`\x02Ta\x01\xF5\x81a\x05\x02V[_[\x82\x81\x10a\x02\xADWP`@Q\x90` \x82\x84\x81R\x01\x92\x82\x84`\x02_R\x7F@W\x87\xFA\x12\xA8#\xE0\xF2\xB7c\x1C\xC4\x1B;\xA8\x82\x8B3!\xCA\x81\x11\x11\xFAu\xCD:\xA3\xBBZ\xCE\x92_[\x81\x81\x10a\x02\x94WPPa\x02J\x92P\x03\x83a\x04\xA9V[`@Q\x91`@\x83\x01\x90`@\x84RQ\x80\x91R``\x83\x01\x93\x90_[\x81\x81\x10a\x02~W\x84\x80a\x01M\x88\x87\x83\x82\x03` \x85\x01Ra\x04`V[\x82Q\x86R` \x95\x86\x01\x95\x90\x92\x01\x91`\x01\x01a\x02cV[\x84T\x83R`\x01\x94\x85\x01\x94\x87\x94P` \x90\x93\x01\x92\x01a\x025V[\x80a\x02\xB9`\x01\x92a\x04\x1BV[\x90T\x90`\x03\x1B\x1C_R\x81` Rs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16a\x02\xEB\x82\x85a\x05QV[R\x01a\x01\xF7V[4a\x01aW` `\x03\x196\x01\x12a\x01aW`\x045`\x02T\x81\x10\x15a\x01aWa\x03\x1B` \x91a\x04\x1BV[\x90T\x90`\x03\x1B\x1C`@Q\x90\x81R\xF3[4a\x01aW`@`\x03\x196\x01\x12a\x01aW`\x045`$5s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x16\x80\x91\x03a\x01aW\x81_R`\x01` R`@_ \x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82T\x16\x17\x90U`\x02Th\x01\0\0\0\0\0\0\0\0\x81\x10\x15a\x03\xEEW\x80`\x01a\x03\xB7\x92\x01`\x02Ua\x04\x1BV[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x93\x92T\x91`\x03\x1B\x92\x83\x1B\x92\x1B\x19\x16\x17\x90U_\x80\xF3[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[`\x02T\x81\x10\x15a\x043W`\x02_R` _ \x01\x90_\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x90` \x80\x83Q\x92\x83\x81R\x01\x92\x01\x90_[\x81\x81\x10a\x04}WPPP\x90V[\x82Qs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x84R` \x93\x84\x01\x93\x90\x92\x01\x91`\x01\x01a\x04pV[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x03\xEEW`@RV[g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x03\xEEW`\x05\x1B` \x01\x90V[\x90a\x05\x0C\x82a\x04\xEAV[a\x05\x19`@Q\x91\x82a\x04\xA9V[\x82\x81R\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0a\x05G\x82\x94a\x04\xEAV[\x01\x90` 6\x91\x017V[\x80Q\x82\x10\x15a\x043W` \x91`\x05\x1B\x01\x01\x90V",
+        b"`\x80\x80`@R4`\x15Wa\x05e\x90\x81a\0\x1A\x829\xF3[_\x80\xFD\xFE`\x80`@R`\x046\x10\x15a\0\x11W_\x80\xFD[_5`\xE0\x1C\x80c0\xAF\x8F\xE2\x14a\x03*W\x80c[\xD6X\x8B\x14a\x02\x11W\x80c\\\x0F\x88\x8E\x14a\x01\xD9W\x80cj\xE7\xE7\x03\x14a\0qW\x80co\xF6\xF6\xC0\x14a\x01\x99W\x80c\xAA\xE7#\x8C\x14a\0\xA9W\x80c\xB3\x18\x84\xC0\x14a\0\x91Wc\xCD\x12\x1E\x04\x14a\0qW_\x80\xFD[4a\0\x8DW_`\x03\x196\x01\x12a\0\x8DW` _T`@Q\x90\x81R\xF3[_\x80\xFD[4a\0\x8DW` `\x03\x196\x01\x12a\0\x8DW`\x045_U\0[4a\0\x8DW` `\x03\x196\x01\x12a\0\x8DW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x8DW6`#\x82\x01\x12\x15a\0\x8DW\x80`\x04\x015\x90a\0\xE6\x82a\x04\xEAV[\x91a\0\xF4`@Q\x93\x84a\x04\xA9V[\x80\x83R`$` \x84\x01\x91`\x05\x1B\x83\x01\x01\x916\x83\x11a\0\x8DW`$\x01\x90[\x82\x82\x10a\x01\x89W\x83a\x01#\x81Qa\x05\x02V[\x90_[\x81Q\x81\x10\x15a\x01oW\x80a\x01<`\x01\x92\x84a\x05QV[Q_R\x81` Rs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16a\x01h\x82\x86a\x05QV[R\x01a\x01&V[`@Q` \x80\x82R\x81\x90a\x01\x85\x90\x82\x01\x86a\x04\x1BV[\x03\x90\xF3[\x815\x81R` \x91\x82\x01\x91\x01a\x01\x11V[4a\0\x8DW` `\x03\x196\x01\x12a\0\x8DW`\x045_R`\x01` R` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16`@Q\x90\x81R\xF3[4a\0\x8DW` `\x03\x196\x01\x12a\0\x8DW`\x045`\x02T\x81\x10\x15a\0\x8DWa\x02\x02` \x91a\x04dV[\x90T\x90`\x03\x1B\x1C`@Q\x90\x81R\xF3[4a\0\x8DW_`\x03\x196\x01\x12a\0\x8DW`\x02Ta\x02-\x81a\x05\x02V[_[\x82\x81\x10a\x02\xE5WP`@Q\x90` \x82\x84\x81R\x01\x92\x82\x84`\x02_R\x7F@W\x87\xFA\x12\xA8#\xE0\xF2\xB7c\x1C\xC4\x1B;\xA8\x82\x8B3!\xCA\x81\x11\x11\xFAu\xCD:\xA3\xBBZ\xCE\x92_[\x81\x81\x10a\x02\xCCWPPa\x02\x82\x92P\x03\x83a\x04\xA9V[`@Q\x91`@\x83\x01\x90`@\x84RQ\x80\x91R``\x83\x01\x93\x90_[\x81\x81\x10a\x02\xB6W\x84\x80a\x01\x85\x88\x87\x83\x82\x03` \x85\x01Ra\x04\x1BV[\x82Q\x86R` \x95\x86\x01\x95\x90\x92\x01\x91`\x01\x01a\x02\x9BV[\x84T\x83R`\x01\x94\x85\x01\x94\x87\x94P` \x90\x93\x01\x92\x01a\x02mV[\x80a\x02\xF1`\x01\x92a\x04dV[\x90T\x90`\x03\x1B\x1C_R\x81` Rs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16a\x03#\x82\x85a\x05QV[R\x01a\x02/V[4a\0\x8DW`@`\x03\x196\x01\x12a\0\x8DW`\x045`$5s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x16\x80\x91\x03a\0\x8DW\x81_R`\x01` R`@_ \x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82T\x16\x17\x90U`\x02Th\x01\0\0\0\0\0\0\0\0\x81\x10\x15a\x03\xEEW\x80`\x01a\x03\xB7\x92\x01`\x02Ua\x04dV[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x93\x92T\x91`\x03\x1B\x92\x83\x1B\x92\x1B\x19\x16\x17\x90U_\x80\xF3[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[\x90` \x80\x83Q\x92\x83\x81R\x01\x92\x01\x90_[\x81\x81\x10a\x048WPPP\x90V[\x82Qs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x84R` \x93\x84\x01\x93\x90\x92\x01\x91`\x01\x01a\x04+V[`\x02T\x81\x10\x15a\x04|W`\x02_R` _ \x01\x90_\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x03\xEEW`@RV[g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x03\xEEW`\x05\x1B` \x01\x90V[\x90a\x05\x0C\x82a\x04\xEAV[a\x05\x19`@Q\x91\x82a\x04\xA9V[\x82\x81R\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0a\x05G\x82\x94a\x04\xEAV[\x01\x90` 6\x91\x017V[\x80Q\x82\x10\x15a\x04|W` \x91`\x05\x1B\x01\x01\x90V",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040526004361015610011575f80fd5b5f3560e01c806330af8fe21461032a5780635c0f888e146102f2578063601b546c146101d95780636ff6f6c014610199578063b31884c014610181578063bc109dd614610165578063cd121e04146101655763e59d037614610071575f80fd5b346101615760206003193601126101615760043567ffffffffffffffff81116101615736602382011215610161578060040135906100ae826104ea565b916100bc60405193846104a9565b8083526024602084019160051b8301019136831161016157602401905b82821061015157836100eb8151610502565b905f5b8151811015610137578061010460019284610551565b515f528160205273ffffffffffffffffffffffffffffffffffffffff60405f2054166101308286610551565b52016100ee565b6040516020808252819061014d90820186610460565b0390f35b81358152602091820191016100d9565b5f80fd5b34610161575f6003193601126101615760205f54604051908152f35b34610161576020600319360112610161576004355f55005b34610161576020600319360112610161576004355f526001602052602073ffffffffffffffffffffffffffffffffffffffff60405f205416604051908152f35b34610161575f600319360112610161576002546101f581610502565b5f5b8281106102ad5750604051906020828481520192828460025f527f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace925f5b81811061029457505061024a925003836104a9565b60405191604083019060408452518091526060830193905f5b81811061027e57848061014d88878382036020850152610460565b8251865260209586019590920191600101610263565b8454835260019485019487945060209093019201610235565b806102b960019261041b565b90549060031b1c5f528160205273ffffffffffffffffffffffffffffffffffffffff60405f2054166102eb8285610551565b52016101f7565b34610161576020600319360112610161576004356002548110156101615761031b60209161041b565b90549060031b1c604051908152f35b346101615760406003193601126101615760043560243573ffffffffffffffffffffffffffffffffffffffff811680910361016157815f52600160205260405f20907fffffffffffffffffffffffff0000000000000000000000000000000000000000825416179055600254680100000000000000008110156103ee578060016103b7920160025561041b565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff829392549160031b92831b921b19161790555f80f35b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b6002548110156104335760025f5260205f2001905f90565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b90602080835192838152019201905f5b81811061047d5750505090565b825173ffffffffffffffffffffffffffffffffffffffff16845260209384019390920191600101610470565b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff8211176103ee57604052565b67ffffffffffffffff81116103ee5760051b60200190565b9061050c826104ea565b61051960405191826104a9565b8281527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe061054782946104ea565b0190602036910137565b80518210156104335760209160051b01019056
+    ///0x60806040526004361015610011575f80fd5b5f3560e01c806330af8fe21461032a5780635bd6588b146102115780635c0f888e146101d95780636ae7e703146100715780636ff6f6c014610199578063aae7238c146100a9578063b31884c0146100915763cd121e0414610071575f80fd5b3461008d575f60031936011261008d5760205f54604051908152f35b5f80fd5b3461008d57602060031936011261008d576004355f55005b3461008d57602060031936011261008d5760043567ffffffffffffffff811161008d573660238201121561008d578060040135906100e6826104ea565b916100f460405193846104a9565b8083526024602084019160051b8301019136831161008d57602401905b82821061018957836101238151610502565b905f5b815181101561016f578061013c60019284610551565b515f528160205273ffffffffffffffffffffffffffffffffffffffff60405f2054166101688286610551565b5201610126565b604051602080825281906101859082018661041b565b0390f35b8135815260209182019101610111565b3461008d57602060031936011261008d576004355f526001602052602073ffffffffffffffffffffffffffffffffffffffff60405f205416604051908152f35b3461008d57602060031936011261008d5760043560025481101561008d57610202602091610464565b90549060031b1c604051908152f35b3461008d575f60031936011261008d5760025461022d81610502565b5f5b8281106102e55750604051906020828481520192828460025f527f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace925f5b8181106102cc575050610282925003836104a9565b60405191604083019060408452518091526060830193905f5b8181106102b65784806101858887838203602085015261041b565b825186526020958601959092019160010161029b565b845483526001948501948794506020909301920161026d565b806102f1600192610464565b90549060031b1c5f528160205273ffffffffffffffffffffffffffffffffffffffff60405f2054166103238285610551565b520161022f565b3461008d57604060031936011261008d5760043560243573ffffffffffffffffffffffffffffffffffffffff811680910361008d57815f52600160205260405f20907fffffffffffffffffffffffff0000000000000000000000000000000000000000825416179055600254680100000000000000008110156103ee578060016103b79201600255610464565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff829392549160031b92831b921b19161790555f80f35b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b90602080835192838152019201905f5b8181106104385750505090565b825173ffffffffffffffffffffffffffffffffffffffff1684526020938401939092019160010161042b565b60025481101561047c5760025f5260205f2001905f90565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff8211176103ee57604052565b67ffffffffffffffff81116103ee5760051b60200190565b9061050c826104ea565b61051960405191826104a9565b8281527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe061054782946104ea565b0190602036910137565b805182101561047c5760209160051b01019056
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R`\x046\x10\x15a\0\x11W_\x80\xFD[_5`\xE0\x1C\x80c0\xAF\x8F\xE2\x14a\x03*W\x80c\\\x0F\x88\x8E\x14a\x02\xF2W\x80c`\x1BTl\x14a\x01\xD9W\x80co\xF6\xF6\xC0\x14a\x01\x99W\x80c\xB3\x18\x84\xC0\x14a\x01\x81W\x80c\xBC\x10\x9D\xD6\x14a\x01eW\x80c\xCD\x12\x1E\x04\x14a\x01eWc\xE5\x9D\x03v\x14a\0qW_\x80\xFD[4a\x01aW` `\x03\x196\x01\x12a\x01aW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01aW6`#\x82\x01\x12\x15a\x01aW\x80`\x04\x015\x90a\0\xAE\x82a\x04\xEAV[\x91a\0\xBC`@Q\x93\x84a\x04\xA9V[\x80\x83R`$` \x84\x01\x91`\x05\x1B\x83\x01\x01\x916\x83\x11a\x01aW`$\x01\x90[\x82\x82\x10a\x01QW\x83a\0\xEB\x81Qa\x05\x02V[\x90_[\x81Q\x81\x10\x15a\x017W\x80a\x01\x04`\x01\x92\x84a\x05QV[Q_R\x81` Rs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16a\x010\x82\x86a\x05QV[R\x01a\0\xEEV[`@Q` \x80\x82R\x81\x90a\x01M\x90\x82\x01\x86a\x04`V[\x03\x90\xF3[\x815\x81R` \x91\x82\x01\x91\x01a\0\xD9V[_\x80\xFD[4a\x01aW_`\x03\x196\x01\x12a\x01aW` _T`@Q\x90\x81R\xF3[4a\x01aW` `\x03\x196\x01\x12a\x01aW`\x045_U\0[4a\x01aW` `\x03\x196\x01\x12a\x01aW`\x045_R`\x01` R` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16`@Q\x90\x81R\xF3[4a\x01aW_`\x03\x196\x01\x12a\x01aW`\x02Ta\x01\xF5\x81a\x05\x02V[_[\x82\x81\x10a\x02\xADWP`@Q\x90` \x82\x84\x81R\x01\x92\x82\x84`\x02_R\x7F@W\x87\xFA\x12\xA8#\xE0\xF2\xB7c\x1C\xC4\x1B;\xA8\x82\x8B3!\xCA\x81\x11\x11\xFAu\xCD:\xA3\xBBZ\xCE\x92_[\x81\x81\x10a\x02\x94WPPa\x02J\x92P\x03\x83a\x04\xA9V[`@Q\x91`@\x83\x01\x90`@\x84RQ\x80\x91R``\x83\x01\x93\x90_[\x81\x81\x10a\x02~W\x84\x80a\x01M\x88\x87\x83\x82\x03` \x85\x01Ra\x04`V[\x82Q\x86R` \x95\x86\x01\x95\x90\x92\x01\x91`\x01\x01a\x02cV[\x84T\x83R`\x01\x94\x85\x01\x94\x87\x94P` \x90\x93\x01\x92\x01a\x025V[\x80a\x02\xB9`\x01\x92a\x04\x1BV[\x90T\x90`\x03\x1B\x1C_R\x81` Rs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16a\x02\xEB\x82\x85a\x05QV[R\x01a\x01\xF7V[4a\x01aW` `\x03\x196\x01\x12a\x01aW`\x045`\x02T\x81\x10\x15a\x01aWa\x03\x1B` \x91a\x04\x1BV[\x90T\x90`\x03\x1B\x1C`@Q\x90\x81R\xF3[4a\x01aW`@`\x03\x196\x01\x12a\x01aW`\x045`$5s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x16\x80\x91\x03a\x01aW\x81_R`\x01` R`@_ \x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82T\x16\x17\x90U`\x02Th\x01\0\0\0\0\0\0\0\0\x81\x10\x15a\x03\xEEW\x80`\x01a\x03\xB7\x92\x01`\x02Ua\x04\x1BV[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x93\x92T\x91`\x03\x1B\x92\x83\x1B\x92\x1B\x19\x16\x17\x90U_\x80\xF3[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[`\x02T\x81\x10\x15a\x043W`\x02_R` _ \x01\x90_\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x90` \x80\x83Q\x92\x83\x81R\x01\x92\x01\x90_[\x81\x81\x10a\x04}WPPP\x90V[\x82Qs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x84R` \x93\x84\x01\x93\x90\x92\x01\x91`\x01\x01a\x04pV[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x03\xEEW`@RV[g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x03\xEEW`\x05\x1B` \x01\x90V[\x90a\x05\x0C\x82a\x04\xEAV[a\x05\x19`@Q\x91\x82a\x04\xA9V[\x82\x81R\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0a\x05G\x82\x94a\x04\xEAV[\x01\x90` 6\x91\x017V[\x80Q\x82\x10\x15a\x043W` \x91`\x05\x1B\x01\x01\x90V",
+        b"`\x80`@R`\x046\x10\x15a\0\x11W_\x80\xFD[_5`\xE0\x1C\x80c0\xAF\x8F\xE2\x14a\x03*W\x80c[\xD6X\x8B\x14a\x02\x11W\x80c\\\x0F\x88\x8E\x14a\x01\xD9W\x80cj\xE7\xE7\x03\x14a\0qW\x80co\xF6\xF6\xC0\x14a\x01\x99W\x80c\xAA\xE7#\x8C\x14a\0\xA9W\x80c\xB3\x18\x84\xC0\x14a\0\x91Wc\xCD\x12\x1E\x04\x14a\0qW_\x80\xFD[4a\0\x8DW_`\x03\x196\x01\x12a\0\x8DW` _T`@Q\x90\x81R\xF3[_\x80\xFD[4a\0\x8DW` `\x03\x196\x01\x12a\0\x8DW`\x045_U\0[4a\0\x8DW` `\x03\x196\x01\x12a\0\x8DW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x8DW6`#\x82\x01\x12\x15a\0\x8DW\x80`\x04\x015\x90a\0\xE6\x82a\x04\xEAV[\x91a\0\xF4`@Q\x93\x84a\x04\xA9V[\x80\x83R`$` \x84\x01\x91`\x05\x1B\x83\x01\x01\x916\x83\x11a\0\x8DW`$\x01\x90[\x82\x82\x10a\x01\x89W\x83a\x01#\x81Qa\x05\x02V[\x90_[\x81Q\x81\x10\x15a\x01oW\x80a\x01<`\x01\x92\x84a\x05QV[Q_R\x81` Rs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16a\x01h\x82\x86a\x05QV[R\x01a\x01&V[`@Q` \x80\x82R\x81\x90a\x01\x85\x90\x82\x01\x86a\x04\x1BV[\x03\x90\xF3[\x815\x81R` \x91\x82\x01\x91\x01a\x01\x11V[4a\0\x8DW` `\x03\x196\x01\x12a\0\x8DW`\x045_R`\x01` R` s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16`@Q\x90\x81R\xF3[4a\0\x8DW` `\x03\x196\x01\x12a\0\x8DW`\x045`\x02T\x81\x10\x15a\0\x8DWa\x02\x02` \x91a\x04dV[\x90T\x90`\x03\x1B\x1C`@Q\x90\x81R\xF3[4a\0\x8DW_`\x03\x196\x01\x12a\0\x8DW`\x02Ta\x02-\x81a\x05\x02V[_[\x82\x81\x10a\x02\xE5WP`@Q\x90` \x82\x84\x81R\x01\x92\x82\x84`\x02_R\x7F@W\x87\xFA\x12\xA8#\xE0\xF2\xB7c\x1C\xC4\x1B;\xA8\x82\x8B3!\xCA\x81\x11\x11\xFAu\xCD:\xA3\xBBZ\xCE\x92_[\x81\x81\x10a\x02\xCCWPPa\x02\x82\x92P\x03\x83a\x04\xA9V[`@Q\x91`@\x83\x01\x90`@\x84RQ\x80\x91R``\x83\x01\x93\x90_[\x81\x81\x10a\x02\xB6W\x84\x80a\x01\x85\x88\x87\x83\x82\x03` \x85\x01Ra\x04\x1BV[\x82Q\x86R` \x95\x86\x01\x95\x90\x92\x01\x91`\x01\x01a\x02\x9BV[\x84T\x83R`\x01\x94\x85\x01\x94\x87\x94P` \x90\x93\x01\x92\x01a\x02mV[\x80a\x02\xF1`\x01\x92a\x04dV[\x90T\x90`\x03\x1B\x1C_R\x81` Rs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF`@_ T\x16a\x03#\x82\x85a\x05QV[R\x01a\x02/V[4a\0\x8DW`@`\x03\x196\x01\x12a\0\x8DW`\x045`$5s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x16\x80\x91\x03a\0\x8DW\x81_R`\x01` R`@_ \x90\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x82T\x16\x17\x90U`\x02Th\x01\0\0\0\0\0\0\0\0\x81\x10\x15a\x03\xEEW\x80`\x01a\x03\xB7\x92\x01`\x02Ua\x04dV[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x93\x92T\x91`\x03\x1B\x92\x83\x1B\x92\x1B\x19\x16\x17\x90U_\x80\xF3[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[\x90` \x80\x83Q\x92\x83\x81R\x01\x92\x01\x90_[\x81\x81\x10a\x048WPPP\x90V[\x82Qs\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x16\x84R` \x93\x84\x01\x93\x90\x92\x01\x91`\x01\x01a\x04+V[`\x02T\x81\x10\x15a\x04|W`\x02_R` _ \x01\x90_\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x03\xEEW`@RV[g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x03\xEEW`\x05\x1B` \x01\x90V[\x90a\x05\x0C\x82a\x04\xEAV[a\x05\x19`@Q\x91\x82a\x04\xA9V[\x82\x81R\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0a\x05G\x82\x94a\x04\xEAV[\x01\x90` 6\x91\x017V[\x80Q\x82\x10\x15a\x04|W` \x91`\x05\x1B\x01\x01\x90V",
     );
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
@@ -654,19 +654,19 @@ function appchainContracts(uint256) external view returns (address);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getAppchainsAndContracts()` and selector `0x601b546c`.
+    /**Function with signature `getAppchainsAndContractsForGasTracking()` and selector `0x5bd6588b`.
 ```solidity
-function getAppchainsAndContracts() external view returns (uint256[] memory, address[] memory);
+function getAppchainsAndContractsForGasTracking() external view returns (uint256[] memory, address[] memory);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct getAppchainsAndContractsCall;
+    pub struct getAppchainsAndContractsForGasTrackingCall;
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getAppchainsAndContracts()`](getAppchainsAndContractsCall) function.
+    ///Container type for the return parameters of the [`getAppchainsAndContractsForGasTracking()`](getAppchainsAndContractsForGasTrackingCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct getAppchainsAndContractsReturn {
+    pub struct getAppchainsAndContractsForGasTrackingReturn {
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
@@ -700,16 +700,16 @@ function getAppchainsAndContracts() external view returns (uint256[] memory, add
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<getAppchainsAndContractsCall>
+            impl ::core::convert::From<getAppchainsAndContractsForGasTrackingCall>
             for UnderlyingRustTuple<'_> {
-                fn from(value: getAppchainsAndContractsCall) -> Self {
+                fn from(value: getAppchainsAndContractsForGasTrackingCall) -> Self {
                     ()
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getAppchainsAndContractsCall {
+            for getAppchainsAndContractsForGasTrackingCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self
                 }
@@ -741,25 +741,25 @@ function getAppchainsAndContracts() external view returns (uint256[] memory, add
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<getAppchainsAndContractsReturn>
+            impl ::core::convert::From<getAppchainsAndContractsForGasTrackingReturn>
             for UnderlyingRustTuple<'_> {
-                fn from(value: getAppchainsAndContractsReturn) -> Self {
+                fn from(value: getAppchainsAndContractsForGasTrackingReturn) -> Self {
                     (value._0, value._1)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getAppchainsAndContractsReturn {
+            for getAppchainsAndContractsForGasTrackingReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { _0: tuple.0, _1: tuple.1 }
                 }
             }
         }
-        impl getAppchainsAndContractsReturn {
+        impl getAppchainsAndContractsForGasTrackingReturn {
             fn _tokenize(
                 &self,
-            ) -> <getAppchainsAndContractsCall as alloy_sol_types::SolCall>::ReturnToken<
+            ) -> <getAppchainsAndContractsForGasTrackingCall as alloy_sol_types::SolCall>::ReturnToken<
                 '_,
             > {
                 (
@@ -773,12 +773,12 @@ function getAppchainsAndContracts() external view returns (uint256[] memory, add
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for getAppchainsAndContractsCall {
+        impl alloy_sol_types::SolCall for getAppchainsAndContractsForGasTrackingCall {
             type Parameters<'a> = ();
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = getAppchainsAndContractsReturn;
+            type Return = getAppchainsAndContractsForGasTrackingReturn;
             type ReturnTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
@@ -786,8 +786,8 @@ function getAppchainsAndContracts() external view returns (uint256[] memory, add
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getAppchainsAndContracts()";
-            const SELECTOR: [u8; 4] = [96u8, 27u8, 84u8, 108u8];
+            const SIGNATURE: &'static str = "getAppchainsAndContractsForGasTracking()";
+            const SELECTOR: [u8; 4] = [91u8, 214u8, 88u8, 139u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -800,7 +800,7 @@ function getAppchainsAndContracts() external view returns (uint256[] memory, add
             }
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                getAppchainsAndContractsReturn::_tokenize(ret)
+                getAppchainsAndContractsForGasTrackingReturn::_tokenize(ret)
             }
             #[inline]
             fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
@@ -822,13 +822,13 @@ function getAppchainsAndContracts() external view returns (uint256[] memory, add
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getContractsForAppchains(uint256[])` and selector `0xe59d0376`.
+    /**Function with signature `getContractsForGasTracking(uint256[])` and selector `0xaae7238c`.
 ```solidity
-function getContractsForAppchains(uint256[] memory chainIDs) external view returns (address[] memory);
+function getContractsForGasTracking(uint256[] memory chainIDs) external view returns (address[] memory);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct getContractsForAppchainsCall {
+    pub struct getContractsForGasTrackingCall {
         #[allow(missing_docs)]
         pub chainIDs: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
@@ -836,10 +836,10 @@ function getContractsForAppchains(uint256[] memory chainIDs) external view retur
     }
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getContractsForAppchains(uint256[])`](getContractsForAppchainsCall) function.
+    ///Container type for the return parameters of the [`getContractsForGasTracking(uint256[])`](getContractsForGasTrackingCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct getContractsForAppchainsReturn {
+    pub struct getContractsForGasTrackingReturn {
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
@@ -875,16 +875,16 @@ function getContractsForAppchains(uint256[] memory chainIDs) external view retur
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<getContractsForAppchainsCall>
+            impl ::core::convert::From<getContractsForGasTrackingCall>
             for UnderlyingRustTuple<'_> {
-                fn from(value: getContractsForAppchainsCall) -> Self {
+                fn from(value: getContractsForGasTrackingCall) -> Self {
                     (value.chainIDs,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getContractsForAppchainsCall {
+            for getContractsForGasTrackingCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { chainIDs: tuple.0 }
                 }
@@ -912,23 +912,23 @@ function getContractsForAppchains(uint256[] memory chainIDs) external view retur
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<getContractsForAppchainsReturn>
+            impl ::core::convert::From<getContractsForGasTrackingReturn>
             for UnderlyingRustTuple<'_> {
-                fn from(value: getContractsForAppchainsReturn) -> Self {
+                fn from(value: getContractsForGasTrackingReturn) -> Self {
                     (value._0,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getContractsForAppchainsReturn {
+            for getContractsForGasTrackingReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { _0: tuple.0 }
                 }
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for getContractsForAppchainsCall {
+        impl alloy_sol_types::SolCall for getContractsForGasTrackingCall {
             type Parameters<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
             );
@@ -944,8 +944,8 @@ function getContractsForAppchains(uint256[] memory chainIDs) external view retur
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getContractsForAppchains(uint256[])";
-            const SELECTOR: [u8; 4] = [229u8, 157u8, 3u8, 118u8];
+            const SIGNATURE: &'static str = "getContractsForGasTracking(uint256[])";
+            const SELECTOR: [u8; 4] = [170u8, 231u8, 35u8, 140u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -974,7 +974,7 @@ function getContractsForAppchains(uint256[] memory chainIDs) external view retur
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
                     .map(|r| {
-                        let r: getContractsForAppchainsReturn = r.into();
+                        let r: getContractsForGasTrackingReturn = r.into();
                         r._0
                     })
             }
@@ -986,7 +986,7 @@ function getContractsForAppchains(uint256[] memory chainIDs) external view retur
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
-                        let r: getContractsForAppchainsReturn = r.into();
+                        let r: getContractsForGasTrackingReturn = r.into();
                         r._0
                     })
             }
@@ -994,19 +994,19 @@ function getContractsForAppchains(uint256[] memory chainIDs) external view retur
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getTotalAppchains()` and selector `0xbc109dd6`.
+    /**Function with signature `getTotalAppchainsForGasTracking()` and selector `0x6ae7e703`.
 ```solidity
-function getTotalAppchains() external view returns (uint256);
+function getTotalAppchainsForGasTracking() external view returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct getTotalAppchainsCall;
+    pub struct getTotalAppchainsForGasTrackingCall;
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getTotalAppchains()`](getTotalAppchainsCall) function.
+    ///Container type for the return parameters of the [`getTotalAppchainsForGasTracking()`](getTotalAppchainsForGasTrackingCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct getTotalAppchainsReturn {
+    pub struct getTotalAppchainsForGasTrackingReturn {
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
@@ -1036,16 +1036,16 @@ function getTotalAppchains() external view returns (uint256);
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<getTotalAppchainsCall>
+            impl ::core::convert::From<getTotalAppchainsForGasTrackingCall>
             for UnderlyingRustTuple<'_> {
-                fn from(value: getTotalAppchainsCall) -> Self {
+                fn from(value: getTotalAppchainsForGasTrackingCall) -> Self {
                     ()
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getTotalAppchainsCall {
+            for getTotalAppchainsForGasTrackingCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self
                 }
@@ -1071,23 +1071,23 @@ function getTotalAppchains() external view returns (uint256);
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<getTotalAppchainsReturn>
+            impl ::core::convert::From<getTotalAppchainsForGasTrackingReturn>
             for UnderlyingRustTuple<'_> {
-                fn from(value: getTotalAppchainsReturn) -> Self {
+                fn from(value: getTotalAppchainsForGasTrackingReturn) -> Self {
                     (value._0,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getTotalAppchainsReturn {
+            for getTotalAppchainsForGasTrackingReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { _0: tuple.0 }
                 }
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for getTotalAppchainsCall {
+        impl alloy_sol_types::SolCall for getTotalAppchainsForGasTrackingCall {
             type Parameters<'a> = ();
             type Token<'a> = <Self::Parameters<
                 'a,
@@ -1097,8 +1097,8 @@ function getTotalAppchains() external view returns (uint256);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getTotalAppchains()";
-            const SELECTOR: [u8; 4] = [188u8, 16u8, 157u8, 214u8];
+            const SIGNATURE: &'static str = "getTotalAppchainsForGasTracking()";
+            const SELECTOR: [u8; 4] = [106u8, 231u8, 231u8, 3u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -1123,7 +1123,7 @@ function getTotalAppchains() external view returns (uint256);
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
                     .map(|r| {
-                        let r: getTotalAppchainsReturn = r.into();
+                        let r: getTotalAppchainsForGasTrackingReturn = r.into();
                         r._0
                     })
             }
@@ -1135,7 +1135,7 @@ function getTotalAppchains() external view returns (uint256);
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
-                        let r: getTotalAppchainsReturn = r.into();
+                        let r: getTotalAppchainsForGasTrackingReturn = r.into();
                         r._0
                     })
             }
@@ -1447,11 +1447,13 @@ function totalAppchains() external view returns (uint256);
         #[allow(missing_docs)]
         appchainContracts(appchainContractsCall),
         #[allow(missing_docs)]
-        getAppchainsAndContracts(getAppchainsAndContractsCall),
+        getAppchainsAndContractsForGasTracking(
+            getAppchainsAndContractsForGasTrackingCall,
+        ),
         #[allow(missing_docs)]
-        getContractsForAppchains(getContractsForAppchainsCall),
+        getContractsForGasTracking(getContractsForGasTrackingCall),
         #[allow(missing_docs)]
-        getTotalAppchains(getTotalAppchainsCall),
+        getTotalAppchainsForGasTracking(getTotalAppchainsForGasTrackingCall),
         #[allow(missing_docs)]
         setTotalAppchains(setTotalAppchainsCall),
         #[allow(missing_docs)]
@@ -1467,13 +1469,13 @@ function totalAppchains() external view returns (uint256);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [48u8, 175u8, 143u8, 226u8],
+            [91u8, 214u8, 88u8, 139u8],
             [92u8, 15u8, 136u8, 142u8],
-            [96u8, 27u8, 84u8, 108u8],
+            [106u8, 231u8, 231u8, 3u8],
             [111u8, 246u8, 246u8, 192u8],
+            [170u8, 231u8, 35u8, 140u8],
             [179u8, 24u8, 132u8, 192u8],
-            [188u8, 16u8, 157u8, 214u8],
             [205u8, 18u8, 30u8, 4u8],
-            [229u8, 157u8, 3u8, 118u8],
         ];
     }
     #[automatically_derived]
@@ -1493,14 +1495,14 @@ function totalAppchains() external view returns (uint256);
                 Self::appchainContracts(_) => {
                     <appchainContractsCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::getAppchainsAndContracts(_) => {
-                    <getAppchainsAndContractsCall as alloy_sol_types::SolCall>::SELECTOR
+                Self::getAppchainsAndContractsForGasTracking(_) => {
+                    <getAppchainsAndContractsForGasTrackingCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::getContractsForAppchains(_) => {
-                    <getContractsForAppchainsCall as alloy_sol_types::SolCall>::SELECTOR
+                Self::getContractsForGasTracking(_) => {
+                    <getContractsForGasTrackingCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::getTotalAppchains(_) => {
-                    <getTotalAppchainsCall as alloy_sol_types::SolCall>::SELECTOR
+                Self::getTotalAppchainsForGasTracking(_) => {
+                    <getTotalAppchainsForGasTrackingCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::setTotalAppchains(_) => {
                     <setTotalAppchainsCall as alloy_sol_types::SolCall>::SELECTOR
@@ -1539,6 +1541,19 @@ function totalAppchains() external view returns (uint256);
                     addAppchain
                 },
                 {
+                    fn getAppchainsAndContractsForGasTracking(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
+                        <getAppchainsAndContractsForGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(
+                                MockAppchainFactoryCalls::getAppchainsAndContractsForGasTracking,
+                            )
+                    }
+                    getAppchainsAndContractsForGasTracking
+                },
+                {
                     fn appchainChainIDs(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
@@ -1550,15 +1565,17 @@ function totalAppchains() external view returns (uint256);
                     appchainChainIDs
                 },
                 {
-                    fn getAppchainsAndContracts(
+                    fn getTotalAppchainsForGasTracking(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
-                        <getAppchainsAndContractsCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <getTotalAppchainsForGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
                             )
-                            .map(MockAppchainFactoryCalls::getAppchainsAndContracts)
+                            .map(
+                                MockAppchainFactoryCalls::getTotalAppchainsForGasTracking,
+                            )
                     }
-                    getAppchainsAndContracts
+                    getTotalAppchainsForGasTracking
                 },
                 {
                     fn appchainContracts(
@@ -1572,6 +1589,17 @@ function totalAppchains() external view returns (uint256);
                     appchainContracts
                 },
                 {
+                    fn getContractsForGasTracking(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
+                        <getContractsForGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(MockAppchainFactoryCalls::getContractsForGasTracking)
+                    }
+                    getContractsForGasTracking
+                },
+                {
                     fn setTotalAppchains(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
@@ -1583,17 +1611,6 @@ function totalAppchains() external view returns (uint256);
                     setTotalAppchains
                 },
                 {
-                    fn getTotalAppchains(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
-                        <getTotalAppchainsCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(MockAppchainFactoryCalls::getTotalAppchains)
-                    }
-                    getTotalAppchains
-                },
-                {
                     fn totalAppchains(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
@@ -1603,17 +1620,6 @@ function totalAppchains() external view returns (uint256);
                             .map(MockAppchainFactoryCalls::totalAppchains)
                     }
                     totalAppchains
-                },
-                {
-                    fn getContractsForAppchains(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
-                        <getContractsForAppchainsCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(MockAppchainFactoryCalls::getContractsForAppchains)
-                    }
-                    getContractsForAppchains
                 },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
@@ -1647,6 +1653,19 @@ function totalAppchains() external view returns (uint256);
                     addAppchain
                 },
                 {
+                    fn getAppchainsAndContractsForGasTracking(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
+                        <getAppchainsAndContractsForGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(
+                                MockAppchainFactoryCalls::getAppchainsAndContractsForGasTracking,
+                            )
+                    }
+                    getAppchainsAndContractsForGasTracking
+                },
+                {
                     fn appchainChainIDs(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
@@ -1658,15 +1677,17 @@ function totalAppchains() external view returns (uint256);
                     appchainChainIDs
                 },
                 {
-                    fn getAppchainsAndContracts(
+                    fn getTotalAppchainsForGasTracking(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
-                        <getAppchainsAndContractsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <getTotalAppchainsForGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
                             )
-                            .map(MockAppchainFactoryCalls::getAppchainsAndContracts)
+                            .map(
+                                MockAppchainFactoryCalls::getTotalAppchainsForGasTracking,
+                            )
                     }
-                    getAppchainsAndContracts
+                    getTotalAppchainsForGasTracking
                 },
                 {
                     fn appchainContracts(
@@ -1680,6 +1701,17 @@ function totalAppchains() external view returns (uint256);
                     appchainContracts
                 },
                 {
+                    fn getContractsForGasTracking(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
+                        <getContractsForGasTrackingCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(MockAppchainFactoryCalls::getContractsForGasTracking)
+                    }
+                    getContractsForGasTracking
+                },
+                {
                     fn setTotalAppchains(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
@@ -1691,17 +1723,6 @@ function totalAppchains() external view returns (uint256);
                     setTotalAppchains
                 },
                 {
-                    fn getTotalAppchains(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
-                        <getTotalAppchainsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(MockAppchainFactoryCalls::getTotalAppchains)
-                    }
-                    getTotalAppchains
-                },
-                {
                     fn totalAppchains(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
@@ -1711,17 +1732,6 @@ function totalAppchains() external view returns (uint256);
                             .map(MockAppchainFactoryCalls::totalAppchains)
                     }
                     totalAppchains
-                },
-                {
-                    fn getContractsForAppchains(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<MockAppchainFactoryCalls> {
-                        <getContractsForAppchainsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(MockAppchainFactoryCalls::getContractsForAppchains)
-                    }
-                    getContractsForAppchains
                 },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
@@ -1752,18 +1762,18 @@ function totalAppchains() external view returns (uint256);
                         inner,
                     )
                 }
-                Self::getAppchainsAndContracts(inner) => {
-                    <getAppchainsAndContractsCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                Self::getAppchainsAndContractsForGasTracking(inner) => {
+                    <getAppchainsAndContractsForGasTrackingCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
-                Self::getContractsForAppchains(inner) => {
-                    <getContractsForAppchainsCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                Self::getContractsForGasTracking(inner) => {
+                    <getContractsForGasTrackingCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
-                Self::getTotalAppchains(inner) => {
-                    <getTotalAppchainsCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                Self::getTotalAppchainsForGasTracking(inner) => {
+                    <getTotalAppchainsForGasTrackingCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -1800,20 +1810,20 @@ function totalAppchains() external view returns (uint256);
                         out,
                     )
                 }
-                Self::getAppchainsAndContracts(inner) => {
-                    <getAppchainsAndContractsCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::getAppchainsAndContractsForGasTracking(inner) => {
+                    <getAppchainsAndContractsForGasTrackingCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
                 }
-                Self::getContractsForAppchains(inner) => {
-                    <getContractsForAppchainsCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::getContractsForGasTracking(inner) => {
+                    <getContractsForGasTrackingCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
                 }
-                Self::getTotalAppchains(inner) => {
-                    <getTotalAppchainsCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::getTotalAppchainsForGasTracking(inner) => {
+                    <getTotalAppchainsForGasTrackingCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -2019,30 +2029,34 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, appchainContractsCall, N> {
             self.call_builder(&appchainContractsCall(_0))
         }
-        ///Creates a new call builder for the [`getAppchainsAndContracts`] function.
-        pub fn getAppchainsAndContracts(
+        ///Creates a new call builder for the [`getAppchainsAndContractsForGasTracking`] function.
+        pub fn getAppchainsAndContractsForGasTracking(
             &self,
-        ) -> alloy_contract::SolCallBuilder<&P, getAppchainsAndContractsCall, N> {
-            self.call_builder(&getAppchainsAndContractsCall)
+        ) -> alloy_contract::SolCallBuilder<
+            &P,
+            getAppchainsAndContractsForGasTrackingCall,
+            N,
+        > {
+            self.call_builder(&getAppchainsAndContractsForGasTrackingCall)
         }
-        ///Creates a new call builder for the [`getContractsForAppchains`] function.
-        pub fn getContractsForAppchains(
+        ///Creates a new call builder for the [`getContractsForGasTracking`] function.
+        pub fn getContractsForGasTracking(
             &self,
             chainIDs: alloy::sol_types::private::Vec<
                 alloy::sol_types::private::primitives::aliases::U256,
             >,
-        ) -> alloy_contract::SolCallBuilder<&P, getContractsForAppchainsCall, N> {
+        ) -> alloy_contract::SolCallBuilder<&P, getContractsForGasTrackingCall, N> {
             self.call_builder(
-                &getContractsForAppchainsCall {
+                &getContractsForGasTrackingCall {
                     chainIDs,
                 },
             )
         }
-        ///Creates a new call builder for the [`getTotalAppchains`] function.
-        pub fn getTotalAppchains(
+        ///Creates a new call builder for the [`getTotalAppchainsForGasTracking`] function.
+        pub fn getTotalAppchainsForGasTracking(
             &self,
-        ) -> alloy_contract::SolCallBuilder<&P, getTotalAppchainsCall, N> {
-            self.call_builder(&getTotalAppchainsCall)
+        ) -> alloy_contract::SolCallBuilder<&P, getTotalAppchainsForGasTrackingCall, N> {
+            self.call_builder(&getTotalAppchainsForGasTrackingCall)
         }
         ///Creates a new call builder for the [`setTotalAppchains`] function.
         pub fn setTotalAppchains(

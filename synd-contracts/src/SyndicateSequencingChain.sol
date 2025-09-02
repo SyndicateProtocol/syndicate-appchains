@@ -6,6 +6,12 @@ import {GasCounter} from "./staking/GasCounter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
+interface ISyndicateFactory {
+    function isImplementationAllowed(address implementation) external view returns (bool);
+    function notifyChainUpgrade(uint256 chainId, address newImplementation) external;
+}
 
 enum TransactionType {
     Unsigned, // an unsigned tx
@@ -73,10 +79,18 @@ contract SyndicateSequencingChain is
     /// Storage slot 1
     address public emissionsReceiver;
 
+    /// @notice The factory contract that deployed this chain
+    /// Storage slot 2
+    address public factory;
+
+    /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
+    /// Storage slot 3
+    bool public allowGasTrackingBanOnUpgrade;
+
     // We use per-address contract nonces instead of a global one to increase the predictability of the request id
     // and store per-address contract tx counts for debugging purposes.
     // Note that gaps are allowed in the request id, unlike a regular nonce.
-    /// Storage slot 2
+    /// Storage slot 4
     mapping(address => uint256) public contractNonce;
 
     /*//////////////////////////////////////////////////////////////
@@ -120,13 +134,22 @@ contract SyndicateSequencingChain is
         __UUPSUpgradeable_init();
         _enableGasTracking();
         appchainId = _appchainId;
+        factory = msg.sender;
+        allowGasTrackingBanOnUpgrade = false;
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
     /// @dev Required by UUPSUpgradeable to restrict upgradeability to the owner.
     /// @param _newImplementation The address of the new implementation contract.
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
-        // TODO: Confirm implementation is a allowlisted SyndicateSequencingChain contract
+        bool isAllowed = ISyndicateFactory(factory).isImplementationAllowed(_newImplementation);
+
+        if (!isAllowed) {
+            require(allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
+        }
+
+        // Notify factory about the upgrade
+        ISyndicateFactory(factory).notifyChainUpgrade(appchainId, _newImplementation);
     }
 
     /// this is intentionally different from the standard offset used by rollups to prevent collisions
@@ -305,5 +328,12 @@ contract SyndicateSequencingChain is
     /// @dev Only callable by the contract owner
     function enableGasTracking() external onlyOwner {
         _enableGasTracking();
+    }
+
+    /// @notice Set whether to allow gas tracking ban on upgrade
+    /// @dev Only callable by the contract owner
+    /// @param _allowGasTrackingBanOnUpgrade Whether to allow gas tracking ban on upgrade
+    function setAllowGasTrackingBanOnUpgrade(bool _allowGasTrackingBanOnUpgrade) external onlyOwner {
+        allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
     }
 }
