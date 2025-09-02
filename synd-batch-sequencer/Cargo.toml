@@ -11,6 +11,7 @@ version.workspace      = true
 
 [dependencies]
 alloy             = { workspace = true }
+brotli            = { workspace = true }
 byte-unit         = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 contract-bindings = { workspace = true }
@@ -20,6 +21,7 @@ eyre              = { workspace = true }
 humantime         = { workspace = true }
 prometheus-client = { workspace = true }
 redis             = { workspace = true, features = ["streams", "tokio-comp"] }
+rlp               = { workspace = true }
 shared            = { workspace = true }
 synd-maestro      = { workspace = true }
 thiserror         = { workspace = true }

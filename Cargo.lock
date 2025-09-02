@@ -6908,6 +6908,7 @@ name = "synd-batch-sequencer"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "brotli",
  "byte-unit",
  "clap",
  "contract-bindings",
@@ -6918,6 +6919,7 @@ dependencies = [
  "prometheus-client",
  "redis",
  "reqwest",
+ "rlp 0.6.1",
  "shared",
  "synd-maestro",
  "test-utils",
