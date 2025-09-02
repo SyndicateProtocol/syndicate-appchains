@@ -283,15 +283,31 @@ docker build -f synd-withdrawals/synd-enclave/Dockerfile . --platform linux/amd6
 
 ## Reproducible builds with Nix
 
+### Architecture
+
+`synd-withdrawals/`
+- `flake.nix`: top-level entrypoint for `nix *` commands, describes the inputs (both Nix and non-Nix repositories/dependencies) and outputs (packages)
+  - `inherit`s relevant (`synd-*`, `eif.bin`) packages from `nix/packages.nix` to make them available to `nix *` commands
+- `flake.lock`: a lockfile with exact timestamps and hashes of every entry from `inputs` in `flake.nix`
+  - needs to be updated by running `nix flake update` when new input versions are desired
+- `nix/`: supporting files for `flake.nix`
+  - `lib.nix`: some helper functions that don't make sense as "packages"
+  - `packages.nix`: a list of Nix packages built in this repo
+    - packages not `inherit`ed in `flake.nix` are dependencies and not exported to be built separately
+
+### Running builds and checking hashes
+
+I will use the `eif.bin` file as an example here.
+
 1. Install Nix using https://github.com/DeterminateSystems/nix-installer:
 
 ```sh
 curl -fsSL https://install.determinate.systems/nix | sh -s -- install
 ```
 
-2. Change to the `synd-withdrawals` directory (containing `flake.nix` file).
+2. Change to the `synd-withdrawals` directory (the one containing `flake.nix` file).
 
-3. Because Nix might take a long time (5-10 minutes on a MBP M3) to fetch all the dependencies (like nitro and its submodules),
+3. Because Nix might take a long time (~5-10 minutes on a MBP M3) to fetch all the dependencies (like nitro and its submodules),
 I recommend running `nix flake archive` first, so you know you're not stuck on a build, but rather fetching dependencies.
 
 4. Run the following command to build the `eif.bin` file:
@@ -301,12 +317,23 @@ nix build .#eif-bin --print-out-paths
 ```
 
 In the end, you should get a Nix path for `eif.bin` with a hash in the name, e.g.
-`/nix/store/b0v83kjd7r5993gl4mk96zcrlaam7swq-eif.bin`.
+`/nix/store/b0v83kjd7r5993gl4mk96zcrlaam7swq-eif.bin`, as well as a `synd-withdrawals/result` symlink to the same path.
 
 The path should be the same for everyone building on all machines with the same architecture.
 E.g., when using a fixed commit of this repo, the resulting path should be the same for `x86_64-linux` or `aarch64-linux` respectively.
 - In the event of differing hashes between machines, start by running the build again with `--print-build-logs`. `eif.bin` build should report the hashes of the resulting file in the form of `PCR0`/`PCR1`/`PCR2` hashes. Compare these hashes between machines.
   - If only the Nix store path differs, but the PCR hashes are the same, then the resulting file is identical, but Nix noticed a change of dependency code used to build it. Consider using the same technique to see whether the dependencies used to build `eif.bin` are reproducible (especially ones based on the code from this repo, like `synd-enclave-server` and `enclave-src-with-generated`).
-  - If the PCR hashes differ, then there is an issue with the reproducibility of the build.
+  - If the PCR hashes differ, then there is an issue with the reproducibility of the build, potentially caused by the logic in `eif_build` or similar.
 
+### Maintenance and updates
+
+- Some input repos are pinned to a commit and are not expected to change, some just mention a repository, e.g. `https://github.com/SyndicateProtocol/nitro.git` for `nitro` and must sometimes be updated to point to the latest revision
+  - To update non-pinned inputs: in the `flake.nix` directory, run `nix flake update` to update all available inputs (will probably trigger mass rebuilds), or `nix flake update nitro` to update a specific input.
+- Some dependency trees, like Go/Rust dependencies, are vendored and prehashed by Nix (so the builds can be done without internet). Those packages have `vendorHash` (Go) / `cargoHash` (Rust) attributes, and the hashes inside might change when the package sources are updated
+  - If this happens, Nix will throw an error about a hash mismatch - copy the `got:` value into the `vendorHash`/`cargoHash` attribute:
+```
+hash mismatch in fixed-output derivation '/nix/store/...':
+  specified: sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  # <-- this is the one inside `packages.nix`
+  got:       sha256-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  # <-- this is the updated value
+```
 ---
