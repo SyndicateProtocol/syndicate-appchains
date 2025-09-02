@@ -2,12 +2,24 @@
 pragma solidity 0.8.28;
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
-import {AppchainPool} from "src/staking/AppchainPool.sol";
+import {AppchainPool, AppchainFactory} from "src/staking/AppchainPool.sol";
+import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
+contract MockAppchainFactory is AppchainFactory {
+    function getAppchainIds() external view returns (uint256[] memory _chainIDs) {
+        _chainIDs = new uint256[](3);
+        _chainIDs[0] = 111;
+        _chainIDs[1] = 222;
+        _chainIDs[2] = 333;
+        return _chainIDs;
+    }
+}
+
 contract AppchainPoolTest is Test {
     SyndStaking public staking;
+    AppchainFactory public appchainFactory;
     AppchainPool public appchainPool;
 
     address public user1;
@@ -22,7 +34,8 @@ contract AppchainPoolTest is Test {
 
     function setUp() public {
         staking = new SyndStaking(msg.sender);
-        appchainPool = new AppchainPool(address(staking));
+        appchainFactory = new MockAppchainFactory();
+        appchainPool = new AppchainPool(address(appchainFactory), address(staking));
 
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");

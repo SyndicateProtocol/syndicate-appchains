@@ -6,6 +6,10 @@ import {IPool} from "./IPool.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 
+interface AppchainFactory {
+    function getAppchainIds() external view returns (uint256[] memory _chainIDs);
+}
+
 /**
  * @title AppchainPool
  * @notice Contract for distributing rewards to stakers based on appchain stake share
@@ -25,6 +29,9 @@ contract AppchainPool is IPool {
 
     /// @notice Reference to the SyndStaking contract for stake queries
     ISyndStaking public immutable stakingContract;
+
+    /// @notice Reference to the AppchainFactory contract for appchain queries
+    AppchainFactory public immutable appchainFactory;
 
     /// @notice Mapping from epoch index to total reward amount deposited for that epoch
     mapping(uint256 epochIndex => uint256 total) public epochTotal;
@@ -55,7 +62,8 @@ contract AppchainPool is IPool {
      * @notice Constructor to initialize the pool with staking contract and depositor
      * @param _stakingContract Address of the SyndStaking contract
      */
-    constructor(address _stakingContract) {
+    constructor(address _appchainFactory, address _stakingContract) {
+        appchainFactory = AppchainFactory(_appchainFactory);
         stakingContract = ISyndStaking(_stakingContract);
     }
 
@@ -106,25 +114,61 @@ contract AppchainPool is IPool {
         UD60x18 poolAmount = convert(epochTotal[epochIndex]);
         if (poolAmount.isZero()) return 0;
 
+        /// TOTAL STAKING & GAS FEES
         UD60x18 totalStake = convert(stakingContract.getTotalStake(epochIndex));
         if (totalStake.isZero()) return 0;
 
         UD60x18 totalGasFees = convert(100); // TODO: get from real gas contract - ask Jorge
         if (totalGasFees.isZero()) return 0;
 
+        UD60x18 appchainDiminishingFactor =
+            _getAppchainDiminishingFactor(epochIndex, appchainId, totalStake, totalGasFees);
+        if (appchainDiminishingFactor.isZero()) return 0;
+        UD60x18 allAppchainsDiminishingFactor = _getAllAppchainsDiminishingFactor(epochIndex, totalStake, totalGasFees);
+        if (allAppchainsDiminishingFactor.isZero()) return 0;
+
+        uint256 appchainReward = convert(poolAmount.mul(appchainDiminishingFactor).div(allAppchainsDiminishingFactor));
+        uint256 alreadyClaimed = claimed[epochIndex][appchainId];
+
+        return appchainReward > alreadyClaimed ? appchainReward - alreadyClaimed : 0;
+    }
+
+    /**
+     * @dev Computes the appchain’s diminishing factor for an epoch.
+     *      Uses stake share and gas-fee share with multipliers, then ln(1 + DECAY_FACTOR * dominance).
+     */
+    function _getAppchainDiminishingFactor(
+        uint256 epochIndex,
+        uint256 appchainId,
+        UD60x18 totalStake,
+        UD60x18 totalGasFees
+    ) internal view returns (UD60x18) {
         UD60x18 appchainStake = convert(stakingContract.getAppchainStake(epochIndex, appchainId));
         UD60x18 appchainGasFees = convert(20); // TODO: get from real gas contract - ask Jorge
-        // TODO: do we need to check if these values are 0?
 
-        UD60x18 feeShare = appchainGasFees.mul(FEE_MULTIPLIER).div(totalGasFees);
-        UD60x18 stakeShare = appchainStake.mul(STAKING_MULTIPLIER).div(totalStake);
-        UD60x18 appchainDominanceFactor = feeShare.add(stakeShare);
+        UD60x18 appchainFeeShare = appchainGasFees.mul(FEE_MULTIPLIER).div(totalGasFees);
+        UD60x18 appchainStakeShare = appchainStake.mul(STAKING_MULTIPLIER).div(totalStake);
+        UD60x18 appchainDominanceFactor = appchainFeeShare.add(appchainStakeShare);
+        UD60x18 appchainDiminishingFactor = (convert(1).add(DECAY_FACTOR.mul(appchainDominanceFactor))).ln();
+        return appchainDiminishingFactor;
+    }
 
-        UD60x18 dominanceFactor = (convert(1).add(DECAY_FACTOR.mul(appchainDominanceFactor))).ln();
-
-        UD60x18 scalingFactor = convert(1); // TODO: how to get k (scalingFactor) - ask Justin
-
-        uint256 appchainReward = convert(poolAmount.mul(dominanceFactor).mul(scalingFactor));
-        return appchainReward - claimed[epochIndex][appchainId];
+    // TODO: IS THIS TOO EXPENSIVE TO COMPUTE?
+    /**
+     * @dev Computes the total diminishing factor for all appchains for an epoch.
+     */
+    function _getAllAppchainsDiminishingFactor(uint256 epochIndex, UD60x18 totalStake, UD60x18 totalGasFees)
+        internal
+        view
+        returns (UD60x18)
+    {
+        uint256[] memory allAppchainIds = appchainFactory.getAppchainIds();
+        UD60x18 allAppchainsDiminishingFactor = convert(0);
+        for (uint256 i = 0; i < allAppchainIds.length; i++) {
+            UD60x18 appchainDiminishingFactor =
+                _getAppchainDiminishingFactor(epochIndex, allAppchainIds[i], totalStake, totalGasFees);
+            allAppchainsDiminishingFactor = allAppchainsDiminishingFactor.add(appchainDiminishingFactor);
+        }
+        return allAppchainsDiminishingFactor;
     }
 }
