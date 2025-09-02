@@ -8,7 +8,6 @@ methods {
     function owner() external returns (address) envfree;
     function gasTrackingDisabled() external returns (bool) envfree;
     function encodeTransaction(bytes) external returns (bytes) envfree;
-    function encodeTransactionsCompressed(bytes) external returns (bytes) envfree;
 
     // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
