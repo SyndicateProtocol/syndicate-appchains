@@ -1,0 +1,52 @@
+[
+    {
+        "chain-id": 510003,
+        "parent-chain-id": 511000,
+        "parent-chain-is-arbitrum": false,
+        "sequencer-url": "null",
+        "has-genesis-state": false,
+        "chain-name": "commons",
+        "chain-config": {
+            "homesteadBlock": 0,
+            "daoForkBlock": null,
+            "daoForkSupport": true,
+            "eip150Block": 0,
+            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "eip155Block": 0,
+            "eip158Block": 0,
+            "byzantiumBlock": 0,
+            "constantinopleBlock": 0,
+            "petersburgBlock": 0,
+            "istanbulBlock": 0,
+            "muirGlacierBlock": 0,
+            "berlinBlock": 0,
+            "londonBlock": 0,
+            "clique": {
+                "period": 0,
+                "epoch": 0
+            },
+            "arbitrum": {
+                "EnableArbOS": true,
+                "AllowDebugPrecompiles": false,
+                "DataAvailabilityCommittee": false,
+                "InitialArbOSVersion": 32,
+                "GenesisBlockNum": 0,
+                "MaxCodeSize": 0,
+                "MaxInitCodeSize": 0,
+                "Syndicate": true,
+                "InitialChainOwner": "0xreplaceme"
+            },
+            "chainId": 510003
+        },
+        "rollup": {
+            "bridge": "0x0000000000000000000000000000000000511000",
+            "inbox": "0x0000000000000000000000000000000000000000",
+            "sequencer-inbox": "0x0000000000000000000000000000000000511000",
+            "deployed-at": 1,
+            "rollup": "0x0000000000000000000000000000000000000000",
+            "native-token": "0xreplaceme",
+            "upgrade-executor": "0x0000000000000000000000000000000000000000",
+            "validator-wallet-creator": "0x0000000000000000000000000000000000000000"
+        }
+    }
+]
