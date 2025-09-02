@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 
 import {SyndicateStorage} from "../src/backfill/SyndicateStorage.sol";
 import {AccessControlledERC20} from "../src/token/AccessControlledERC20.sol";
+import {console} from "forge-std/console.sol";
 
 contract DeployAccessControlledERC20 is Script {
     AccessControlledERC20 public accessControlledERC20;
@@ -15,16 +16,14 @@ contract DeployAccessControlledERC20 is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        accessControlledERC20 = new AccessControlledERC20("Testmon", "TESTMON", admin);
+        string memory name = "TestToken";
+        // symbol should be <= 6 characters long
+        string memory symbol = "TEST";
+        console.log("deploying access controlled ERC20 with name", name, "and symbol", symbol);
 
-        address[6] memory addressesToAllowlist = [
-            0x5E2F16dF1550e49aA44aF99Ed3cdF1be72913118,
-            0xec0e25aBc32e5dcee851133c59a0bE9Fe6BA452A,
-            0x8AB5496a45c92c36eC293d2681F1d3706eaff85D,
-            0xb6235EAEADfA5839CdA207B454d98b328dFE2F3A,
-            0x6cDfAC7c8e0eEc97a2bCb98A2FF968C946e91553,
-            0x30D8A40f9A5539C1e75929BC6117e55F16c1C303
-        ];
+        accessControlledERC20 = new AccessControlledERC20(name, symbol, admin);
+
+        address[1] memory addressesToAllowlist = [admin];
 
         for (uint256 i = 0; i < addressesToAllowlist.length; i++) {
             accessControlledERC20.grantRole(accessControlledERC20.MINTER_ROLE(), addressesToAllowlist[i]);
