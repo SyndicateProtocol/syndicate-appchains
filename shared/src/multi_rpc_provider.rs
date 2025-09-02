@@ -1101,9 +1101,7 @@ mod tests {
                 let result = provider_clone.get_block_number().await;
                 assert!(
                     result.is_ok(),
-                    "Thread {}: Expected result to be Ok after failover, got: {:?}",
-                    i,
-                    result
+                    "Thread {i}: Expected result to be Ok after failover, got: {result:?}",
                 );
                 // Return the final provider index each thread observed
                 provider_clone.active_provider_index.load(Ordering::SeqCst)
