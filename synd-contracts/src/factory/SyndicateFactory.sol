@@ -172,12 +172,6 @@ contract SyndicateFactory is AccessControl, Pausable {
         return (chainIDs, contracts);
     }
 
-    /// @notice returns all appchain ids
-    /// @return _chainIDs
-    function getAppchainIds() external view returns (uint256[] memory _chainIDs) {
-        return chainIDs;
-    }
-
     /// @notice Update namespace configuration (manager only)
     /// @param newPrefix The new namespace prefix
     /// old namespace prefixes can be reused, but prefixes that can generate collisions are forbidden
