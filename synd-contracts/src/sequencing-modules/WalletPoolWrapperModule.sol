@@ -64,24 +64,6 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
     }
 
     /**
-     * @dev Function to process compressed transactions.
-     * @param _SyndicateSequencingChain The syndicate sequencer chain address
-     * @param data The transaction data to process.
-     */
-    //#olympix-ignore-reentrancy-events
-    function processTransactionsCompressed(address _SyndicateSequencingChain, bytes calldata data)
-        external
-        onlyAllowed
-        SyndicateSequencingChainNotZero(_SyndicateSequencingChain)
-    {
-        // Forward the transaction to the syndicate sequencer chain
-        ISyndicateSequencingChain(_SyndicateSequencingChain).processTransactionsCompressed(data);
-
-        // Emit an event indicating the transaction was sent
-        emit WalletPoolWrapperTransactionSent(msg.sender, _SyndicateSequencingChain);
-    }
-
-    /**
      * @dev Function to process bulk transactions.
      * @param _SyndicateSequencingChain The syndicate sequencer chain address
      * @param data The array of transaction data to process.

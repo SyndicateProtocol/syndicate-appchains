@@ -262,10 +262,7 @@ impl Batcher {
     )]
     async fn read_and_batch_transactions(&mut self) -> Result<(SequencingBatch, String)> {
         let start = Instant::now();
-        let mut batch = match self.config.compression_enabled {
-            true => SequencingBatch::Compressed(vec![], vec![]),
-            false => SequencingBatch::Uncompressed(vec![]),
-        };
+        let mut batch = SequencingBatch::Uncompressed(vec![]);
         let mut last_included_id = "0-0".to_string();
 
         'outer: loop {
@@ -313,13 +310,6 @@ impl Batcher {
             }
         }
         self.metrics.record_batch_transactions(batch.txs().len());
-        if self.config.compression_enabled {
-            let uncompressed_size = batch.uncompressed_size();
-            if batch.len() > uncompressed_size {
-                debug!(%self.config.chain_id, "Batch compressed size is larger than uncompressed size.");
-            }
-            self.metrics.record_compression_space_saving_pct(uncompressed_size, batch.len());
-        }
         Ok((batch, last_included_id))
     }
 
@@ -339,10 +329,6 @@ impl Batcher {
         );
 
         let transaction_request = match batch {
-            SequencingBatch::Compressed(compressed_bytes, _) => self
-                .sequencing_contract_instance
-                .processTransactionsCompressed(Bytes::from(compressed_bytes.clone()))
-                .into_transaction_request(),
             SequencingBatch::Uncompressed(batch) => self
                 .sequencing_contract_instance
                 .processTransactionsBulk(batch.iter().map(|tx| Bytes::from(tx.0.clone())).collect())
@@ -501,7 +487,6 @@ mod tests {
             max_batch_size: byte_unit::Byte::from_u64(1024),
             valkey_url: "dummy".to_string(),
             chain_id: 1,
-            compression_enabled: true,
             timeout: Duration::from_millis(200),
             private_key: test_account1().private_key.to_string(),
             sequencing_rpc_urls: vec![Url::parse("http://localhost:8545").unwrap()],
@@ -556,7 +541,6 @@ mod tests {
     async fn test_send_compressed_batch_returns_error_if_too_large() {
         let mut config = test_config();
         config.max_batch_size = byte_unit::Byte::from_u64(1); // force failure
-        config.compression_enabled = false;
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
         config.valkey_url = valkey_url.clone();
         let valkey_metrics = Arc::new(ValkeyMetrics::default());
@@ -691,7 +675,6 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_txs_uncompressed() {
         let mut config = test_config();
-        config.compression_enabled = false;
         config.max_batch_size = byte_unit::Byte::from_u64(51 * 1024); // 51KB
 
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
@@ -762,7 +745,6 @@ mod tests {
             max_batch_size: byte_unit::Byte::from_u64(1024),
             valkey_url,
             chain_id: 1,
-            compression_enabled: true,
             timeout: Duration::from_millis(200),
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
@@ -797,7 +779,6 @@ mod tests {
     #[tokio::test]
     async fn test_consumer_last_id_update_on_tx() {
         let mut config = test_config();
-        config.compression_enabled = false;
         config.max_batch_size = byte_unit::Byte::from_u64(51 * 1024); // 51KB
 
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
@@ -983,7 +964,6 @@ mod tests {
         JoinHandle<()>,
     ) {
         let mut config = test_config();
-        config.compression_enabled = false;
         config.wait_for_receipt = true;
 
         let (_valkey, valkey_url) = start_valkey().await.unwrap();
