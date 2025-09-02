@@ -5,6 +5,7 @@
 //! These files may be overwritten by the codegen system at any time.
 pub mod r#access_control;
 pub mod r#access_control_upgradeable;
+pub mod r#access_controlled_erc20;
 pub mod r#add_batch_transactions_to_syndicate_sequencing_chain_contract;
 pub mod r#address;
 pub mod r#address_structured_linked_list;
@@ -52,6 +53,7 @@ pub mod r#checkpoints;
 pub mod r#context;
 pub mod r#context_upgradeable;
 pub mod r#create2;
+pub mod r#deploy_access_controlled_erc20;
 pub mod r#deploy_arb_config_manager;
 pub mod r#deploy_arb_config_manager_factory;
 pub mod r#deploy_syndicate_factory;
