@@ -14,17 +14,11 @@ abstract contract GasCounter is EpochTracker {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Whether gas tracking is enabled
-    bool public gasTrackingEnabled = true;
+    /// @notice Whether gas tracking is disabled
+    bool public gasTrackingDisabled;
 
     /// @notice Mapping from epoch index to total tokens used in gas fees for that epoch
     mapping(uint256 epochIndex => uint256 tokensUsed) public tokensUsedPerEpoch;
-
-    /*//////////////////////////////////////////////////////////////
-                ERRORS
-    //////////////////////////////////////////////////////////////*/
-    error GasTrackingAlreadyEnabled();
-    error GasTrackingAlreadyDisabled();
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
@@ -32,16 +26,18 @@ abstract contract GasCounter is EpochTracker {
 
     /// @notice Modifier that tracks gas usage for a function call
     modifier trackGasUsage() {
-        if (!gasTrackingEnabled) {
+        if (gasTrackingDisabled) {
             _;
             return;
         }
 
         uint256 gasStart = gasleft();
         _;
-        uint256 gasUsed = gasStart - gasleft();
 
-        _trackGas(gasUsed);
+        // workaround: certora thinks gasStart - gasleft() can underflow even though it is safe
+        unchecked {
+            _trackGas(gasStart - gasleft());
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -62,7 +58,9 @@ abstract contract GasCounter is EpochTracker {
         }
 
         // Add gas and cost to current epoch
-        tokensUsedPerEpoch[currentEpoch] += gasUsed * gasPrice;
+        unchecked {
+            tokensUsedPerEpoch[currentEpoch] += gasUsed * gasPrice;
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -74,27 +72,5 @@ abstract contract GasCounter is EpochTracker {
     /// @return The total tokens used in gas fees for the specified epoch
     function getTokensForEpoch(uint256 epochIndex) external view returns (uint256) {
         return tokensUsedPerEpoch[epochIndex];
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                         ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Disable gas tracking if needed
-    /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
-    function _disableGasTracking() internal {
-        if (gasTrackingEnabled == false) {
-            revert GasTrackingAlreadyDisabled();
-        }
-        gasTrackingEnabled = false;
-    }
-
-    /// @notice Enable gas tracking
-    /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
-    function _enableGasTracking() internal {
-        if (gasTrackingEnabled == true) {
-            revert GasTrackingAlreadyEnabled();
-        }
-        gasTrackingEnabled = true;
     }
 }

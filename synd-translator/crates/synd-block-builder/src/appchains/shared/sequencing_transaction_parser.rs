@@ -3,14 +3,17 @@
 //! This module provides the core [`SequencingTransactionParser`] trait that defines how
 //! sequencing transactions are captured and parsed.
 
+use crate::appchains::arbitrum::batch::MAX_L2_MESSAGE_SIZE;
 use alloy::{
+    consensus::{transaction::RlpEcdsaDecodableTx as _, TxEip1559, TxEip2930, TxEip7702, TxLegacy},
     primitives::{keccak256, Address, Bytes, Log},
     sol_types::SolEvent,
 };
 use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
 use rlp::Rlp;
+use std::io::Cursor;
 use thiserror::Error;
-use tracing::error;
+use tracing::{debug, error};
 
 /// Represents errors that can occur during sequencing transaction parsing.
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -51,24 +54,53 @@ pub struct SequencingTransactionParser {
     pub sequencing_contract_address: Address,
 }
 
-enum TransactionType {
-    Unsigned = 0,
-    Contract = 1,
-    Compressed = 3,
-    Signed = 4,
+/// See `arbos/parse_l2.go` for details.
+#[derive(Debug)]
+#[allow(missing_docs)]
+pub enum L2MessageKind {
+    UnsignedUserTx = 0,
+    ContractTx = 1,
+    Batch = 3,
+    SignedTx = 4,
 }
 
-impl TryFrom<u8> for TransactionType {
+impl TryFrom<u8> for L2MessageKind {
     type Error = ();
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(Self::Unsigned),
-            1 => Ok(Self::Contract),
-            3 => Ok(Self::Compressed),
-            4 => Ok(Self::Signed),
+            0 => Ok(Self::UnsignedUserTx),
+            1 => Ok(Self::ContractTx),
+            3 => Ok(Self::Batch),
+            4 => Ok(Self::SignedTx),
             _ => Err(()),
         }
     }
+}
+
+fn is_signed_tx_valid(mut b: &[u8]) -> bool {
+    if b.is_empty() {
+        debug!("dropping empty signed tx");
+        return false;
+    }
+
+    if let Some(err) = match b[0] {
+        0x80.. => TxLegacy::eip2718_decode(&mut b).err(),
+        TxEip2930::DEFAULT_TX_TYPE => TxEip2930::eip2718_decode(&mut b).err(), // AccessListTxType
+        TxEip1559::DEFAULT_TX_TYPE => TxEip1559::eip2718_decode(&mut b).err(), // DynamicFeeTxType
+        TxEip7702::DEFAULT_TX_TYPE => TxEip7702::eip2718_decode(&mut b).err(), // SetCodeTxType
+        // Arbitrum doesn't support EIP-4844 blob txs yet
+        x => Some(alloy::eips::eip2718::Eip2718Error::UnexpectedType(x)),
+    } {
+        debug!("dropping tx with invalid rlp encoding: {}", err);
+        return false;
+    }
+
+    if !b.is_empty() {
+        debug!("dropping tx with extra bytes");
+        return false;
+    }
+
+    true
 }
 
 /// Decompresses `brotli`-compressed Ethereum transactions back into their original form
@@ -78,19 +110,28 @@ fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, SequencingParserEr
         return Err(SequencingParserError::DecompressionError("Empty compressed data".to_string()));
     }
 
-    let mut decoded_bytes = Vec::new();
+    let mut buffer = vec![0u8; MAX_L2_MESSAGE_SIZE];
+    let mut decoded_bytes = Cursor::new(buffer.as_mut_slice());
     brotli::BrotliDecompress(&mut &data[..], &mut decoded_bytes)
         .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))?;
 
+    if decoded_bytes.position() as usize > data.len() * 10 {
+        return Err(SequencingParserError::DecompressionError(
+            "Compression ratio above 10".to_string(),
+        ));
+    }
+
     // Decode RLP
-    Rlp::new(&decoded_bytes)
+    Rlp::new(&decoded_bytes.get_ref()[..decoded_bytes.position() as usize])
         .as_list::<Vec<u8>>()
         .map(|vec_list| {
             vec_list
                 .into_iter()
-                .map(|mut tx| {
-                    tx.insert(0, TransactionType::Signed as u8);
-                    Bytes::from(tx)
+                .filter_map(|mut tx| {
+                    (tx.len() < MAX_L2_MESSAGE_SIZE && is_signed_tx_valid(&tx)).then(|| {
+                        tx.insert(0, L2MessageKind::SignedTx as u8);
+                        Bytes::from(tx)
+                    })
                 })
                 .collect()
         })
@@ -120,11 +161,17 @@ impl SequencingTransactionParser {
 
         let mut transactions = Vec::new();
         match data[0].try_into().map_err(|_| SequencingParserError::UnexpectedDataType)? {
-            TransactionType::Compressed => {
-                transactions.append(&mut decompress_transactions(&data[1..])?)
+            L2MessageKind::Batch => transactions.append(&mut decompress_transactions(&data[1..])?),
+            L2MessageKind::SignedTx => {
+                if data.len() <= MAX_L2_MESSAGE_SIZE && is_signed_tx_valid(&data[1..]) {
+                    transactions.push(data.clone());
+                }
             }
-            TransactionType::Unsigned | TransactionType::Contract | TransactionType::Signed => {
-                transactions.push(data.clone())
+            // The sequencing contract ensures that unsigned transactions are valid
+            L2MessageKind::UnsignedUserTx | L2MessageKind::ContractTx => {
+                if data.len() <= MAX_L2_MESSAGE_SIZE {
+                    transactions.push(data.clone());
+                }
             }
         }
 
@@ -154,32 +201,8 @@ impl SequencingTransactionParser {
 mod tests {
     use super::*;
     use alloy::{hex, primitives::B256, sol_types::SolValue};
-    use rlp::RlpStream;
 
-    const DUMMY_TXN_VALUE: &[u8] = &[TransactionType::Signed as u8];
-
-    /// RLP encodes and compresses a slice of Ethereum transactions using brotli compression
-    fn compress_transactions(transactions: &[Bytes]) -> std::io::Result<Bytes> {
-        // RLP encode the list of transactions
-        let mut stream = RlpStream::new_list(transactions.len());
-        for tx in transactions {
-            stream.append(&tx.as_ref());
-        }
-        let encoded = stream.out();
-
-        // Compress the RLP encoded bytes using brotli
-        let mut compressed = Vec::new();
-        brotli::enc::BrotliCompress(
-            &mut &encoded[..],
-            &mut compressed,
-            &brotli::enc::BrotliEncoderInitParams(),
-        )?;
-
-        // Append the compression prefix
-        compressed.insert(0, TransactionType::Compressed as u8);
-
-        Ok(Bytes::from(compressed))
-    }
+    const DUMMY_TXN_VALUE: &[u8] = &[L2MessageKind::UnsignedUserTx as u8];
 
     fn generate_valid_test_log(contract_address: Address) -> Log {
         let topics = vec![
@@ -246,30 +269,5 @@ mod tests {
         let result = parser.get_event_transactions(&log);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SequencingParserError::InvalidLogEvent);
-    }
-
-    #[test]
-    fn test_decode_event_data() {
-        // Test that demonstrates the correct protocol data structure for each compression case
-
-        // Case 1: No compression, so there's a leading signed byte
-        let mut raw_data = b"raw_transaction_data".to_vec();
-        raw_data.insert(0, TransactionType::Signed as u8);
-        let raw_data = raw_data.into();
-
-        let result = SequencingTransactionParser::decode_event_data(&raw_data);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![raw_data]);
-
-        // Case 2: Brotli compression, the uncompressed tx includes a leading signed byte
-        let tx = Bytes::from(b"test_transaction".to_vec());
-        let transactions = vec![tx.clone()];
-        let compressed_data = compress_transactions(&transactions).unwrap();
-        let mut signed_tx = Vec::from(tx);
-        signed_tx.insert(0, TransactionType::Signed as u8);
-
-        let result = SequencingTransactionParser::decode_event_data(&compressed_data);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), vec![signed_tx]);
     }
 }

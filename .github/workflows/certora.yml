@@ -51,6 +51,8 @@ jobs:
             "RequireAndModule",
             "RequireOrModule",
             "WalletPoolWrapperModule",
+            "EmissionsCalculator",
+            "SyndStaking",
           ]
     steps:
       - name: Checkout repository

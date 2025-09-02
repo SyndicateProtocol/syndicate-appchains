@@ -11,55 +11,15 @@ contract MockSyndicateSequencingChain is ISyndicateSequencingChain {
     bytes[] public lastProcessedBulkData;
     bool public shouldRevert;
 
+    function encodeTransaction(bytes calldata data) external returns (bytes memory) {
+        revert("unimplemented");
+    }
+
     function appchainId() external view returns (uint256) {
         revert("unimplemented");
     }
 
-    function contractNonce(address sender) external view returns (uint256) {
-        revert("unimplemented");
-    }
-
-    function OFFSET() external view returns (uint160) {
-        revert("unimplemented");
-    }
-
-    function applyAlias(address seqAddress) external view returns (address) {
-        revert("unimplemented");
-    }
-
-    function undoAlias(address appAddress) external view returns (address) {
-        revert("unimplemented");
-    }
-
-    function sendContractTransaction(
-        uint64 gasLimit,
-        uint256 maxFeePerGas,
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external returns (uint256) {
-        revert("unimplemented");
-    }
-
-    function sendUnsignedTransaction(
-        uint64 gasLimit,
-        uint256 maxFeePerGas,
-        uint256 nonce,
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external {
-        revert("unimplemented");
-    }
-
     function processTransaction(bytes calldata data) external {
-        if (shouldRevert) {
-            revert("Sequencer error");
-        }
-        lastProcessedData = data;
-    }
-
-    function processTransactionsCompressed(bytes calldata data) external {
         if (shouldRevert) {
             revert("Sequencer error");
         }
@@ -211,18 +171,10 @@ contract WalletPoolWrapperModuleTest is Test {
         emit WalletPoolWrapperModule.WalletPoolWrapperTransactionSent(allowedWallet, SyndicateSequencingChainAddress);
 
         // Process the compressed transaction
-        walletPoolWrapper.processTransactionsCompressed(SyndicateSequencingChainAddress, testData);
+        walletPoolWrapper.processTransaction(SyndicateSequencingChainAddress, testData);
 
         // Verify the data was forwarded to the sequencer chain
         assertEq(mockSequencingChain.lastProcessedData(), testData);
-    }
-
-    function testProcessTransactionRawWithZeroAddress() public {
-        vm.prank(allowedWallet);
-
-        // Expect the call to revert with ZeroSequencerAddressNotAllowed error
-        vm.expectRevert(WalletPoolWrapperModule.ZeroSequencerAddressNotAllowed.selector);
-        walletPoolWrapper.processTransactionsCompressed(address(0), testData);
     }
 
     function testProcessTransactionsBulk() public {

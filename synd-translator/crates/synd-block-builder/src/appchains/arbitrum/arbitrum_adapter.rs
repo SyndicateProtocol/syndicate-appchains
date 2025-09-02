@@ -6,7 +6,9 @@
 
 use crate::{
     appchains::{
-        arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader},
+        arbitrum::batch::{
+            Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader, MAX_L2_MESSAGE_SIZE,
+        },
         shared::{RollupAdapter, SequencingTransactionParser},
     },
     config::BlockBuilderConfig,
@@ -31,6 +33,12 @@ use std::collections::HashMap;
 use synd_mchain::db::DelayedMessage;
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
+
+// Limit the number of tx per a block so that they have enough gas to be included most of the time.
+// Each tx can use 320k gas on average given the default block gas limit of 32 million.
+// Eventually once the translator uses nitro to simulate tx execution, transactions can be slotted
+// into blocks based on gas usage instead.
+const TX_PER_BLOCK: usize = 100;
 
 const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
@@ -273,24 +281,53 @@ impl ArbitrumAdapter {
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
+    /// note: this must mirror the logic in the enclave go code
+    /// for building batches.
+    #[allow(clippy::cognitive_complexity)]
     fn build_batch_txn(
         &self,
         txs: Vec<Bytes>,
         mchain_block_number: u64,
         mchain_timestamp: u64,
     ) -> Result<Bytes> {
-        let mut messages = vec![];
+        debug!("Sequenced transactions: {:?}", txs);
 
-        if !txs.is_empty() {
-            debug!("Sequenced transactions: {:?}", txs);
+        let mut messages = vec![];
+        let mut block = vec![];
+        // Start with the batch header byte - see l2_msg_to_bytes in batch.rs for more
+        // infomation.
+        let mut size = 1;
+        for tx in txs {
+            // When multiple txs are included in the block, then each tx is prefixed a uint64
+            // value indicating with the size of the tx.
+            // See l2_msg_to_bytes in batch.rs for more infomation.
+            let tx_size = 8 + tx.len();
+            size += tx_size;
+            if block.len() >= TX_PER_BLOCK || (!block.is_empty() && size > MAX_L2_MESSAGE_SIZE) {
+                messages.push(BatchMessage::L2(L1IncomingMessage {
+                    header: L1IncomingMessageHeader {
+                        block_number: mchain_block_number,
+                        timestamp: mchain_timestamp,
+                    },
+                    l2_msg: block,
+                }));
+                block = vec![];
+                // When multiple transactions are in the block, then the batch of transactions
+                // is prefixed with a batch header byte.
+                // See l2_msg_to_bytes in batch.rs for more infomation.
+                size = 1 + tx_size;
+            }
+            block.push(tx);
+        }
+        if !block.is_empty() {
             messages.push(BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
                     block_number: mchain_block_number,
                     timestamp: mchain_timestamp,
                 },
-                l2_msg: txs,
+                l2_msg: block,
             }));
-        };
+        }
 
         let batch = Batch(messages);
         debug!("New Batch: {:?}", batch);

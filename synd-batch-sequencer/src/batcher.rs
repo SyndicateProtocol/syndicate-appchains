@@ -266,7 +266,6 @@ impl Batcher {
             true => SequencingBatch::Compressed(vec![], vec![]),
             false => SequencingBatch::Uncompressed(vec![]),
         };
-        let mut uncompressed_size = 0;
         let mut last_included_id = "0-0".to_string();
 
         'outer: loop {
@@ -305,7 +304,6 @@ impl Batcher {
                     break 'outer;
                 }
 
-                uncompressed_size += tx_bytes.len();
                 debug!(
                     %self.config.chain_id, %tx_id, batch_size = %proposed_batch.len(), "Adding transaction to batch",
                 );
@@ -316,8 +314,9 @@ impl Batcher {
         }
         self.metrics.record_batch_transactions(batch.txs().len());
         if self.config.compression_enabled {
+            let uncompressed_size = batch.uncompressed_size();
             if batch.len() > uncompressed_size {
-                warn!(%self.config.chain_id, "Batch compressed size is larger than uncompressed size.");
+                debug!(%self.config.chain_id, "Batch compressed size is larger than uncompressed size.");
             }
             self.metrics.record_compression_space_saving_pct(uncompressed_size, batch.len());
         }
@@ -340,10 +339,7 @@ impl Batcher {
         );
 
         let transaction_request = match batch {
-            SequencingBatch::Compressed(compressed_bytes, _) => self
-                .sequencing_contract_instance
-                .processTransactionsCompressed(Bytes::from(compressed_bytes.clone()))
-                .into_transaction_request(),
+            SequencingBatch::Compressed(_compressed_bytes, _) => panic!("compression disabled"),
             SequencingBatch::Uncompressed(batch) => self
                 .sequencing_contract_instance
                 .processTransactionsBulk(batch.iter().map(|tx| Bytes::from(tx.0.clone())).collect())
@@ -629,6 +625,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "compression is disabled"]
     async fn test_multiple_txs() {
         let mut config = test_config();
         let (_valkey, valkey_url) = start_valkey().await.unwrap();

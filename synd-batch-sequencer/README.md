@@ -21,3 +21,5 @@ cargo run -p synd-batch-sequencer -- \
   ⚠️ Important: Do not commit this key to version control. Use environment variables or secret managers to inject it at runtime securely.
 
 - Although we're using Valkey as our key-value store, we still use a Redis Rust client library, following recommendations for compatibility. (https://github.com/valkey-io/valkey-glide/issues/828)
+
+- Although a compression_enabled flag exists, compression is currently unsupported and the sequencer will panic if it is enabled.
