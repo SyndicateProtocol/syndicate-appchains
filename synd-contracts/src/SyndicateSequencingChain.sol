@@ -5,14 +5,8 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 import {GasCounter} from "./staking/GasCounter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
 
-enum TransactionType {
-    Unsigned, // an unsigned tx
-    Contract, // a contract tx (unsigned, nonceless)
-    _Reserved,
-    Compressed, // compressed batch of transactions (signed)
-    Signed // a regular signed tx
-
-}
+uint8 constant L2MessageType_Batch = 3; // compressed batch of transactions (signed)
+uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
 
 /// @title SyndicateSequencingChain
 /// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
@@ -48,11 +42,10 @@ enum TransactionType {
 /// This event-based design provides scalability and gas efficiency while maintaining security
 /// through modular, developer-controlled permission systems.
 contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequencingChain, GasCounter {
-    /// @notice The ID of the App chain that this contract is sequencing transactions for.
-    uint256 public immutable appchainId;
-
-    /// @notice The address that receives emissions for this sequencing chain
-    address public emissionsReceiver;
+    error NoTxData();
+    error TransactionOrSenderNotAllowed();
+    error GasTrackingAlreadyEnabled();
+    error GasTrackingAlreadyDisabled();
 
     /// @notice Emitted when a new transaction is processed
     /// @param sender The address that submitted the transaction
@@ -64,6 +57,11 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @param newReceiver The new emissions receiver address
     event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
 
+    uint256 public immutable appchainId;
+
+    /// @notice The address that receives emissions for this sequencing chain
+    address public emissionsReceiver;
+
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
     //#olympix-ignore-missing-revert-reason-tests
@@ -73,28 +71,36 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         appchainId = _appchainId;
     }
 
+    function encodeTransactionsCompressed(bytes calldata data) public pure returns (bytes memory) {
+        return abi.encodePacked(L2MessageType_Batch, data);
+    }
+
     /// @notice Processes a compressed batch of signed transactions.
     /// @param data The compressed transaction data.
     //#olympix-ignore-required-tx-origin
-    function processTransactionsCompressed(bytes calldata data)
-        external
-        onlyWhenAllowedCompressed(msg.sender, tx.origin)
-        trackGasUsage
-    {
+    function processTransactionsCompressed(bytes calldata data) external trackGasUsage {
         require(data.length > 0, NoTxData());
-        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Compressed, data));
+
+        // ignore tx data as the tx is compressed
+        require(
+            isAllowed(msg.sender, tx.origin, abi.encodePacked(L2MessageType_Batch)), TransactionOrSenderNotAllowed()
+        );
+        emit TransactionProcessed(msg.sender, encodeTransactionsCompressed(data));
+    }
+
+    function encodeTransaction(bytes calldata data) public pure returns (bytes memory) {
+        return abi.encodePacked(L2MessageType_SignedTx, data);
     }
 
     /// @notice Process a signed transaction.
     /// @param data Transaction data
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data)
-        external
-        onlyWhenAllowed(msg.sender, tx.origin, data)
-        trackGasUsage
-    {
+    function processTransaction(bytes calldata data) external trackGasUsage {
         require(data.length > 0, NoTxData());
-        emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data));
+
+        bytes memory transaction = encodeTransaction(data);
+        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
+        emit TransactionProcessed(msg.sender, transaction);
     }
 
     /// @notice Processes multiple signed transactions in bulk.
@@ -102,14 +108,17 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     //#olympix-ignore
     function processTransactionsBulk(bytes[] calldata data) external trackGasUsage {
         uint256 dataCount = data.length;
+        require(dataCount > 0, NoTxData());
 
         // Process all transactions
         uint256 i;
         for (i = 0; i < dataCount; i++) {
-            bool isAllowed = data.length > 0 && isAllowed(msg.sender, tx.origin, data[i]); //#olympix-ignore-any-tx-origin
+            require(data[i].length > 0, NoTxData());
+            bytes memory transaction = encodeTransaction(data[i]);
+            bool isAllowed = isAllowed(msg.sender, tx.origin, transaction); //#olympix-ignore-any-tx-origin
             if (isAllowed) {
                 // only emit the event if the transaction is allowed
-                emit TransactionProcessed(msg.sender, abi.encodePacked(TransactionType.Signed, data[i]));
+                emit TransactionProcessed(msg.sender, transaction);
             }
         }
     }
@@ -155,12 +164,14 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     /// @notice Disable gas tracking if needed
     /// @dev Only callable by the contract owner
     function disableGasTracking() external onlyOwner {
-        _disableGasTracking();
+        require(!gasTrackingDisabled, GasTrackingAlreadyDisabled());
+        gasTrackingDisabled = true;
     }
 
     /// @notice Enable gas tracking
     /// @dev Only callable by the contract owner
     function enableGasTracking() external onlyOwner {
-        _enableGasTracking();
+        require(gasTrackingDisabled, GasTrackingAlreadyEnabled());
+        gasTrackingDisabled = false;
     }
 }

@@ -19,7 +19,8 @@ contract SequencingModuleCheckerTest is Test {
 
         masterModule = new RequireAndModule(admin);
         manager = new SequencingModuleCheckerMock();
-        manager.initialize(admin, address(masterModule));
+        manager.updateRequirementModule(address(masterModule));
+        manager.transferOwnership(admin);
     }
 
     function testUpdateMasterModule() public {
@@ -41,23 +42,19 @@ contract SequencingModuleCheckerTest is Test {
         manager.updateRequirementModule(newModule);
     }
 
-    function testCannotInitializeTwice() public {
-        vm.prank(admin);
-        vm.expectRevert(SequencingModuleChecker.AlreadyInitialized.selector);
-        manager.initialize(admin, address(masterModule));
-    }
-
     function testNotInitialized() public {
         SequencingModuleChecker uninitializedManager = new SequencingModuleCheckerMock();
 
         bytes memory emptyData = new bytes(0);
 
-        assertFalse(uninitializedManager.isAllowed(address(0), address(0), emptyData));
+        vm.expectRevert();
+        uninitializedManager.isAllowed(address(0), address(0), emptyData);
     }
 
     function testIsAllowedAfterInitialization() public {
         SequencingModuleChecker initializedManager = new SequencingModuleCheckerMock();
-        initializedManager.initialize(admin, address(masterModule));
+        initializedManager.updateRequirementModule(address(masterModule));
+        initializedManager.transferOwnership(admin);
 
         bytes memory emptyData = new bytes(0);
 
