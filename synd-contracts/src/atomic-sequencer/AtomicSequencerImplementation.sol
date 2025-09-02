@@ -62,23 +62,16 @@ contract AtomicSequencerImplementation {
     ///
     /// @param chains Array of SyndicateSequencingChain contracts to process transactions on
     /// @param transactions Array of transaction data corresponding to each chain
-    /// @param isRaw Array indicating whether each transaction uses compressed (true) or uncompressed (false) processing
-    function processTransactionsAtomically(
-        SyndicateSequencingChain[] calldata chains,
-        bytes[] calldata transactions,
-        bool[] calldata isRaw
-    ) external {
+    function processTransactionsAtomically(SyndicateSequencingChain[] calldata chains, bytes[] calldata transactions)
+        external
+    {
         // Check array lengths match
-        if (chains.length == 0 || chains.length != transactions.length || chains.length != isRaw.length) {
+        if (chains.length == 0 || chains.length != transactions.length) {
             revert InputLengthMismatchError();
         }
 
         for (uint256 i = 0; i < chains.length; i++) {
-            if (isRaw[i]) {
-                chains[i].processTransactionsCompressed(transactions[i]);
-            } else {
-                chains[i].processTransaction(transactions[i]);
-            }
+            chains[i].processTransaction(transactions[i]);
         }
     }
 
@@ -90,7 +83,7 @@ contract AtomicSequencerImplementation {
     /// • Chain-level authorization prevents unauthorized bulk transaction processing
     ///
     /// @param chains Array of SyndicateSequencingChain contracts to process bulk transactions on
-    /// @param transactions Array of transaction arrays corresponding to each chain (compressed format only)
+    /// @param transactions Array of transaction arrays corresponding to each chain
     function processTransactionsBulkAtomically(
         SyndicateSequencingChain[] calldata chains,
         bytes[][] calldata transactions

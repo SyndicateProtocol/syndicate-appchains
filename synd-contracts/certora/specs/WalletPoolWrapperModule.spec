@@ -26,25 +26,7 @@ rule onlyAllowlistedCanProcessTransaction() {
 }
 
 /**
- * Rule 2: Only allowlisted addresses can use processTransactionsCompressed
- */
-rule onlyAllowlistedCanProcessTransactionsCompressed() {
-    env e;
-    address SyndicateSequencingChain;
-    bytes data;
-
-    // Require a non-zero sequencer address
-    require SyndicateSequencingChain != 0;
-
-    // Try to process a raw transaction
-    processTransactionsCompressed@withrevert(e, SyndicateSequencingChain, data);
-
-    // If transaction succeeded (didn't revert), sender must be in allowlist
-    assert !lastReverted => allowlist(e.msg.sender);
-}
-
-/**
- * Rule 3: Only allowlisted addresses can use processTransactionsBulk
+ * Rule 2: Only allowlisted addresses can use processTransactionsBulk
  */
 rule onlyAllowlistedCanProcessTransactionsBulk() {
     env e;
@@ -62,7 +44,7 @@ rule onlyAllowlistedCanProcessTransactionsBulk() {
 }
 
 /**
- * Rule 4: Zero address cannot be used as sequencer chain
+ * Rule 3: Zero address cannot be used as sequencer chain
  */
 rule noZeroAddressSequencingChain() {
     env e;
@@ -76,7 +58,7 @@ rule noZeroAddressSequencingChain() {
     assert lastReverted;
 
     // Try to process raw transaction with zero address
-    processTransactionsCompressed@withrevert(e, 0, data);
+    processTransaction@withrevert(e, 0, data);
 
     // Must revert
     assert lastReverted;
@@ -89,7 +71,7 @@ rule noZeroAddressSequencingChain() {
 }
 
 /**
- * Rule 5: Being in allowlist grants permission to process transactions
+ * Rule 4: Being in allowlist grants permission to process transactions
  */
 rule allowlistedCanProcessTransactions() {
     env e;
@@ -104,7 +86,7 @@ rule allowlistedCanProcessTransactions() {
 }
 
 /**
- * Rule 6: isAllowed function matches allowlist state
+ * Rule 5: isAllowed function matches allowlist state
  */
 rule isAllowedConsistency(bytes data) {
     address user;
@@ -116,7 +98,7 @@ rule isAllowedConsistency(bytes data) {
 }
 
 /**
- * Rule 7: Adding to allowlist changes state
+ * Rule 6: Adding to allowlist changes state
  */
 rule addToAllowlistChangesState() {
     env e;
@@ -135,7 +117,7 @@ rule addToAllowlistChangesState() {
 }
 
 /**
- * Rule 8: Removing from allowlist changes state
+ * Rule 7: Removing from allowlist changes state
  */
 rule removeFromAllowlistChangesState() {
     env e;
@@ -154,7 +136,7 @@ rule removeFromAllowlistChangesState() {
 }
 
 /**
- * Rule 9: Only admin can modify allowlist
+ * Rule 8: Only admin can modify allowlist
  */
 rule onlyAdminCanModifyAllowlist() {
     env e;
@@ -175,7 +157,7 @@ rule onlyAdminCanModifyAllowlist() {
 }
 
 /**
- * Rule 10: Admin transfers work correctly
+ * Rule 9: Admin transfers work correctly
  */
 rule adminTransferWorks() {
     env e;
@@ -194,7 +176,7 @@ rule adminTransferWorks() {
 }
 
 /**
- * Rule 11: Consistency between transaction methods
+ * Rule 10: Consistency between transaction methods
  * This rule verifies that all three transaction methods have consistent behavior
  * regarding allowlist checks
  */
@@ -214,20 +196,16 @@ rule methodsHaveConsistentAllowlistChecks() {
     processTransaction@withrevert(e, SyndicateSequencingChain, data);
     bool txReverted = lastReverted;
 
-    // Call processTransactionsCompressed
-    processTransactionsCompressed@withrevert(e, SyndicateSequencingChain, data);
-    bool compressedTxReverted = lastReverted;
-
     // Call processTransactionsBulk
     processTransactionsBulk@withrevert(e, SyndicateSequencingChain, bulkData);
     bool bulkTxReverted = lastReverted;
 
-    // If sender is not allowed, all three methods should revert
-    assert !isAllowed => (txReverted && compressedTxReverted && bulkTxReverted);
+    // If sender is not allowed, both these methods should revert
+    assert !isAllowed => (txReverted && bulkTxReverted);
 }
 
 /**
- * Rule 12: Check for correct modifier application
+ * Rule 11: Check for correct modifier application
  * This rule verifies that our modifiers are properly applied by
  * ensuring non-allowlisted senders can't use any transaction method
  */
@@ -240,11 +218,8 @@ rule modifiersAppliedCorrectly() {
     // Require sender is not allowed
     require !allowlist(e.msg.sender);
 
-    // All three methods should revert for non-allowlisted sender
+    // Both methods should revert for non-allowlisted sender
     processTransaction@withrevert(e, SyndicateSequencingChain, data);
-    assert lastReverted;
-
-    processTransactionsCompressed@withrevert(e, SyndicateSequencingChain, data);
     assert lastReverted;
 
     processTransactionsBulk@withrevert(e, SyndicateSequencingChain, bulkData);

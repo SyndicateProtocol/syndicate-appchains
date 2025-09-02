@@ -5,7 +5,6 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 import {GasCounter} from "./staking/GasCounter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
 
-uint8 constant L2MessageType_Batch = 3; // compressed batch of transactions (signed)
 uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
 
 /// @title SyndicateSequencingChain
@@ -32,7 +31,7 @@ uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
 /// └─────────────────────────────────────────────────────────────────────────┘
 ///
 /// @dev Transaction Lifecycle:
-/// 1. Transaction is submitted via processTransaction, processTransactionsCompressed, or processTransactionsBulk
+/// 1. Transaction is submitted via processTransaction or processTransactionsBulk
 /// 2. onlyWhenAllowed modifier passes both msg.sender AND tx.origin to SequencingModuleChecker
 /// 3. SequencingModuleChecker delegates to the configured permissionRequirementModule
 /// 4. Permission module evaluates BOTH addresses using custom logic (developer responsibility)
@@ -69,23 +68,6 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         // chain id zero has no replay protection: https://eips.ethereum.org/EIPS/eip-3788
         require(_appchainId != 0, "App chain ID cannot be 0");
         appchainId = _appchainId;
-    }
-
-    function encodeTransactionsCompressed(bytes calldata data) public pure returns (bytes memory) {
-        return abi.encodePacked(L2MessageType_Batch, data);
-    }
-
-    /// @notice Processes a compressed batch of signed transactions.
-    /// @param data The compressed transaction data.
-    //#olympix-ignore-required-tx-origin
-    function processTransactionsCompressed(bytes calldata data) external trackGasUsage {
-        require(data.length > 0, NoTxData());
-
-        // ignore tx data as the tx is compressed
-        require(
-            isAllowed(msg.sender, tx.origin, abi.encodePacked(L2MessageType_Batch)), TransactionOrSenderNotAllowed()
-        );
-        emit TransactionProcessed(msg.sender, encodeTransactionsCompressed(data));
     }
 
     function encodeTransaction(bytes calldata data) public pure returns (bytes memory) {

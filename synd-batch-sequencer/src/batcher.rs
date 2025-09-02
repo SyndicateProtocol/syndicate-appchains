@@ -339,10 +339,7 @@ impl Batcher {
         );
 
         let transaction_request = match batch {
-            SequencingBatch::Compressed(compressed_bytes, _) => self
-                .sequencing_contract_instance
-                .processTransactionsCompressed(Bytes::from(compressed_bytes.clone()))
-                .into_transaction_request(),
+            SequencingBatch::Compressed(_compressed_bytes, _) => panic!("compression disabled"),
             SequencingBatch::Uncompressed(batch) => self
                 .sequencing_contract_instance
                 .processTransactionsBulk(batch.iter().map(|tx| Bytes::from(tx.0.clone())).collect())
@@ -628,6 +625,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "compression is disabled"]
     async fn test_multiple_txs() {
         let mut config = test_config();
         let (_valkey, valkey_url) = start_valkey().await.unwrap();

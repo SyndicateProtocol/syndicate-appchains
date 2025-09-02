@@ -16,7 +16,6 @@ import {DataTooLarge} from "@arbitrum/nitro-contracts/src/libraries/Error.sol";
 ///    via the Ownable transferOwnership() function
 abstract contract SequencingModuleChecker is Ownable, IPermissionModule {
     // Just in case, limit the amount of tx data sent to the isAllowed function.
-    // Note that this limit does not apply to compressed transactions.
     uint256 public constant maxDataSize = 200000;
 
     /// @notice The requirement module that handles checks

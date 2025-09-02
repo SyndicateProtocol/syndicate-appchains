@@ -38,7 +38,7 @@ pub struct BatcherConfig {
     pub chain_id: ChainId,
 
     /// Enable compression
-    #[arg(short = 'z', long, env = "COMPRESSION_ENABLED", default_value = "true")]
+    #[arg(short = 'z', long, env = "COMPRESSION_ENABLED", default_value = "false")]
     pub compression_enabled: bool,
 
     /// Max batch size in bytes
@@ -109,7 +109,7 @@ impl Default for BatcherConfig {
         Self {
             valkey_url: "redis://127.0.0.1:6379".to_string(),
             chain_id: 1,
-            compression_enabled: true,
+            compression_enabled: false,
             max_batch_size: byte_unit::Byte::from_u64(90 * 1024),
             timeout: Duration::from_millis(200),
             private_key: "0x0000000000000000000000000000000000000000000000000000000000000000"

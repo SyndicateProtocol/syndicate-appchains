@@ -7,9 +7,7 @@ interface ISyndicateSequencingChain {
     /// @notice The ID of the App chain that this contract is sequencing transactions for
     function appchainId() external view returns (uint256);
 
-    /// @notice Processes a compressed batch of signed transactions.
-    /// @param data The compressed transaction data.
-    function processTransactionsCompressed(bytes calldata data) external;
+    function encodeTransaction(bytes calldata data) external returns (bytes memory);
 
     /// @notice Process a signed transaction.
     /// @param data Transaction data
