@@ -318,8 +318,7 @@ impl Batcher {
             if batch.len() > uncompressed_size {
                 debug!(%self.config.chain_id, "Batch compressed size is larger than uncompressed size.");
             }
-            self.metrics
-                .record_compression_space_saving_pct(uncompressed_size, batch.len());
+            self.metrics.record_compression_space_saving_pct(uncompressed_size, batch.len());
         }
         Ok((batch, last_included_id))
     }
