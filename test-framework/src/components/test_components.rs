@@ -18,11 +18,11 @@ use alloy::{
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
-    r#always_allowed_module::AlwaysAllowedModule,
     assertion_poster::AssertionPoster,
     erc1967_proxy::ERC1967Proxy,
     i_inbox::IInbox,
     i_upgrade_executor::IUpgradeExecutor,
+    r#always_allowed_module::AlwaysAllowedModule,
     rollup::Rollup,
     syndicate_sequencing_chain::SyndicateSequencingChain::{
         self, SyndicateSequencingChainInstance,
