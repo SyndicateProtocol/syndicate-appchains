@@ -4,12 +4,14 @@ on:
   pull_request:
     branches:
       - main
+      - staging
   workflow_run:
     workflows: [ "Publish Service Images" ] # Run on `main` pushes only AFTER `publish-images` workflow completes successfully
     types:
       - completed
     branches:
       - main
+      - staging
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
