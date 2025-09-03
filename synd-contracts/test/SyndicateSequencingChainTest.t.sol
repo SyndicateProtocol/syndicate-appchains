@@ -3,7 +3,9 @@ pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
-import {SyndicateSequencingChain, TransactionType, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
+import {
+    SyndicateSequencingChain, L2MessageType_SignedTx, SequencingModuleChecker
+} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -26,7 +28,7 @@ contract MockIsAllowed is IPermissionModule {
 
 contract MockIsAllowedWithInvalidData is IPermissionModule {
     function isAllowed(address, address, bytes calldata data) external pure override returns (bool) {
-        return keccak256(data) != keccak256(abi.encodePacked(TransactionType.Signed, "invalid"));
+        return keccak256(data) != keccak256(abi.encodePacked(L2MessageType_SignedTx, "invalid"));
     }
 }
 
@@ -87,7 +89,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(
-            address(this), abi.encodePacked(TransactionType.Signed, validTxn)
+            address(this), abi.encodePacked(L2MessageType_SignedTx, validTxn)
         );
 
         chain.processTransaction(validTxn);
@@ -106,7 +108,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
                 RequireAndModule.AndPermissionCheckFailed.selector,
                 mockRequireAll,
                 address(this),
-                abi.encodePacked(TransactionType.Signed, validTxn)
+                abi.encodePacked(L2MessageType_SignedTx, validTxn)
             )
         );
         chain.processTransaction(validTxn);
@@ -124,7 +126,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             abi.encodeWithSelector(
                 RequireOrModule.AllOrPermissionChecksFailed.selector,
                 address(this),
-                abi.encodePacked(TransactionType.Signed, validTxn)
+                abi.encodePacked(L2MessageType_SignedTx, validTxn)
             )
         );
         chain.processTransaction(validTxn);
@@ -139,7 +141,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(
-            address(this), abi.encodePacked(TransactionType.Signed, data)
+            address(this), abi.encodePacked(L2MessageType_SignedTx, data)
         );
 
         chain.processTransaction(data);
@@ -159,7 +161,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             vm.expectEmit(true, false, false, true);
 
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(TransactionType.Signed, validTxns[i])
+                address(this), abi.encodePacked(L2MessageType_SignedTx, validTxns[i])
             );
         }
 
@@ -330,15 +332,15 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         txns[2] = abi.encode("transaction 3");
 
         // Configure mock to allow all transactions
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, txns[0]), true);
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, txns[1]), true);
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, txns[2]), true);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, txns[0]), true);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, txns[1]), true);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, txns[2]), true);
 
         // Expect events for all transactions
         for (uint256 i = 0; i < txns.length; i++) {
             vm.expectEmit(true, false, false, true);
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(TransactionType.Signed, txns[i])
+                address(this), abi.encodePacked(L2MessageType_SignedTx, txns[i])
             );
         }
 
@@ -360,8 +362,8 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         failingTxns[0] = abi.encode("allowed tx");
         failingTxns[1] = abi.encode("disallowed tx");
 
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, failingTxns[0]), true);
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, failingTxns[1]), false);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, failingTxns[0]), true);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, failingTxns[1]), false);
 
         chain.processTransactionsBulk(failingTxns);
 
@@ -370,14 +372,14 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         successTxns[0] = abi.encode("allowed tx 1");
         successTxns[1] = abi.encode("allowed tx 2");
 
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, successTxns[0]), true);
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, successTxns[1]), true);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, successTxns[0]), true);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, successTxns[1]), true);
 
         // Expect events for successful transactions
         for (uint256 i = 0; i < successTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
             emit SyndicateSequencingChain.TransactionProcessed(
-                address(this), abi.encodePacked(TransactionType.Signed, successTxns[i])
+                address(this), abi.encodePacked(L2MessageType_SignedTx, successTxns[i])
             );
         }
 
@@ -405,7 +407,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             Vm.Log memory log = logs[i];
 
             if (log.topics.length > 0 && log.topics[0] == expectedSig) {
-                if (keccak256(log.data) == keccak256(abi.encodePacked(TransactionType.Signed, "invalid"))) {
+                if (keccak256(log.data) == keccak256(abi.encodePacked(L2MessageType_SignedTx, "invalid"))) {
                     fail();
                 }
 
@@ -429,8 +431,8 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         bytes memory disallowedData = abi.encode("disallowed data");
 
         // Configure permissions
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, allowedData), true);
-        directMock.setAllowed(abi.encodePacked(TransactionType.Signed, disallowedData), false);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, allowedData), true);
+        directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, disallowedData), false);
 
         // Test 1: Failure path of onlyWhenAllowed (processTransaction)
         vm.expectRevert(SyndicateSequencingChain.TransactionOrSenderNotAllowed.selector);
@@ -439,7 +441,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Test 2: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
         emit SyndicateSequencingChain.TransactionProcessed(
-            address(this), abi.encodePacked(TransactionType.Signed, allowedData)
+            address(this), abi.encodePacked(L2MessageType_SignedTx, allowedData)
         );
         chain.processTransaction(allowedData);
     }

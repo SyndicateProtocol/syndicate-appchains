@@ -31,14 +31,6 @@
       "offset": 20,
       "slot": "2",
       "type": "t_bool"
-    },
-    {
-      "astId": 1702,
-      "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
-      "label": "contractNonce",
-      "offset": 0,
-      "slot": "3",
-      "type": "t_mapping(t_address,t_uint256)"
     }
   ],
   "types": {

@@ -12,8 +12,8 @@ methods {
     function enableGasTracking() external;
     function emissionsReceiver() external returns (address) envfree;
     function getEmissionsReceiver() external returns (address) envfree;
-    // Contract nonce function
-    function contractNonce(address) external returns (uint256) envfree;
+    function gasTrackingDisabled() external returns (bool) envfree;
+    function encodeTransaction(bytes) external returns (bytes) envfree;
     // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
     function permissionModule.setAllowed(address, bool) external;
@@ -217,30 +217,28 @@ rule emissionsReceiverConsistency() {
     assert receiver != 0 => effectiveReceiver == receiver, "When explicit receiver set, should return that receiver";
 }
 
-/*
- * Rule : Contract nonce only increases for sendContractTransaction
- */
-rule contractNonceIncreasesOnContractTx(address user, uint64 gasLimit, uint256 maxFeePerGas, address to, uint256 value, bytes data) {
-    env e;
-    require getInitializedVersion() > 0;
-    require e.msg.sender == user;
-    uint256 nonceBefore = contractNonce(user);
-    sendContractTransaction(e, gasLimit, maxFeePerGas, to, value, data);
-    uint256 nonceAfter = contractNonce(user);
-    assert nonceAfter == nonceBefore + 1, "Contract nonce should increment by 1 for sendContractTransaction";
-}
 
 /*
- * Rule : Contract nonce unchanged by other operations
+ * Rule : Verify permissions are correctly enforced
  */
-rule contractNonceUnchangedByOtherOps(address user, bytes txData) {
+rule permissionsCorrectlyEnforced(bytes data) {
     env e;
-    require getInitializedVersion() > 0;
-    require e.msg.sender != user; // Different sender
-    uint256 nonceBefore = contractNonce(user);
-    // Test with processTransaction (should not affect nonces)
-    processTransaction@withrevert(e, txData);
-    uint256 nonceAfter = contractNonce(user);
-    assert nonceAfter == nonceBefore, "Contract nonce should not change for non-contract transactions";
+    // Require the contract to be initialized
+    require permissionRequirementModule() == permissionModule;
+    require owner() == e.msg.sender;
+    // Valid sender and msg parameters
+    require e.block.timestamp >= 1754089200;
+    require e.msg.value == 0;
+    // Valid data requirements
+    require data.length > 0;
+    require data.length < max_uint256;
+    // Check permissions
+    bool senderAllowed = isAllowed(e.msg.sender, e.msg.sender, encodeTransaction(data));
+    // Process transaction
+    processTransaction@withrevert(e, data);
+    bool txSucceeded = !lastReverted;
+    // Bidirectional assertions
+    assert txSucceeded => senderAllowed, "Transaction succeeded with unauthorized sender";
+    assert senderAllowed => txSucceeded, "Transaction failed despite permissions being valid and preconditions met";
 }
 

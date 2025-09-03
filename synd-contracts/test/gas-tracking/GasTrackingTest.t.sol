@@ -15,6 +15,7 @@ import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.s
 
 contract MockGasCounter {
     mapping(uint256 => uint256) public tokensUsedPerEpoch;
+    address public emissionsReceiver;
 
     function getTokensForEpoch(uint256 epoch) external view returns (uint256) {
         return tokensUsedPerEpoch[epoch];
@@ -22,6 +23,14 @@ contract MockGasCounter {
 
     function setTokensForEpoch(uint256 epoch, uint256 tokens) external {
         tokensUsedPerEpoch[epoch] = tokens;
+    }
+
+    function getEmissionsReceiver() external view returns (address) {
+        return emissionsReceiver;
+    }
+
+    function setEmissionsReceiver(address _emissionsReceiver) external {
+        emissionsReceiver = _emissionsReceiver;
     }
 }
 
@@ -193,6 +202,9 @@ contract GasAggregatorTest is Test {
         mockFactory.addAppchain(1, address(mockGasCounter1));
         mockFactory.addAppchain(2, address(mockGasCounter2));
 
+        mockGasCounter1.setEmissionsReceiver(address(0x2001));
+        mockGasCounter2.setEmissionsReceiver(address(0x2002));
+
         // Set gas usage for current epoch
         uint256 epoch = 1;
         mockGasCounter1.setTokensForEpoch(epoch, 100);
@@ -235,6 +247,9 @@ contract GasAggregatorTest is Test {
         mockFactory.addAppchain(1, address(mockGasCounter1));
         mockFactory.addAppchain(2, address(mockGasCounter2));
 
+        mockGasCounter1.setEmissionsReceiver(address(0x1001));
+        mockGasCounter2.setEmissionsReceiver(address(0x1002));
+
         // Set gas usage
         uint256 currentEpoch = gasAggregator.pendingEpoch();
         mockGasCounter1.setTokensForEpoch(currentEpoch, 100);
@@ -264,7 +279,10 @@ contract GasAggregatorTest is Test {
         uint256[] memory expectedTokens = new uint256[](2);
         expectedTokens[0] = 100;
         expectedTokens[1] = 200;
-        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens));
+        address[] memory expectedEmissionsReceivers = new address[](2);
+        expectedEmissionsReceivers[0] = address(0x1001);
+        expectedEmissionsReceivers[1] = address(0x1002);
+        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens, expectedEmissionsReceivers));
         assertEq(gasAggregator.pendingDataHash(), expectedHash);
     }
 
@@ -417,7 +435,10 @@ contract GasAggregatorTest is Test {
         uint256[] memory expectedTokens = new uint256[](2);
         expectedTokens[0] = 100;
         expectedTokens[1] = 200;
-        bytes32 expectedHash = keccak256(abi.encode(chainIDs, expectedTokens));
+        address[] memory expectedEmissionsReceivers = new address[](2);
+        expectedEmissionsReceivers[0] = address(0);
+        expectedEmissionsReceivers[1] = address(0);
+        bytes32 expectedHash = keccak256(abi.encode(chainIDs, expectedTokens, expectedEmissionsReceivers));
         assertEq(gasAggregator.aggregatedEpochDataHash(currentEpoch), expectedHash);
     }
 
@@ -574,7 +595,10 @@ contract GasAggregatorTest is Test {
         uint256[] memory tokens = new uint256[](2);
         tokens[0] = 100;
         tokens[1] = 200;
-        bytes32 expectedHash = keccak256(abi.encode(chainIDs, tokens));
+        address[] memory expectedEmissionsReceivers = new address[](2);
+        expectedEmissionsReceivers[0] = address(0);
+        expectedEmissionsReceivers[1] = address(0);
+        bytes32 expectedHash = keccak256(abi.encode(chainIDs, tokens, expectedEmissionsReceivers));
         assertEq(gasAggregator.aggregatedEpochDataHash(epoch1), expectedHash);
 
         // Move forward some time to simulate a later point where we want to re-submit historical data
@@ -589,6 +613,9 @@ contract GasAggregatorTest is Test {
         mockFactory.setTotalAppchains(1);
         mockFactory.addAppchain(1, address(mockGasCounter1));
         mockFactory.addAppchain(2, address(mockGasCounter2));
+
+        mockGasCounter1.setEmissionsReceiver(address(0x3001));
+        mockGasCounter2.setEmissionsReceiver(address(0x3002));
 
         // Set gas usage for epoch 1
         uint256 epoch1 = gasAggregator.pendingEpoch();
@@ -608,7 +635,10 @@ contract GasAggregatorTest is Test {
         uint256[] memory expectedTokens = new uint256[](2);
         expectedTokens[0] = 100;
         expectedTokens[1] = 200;
-        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens));
+        address[] memory expectedEmissionsReceivers = new address[](2);
+        expectedEmissionsReceivers[0] = address(0x3001);
+        expectedEmissionsReceivers[1] = address(0x3002);
+        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens, expectedEmissionsReceivers));
         assertEq(gasAggregator.aggregatedEpochDataHash(epoch1), expectedHash);
 
         // Move forward in time to simulate a later point where we want to re-submit historical data

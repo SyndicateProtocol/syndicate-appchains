@@ -8,13 +8,11 @@ rule emptyArraysRevert() {
     env e;
     address[] chains;
     bytes[] transactions;
-    bool[] isRaw;
 
     require chains.length == 0;
     require transactions.length == 0;
-    require isRaw.length == 0;
 
-    processTransactionsAtomically@withrevert(e, chains, transactions, isRaw);
+    processTransactionsAtomically@withrevert(e, chains, transactions);
     assert lastReverted, "Empty arrays should revert";
 }
 
@@ -22,12 +20,11 @@ rule mismatchedLengthsRevert() {
     env e;
     address[] chains;
     bytes[] transactions;
-    bool[] isRaw;
 
-    require chains.length != transactions.length || chains.length != isRaw.length;
+    require chains.length != transactions.length;
     require chains.length > 0;
 
-    processTransactionsAtomically@withrevert(e, chains, transactions, isRaw);
+    processTransactionsAtomically@withrevert(e, chains, transactions);
     assert lastReverted, "Mismatched lengths should revert";
 }
 
