@@ -46,10 +46,11 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
     mapping(uint256 => bytes32) public lastKnownSeqChainBlockHashes;
 
     /// @notice epoches and related chainIDs for which data is already validated and stored
-    mapping(uint256 => mapping(uint256 => bool)) public archivedEpochData;
+    mapping(uint256 => bool) public archivedEpochData;
 
     /// @notice Validated epoch data
     mapping(uint256 => uint256) public epochTotalTokensUsed;
+    mapping(uint256 => uint256[]) public epochAppchainIDs;
     mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainTokensUsed;
     mapping(uint256 => mapping(uint256 => address)) public epochAppchainEmissionsReceiver;
     // NOTE: if an appchain has different emissions receivers across different sequencing chains, the latest one to be validated will be used
@@ -76,6 +77,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
     error InvalidEthereumBlockHeader();
     error InvalidSeqChainBlockHeader();
     error sequencingChainAlreadyExists();
+    error NotArchivedEpoch();
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -180,13 +182,14 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
 
         // data submitted is valid, store it
         uint256 totalTokensUsed = 0;
+        epochAppchainIDs[epoch] = appchains;
         for (uint256 i = 0; i < appchains.length; i++) {
             totalTokensUsed += tokens[i];
             epochAppchainTokensUsed[epoch][appchains[i]] += tokens[i];
             epochAppchainEmissionsReceiver[epoch][appchains[i]] = emissionsReceivers[i];
         }
-        epochTotalTokensUsed[epoch] += totalTokensUsed;
-        archivedEpochData[epoch][seqChainID] = true;
+        epochTotalTokensUsed[epoch] = totalTokensUsed;
+        archivedEpochData[epoch] = true;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -339,6 +342,47 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
             proofItems[i] = proof[i].toRlpItem();
         }
         return proofItems;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             VIEWS
+    //////////////////////////////////////////////////////////////*/
+
+    modifier onlyArchivedEpoch(uint256 epochIndex) {
+        if (!archivedEpochData[epochIndex]) revert NotArchivedEpoch();
+        _;
+    }
+
+    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId)
+        external
+        view
+        onlyArchivedEpoch(epochIndex)
+        returns (uint256)
+    {
+        return epochAppchainTokensUsed[epochIndex][appchainId];
+    }
+
+    function getTotalGasFees(uint256 epochIndex) external view onlyArchivedEpoch(epochIndex) returns (uint256) {
+        return epochTotalTokensUsed[epochIndex];
+    }
+
+    function getActiveAppchainIds(uint256 epochIndex)
+        external
+        view
+        onlyArchivedEpoch(epochIndex)
+        returns (uint256[] memory _chainIDs)
+    {
+        uint256[] memory appchainIDs = epochAppchainIDs[epochIndex];
+        return appchainIDs;
+    }
+
+    function getAppchainRewardsReceiver(uint256 epochIndex, uint256 appchainId)
+        external
+        view
+        onlyArchivedEpoch(epochIndex)
+        returns (address)
+    {
+        return epochAppchainEmissionsReceiver[epochIndex][appchainId];
     }
 
     /*//////////////////////////////////////////////////////////////
