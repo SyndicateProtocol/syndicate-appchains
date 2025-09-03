@@ -213,8 +213,13 @@ contract AppchainPoolTest is Test {
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 100 ether);
 
-        vm.startPrank(user1);
-        appchainPool.claim(epoch, appchainId1);
+        vm.prank(user1);
+        vm.expectRevert(AppchainPool.InvalidClaimer.selector);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
+        vm.stopPrank();
+
+        vm.startPrank(appchainDest1);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
@@ -232,15 +237,15 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 50 ether);
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId2), 50 ether);
 
-        vm.startPrank(user1);
-        appchainPool.claim(epoch, appchainId1);
+        vm.startPrank(appchainDest1);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId2), 50 ether);
 
-        vm.startPrank(user2);
-        appchainPool.claim(epoch, appchainId2);
+        vm.startPrank(appchainDest2);
+        appchainPool.claim(epoch, appchainId2, address(appchainDest2));
         vm.stopPrank();
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
@@ -260,16 +265,16 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId2), 30 ether);
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId3), 30 ether);
 
-        vm.startPrank(user1);
-        appchainPool.claim(epoch, appchainId1);
+        vm.startPrank(appchainDest1);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
 
-        vm.startPrank(user2);
-        appchainPool.claim(epoch, appchainId2);
+        vm.startPrank(appchainDest2);
+        appchainPool.claim(epoch, appchainId2, address(appchainDest2));
         vm.stopPrank();
 
-        vm.startPrank(user3);
-        appchainPool.claim(epoch, appchainId3);
+        vm.startPrank(appchainDest3);
+        appchainPool.claim(epoch, appchainId3, address(appchainDest3));
         vm.stopPrank();
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
@@ -309,8 +314,8 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId2), 30 ether);
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId3), 30 ether);
 
-        vm.startPrank(user1);
-        appchainPool.claim(epoch, appchainId1);
+        vm.startPrank(appchainDest1);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
@@ -323,8 +328,8 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId2), 33 ether);
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId3), 33 ether);
 
-        vm.startPrank(user2);
-        appchainPool.claim(epoch, appchainId2);
+        vm.startPrank(appchainDest2);
+        appchainPool.claim(epoch, appchainId2, address(appchainDest2));
         vm.stopPrank();
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 3 ether);
@@ -342,9 +347,9 @@ contract AppchainPoolTest is Test {
 
         uint256 currentEpoch = staking.getCurrentEpoch();
 
-        vm.startPrank(user1);
+        vm.startPrank(appchainDest1);
         vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
-        appchainPool.claim(currentEpoch, appchainId1);
+        appchainPool.claim(currentEpoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
 
@@ -358,9 +363,9 @@ contract AppchainPoolTest is Test {
 
         uint256 currentEpoch = staking.getCurrentEpoch();
 
-        vm.startPrank(user1);
+        vm.startPrank(appchainDest1);
         vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
-        appchainPool.claim(currentEpoch + 1, appchainId1);
+        appchainPool.claim(currentEpoch + 1, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
 
@@ -375,9 +380,9 @@ contract AppchainPoolTest is Test {
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
 
-        vm.startPrank(user2); // random user
+        vm.startPrank(address(appchainDest1));
         vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
-        appchainPool.claim(epoch, appchainId1);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
 
@@ -435,8 +440,8 @@ contract AppchainPoolTest is Test {
         emit ClaimSuccess(epoch, appchainId1, appchainDest1, expected);
 
         // Claim
-        vm.prank(user1);
-        appchainPool.claim(epoch, appchainId1);
+        vm.prank(appchainDest1);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
 
         // Receiver got paid
         assertEq(appchainDest1.balance, destBefore + expected, "receiver did not receive amount");
@@ -448,7 +453,7 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
     }
 
-    /// If a receiver isn’t configured (address(0)), claim must revert with InvalidDestination.
+    /// If a receiver isn’t configured (address(0)), claim must revert with InvalidClaimer.
     function test_claim_reverts_when_receiver_not_set() public {
         setupStake(100 ether, 0, 0);
 
@@ -467,8 +472,8 @@ contract AppchainPoolTest is Test {
         assertEq(amt, 100 ether, "math should still compute before destination check");
 
         vm.startPrank(user1);
-        vm.expectRevert(AppchainPool.InvalidDestination.selector);
-        appchainPool.claim(epoch, appchainId1);
+        vm.expectRevert(AppchainPool.InvalidClaimer.selector);
+        appchainPool.claim(epoch, appchainId1, address(user1));
         vm.stopPrank();
     }
 
@@ -484,9 +489,9 @@ contract AppchainPoolTest is Test {
         // claimable must be zero and claim must revert
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "should be zero when totalStake==0");
 
-        vm.startPrank(user1);
+        vm.startPrank(address(appchainDest1));
         vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
-        appchainPool.claim(epoch, appchainId1);
+        appchainPool.claim(epoch, appchainId1, address(user1));
         vm.stopPrank();
     }
 
@@ -507,8 +512,8 @@ contract AppchainPoolTest is Test {
 
         vm.expectEmit(true, true, true, true, address(appchainPool));
         emit ClaimSuccess(e1, appchainId1, appchainDest1, exp1);
-        vm.prank(user1);
-        appchainPool.claim(e1, appchainId1);
+        vm.prank(appchainDest1);
+        appchainPool.claim(e1, appchainId1, address(appchainDest1));
 
         assertEq(appchainDest1.balance, dest1Before + exp1, "epoch1 receiver did not receive");
         assertEq(address(appchainPool).balance, poolBefore1 - exp1, "pool not reduced e1");
@@ -529,8 +534,8 @@ contract AppchainPoolTest is Test {
 
         vm.expectEmit(true, true, true, true, address(appchainPool));
         emit ClaimSuccess(e2, appchainId1, appchainDest2, exp2);
-        vm.prank(user1);
-        appchainPool.claim(e2, appchainId1);
+        vm.prank(appchainDest2);
+        appchainPool.claim(e2, appchainId1, address(appchainDest2));
 
         assertEq(appchainDest2.balance, dest2Before + exp2, "epoch2 receiver did not receive");
         assertEq(address(appchainPool).balance, poolBefore2 - exp2, "pool not reduced e2");
@@ -549,8 +554,8 @@ contract AppchainPoolTest is Test {
         uint256 before1 = appchainDest1.balance;
         uint256 expected1 = appchainPool.getClaimableAmount(epoch, appchainId1);
 
-        vm.prank(user1);
-        appchainPool.claim(epoch, appchainId1);
+        vm.prank(appchainDest1);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
 
         assertEq(appchainDest1.balance, before1 + expected1, "first claim not paid");
 
@@ -559,8 +564,8 @@ contract AppchainPoolTest is Test {
         uint256 before2 = appchainDest1.balance;
         uint256 expected2 = appchainPool.getClaimableAmount(epoch, appchainId1); // should be the delta (≈ 3 ether)
 
-        vm.prank(user1);
-        appchainPool.claim(epoch, appchainId1);
+        vm.prank(appchainDest1);
+        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
 
         assertEq(appchainDest1.balance, before2 + expected2, "incremental claim not paid");
     }

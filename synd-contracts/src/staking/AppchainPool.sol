@@ -6,8 +6,11 @@ import {IPool} from "./IPool.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {console2} from "forge-std/console2.sol";
 
-interface GasDataProvider {
+// TODO: Reconcile with IGasProvider interface when contract is ready
+// Current work in progress https://github.com/SyndicateProtocol/syndicate-appchains/pull/780
+interface IGasDataProvider {
     function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
     function getTotalGasFees(uint256 epochIndex) external view returns (uint256);
     function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory _chainIDs);
@@ -35,7 +38,7 @@ contract AppchainPool is IPool, ReentrancyGuard {
     ISyndStaking public immutable stakingContract;
 
     /// @notice Reference to the GasDataProvider contract for gas data queries
-    GasDataProvider public immutable gasDataProvider;
+    IGasDataProvider public immutable gasDataProvider;
 
     /// @notice Mapping from epoch index to total reward amount deposited for that epoch
     mapping(uint256 epochIndex => uint256 total) public epochTotal;
@@ -43,13 +46,10 @@ contract AppchainPool is IPool, ReentrancyGuard {
     /// @notice Mapping from epoch index and appchain id to the amount of rewards claimed
     mapping(uint256 epochIndex => mapping(uint256 appchainId => uint256 claimed)) public claimed;
 
-    /// @notice Mapping from epoch index and appchain id to the dominance factor for that appchain
-    mapping(uint256 epochIndex => mapping(uint256 appchainId => UD60x18 dominanceFactor)) public dominanceFactor;
+    /// @notice Mapping from epoch index and appchain id to the diminishing factor for that appchain
+    mapping(uint256 epochIndex => mapping(uint256 appchainId => UD60x18 diminishingFactor)) public diminishingFactor;
 
-    /// @notice Mapping from epoch index to appchain id to is dominance factor computed
-    mapping(uint256 epochIndex => mapping(uint256 appchainId => bool isComputed)) public isComputed;
-
-    /// @notice Mapping from epoch index to the total dominance factor for all appchains
+    /// @notice Mapping from epoch index to the total diminishing factor for all appchains
     mapping(uint256 epochIndex => UD60x18 epochTotalDiminishingFactor) public epochTotalDiminishingFactor;
 
     /**
@@ -73,8 +73,8 @@ contract AppchainPool is IPool, ReentrancyGuard {
     /// @notice Error thrown when trying to claim from an epoch with no rewards
     error ClaimNotAvailable();
 
-    /// @notice Error thrown when trying to claim from an invalid destination
-    error InvalidDestination();
+    /// @notice Error thrown when trying to claim from an invalid sender
+    error InvalidClaimer();
 
     /// @notice Error thrown when trying to claim from a zero address
     error ZeroAddress();
@@ -82,12 +82,13 @@ contract AppchainPool is IPool, ReentrancyGuard {
     /**
      * @notice Constructor to initialize the pool with staking contract and depositor
      * @param _stakingContract Address of the SyndStaking contract
+     * @param _gasDataProvider Address of the GasDataProvider contract
      */
     constructor(address _stakingContract, address _gasDataProvider) {
         if (_stakingContract == address(0) || _gasDataProvider == address(0)) revert ZeroAddress();
 
         stakingContract = ISyndStaking(_stakingContract);
-        gasDataProvider = GasDataProvider(_gasDataProvider);
+        gasDataProvider = IGasDataProvider(_gasDataProvider);
     }
 
     /**
@@ -107,15 +108,15 @@ contract AppchainPool is IPool, ReentrancyGuard {
      *    @dev Appchains can claim repeatedly until fully claimed; rewards are based on stake/fees for the epoch.
      * @param epochIndex The epoch index for which to claim rewards
      * @param appchainId The ID of the appchain
+     * @param destination The address where rewards should be sent
      */
-    function claim(uint256 epochIndex, uint256 appchainId) external nonReentrant {
+    function claim(uint256 epochIndex, uint256 appchainId, address destination) external nonReentrant {
         if (epochTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
 
-        address destination = gasDataProvider.getAppchainRewardsReceiver(epochIndex, appchainId);
-        if (destination == address(0)) {
-            revert InvalidDestination();
+        if (msg.sender != gasDataProvider.getAppchainRewardsReceiver(epochIndex, appchainId)) {
+            revert InvalidClaimer();
         }
 
         uint256 claimAmount = getClaimableAmount(epochIndex, appchainId);
@@ -124,7 +125,7 @@ contract AppchainPool is IPool, ReentrancyGuard {
         }
         claimed[epochIndex][appchainId] += claimAmount;
 
-        // Send synd to destination
+        // Send $SYND to destination
         Address.sendValue(payable(destination), claimAmount);
 
         emit ClaimSuccess(epochIndex, appchainId, destination, claimAmount);
@@ -133,6 +134,8 @@ contract AppchainPool is IPool, ReentrancyGuard {
     /**
      * @notice Calculates the claimable reward amount for an appchain in a specific epoch
      * @dev Returns the amount of rewards the appchain can claim for the given epoch, based on their stake share and any previously claimed amount.
+     * RewardAmount = (PoolAmount * AppchainDiminishingFactor) / AllAppchainsDiminishingFactor
+     * Claimable = RewardAmount - AlreadyClaimed
      * @param epochIndex The epoch index to query
      * @param appchainId The ID of the appchain
      * @return The amount of rewards claimable by the appchain for the specified epoch
@@ -174,8 +177,8 @@ contract AppchainPool is IPool, ReentrancyGuard {
         UD60x18 totalStake,
         UD60x18 totalGasFees
     ) internal returns (UD60x18) {
-        if (isComputed[epochIndex][appchainId]) {
-            return dominanceFactor[epochIndex][appchainId];
+        if (!diminishingFactor[epochIndex][appchainId].isZero()) {
+            return diminishingFactor[epochIndex][appchainId];
         }
 
         UD60x18 appchainStake = convert(stakingContract.getAppchainStake(epochIndex, appchainId));
@@ -188,8 +191,7 @@ contract AppchainPool is IPool, ReentrancyGuard {
         if (appchainDiminishingFactor.isZero()) return convert(0);
 
         // Cache the result
-        isComputed[epochIndex][appchainId] = true;
-        dominanceFactor[epochIndex][appchainId] = appchainDiminishingFactor;
+        diminishingFactor[epochIndex][appchainId] = appchainDiminishingFactor;
 
         return appchainDiminishingFactor;
     }
