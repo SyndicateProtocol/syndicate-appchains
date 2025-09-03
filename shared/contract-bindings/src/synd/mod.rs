@@ -16,7 +16,7 @@ pub mod r#allowlist_sequencing_module;
 pub mod r#allowlist_syndicate_storage_addresses;
 pub mod r#always_allowed_module;
 pub mod r#appchain_pool;
-pub mod r#gas_data_provider;
+pub mod r#i_gas_data_provider;
 pub mod r#i_gas_provider;
 pub mod r#mock_gas_provider;
 pub mod r#arb_chain_config;

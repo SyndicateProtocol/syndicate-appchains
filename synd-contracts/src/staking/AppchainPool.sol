@@ -6,7 +6,7 @@ import {IPool} from "./IPool.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {console2} from "forge-std/console2.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // TODO: Reconcile with IGasProvider interface when contract is ready
 // Current work in progress https://github.com/SyndicateProtocol/syndicate-appchains/pull/780
@@ -26,13 +26,13 @@ interface IGasDataProvider {
  * This contract allows anyone to deposit rewards for specific epochs,
  * and stakers can claim their rewards based on their appchain stake share.
  */
-contract AppchainPool is IPool, ReentrancyGuard {
+contract AppchainPool is IPool, ReentrancyGuard, Ownable {
     // Weights and decay
     // fee multiplier x = 0.4, stake multiplier y = 0.2
-    UD60x18 immutable FEE_MULTIPLIER = ud(0.4e18);
-    UD60x18 immutable STAKING_MULTIPLIER = ud(0.2e18);
+    UD60x18 public feeMultiplier = ud(0.4e18);
+    UD60x18 public stakeMultiplier = ud(0.2e18);
     // decay factor = 2
-    UD60x18 immutable DECAY_FACTOR = ud(2e18);
+    UD60x18 public decayFactor = ud(2e18);
 
     /// @notice Reference to the SyndStaking contract for stake queries
     ISyndStaking public immutable stakingContract;
@@ -81,10 +81,11 @@ contract AppchainPool is IPool, ReentrancyGuard {
 
     /**
      * @notice Constructor to initialize the pool with staking contract and depositor
+     * @param _defaultAdmin The address to be set as the contract owner
      * @param _stakingContract Address of the SyndStaking contract
      * @param _gasDataProvider Address of the GasDataProvider contract
      */
-    constructor(address _stakingContract, address _gasDataProvider) {
+    constructor(address _defaultAdmin, address _stakingContract, address _gasDataProvider) Ownable(_defaultAdmin) {
         if (_stakingContract == address(0) || _gasDataProvider == address(0)) revert ZeroAddress();
 
         stakingContract = ISyndStaking(_stakingContract);
@@ -138,7 +139,7 @@ contract AppchainPool is IPool, ReentrancyGuard {
      * Claimable = RewardAmount - AlreadyClaimed
      * @param epochIndex The epoch index to query
      * @param appchainId The ID of the appchain
-     * @return The amount of rewards claimable by the appchain for the specified epoch
+     * @return claimableAmount The amount of rewards claimable by the appchain for the specified epoch
      */
     function getClaimableAmount(uint256 epochIndex, uint256 appchainId) public returns (uint256) {
         if (epochTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
@@ -147,10 +148,10 @@ contract AppchainPool is IPool, ReentrancyGuard {
 
         UD60x18 poolAmount = convert(epochTotal[epochIndex]);
 
-        /// TOTAL STAKING & GAS FEES
         UD60x18 totalStake = convert(stakingContract.getTotalStake(epochIndex));
         if (totalStake.isZero()) return 0;
 
+        // We need this value to be 0 or the function to revert when gas data is not ready yet
         UD60x18 totalGasFees = convert(gasDataProvider.getTotalGasFees(epochIndex));
         if (totalGasFees.isZero()) return 0;
 
@@ -162,9 +163,9 @@ contract AppchainPool is IPool, ReentrancyGuard {
         if (allAppchainsDiminishingFactor.isZero()) return 0;
 
         uint256 appchainReward = convert(poolAmount.mul(appchainDiminishingFactor).div(allAppchainsDiminishingFactor));
+        // TODO (SEQ-1337): Add vesting calculations
         uint256 alreadyClaimed = claimed[epochIndex][appchainId];
-
-        return appchainReward > alreadyClaimed ? appchainReward - alreadyClaimed : 0;
+        return appchainReward - alreadyClaimed;
     }
 
     /**
@@ -184,10 +185,10 @@ contract AppchainPool is IPool, ReentrancyGuard {
         UD60x18 appchainStake = convert(stakingContract.getAppchainStake(epochIndex, appchainId));
         UD60x18 appchainGasFees = convert(gasDataProvider.getAppchainGasFees(epochIndex, appchainId));
 
-        UD60x18 appchainFeeShare = appchainGasFees.mul(FEE_MULTIPLIER).div(totalGasFees);
-        UD60x18 appchainStakeShare = appchainStake.mul(STAKING_MULTIPLIER).div(totalStake);
+        UD60x18 appchainFeeShare = appchainGasFees.mul(feeMultiplier).div(totalGasFees);
+        UD60x18 appchainStakeShare = appchainStake.mul(stakeMultiplier).div(totalStake);
         UD60x18 appchainDominanceFactor = appchainFeeShare.add(appchainStakeShare);
-        UD60x18 appchainDiminishingFactor = (convert(1).add(DECAY_FACTOR.mul(appchainDominanceFactor))).ln();
+        UD60x18 appchainDiminishingFactor = (convert(1).add(decayFactor.mul(appchainDominanceFactor))).ln();
         if (appchainDiminishingFactor.isZero()) return convert(0);
 
         // Cache the result
@@ -197,7 +198,7 @@ contract AppchainPool is IPool, ReentrancyGuard {
     }
 
     /**
-     * @dev Computes the total diminishing factor for all appchains for an epoch.
+     * @dev Computes the sum of the diminishing factors for all appchains for an epoch.
      */
     function _getAllAppchainsDiminishingFactor(uint256 epochIndex, UD60x18 totalStake, UD60x18 totalGasFees)
         internal
@@ -223,5 +224,40 @@ contract AppchainPool is IPool, ReentrancyGuard {
         epochTotalDiminishingFactor[epochIndex] = allAppchainsDiminishingFactor;
 
         return allAppchainsDiminishingFactor;
+    }
+
+    /////// Setters for multipliers and decay factor ///////
+
+    /**
+     * @notice Set the fee multiplier
+     * @param _feeMultiplier The new fee multiplier
+     * @dev The fee multiplier is divided by 1e18
+     * eg. If we want to set 0.4, we need to call with 0.4e18
+     * @dev Changes will take effect for the next epoch
+     */
+    function setFeeMultiplier(uint256 _feeMultiplier) external onlyOwner {
+        feeMultiplier = ud(_feeMultiplier);
+    }
+
+    /**
+     * @notice Set the stake multiplier
+     * @param _stakeMultiplier The new stake multiplier
+     * @dev The stake multiplier is divided by 1e18
+     * eg. If we want to set 0.2, we need to call with 0.2e18
+     * @dev Changes will take effect for the next epoch
+     */
+    function setStakeMultiplier(uint256 _stakeMultiplier) external onlyOwner {
+        stakeMultiplier = ud(_stakeMultiplier);
+    }
+
+    /**
+     * @notice Set the decay factor
+     * @param _decayFactor The new decay factor
+     * @dev The decay factor is divided by 1e18
+     * eg. If we want to set 2, we need to call with 2e18
+     * @dev Changes will take effect for the next epoch
+     */
+    function setDecayFactor(uint256 _decayFactor) external onlyOwner {
+        decayFactor = ud(_decayFactor);
     }
 }
