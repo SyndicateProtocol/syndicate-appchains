@@ -120,7 +120,6 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     constructor(address defaultAdmin, address syndTreasuryAddress)
         ERC20("Syndicate", "SYND")
         ERC20Permit("Syndicate")
-        ERC20Votes()
     {
         // Input validation
         if (defaultAdmin == address(0)) revert ZeroAddress();
