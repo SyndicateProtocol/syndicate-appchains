@@ -1,7 +1,7 @@
 {
   "storage": [
     {
-      "astId": 1688,
+      "astId": 1884,
       "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
       "label": "appchainId",
       "offset": 0,
@@ -9,7 +9,7 @@
       "type": "t_uint256"
     },
     {
-      "astId": 1691,
+      "astId": 1887,
       "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
       "label": "emissionsReceiver",
       "offset": 0,
@@ -17,7 +17,7 @@
       "type": "t_address"
     },
     {
-      "astId": 1694,
+      "astId": 1890,
       "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
       "label": "factory",
       "offset": 0,
@@ -25,7 +25,7 @@
       "type": "t_address"
     },
     {
-      "astId": 1697,
+      "astId": 1893,
       "contract": "src/SyndicateSequencingChain.sol:SyndicateSequencingChain",
       "label": "allowGasTrackingBanOnUpgrade",
       "offset": 20,
@@ -43,13 +43,6 @@
       "encoding": "inplace",
       "label": "bool",
       "numberOfBytes": "1"
-    },
-    "t_mapping(t_address,t_uint256)": {
-      "encoding": "mapping",
-      "key": "t_address",
-      "label": "mapping(address => uint256)",
-      "numberOfBytes": "32",
-      "value": "t_uint256"
     },
     "t_uint256": {
       "encoding": "inplace",

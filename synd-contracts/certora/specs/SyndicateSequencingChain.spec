@@ -12,7 +12,6 @@ methods {
     function enableGasTracking() external;
     function emissionsReceiver() external returns (address) envfree;
     function getEmissionsReceiver() external returns (address) envfree;
-    function gasTrackingDisabled() external returns (bool) envfree;
     function encodeTransaction(bytes) external returns (bytes) envfree;
     // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;

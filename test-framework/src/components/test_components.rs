@@ -12,12 +12,13 @@ use crate::components::{
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
-    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U160, U256},
+    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, TransactionReceipt},
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
+    r#always_allowed_module::AlwaysAllowedModule,
     assertion_poster::AssertionPoster,
     erc1967_proxy::ERC1967Proxy,
     i_inbox::IInbox,
