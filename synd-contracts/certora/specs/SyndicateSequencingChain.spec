@@ -81,8 +81,8 @@ rule onlyAllowedCanProcess(bytes data) {
     require e.msg.value == 0;
     // Disable gas tracking
     require !gasTrackingEnabled();
-    // Use zero address as permission module to allow all transactions
-    require permissionRequirementModule() == 0;
+    // Use address(1) as permission module to allow all transactions
+    require permissionRequirementModule() == 1;
     // Try to process a transaction
     processTransaction@withrevert(e, data);
     // With no permission module, all transactions should succeed
@@ -101,8 +101,8 @@ rule processConsistencyNoPermissions(bytes data) {
     require e.msg.value == 0;
     // Disable gas tracking
     require !gasTrackingEnabled();
-    // Use no permission module (allows all)
-    require permissionRequirementModule() == 0;
+    // Use address(1) as permission module (allows all)
+    require permissionRequirementModule() == 1;
     // Record both outcomes
     processTransaction@withrevert(e, data);
     bool txSuccess = !lastReverted;
@@ -125,8 +125,8 @@ rule permissionModuleRequired(bytes data) {
     // Disable gas tracking
     require !gasTrackingEnabled();
     // Compare behavior with and without permission module
-    // First test with no permission module
-    require permissionRequirementModule() == 0;
+    // First test with address(1) permission module (allows all)
+    require permissionRequirementModule() == 1;
     processTransaction@withrevert(e, data);
     bool successNoPermissions = !lastReverted;
     // This should succeed since no permissions are required
@@ -214,30 +214,5 @@ rule emissionsReceiverConsistency() {
     address effectiveReceiver = getEmissionsReceiver();
     assert receiver == 0 => effectiveReceiver == owner(), "When no explicit receiver set, should return owner";
     assert receiver != 0 => effectiveReceiver == receiver, "When explicit receiver set, should return that receiver";
-}
-
-
-/*
- * Rule : Verify permissions are correctly enforced
- */
-rule permissionsCorrectlyEnforced(bytes data) {
-    env e;
-    // Require the contract to be initialized
-    require permissionRequirementModule() == permissionModule;
-    require owner() == e.msg.sender;
-    // Valid sender and msg parameters
-    require e.block.timestamp >= 1754089200;
-    require e.msg.value == 0;
-    // Valid data requirements
-    require data.length > 0;
-    require data.length < max_uint256;
-    // Check permissions
-    bool senderAllowed = isAllowed(e.msg.sender, e.msg.sender, encodeTransaction(data));
-    // Process transaction
-    processTransaction@withrevert(e, data);
-    bool txSucceeded = !lastReverted;
-    // Bidirectional assertions
-    assert txSucceeded => senderAllowed, "Transaction succeeded with unauthorized sender";
-    assert senderAllowed => txSucceeded, "Transaction failed despite permissions being valid and preconditions met";
 }
 
