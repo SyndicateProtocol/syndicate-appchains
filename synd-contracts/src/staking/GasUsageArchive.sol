@@ -46,7 +46,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
     mapping(uint256 => bytes32) public lastKnownSeqChainBlockHashes;
 
     /// @notice epoches and related chainIDs for which data is already validated and stored
-    mapping(uint256 => mapping(uint256 => bool)) public archievedEpochData;
+    mapping(uint256 => mapping(uint256 => bool)) public archivedEpochData;
 
     /// @notice Validated epoch data
     mapping(uint256 => uint256) public epochTotalTokensUsed;
@@ -71,6 +71,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
     error EmptySlot();
     error InvalidData();
     error ChainIDNotFound();
+    error CannotSubmitProofForSettlementChain();
     error NotBlockHashSender();
     error InvalidEthereumBlockHeader();
     error InvalidSeqChainBlockHeader();
@@ -109,7 +110,13 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         lastKnownSettlementChainBlockHash = seqBlockHash;
     }
 
-    //TODO docs
+    /// @notice Confirms and stores a sequencing chain block hash using Ethereum storage proofs
+    /// @dev Verifies that the provided block hash is confirmed in the respective Ethereum bridge contract storage
+    /// @param seqChainID The ID of the sequencing chain
+    /// @param seqChainBlockHash The sequencing chain block hash to confirm
+    /// @param ethereumBlockHeader RLP-encoded Ethereum block header
+    /// @param ethereumAccountProof Merkle proof of the bridge contract account
+    /// @param ethereumStorageProof Merkle proof of the storage slot containing the block hash
     function confirmSequencingChainBlockHash(
         uint256 seqChainID,
         bytes32 seqChainBlockHash,
@@ -127,7 +134,16 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         lastKnownSeqChainBlockHashes[seqChainID] = seqChainBlockHash;
     }
 
-    // TODO docs
+    /// @notice Validates and stores epoch gas usage data using sequencing chain storage proofs
+    /// @dev Verifies epoch data against the sequencing chain's GasAggregator contract storage
+    /// @param epoch The epoch number to validate
+    /// @param seqChainID The sequencing chain ID
+    /// @param seqChainBlockHeader RLP-encoded sequencing chain block header
+    /// @param seqChainAccountProof Merkle proof of the GasAggregator account
+    /// @param seqChainStorageProof Merkle proof of the epoch data storage slot
+    /// @param appchains Array of appchain IDs
+    /// @param tokens Array of token amounts used to pay for gas by each appchain on the sequencing chain
+    /// @param emissionsReceivers Array of emissions receiver addresses for each appchain
     function confirmEpochDataHash(
         uint256 epoch,
         uint256 seqChainID,
@@ -138,7 +154,9 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         uint256[] calldata tokens,
         address[] calldata emissionsReceivers
     ) external {
-        // must matches the last confirmed block hash for this sequencing chain
+        // note: it's not necessary to validate the array lengths match because the GasAggregator already does that
+
+        // seq chain header must matches the last confirmed block hash for this sequencing chain
         bytes32 seqChainBlockHash = keccak256(seqChainBlockHeader);
         bytes32 expectedBlockHash = lastKnownSeqChainBlockHashes[seqChainID];
         if (useSettlementChainAsSequencingChain) {
@@ -167,8 +185,8 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
             epochAppchainTokensUsed[epoch][appchains[i]] += tokens[i];
             epochAppchainEmissionsReceiver[epoch][appchains[i]] = emissionsReceivers[i];
         }
-        epochTotalTokensUsed[epoch] = totalTokensUsed;
-        archievedEpochData[epoch][seqChainID] = true;
+        epochTotalTokensUsed[epoch] += totalTokensUsed;
+        archivedEpochData[epoch][seqChainID] = true;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -193,11 +211,18 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         if (keccak256(ethereumBlockHeader) != lastKnownEthereumBlockHash) {
             revert InvalidEthereumBlockHeader();
         }
+        address account = ethereumSeqChainBridges[seqChainID];
+        if (account == address(0)) {
+            if (useSettlementChainAsSequencingChain && seqChainID == settlementChainID) {
+                revert CannotSubmitProofForSettlementChain();
+            }
+            revert ChainIDNotFound();
+        }
         bytes32 verifiedSeqChainBlockHash = _getSlotValueFromProof({
             stateRoot: _getStateRootFromHeader(ethereumBlockHeader),
             accountProof: accountProof,
             storageProof: storageProof,
-            account: ethereumSeqChainBridges[seqChainID],
+            account: account,
             storageSlot: ethereumSeqChainStorageSlots[seqChainID]
         });
 
@@ -218,11 +243,15 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         bytes[] calldata accountProof,
         bytes[] calldata storageProof
     ) internal view returns (bytes32) {
+        address account = seqChainGasAggregatorAddresses[seqChainID];
+        if (account == address(0)) {
+            revert ChainIDNotFound();
+        }
         return _getSlotValueFromProof({
             stateRoot: _getStateRootFromHeader(blockHeader),
             accountProof: accountProof,
             storageProof: storageProof,
-            account: seqChainGasAggregatorAddresses[seqChainID],
+            account: account,
             storageSlot: _getStorageSlot(epoch)
         });
     }
@@ -243,7 +272,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         RLPReader.RLPItem memory accountRlp = MerklePatriciaProofVerifier.extractProofValue({
             rootHash: stateRoot,
             path: abi.encodePacked(accountHash),
-            stack: _parseRLPItems(accountProof)
+            stack: _RLPItemsFromProofBytes(accountProof)
         }).toRlpItem();
 
         // If the account does not exist, return the hash of an empty trie.
@@ -277,7 +306,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         RLPReader.RLPItem memory slotContents = MerklePatriciaProofVerifier.extractProofValue({
             rootHash: storageRoot,
             path: abi.encodePacked(storageSlot),
-            stack: _parseRLPItems(storageProof)
+            stack: _RLPItemsFromProofBytes(storageProof)
         }).toRlpItem();
 
         if (slotContents.len == 0) {
@@ -299,17 +328,16 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         return keccak256(abi.encode(epoch, AGGREGATED_EPOCH_DATA_HASH_SLOT));
     }
 
-    /// @notice Parses RLP items from the given proof bytes.
+    /// @notice creates RLP items from the given proof bytes.
     ///
     /// @param proof The proof bytes.
     ///
-    /// @return The parsed RLP items.
-    function _parseRLPItems(bytes[] memory proof) private pure returns (RLPReader.RLPItem[] memory) {
+    /// @return The RLP items.
+    function _RLPItemsFromProofBytes(bytes[] memory proof) private pure returns (RLPReader.RLPItem[] memory) {
         RLPReader.RLPItem[] memory proofItems = new RLPReader.RLPItem[](proof.length);
         for (uint256 i; i < proof.length; i++) {
             proofItems[i] = proof[i].toRlpItem();
         }
-
         return proofItems;
     }
 
@@ -317,12 +345,17 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
                          ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    // TODO docs
+    /// @notice Adds a new sequencing chain configuration
+    /// @dev Only admin can add sequencing chains. Special handling for settlement chain as sequencing chain
+    /// @param chainID The chain ID of the sequencing chain
+    /// @param aggregatorAddress Address of the GasAggregator contract on the sequencing chain
+    /// @param bridgeAddress Address of the bridge contract on Ethereum (not needed for settlement chain)
+    /// @param storageSlot Storage slot in the bridge contract where the block hash is stored
     function addSequencingChain(uint256 chainID, address aggregatorAddress, address bridgeAddress, bytes32 storageSlot)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        if (seqChainGasAggregatorAddresses[chainID] == address(0)) {
+        if (seqChainGasAggregatorAddresses[chainID] != address(0)) {
             revert sequencingChainAlreadyExists();
         }
         if (aggregatorAddress == address(0)) {
@@ -345,7 +378,9 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         ethereumSeqChainStorageSlots[chainID] = storageSlot;
     }
 
-    // TODO docs
+    /// @notice Removes a sequencing chain configuration
+    /// @dev Only admin can remove sequencing chains. Special handling for settlement chain
+    /// @param chainID The chain ID of the sequencing chain to remove
     function removeSeqChain(uint256 chainID) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (chainID == settlementChainID) {
             useSettlementChainAsSequencingChain = false;
@@ -370,7 +405,9 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         delete ethereumSeqChainStorageSlots[chainID];
     }
 
-    // TODO docs
+    /// @notice Updates the authorized block hash sender address
+    /// @dev Only admin can change the block hash sender
+    /// @param newBlockHashSender The new address authorized to send block hashes
     function setBlockHashSender(address newBlockHashSender) external onlyRole(DEFAULT_ADMIN_ROLE) {
         blockHashSender = newBlockHashSender;
     }
