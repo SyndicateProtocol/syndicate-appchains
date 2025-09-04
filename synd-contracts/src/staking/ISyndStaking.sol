@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
  * @notice Interface for the SyndStaking contract providing stake query functionality
  * @dev Defines the core view functions for accessing stake information across different dimensions
  */
-interface ISyndStaking {
+interface ISyndStaking  {
     /**
      * @notice Get the total stake amount for a specific user in a specific epoch
      * @param epochIndex The epoch index to query
