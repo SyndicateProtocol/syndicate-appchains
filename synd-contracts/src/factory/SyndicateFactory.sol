@@ -56,6 +56,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Emitted when a chain is banned from gas tracking
     event ChainBannedFromGasTracking(uint256 indexed chainId, address indexed notAllowedImplementation);
 
+    /// @notice Emitted when a deterministic chainID is generated
+    event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
+
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     error ZeroAddress();
@@ -88,6 +91,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Chains banned from gas tracking due to not allowed implementation
     mapping(uint256 => bool) public gasTrackingBanlist;
     uint256 public numberOfChainsBannedFromGasTracking;
+
+    /// @notice Per-sender nonce tracking for deterministic chainID generation
+    mapping(address sender => uint256 nonce) public senderNonces;
 
     /// @notice Disables initializers to prevent the implementation contract from being initialized
     constructor() {
@@ -182,6 +188,125 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         return (sequencingChain, actualChainId);
     }
 
+    /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID to prevent squatting
+    /// @param nonce The nonce for deterministic chainID generation (0 for auto-increment using sender's current nonce)
+    /// @param admin The admin address for the new chain
+    /// @param permissionModule The pre-deployed permission module
+    /// @return sequencingChain The deployed sequencing chain address
+    /// @return actualChainId The chain ID that was used
+    //#olympix-ignore-reentrancy-events
+    function createSyndicateSequencingChainDeterministic(
+        uint256 nonce,
+        address admin,
+        IRequirementModule permissionModule
+    ) external whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
+        if (admin == address(0) || address(permissionModule) == address(0)) {
+            revert ZeroAddress();
+        }
+
+        // Determine actual nonce and chain ID using deterministic generation
+        uint256 actualNonce = nonce == 0 ? senderNonces[msg.sender] : nonce;
+        actualChainId = generateDeterministicChainId(msg.sender, actualNonce);
+
+        // Validate chain ID is not already used
+        if (appchainContracts[actualChainId] != address(0)) {
+            revert ChainIdAlreadyExists();
+        }
+
+        // If using auto-increment nonce (nonce == 0), increment the sender's nonce
+        if (nonce == 0) {
+            senderNonces[msg.sender]++;
+        } else {
+            // If using specific nonce, ensure it's greater than current nonce
+            if (nonce < senderNonces[msg.sender]) {
+                revert ChainIdAlreadyExists(); // Reusing this error for nonce already used
+            }
+            // Update sender's nonce to be at least this value + 1
+            senderNonces[msg.sender] = nonce + 1;
+        }
+
+        // Emit deterministic chainID generation event
+        emit DeterministicChainIdGenerated(msg.sender, actualNonce, actualChainId);
+
+        // Deploy the sequencing chain using consistent proxy bytecode
+        bytes memory consistentBytecode = getProxyBytecode();
+        sequencingChain = Create2.deploy(0, bytes32(actualChainId), consistentBytecode);
+
+        // Store the mapping of appchain ID to contract address
+        appchainContracts[actualChainId] = sequencingChain;
+        chainIDs.push(actualChainId);
+
+        // Upgrade the proxy to use the latest implementation (instead of the stub)
+        bytes memory initData = abi.encodeWithSignature(
+            "initialize(address,address,uint256)", address(this), address(permissionModule), actualChainId
+        );
+        (bool upgradeSuccess,) = sequencingChain.call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
+        );
+        if (!upgradeSuccess) {
+            revert FailedToUpgradeToLatestImplementation();
+        }
+
+        // Transfer ownership to the intended admin
+        SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
+
+        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
+
+        return (sequencingChain, actualChainId);
+    }
+
+    /// @notice Creates a new SyndicateSequencingChain with a custom chainID (admin only)
+    /// @param customChainId The custom chain ID to use
+    /// @param admin The admin address for the new chain
+    /// @param permissionModule The pre-deployed permission module
+    /// @return sequencingChain The deployed sequencing chain address
+    /// @return actualChainId The chain ID that was used (same as customChainId)
+    function createSyndicateSequencingChainWithCustomId(
+        uint256 customChainId,
+        address admin,
+        IRequirementModule permissionModule
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
+        if (admin == address(0) || address(permissionModule) == address(0)) {
+            revert ZeroAddress();
+        }
+        if (customChainId == 0) {
+            revert ZeroAddress(); // Reusing this error for zero chainID
+        }
+
+        // Validate chain ID is not already used
+        if (appchainContracts[customChainId] != address(0)) {
+            revert ChainIdAlreadyExists();
+        }
+
+        actualChainId = customChainId;
+
+        // Deploy the sequencing chain using consistent proxy bytecode
+        bytes memory consistentBytecode = getProxyBytecode();
+        sequencingChain = Create2.deploy(0, bytes32(actualChainId), consistentBytecode);
+
+        // Store the mapping of appchain ID to contract address
+        appchainContracts[actualChainId] = sequencingChain;
+        chainIDs.push(actualChainId);
+
+        // Upgrade the proxy to use the latest implementation (instead of the stub)
+        bytes memory initData = abi.encodeWithSignature(
+            "initialize(address,address,uint256)", address(this), address(permissionModule), actualChainId
+        );
+        (bool upgradeSuccess,) = sequencingChain.call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
+        );
+        if (!upgradeSuccess) {
+            revert FailedToUpgradeToLatestImplementation();
+        }
+
+        // Transfer ownership to the intended admin
+        SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
+
+        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
+
+        return (sequencingChain, actualChainId);
+    }
+
     /// @notice Computes the address where a sequencing chain will be deployed
     /// @param chainId The chain ID to compute the address for
     /// @return The computed address
@@ -232,6 +357,29 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @return 1 if used, 0 if available
     function isChainIdUsed(uint256 chainId) public view returns (bool) {
         return appchainContracts[chainId] != address(0);
+    }
+
+    /// @notice Generate deterministic chainID from sender address and nonce
+    /// @param sender The sender address
+    /// @param nonce The nonce for this sender
+    /// @return chainId The deterministic chain ID
+    function generateDeterministicChainId(address sender, uint256 nonce) public pure returns (uint256 chainId) {
+        // Use keccak256 hash of sender + nonce, then take modulo to keep within reasonable range
+        // This prevents chainID squatting across different sequencing chains
+        bytes32 hash = keccak256(abi.encodePacked(sender, nonce));
+        // Use modulo to keep chainIDs in a reasonable range (avoid extremely large numbers)
+        chainId = uint256(hash) % (10 ** 18); // Max 18 digits
+        // Ensure chainID is never 0
+        if (chainId == 0) {
+            chainId = 1;
+        }
+    }
+
+    /// @notice Get the next nonce for a sender
+    /// @param sender The sender address
+    /// @return The next nonce for this sender
+    function getNextNonceForSender(address sender) external view returns (uint256) {
+        return senderNonces[sender];
     }
 
     /// @notice returns the number of appchains not banned from gas tracking

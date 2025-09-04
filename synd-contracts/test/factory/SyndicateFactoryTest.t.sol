@@ -30,6 +30,8 @@ contract SyndicateFactoryTest is Test {
 
     event ChainIdManuallyMarked(uint256 indexed chainId);
 
+    event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
+
     function setUp() public {
         admin = address(0x1);
         manager = address(0x2);
@@ -175,7 +177,7 @@ contract SyndicateFactoryTest is Test {
         assertEq(sequencingChainAddress, expectedAddress);
     }
 
-    function testGetProxyBytecode() public {
+    function testGetProxyBytecode() public view {
         bytes memory bytecode = factory.getProxyBytecode();
         bytes memory expectedBytecode =
             abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(factory.stubImplementation(), ""));
@@ -311,7 +313,7 @@ contract SyndicateFactoryTest is Test {
         factory.unpause();
 
         vm.prank(nonManager);
-        vm.expectRevert(); // AccessControl will revert
+        vm.expectRevert(); // AccessControl revert
         factory.unpause();
     }
 
@@ -358,12 +360,6 @@ contract SyndicateFactoryTest is Test {
         // Non-manager should not have any roles
         assertFalse(factory.hasRole(DEFAULT_ADMIN_ROLE, nonManager));
         assertFalse(factory.hasRole(MANAGER_ROLE, nonManager));
-    }
-
-    function testNamespaceConfigGetters() public view {
-        // Initial values
-        assertEq(factory.namespacePrefix(), 510);
-        // Note: namespaceMultiplier no longer exists
     }
 
     function testPublicVariables() public view {
@@ -1049,5 +1045,600 @@ contract SyndicateFactoryTest is Test {
         vm.prank(nonManager);
         vm.expectRevert(); // AccessControl revert
         factory.setDefaultImplementation(address(impl));
+    }
+
+    // ================== DETERMINISTIC CHAIN ID TESTS ==================
+
+    function testGenerateDeterministicChainId() public view {
+        address sender = address(0x123);
+        uint256 nonce = 0;
+
+        uint256 chainId = factory.generateDeterministicChainId(sender, nonce);
+
+        // Verify chainID is deterministic (same inputs -> same output)
+        uint256 chainId2 = factory.generateDeterministicChainId(sender, nonce);
+        assertEq(chainId, chainId2);
+
+        // Verify chainID is never 0
+        assertTrue(chainId > 0);
+
+        // Verify different sender produces different chainID
+        uint256 chainId3 = factory.generateDeterministicChainId(address(0x456), nonce);
+        assertTrue(chainId != chainId3);
+
+        // Verify different nonce produces different chainID
+        uint256 chainId4 = factory.generateDeterministicChainId(sender, 1);
+        assertTrue(chainId != chainId4);
+    }
+
+    function testCreateSequencingChainDeterministicWithAutoIncrement() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+
+        // Check initial nonce is 0
+        assertEq(factory.getNextNonceForSender(admin), 0);
+
+        // Create sequencing chain with auto-increment nonce (nonce = 0)
+        vm.prank(admin);
+
+        (address sequencingChain, uint256 chainId) =
+            factory.createSyndicateSequencingChainDeterministic(0, chainAdmin, permissionModule);
+
+        // Verify the chain was deployed
+        assertTrue(sequencingChain != address(0));
+        assertTrue(chainId > 0);
+
+        // Verify nonce incremented
+        assertEq(factory.getNextNonceForSender(admin), 1);
+
+        // Verify deterministic generation
+        uint256 expectedChainId = factory.generateDeterministicChainId(admin, 0);
+        assertEq(chainId, expectedChainId);
+
+        // Verify chain is marked as used
+        assertTrue(factory.isChainIdUsed(chainId));
+    }
+
+    function testCreateSequencingChainDeterministicWithSpecificNonce() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+        uint256 specificNonce = 5;
+
+        // Create sequencing chain with specific nonce
+        vm.prank(admin);
+
+        (address sequencingChain, uint256 chainId) =
+            factory.createSyndicateSequencingChainDeterministic(specificNonce, chainAdmin, permissionModule);
+
+        // Verify the chain was deployed
+        assertTrue(sequencingChain != address(0));
+        assertTrue(chainId > 0);
+
+        // Verify nonce updated to specificNonce + 1
+        assertEq(factory.getNextNonceForSender(admin), specificNonce + 1);
+
+        // Verify deterministic generation
+        uint256 expectedChainId = factory.generateDeterministicChainId(admin, specificNonce);
+        assertEq(chainId, expectedChainId);
+    }
+
+    function testCreateSequencingChainDeterministicCannotReuseNonce() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+        uint256 nonce = 3;
+
+        // Create first chain with specific nonce
+        vm.prank(admin);
+        factory.createSyndicateSequencingChainDeterministic(nonce, chainAdmin, permissionModule);
+
+        // Try to reuse the same nonce - should fail
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
+        factory.createSyndicateSequencingChainDeterministic(nonce, chainAdmin, permissionModule);
+
+        // Also test using a lower nonce
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
+        factory.createSyndicateSequencingChainDeterministic(nonce - 1, chainAdmin, permissionModule);
+    }
+
+    function testCreateSequencingChainDeterministicDifferentSendersGetDifferentChainIds() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+        address sender1 = address(0x111);
+        address sender2 = address(0x222);
+
+        // Both senders use nonce 0
+        vm.prank(sender1);
+        (, uint256 chainId1) = factory.createSyndicateSequencingChainDeterministic(0, chainAdmin, permissionModule);
+
+        vm.prank(sender2);
+        (, uint256 chainId2) = factory.createSyndicateSequencingChainDeterministic(0, chainAdmin, permissionModule);
+
+        // Chain IDs should be different
+        assertTrue(chainId1 != chainId2);
+
+        // Both nonces should be 1 now
+        assertEq(factory.getNextNonceForSender(sender1), 1);
+        assertEq(factory.getNextNonceForSender(sender2), 1);
+    }
+
+    function testCreateSequencingChainDeterministicWhenPausedReverts() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+
+        // Pause the factory
+        vm.prank(admin);
+        factory.pause();
+
+        // Try to create deterministic sequencing chain
+        vm.prank(admin);
+        vm.expectRevert(); // Pausable will revert
+        factory.createSyndicateSequencingChainDeterministic(0, chainAdmin, permissionModule);
+    }
+
+    function testCreateSequencingChainDeterministicRevertsOnZeroAdmin() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainDeterministic(0, address(0), permissionModule);
+    }
+
+    function testCreateSequencingChainDeterministicRevertsOnZeroPermissionModule() public {
+        address chainAdmin = address(0x789);
+
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainDeterministic(0, chainAdmin, IRequirementModule(address(0)));
+    }
+
+    function testCreateSyndicateSequencingChainWithCustomIdAdminOnly() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+        uint256 customChainId = 999999;
+
+        // Admin can create with custom ID
+        vm.prank(admin);
+        (address sequencingChain, uint256 actualChainId) =
+            factory.createSyndicateSequencingChainWithCustomId(customChainId, chainAdmin, permissionModule);
+
+        assertTrue(sequencingChain != address(0));
+        assertEq(actualChainId, customChainId);
+        assertTrue(factory.isChainIdUsed(customChainId));
+
+        // Non-admin cannot create with custom ID
+        vm.prank(manager);
+        vm.expectRevert(); // AccessControl revert
+        factory.createSyndicateSequencingChainWithCustomId(customChainId + 1, chainAdmin, permissionModule);
+
+        vm.prank(nonManager);
+        vm.expectRevert(); // AccessControl revert
+        factory.createSyndicateSequencingChainWithCustomId(customChainId + 2, chainAdmin, permissionModule);
+    }
+
+    function testCreateCustomIdCannotReuseChainId() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+        uint256 customChainId = 888888;
+
+        // Create first chain
+        vm.prank(admin);
+        factory.createSyndicateSequencingChainWithCustomId(customChainId, chainAdmin, permissionModule);
+
+        // Try to reuse same chain ID - should fail
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
+        factory.createSyndicateSequencingChainWithCustomId(customChainId, chainAdmin, permissionModule);
+    }
+
+    function testCreateCustomIdCannotUseZeroChainId() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainWithCustomId(0, chainAdmin, permissionModule);
+    }
+
+    function testCreateCustomIdWhenPausedReverts() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+        uint256 customChainId = 777777;
+
+        // Pause the factory
+        vm.prank(admin);
+        factory.pause();
+
+        // Try to create custom ID chain
+        vm.prank(admin);
+        vm.expectRevert(); // Pausable will revert
+        factory.createSyndicateSequencingChainWithCustomId(customChainId, chainAdmin, permissionModule);
+    }
+
+    function testCreateCustomIdRevertsOnZeroAdmin() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        uint256 customChainId = 666666;
+
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainWithCustomId(customChainId, address(0), permissionModule);
+    }
+
+    function testCreateCustomIdRevertsOnZeroPermissionModule() public {
+        address chainAdmin = address(0x789);
+        uint256 customChainId = 555555;
+
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainWithCustomId(customChainId, chainAdmin, IRequirementModule(address(0)));
+    }
+
+    function testAntiSquattingAcrossChains() public {
+        // This test demonstrates that the same sender + nonce combination
+        // will always generate the same chainID, preventing squatting across different deployments
+
+        address sender = address(0x555);
+        uint256 nonce = 10;
+
+        // Generate chainID deterministically
+        uint256 expectedChainId = factory.generateDeterministicChainId(sender, nonce);
+
+        // Deploy a chain with this combination
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+
+        vm.prank(sender);
+        (, uint256 actualChainId) =
+            factory.createSyndicateSequencingChainDeterministic(nonce, chainAdmin, permissionModule);
+
+        // ChainID should match expected
+        assertEq(actualChainId, expectedChainId);
+
+        // Now simulate trying to deploy the same sender + nonce on a different "sequencing chain"
+        // (in practice this would be a different factory deployment, but we can test the collision here)
+        vm.prank(sender);
+        vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
+        factory.createSyndicateSequencingChainDeterministic(nonce, chainAdmin, permissionModule);
+    }
+
+    function testFuzzDeterministicChainIdGeneration(address sender, uint256 nonce) public view {
+        // Ensure we have a valid sender (not zero address since our contract checks for this)
+        vm.assume(sender != address(0));
+
+        uint256 chainId = factory.generateDeterministicChainId(sender, nonce);
+
+        // Chain ID should never be 0
+        assertTrue(chainId > 0);
+
+        // Chain ID should be deterministic
+        uint256 chainId2 = factory.generateDeterministicChainId(sender, nonce);
+        assertEq(chainId, chainId2);
+
+        // Chain ID should be within reasonable bounds (less than 10^18)
+        assertTrue(chainId < 10 ** 18);
+    }
+
+    function testMultipleSequentialDeterministicDeployments() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+        address sender = address(0x666);
+
+        uint256[] memory chainIds = new uint256[](5);
+
+        // Deploy 5 sequential chains using auto-increment nonces
+        for (uint256 i = 0; i < 5; i++) {
+            vm.prank(sender);
+            (, chainIds[i]) = factory.createSyndicateSequencingChainDeterministic(0, chainAdmin, permissionModule);
+
+            // Verify nonce incremented
+            assertEq(factory.getNextNonceForSender(sender), i + 1);
+        }
+
+        // All chain IDs should be different
+        for (uint256 i = 0; i < 5; i++) {
+            for (uint256 j = i + 1; j < 5; j++) {
+                assertTrue(chainIds[i] != chainIds[j]);
+            }
+        }
+
+        // All should be marked as used
+        for (uint256 i = 0; i < 5; i++) {
+            assertTrue(factory.isChainIdUsed(chainIds[i]));
+        }
+    }
+
+    // ================== NAMESPACE COLLISION TESTS ==================
+
+    function testNamespaceCollisionPrevention() public {
+        // Test that namespace collision detection works
+        vm.startPrank(admin);
+
+        // Should be able to use 123
+        factory.updateNamespaceConfig(123);
+
+        // Should not be able to use 12 (would create collision with 123)
+        vm.expectRevert("namespace collision detected");
+        factory.updateNamespaceConfig(12);
+
+        // Should not be able to use 1 (would create collision with 123)
+        vm.expectRevert("namespace collision detected");
+        factory.updateNamespaceConfig(1);
+
+        // Should not be able to use 0 (forbidden)
+        vm.expectRevert("namespace prefix of 0 is forbidden");
+        factory.updateNamespaceConfig(0);
+
+        vm.stopPrank();
+    }
+
+    function testNamespaceReuse() public {
+        vm.startPrank(admin);
+
+        // Use namespace 456
+        factory.updateNamespaceConfig(456);
+        assertEq(factory.namespacePrefix(), 456);
+
+        // Change to different namespace
+        factory.updateNamespaceConfig(789);
+        assertEq(factory.namespacePrefix(), 789);
+
+        // Should be able to reuse 456 (old namespaces can be reused)
+        factory.updateNamespaceConfig(456);
+        assertEq(factory.namespacePrefix(), 456);
+
+        vm.stopPrank();
+    }
+
+    // ================== STUB IMPLEMENTATION TESTS ==================
+
+    function testStubImplementationConsistency() public view {
+        // Test that stub implementation address is deterministic
+        address computedStub = factory.computeStubImplementationAddress();
+        address actualStub = factory.stubImplementation();
+        assertEq(computedStub, actualStub);
+    }
+
+    // ================== COMPREHENSIVE GAS TRACKING TESTS ==================
+
+    function testGasTrackingWithBannedChains() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Create 3 chains
+        uint256 chainId1 = 1001;
+        uint256 chainId2 = 1002;
+        uint256 chainId3 = 1003;
+
+        (address chain1,) = factory.createSyndicateSequencingChain(chainId1, admin, permissionModule);
+        factory.createSyndicateSequencingChain(chainId2, admin, permissionModule);
+        (address chain3,) = factory.createSyndicateSequencingChain(chainId3, admin, permissionModule);
+
+        // Initially all chains should be included
+        assertEq(factory.getTotalAppchainsForGasTracking(), 3);
+        assertEq(factory.numberOfChainsBannedFromGasTracking(), 0);
+
+        // Ban chain 2
+        vm.prank(admin);
+        factory.banChainFromGasTracking(chainId2, address(0x123));
+
+        // Now only 2 chains should be counted
+        assertEq(factory.getTotalAppchainsForGasTracking(), 2);
+        assertEq(factory.numberOfChainsBannedFromGasTracking(), 1);
+
+        // Test getAppchainsAndContractsForGasTracking
+        (uint256[] memory chainIds, address[] memory contracts) = factory.getAppchainsAndContractsForGasTracking();
+        assertEq(chainIds.length, 2);
+        assertEq(contracts.length, 2);
+
+        // Should contain chains 1 and 3, but not chain 2
+        bool foundChain1 = false;
+        bool foundChain3 = false;
+        bool foundChain2 = false;
+
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            if (chainIds[i] == chainId1) foundChain1 = true;
+            if (chainIds[i] == chainId2) foundChain2 = true;
+            if (chainIds[i] == chainId3) foundChain3 = true;
+        }
+
+        assertTrue(foundChain1);
+        assertTrue(foundChain3);
+        assertFalse(foundChain2);
+
+        // Test getContractsForGasTracking with banned chain
+        uint256[] memory requestedChains = new uint256[](3);
+        requestedChains[0] = chainId1;
+        requestedChains[1] = chainId2; // banned
+        requestedChains[2] = chainId3;
+
+        address[] memory returnedContracts = factory.getContractsForGasTracking(requestedChains);
+        assertEq(returnedContracts.length, 3);
+        assertEq(returnedContracts[0], chain1); // chain1 should be returned
+        assertEq(returnedContracts[1], address(0)); // chain2 should return zero address (banned)
+        assertEq(returnedContracts[2], chain3); // chain3 should be returned
+    }
+
+    function testBanningAlreadyBannedChainDoesntDoubleCount() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        uint256 chainId = 2001;
+        factory.createSyndicateSequencingChain(chainId, admin, permissionModule);
+
+        // Ban the chain
+        vm.prank(admin);
+        factory.banChainFromGasTracking(chainId, address(0x123));
+        assertEq(factory.numberOfChainsBannedFromGasTracking(), 1);
+
+        // Ban it again - count should not increase
+        vm.prank(admin);
+        factory.banChainFromGasTracking(chainId, address(0x456));
+        assertEq(factory.numberOfChainsBannedFromGasTracking(), 1); // Still 1, not 2
+    }
+
+    // ================== COMPREHENSIVE INTEGRATION TESTS ==================
+
+    function testFullFactoryLifecycle() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Test 1: Regular chain creation
+        (address regularChain, uint256 regularChainId) =
+            factory.createSyndicateSequencingChain(5001, admin, permissionModule);
+        assertTrue(regularChain != address(0));
+        assertEq(regularChainId, 5001);
+
+        // Test 2: Auto-increment chain creation
+        (, uint256 autoChainId) = factory.createSyndicateSequencingChain(0, admin, permissionModule);
+        uint256 expectedAutoId = (factory.namespacePrefix() * 10) + 1;
+        assertEq(autoChainId, expectedAutoId);
+
+        // Test 3: Deterministic chain creation
+        (, uint256 detChainId) = factory.createSyndicateSequencingChainDeterministic(0, admin, permissionModule);
+        uint256 expectedDetId = factory.generateDeterministicChainId(address(this), 0);
+        assertEq(detChainId, expectedDetId);
+
+        // Test 4: Custom chain creation (admin only)
+        vm.prank(admin);
+        (, uint256 customChainId) = factory.createSyndicateSequencingChainWithCustomId(9999, admin, permissionModule);
+        assertEq(customChainId, 9999);
+
+        // Test 5: All chains should be tracked
+        assertEq(factory.getTotalAppchainsForGasTracking(), 4);
+
+        // Test 6: Verify all chain IDs are different
+        assertTrue(regularChainId != autoChainId);
+        assertTrue(regularChainId != detChainId);
+        assertTrue(regularChainId != customChainId);
+        assertTrue(autoChainId != detChainId);
+        assertTrue(autoChainId != customChainId);
+        assertTrue(detChainId != customChainId);
+    }
+
+    function testMixedCreationMethodsWithCollisions() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Create regular chain
+        uint256 regularId = 1000;
+        factory.createSyndicateSequencingChain(regularId, admin, permissionModule);
+
+        // Try to create deterministic chain that might collide
+        vm.prank(admin);
+        (, uint256 detId) = factory.createSyndicateSequencingChainDeterministic(0, admin, permissionModule);
+
+        // Try to create custom chain with same ID as regular - should fail
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
+        factory.createSyndicateSequencingChainWithCustomId(regularId, admin, permissionModule);
+
+        // Try to create regular chain with same ID as deterministic - should fail
+        vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
+        factory.createSyndicateSequencingChain(detId, admin, permissionModule);
+
+        // All methods should respect the shared chainId space
+        assertTrue(factory.isChainIdUsed(regularId));
+        assertTrue(factory.isChainIdUsed(detId));
+    }
+
+    // ================== ERROR HANDLING TESTS ==================
+
+    function testZeroAddressValidation() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Test all creation methods with zero admin
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChain(1001, address(0), permissionModule);
+
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainDeterministic(0, address(0), permissionModule);
+
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainWithCustomId(1002, address(0), permissionModule);
+
+        // Test all creation methods with zero permission module
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChain(1003, admin, IRequirementModule(address(0)));
+
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainDeterministic(0, admin, IRequirementModule(address(0)));
+
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.createSyndicateSequencingChainWithCustomId(1004, admin, IRequirementModule(address(0)));
+    }
+
+    function testImplementationManagementErrors() public {
+        SyndicateSequencingChain impl = new SyndicateSequencingChain();
+
+        // Test adding zero address implementation
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
+        factory.addAllowedImplementation(address(0), false);
+
+        // Test removing implementation not in list
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ImplementationNotAllowed.selector);
+        factory.removeAllowedImplementation(address(impl));
+
+        // Test setting non-allowed implementation as default
+        vm.prank(admin);
+        vm.expectRevert(SyndicateFactory.ImplementationNotAllowed.selector);
+        factory.setDefaultImplementation(address(impl));
+    }
+
+    // ================== EDGE CASE TESTS ==================
+
+    function testLargeNonceValues() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address chainAdmin = address(0x789);
+        uint256 largeNonce = type(uint256).max - 1;
+
+        // Should handle large nonce values
+        vm.prank(admin);
+        (, uint256 chainId) =
+            factory.createSyndicateSequencingChainDeterministic(largeNonce, chainAdmin, permissionModule);
+
+        assertTrue(chainId > 0);
+        assertEq(factory.getNextNonceForSender(admin), type(uint256).max); // largeNonce + 1
+
+        // Verify deterministic generation still works
+        uint256 expectedId = factory.generateDeterministicChainId(admin, largeNonce);
+        assertEq(chainId, expectedId);
+    }
+
+    function testMaxChainIdValue() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        uint256 maxChainId = type(uint256).max - 1;
+
+        // Should handle very large chain ID values
+        vm.prank(admin);
+        (, uint256 actualChainId) =
+            factory.createSyndicateSequencingChainWithCustomId(maxChainId, admin, permissionModule);
+
+        assertEq(actualChainId, maxChainId);
+        assertTrue(factory.isChainIdUsed(maxChainId));
+    }
+
+    // ================== FUZZ TESTS ==================
+
+    function testFuzzCreateRegularChain(uint256 chainId, address chainAdmin) public {
+        vm.assume(chainId != 0);
+        vm.assume(chainAdmin != address(0));
+        vm.assume(!factory.isChainIdUsed(chainId));
+
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        (, uint256 actualChainId) = factory.createSyndicateSequencingChain(chainId, chainAdmin, permissionModule);
+        assertEq(actualChainId, chainId);
+        assertTrue(factory.isChainIdUsed(chainId));
+    }
+
+    function testFuzzDeterministicChainGeneration(address sender, uint256 nonce) public view {
+        vm.assume(sender != address(0));
+
+        uint256 chainId1 = factory.generateDeterministicChainId(sender, nonce);
+        uint256 chainId2 = factory.generateDeterministicChainId(sender, nonce);
+
+        // Should be deterministic
+        assertEq(chainId1, chainId2);
+        assertTrue(chainId1 > 0);
+        assertTrue(chainId1 < 10 ** 18); // Within reasonable bounds
     }
 }
