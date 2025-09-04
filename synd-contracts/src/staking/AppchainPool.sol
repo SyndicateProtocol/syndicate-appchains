@@ -30,7 +30,6 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
     /// @notice Vesting duration in seconds (1 year = 365 days)
     uint256 public constant VESTING_DURATION = 365 days;
 
-
     // Weights and decay
     // fee multiplier x = 0.4, stake multiplier y = 0.2
     UD60x18 public feeMultiplier = ud(0.4e18);
@@ -136,7 +135,7 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
         emit ClaimSuccess(epochIndex, appchainId, destination, claimAmount);
     }
 
-        /**
+    /**
      * @notice Calculates the full reward amount for an appchain in a specific epoch (without vesting)
      * @dev Returns the total amount of rewards the appchain earned for the given epoch, regardless of vesting
      * RewardAmount = (PoolAmount * AppchainDiminishingFactor) / AllAppchainsDiminishingFactor
@@ -167,10 +166,9 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
         if (allAppchainsDiminishingFactor.isZero()) return 0;
 
         uint256 appchainReward = convert(poolAmount.mul(appchainDiminishingFactor).div(allAppchainsDiminishingFactor));
-      
+
         return appchainReward;
     }
-
 
     /**
      * @notice Calculates the claimable reward amount for an appchain in a specific epoch (with vesting)
@@ -187,16 +185,16 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
 
         uint256 alreadyClaimed = claimed[epochIndex][appchainId];
         uint256 vestedAmount = getVestedAmount(epochIndex, fullReward);
-        
+
         // Return the minimum of vested amount and remaining unclaimed amount
         if (vestedAmount <= alreadyClaimed) {
             return 0;
         }
-        
+
         return vestedAmount - alreadyClaimed;
     }
 
-        /**
+    /**
      * @notice Calculates the vested amount for a given epoch and reward amount
      * @dev Implements linear vesting over 1 year (365 days) after the epoch ends
      * @param epochIndex The epoch index
@@ -217,11 +215,11 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
         if (timeElapsed >= VESTING_DURATION) {
             return fullReward;
         }
-        
+
         // Calculate linear vesting: (timeElapsed / VESTING_DURATION) * fullReward
         // Use higher precision to avoid rounding errors
         uint256 vestedAmount = (fullReward * timeElapsed) / VESTING_DURATION;
-        
+
         return vestedAmount;
     }
 
