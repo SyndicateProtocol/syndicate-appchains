@@ -6,9 +6,9 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {MerklePatriciaProofVerifier} from "./lib/MerklePatriciaProofVerifier.sol";
 import {RLPReader} from "./lib/RLPReader.sol";
 
-/// @title GasUsageArchive
-/// @notice Trustlessly validates and stores gas usage data from chainA using storage proofs
-contract GasUsageArchive is Initializable, AccessControlUpgradeable {
+/// @title GasArchive
+/// @notice Lives on the staking appchain and trustlessly validates and stores gas usage data from multiple sequencing chains using storage proofs
+contract GasArchive is Initializable, AccessControlUpgradeable {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for bytes;
 
@@ -42,7 +42,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
     mapping(uint256 => address) public ethereumSeqChainBridges;
     /// @notice mapping of sequencing chain IDs to the storage slot of the rollup hash in the bridge contract
     mapping(uint256 => bytes32) public ethereumSeqChainStorageSlots;
-
+    // @notice mapping of sequencing chain IDs to the respective last confirmed block hash
     mapping(uint256 => bytes32) public lastKnownSeqChainBlockHashes;
 
     /// @notice epoches and related chainIDs for which data is already validated and stored
@@ -59,7 +59,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event EpochDataValidated(uint256 indexed epoch, bytes32 dataHash, uint256 blockNumber);
+    event EpochDataValidated(uint256 indexed epoch, uint256 indexed seqChainID, bytes32 dataHash);
     event GasAggregatorAddressUpdated(address indexed oldAddress, address indexed newAddress);
 
     /*//////////////////////////////////////////////////////////////
@@ -76,7 +76,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
     error NotBlockHashSender();
     error InvalidEthereumBlockHeader();
     error InvalidSeqChainBlockHeader();
-    error sequencingChainAlreadyExists();
+    error SequencingChainAlreadyExists();
     error NotArchivedEpoch();
 
     /*//////////////////////////////////////////////////////////////
@@ -106,7 +106,6 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
     /// @param ethBlockHash The last known block hash for the ETH chain
     /// @param seqBlockHash The last known block hash for the SETTLEMENT chain
     function setLastKnownBlockHashes(bytes32 ethBlockHash, bytes32 seqBlockHash) external {
-        // TODO implement the contract to call this function
         if (msg.sender != blockHashSender) revert NotBlockHashSender();
         lastKnownEthereumBlockHash = ethBlockHash;
         lastKnownSettlementChainBlockHash = seqBlockHash;
@@ -161,7 +160,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         // seq chain header must matches the last confirmed block hash for this sequencing chain
         bytes32 seqChainBlockHash = keccak256(seqChainBlockHeader);
         bytes32 expectedBlockHash = lastKnownSeqChainBlockHashes[seqChainID];
-        if (useSettlementChainAsSequencingChain) {
+        if (useSettlementChainAsSequencingChain && seqChainID == settlementChainID) {
             expectedBlockHash = lastKnownSettlementChainBlockHash;
         }
         if (expectedBlockHash != seqChainBlockHash) {
@@ -181,6 +180,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         }
 
         // data submitted is valid, store it
+        emit EpochDataValidated(epoch, seqChainID, epochDataHash);
         uint256 totalTokensUsed = 0;
         epochAppchainIDs[epoch] = appchains;
         for (uint256 i = 0; i < appchains.length; i++) {
@@ -400,7 +400,7 @@ contract GasUsageArchive is Initializable, AccessControlUpgradeable {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         if (seqChainGasAggregatorAddresses[chainID] != address(0)) {
-            revert sequencingChainAlreadyExists();
+            revert SequencingChainAlreadyExists();
         }
         if (aggregatorAddress == address(0)) {
             revert ZeroAddress();
