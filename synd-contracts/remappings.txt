@@ -5,6 +5,5 @@
 @sp1-contracts/=lib/sp1-contracts/contracts/src/
 @arbitrum/nitro-contracts/=lib/nitro-contracts/
 @eigenda/contracts/=lib/eigenda-contracts/
-lib/eigenda-contracts/lib/eigenlayer-middleware/=lib/eigenlayer-middleware/
 @prb/math/=lib/prb-math/
 @offchainlabs/upgrade-executor/=lib/upgrade-executor/
