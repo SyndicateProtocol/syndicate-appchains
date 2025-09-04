@@ -726,16 +726,16 @@ contract AppchainPoolTest is Test {
     /// Test that only owner can call setter functions
     function test_setter_functions_only_owner() public {
         vm.startPrank(user1); // non-owner
-        
+
         vm.expectRevert(); // Ownable: caller is not the owner
         appchainPool.setFeeMultiplier(0.5e18);
-        
+
         vm.expectRevert(); // Ownable: caller is not the owner
         appchainPool.setStakeMultiplier(0.3e18);
-        
+
         vm.expectRevert(); // Ownable: caller is not the owner
         appchainPool.setDecayFactor(2.5e18);
-        
+
         vm.stopPrank();
     }
 
@@ -773,7 +773,7 @@ contract AppchainPoolTest is Test {
         // claimed is the first state variable (slot 6)
         bytes32 epochSlot = keccak256(abi.encode(epoch, uint256(6)));
         bytes32 finalSlot = keccak256(abi.encode(appchainId1, epochSlot));
-        
+
         // Set claimed amount to be greater than the reward
         // This will cause: appchainReward - alreadyClaimed = 100 - 200 = -100 (underflow)
         vm.store(address(appchainPool), finalSlot, bytes32(uint256(200 ether)));
@@ -866,46 +866,46 @@ contract AppchainPoolTest is Test {
 
         // Set up new epoch to test that new multipliers take effect
         uint256 newEpoch = epoch + 1;
-        
+
         // Move to next epoch and ensure it's properly set up
         vm.warp(block.timestamp + 1 days); // Move to next epoch
-        
+
         // IMPORTANT: We need to set up stakes for the new epoch
         // The setupStake function only sets up stakes for epoch 1, so we need to handle epoch 3
         vm.startPrank(user1);
         staking.stakeSynd{value: 100 ether}(appchainId1);
         vm.stopPrank();
-        
+
         vm.startPrank(user2);
         staking.stakeSynd{value: 100 ether}(appchainId2);
         vm.stopPrank();
-        
+
         // Set up gas shares and receivers for new epoch
         setGasShares(newEpoch, 1, 1, 0);
         setDefaultReceivers(newEpoch);
-        
+
         // Deposit funds for new epoch
         appchainPool.deposit{value: 100 ether}(newEpoch);
-        
+
         // Get claimable amount for new epoch with new multipliers
         uint256 newEpochCall = appchainPool.getClaimableAmount(newEpoch, appchainId1);
         assertEq(newEpochCall, 0, "New epoch should have 0 claimable before epoch ends");
-        
+
         // Move to after new epoch ends
         vm.warp(staking.getEpochEnd(newEpoch) + 1);
-        
+
         newEpochCall = appchainPool.getClaimableAmount(newEpoch, appchainId1);
         assertGt(newEpochCall, 0, "New epoch should have claimable amount after epoch ends");
-        
+
         // Test that the new epoch uses the updated multipliers
         // The claimable amount should be different due to the new fee multiplier
         console2.log("Original epoch claimable:", firstCall);
         console2.log("New epoch claimable:", newEpochCall);
-        
+
         // Verify that caching still works for the new epoch
         uint256 newEpochCall2 = appchainPool.getClaimableAmount(newEpoch, appchainId1);
         assertEq(newEpochCall, newEpochCall2, "Caching should work for new epoch");
-        
+
         // Test that the contract state remains consistent
         assertTrue(appchainPool.feeMultiplier().eq(ud(0.8e18)), "Fee multiplier should remain updated");
     }
@@ -988,8 +988,16 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "Appchain1 should be fully claimed");
 
         // Appchain2 and 3 should still have their amounts
-        assertEq(appchainPool.getClaimableAmount(epoch, appchainId2), claimable2, "Appchain2 should still have claimable amount");
-        assertEq(appchainPool.getClaimableAmount(epoch, appchainId3), claimable3, "Appchain3 should still have claimable amount");
+        assertEq(
+            appchainPool.getClaimableAmount(epoch, appchainId2),
+            claimable2,
+            "Appchain2 should still have claimable amount"
+        );
+        assertEq(
+            appchainPool.getClaimableAmount(epoch, appchainId3),
+            claimable3,
+            "Appchain3 should still have claimable amount"
+        );
     }
 
     // ===== VESTING TESTS =====
@@ -1027,7 +1035,9 @@ contract AppchainPoolTest is Test {
         // After half year - should have half the amount
         uint256 claimableAfterHalfYear = appchainPool.getClaimableAmount(epoch, appchainId1);
         uint256 expectedAfterHalfYear = convert(convert(100 ether).mul(convert(182 days)).div(convert(365 days)));
-        assertApproxEqAbs(claimableAfterHalfYear, expectedAfterHalfYear, 1, "Should have correct amount after half year");
+        assertApproxEqAbs(
+            claimableAfterHalfYear, expectedAfterHalfYear, 1, "Should have correct amount after half year"
+        );
 
         // Move to epoch end + 365 days (full year)
         vm.warp(staking.getEpochEnd(epoch) + 365 days);
@@ -1071,7 +1081,9 @@ contract AppchainPoolTest is Test {
         uint256 secondClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
         uint256 expectedAfter60Days = convert(convert(100 ether).mul(convert(60 days)).div(convert(365 days)));
         uint256 additionalClaimable = expectedAfter60Days - firstClaimable;
-        assertApproxEqAbs(secondClaimable, additionalClaimable, 1, "Should have correct additional amount after 60 days");
+        assertApproxEqAbs(
+            secondClaimable, additionalClaimable, 1, "Should have correct additional amount after 60 days"
+        );
 
         // Second claim
         uint256 balanceBefore = appchainDest1.balance;
