@@ -8,6 +8,7 @@ import {RequireAndModuleFactory, RequireOrModuleFactory} from "src/factory/Permi
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract SyndicateFactoryWrapperTest is Test {
     SyndicateFactoryWrapper public wrapper;
@@ -44,7 +45,11 @@ contract SyndicateFactoryWrapperTest is Test {
         nonManager = address(0x5);
 
         // Deploy individual factories
-        syndicateFactory = new SyndicateFactory(admin);
+        // Deploy implementation and proxy
+        SyndicateFactory implementation = new SyndicateFactory();
+        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        syndicateFactory = SyndicateFactory(address(proxy));
         andFactory = new RequireAndModuleFactory(admin);
         orFactory = new RequireOrModuleFactory(admin);
 

@@ -54,7 +54,10 @@ contract SyndicateSequencingChainTestSetUp is Test {
     function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
         vm.startPrank(admin);
-        factory = new SyndicateFactory(admin);
+        SyndicateFactory implementation = new SyndicateFactory();
+        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        factory = SyndicateFactory(address(proxy));
         (address chainAddress,) = factory.createSyndicateSequencingChain(appchainId, admin, _permissionModule);
         vm.stopPrank();
         return SyndicateSequencingChain(chainAddress);
@@ -201,7 +204,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Deploy chain through factory to get proper factory setup
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory testFactory = new SyndicateFactory(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
         testFactory.addAllowedImplementation(address(newImpl), false);
@@ -223,7 +229,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Deploy chain through factory
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory testFactory = new SyndicateFactory(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
         (address chainAddr, uint256 chainId) =
@@ -248,7 +257,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Deploy chain through factory
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory testFactory = new SyndicateFactory(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
         (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
@@ -270,7 +282,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Deploy chain through factory
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory testFactory = new SyndicateFactory(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
         testFactory.addAllowedImplementation(address(newImpl), false);
@@ -288,7 +303,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     function testUpgradeChecksImplementationCorrectly() public {
         // Deploy chain through factory
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory testFactory = new SyndicateFactory(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
         (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);

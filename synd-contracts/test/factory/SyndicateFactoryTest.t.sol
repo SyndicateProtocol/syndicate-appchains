@@ -34,7 +34,11 @@ contract SyndicateFactoryTest is Test {
         admin = address(0x1);
         manager = address(0x2);
         nonManager = address(0x3);
-        factory = new SyndicateFactory(admin);
+        // Deploy implementation and proxy
+        SyndicateFactory implementation = new SyndicateFactory();
+        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        factory = SyndicateFactory(address(proxy));
 
         // Grant manager role to the manager address
         vm.prank(admin);
@@ -422,9 +426,12 @@ contract SyndicateFactoryTest is Test {
         assertEq(id2, expectedId2);
     }
 
-    function testConstructorWithZeroAddressReverts() public {
+    function testInitializeWithZeroAddressReverts() public {
+        SyndicateFactory implementation = new SyndicateFactory();
+        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (address(0)));
+
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        new SyndicateFactory(address(0));
+        new ERC1967Proxy(address(implementation), initData);
     }
 
     function testGetNextChainIdFunction() public view {

@@ -9,6 +9,7 @@ import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.so
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {RequireAndModuleFactory} from "src/factory/PermissionModuleFactories.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DeploySyndicateFactory is Script {
     SyndicateFactory public syndicateFactory;
@@ -23,7 +24,11 @@ contract DeploySyndicateFactory is Script {
         // syndicate admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
-        syndicateFactory = new SyndicateFactory(admin);
+        // Deploy implementation and proxy
+        SyndicateFactory implementation = new SyndicateFactory();
+        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        syndicateFactory = SyndicateFactory(address(proxy));
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
         requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));

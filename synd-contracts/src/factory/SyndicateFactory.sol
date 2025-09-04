@@ -4,11 +4,12 @@ pragma solidity 0.8.28;
 import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
 import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title MinimalUUPSStub
 /// @notice Minimal UUPS implementation stub for deterministic proxy deployments
@@ -36,8 +37,8 @@ enum NamespaceState {
 
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts with centralized gas tracking
-/// @dev Uses CREATE2 pattern for deterministic deployments - users deploy permission modules separately
-contract SyndicateFactory is AccessControl, Pausable {
+/// @dev Uses UUPS proxy pattern for upgradeability and CREATE2 pattern for deterministic deployments
+contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     /// @notice Emitted when a new SyndicateSequencingChain is created
     event SyndicateSequencingChainCreated(
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
@@ -75,7 +76,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     uint256[] public chainIDs;
 
     /// @notice Stub implementation for consistent proxy deployment
-    address public immutable stubImplementation;
+    address public stubImplementation;
 
     /// @notice Current implementation address used for new deployments
     address public syndicateChainImpl;
@@ -88,8 +89,19 @@ contract SyndicateFactory is AccessControl, Pausable {
     mapping(uint256 => bool) public gasTrackingBanlist;
     uint256 public numberOfChainsBannedFromGasTracking;
 
-    constructor(address admin) {
+    /// @notice Disables initializers to prevent the implementation contract from being initialized
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice Initializes the upgradeable factory
+    /// @param admin The admin address that will have DEFAULT_ADMIN_ROLE and MANAGER_ROLE
+    function initialize(address admin) external initializer {
         if (admin == address(0)) revert ZeroAddress();
+
+        __AccessControl_init();
+        __Pausable_init();
+        __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, admin);
@@ -110,6 +122,10 @@ contract SyndicateFactory is AccessControl, Pausable {
         isImplementationAllowed[syndicateChainImpl] = true;
         emit ImplementationAdded(syndicateChainImpl);
     }
+
+    /// @notice Authorizes upgrades to new implementations (admin only)
+    /// @param newImplementation The address of the new implementation
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /// @notice Creates a new SyndicateSequencingChain contract
     /// @param appchainId The app chain ID (0 for auto-increment)

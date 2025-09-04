@@ -83,12 +83,12 @@ contract SyndicateSequencingChainV2 is
         // Initialize parent contracts
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
         __UUPSUpgradeable_init();
-        
+
         // Initialize storage variables
         appchainId = _appchainId;
         factory = _factory;
         emissionsReceiver = _emissionsReceiver;
-        
+
         // Enable gas tracking
         _enableGasTracking();
         // Set default to false for new deployments
@@ -145,9 +145,9 @@ contract SyndicateSequencingChainV2 is
         _;
     }
 
-    function processTransaction(bytes calldata data) 
-        external 
-        onlyWhenAllowed(data) 
+    function processTransaction(bytes calldata data)
+        external
+        onlyWhenAllowed(data)
         checkReplayProtection // NEW: Check replay protection
     {
         if (data.length == 0) {
@@ -162,8 +162,8 @@ contract SyndicateSequencingChainV2 is
         emit TransactionProcessed(msg.sender, data);
     }
 
-    function processTransactionsBulk(bytes[] calldata data) 
-        external 
+    function processTransactionsBulk(bytes[] calldata data)
+        external
         checkReplayProtection // NEW: Check replay protection
     {
         // Check permission for bulk transaction

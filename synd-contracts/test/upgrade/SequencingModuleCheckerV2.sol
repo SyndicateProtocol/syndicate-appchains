@@ -12,7 +12,7 @@ struct SequencingModuleStorage {
     IPermissionModule permissionRequirementModule;
     /// @notice NEW FIELD: Maximum number of transactions per batch
     uint256 maxTransactionsPerBatch;
-    /// @notice NEW FIELD: Enable/disable batch processing  
+    /// @notice NEW FIELD: Enable/disable batch processing
     bool batchProcessingEnabled;
     /// @notice NEW FIELD: Timestamp of last permission update
     uint256 lastPermissionUpdate;
