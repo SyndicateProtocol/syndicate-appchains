@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {ISyndStaking} from "./ISyndStaking.sol";
-import {IPool} from "./IPool.sol";
+import {IUserPool} from "./IPool.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -17,7 +17,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * and stakers can claim their proportional share of those rewards based on their
  * stake in the SyndStaking contract.
  */
-contract BasePool is IPool, ReentrancyGuard {
+contract BasePool is IUserPool, ReentrancyGuard {
     /// @notice Reference to the SyndStaking contract for stake queries
     ISyndStaking public immutable stakingContract;
 
