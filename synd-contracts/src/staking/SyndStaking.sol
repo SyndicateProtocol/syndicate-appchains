@@ -511,7 +511,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
 
     /**
      * @notice Claim rewards from multiple pools for the caller
-     * @dev This function calls the claimFor function on each pool contract
+     * @dev This function calls the claimFor function on each pool contract that supports it (BasePool and PerformancePool)
      * @param claims Array of ClaimRequest structs containing claim details
      */
     function claimAllRewards(ClaimRequest[] calldata claims, address destination) external nonReentrant {
