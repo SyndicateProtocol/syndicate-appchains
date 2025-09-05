@@ -353,7 +353,7 @@ contract GasArchiveTest is Test {
 
         // Now the test should pass with valid proofs
         vm.expectEmit(true, false, false, true);
-        emit EpochDataValidated(EPOCH, SEQ_CHAIN_ID, 0xd28330125767835ee3d876f621ea79ff18fc11832b80c86b99b55722140ae5e1);
+        emit EpochDataValidated(EPOCH, SEQ_CHAIN_ID, bytes32(vm.parseJsonBytes(proofJson, ".storageProof[0].value")));
 
         gasArchive.confirmEpochDataHash(
             EPOCH,
