@@ -5570,6 +5570,17 @@ function transferOwnership(address newOwner) external;
                     VESTING_DURATION
                 },
                 {
+                    fn VESTING_DURATION(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<AppchainPoolCalls> {
+                        <VESTING_DURATIONCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(AppchainPoolCalls::VESTING_DURATION)
+                    }
+                    VESTING_DURATION
+                },
+                {
                     fn stakeMultiplier(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<AppchainPoolCalls> {
