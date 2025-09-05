@@ -285,7 +285,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
 
         RLPReader.RLPItem[] memory accountFields = accountRlp.toList();
 
-        return bytes32(accountFields[STORAGE_ROOT_ACCOUNT_FIELDS_INDEX].toUintStrict());
+        return bytes32(accountFields[STORAGE_ROOT_ACCOUNT_FIELDS_INDEX].toUint());
     }
 
     /// @notice Retrieves a storage slot value using Merkle Patricia proofs (can be obtained from `eth_getProof`)
@@ -306,9 +306,11 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
     ) internal pure returns (bytes32) {
         bytes32 storageRoot = _storageRootFromAccountProof(account, stateRoot, accountProof);
 
+        // storage slot must be hashed to be used as the path in the MPT proof
+        bytes32 hashedStorageSlot = keccak256(abi.encode(storageSlot));
         RLPReader.RLPItem memory slotContents = MerklePatriciaProofVerifier.extractProofValue({
             rootHash: storageRoot,
-            path: abi.encodePacked(storageSlot),
+            path: abi.encodePacked(hashedStorageSlot),
             stack: _RLPItemsFromProofBytes(storageProof)
         }).toRlpItem();
 
@@ -316,12 +318,12 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
             revert EmptySlot();
         }
 
-        return bytes32(slotContents.toUintStrict());
+        return bytes32(slotContents.toUint());
     }
 
     function _getStateRootFromHeader(bytes calldata blockHeader) internal pure returns (bytes32) {
         RLPReader.RLPItem[] memory headerFields = blockHeader.toRlpItem().toList();
-        return bytes32(headerFields[HEADER_STATE_ROOT_INDEX].toUintStrict());
+        return bytes32(headerFields[HEADER_STATE_ROOT_INDEX].toUint());
     }
 
     /// @notice Calculates the storage slot for a given epoch in the aggregatedEpochDataHash mapping

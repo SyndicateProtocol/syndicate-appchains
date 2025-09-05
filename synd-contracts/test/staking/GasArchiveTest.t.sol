@@ -365,7 +365,26 @@ contract GasArchiveTest is Test {
             tokens,
             emissionsReceivers
         );
-        // TODO assert the epoch data was stored correctly
+        
+        // Assert the epoch data was stored correctly
+        assertTrue(gasArchive.archivedEpochData(EPOCH), "Epoch should be marked as archived");
+        
+        // Check total gas fees
+        assertEq(gasArchive.getTotalGasFees(EPOCH), 300, "Total gas fees should be 100 + 200 = 300");
+        
+        // Check individual appchain gas fees
+        assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_1), 100, "Appchain 123 should have 100 tokens");
+        assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_2), 200, "Appchain 456 should have 200 tokens");
+        
+        // Check active appchain IDs
+        uint256[] memory activeAppchains = gasArchive.getActiveAppchainIds(EPOCH);
+        assertEq(activeAppchains.length, 2, "Should have 2 active appchains");
+        assertEq(activeAppchains[0], APPCHAIN_ID_1, "First appchain should be 123");
+        assertEq(activeAppchains[1], APPCHAIN_ID_2, "Second appchain should be 456");
+        
+        // Check emissions receivers
+        assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_1), address(0x123), "Appchain 123 receiver should be 0x123");
+        assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_2), address(0x456), "Appchain 456 receiver should be 0x456");
     }
 
     function testConfirmEpochDataHashInvalidSeqChainBlockHeader() public {
