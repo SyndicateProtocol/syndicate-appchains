@@ -125,6 +125,7 @@ pub mod r#ierc721_token_receiver;
 pub mod r#ierc7802;
 pub mod r#i_eigen_da_cert_verifier;
 pub mod r#i_eigen_da_threshold_registry;
+pub mod r#i_epoch_tracker;
 pub mod r#i_gas_refunder;
 pub mod r#i_inbox;
 pub mod r#i_inbox_base;
