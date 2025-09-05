@@ -327,7 +327,7 @@ contract GasArchiveTest is Test {
         // EPOCH = 10
 
         // Load fixture data
-        string memory proofJson = vm.readFile("./test/staking/fixtures/epochDataHash.json");
+        string memory proofJson = vm.readFile("./test/staking/fixtures/arbRollupProof.json");
 
         // Parse JSON arrays directly
         bytes[] memory accountProofArray = vm.parseJsonBytesArray(proofJson, ".accountProof");
@@ -365,26 +365,34 @@ contract GasArchiveTest is Test {
             tokens,
             emissionsReceivers
         );
-        
+
         // Assert the epoch data was stored correctly
         assertTrue(gasArchive.archivedEpochData(EPOCH), "Epoch should be marked as archived");
-        
+
         // Check total gas fees
         assertEq(gasArchive.getTotalGasFees(EPOCH), 300, "Total gas fees should be 100 + 200 = 300");
-        
+
         // Check individual appchain gas fees
         assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_1), 100, "Appchain 123 should have 100 tokens");
         assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_2), 200, "Appchain 456 should have 200 tokens");
-        
+
         // Check active appchain IDs
         uint256[] memory activeAppchains = gasArchive.getActiveAppchainIds(EPOCH);
         assertEq(activeAppchains.length, 2, "Should have 2 active appchains");
         assertEq(activeAppchains[0], APPCHAIN_ID_1, "First appchain should be 123");
         assertEq(activeAppchains[1], APPCHAIN_ID_2, "Second appchain should be 456");
-        
+
         // Check emissions receivers
-        assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_1), address(0x123), "Appchain 123 receiver should be 0x123");
-        assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_2), address(0x456), "Appchain 456 receiver should be 0x456");
+        assertEq(
+            gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_1),
+            address(0x123),
+            "Appchain 123 receiver should be 0x123"
+        );
+        assertEq(
+            gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_2),
+            address(0x456),
+            "Appchain 456 receiver should be 0x456"
+        );
     }
 
     function testConfirmEpochDataHashInvalidSeqChainBlockHeader() public {
@@ -408,8 +416,53 @@ contract GasArchiveTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                    STORAGE PROOF VERIFICATION TESTS
+                    SEQ CHAIN BLOCK HASH TESTS
     //////////////////////////////////////////////////////////////*/
+
+    function testConfirmSequencingChainBlockHashWithValidProof() public {
+        // proof generated using Arbitrum Nova deployment on Ethereum with the following info:
+        // block number: 23297133 hash: 0x5df3e2c7aafac99082a4538843b361f2502e48d034677dce776e7d7c9587cf35
+        // Rollup Contract: https://etherscan.io/address/0xE7E8cCC7c381809BDC4b213CE44016300707B7Bd
+        // storage_slot: 116 - see nitro-contracts at v2.1.0 (RollupCore contract)
+        // arbitrum nova assertion: 0x6e4b03dae0c2f93a95ad7eb04805564a345c2f200a87694eac0eefea9740a4fd
+        // arbitrum nova block hash: ?
+
+        // Setup: Add Arbitrum Nova as a sequencing chain
+        uint256 arbNovaChainId = 42170; // Arbitrum Nova chain ID
+        address arbNovaRollupContract = 0xE7E8cCC7c381809BDC4b213CE44016300707B7Bd;
+        bytes32 storageSlot = bytes32(uint256(116)); // slot for confirmedNodeHash
+
+        vm.prank(admin);
+        gasArchive.addSequencingChain(arbNovaChainId, makeAddr("gasAggregator"), arbNovaRollupContract, storageSlot);
+
+        // Load fixture data
+        string memory proofJson = vm.readFile("./test/staking/fixtures/arbRollupProof.json");
+
+        // Parse the proof data
+        bytes[] memory accountProofArray = vm.parseJsonBytesArray(proofJson, ".accountProof");
+        bytes[] memory storageProofArray = vm.parseJsonBytesArray(proofJson, ".storageProof[0].proof");
+        string memory storageValueStr = vm.parseJsonString(proofJson, ".storageProof[0].value");
+
+        // Set the last known Ethereum block hash (this would come from the bridge in practice)
+        // We need to calculate the block header hash that would match the account proof's root
+        bytes32 ethereumBlockHash = 0x5df3e2c7aafac99082a4538843b361f2502e48d034677dce776e7d7c9587cf35;
+        vm.prank(blockHashSender);
+        gasArchive.setLastKnownBlockHashes(ethereumBlockHash, TEST_SETTLEMENT_BLOCK_HASH);
+
+        // obtained using rust code, same method as `testConfirmEpochDataHashSuccess`
+        bytes memory ethereumBlockHeader =
+            hex"f9027ea04155c48e3ccc5b913d13722a9d2c4274097c11f9abe4d1649800cd8a75ba1994a01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347945995510b29924a0c68e5e266687c81af6a06abb43268378b2c475de61a46a90538e8a0efdac8fbf57e76e6d5905f0fac94a5783e7402e675a50efee418f0039617bd33b9010028ff328352b344aa028b24adca61b622f360e2a15115c5099b63283252009a1bb8636c59be951c54cb42a00e2c4b279a86e64110c12f2070a0c0e8edc65d89afa05ade68bbc41c73c0dcd4800d28fccfff87582e25e713ab3517336644680a472d67279aba4cad4ce88cc0c29b2081d54a41ee4a7070306b5256b4213b19300390c54480b1a53b008660e256be8604515503808c55a225fc808401637c6d8402aea540839037008468bae223924e65746865726d696e6420e454a0f4da304510dddcdf8186909d7cb74e2e07a1e703dd7baa27eeeada9a014629ad8312000083040000a004dad78a8451df8a2911991c5a6bcadb0fd9d8f8ff9d8135e6fa0de127ffa7dfa0e3b0c442";
+
+        // The test should revert with EmptySlot since the proven storage value is 0
+        vm.expectRevert(GasArchive.EmptySlot.selector);
+        gasArchive.confirmSequencingChainBlockHash(
+            arbNovaChainId,
+            0x6e4b03dae0c2f93a95ad7eb04805564a345c2f200a87694eac0eefea9740a4fd,
+            ethereumBlockHeader,
+            accountProofArray,
+            storageProofArray
+        );
+    }
 
     function testConfirmSequencingChainBlockHashInvalidEthereumBlockHeader() public {
         bytes memory mockEthHeader = abi.encode("invalid_eth_header");
@@ -441,7 +494,7 @@ contract GasArchiveTest is Test {
         );
     }
 
-    function testConfirmSequencingChainBlockHashForSettlementChain() public {
+    function testCannotSubmitBlockHashProofForSettlementChain() public {
         // Setup settlement chain as sequencing chain
         vm.prank(admin);
         gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, address(mockGasAggregator), address(0), bytes32(0));
@@ -450,8 +503,6 @@ contract GasArchiveTest is Test {
         vm.prank(blockHashSender);
         gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
 
-        // We need to create a header that when hashed equals TEST_ETH_BLOCK_HASH
-        // Since TEST_ETH_BLOCK_HASH = keccak256("eth_block"), we use that exact data
         bytes memory mockEthHeader = "eth_block";
         bytes[] memory mockAccountProof = new bytes[](0);
         bytes[] memory mockStorageProof = new bytes[](0);
@@ -590,135 +641,6 @@ contract GasArchiveTest is Test {
 
         // Test non-existent appchain returns zero address
         assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_2), address(0));
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                    PROOF VERIFICATION TESTS (SKELETONS)
-    //////////////////////////////////////////////////////////////*/
-
-    function testConfirmSequencingChainBlockHashWithValidProof() public {
-        // TODO: Generate valid Ethereum block header, account proof, and storage proof
-        // TODO: Set up mock bridge contract with the expected block hash in storage
-        // TODO: Call confirmSequencingChainBlockHash with valid proofs
-        // TODO: Verify lastKnownSeqChainBlockHashes is updated correctly
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testConfirmSequencingChainBlockHashInvalidAccountProof() public {
-        // TODO: Generate valid Ethereum block header but invalid account proof
-        // TODO: Expect InvalidProof error when account doesn't exist in state
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testConfirmSequencingChainBlockHashInvalidStorageProof() public {
-        // TODO: Generate valid Ethereum block header and account proof
-        // TODO: But provide invalid storage proof (wrong storage slot or corrupted proof)
-        // TODO: Expect InvalidProof error
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testConfirmSequencingChainBlockHashEmptyStorageSlot() public {
-        // TODO: Generate valid proofs but point to empty storage slot
-        // TODO: Expect EmptySlot error
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testConfirmEpochDataHashWithValidStorageProof() public {
-        // TODO: Set up valid sequencing chain block header
-        // TODO: Generate valid account proof for GasAggregator contract
-        // TODO: Generate valid storage proof for epoch data hash
-        // TODO: Provide matching epoch data (appchains, tokens, emissionsReceivers)
-        // TODO: Verify epoch data is stored correctly
-        // TODO: Verify EpochDataValidated event is emitted
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testConfirmEpochDataHashInvalidDataMismatch() public {
-        // TODO: Set up valid sequencing chain block header and proofs
-        // TODO: But provide epoch data that doesn't match the hash in storage
-        // TODO: Expect InvalidData error
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testConfirmEpochDataHashAccountDoesNotExist() public {
-        // TODO: Generate proofs where GasAggregator account doesn't exist
-        // TODO: Expect AccountDoesNotExistInProof error
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testConfirmEpochDataHashUseSettlementChainAsSequencing() public {
-        // TODO: Set up settlement chain as sequencing chain
-        // TODO: Generate valid settlement chain block header and proofs
-        // TODO: Verify epoch data validation works with settlement chain
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testRLPHeaderParsing() public {
-        // TODO: Create valid RLP-encoded block headers
-        // TODO: Test _getStateRootFromHeader function with various headers
-        // TODO: Verify state root is extracted from correct index (HEADER_STATE_ROOT_INDEX = 3)
-        // TODO: Test with malformed RLP headers (should revert)
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testStorageSlotCalculation() public {
-        // TODO: Test _getStorageSlot function with various epoch values
-        // TODO: Verify it matches the expected keccak256(abi.encode(epoch, AGGREGATED_EPOCH_DATA_HASH_SLOT))
-        // TODO: Test edge cases (epoch 0, large epoch values)
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testMerklePatriciaProofVerification() public {
-        // TODO: Test _storageRootFromAccountProof with valid account proofs
-        // TODO: Test with various account addresses and state roots
-        // TODO: Verify storage root is extracted from correct account field index
-        // TODO: Test _getSlotValueFromProof with valid storage proofs
-        // TODO: Test proof verification with corrupted proofs at various levels
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testRLPItemsFromProofBytes() public {
-        // TODO: Test _RLPItemsFromProofBytes with various proof byte arrays
-        // TODO: Verify RLP items are created correctly
-        // TODO: Test with empty proofs, single item, multiple items
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testMultipleEpochDataValidation() public {
-        // TODO: Set up multiple sequencing chains
-        // TODO: Validate epoch data from different chains for the same epoch
-        // TODO: Verify data is aggregated correctly across chains
-        // TODO: Test that emissions receivers can be overwritten by later validations
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testLargeEpochDataArrays() public {
-        // TODO: Test confirmEpochDataHash with large arrays of appchains
-        // TODO: Verify gas usage is reasonable
-        // TODO: Test storage and retrieval of large datasets
-
-        vm.skip(true); // Skip until real proofs are implemented
-    }
-
-    function testEpochDataHashCollisions() public {
-        // TODO: Test with different epoch data that might produce same hash
-        // TODO: Verify the system handles hash collisions appropriately
-        // TODO: Test edge cases with similar but different data
-
-        vm.skip(true); // Skip until real proofs are implemented
     }
 
     /*//////////////////////////////////////////////////////////////

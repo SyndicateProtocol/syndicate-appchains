@@ -14,7 +14,7 @@ interface IArbSys {
         returns (uint256);
 }
 
-// TODO untested
+// TODO untested and looks broken
 contract BlockHashMessenger {
     address public constant L1_BLOCK_ADDRESS = 0x4200000000000000000000000000000000000015;
     address public constant ARBSYS_ADDRESS = 0x0000000000000000000000000000000000000064;

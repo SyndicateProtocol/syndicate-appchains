@@ -104,11 +104,11 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
     /// @notice Sets the last known block hashes for the ETH and SETTLEMENT chains
     /// @dev This function is called by the block hash sender on the settlement chain to share the last known block hashes
     /// @param ethBlockHash The last known block hash for the ETH chain
-    /// @param seqBlockHash The last known block hash for the SETTLEMENT chain
-    function setLastKnownBlockHashes(bytes32 ethBlockHash, bytes32 seqBlockHash) external {
+    /// @param settlementBlockHash The last known block hash for the SETTLEMENT chain
+    function setLastKnownBlockHashes(bytes32 ethBlockHash, bytes32 settlementBlockHash) external {
         if (msg.sender != blockHashSender) revert NotBlockHashSender();
         lastKnownEthereumBlockHash = ethBlockHash;
-        lastKnownSettlementChainBlockHash = seqBlockHash;
+        lastKnownSettlementChainBlockHash = settlementBlockHash;
     }
 
     /// @notice Confirms and stores a sequencing chain block hash using Ethereum storage proofs
@@ -125,6 +125,8 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
         bytes[] calldata ethereumAccountProof,
         bytes[] calldata ethereumStorageProof
     ) external {
+        // TODO update to use assertion
+
         _verifyEthereumProof({
             seqChainID: seqChainID,
             seqChainBlockHash: seqChainBlockHash,
@@ -259,35 +261,6 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
         });
     }
 
-    /// @notice Extracts the storage root from an account proof
-    /// @dev Verifies the account proof against the state root and returns the account's storage root
-    ///      from the RLP-decoded account fields
-    /// @param account The account address to verify
-    /// @param stateRoot The Ethereum state root to verify against
-    /// @param accountProof Merkle proof of the account in the state trie
-    /// @return The storage root hash of the verified account
-    function _storageRootFromAccountProof(address account, bytes32 stateRoot, bytes[] calldata accountProof)
-        internal
-        pure
-        returns (bytes32)
-    {
-        bytes32 accountHash = keccak256(abi.encodePacked(account));
-        RLPReader.RLPItem memory accountRlp = MerklePatriciaProofVerifier.extractProofValue({
-            rootHash: stateRoot,
-            path: abi.encodePacked(accountHash),
-            stack: _RLPItemsFromProofBytes(accountProof)
-        }).toRlpItem();
-
-        // If the account does not exist, return the hash of an empty trie.
-        if (accountRlp.len == 0) {
-            revert AccountDoesNotExistInProof();
-        }
-
-        RLPReader.RLPItem[] memory accountFields = accountRlp.toList();
-
-        return bytes32(accountFields[STORAGE_ROOT_ACCOUNT_FIELDS_INDEX].toUint());
-    }
-
     /// @notice Retrieves a storage slot value using Merkle Patricia proofs (can be obtained from `eth_getProof`)
     /// @dev First verifies the account proof to get the storage root, then verifies the storage proof
     ///      to extract the value at the specified storage slot
@@ -319,6 +292,35 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
         }
 
         return bytes32(slotContents.toUint());
+    }
+
+    /// @notice Extracts the storage root from an account proof
+    /// @dev Verifies the account proof against the state root and returns the account's storage root
+    ///      from the RLP-decoded account fields
+    /// @param account The account address to verify
+    /// @param stateRoot The Ethereum state root to verify against
+    /// @param accountProof Merkle proof of the account in the state trie
+    /// @return The storage root hash of the verified account
+    function _storageRootFromAccountProof(address account, bytes32 stateRoot, bytes[] calldata accountProof)
+        internal
+        pure
+        returns (bytes32)
+    {
+        bytes32 accountHash = keccak256(abi.encodePacked(account));
+        RLPReader.RLPItem memory accountRlp = MerklePatriciaProofVerifier.extractProofValue({
+            rootHash: stateRoot,
+            path: abi.encodePacked(accountHash),
+            stack: _RLPItemsFromProofBytes(accountProof)
+        }).toRlpItem();
+
+        // If the account does not exist, return the hash of an empty trie.
+        if (accountRlp.len == 0) {
+            revert AccountDoesNotExistInProof();
+        }
+
+        RLPReader.RLPItem[] memory accountFields = accountRlp.toList();
+
+        return bytes32(accountFields[STORAGE_ROOT_ACCOUNT_FIELDS_INDEX].toUint());
     }
 
     function _getStateRootFromHeader(bytes calldata blockHeader) internal pure returns (bytes32) {
