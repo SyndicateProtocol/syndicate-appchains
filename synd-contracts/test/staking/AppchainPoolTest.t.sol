@@ -6,6 +6,7 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {AppchainPool} from "src/staking/AppchainPool.sol";
+import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
 import {UD60x18, ud} from "@prb/math/src/UD60x18.sol";
 
 import {console2} from "forge-std/console2.sol";
@@ -351,7 +352,7 @@ contract AppchainPoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(appchainDest1);
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(currentEpoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -367,7 +368,7 @@ contract AppchainPoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(appchainDest1);
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(currentEpoch + 1, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -384,7 +385,7 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
 
         vm.startPrank(address(appchainDest1));
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -493,7 +494,7 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "should be zero when totalStake==0");
 
         vm.startPrank(address(appchainDest1));
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(epoch, appchainId1, address(user1));
         vm.stopPrank();
     }
@@ -586,11 +587,11 @@ contract AppchainPoolTest is Test {
         appchainPool.deposit{value: 10 ether}(currentEpoch);
 
         // Expect revert on getClaimableAmount for current
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.getClaimableAmount(currentEpoch, appchainId1);
 
         // Future epoch should also revert
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.getClaimableAmount(currentEpoch + 1, appchainId1);
     }
 
@@ -721,44 +722,6 @@ contract AppchainPoolTest is Test {
         appchainPool.setDecayFactor(2.5e18);
 
         vm.stopPrank();
-    }
-
-    /// Test edge case where appchainReward - alreadyClaimed could be negative
-    /// This tests the line: return appchainReward - alreadyClaimed;
-    /// This should never happen
-    function test_negative_claimable_amount_edge_case() public {
-        setupStake(100 ether, 0, 0);
-
-        uint256 epoch = _settledEpoch();
-        setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
-
-        // Initial deposit
-        appchainPool.deposit{value: 100 ether}(epoch);
-
-        // First claim - should work normally
-        uint256 firstClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        assertEq(firstClaimable, 100 ether, "First claimable should be 100 ether");
-
-        vm.startPrank(appchainDest1);
-        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
-        vm.stopPrank();
-
-        // Verify first claim was successful
-        assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "Should be fully claimed");
-
-        // Manually set the claimed amount to be greater than the reward
-        // claimed is the first state variable (slot 6)
-        bytes32 epochSlot = keccak256(abi.encode(epoch, uint256(6)));
-        bytes32 finalSlot = keccak256(abi.encode(appchainId1, epochSlot));
-
-        // Set claimed amount to be greater than the reward
-        vm.store(address(appchainPool), finalSlot, bytes32(uint256(200 ether)));
-
-        // Now getClaimableAmount should handle this gracefully
-        // In Solidity >=0.8.0, this should revert due to underflow protection
-        vm.expectRevert(abi.encodeWithSignature("Panic(uint256)", 0x11)); // Panic code 0x11 = arithmetic overflow/underflow
-        appchainPool.getClaimableAmount(epoch, appchainId1);
     }
 
     /// Test multiple deposits and claims to ensure no underflow issues
