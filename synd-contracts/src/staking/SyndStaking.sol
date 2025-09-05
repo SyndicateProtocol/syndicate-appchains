@@ -107,6 +107,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
     struct ClaimRequest {
         uint256 epochIndex;
         address poolAddress;
+        uint256 appchainId;
     }
 
     /*
@@ -519,7 +520,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
         }
 
         for (uint256 i = 0; i < claims.length; i++) {
-            IUserPool(claims[i].poolAddress).claimFor(claims[i].epochIndex, msg.sender, destination);
+            IUserPool(claims[i].poolAddress).claimFor(
+                claims[i].epochIndex, msg.sender, destination, claims[i].appchainId
+            );
         }
     }
 
@@ -655,8 +658,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
 
     /**
      * @notice Withdraws funds for multiple epochs in a single transaction.
-     * @dev Iterates through the provided epoch indices, finalizes user epochs, and transfers the total amount to the specified destination.
-     *      Reverts if any epoch is not ready for withdrawal or if there is no withdrawal amount for an epoch.
+     * @dev Iterates through the provided epoch indices, finalizes user epochs,
+     * and transfers the total amount to the specified destination.
+     * Reverts if any epoch is not ready for withdrawal or if there is no withdrawal amount for an epoch.
      * @param epochIndices The array of epoch indices to withdraw from.
      * @param destination The address to receive the withdrawn funds.
      */

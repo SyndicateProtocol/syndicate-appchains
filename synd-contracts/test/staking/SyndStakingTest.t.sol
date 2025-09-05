@@ -851,7 +851,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -883,8 +883,8 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool1)});
-        claims[1] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool2)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool1), appchainId: 0});
+        claims[1] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool2), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -925,8 +925,8 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
-        claims[1] = SyndStaking.ClaimRequest({epochIndex: 3, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
+        claims[1] = SyndStaking.ClaimRequest({epochIndex: 3, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -962,7 +962,7 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 user1InitialBalance = address(user1).balance;
         uint256 user2InitialBalance = address(user2).balance;
@@ -1004,7 +1004,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         vm.startPrank(user1);
         vm.expectRevert(BasePool.ClaimNotAvailable.selector);
@@ -1023,7 +1023,7 @@ contract SyndStakingTest is Test {
 
         // Try to claim from current epoch (should fail)
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 1, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 1, poolAddress: address(pool), appchainId: 0});
 
         vm.startPrank(user1);
         vm.expectRevert(BasePool.ClaimNotAvailable.selector);
@@ -1050,7 +1050,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         address destination = makeAddr("destination");
         uint256 initialBalance = destination.balance;
@@ -1082,7 +1082,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         // The function should be protected against reentrancy
         vm.startPrank(user1);
@@ -1114,7 +1114,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
