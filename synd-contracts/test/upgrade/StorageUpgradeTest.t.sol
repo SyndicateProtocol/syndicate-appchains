@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
-import {SyndicateSequencingChainV2} from "./SyndicateSequencingChainV2.sol";
+import {SyndicateSequencingChainTestingUpgradeability} from "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
 import {IPermissionModule} from "../../src/interfaces/IPermissionModule.sol";
 
 /// @notice Mock factory contract for testing upgrades
@@ -31,7 +31,7 @@ contract StorageUpgradeTest is Test {
 
     // Contract instances
     SyndicateSequencingChain syndicateV1;
-    SyndicateSequencingChainV2 syndicateV2;
+    SyndicateSequencingChainTestingUpgradeability syndicateV2;
     ERC1967Proxy proxy;
     MockFactory factory;
 
@@ -91,13 +91,13 @@ contract StorageUpgradeTest is Test {
         });
 
         // Deploy V2 implementation
-        syndicateV2 = new SyndicateSequencingChainV2();
+        syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();
 
         // Upgrade proxy to V2
         syndicateV1.upgradeToAndCall(address(syndicateV2), "");
 
         // Cast proxy to V2 interface
-        syndicateV2 = SyndicateSequencingChainV2(address(proxy));
+        syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
 
         // Verify all original storage is preserved
         assertEq(syndicateV2.appchainId(), originalData.appchainId, "appchainId should be preserved");
@@ -131,9 +131,9 @@ contract StorageUpgradeTest is Test {
         vm.startPrank(ADMIN);
 
         // Deploy V2 and upgrade
-        syndicateV2 = new SyndicateSequencingChainV2();
+        syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();
         syndicateV1.upgradeToAndCall(address(syndicateV2), "");
-        syndicateV2 = SyndicateSequencingChainV2(address(proxy));
+        syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
 
         // Test namespaced storage fields work correctly
         // Note: These should be zero-initialized since they're new fields added during upgrade
@@ -160,9 +160,9 @@ contract StorageUpgradeTest is Test {
         vm.startPrank(ADMIN);
 
         // Deploy V2 and upgrade
-        syndicateV2 = new SyndicateSequencingChainV2();
+        syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();
         syndicateV1.upgradeToAndCall(address(syndicateV2), "");
-        syndicateV2 = SyndicateSequencingChainV2(address(proxy));
+        syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
 
         // Test new traditional storage fields are zero-initialized during upgrade
         assertEq(syndicateV2.maxGasPerTransaction(), 0, "maxGasPerTransaction should be zero-initialized");
@@ -193,9 +193,9 @@ contract StorageUpgradeTest is Test {
         vm.startPrank(ADMIN);
 
         // Deploy V2 and upgrade
-        syndicateV2 = new SyndicateSequencingChainV2();
+        syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();
         syndicateV1.upgradeToAndCall(address(syndicateV2), "");
-        syndicateV2 = SyndicateSequencingChainV2(address(proxy));
+        syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
 
         // Enable batch processing for V2 functionality
         syndicateV2.toggleBatchProcessing();
@@ -227,9 +227,9 @@ contract StorageUpgradeTest is Test {
         vm.startPrank(ADMIN);
 
         // Deploy V2 and upgrade
-        syndicateV2 = new SyndicateSequencingChainV2();
+        syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();
         syndicateV1.upgradeToAndCall(address(syndicateV2), "");
-        syndicateV2 = SyndicateSequencingChainV2(address(proxy));
+        syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
 
         // Enable batch processing first, then test batch limit enforcement
         syndicateV2.toggleBatchProcessing();
@@ -282,9 +282,9 @@ contract StorageUpgradeTest is Test {
         syndicateV1.setAllowGasTrackingBanOnUpgrade(true);
 
         // Deploy V2 and upgrade
-        syndicateV2 = new SyndicateSequencingChainV2();
+        syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();
         syndicateV1.upgradeToAndCall(address(syndicateV2), "");
-        syndicateV2 = SyndicateSequencingChainV2(address(proxy));
+        syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
 
         // Verify original values are still intact
         assertTrue(syndicateV2.allowGasTrackingBanOnUpgrade(), "V1 storage should not be affected by V2 upgrade");

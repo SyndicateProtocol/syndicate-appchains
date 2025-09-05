@@ -14,6 +14,18 @@ interface ISyndicateFactory {
 
 uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
 
+/// @custom:storage-location erc7201:syndicate.storage.SyndicateSequencingChain
+struct SyndicateSequencingChainStorage {
+    /// @notice The ID of the App chain that this contract is sequencing transactions for.
+    uint256 appchainId;
+    /// @notice The address that receives emissions for this sequencing chain
+    address emissionsReceiver;
+    /// @notice The factory contract that deployed this chain
+    address factory;
+    /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
+    bool allowGasTrackingBanOnUpgrade;
+}
+
 /// @title SyndicateSequencingChain
 /// @notice Core contract for transaction sequencing using Syndicate's "secure by module design" architecture
 ///
@@ -60,24 +72,38 @@ contract SyndicateSequencingChain is
     error TransactionOrSenderNotAllowed();
 
     /*//////////////////////////////////////////////////////////////
-                STATE VARIABLES - DO NOT REORDER
+                            STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice The ID of the App chain that this contract is sequencing transactions for.
-    /// Storage slot 0
-    uint256 public appchainId;
+    // cast index-erc7201 syndicate.storage.SyndicateSequencingChain
+    bytes32 public constant SYNDICATE_SEQUENCING_CHAIN_STORAGE_LOCATION =
+        0xc541a3613bd22a8da1c897658e95c42e6bb9158c83d62ac963646ba27200a400;
 
-    /// @notice The address that receives emissions for this sequencing chain
-    /// Storage slot 1
-    address public emissionsReceiver;
+    function _getSyndicateSequencingChainStorage() private pure returns (SyndicateSequencingChainStorage storage $) {
+        assembly {
+            $.slot := SYNDICATE_SEQUENCING_CHAIN_STORAGE_LOCATION
+        }
+    }
 
-    /// @notice The factory contract that deployed this chain
-    /// Storage slot 2
-    address public factory;
+    function appchainId() public view returns (uint256) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.appchainId;
+    }
 
-    /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
-    /// Storage slot 3
-    bool public allowGasTrackingBanOnUpgrade;
+    function emissionsReceiver() public view returns (address) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.emissionsReceiver;
+    }
+
+    function factory() public view returns (address) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.factory;
+    }
+
+    function allowGasTrackingBanOnUpgrade() public view returns (bool) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.allowGasTrackingBanOnUpgrade;
+    }
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS
@@ -119,23 +145,26 @@ contract SyndicateSequencingChain is
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
         __UUPSUpgradeable_init();
         _enableGasTracking();
-        appchainId = _appchainId;
-        factory = msg.sender;
-        allowGasTrackingBanOnUpgrade = false;
+
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        $.appchainId = _appchainId;
+        $.factory = msg.sender;
+        $.allowGasTrackingBanOnUpgrade = false;
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
     /// @dev Required by UUPSUpgradeable to restrict upgradeability to the owner.
     /// @param _newImplementation The address of the new implementation contract.
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
-        bool isAllowed = ISyndicateFactory(factory).isImplementationAllowed(_newImplementation);
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        bool isAllowed = ISyndicateFactory($.factory).isImplementationAllowed(_newImplementation);
 
         if (!isAllowed) {
-            require(allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
+            require($.allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
         }
 
         // Notify factory about the upgrade
-        ISyndicateFactory(factory).notifyChainUpgrade(appchainId, _newImplementation);
+        ISyndicateFactory($.factory).notifyChainUpgrade($.appchainId, _newImplementation);
     }
 
     function encodeTransaction(bytes calldata data) public pure returns (bytes memory) {
@@ -181,9 +210,10 @@ contract SyndicateSequencingChain is
     /// @dev Only callable by the contract owner
     /// @param _emissionsReceiver The address to receive emissions
     function setEmissionsReceiver(address _emissionsReceiver) external onlyOwner {
-        address oldReceiver = emissionsReceiver;
-        emissionsReceiver = _emissionsReceiver;
-        if (emissionsReceiver != address(0)) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        address oldReceiver = $.emissionsReceiver;
+        $.emissionsReceiver = _emissionsReceiver;
+        if ($.emissionsReceiver != address(0)) {
             emit EmissionsReceiverUpdated(oldReceiver, _emissionsReceiver);
         } else {
             emit EmissionsReceiverUpdated(oldReceiver, owner());
@@ -194,7 +224,8 @@ contract SyndicateSequencingChain is
     /// @dev Returns emissionsReceiver if set, otherwise returns the contract owner
     /// @return The address that should receive emissions
     function getEmissionsReceiver() external view returns (address) {
-        return emissionsReceiver == address(0) ? owner() : emissionsReceiver;
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.emissionsReceiver == address(0) ? owner() : $.emissionsReceiver;
     }
 
     /// @notice Override transferOwnership to emit EmissionsReceiverUpdated event when appropriate
@@ -202,7 +233,8 @@ contract SyndicateSequencingChain is
     /// effectively changes the emissions receiver, so we emit the event for transparency
     /// @param newOwner The address of the new owner
     function transferOwnership(address newOwner) public override onlyOwner {
-        if (emissionsReceiver == address(0)) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        if ($.emissionsReceiver == address(0)) {
             emit EmissionsReceiverUpdated(owner(), newOwner);
         }
         super.transferOwnership(newOwner);
@@ -227,6 +259,7 @@ contract SyndicateSequencingChain is
     /// @dev Only callable by the contract owner
     /// @param _allowGasTrackingBanOnUpgrade Whether to allow gas tracking ban on upgrade
     function setAllowGasTrackingBanOnUpgrade(bool _allowGasTrackingBanOnUpgrade) external onlyOwner {
-        allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        $.allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
     }
 }

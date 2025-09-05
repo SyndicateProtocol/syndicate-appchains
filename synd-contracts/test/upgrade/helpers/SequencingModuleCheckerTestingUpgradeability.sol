@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {IPermissionModule} from "../../src/interfaces/IPermissionModule.sol";
+import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {DataTooLarge} from "@arbitrum/nitro-contracts/src/libraries/Error.sol";
@@ -18,9 +18,13 @@ struct SequencingModuleStorage {
     uint256 lastPermissionUpdate;
 }
 
-/// @title SequencingModuleCheckerV2
+/// @title SequencingModuleCheckerTestingUpgradeability
 /// @notice Upgraded version with additional storage fields - tests namespaced storage safety
-abstract contract SequencingModuleCheckerV2 is Initializable, OwnableUpgradeable, IPermissionModule {
+abstract contract SequencingModuleCheckerTestingUpgradeability is
+    Initializable,
+    OwnableUpgradeable,
+    IPermissionModule
+{
     event RequirementModuleUpdated(address indexed newModule);
     event MaxTransactionsPerBatchUpdated(uint256 newMax);
     event BatchProcessingToggled(bool enabled);

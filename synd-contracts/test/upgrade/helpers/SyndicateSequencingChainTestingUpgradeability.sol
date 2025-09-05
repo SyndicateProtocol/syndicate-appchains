@@ -3,16 +3,28 @@ pragma solidity 0.8.28;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {ISyndicateSequencingChain} from "../../src/interfaces/ISyndicateSequencingChain.sol";
-import {GasCounter} from "../../src/staking/GasCounter.sol";
-import "./SequencingModuleCheckerV2.sol";
+import {ISyndicateSequencingChain} from "src/interfaces/ISyndicateSequencingChain.sol";
+import {GasCounter} from "src/staking/GasCounter.sol";
+import "./SequencingModuleCheckerTestingUpgradeability.sol";
 
-/// @title SyndicateSequencingChainV2
+/// @custom:storage-location erc7201:syndicate.storage.SyndicateSequencingChain
+struct SyndicateSequencingChainStorage {
+    /// @notice The ID of the App chain that this contract is sequencing transactions for.
+    uint256 appchainId;
+    /// @notice The address that receives emissions for this sequencing chain
+    address emissionsReceiver;
+    /// @notice The factory contract that deployed this chain
+    address factory;
+    /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
+    bool allowGasTrackingBanOnUpgrade;
+}
+
+/// @title SyndicateSequencingChainTestingUpgradeability
 /// @notice Upgraded version with additional storage fields - tests upgrade safety
 /// @dev This tests both traditional storage (appended to end) and namespaced storage safety
-contract SyndicateSequencingChainV2 is
+contract SyndicateSequencingChainTestingUpgradeability is
     Initializable,
-    SequencingModuleCheckerV2,
+    SequencingModuleCheckerTestingUpgradeability,
     ISyndicateSequencingChain,
     GasCounter,
     UUPSUpgradeable
@@ -21,43 +33,53 @@ contract SyndicateSequencingChainV2 is
     error TransactionOrSenderNotAllowed();
 
     /*//////////////////////////////////////////////////////////////
-                STATE VARIABLES - DO NOT REORDER
+                        NAMESPACED STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice The ID of the App chain that this contract is sequencing transactions for.
-    /// Storage slot 0
-    uint256 public appchainId;
+    // cast index-erc7201 syndicate.storage.SyndicateSequencingChain
+    bytes32 public constant SYNDICATE_SEQUENCING_CHAIN_STORAGE_LOCATION =
+        0xc541a3613bd22a8da1c897658e95c42e6bb9158c83d62ac963646ba27200a400;
 
-    /// @notice The address that receives emissions for this sequencing chain
-    /// Storage slot 1
-    address public emissionsReceiver;
+    function _getSyndicateSequencingChainStorage() private pure returns (SyndicateSequencingChainStorage storage $) {
+        assembly {
+            $.slot := SYNDICATE_SEQUENCING_CHAIN_STORAGE_LOCATION
+        }
+    }
 
-    /// @notice The factory contract that deployed this chain
-    /// Storage slot 2
-    address public factory;
+    function appchainId() public view returns (uint256) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.appchainId;
+    }
 
-    /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
-    /// Storage slot 3
-    bool public allowGasTrackingBanOnUpgrade;
+    function emissionsReceiver() public view returns (address) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.emissionsReceiver;
+    }
+
+    function factory() public view returns (address) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.factory;
+    }
+
+    function allowGasTrackingBanOnUpgrade() public view returns (bool) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.allowGasTrackingBanOnUpgrade;
+    }
 
     /*//////////////////////////////////////////////////////////////
-                NEW STORAGE VARIABLES - APPENDED SAFELY
+                NEW V2 GLOBAL VARIABLES - APPENDED SAFELY
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice NEW FIELD: Maximum gas limit per transaction
-    /// Storage slot 4
+    /// @notice V2: Maximum gas limit per transaction
     uint256 public maxGasPerTransaction;
 
-    /// @notice NEW FIELD: Enable/disable transaction replay protection
-    /// Storage slot 5
+    /// @notice V2: Enable/disable transaction replay protection
     bool public replayProtectionEnabled;
 
-    /// @notice NEW FIELD: Minimum time between transactions from same address
-    /// Storage slot 6
+    /// @notice V2: Minimum time between transactions from same address
     uint256 public minTimeBetweenTxs;
 
-    /// @notice NEW FIELD: Mapping of address to last transaction timestamp
-    /// Storage slot 7
+    /// @notice V2: Mapping of address to last transaction timestamp
     mapping(address => uint256) public lastTransactionTime;
 
     /*//////////////////////////////////////////////////////////////
@@ -84,15 +106,16 @@ contract SyndicateSequencingChainV2 is
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
         __UUPSUpgradeable_init();
 
-        // Initialize storage variables
-        appchainId = _appchainId;
-        factory = _factory;
-        emissionsReceiver = _emissionsReceiver;
+        // Initialize namespaced storage variables
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        $.appchainId = _appchainId;
+        $.factory = _factory;
+        $.emissionsReceiver = _emissionsReceiver;
 
         // Enable gas tracking
         _enableGasTracking();
         // Set default to false for new deployments
-        allowGasTrackingBanOnUpgrade = false;
+        $.allowGasTrackingBanOnUpgrade = false;
 
         // Initialize new V2 fields with default values
         maxGasPerTransaction = 1000000; // 1M gas default
@@ -190,12 +213,14 @@ contract SyndicateSequencingChainV2 is
     //////////////////////////////////////////////////////////////*/
 
     function getEmissionsReceiver() public view returns (address) {
-        return emissionsReceiver == address(0) ? owner() : emissionsReceiver;
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.emissionsReceiver == address(0) ? owner() : $.emissionsReceiver;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
-        if (!allowGasTrackingBanOnUpgrade) {
-            require(allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        if (!$.allowGasTrackingBanOnUpgrade) {
+            require($.allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
         }
     }
 
@@ -212,7 +237,8 @@ contract SyndicateSequencingChainV2 is
     }
 
     function setAllowGasTrackingBanOnUpgrade(bool _allowGasTrackingBanOnUpgrade) external onlyOwner {
-        allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        $.allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
     }
 
     /*//////////////////////////////////////////////////////////////
