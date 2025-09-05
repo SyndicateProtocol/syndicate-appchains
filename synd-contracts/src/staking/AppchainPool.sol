@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {SyndStaking} from "./SyndStaking.sol";
-import {IPool} from "./IPool.sol";
+import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
+import {IPool} from "./interfaces/IPool.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -38,7 +38,7 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
     UD60x18 public decayFactor = ud(2e18);
 
     /// @notice Reference to the SyndStaking contract for stake queries
-    SyndStaking public immutable stakingContract;
+    ISyndStaking public immutable stakingContract;
 
     /// @notice Reference to the GasDataProvider contract for gas data queries
     IGasDataProvider public immutable gasDataProvider;
@@ -91,7 +91,7 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
     constructor(address _defaultAdmin, address _stakingContract, address _gasDataProvider) Ownable(_defaultAdmin) {
         if (_stakingContract == address(0) || _gasDataProvider == address(0)) revert ZeroAddress();
 
-        stakingContract = SyndStaking(_stakingContract);
+        stakingContract = ISyndStaking(_stakingContract);
         gasDataProvider = IGasDataProvider(_gasDataProvider);
     }
 
@@ -200,11 +200,11 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
         uint256 epochEnd = stakingContract.getEpochEnd(epochIndex);
 
         uint256 currentTime = block.timestamp;
-        uint256 timeElapsed = currentTime - epochEnd;
-
-        if (timeElapsed <= 0) {
+        if (epochEnd >= currentTime) {
             return 0;
         }
+
+        uint256 timeElapsed = currentTime - epochEnd;
 
         // If vesting period is complete, return full amount
         if (timeElapsed >= VESTING_DURATION) {
