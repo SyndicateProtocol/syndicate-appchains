@@ -28,13 +28,13 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
     IGasDataProvider public immutable gasDataProvider;
 
     // Total reward deposited per epoch (in wei)
-    mapping(uint256 => uint256) public epochTotal;
+    mapping(uint256 epochIndex => uint256 epochTotal) public epochTotal;
 
     // Cache: per-epoch/appchain diminishing factor
-    mapping(uint256 => mapping(uint256 => UD60x18)) internal diminishingFactor;
+    mapping(uint256 epochIndex => mapping(uint256 appchainId => UD60x18 diminishingFactor)) internal diminishingFactor;
 
     // Cache: per-epoch sum of diminishing factors across all appchains
-    mapping(uint256 => UD60x18) internal epochTotalDiminishingFactor;
+    mapping(uint256 epochIndex => UD60x18 epochTotalDiminishingFactor) internal epochTotalDiminishingFactor;
 
     // Events / Errors reused by children
     event EpochDeposit(uint256 indexed epochIndex, uint256 amount);

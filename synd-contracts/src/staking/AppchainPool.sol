@@ -13,7 +13,7 @@ contract AppchainPool is IPool, RewardPoolBase {
     uint256 public constant VESTING_DURATION = 365 days;
 
     // amount already claimed per epoch/appchain
-    mapping(uint256 => mapping(uint256 => uint256)) public claimed;
+    mapping(uint256 epochIndex => mapping(uint256 appchainId => uint256 claimed)) public claimed;
 
     error InvalidClaimer();
 

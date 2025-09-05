@@ -16,7 +16,7 @@ interface RewardPoolBase {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     function decayFactor() external view returns (UD60x18);
-    function epochTotal(uint256) external view returns (uint256);
+    function epochTotal(uint256 epochIndex) external view returns (uint256 epochTotal);
     function feeMultiplier() external view returns (UD60x18);
     function gasDataProvider() external view returns (address);
     function owner() external view returns (address);
@@ -51,14 +51,14 @@ interface RewardPoolBase {
     "name": "epochTotal",
     "inputs": [
       {
-        "name": "",
+        "name": "epochIndex",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
     "outputs": [
       {
-        "name": "",
+        "name": "epochTotal",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1371,11 +1371,14 @@ function decayFactor() external view returns (UD60x18);
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `epochTotal(uint256)` and selector `0x1e0e8489`.
 ```solidity
-function epochTotal(uint256) external view returns (uint256);
+function epochTotal(uint256 epochIndex) external view returns (uint256 epochTotal);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct epochTotalCall(pub alloy::sol_types::private::primitives::aliases::U256);
+    pub struct epochTotalCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+    }
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`epochTotal(uint256)`](epochTotalCall) function.
@@ -1383,7 +1386,7 @@ function epochTotal(uint256) external view returns (uint256);
     #[derive(Clone)]
     pub struct epochTotalReturn {
         #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+        pub epochTotal: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
         non_camel_case_types,
@@ -1415,14 +1418,14 @@ function epochTotal(uint256) external view returns (uint256);
             #[doc(hidden)]
             impl ::core::convert::From<epochTotalCall> for UnderlyingRustTuple<'_> {
                 fn from(value: epochTotalCall) -> Self {
-                    (value.0,)
+                    (value.epochIndex,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for epochTotalCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self(tuple.0)
+                    Self { epochIndex: tuple.0 }
                 }
             }
         }
@@ -1448,14 +1451,14 @@ function epochTotal(uint256) external view returns (uint256);
             #[doc(hidden)]
             impl ::core::convert::From<epochTotalReturn> for UnderlyingRustTuple<'_> {
                 fn from(value: epochTotalReturn) -> Self {
-                    (value._0,)
+                    (value.epochTotal,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>> for epochTotalReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
+                    Self { epochTotal: tuple.0 }
                 }
             }
         }
@@ -1483,7 +1486,7 @@ function epochTotal(uint256) external view returns (uint256);
                 (
                     <alloy::sol_types::sol_data::Uint<
                         256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.0),
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
                 )
             }
             #[inline]
@@ -1501,7 +1504,7 @@ function epochTotal(uint256) external view returns (uint256);
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
                     .map(|r| {
                         let r: epochTotalReturn = r.into();
-                        r._0
+                        r.epochTotal
                     })
             }
             #[inline]
@@ -1513,7 +1516,7 @@ function epochTotal(uint256) external view returns (uint256);
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
                         let r: epochTotalReturn = r.into();
-                        r._0
+                        r.epochTotal
                     })
             }
         }
@@ -4060,9 +4063,9 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`epochTotal`] function.
         pub fn epochTotal(
             &self,
-            _0: alloy::sol_types::private::primitives::aliases::U256,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, epochTotalCall, N> {
-            self.call_builder(&epochTotalCall(_0))
+            self.call_builder(&epochTotalCall { epochIndex })
         }
         ///Creates a new call builder for the [`feeMultiplier`] function.
         pub fn feeMultiplier(

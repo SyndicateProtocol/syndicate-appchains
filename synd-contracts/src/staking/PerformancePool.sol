@@ -8,11 +8,19 @@ import {IUserPool} from "./interfaces/IPool.sol";
 
 contract PerformancePool is IUserPool, RewardPoolBase {
     // amount already claimed per epoch/appchain/user
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public claimed;
+    mapping(uint256 epochIndex => mapping(uint256 appchainId => mapping(address user => uint256 claimed))) public
+        claimed;
 
-    error UnauthorizedCaller(); // keep if you add a restricted forwarder
+    error UnauthorizedCaller();
 
     constructor(address admin, address staking, address gas) RewardPoolBase(admin, staking, gas) {}
+
+    modifier onlyStakingContract() {
+        if (msg.sender != address(stakingContract)) {
+            revert UnauthorizedCaller();
+        }
+        _;
+    }
 
     function deposit(uint256 epochIndex) external payable override {
         _deposit(epochIndex);
@@ -25,9 +33,8 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     function claimFor(uint256 epochIndex, address user, address destination, uint256 appchainId)
         external
         nonReentrant
+        onlyStakingContract
     {
-        // Optionally gate this with a forwarder allowlist
-        // if (msg.sender != address(stakingContract)) revert UnauthorizedCaller();
         _claim(epochIndex, user, destination, appchainId);
     }
 
