@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {ISyndStaking} from "./ISyndStaking.sol";
-import {IGasDataProvider} from "./IGasDataProvider.sol";
+import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
+import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";

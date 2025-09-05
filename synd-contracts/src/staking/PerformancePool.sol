@@ -2,9 +2,9 @@
 pragma solidity 0.8.28;
 
 import {RewardPoolBase} from "./RewardPoolBase.sol";
-import {ISyndStaking} from "./ISyndStaking.sol";
+import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IUserPool} from "./IPool.sol";
+import {IUserPool} from "./interfaces/IPool.sol";
 
 contract PerformancePool is IUserPool, RewardPoolBase {
     // amount already claimed per epoch/appchain/user
