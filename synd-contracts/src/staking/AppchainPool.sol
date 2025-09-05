@@ -27,7 +27,7 @@ interface IGasDataProvider {
  * and stakers can claim their rewards based on their appchain stake share.
  */
 contract AppchainPool is IPool, ReentrancyGuard, Ownable {
-    /// @notice Vesting duration in seconds (1 year = 365 days)
+    /// @notice Vesting duration (1 year = 365 days)
     uint256 public constant VESTING_DURATION = 365 days;
 
     // Weights and decay
@@ -185,11 +185,6 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
 
         uint256 alreadyClaimed = claimed[epochIndex][appchainId];
         uint256 vestedAmount = getVestedAmount(epochIndex, fullReward);
-
-        // Return the minimum of vested amount and remaining unclaimed amount
-        if (vestedAmount <= alreadyClaimed) {
-            return 0;
-        }
 
         return vestedAmount - alreadyClaimed;
     }
