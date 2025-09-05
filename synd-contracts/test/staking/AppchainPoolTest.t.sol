@@ -752,7 +752,6 @@ contract AppchainPoolTest is Test {
         assertApproxEqAbs(finalAppchain1 + finalAppchain2, 100 ether, 1, "Total claimable should equal deposit");
 
         // Test that the setter functions actually modify the contract state
-        // This is more important than testing specific calculation changes
         assertTrue(appchainPool.feeMultiplier().eq(ud(0.6e18)), "Fee multiplier should remain updated");
         assertTrue(appchainPool.stakeMultiplier().eq(ud(0.4e18)), "Stake multiplier should remain updated");
         assertTrue(appchainPool.decayFactor().eq(ud(3e18)), "Decay factor should remain updated");
@@ -878,7 +877,6 @@ contract AppchainPoolTest is Test {
         setGasShares(epoch, 1, 1, 0);
         setDefaultReceivers(epoch);
 
-        // CRITICAL: Need to deposit funds before calling getClaimableAmount
         appchainPool.deposit{value: 100 ether}(epoch);
 
         // First call should calculate and cache (but return 0 before epoch ends)
@@ -904,7 +902,6 @@ contract AppchainPoolTest is Test {
         vm.warp(block.timestamp + 30 days); // Move to next epoch
         uint256 newEpoch = _settledEpoch(); // Get a properly settled epoch
 
-        // IMPORTANT: We need to set up stakes for the new epoch
         // The setupStake function only sets up stakes for epoch 1, so we need to handle the new epoch
         vm.startPrank(user1);
         staking.stakeSynd{value: 50 ether}(appchainId1);
@@ -1031,7 +1028,6 @@ contract AppchainPoolTest is Test {
 
     // ===== VESTING TESTS =====
 
-    /// Test basic vesting functionality
     function test_basic_vesting_functionality() public {
         setupStake(100 ether, 0, 0);
 
@@ -1076,7 +1072,6 @@ contract AppchainPoolTest is Test {
         assertEq(claimableAfterFullYear, 100 ether, "Should have full amount after 1 year");
     }
 
-    /// Test vesting with multiple claims over time
     function test_vesting_multiple_claims_over_time() public {
         setupStake(100 ether, 0, 0);
 
@@ -1124,7 +1119,6 @@ contract AppchainPoolTest is Test {
         assertEq(appchainDest1.balance, balanceBefore + secondClaimable, "Second claim should have been paid");
     }
 
-    /// Test vesting edge cases
     function test_vesting_edge_cases() public {
         setupStake(100 ether, 0, 0);
 
@@ -1157,7 +1151,6 @@ contract AppchainPoolTest is Test {
         assertEq(claimableAfter1000Days, 100 ether, "Should cap at full amount after 1 year");
     }
 
-    /// Test vesting with multiple appchains
     function test_vesting_multiple_appchains() public {
         setupStake(60 ether, 30 ether, 10 ether); // 60:30:10 ratio
 
@@ -1196,7 +1189,6 @@ contract AppchainPoolTest is Test {
         assertApproxEqAbs(claimable3, expectedAfter100Days3, 1, "Appchain3 should have correct amount after 100 days");
     }
 
-    /// Test vesting with getFullRewardAmount function
     function test_getFullRewardAmount_function() public {
         setupStake(100 ether, 0, 0);
 

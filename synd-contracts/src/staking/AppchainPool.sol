@@ -212,7 +212,6 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
         }
 
         // Calculate linear vesting: (timeElapsed / VESTING_DURATION) * fullReward
-        // Use higher precision to avoid rounding errors
         uint256 vestedAmount = (fullReward * timeElapsed) / VESTING_DURATION;
 
         return vestedAmount;
