@@ -44,9 +44,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
     );
 
-    /// @notice Emitted when namespace configuration is updated
-    event NamespaceConfigUpdated(uint256 oldNamespacePrefix, uint256 newNamespacePrefix);
-
     /// @notice Emitted when a chain ID is manually marked as used
     event ChainIdManuallyMarked(uint256 indexed chainId);
 
@@ -68,11 +65,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     error OnlyChainCanNotifyUpgrade();
     error CannotRemoveDefaultImplementation();
     error FailedToUpgradeToLatestImplementation();
-
-    // Namespace configuration - made public for frontend access
-    uint256 public namespacePrefix;
-    uint256 public nextAutoChainId;
-    mapping(uint256 => NamespaceState) public usedNamespaces;
 
     /// @notice Mapping from appchain ID to the sequencing contract address
     mapping(uint256 => address) public appchainContracts;
@@ -112,10 +104,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, admin);
 
-        _updateNamespaceConfig(510);
-
-        nextAutoChainId = 1;
-
         // Deploy minimal stub implementation using CREATE2 for deterministic address
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
         stubImplementation = Create2.deploy(0, bytes32("SYNDICATE_STUB_V1"), stubBytecode);
@@ -133,14 +121,13 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @param newImplementation The address of the new implementation
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
-    /// @notice Creates a new SyndicateSequencingChain contract
-    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID to prevent squatting
     /// @param admin The admin address for the new chain
     /// @param permissionModule The pre-deployed permission module
     /// @return sequencingChain The deployed sequencing chain address
     /// @return actualChainId The chain ID that was used
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChain(uint256 appchainId, address admin, IRequirementModule permissionModule)
+    function createSyndicateSequencingChainDeterministic(address admin, IRequirementModule permissionModule)
         external
         whenNotPaused
         returns (address sequencingChain, uint256 actualChainId)
@@ -149,63 +136,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
             revert ZeroAddress();
         }
 
-        // Determine actual chain ID
-        actualChainId = appchainId == 0 ? getNextChainId() : appchainId;
-
-        // Validate chain ID is not already used
-        if (appchainContracts[actualChainId] != address(0)) {
-            revert ChainIdAlreadyExists();
-        }
-
-        if (appchainId == 0) {
-            nextAutoChainId++;
-        }
-
-        // Deploy the sequencing chain using consistent proxy bytecode
-        bytes memory consistentBytecode = getProxyBytecode();
-        sequencingChain = Create2.deploy(0, bytes32(actualChainId), consistentBytecode);
-
-        // Store the mapping of appchain ID to contract address
-        appchainContracts[actualChainId] = sequencingChain;
-        chainIDs.push(actualChainId);
-
-        // Upgrade the proxy to use the latest implementation (instead of the stub)
-        bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,uint256)", address(this), address(permissionModule), actualChainId
-        );
-        (bool upgradeSuccess,) = sequencingChain.call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
-        );
-        if (!upgradeSuccess) {
-            revert FailedToUpgradeToLatestImplementation();
-        }
-
-        // Transfer ownership to the intended admin
-        SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
-
-        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
-
-        return (sequencingChain, actualChainId);
-    }
-
-    /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID to prevent squatting
-    /// @param nonce The nonce for deterministic chainID generation (0 for auto-increment using sender's current nonce)
-    /// @param admin The admin address for the new chain
-    /// @param permissionModule The pre-deployed permission module
-    /// @return sequencingChain The deployed sequencing chain address
-    /// @return actualChainId The chain ID that was used
-    //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChainDeterministic(
-        uint256 nonce,
-        address admin,
-        IRequirementModule permissionModule
-    ) external whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
-        if (admin == address(0) || address(permissionModule) == address(0)) {
-            revert ZeroAddress();
-        }
-
-        // Determine actual nonce and chain ID using deterministic generation
-        uint256 actualNonce = nonce == 0 ? senderNonces[msg.sender] : nonce;
+        // Use current nonce for this sender and increment it
+        uint256 actualNonce = senderNonces[msg.sender];
         actualChainId = generateDeterministicChainId(msg.sender, actualNonce);
 
         // Validate chain ID is not already used
@@ -213,17 +145,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
             revert ChainIdAlreadyExists();
         }
 
-        // If using auto-increment nonce (nonce == 0), increment the sender's nonce
-        if (nonce == 0) {
-            senderNonces[msg.sender]++;
-        } else {
-            // If using specific nonce, ensure it's greater than current nonce
-            if (nonce < senderNonces[msg.sender]) {
-                revert ChainIdAlreadyExists(); // Reusing this error for nonce already used
-            }
-            // Update sender's nonce to be at least this value + 1
-            senderNonces[msg.sender] = nonce + 1;
-        }
+        // Increment the sender's nonce for next use
+        senderNonces[msg.sender]++;
 
         // Emit deterministic chainID generation event
         emit DeterministicChainIdGenerated(msg.sender, actualNonce, actualChainId);
@@ -337,21 +260,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         return Create2.computeAddress(bytes32("SYNDICATE_STUB_V1"), keccak256(stubBytecode));
     }
 
-    /// @notice Get the next auto-generated chain ID
-    /// @dev Chain ID calculation: concatenates namespacePrefix with nextAutoChainId
-    /// @dev Example: with namespacePrefix=510 and nextAutoChainId=1, result is 5101
-    /// @dev Example: with namespacePrefix=510 and nextAutoChainId=1000, result is 5101000
-    /// @return The next available chain ID in the namespace
-    function getNextChainId() public view returns (uint256) {
-        // Concatenate namespace prefix with auto chain ID
-        // This ensures we always stay within the 510 namespace
-        string memory prefixStr = Strings.toString(namespacePrefix);
-        string memory chainIdStr = Strings.toString(nextAutoChainId);
-        //#olympix-ignore-abi-encode-packed-dynamic-types
-        string memory combined = string(abi.encodePacked(prefixStr, chainIdStr));
-        return Strings.parseUint(combined);
-    }
-
     /// @notice Check if a chain ID has been used
     /// @param chainId The chain ID to check
     /// @return 1 if used, 0 if available
@@ -426,28 +334,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         }
 
         return (validChainIDs, validContracts);
-    }
-
-    /// @notice Update namespace configuration (manager only)
-    /// @param newPrefix The new namespace prefix
-    /// old namespace prefixes can be reused, but prefixes that can generate collisions are forbidden
-    function updateNamespaceConfig(uint256 newPrefix) external onlyRole(MANAGER_ROLE) {
-        _updateNamespaceConfig(newPrefix);
-    }
-
-    function _updateNamespaceConfig(uint256 newPrefix) private {
-        require(newPrefix > 0, "namespace prefix of 0 is forbidden");
-        require(usedNamespaces[newPrefix] != NamespaceState.Reserved, "namespace collision detected");
-        usedNamespaces[newPrefix] = NamespaceState.Used;
-        uint256 prefix = newPrefix / 10;
-        while (prefix > 0) {
-            require(usedNamespaces[prefix] != NamespaceState.Used, "namespace collision detected");
-            usedNamespaces[prefix] = NamespaceState.Reserved;
-            prefix /= 10;
-        }
-        prefix = namespacePrefix;
-        namespacePrefix = newPrefix;
-        emit NamespaceConfigUpdated(prefix, newPrefix);
     }
 
     /// @notice Pause the factory (admin only)

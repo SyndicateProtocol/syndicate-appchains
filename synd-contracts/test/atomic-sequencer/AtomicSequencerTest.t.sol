@@ -54,7 +54,8 @@ contract AtomicSequencerTest is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         SyndicateFactory factory = SyndicateFactory(address(proxy));
-        (address chainAddress,) = factory.createSyndicateSequencingChain(appchainId, admin, permissionModule);
+        (address chainAddress,) =
+            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
         return SyndicateSequencingChain(chainAddress);
     }
 
@@ -104,7 +105,9 @@ contract AtomicSequencerTest is Test {
     }
 
     function testProcessMultipleChains() public {
+        vm.startPrank(admin);
         SyndicateSequencingChain chainC = deployFromFactory(10042003);
+        vm.stopPrank();
 
         SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](3);
         chains[0] = chainA;

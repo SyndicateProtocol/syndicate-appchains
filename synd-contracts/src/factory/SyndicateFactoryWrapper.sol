@@ -51,7 +51,7 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
     }
 
     /// @notice Deploy a complete syndicate with permission module and sequencing chain
-    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param appchainId The app chain ID (0 for deterministic generation)
     /// @param admin The admin address for both contracts
     /// @param moduleType The type of permission module to deploy (And or Or)
     /// @param moduleSalt The salt for the permission module deployment
@@ -76,8 +76,17 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
         }
 
         // Deploy the sequencing chain with the permission module
-        (sequencingChain, actualChainId) =
-            syndicateFactory.createSyndicateSequencingChain(appchainId, admin, IRequirementModule(permissionModule));
+        if (appchainId == 0) {
+            // Use deterministic deployment when appchainId is 0
+            (sequencingChain, actualChainId) = syndicateFactory.createSyndicateSequencingChainDeterministic(
+                admin, IRequirementModule(permissionModule)
+            );
+        } else {
+            // Use custom chain ID when appchainId is provided
+            (sequencingChain, actualChainId) = syndicateFactory.createSyndicateSequencingChainWithCustomId(
+                appchainId, admin, IRequirementModule(permissionModule)
+            );
+        }
 
         emit CompleteSyndicateDeployed(actualChainId, sequencingChain, permissionModule, moduleType, admin);
 
@@ -112,12 +121,6 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
         return (permissionModuleAddress, sequencingChainAddress);
     }
 
-    /// @notice Get the next auto-generated chain ID from the syndicate factory
-    /// @return The next available chain ID
-    function getNextAutoChainId() external view returns (uint256) {
-        return syndicateFactory.getNextChainId();
-    }
-
     /// @notice Check if a chain ID has been used in the syndicate factory
     /// @param chainId The chain ID to check
     /// @return true if used, false if available
@@ -125,14 +128,8 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
         return syndicateFactory.isChainIdUsed(chainId);
     }
 
-    /// @notice Get the namespace prefix from the syndicate factory
-    /// @return The current namespace prefix
-    function getNamespacePrefix() external view returns (uint256) {
-        return syndicateFactory.namespacePrefix();
-    }
-
     /// @notice Deploy a syndicate with RequireAndModule
-    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param appchainId The app chain ID (0 for deterministic generation)
     /// @param admin The admin address for both contracts
     /// @param moduleSalt The salt for the permission module deployment
     /// @return sequencingChain The deployed sequencing chain address
@@ -147,7 +144,7 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
     }
 
     /// @notice Deploy a syndicate with RequireOrModule
-    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param appchainId The app chain ID (0 for deterministic generation)
     /// @param admin The admin address for both contracts
     /// @param moduleSalt The salt for the permission module deployment
     /// @return sequencingChain The deployed sequencing chain address

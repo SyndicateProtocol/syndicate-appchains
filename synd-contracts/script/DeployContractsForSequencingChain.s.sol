@@ -9,6 +9,7 @@ import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.so
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {RequireAndModuleFactory} from "src/factory/PermissionModuleFactories.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
+
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DeploySyndicateFactory is Script {
@@ -37,11 +38,8 @@ contract DeploySyndicateFactory is Script {
         console.log("Deployed RequireAndModule", module);
 
         // create SyndicateSequencingChain with the permission module
-        (address sequencingChain, uint256 chainId) = syndicateFactory.createSyndicateSequencingChain(
-            0, // auto-increment
-            admin,
-            IRequirementModule(module)
-        );
+        (address sequencingChain, uint256 chainId) =
+            syndicateFactory.createSyndicateSequencingChainDeterministic(admin, IRequirementModule(module));
 
         console.log("Deployed SyndicateSequencingChain", sequencingChain);
         console.log("Deployed RequireAndModule", address(module));

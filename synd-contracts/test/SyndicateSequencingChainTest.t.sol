@@ -58,7 +58,8 @@ contract SyndicateSequencingChainTestSetUp is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
-        (address chainAddress,) = factory.createSyndicateSequencingChain(appchainId, admin, _permissionModule);
+        (address chainAddress,) =
+            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
         vm.stopPrank();
         return SyndicateSequencingChain(chainAddress);
     }
@@ -211,7 +212,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.startPrank(admin);
         testFactory.addAllowedImplementation(address(newImpl), false);
-        (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
         // Upgrade should succeed since implementation is allowed
@@ -236,7 +237,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.startPrank(admin);
         (address chainAddr, uint256 chainId) =
-            testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+            testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
         // Upgrade should succeed with allowGasTrackingBan=true even though implementation not allowed
@@ -263,7 +264,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
-        (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
         // Upgrade should revert with allowGasTrackingBan=false
@@ -289,7 +290,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.startPrank(admin);
         testFactory.addAllowedImplementation(address(newImpl), false);
-        (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
         address nonOwner = makeAddr("nonOwner");
@@ -309,7 +310,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
-        (address chainAddr,) = testFactory.createSyndicateSequencingChain(123, admin, testPermissionModule);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
         // Create two different implementations

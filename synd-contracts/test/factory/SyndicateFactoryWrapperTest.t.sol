@@ -59,6 +59,8 @@ contract SyndicateFactoryWrapperTest is Test {
         // Grant manager roles
         vm.startPrank(admin);
         wrapper.grantRole(MANAGER_ROLE, manager);
+        // Grant the wrapper admin role on the syndicate factory so it can create chains
+        syndicateFactory.grantRole(DEFAULT_ADMIN_ROLE, address(wrapper));
         vm.stopPrank();
     }
 
@@ -153,22 +155,18 @@ contract SyndicateFactoryWrapperTest is Test {
         assertEq(module.owner(), user1);
     }
 
-    // Auto-increment chain ID tests
-    function testDeployWithAutoIncrementChainId() public {
-        bytes32 moduleSalt = keccak256(abi.encodePacked("auto-increment-module"));
-
-        uint256 expectedChainId = wrapper.getNextAutoChainId();
+    // Custom chain ID tests
+    function testDeployWithCustomChainId() public {
+        bytes32 moduleSalt = keccak256(abi.encodePacked("custom-module"));
+        uint256 customChainId = 1001;
 
         (address sequencingChain, address permissionModule, uint256 actualChainId) = wrapper.deployCompleteSyndicate(
-            0, // Auto-increment
-            user1,
-            SyndicateFactoryWrapper.ModuleType.RequireAnd,
-            moduleSalt
+            customChainId, user1, SyndicateFactoryWrapper.ModuleType.RequireAnd, moduleSalt
         );
 
         assertTrue(sequencingChain != address(0));
         assertTrue(permissionModule != address(0));
-        assertEq(actualChainId, expectedChainId);
+        assertEq(actualChainId, customChainId);
 
         // Verify chain ID is marked as used
         assertEq(wrapper.isChainIdUsed(actualChainId), true);
@@ -287,17 +285,6 @@ contract SyndicateFactoryWrapperTest is Test {
         // Non-manager should not have any roles
         assertFalse(wrapper.hasRole(DEFAULT_ADMIN_ROLE, nonManager));
         assertFalse(wrapper.hasRole(MANAGER_ROLE, nonManager));
-    }
-
-    // Helper function tests
-    function testGetNextAutoChainId() public view {
-        uint256 nextId = wrapper.getNextAutoChainId();
-        assertEq(nextId, 5101); // Should match syndicate factory default
-    }
-
-    function testGetNamespacePrefix() public view {
-        uint256 prefix = wrapper.getNamespacePrefix();
-        assertEq(prefix, 510); // Should match syndicate factory default
     }
 
     function testIsChainIdUsed() public {
