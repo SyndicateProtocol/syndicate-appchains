@@ -175,4 +175,4 @@ syndicate-appchains/
 - **Discussions**: [GitHub Discussions](https://github.com/syndicateio/syndicate-appchains/discussions)
 
 ## Audits
-Audits are available in the [audits](./audits) directory.
+PDF reports for the latest audits are available in the [audits](./audits) directory.
