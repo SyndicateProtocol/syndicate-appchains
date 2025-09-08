@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IPool} from "./IPool.sol";
+import {IPool} from "./interfaces/IPool.sol";
 
 /**
  * @title Splitter

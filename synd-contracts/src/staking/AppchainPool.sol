@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {ISyndStaking} from "./ISyndStaking.sol";
-import {IPool} from "./IPool.sol";
+import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
+import {IPool} from "./interfaces/IPool.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -27,6 +27,9 @@ interface IGasDataProvider {
  * and stakers can claim their rewards based on their appchain stake share.
  */
 contract AppchainPool is IPool, ReentrancyGuard, Ownable {
+    /// @notice Vesting duration (1 year = 365 days)
+    uint256 public constant VESTING_DURATION = 365 days;
+
     // Weights and decay
     // fee multiplier x = 0.4, stake multiplier y = 0.2
     UD60x18 public feeMultiplier = ud(0.4e18);
@@ -133,15 +136,15 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice Calculates the claimable reward amount for an appchain in a specific epoch
-     * @dev Returns the amount of rewards the appchain can claim for the given epoch, based on their stake share and any previously claimed amount.
+     * @notice Calculates the full reward amount for an appchain in a specific epoch (without vesting)
+     * @dev Returns the total amount of rewards the appchain earned for the given epoch, regardless of vesting
      * RewardAmount = (PoolAmount * AppchainDiminishingFactor) / AllAppchainsDiminishingFactor
      * Claimable = RewardAmount - AlreadyClaimed
-     * @param epochIndex The epoch index to query
+     * @param epochIndex The epoch index for which to calculate rewards
      * @param appchainId The ID of the appchain
-     * @return claimableAmount The amount of rewards claimable by the appchain for the specified epoch
+     * @return amount The full reward amount for the appchain in the epoch
      */
-    function getClaimableAmount(uint256 epochIndex, uint256 appchainId) public returns (uint256) {
+    function getFullRewardAmount(uint256 epochIndex, uint256 appchainId) public returns (uint256) {
         if (epochTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
@@ -163,9 +166,55 @@ contract AppchainPool is IPool, ReentrancyGuard, Ownable {
         if (allAppchainsDiminishingFactor.isZero()) return 0;
 
         uint256 appchainReward = convert(poolAmount.mul(appchainDiminishingFactor).div(allAppchainsDiminishingFactor));
-        // TODO (SEQ-1337): Add vesting calculations
+
+        return appchainReward;
+    }
+
+    /**
+     * @notice Calculates the claimable reward amount for an appchain in a specific epoch (with vesting)
+     * @dev Returns the amount of rewards the appchain can claim for the given epoch, considering vesting schedule
+     * @param epochIndex The epoch index for which to calculate claimable rewards
+     * @param appchainId The ID of the appchain
+     * @return The claimable reward amount for the appchain in the epoch
+     */
+    function getClaimableAmount(uint256 epochIndex, uint256 appchainId) public returns (uint256) {
+        uint256 fullReward = getFullRewardAmount(epochIndex, appchainId);
+        if (fullReward == 0) {
+            return 0;
+        }
+
         uint256 alreadyClaimed = claimed[epochIndex][appchainId];
-        return appchainReward - alreadyClaimed;
+        uint256 vestedAmount = getVestedAmount(epochIndex, fullReward);
+
+        return vestedAmount - alreadyClaimed;
+    }
+
+    /**
+     * @notice Calculates the vested amount for a given epoch and reward amount
+     * @dev Implements linear vesting over 1 year (365 days) after the epoch ends
+     * @param epochIndex The epoch index
+     * @param fullReward The full reward amount for the epoch
+     * @return The vested amount as of the current time
+     */
+    function getVestedAmount(uint256 epochIndex, uint256 fullReward) public view returns (uint256) {
+        uint256 epochEnd = stakingContract.getEpochEnd(epochIndex);
+
+        uint256 currentTime = block.timestamp;
+        if (epochEnd >= currentTime) {
+            return 0;
+        }
+
+        uint256 timeElapsed = currentTime - epochEnd;
+
+        // If vesting period is complete, return full amount
+        if (timeElapsed >= VESTING_DURATION) {
+            return fullReward;
+        }
+
+        // Calculate linear vesting: (timeElapsed / VESTING_DURATION) * fullReward
+        uint256 vestedAmount = (fullReward * timeElapsed) / VESTING_DURATION;
+
+        return vestedAmount;
     }
 
     /**
