@@ -22,7 +22,7 @@ contract PerformancePool is IUserPool, RewardPoolBase {
         _;
     }
 
-    function deposit(uint256 epochIndex) external payable override {
+    function deposit(uint256 epochIndex) external payable override nonReentrant {
         _deposit(epochIndex);
     }
 

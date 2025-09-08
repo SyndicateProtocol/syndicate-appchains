@@ -19,7 +19,7 @@ contract AppchainPool is IPool, RewardPoolBase {
 
     constructor(address admin, address staking, address gas) RewardPoolBase(admin, staking, gas) {}
 
-    function deposit(uint256 epochIndex) external payable override {
+    function deposit(uint256 epochIndex) external payable override nonReentrant {
         _deposit(epochIndex);
     }
 

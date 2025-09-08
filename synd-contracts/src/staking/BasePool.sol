@@ -68,7 +68,7 @@ contract BasePool is IUserPool, ReentrancyGuard {
      * @dev Since rewards are additive, we dont care who deposits
      * @param epochIndex The epoch index for which rewards are being deposited
      */
-    function deposit(uint256 epochIndex) external payable {
+    function deposit(uint256 epochIndex) external payable nonReentrant {
         uint256 amount = msg.value;
         epochRewardTotal[epochIndex] += amount;
 
