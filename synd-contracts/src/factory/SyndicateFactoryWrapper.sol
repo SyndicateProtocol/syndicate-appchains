@@ -78,9 +78,8 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
         // Deploy the sequencing chain with the permission module
         if (appchainId == 0) {
             // Use deterministic deployment when appchainId is 0
-            (sequencingChain, actualChainId) = syndicateFactory.createSyndicateSequencingChainDeterministic(
-                admin, IRequirementModule(permissionModule)
-            );
+            (sequencingChain, actualChainId) =
+                syndicateFactory.createSyndicateSequencingChain(admin, IRequirementModule(permissionModule));
         } else {
             // Use custom chain ID when appchainId is provided
             (sequencingChain, actualChainId) = syndicateFactory.createSyndicateSequencingChainWithCustomId(

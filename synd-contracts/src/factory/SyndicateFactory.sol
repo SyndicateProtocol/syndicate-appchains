@@ -56,7 +56,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Emitted when a deterministic chainID is generated
     event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
 
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+    /// @notice Emitted when the creation fee is updated
+    event CreationFeeUpdated(uint256 oldFee, uint256 newFee);
 
     error ZeroAddress();
     error ChainIdAlreadyExists();
@@ -65,6 +66,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     error OnlyChainCanNotifyUpgrade();
     error CannotRemoveDefaultImplementation();
     error FailedToUpgradeToLatestImplementation();
+    error InsufficientFee();
 
     /// @notice Mapping from appchain ID to the sequencing contract address
     mapping(uint256 => address) public appchainContracts;
@@ -87,9 +89,20 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Per-sender nonce tracking for deterministic chainID generation
     mapping(address sender => uint256 nonce) public senderNonces;
 
+    /// @notice Fee required to create a sequencing chain (in native token)
+    uint256 public creationFee;
+
     /// @notice Disables initializers to prevent the implementation contract from being initialized
     constructor() {
         _disableInitializers();
+    }
+
+    /// @notice Modifier to check that sufficient fee is paid
+    modifier paysCreationFee() {
+        if (msg.value < creationFee) {
+            revert InsufficientFee();
+        }
+        _;
     }
 
     /// @notice Initializes the upgradeable factory
@@ -102,7 +115,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(MANAGER_ROLE, admin);
 
         // Deploy minimal stub implementation using CREATE2 for deterministic address
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
@@ -127,9 +139,11 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @return sequencingChain The deployed sequencing chain address
     /// @return actualChainId The chain ID that was used
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChainDeterministic(address admin, IRequirementModule permissionModule)
+    function createSyndicateSequencingChain(address admin, IRequirementModule permissionModule)
         external
+        payable
         whenNotPaused
+        paysCreationFee
         returns (address sequencingChain, uint256 actualChainId)
     {
         if (admin == address(0) || address(permissionModule) == address(0)) {
@@ -188,7 +202,14 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         uint256 customChainId,
         address admin,
         IRequirementModule permissionModule
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
+    )
+        external
+        payable
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        whenNotPaused
+        paysCreationFee
+        returns (address sequencingChain, uint256 actualChainId)
+    {
         if (admin == address(0) || address(permissionModule) == address(0)) {
             revert ZeroAddress();
         }
@@ -334,6 +355,23 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         }
 
         return (validChainIDs, validContracts);
+    }
+
+    /// @notice Set the creation fee (admin only)
+    /// @param newFee The new fee amount in native token
+    function setCreationFee(uint256 newFee) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 oldFee = creationFee;
+        creationFee = newFee;
+        emit CreationFeeUpdated(oldFee, newFee);
+    }
+
+    /// @notice Withdraw collected fees (admin only)
+    /// @param to The address to send the fees to
+    function withdrawFees(address payable to) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (to == address(0)) revert ZeroAddress();
+        uint256 balance = address(this).balance;
+        (bool success,) = to.call{value: balance}("");
+        require(success, "Fee withdrawal failed");
     }
 
     /// @notice Pause the factory (admin only)
