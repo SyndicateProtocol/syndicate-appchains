@@ -120,7 +120,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
     /// @param ethereumStorageProof Merkle proof of the storage slot containing the block hash
     function confirmSequencingChainBlockHash(
         uint256 seqChainID,
-        bytes calldata sendRoot,
+        bytes32 sendRoot,
         bytes calldata ethereumBlockHeader,
         bytes[] calldata ethereumAccountProof,
         bytes[] calldata ethereumStorageProof
@@ -310,7 +310,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
         return keccak256(abi.encode(epoch, AGGREGATED_EPOCH_DATA_HASH_SLOT));
     }
 
-    function _getSendRootStorageSlot(bytes calldata sendroot, uint256 mappingSlot) internal pure returns (bytes32) {
+    function _getSendRootStorageSlot(bytes32 sendroot, uint256 mappingSlot) internal pure returns (bytes32) {
         return keccak256(abi.encode(sendroot, mappingSlot));
     }
 

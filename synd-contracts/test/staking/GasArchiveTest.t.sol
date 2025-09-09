@@ -500,7 +500,7 @@ contract GasArchiveTest is Test {
 
         uint256 storageSlot = vm.parseJsonUint(proofJson, ".send_root_storage_slot_index");
         address arbNovaOutboxContract = vm.parseJsonAddress(proofJson, ".outbox_contract_address");
-        bytes memory sendRoot = vm.parseJsonBytes(proofJson, ".send_root");
+        bytes32 sendRoot = vm.parseJsonBytes32(proofJson, ".send_root");
         bytes32 ethereumBlockHash = vm.parseJsonBytes32(proofJson, ".ethereum_block_hash");
         bytes32 rollupBlockHash = vm.parseJsonBytes32(proofJson, ".rollup_block_hash");
         bytes memory ethBlockHeaderRLP = vm.parseJsonBytes(proofJson, ".eth_block_header_rlp");
@@ -530,7 +530,7 @@ contract GasArchiveTest is Test {
 
         vm.expectRevert(GasArchive.InvalidEthereumBlockHeader.selector);
         gasArchive.confirmSequencingChainBlockHash(
-            SEQ_CHAIN_ID, abi.encodePacked(TEST_SEQ_BLOCK_HASH), mockEthHeader, mockAccountProof, mockStorageProof
+            SEQ_CHAIN_ID, TEST_SEQ_BLOCK_HASH, mockEthHeader, mockAccountProof, mockStorageProof
         );
     }
 
@@ -549,7 +549,7 @@ contract GasArchiveTest is Test {
 
         vm.expectRevert(GasArchive.ChainIDNotFound.selector);
         gasArchive.confirmSequencingChainBlockHash(
-            invalidChainId, abi.encodePacked(TEST_SEQ_BLOCK_HASH), mockEthHeader, mockAccountProof, mockStorageProof
+            invalidChainId, TEST_SEQ_BLOCK_HASH, mockEthHeader, mockAccountProof, mockStorageProof
         );
     }
 
@@ -568,11 +568,7 @@ contract GasArchiveTest is Test {
 
         vm.expectRevert(GasArchive.CannotSubmitProofForSettlementChain.selector);
         gasArchive.confirmSequencingChainBlockHash(
-            SETTLEMENT_CHAIN_ID,
-            abi.encodePacked(TEST_SEQ_BLOCK_HASH),
-            mockEthHeader,
-            mockAccountProof,
-            mockStorageProof
+            SETTLEMENT_CHAIN_ID, TEST_SEQ_BLOCK_HASH, mockEthHeader, mockAccountProof, mockStorageProof
         );
     }
 
