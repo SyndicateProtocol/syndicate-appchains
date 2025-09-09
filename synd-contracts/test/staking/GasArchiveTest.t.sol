@@ -72,7 +72,7 @@ contract GasArchiveTest is Test {
     bytes32 public constant TEST_ETH_BLOCK_HASH = keccak256("eth_block");
     bytes32 public constant TEST_SETTLEMENT_BLOCK_HASH = keccak256("settlement_block");
     bytes32 public constant TEST_SEQ_BLOCK_HASH = keccak256("seq_block");
-    bytes32 public constant TEST_STORAGE_SLOT = keccak256("storage_slot");
+    uint256 public constant TEST_STORAGE_SLOT_INDEX = 1;
 
     event EpochDataValidated(uint256 indexed epoch, uint256 indexed seqChainID, bytes32 dataHash);
     event GasAggregatorAddressUpdated(address indexed oldAddress, address indexed newAddress);
@@ -96,7 +96,7 @@ contract GasArchiveTest is Test {
         // Set up sequencing chain
         vm.startPrank(admin);
         address gasArchiveAddress = address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0); // matches the expcted values in testConfirmEpochDataHashSuccess
-        gasArchive.addSequencingChain(SEQ_CHAIN_ID, gasArchiveAddress, address(mockBridge), TEST_STORAGE_SLOT);
+        gasArchive.addSequencingChain(SEQ_CHAIN_ID, gasArchiveAddress, address(mockBridge), TEST_STORAGE_SLOT_INDEX);
         vm.stopPrank();
     }
 
@@ -173,77 +173,80 @@ contract GasArchiveTest is Test {
         uint256 newChainId = 789;
         address newAggregator = makeAddr("newAggregator");
         address newBridge = makeAddr("newBridge");
-        bytes32 newStorageSlot = keccak256("new_slot");
+        uint256 newStorageSlotIndex = 2;
 
         vm.prank(admin);
-        gasArchive.addSequencingChain(newChainId, newAggregator, newBridge, newStorageSlot);
+        gasArchive.addSequencingChain(newChainId, newAggregator, newBridge, newStorageSlotIndex);
 
         assertEq(gasArchive.seqChainGasAggregatorAddresses(newChainId), newAggregator);
-        assertEq(gasArchive.ethereumSeqChainBridges(newChainId), newBridge);
-        assertEq(gasArchive.ethereumSeqChainStorageSlots(newChainId), newStorageSlot);
+        assertEq(gasArchive.seqChainEthOutbox(newChainId), newBridge);
+        assertEq(gasArchive.seqChainEthSendRootStorageSlot(newChainId), newStorageSlotIndex);
     }
 
-    function testAddSequencingChainAsSettlementChain() public {
+    function testAddSettlementChainAsSequencingChain() public {
         address settlementAggregator = makeAddr("settlementAggregator");
 
         vm.prank(admin);
-        gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, settlementAggregator, address(0), bytes32(0));
+        gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, settlementAggregator, address(0), 0);
 
         assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), settlementAggregator);
-        assertTrue(gasArchive.useSettlementChainAsSequencingChain());
+        assertEq(gasArchive.seqChainEthOutbox(SETTLEMENT_CHAIN_ID), address(0));
+        assertEq(gasArchive.seqChainEthSendRootStorageSlot(SETTLEMENT_CHAIN_ID), 0);
     }
 
     function testAddSequencingChainAlreadyExists() public {
         vm.prank(admin);
         vm.expectRevert(GasArchive.SequencingChainAlreadyExists.selector);
-        gasArchive.addSequencingChain(SEQ_CHAIN_ID, address(mockGasAggregator), address(mockBridge), TEST_STORAGE_SLOT);
+        gasArchive.addSequencingChain(
+            SEQ_CHAIN_ID, address(mockGasAggregator), address(mockBridge), TEST_STORAGE_SLOT_INDEX
+        );
     }
 
     function testAddSequencingChainZeroAggregator() public {
         vm.prank(admin);
         vm.expectRevert(GasArchive.ZeroAddress.selector);
-        gasArchive.addSequencingChain(999, address(0), address(mockBridge), TEST_STORAGE_SLOT);
+        gasArchive.addSequencingChain(999, address(0), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
     }
 
     function testAddSequencingChainZeroBridge() public {
         vm.prank(admin);
         vm.expectRevert(GasArchive.ZeroAddress.selector);
-        gasArchive.addSequencingChain(999, address(0x1), address(0), TEST_STORAGE_SLOT);
+        gasArchive.addSequencingChain(999, address(0x1), address(0), TEST_STORAGE_SLOT_INDEX);
     }
 
     function testAddSequencingChainUnauthorized() public {
         vm.prank(user);
         vm.expectRevert();
-        gasArchive.addSequencingChain(999, address(0x1), address(mockBridge), TEST_STORAGE_SLOT);
+        gasArchive.addSequencingChain(999, address(0x1), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
     }
 
     function testRemoveSequencingChain() public {
         // First add a new chain to remove
         uint256 newChainId = 789;
         vm.prank(admin);
-        gasArchive.addSequencingChain(newChainId, address(0x1), address(mockBridge), TEST_STORAGE_SLOT);
+        gasArchive.addSequencingChain(newChainId, address(0x1), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
 
         // Remove it
         vm.prank(admin);
         gasArchive.removeSeqChain(newChainId);
 
         assertEq(gasArchive.seqChainGasAggregatorAddresses(newChainId), address(0));
-        assertEq(gasArchive.ethereumSeqChainBridges(newChainId), address(0));
-        assertEq(gasArchive.ethereumSeqChainStorageSlots(newChainId), bytes32(0));
+        assertEq(gasArchive.seqChainEthOutbox(newChainId), address(0));
+        assertEq(gasArchive.seqChainEthSendRootStorageSlot(newChainId), 0);
     }
 
     function testRemoveSettlementChainAsSequencing() public {
         // First add settlement chain as sequencing
         vm.prank(admin);
-        gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, address(0x1), address(0), bytes32(0));
+        gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, address(0x1), address(0), 0);
 
-        assertTrue(gasArchive.useSettlementChainAsSequencingChain());
+        assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(0x1));
 
         // Remove it
         vm.prank(admin);
         gasArchive.removeSeqChain(SETTLEMENT_CHAIN_ID);
 
-        assertFalse(gasArchive.useSettlementChainAsSequencingChain());
+        assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(0));
         assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(0));
     }
 
@@ -327,7 +330,7 @@ contract GasArchiveTest is Test {
         // EPOCH = 10
 
         // Load fixture data
-        string memory proofJson = vm.readFile("./test/staking/fixtures/arbRollupProof.json");
+        string memory proofJson = vm.readFile("./test/staking/fixtures/gasAggregatorEpochDataHashProof.json");
 
         // Parse JSON arrays directly
         bytes[] memory accountProofArray = vm.parseJsonBytesArray(proofJson, ".accountProof");
@@ -420,48 +423,104 @@ contract GasArchiveTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function testConfirmSequencingChainBlockHashWithValidProof() public {
-        // proof generated using Arbitrum Nova deployment on Ethereum with the following info:
-        // block number: 23297133 hash: 0x5df3e2c7aafac99082a4538843b361f2502e48d034677dce776e7d7c9587cf35
-        // Rollup Contract: https://etherscan.io/address/0xE7E8cCC7c381809BDC4b213CE44016300707B7Bd
-        // storage_slot: 116 - see nitro-contracts at v2.1.0 (RollupCore contract)
-        // arbitrum nova assertion: 0x6e4b03dae0c2f93a95ad7eb04805564a345c2f200a87694eac0eefea9740a4fd
-        // arbitrum nova block hash: ?
+        // proof generated using the following rust code:
+        //
 
-        // Setup: Add Arbitrum Nova as a sequencing chain
-        uint256 arbNovaChainId = 42170; // Arbitrum Nova chain ID
-        address arbNovaRollupContract = 0xE7E8cCC7c381809BDC4b213CE44016300707B7Bd;
-        bytes32 storageSlot = bytes32(uint256(116)); // slot for confirmedNodeHash
+        // use alloy::{
+        //     primitives::{keccak256, Address, Bytes, FixedBytes, StorageKey},
+        //     providers::ProviderBuilder,
+        //     rlp::Encodable,
+        //     sol,
+        //     sol_types::{SolEvent, SolValue},
+        // };
+        //
+        // // the rollup Outbox contract
+        // let outbox_contract: Address = "0xD4B80C3D7240325D18E645B49e6535A3Bf95cc58".parse().unwrap();
+        // let roots_mapping_storage_slot_index = U256::from(3);
+        // let rpc_url = "<ETHEREUM_RPC_URL>";
+        //
+        // let provider = ProviderBuilder::new().connect(rpc_url).await.unwrap();
+        // let eth_block = provider.get_block(BlockId::latest()).await.unwrap().unwrap();
+        // let mut header_rlp = vec![];
+        // eth_block.header.encode(&mut header_rlp);
+        //
+        // sol! {
+        //     event SendRootUpdated(bytes32 indexed outputRoot, bytes32 indexed l2BlockHash);
+        // }
+        //
+        // // search the 1000 previous blocks for the SendRootUpdated event
+        // let filter = alloy::rpc::types::Filter::new()
+        //     .address(outbox_contract)
+        //     .event_signature(SendRootUpdated::SIGNATURE_HASH)
+        //     .from_block(BlockNumberOrTag::Number(eth_block.number() - 1000))
+        //     .to_block(BlockNumberOrTag::Number(eth_block.number()));
+        //
+        // let logs = provider.get_logs(&filter).await.unwrap();
+        //
+        // let last_log = logs.last().unwrap_or_else(|| panic!("No events found"));
+        // let parsed = SendRootUpdated::decode_log_data(last_log.data()).unwrap();
+        //
+        // let storage_key: StorageKey =
+        //     keccak256((parsed.outputRoot, roots_mapping_storage_slot_index).abi_encode());
+        //
+        // let proof = provider
+        //     .get_proof(outbox_contract, vec![storage_key])
+        //     .block_id(eth_block.hash().into())
+        //     .await
+        //     .unwrap();
+        //
+        // let storage_proof_value: FixedBytes<32> = proof.storage_proof.first().unwrap().value.into();
+        // assert_eq!(storage_proof_value, parsed.l2BlockHash); //sanity check
+        //
+        // #[derive(serde::Serialize)]
+        // struct TestFixture {
+        //     ethereum_block_hash: FixedBytes<32>,
+        //     outbox_contract_address: Address,
+        //     send_root_storage_slot_index: U256,
+        //     rollup_block_hash: FixedBytes<32>,
+        //     send_root: Bytes,
+        //     eth_block_header_rlp: Bytes,
+        //     account_proof: Vec<Bytes>,
+        //     storage_proof: Vec<Bytes>,
+        // }
+        //
+        // let fixture = TestFixture {
+        //     send_root: parsed.outputRoot.into(),
+        //     eth_block_header_rlp: header_rlp.into(),
+        //     account_proof: proof.account_proof.clone(),
+        //     storage_proof: proof.storage_proof.first().unwrap().proof.clone(),
+        //     ethereum_block_hash: eth_block.hash(),
+        //     outbox_contract_address: outbox_contract,
+        //     send_root_storage_slot_index: roots_mapping_storage_slot_index,
+        //     rollup_block_hash: parsed.l2BlockHash,
+        // };
+        // println!("{}", serde_json::to_string_pretty(&fixture).unwrap());
 
-        vm.prank(admin);
-        gasArchive.addSequencingChain(arbNovaChainId, makeAddr("gasAggregator"), arbNovaRollupContract, storageSlot);
-
-        // Load fixture data
         string memory proofJson = vm.readFile("./test/staking/fixtures/arbRollupProof.json");
 
-        // Parse the proof data
-        bytes[] memory accountProofArray = vm.parseJsonBytesArray(proofJson, ".accountProof");
-        bytes[] memory storageProofArray = vm.parseJsonBytesArray(proofJson, ".storageProof[0].proof");
-        string memory storageValueStr = vm.parseJsonString(proofJson, ".storageProof[0].value");
+        uint256 storageSlot = vm.parseJsonUint(proofJson, ".send_root_storage_slot_index");
+        address arbNovaOutboxContract = vm.parseJsonAddress(proofJson, ".outbox_contract_address");
+        bytes memory sendRoot = vm.parseJsonBytes(proofJson, ".send_root");
+        bytes32 ethereumBlockHash = vm.parseJsonBytes32(proofJson, ".ethereum_block_hash");
+        bytes32 rollupBlockHash = vm.parseJsonBytes32(proofJson, ".rollup_block_hash");
+        bytes memory ethBlockHeaderRLP = vm.parseJsonBytes(proofJson, ".eth_block_header_rlp");
+        bytes[] memory accountProofArray = vm.parseJsonBytesArray(proofJson, ".account_proof");
+        bytes[] memory storageProofArray = vm.parseJsonBytesArray(proofJson, ".storage_proof");
+
+        // Add Arbitrum Nova as a sequencing chain
+        uint256 arbNovaChainId = 42170; // Arbitrum Nova chain ID
+        vm.prank(admin);
+        gasArchive.addSequencingChain(arbNovaChainId, makeAddr("gasAggregator"), arbNovaOutboxContract, storageSlot);
 
         // Set the last known Ethereum block hash (this would come from the bridge in practice)
-        // We need to calculate the block header hash that would match the account proof's root
-        bytes32 ethereumBlockHash = 0x5df3e2c7aafac99082a4538843b361f2502e48d034677dce776e7d7c9587cf35;
         vm.prank(blockHashSender);
-        gasArchive.setLastKnownBlockHashes(ethereumBlockHash, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(ethereumBlockHash, keccak256("set chain bloch hash"));
 
-        // obtained using rust code, same method as `testConfirmEpochDataHashSuccess`
-        bytes memory ethereumBlockHeader =
-            hex"f9027ea04155c48e3ccc5b913d13722a9d2c4274097c11f9abe4d1649800cd8a75ba1994a01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347945995510b29924a0c68e5e266687c81af6a06abb43268378b2c475de61a46a90538e8a0efdac8fbf57e76e6d5905f0fac94a5783e7402e675a50efee418f0039617bd33b9010028ff328352b344aa028b24adca61b622f360e2a15115c5099b63283252009a1bb8636c59be951c54cb42a00e2c4b279a86e64110c12f2070a0c0e8edc65d89afa05ade68bbc41c73c0dcd4800d28fccfff87582e25e713ab3517336644680a472d67279aba4cad4ce88cc0c29b2081d54a41ee4a7070306b5256b4213b19300390c54480b1a53b008660e256be8604515503808c55a225fc808401637c6d8402aea540839037008468bae223924e65746865726d696e6420e454a0f4da304510dddcdf8186909d7cb74e2e07a1e703dd7baa27eeeada9a014629ad8312000083040000a004dad78a8451df8a2911991c5a6bcadb0fd9d8f8ff9d8135e6fa0de127ffa7dfa0e3b0c442";
-
-        // The test should revert with EmptySlot since the proven storage value is 0
-        vm.expectRevert(GasArchive.EmptySlot.selector);
         gasArchive.confirmSequencingChainBlockHash(
-            arbNovaChainId,
-            0x6e4b03dae0c2f93a95ad7eb04805564a345c2f200a87694eac0eefea9740a4fd,
-            ethereumBlockHeader,
-            accountProofArray,
-            storageProofArray
+            arbNovaChainId, sendRoot, ethBlockHeaderRLP, accountProofArray, storageProofArray
         );
+        // Assert the proff has successfully confimed the sequencing chain block hash
+        assertEq(gasArchive.lastKnownSeqChainBlockHashes(arbNovaChainId), rollupBlockHash);
     }
 
     function testConfirmSequencingChainBlockHashInvalidEthereumBlockHeader() public {
@@ -471,7 +530,7 @@ contract GasArchiveTest is Test {
 
         vm.expectRevert(GasArchive.InvalidEthereumBlockHeader.selector);
         gasArchive.confirmSequencingChainBlockHash(
-            SEQ_CHAIN_ID, TEST_SEQ_BLOCK_HASH, mockEthHeader, mockAccountProof, mockStorageProof
+            SEQ_CHAIN_ID, abi.encodePacked(TEST_SEQ_BLOCK_HASH), mockEthHeader, mockAccountProof, mockStorageProof
         );
     }
 
@@ -490,14 +549,14 @@ contract GasArchiveTest is Test {
 
         vm.expectRevert(GasArchive.ChainIDNotFound.selector);
         gasArchive.confirmSequencingChainBlockHash(
-            invalidChainId, TEST_SEQ_BLOCK_HASH, mockEthHeader, mockAccountProof, mockStorageProof
+            invalidChainId, abi.encodePacked(TEST_SEQ_BLOCK_HASH), mockEthHeader, mockAccountProof, mockStorageProof
         );
     }
 
     function testCannotSubmitBlockHashProofForSettlementChain() public {
         // Setup settlement chain as sequencing chain
         vm.prank(admin);
-        gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, address(mockGasAggregator), address(0), bytes32(0));
+        gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, makeAddr("settlementAggregator"), address(0), 0);
 
         // Set ethereum block hash first to avoid InvalidEthereumBlockHeader
         vm.prank(blockHashSender);
@@ -509,7 +568,11 @@ contract GasArchiveTest is Test {
 
         vm.expectRevert(GasArchive.CannotSubmitProofForSettlementChain.selector);
         gasArchive.confirmSequencingChainBlockHash(
-            SETTLEMENT_CHAIN_ID, TEST_SEQ_BLOCK_HASH, mockEthHeader, mockAccountProof, mockStorageProof
+            SETTLEMENT_CHAIN_ID,
+            abi.encodePacked(TEST_SEQ_BLOCK_HASH),
+            mockEthHeader,
+            mockAccountProof,
+            mockStorageProof
         );
     }
 
@@ -528,13 +591,15 @@ contract GasArchiveTest is Test {
         assertEq(gasArchive.settlementChainID(), SETTLEMENT_CHAIN_ID);
         assertEq(gasArchive.lastKnownEthereumBlockHash(), bytes32(0));
         assertEq(gasArchive.lastKnownSettlementChainBlockHash(), bytes32(0));
-        assertFalse(gasArchive.useSettlementChainAsSequencingChain());
+        assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(0));
     }
 
     function testSeqChainConfiguration() public view {
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(0x1));
-        assertEq(gasArchive.ethereumSeqChainBridges(SEQ_CHAIN_ID), address(mockBridge));
-        assertEq(gasArchive.ethereumSeqChainStorageSlots(SEQ_CHAIN_ID), TEST_STORAGE_SLOT);
+        assertEq(
+            gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0)
+        );
+        assertEq(gasArchive.seqChainEthOutbox(SEQ_CHAIN_ID), address(mockBridge));
+        assertEq(gasArchive.seqChainEthSendRootStorageSlot(SEQ_CHAIN_ID), TEST_STORAGE_SLOT_INDEX);
     }
 
     function testEpochDataInitiallyEmpty() public view {
@@ -653,12 +718,14 @@ contract GasArchiveTest is Test {
 
         // Add multiple chains
         vm.startPrank(admin);
-        gasArchive.addSequencingChain(chainId2, address(0x1), address(mockBridge), TEST_STORAGE_SLOT);
-        gasArchive.addSequencingChain(chainId3, address(0x1), address(mockBridge), TEST_STORAGE_SLOT);
+        gasArchive.addSequencingChain(chainId2, address(0x1), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
+        gasArchive.addSequencingChain(chainId3, address(0x1), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
         vm.stopPrank();
 
         // Verify they're all configured
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(0x1));
+        assertEq(
+            gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0)
+        );
         assertEq(gasArchive.seqChainGasAggregatorAddresses(chainId2), address(0x1));
         assertEq(gasArchive.seqChainGasAggregatorAddresses(chainId3), address(0x1));
 
@@ -669,7 +736,9 @@ contract GasArchiveTest is Test {
         // Verify removal
         assertEq(gasArchive.seqChainGasAggregatorAddresses(chainId2), address(0));
         // Others should still exist
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(0x1));
+        assertEq(
+            gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0)
+        );
         assertEq(gasArchive.seqChainGasAggregatorAddresses(chainId3), address(0x1));
     }
 
@@ -678,7 +747,7 @@ contract GasArchiveTest is Test {
         vm.startPrank(user);
 
         vm.expectRevert();
-        gasArchive.addSequencingChain(999, address(0x1), address(mockBridge), TEST_STORAGE_SLOT);
+        gasArchive.addSequencingChain(999, address(0x1), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
 
         vm.expectRevert();
         gasArchive.removeSeqChain(SEQ_CHAIN_ID);
