@@ -159,10 +159,19 @@ contract TeeModule is Ownable(msg.sender) {
         // sequencing chain
         teeTrustedInput.seqStartBlockHash = seqStartBlockHash_;
 
+        // settlement chain
+        teeTrustedInput.setDelayedMessageAcc = bridge.delayedInboxAccs(bridge.delayedMessageCount() - 1);
+
         // l1 chain
         teeTrustedInput.l1StartBatchAcc = l1StartBatchAcc_;
+        if (isL1Chain) {
+            teeTrustedInput.l1EndHash =
+                IBridge(l1BlockOrBridge).sequencerInboxAccs(IBridge(l1BlockOrBridge).sequencerMessageCount() - 1);
+        } else {
+            teeTrustedInput.l1EndHash = IL1Block(l1BlockOrBridge).hash();
+        }
 
-        closeChallengeWindow();
+        emit TeeInput(teeTrustedInput);
     }
 
     function pendingAssertionsCount() external view returns (uint256) {
@@ -170,40 +179,36 @@ contract TeeModule is Ownable(msg.sender) {
     }
 
     function closeChallengeWindow() public {
+        require(pendingAssertions.length == 1, "cannot close challenge window - wrong number of assertions");
+
         require(
             (isL1Chain ? uint64(block.timestamp) : IL1Block(l1BlockOrBridge).timestamp()) > challengeWindowEnd,
             "cannot close challenge window - insufficient time has passed"
         );
 
-        challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
-
-        if (pendingAssertions.length == 1) {
-            // l1 chain
-            teeTrustedInput.l1StartBatchAcc = pendingAssertions[0].l1BatchAcc;
-
-            // sequencing chain
-            teeTrustedInput.seqStartBlockHash = pendingAssertions[0].seqBlockHash;
-
-            // appchain
-            if (teeTrustedInput.appStartBlockHash != pendingAssertions[0].appBlockHash) {
-                teeTrustedInput.appStartBlockHash = pendingAssertions[0].appBlockHash;
-                poster.postAssertion(pendingAssertions[0].appBlockHash, pendingAssertions[0].appSendRoot);
-            }
-
-            delete pendingAssertions;
-        } else {
-            require(pendingAssertions.length == 0, "cannot close challenge window - too many assertions");
-        }
-
-        // settlement chain
-        teeTrustedInput.setDelayedMessageAcc = bridge.delayedInboxAccs(bridge.delayedMessageCount() - 1);
-
         // l1 chain
+        teeTrustedInput.l1StartBatchAcc = pendingAssertions[0].l1BatchAcc;
         if (isL1Chain) {
             teeTrustedInput.l1EndHash =
                 IBridge(l1BlockOrBridge).sequencerInboxAccs(IBridge(l1BlockOrBridge).sequencerMessageCount() - 1);
         } else {
             teeTrustedInput.l1EndHash = IL1Block(l1BlockOrBridge).hash();
+        }
+
+        // sequencing chain
+        teeTrustedInput.seqStartBlockHash = pendingAssertions[0].seqBlockHash;
+
+        // settlement chain
+        teeTrustedInput.setDelayedMessageAcc = bridge.delayedInboxAccs(bridge.delayedMessageCount() - 1);
+
+        // appchain
+        if (teeTrustedInput.appStartBlockHash != pendingAssertions[0].appBlockHash) {
+            teeTrustedInput.appStartBlockHash = pendingAssertions[0].appBlockHash;
+            bytes32 appSendRoot = pendingAssertions[0].appSendRoot;
+            delete pendingAssertions;
+            poster.postAssertion(teeTrustedInput.appStartBlockHash, appSendRoot);
+        } else {
+            delete pendingAssertions;
         }
 
         emit TeeInput(teeTrustedInput);
