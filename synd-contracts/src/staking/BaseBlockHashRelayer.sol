@@ -24,7 +24,6 @@ interface IArbInbox {
     ) external returns (uint256);
 }
 
-// TODO test
 contract BlockHashMessenger {
     address public constant L1_BLOCK_ADDRESS = 0x4200000000000000000000000000000000000015;
 
