@@ -51,7 +51,7 @@ contract SyndicateFactoryStorageTest is Test {
 
         // Create a deterministic chain to increment the nonce
         vm.prank(testSender);
-        factory.createSyndicateSequencingChainDeterministic(admin, permissionModule);
+        factory.createSyndicateSequencingChain(admin, permissionModule);
 
         // Verify nonce was incremented
         assertEq(factory.getNextNonceForSender(testSender), 1);
@@ -103,7 +103,7 @@ contract SyndicateFactoryStorageTest is Test {
         // Create a deterministic chain (modifies storage)
         address testSender = address(0x456);
         vm.prank(testSender);
-        factory.createSyndicateSequencingChainDeterministic(admin, permissionModule);
+        factory.createSyndicateSequencingChain(admin, permissionModule);
 
         // Verify storage snapshot values remain unchanged for core variables
         StorageSnapshot memory newSnapshot = _takeStorageSnapshot();
@@ -123,10 +123,10 @@ contract SyndicateFactoryStorageTest is Test {
 
         // Use the new deterministic functionality
         vm.prank(sender1);
-        factory.createSyndicateSequencingChainDeterministic(admin, permissionModule);
+        factory.createSyndicateSequencingChain(admin, permissionModule);
 
         vm.prank(sender2);
-        factory.createSyndicateSequencingChainDeterministic(admin, permissionModule);
+        factory.createSyndicateSequencingChain(admin, permissionModule);
 
         // Verify existing variables weren't affected
         assertEq(factory.stubImplementation(), initialStubImpl);
@@ -148,7 +148,7 @@ contract SyndicateFactoryStorageTest is Test {
 
         // Process two senders with different deterministic chains
         vm.prank(sender1);
-        try factory.createSyndicateSequencingChainDeterministic(admin, permissionModule) {
+        try factory.createSyndicateSequencingChain(admin, permissionModule) {
             // Success - verify chain was created
             assertTrue(true);
         } catch {
@@ -156,7 +156,7 @@ contract SyndicateFactoryStorageTest is Test {
         }
 
         vm.prank(sender2);
-        try factory.createSyndicateSequencingChainDeterministic(admin, permissionModule) {
+        try factory.createSyndicateSequencingChain(admin, permissionModule) {
             // Success - verify chain was created
             assertTrue(true);
         } catch {
