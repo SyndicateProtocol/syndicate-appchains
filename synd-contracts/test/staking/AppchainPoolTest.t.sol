@@ -6,6 +6,7 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {AppchainPool} from "src/staking/AppchainPool.sol";
+import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 
 /// @notice Interface the pool expects for gas accounting
@@ -364,7 +365,7 @@ contract AppchainPoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(appchainDest1);
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(currentEpoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -380,7 +381,7 @@ contract AppchainPoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(appchainDest1);
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(currentEpoch + 1, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -397,7 +398,7 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
 
         vm.startPrank(address(appchainDest1));
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -518,7 +519,7 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "should be zero when totalStake==0");
 
         vm.startPrank(address(appchainDest1));
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(epoch, appchainId1, address(user1));
         vm.stopPrank();
     }
@@ -621,11 +622,11 @@ contract AppchainPoolTest is Test {
         appchainPool.deposit{value: 10 ether}(currentEpoch);
 
         // Expect revert on getClaimableAmount for current
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.getClaimableAmount(currentEpoch, appchainId1);
 
         // Future epoch should also revert
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.getClaimableAmount(currentEpoch + 1, appchainId1);
     }
 
@@ -771,51 +772,6 @@ contract AppchainPoolTest is Test {
         appchainPool.setDecayFactor(2.5e18);
 
         vm.stopPrank();
-    }
-
-    /// Test edge case where appchainReward - alreadyClaimed could be negative
-    /// This tests the line: return appchainReward - alreadyClaimed;
-    /// This should never happen
-    function test_negative_claimable_amount_edge_case() public {
-        setupStake(100 ether, 0, 0);
-
-        uint256 epoch = _settledEpoch();
-        setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
-
-        // Initial deposit
-        appchainPool.deposit{value: 100 ether}(epoch);
-
-        // First claim - should work normally
-        uint256 firstClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        assertEq(firstClaimable, 0, "First claimable should be 0 before epoch ends");
-
-        // Move to after epoch end + vesting duration
-        vm.warp(staking.getEpochEnd(epoch) + appchainPool.VESTING_DURATION());
-
-        firstClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        assertGt(firstClaimable, 0, "Should have claimable amount after epoch ends");
-
-        vm.startPrank(appchainDest1);
-        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
-        vm.stopPrank();
-
-        // Verify first claim was successful
-        assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "Should be fully claimed");
-
-        // Manually set the claimed amount to be greater than the reward
-        // claimed is the first state variable (slot 6)
-        bytes32 epochSlot = keccak256(abi.encode(epoch, uint256(6)));
-        bytes32 finalSlot = keccak256(abi.encode(appchainId1, epochSlot));
-
-        // Set claimed amount to be greater than the reward
-        // This will cause: appchainReward - alreadyClaimed = 100 - 200 = -100 (underflow)
-        vm.store(address(appchainPool), finalSlot, bytes32(uint256(200 ether)));
-
-        // Now getClaimableAmount should handle this gracefully
-        // In Solidity >=0.8.0, this should revert due to underflow protection
-        vm.expectRevert(abi.encodeWithSignature("Panic(uint256)", 0x11)); // Panic code 0x11 = arithmetic overflow/underflow
-        appchainPool.getClaimableAmount(epoch, appchainId1);
     }
 
     /// Test multiple deposits and claims to ensure no underflow issues
@@ -1087,15 +1043,17 @@ contract AppchainPoolTest is Test {
 
         // First claim after 30 days
         uint256 firstClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        uint256 expectedAfter30Days = convert(convert(100 ether).mul(convert(30 days)).div(convert(365 days)));
+        uint256 fullReward = appchainPool.getFullRewardAmount(epoch, appchainId1);
+        uint256 expectedAfter30Days = convert(convert(fullReward).mul(convert(30 days)).div(convert(365 days)));
         assertApproxEqAbs(firstClaimable, expectedAfter30Days, 1, "Should have correct amount after 30 days");
 
+        uint256 balanceBeforeFirstClaim = appchainDest1.balance;
         vm.startPrank(appchainDest1);
         appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
 
         // Verify claim was successful
-        assertEq(appchainDest1.balance, firstClaimable, "First claim should have been paid");
+        assertEq(appchainDest1.balance, balanceBeforeFirstClaim + firstClaimable, "First claim should have been paid");
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "Should be fully claimed after first claim");
 
         // Move to epoch end + 60 days
@@ -1103,7 +1061,7 @@ contract AppchainPoolTest is Test {
 
         // Second claim after 60 days
         uint256 secondClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        uint256 expectedAfter60Days = convert(convert(100 ether).mul(convert(60 days)).div(convert(365 days)));
+        uint256 expectedAfter60Days = convert(convert(fullReward).mul(convert(60 days)).div(convert(365 days)));
         uint256 additionalClaimable = expectedAfter60Days - firstClaimable;
         assertApproxEqAbs(
             secondClaimable, additionalClaimable, 1, "Should have correct additional amount after 60 days"

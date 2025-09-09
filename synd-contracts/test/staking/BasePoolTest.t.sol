@@ -58,13 +58,13 @@ contract BasePoolTest is Test {
 
         basePool.deposit{value: 100 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user1), 100 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 100 ether);
 
         vm.startPrank(user1);
         basePool.claim(2, user1);
         vm.stopPrank();
 
-        assertEq(basePool.getClaimableAmount(2, user1), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 0 ether);
     }
 
     function test_claim_2_user_stake() public {
@@ -72,22 +72,22 @@ contract BasePoolTest is Test {
 
         basePool.deposit{value: 100 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user1), 50 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 50 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 50 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 50 ether);
 
         vm.startPrank(user1);
         basePool.claim(2, user1);
         vm.stopPrank();
 
-        assertEq(basePool.getClaimableAmount(2, user1), 0 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 50 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 50 ether);
 
         vm.startPrank(user2);
         basePool.claim(2, user2);
         vm.stopPrank();
 
-        assertEq(basePool.getClaimableAmount(2, user1), 0 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 0 ether);
     }
 
     function test_claim_3_user_stake() public {
@@ -95,9 +95,9 @@ contract BasePoolTest is Test {
 
         basePool.deposit{value: 90 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user1), 30 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 30 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 30 ether);
 
         vm.startPrank(user1);
         basePool.claim(2, user1);
@@ -111,64 +111,64 @@ contract BasePoolTest is Test {
         basePool.claim(2, user3);
         vm.stopPrank();
 
-        assertEq(basePool.getClaimableAmount(2, user1), 0 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 0 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 0 ether);
     }
 
     function test_claim_multi_deposit() public {
         setupStake(100 ether, 100 ether, 100 ether);
         basePool.deposit{value: 90 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user1), 30 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 30 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 30 ether);
 
         basePool.deposit{value: 9 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user1), 33 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 33 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 33 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 33 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 33 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 33 ether);
     }
 
     function test_claim_multi_deposit_claim_between() public {
         setupStake(100 ether, 100 ether, 100 ether);
         basePool.deposit{value: 90 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user1), 30 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 30 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 30 ether);
 
         vm.startPrank(user1);
         basePool.claim(2, user1);
         vm.stopPrank();
 
-        assertEq(basePool.getClaimableAmount(2, user1), 0 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 30 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 30 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 30 ether);
 
         basePool.deposit{value: 9 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user1), 3 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 33 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 33 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 3 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 33 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 33 ether);
 
         vm.startPrank(user2);
         basePool.claim(2, user2);
         vm.stopPrank();
 
-        assertEq(basePool.getClaimableAmount(2, user1), 3 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 0 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 33 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 3 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 33 ether);
     }
 
     function test_claim_to_other_user() public {
         setupStake(100 ether, 0 ether, 0 ether);
         basePool.deposit{value: 100 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user1), 100 ether);
-        assertEq(basePool.getClaimableAmount(2, user2), 0 ether);
-        assertEq(basePool.getClaimableAmount(2, user3), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 100 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user3, 0), 0 ether);
 
         uint256 user2Balance = address(user2).balance;
 
@@ -176,7 +176,7 @@ contract BasePoolTest is Test {
         basePool.claim(2, user2);
         vm.stopPrank();
 
-        assertEq(basePool.getClaimableAmount(2, user1), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 0 ether);
 
         assertEq(address(user2).balance, user2Balance + 100 ether);
     }
@@ -209,7 +209,7 @@ contract BasePoolTest is Test {
         setupStake(100 ether, 0 ether, 0 ether);
         basePool.deposit{value: 100 ether}(2);
 
-        assertEq(basePool.getClaimableAmount(2, user2), 0 ether);
+        assertEq(basePool.getClaimableAmount(2, user2, 0), 0 ether);
 
         vm.startPrank(user2);
         vm.expectRevert(BasePool.ClaimNotAvailable.selector);
