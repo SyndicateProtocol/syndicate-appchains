@@ -106,7 +106,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     }
 
     /// @notice Initializes the upgradeable factory
-    /// @param admin The admin address that will have DEFAULT_ADMIN_ROLE and MANAGER_ROLE
+    /// @param admin The admin address that will have DEFAULT_ADMIN_ROLE
     function initialize(address admin) external initializer {
         if (admin == address(0)) revert ZeroAddress();
 
