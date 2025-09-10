@@ -46,8 +46,14 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     // @notice mapping of sequencing chain IDs to the respective last confirmed block hash
     mapping(uint256 => bytes32) public lastKnownSeqChainBlockHashes;
 
-    /// @notice epoches and related chainIDs for which data is already validated and stored
-    mapping(uint256 => bool) public archivedEpochData;
+    /// @notice tracks which sequencing chains have submitted data for each epoch
+    mapping(uint256 => mapping(uint256 => bool)) public epochChainDataSubmitted;
+
+    /// @notice tracks which epochs have received data from all expected sequencing chains
+    mapping(uint256 => bool) public epochCompleted;
+
+    /// @notice stores the snapshot of active sequencing chains when first chain submits data for an epoch
+    mapping(uint256 => uint256[]) public epochExpectedChains;
 
     /// @notice Validated epoch data
     mapping(uint256 => uint256) public epochTotalTokensUsed;
@@ -61,6 +67,8 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     //////////////////////////////////////////////////////////////*/
 
     event EpochDataValidated(uint256 indexed epoch, uint256 indexed seqChainID, bytes32 dataHash);
+    event EpochCompleted(uint256 indexed epoch);
+    event EpochExpectedChainsUpdated(uint256 indexed epoch, uint256[] chainIds);
     event GasAggregatorAddressUpdated(address indexed oldAddress, address indexed newAddress);
 
     /*//////////////////////////////////////////////////////////////
@@ -79,6 +87,8 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     error InvalidSeqChainBlockHeader();
     error SequencingChainAlreadyExists();
     error NotArchivedEpoch();
+    error ZeroLengthArray();
+    error EpochAlreadyCompleted();
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -103,7 +113,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     //////////////////////////////////////////////////////////////*/
 
     modifier onlyArchivedEpoch(uint256 epochIndex) {
-        if (!archivedEpochData[epochIndex]) revert NotArchivedEpoch();
+        if (!epochCompleted[epochIndex]) revert NotArchivedEpoch();
         _;
     }
 
@@ -181,6 +191,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
         address[] calldata emissionsReceivers
     ) external {
         // note: it's not necessary to validate the array lengths match because the GasAggregator already does that
+        if (appchains.length == 0) revert ZeroLengthArray();
 
         // seq chain header must matches the last confirmed block hash for this sequencing chain
         bytes32 seqChainBlockHash = keccak256(seqChainBlockHeader);
@@ -206,6 +217,15 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
 
         // data submitted is valid, store it
         emit EpochDataValidated(epoch, seqChainID, epochDataHash);
+
+        // mark this chain as having submitted data for this epoch
+        epochChainDataSubmitted[epoch][seqChainID] = true;
+
+        // if this is the first chain to submit for this epoch, snapshot the expected chains
+        if (epochExpectedChains[epoch].length == 0) {
+            _snapshotExpectedChainsForEpoch(epoch);
+        }
+
         uint256 totalTokensUsed = 0;
         epochAppchainIDs[epoch] = appchains;
         for (uint256 i = 0; i < appchains.length; i++) {
@@ -214,7 +234,9 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
             epochAppchainEmissionsReceiver[epoch][appchains[i]] = emissionsReceivers[i];
         }
         epochTotalTokensUsed[epoch] = totalTokensUsed;
-        archivedEpochData[epoch] = true;
+
+        // check if all expected chains have now submitted data for this epoch
+        _checkEpochCompletion(epoch);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -337,6 +359,30 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
         return proofItems;
     }
 
+    /// @notice Snapshots the current list of sequencing chains that are expected to submit data for an epoch
+    /// @param epoch The epoch to create the snapshot for
+    function _snapshotExpectedChainsForEpoch(uint256 epoch) internal {
+        epochExpectedChains[epoch] = seqChainIDs;
+        // also include the settlement chain if it has a gas aggregator configured
+        if (seqChainGasAggregatorAddresses[settlementChainID] != address(0)) {
+            epochExpectedChains[epoch].push(settlementChainID);
+        }
+    }
+
+    /// @notice Checks if all expected sequencing chains have submitted data for an epoch
+    /// @param epoch The epoch to check completion for
+    function _checkEpochCompletion(uint256 epoch) internal {
+        uint256[] memory expectedChains = epochExpectedChains[epoch];
+        for (uint256 i = 0; i < expectedChains.length; i++) {
+            if (!epochChainDataSubmitted[epoch][expectedChains[i]]) {
+                return; // not all chains have submitted yet
+            }
+        }
+        // all expected chains have submitted data
+        epochCompleted[epoch] = true;
+        emit EpochCompleted(epoch);
+    }
+
     /*//////////////////////////////////////////////////////////////
                              VIEWS
     //////////////////////////////////////////////////////////////*/
@@ -371,6 +417,42 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
         returns (address)
     {
         return epochAppchainEmissionsReceiver[epochIndex][appchainId];
+    }
+
+    /// @notice Returns the list of sequencing chains expected to submit data for a given epoch
+    /// @param epochIndex The epoch to query
+    /// @return Array of chain IDs expected for this epoch
+    function getEpochExpectedChains(uint256 epochIndex) external view returns (uint256[] memory) {
+        return epochExpectedChains[epochIndex];
+    }
+
+    /// @notice Checks if a specific sequencing chain has submitted data for an epoch
+    /// @param epochIndex The epoch to check
+    /// @param chainId The chain ID to check
+    /// @return Whether the chain has submitted data for this epoch
+    function hasChainSubmittedForEpoch(uint256 epochIndex, uint256 chainId) external view returns (bool) {
+        return epochChainDataSubmitted[epochIndex][chainId];
+    }
+
+    /// @notice Returns completion status and progress for an epoch
+    /// @param epochIndex The epoch to check
+    /// @return completed Whether all expected chains have submitted
+    /// @return totalExpected Total number of chains expected
+    /// @return totalSubmitted Number of chains that have submitted
+    function getEpochProgress(uint256 epochIndex)
+        external
+        view
+        returns (bool completed, uint256 totalExpected, uint256 totalSubmitted)
+    {
+        completed = epochCompleted[epochIndex];
+        uint256[] memory expectedChains = epochExpectedChains[epochIndex];
+        totalExpected = expectedChains.length;
+
+        for (uint256 i = 0; i < expectedChains.length; i++) {
+            if (epochChainDataSubmitted[epochIndex][expectedChains[i]]) {
+                totalSubmitted++;
+            }
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -442,5 +524,26 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     /// @param newBlockHashSender The new address authorized to send block hashes
     function setBlockHashSender(address newBlockHashSender) external onlyRole(DEFAULT_ADMIN_ROLE) {
         blockHashSender = newBlockHashSender;
+    }
+
+    /// @notice Manually sets the expected sequencing chains for an epoch
+    /// @dev Only admin can override expected chains. Useful for handling chain additions/removals
+    /// @param epoch The epoch to update
+    /// @param chainIds Array of chain IDs expected to submit data for this epoch
+    function setEpochExpectedChains(uint256 epoch, uint256[] calldata chainIds) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (epochCompleted[epoch]) revert EpochAlreadyCompleted();
+
+        // Clear existing expected chains
+        delete epochExpectedChains[epoch];
+
+        // Set new expected chains
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            epochExpectedChains[epoch].push(chainIds[i]);
+        }
+
+        emit EpochExpectedChainsUpdated(epoch, chainIds);
+
+        // Check if this change makes the epoch complete
+        _checkEpochCompletion(epoch);
     }
 }

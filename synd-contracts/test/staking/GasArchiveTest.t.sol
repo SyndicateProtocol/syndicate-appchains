@@ -43,11 +43,19 @@ contract GasUsageArchiveTestHelper is GasArchive {
         }
 
         epochTotalTokensUsed[epoch] = totalTokensUsed;
-        archivedEpochData[epoch] = true;
+        epochCompleted[epoch] = true;
     }
 
     function setLastKnownSeqChainBlockHashForTesting(uint256 seqChainId, bytes32 blockHash) external {
         lastKnownSeqChainBlockHashes[seqChainId] = blockHash;
+    }
+
+    function setEpochChainDataSubmittedForTesting(uint256 epoch, uint256 chainId, bool submitted) external {
+        epochChainDataSubmitted[epoch][chainId] = submitted;
+    }
+
+    function addExpectedChainForTesting(uint256 epoch, uint256 chainId) external {
+        epochExpectedChains[epoch].push(chainId);
     }
 }
 
@@ -75,6 +83,8 @@ contract GasArchiveTest is Test {
     uint256 public constant TEST_STORAGE_SLOT_INDEX = 1;
 
     event EpochDataValidated(uint256 indexed epoch, uint256 indexed seqChainID, bytes32 dataHash);
+    event EpochCompleted(uint256 indexed epoch);
+    event EpochExpectedChainsUpdated(uint256 indexed epoch, uint256[] chainIds);
     event GasAggregatorAddressUpdated(address indexed oldAddress, address indexed newAddress);
 
     function setUp() public {
@@ -370,7 +380,7 @@ contract GasArchiveTest is Test {
         );
 
         // Assert the epoch data was stored correctly
-        assertTrue(gasArchive.archivedEpochData(EPOCH), "Epoch should be marked as archived");
+        assertTrue(gasArchive.epochCompleted(EPOCH), "Epoch should be marked as completed");
 
         // Check total gas fees
         assertEq(gasArchive.getTotalGasFees(EPOCH), 300, "Total gas fees should be 100 + 200 = 300");
@@ -599,7 +609,7 @@ contract GasArchiveTest is Test {
     }
 
     function testEpochDataInitiallyEmpty() public view {
-        assertFalse(gasArchive.archivedEpochData(EPOCH));
+        assertFalse(gasArchive.epochCompleted(EPOCH));
         assertEq(gasArchive.epochTotalTokensUsed(EPOCH), 0);
         assertEq(gasArchive.epochAppchainTokensUsed(EPOCH, APPCHAIN_ID_1), 0);
         assertEq(gasArchive.epochAppchainEmissionsReceiver(EPOCH, APPCHAIN_ID_1), address(0));
@@ -702,6 +712,257 @@ contract GasArchiveTest is Test {
 
         // Test non-existent appchain returns zero address
         assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_2), address(0));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    EPOCH COMPLETION TRACKING TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testEpochCompletionWithMultipleSequencingChains() public {
+        uint256 epoch = 100;
+        uint256 chain2 = 999;
+        uint256 chain3 = 888;
+
+        // Add additional sequencing chains
+        vm.startPrank(admin);
+        gasArchive.addSequencingChain(chain2, address(0x1), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
+        gasArchive.addSequencingChain(chain3, address(0x2), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
+        vm.stopPrank();
+
+        // Set up block hashes for all chains
+        vm.prank(blockHashSender);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownSeqChainBlockHashForTesting(SEQ_CHAIN_ID, TEST_SEQ_BLOCK_HASH);
+        gasArchive.setLastKnownSeqChainBlockHashForTesting(chain2, keccak256("chain2_block"));
+        gasArchive.setLastKnownSeqChainBlockHashForTesting(chain3, keccak256("chain3_block"));
+
+        // Initially epoch should not be completed
+        assertFalse(gasArchive.epochCompleted(epoch));
+
+        // Test data for each chain
+        uint256[] memory appchains = new uint256[](1);
+        appchains[0] = APPCHAIN_ID_1;
+        uint256[] memory tokens = new uint256[](1);
+        tokens[0] = 100;
+        address[] memory emissionsReceivers = new address[](1);
+        emissionsReceivers[0] = address(0x123);
+
+        // Simulate confirmEpochDataHash for first chain (SEQ_CHAIN_ID)
+        // This will create the snapshot of expected chains
+        gasArchive.setEpochChainDataSubmittedForTesting(epoch, SEQ_CHAIN_ID, true);
+        gasArchive.addExpectedChainForTesting(epoch, SEQ_CHAIN_ID);
+        gasArchive.addExpectedChainForTesting(epoch, chain2);
+        gasArchive.addExpectedChainForTesting(epoch, chain3);
+
+        // Check that the chain submitted but epoch is not yet complete
+        assertTrue(gasArchive.hasChainSubmittedForEpoch(epoch, SEQ_CHAIN_ID));
+        assertFalse(gasArchive.epochCompleted(epoch));
+
+        // Get epoch progress
+        (bool completed, uint256 totalExpected, uint256 totalSubmitted) = gasArchive.getEpochProgress(epoch);
+        assertFalse(completed);
+        assertEq(totalExpected, 3);
+        assertEq(totalSubmitted, 1);
+
+        // Submit for second chain
+        gasArchive.setEpochChainDataSubmittedForTesting(epoch, chain2, true);
+
+        // Still should not be completed
+        assertFalse(gasArchive.epochCompleted(epoch));
+        (completed, totalExpected, totalSubmitted) = gasArchive.getEpochProgress(epoch);
+        assertFalse(completed);
+        assertEq(totalExpected, 3);
+        assertEq(totalSubmitted, 2);
+
+        // Submit for third chain - now should be completed
+        gasArchive.setEpochChainDataSubmittedForTesting(epoch, chain3, true);
+
+        // Manually call the completion check (normally done automatically in confirmEpochDataHash)
+        uint256[] memory expectedChains = gasArchive.getEpochExpectedChains(epoch);
+        bool allSubmitted = true;
+        for (uint256 i = 0; i < expectedChains.length; i++) {
+            if (!gasArchive.hasChainSubmittedForEpoch(epoch, expectedChains[i])) {
+                allSubmitted = false;
+                break;
+            }
+        }
+
+        // Verify all chains have submitted
+        assertTrue(allSubmitted);
+        assertTrue(gasArchive.hasChainSubmittedForEpoch(epoch, SEQ_CHAIN_ID));
+        assertTrue(gasArchive.hasChainSubmittedForEpoch(epoch, chain2));
+        assertTrue(gasArchive.hasChainSubmittedForEpoch(epoch, chain3));
+
+        // Check expected chains were saved correctly
+        uint256[] memory expectedChainsFromContract = gasArchive.getEpochExpectedChains(epoch);
+        assertEq(expectedChainsFromContract.length, 3);
+        assertEq(expectedChainsFromContract[0], SEQ_CHAIN_ID);
+        assertEq(expectedChainsFromContract[1], chain2);
+        assertEq(expectedChainsFromContract[2], chain3);
+    }
+
+    function testGetNewViewFunctions() public {
+        uint256 epoch = 200;
+
+        // Initially, no data should be available
+        uint256[] memory expectedChains = gasArchive.getEpochExpectedChains(epoch);
+        assertEq(expectedChains.length, 0);
+
+        assertFalse(gasArchive.hasChainSubmittedForEpoch(epoch, SEQ_CHAIN_ID));
+
+        (bool completed, uint256 totalExpected, uint256 totalSubmitted) = gasArchive.getEpochProgress(epoch);
+        assertFalse(completed);
+        assertEq(totalExpected, 0);
+        assertEq(totalSubmitted, 0);
+    }
+
+    function testViewFunctionsRevertForIncompleteEpoch() public {
+        uint256 epoch = 300;
+        uint256 chain2 = 999;
+
+        // Add another sequencing chain
+        vm.prank(admin);
+        gasArchive.addSequencingChain(chain2, address(0x1), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
+
+        // Manually set up partial epoch data (one chain submitted, one hasn't)
+        gasArchive.setEpochChainDataSubmittedForTesting(epoch, SEQ_CHAIN_ID, true);
+        gasArchive.addExpectedChainForTesting(epoch, SEQ_CHAIN_ID);
+        gasArchive.addExpectedChainForTesting(epoch, chain2);
+        // Note: epochCompleted[epoch] remains false
+
+        // IGasDataProvider view functions should revert
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
+        gasArchive.getAppchainGasFees(epoch, APPCHAIN_ID_1);
+
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
+        gasArchive.getTotalGasFees(epoch);
+
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
+        gasArchive.getActiveAppchainIds(epoch);
+
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
+        gasArchive.getAppchainRewardsReceiver(epoch, APPCHAIN_ID_1);
+
+        // But our new utility functions should work
+        assertTrue(gasArchive.hasChainSubmittedForEpoch(epoch, SEQ_CHAIN_ID));
+        assertFalse(gasArchive.hasChainSubmittedForEpoch(epoch, chain2));
+
+        (bool completed, uint256 totalExpected, uint256 totalSubmitted) = gasArchive.getEpochProgress(epoch);
+        assertFalse(completed);
+        assertEq(totalExpected, 2);
+        assertEq(totalSubmitted, 1);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    ADMIN OVERRIDE FUNCTIONALITY TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testSetEpochExpectedChains() public {
+        uint256 epoch = 500;
+        uint256[] memory chainIds = new uint256[](3);
+        chainIds[0] = SEQ_CHAIN_ID;
+        chainIds[1] = 999;
+        chainIds[2] = 888;
+
+        // Initially no expected chains
+        uint256[] memory initialExpected = gasArchive.getEpochExpectedChains(epoch);
+        assertEq(initialExpected.length, 0);
+
+        // Admin sets expected chains
+        vm.expectEmit(true, false, false, true);
+        emit EpochExpectedChainsUpdated(epoch, chainIds);
+
+        vm.prank(admin);
+        gasArchive.setEpochExpectedChains(epoch, chainIds);
+
+        // Verify expected chains were set
+        uint256[] memory expected = gasArchive.getEpochExpectedChains(epoch);
+        assertEq(expected.length, 3);
+        assertEq(expected[0], SEQ_CHAIN_ID);
+        assertEq(expected[1], 999);
+        assertEq(expected[2], 888);
+
+        // Epoch should not be completed yet (no submissions)
+        assertFalse(gasArchive.epochCompleted(epoch));
+    }
+
+    function testSetEpochExpectedChainsUnauthorized() public {
+        uint256 epoch = 500;
+        uint256[] memory chainIds = new uint256[](1);
+        chainIds[0] = SEQ_CHAIN_ID;
+
+        vm.prank(user);
+        vm.expectRevert();
+        gasArchive.setEpochExpectedChains(epoch, chainIds);
+    }
+
+    function testSetEpochExpectedChainsTriggersCompletion() public {
+        uint256 epoch = 500;
+        uint256[] memory chainIds = new uint256[](1);
+        chainIds[0] = SEQ_CHAIN_ID;
+
+        // First submit data for the chain
+        gasArchive.setEpochChainDataSubmittedForTesting(epoch, SEQ_CHAIN_ID, true);
+
+        // Now set expected chains - this should trigger completion
+        vm.expectEmit(true, false, false, false);
+        emit EpochCompleted(epoch);
+
+        vm.prank(admin);
+        gasArchive.setEpochExpectedChains(epoch, chainIds);
+
+        // Epoch should be completed
+        assertTrue(gasArchive.epochCompleted(epoch));
+    }
+
+    function testAdminCanOverrideSnapshotLogic() public {
+        uint256 epoch = 700;
+        uint256 chain2 = 999;
+        uint256 chain3 = 888;
+
+        // Add additional sequencing chains
+        vm.startPrank(admin);
+        gasArchive.addSequencingChain(chain2, address(0x1), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
+        gasArchive.addSequencingChain(chain3, address(0x2), address(mockBridge), TEST_STORAGE_SLOT_INDEX);
+        vm.stopPrank();
+
+        // Simulate first submission creating snapshot of all 3 chains (SEQ_CHAIN_ID + chain2 + chain3)
+        gasArchive.setEpochChainDataSubmittedForTesting(epoch, SEQ_CHAIN_ID, true);
+        gasArchive.addExpectedChainForTesting(epoch, SEQ_CHAIN_ID);
+        gasArchive.addExpectedChainForTesting(epoch, chain2);
+        gasArchive.addExpectedChainForTesting(epoch, chain3);
+
+        // Verify snapshot was created
+        uint256[] memory expectedBefore = gasArchive.getEpochExpectedChains(epoch);
+        assertEq(expectedBefore.length, 3);
+
+        // Only one chain has submitted so far
+        (bool completed, uint256 totalExpected, uint256 totalSubmitted) = gasArchive.getEpochProgress(epoch);
+        assertFalse(completed);
+        assertEq(totalExpected, 3);
+        assertEq(totalSubmitted, 1);
+
+        // Admin decides chain3 won't submit data for this epoch, so removes it
+        uint256[] memory newExpected = new uint256[](2);
+        newExpected[0] = SEQ_CHAIN_ID;
+        newExpected[1] = chain2;
+
+        vm.prank(admin);
+        gasArchive.setEpochExpectedChains(epoch, newExpected);
+
+        // Verify expected chains were updated
+        uint256[] memory expectedAfter = gasArchive.getEpochExpectedChains(epoch);
+        assertEq(expectedAfter.length, 2);
+        assertEq(expectedAfter[0], SEQ_CHAIN_ID);
+        assertEq(expectedAfter[1], chain2);
+
+        // Now submit data for chain2
+        gasArchive.setEpochChainDataSubmittedForTesting(epoch, chain2, true);
+
+        // Manually check completion (since we can't call the internal function directly)
+        (completed, totalExpected, totalSubmitted) = gasArchive.getEpochProgress(epoch);
+        assertEq(totalExpected, 2);
+        assertEq(totalSubmitted, 2);
     }
 
     /*//////////////////////////////////////////////////////////////
