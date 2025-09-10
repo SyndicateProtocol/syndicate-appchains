@@ -86,3 +86,7 @@ airdrop-dry-run :; DRY_RUN=true AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRE
 
 # Execute airdrop with bash script
 airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_ADDRESS} RPC_URL=${RPC_URL} ACCOUNT=${ACCOUNT} DEV_PUB_ADDRESS=${DEV_PUB_ADDRESS} ./script/airdrop/airdrop.sh
+
+## Staking Commands
+
+deploy-staking-contracts :; forge script script/DeployStakingContracts.s.sol:DeployStakingContracts --rpc-url ${RPC_URL} --account ${ACCOUNT} --sender ${DEV_PUB_ADDRESS} --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv
