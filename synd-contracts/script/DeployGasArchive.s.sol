@@ -8,6 +8,14 @@ import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.s
 import {GasArchive} from "src/staking/GasArchive.sol";
 
 contract DeployGasArchive is Script {
+    uint160 constant offset = uint160(0x1111000000000000000000000000000000001111);
+
+    function applyArbRollupAlias(address l1Address) internal pure returns (address l2Address) {
+        unchecked {
+            l2Address = address(uint160(l1Address) + offset);
+        }
+    }
+
     function run() public {
         vm.startBroadcast();
 
@@ -16,8 +24,11 @@ contract DeployGasArchive is Script {
         uint256 settlementChainID = vm.envUint("SETTLEMENT_CHAIN_ID");
         address admin = vm.envAddress("GAS_ARCHIVE_ADMIN");
 
+        address blockHashSenderAliased = applyArbRollupAlias(blockHashSender);
+
         console2.log("Deploying GasArchive with TransparentProxy pattern...");
         console2.log("Block hash sender:", blockHashSender);
+        console2.log("Block hash sender (ArbRollup alias):", blockHashSenderAliased);
         console2.log("Settlement chain ID:", settlementChainID);
         console2.log("Admin address:", admin);
 
@@ -31,7 +42,7 @@ contract DeployGasArchive is Script {
 
         // 3. Prepare initialization data
         bytes memory initData =
-            abi.encodeWithSelector(GasArchive.initialize.selector, blockHashSender, settlementChainID, admin);
+            abi.encodeWithSelector(GasArchive.initialize.selector, blockHashSenderAliased, settlementChainID, admin);
 
         // 4. Deploy TransparentUpgradeableProxy
         TransparentUpgradeableProxy proxy =
