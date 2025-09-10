@@ -1,27 +1,21 @@
 {
-  "lib/crosschainERC20": {
-    "rev": "cf991a89d21044a74dac9ef8e015f2653ce5a020"
+  "../synd-withdrawals/synd-enclave/nitro": {
+    "rev": "3d035ff7a6d059bb455e5bf07395df25c657c6b3"
   },
-  "lib/forge-std": {
-    "rev": "b93cf4bc34ff214c099dc970b153f85ade8c9f66"
+  "lib/openzeppelin-contracts-upgradeable": {
+    "tag": {
+      "name": "v5.4.0",
+      "rev": "e725abddf1e01cf05ace496e950fc8e243cc7cab"
+    }
   },
-  "lib/openzeppelin-contracts": {
-    "rev": "acd4ff74de833399287ed6b31b4debf6b2b35527"
-  },
-  "lib/sp1-contracts": {
-    "rev": "512b5e029abc27f6e46a3c7eba220dac83ecc306"
-  },
-  "lib/eigenda-contracts": {
-    "rev": "6f45c8714f5c82c4bef24b8aac968ef98e33dcf5"
-  },
-  "lib/upgrade-executor": {
-    "rev": "9495a82d52eeca2387dc9d54631e5e166ce7afa5"
+  "lib/prb-math": {
+    "branch": {
+      "name": "release-v4",
+      "rev": "280fc5f77e1b21b9c54013aac51966be33f4a410"
+    }
   },
   "lib/eigenlayer-middleware": {
     "rev": "fd26169c7f988a53ad9ca1e745f40754afed4ed4"
-  },
-  "../synd-withdrawals/synd-enclave/nitro": {
-    "rev": "3d035ff7a6d059bb455e5bf07395df25c657c6b3"
   },
   "lib/nitro-contracts": {
     "branch": {
@@ -29,10 +23,22 @@
       "rev": "278fdbc39089fa86330f0c23f0a05aee61972c84"
     }
   },
-  "lib/openzeppelin-contracts-upgradeable": {
-    "tag": {
-      "name": "v5.4.0",
-      "rev": "e725abddf1e01cf05ace496e950fc8e243cc7cab"
-    }
+  "lib/sp1-contracts": {
+    "rev": "512b5e029abc27f6e46a3c7eba220dac83ecc306"
+  },
+  "lib/openzeppelin-contracts": {
+    "rev": "acd4ff74de833399287ed6b31b4debf6b2b35527"
+  },
+  "lib/upgrade-executor": {
+    "rev": "9495a82d52eeca2387dc9d54631e5e166ce7afa5"
+  },
+  "lib/crosschainERC20": {
+    "rev": "cf991a89d21044a74dac9ef8e015f2653ce5a020"
+  },
+  "lib/eigenda-contracts": {
+    "rev": "6f45c8714f5c82c4bef24b8aac968ef98e33dcf5"
+  },
+  "lib/forge-std": {
+    "rev": "b93cf4bc34ff214c099dc970b153f85ade8c9f66"
   }
 }
