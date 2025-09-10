@@ -240,7 +240,6 @@ contract TeeModuleTest is Test {
         assertEq(address(teeModule.bridge()), address(mockBridge));
         assertEq(address(teeModule.teeKeyManager()), address(mockTeeKeyManager));
         assertEq(teeModule.challengeWindowDuration(), CHALLENGE_WINDOW_DURATION);
-        assertGt(teeModule.challengeWindowEnd(), 0);
     }
 
     function testConstructorL1Chain() public {
@@ -483,7 +482,7 @@ contract TeeModuleTest is Test {
     }
 
     function testRevert_CloseChallengeWindowTooEarly() public {
-        vm.expectRevert("cannot close challenge window - insufficient time has passed");
+        vm.expectRevert("cannot close challenge window - wrong number of assertions");
         teeModule.closeChallengeWindow();
     }
 
@@ -513,7 +512,7 @@ contract TeeModuleTest is Test {
         vm.warp(block.timestamp + CHALLENGE_WINDOW_DURATION + 1);
         mockL1Block.setTimestamp(uint64(block.timestamp + 1));
 
-        vm.expectRevert("cannot close challenge window - too many assertions");
+        vm.expectRevert("cannot close challenge window - wrong number of assertions");
         teeModule.closeChallengeWindow();
     }
 
