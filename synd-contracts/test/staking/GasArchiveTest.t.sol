@@ -64,10 +64,10 @@ contract GasArchiveTest is Test {
     address public user;
 
     uint256 public constant SETTLEMENT_CHAIN_ID = 1;
-    uint256 public constant SEQ_CHAIN_ID = 31337; // matches the expcted values in testConfirmEpochDataHashSuccess
+    uint256 public constant SEQ_CHAIN_ID = 31337; // matches the expected values in testConfirmEpochDataHashSuccess
     uint256 public constant APPCHAIN_ID_1 = 123;
     uint256 public constant APPCHAIN_ID_2 = 456;
-    uint256 public constant EPOCH = 10; // matches the expcted values in testConfirmEpochDataHashSuccess
+    uint256 public constant EPOCH = 10; // matches the expected values in testConfirmEpochDataHashSuccess
 
     bytes32 public constant TEST_ETH_BLOCK_HASH = keccak256("eth_block");
     bytes32 public constant TEST_SETTLEMENT_BLOCK_HASH = keccak256("settlement_block");
@@ -95,7 +95,7 @@ contract GasArchiveTest is Test {
 
         // Set up sequencing chain
         vm.startPrank(admin);
-        address gasArchiveAddress = address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0); // matches the expcted values in testConfirmEpochDataHashSuccess
+        address gasArchiveAddress = address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0); // matches the expected values in testConfirmEpochDataHashSuccess
         gasArchive.addSequencingChain(SEQ_CHAIN_ID, gasArchiveAddress, address(mockBridge), TEST_STORAGE_SLOT_INDEX);
         vm.stopPrank();
     }
@@ -519,7 +519,7 @@ contract GasArchiveTest is Test {
         gasArchive.confirmSequencingChainBlockHash(
             arbNovaChainId, sendRoot, ethBlockHeaderRLP, accountProofArray, storageProofArray
         );
-        // Assert the proff has successfully confimed the sequencing chain block hash
+        // Assert the proof has successfully confimed the sequencing chain block hash
         assertEq(gasArchive.lastKnownSeqChainBlockHashes(arbNovaChainId), rollupBlockHash);
     }
 

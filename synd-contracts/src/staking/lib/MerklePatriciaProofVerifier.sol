@@ -5,7 +5,7 @@
  *   - https://github.com/curvefi/curve-merkle-oracle/blob/b395fb24ac260d9801efc35f6aee5b07613b9257/contracts/MerklePatriciaProofVerifier.sol
  * which in turn copied from
  *   - https://github.com/lorenzb/proveth/blob/c74b20e/onchain/ProvethVerifier.sol
- * we add a security fix for a vulnerabilty that was discovered on March 2025:
+ * we add a security fix for a vulnerability that was discovered on March 2025:
  *  https://www.chainsecurity.com/blog/when-empty-means-valid-exploiting-mpt-proof-verification-for-an-alternative-truth
  */
 pragma solidity >=0.8.12;

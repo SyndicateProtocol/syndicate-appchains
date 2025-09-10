@@ -4,12 +4,13 @@ pragma solidity 0.8.28;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {MerklePatriciaProofVerifier} from "./lib/MerklePatriciaProofVerifier.sol";
+import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {RLPReader} from "./lib/RLPReader.sol";
 
 /// @title GasArchive
 /// @notice Lives on the staking appchain and trustlessly validates and stores gas usage data from multiple sequencing chains using storage proofs
-/// @dev This contract suppoers arbitrum-based sequencing chains only (with the exception of the settlement chain, which can be any chain)
-contract GasArchive is Initializable, AccessControlUpgradeable {
+/// @dev This contract supports arbitrum-based sequencing chains only (with the exception of the settlement chain, which can be any chain)
+contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for bytes;
 
@@ -95,6 +96,15 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
 
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+
+    modifier onlyArchivedEpoch(uint256 epochIndex) {
+        if (!archivedEpochData[epochIndex]) revert NotArchivedEpoch();
+        _;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -330,11 +340,6 @@ contract GasArchive is Initializable, AccessControlUpgradeable {
     /*//////////////////////////////////////////////////////////////
                              VIEWS
     //////////////////////////////////////////////////////////////*/
-
-    modifier onlyArchivedEpoch(uint256 epochIndex) {
-        if (!archivedEpochData[epochIndex]) revert NotArchivedEpoch();
-        _;
-    }
 
     function getAppchainGasFees(uint256 epochIndex, uint256 appchainId)
         external
