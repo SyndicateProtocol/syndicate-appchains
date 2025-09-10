@@ -23,6 +23,7 @@ contract EmissionsSchedulerTest is Test {
     address public user = address(0x1111);
 
     uint256 public constant DEFAULT_DECAY_FACTOR = 0.95e18; // 95% decay
+    uint256 public constant START_EPOCH = 2;
 
     event EmissionMinted(uint256 epoch, uint256 amount);
     event Paused(address account);
@@ -42,7 +43,7 @@ contract EmissionsSchedulerTest is Test {
 
         // Deploy emission scheduler
         emissionScheduler = new EmissionsScheduler(
-            2, address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, pauser
+            START_EPOCH, address(emissionsCalculator), address(relayer), relayDestinationL3, defaultAdmin, pauser
         );
         vm.warp(emissionScheduler.START_TIMESTAMP());
 
@@ -62,10 +63,10 @@ contract EmissionsSchedulerTest is Test {
         assertEq(address(emissionScheduler.emissionsCalculator()), address(emissionsCalculator));
         assertEq(address(emissionScheduler.relayer()), address(relayer));
         assertEq(emissionScheduler.relayDestinationL3(), relayDestinationL3);
-        assertEq(emissionScheduler.epochStartIndex(), 2);
+        assertEq(emissionScheduler.epochStartIndex(), START_EPOCH);
         assertEq(emissionScheduler.getCurrentEpoch(), 1);
         assertEq(emissionScheduler.totalEmissionsMinted(), 0);
-        assertFalse(emissionScheduler.epochMinted(1));
+        assertFalse(emissionScheduler.epochMinted(0));
     }
 
     function test_Constructor_RoleAssignment() public view {
@@ -108,22 +109,22 @@ contract EmissionsSchedulerTest is Test {
         uint256 initialSupply = token.totalSupply();
 
         vm.expectEmit(false, false, false, true);
-        emit EmissionMinted(2, expectedAmount);
-        emissionScheduler.mintEmission(2);
+        emit EmissionMinted(0, expectedAmount);
+        emissionScheduler.mintEmission(0);
 
         assertEq(emissionScheduler.getCurrentEpoch(), 2);
         assertEq(emissionScheduler.totalEmissionsMinted(), expectedAmount);
         assertEq(token.totalSupply(), initialSupply + expectedAmount);
-        assertTrue(emissionScheduler.epochMinted(2));
+        assertTrue(emissionScheduler.epochMinted(0));
     }
 
     function test_MintEmission_MultipleEpochs() public {
         uint256 totalMinted = 0;
         uint256 expectedEpochs = 5;
 
-        for (uint256 i = 2; i <= expectedEpochs; i++) {
+        for (uint256 i = 0; i <= expectedEpochs; i++) {
             // Move to epoch i
-            vm.warp(emissionScheduler.getEpochStart(i));
+            vm.warp(emissionScheduler.getEpochStart(i + START_EPOCH));
 
             uint256 expectedAmount = emissionsCalculator.getNextEmission();
 
@@ -133,28 +134,29 @@ contract EmissionsSchedulerTest is Test {
             assertTrue(emissionScheduler.epochMinted(i));
         }
 
-        assertEq(emissionScheduler.getCurrentEpoch(), expectedEpochs);
+        assertEq(emissionScheduler.getCurrentEpoch(), expectedEpochs + START_EPOCH);
         assertEq(emissionScheduler.totalEmissionsMinted(), totalMinted);
     }
 
     function test_MintEmission_NonSequentialEpochs() public {
-        // Skip to epoch 5 - this should fail because calculator epoch and time epoch don't match
+        // Skip to 3rd epoch since start
         vm.warp(emissionScheduler.getEpochStart(5));
 
-        // This should fail because currentTimeEpoch (5) != calculatorEpoch (0)
+        // This should fail because current realtive epoch (3) != calculatorEpoch (0)
         vm.expectRevert(EmissionsScheduler.InvalidEpoch.selector);
-        emissionScheduler.mintEmission(5);
+        emissionScheduler.mintEmission(3);
 
         // Verify epochs haven't been minted
         assertFalse(emissionScheduler.epochMinted(0));
-        assertFalse(emissionScheduler.epochMinted(4));
-        assertFalse(emissionScheduler.epochMinted(5));
+        assertFalse(emissionScheduler.epochMinted(1));
+        assertFalse(emissionScheduler.epochMinted(2));
+        assertFalse(emissionScheduler.epochMinted(3));
 
         // Make sure catch up works
+        emissionScheduler.mintEmission(0);
+        emissionScheduler.mintEmission(1);
         emissionScheduler.mintEmission(2);
         emissionScheduler.mintEmission(3);
-        emissionScheduler.mintEmission(4);
-        emissionScheduler.mintEmission(5);
     }
 
     function test_RevertWhen_EpochBeforeStart() public {
@@ -166,13 +168,13 @@ contract EmissionsSchedulerTest is Test {
     function test_RevertWhen_MintEmission_EpochAlreadyMinted() public {
         vm.warp(emissionScheduler.getEpochStart(2));
 
-        // Mint epoch 2
-        emissionScheduler.mintEmission(2);
-        assertTrue(emissionScheduler.epochMinted(2));
+        // Mint epoch 0
+        emissionScheduler.mintEmission(0);
+        assertTrue(emissionScheduler.epochMinted(0));
 
-        // Try to mint epoch 2 again
+        // Try to mint epoch 0 again
         vm.expectRevert(EmissionsScheduler.EpochAlreadyMinted.selector);
-        emissionScheduler.mintEmission(2);
+        emissionScheduler.mintEmission(0);
     }
 
     function test_RevertWhen_MintEmission_Paused() public {
@@ -182,14 +184,14 @@ contract EmissionsSchedulerTest is Test {
         emissionScheduler.pause();
 
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        emissionScheduler.mintEmission(2);
+        emissionScheduler.mintEmission(0);
     }
 
     function test_RevertWhen_MintEmission_AllEmissionsCompleted() public {
         // Complete all 48 epochs
-        for (uint256 i = 2; i < 50; i++) {
+        for (uint256 i = 0; i < 48; i++) {
             // Move to epoch i
-            vm.warp(emissionScheduler.getEpochStart(i));
+            vm.warp(emissionScheduler.getEpochStart(i + START_EPOCH));
 
             emissionScheduler.mintEmission(i);
         }
@@ -197,7 +199,7 @@ contract EmissionsSchedulerTest is Test {
         assertTrue(emissionScheduler.emissionsEnded());
 
         vm.expectRevert(EmissionsScheduler.AllEmissionsCompleted.selector);
-        emissionScheduler.mintEmission(50);
+        emissionScheduler.mintEmission(48);
     }
 
     // ============ VIEW FUNCTION TESTS ============
@@ -216,7 +218,7 @@ contract EmissionsSchedulerTest is Test {
 
         uint256 expectedAmount = emissionsCalculator.getNextEmission();
 
-        emissionScheduler.mintEmission(2);
+        emissionScheduler.mintEmission(0);
 
         assertEq(emissionScheduler.totalEmissionsMinted(), expectedAmount);
     }
@@ -269,13 +271,13 @@ contract EmissionsSchedulerTest is Test {
         emissionScheduler.pause();
 
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        emissionScheduler.mintEmission(2);
+        emissionScheduler.mintEmission(0);
 
         // Unpause and verify mint works
         vm.prank(defaultAdmin);
         emissionScheduler.unpause();
 
-        emissionScheduler.mintEmission(2); // Should succeed
+        emissionScheduler.mintEmission(0); // Should succeed
 
         assertEq(emissionScheduler.getCurrentEpoch(), 2);
     }
@@ -283,13 +285,11 @@ contract EmissionsSchedulerTest is Test {
     // ============ INTEGRATION TESTS ============
 
     function test_Integration_FullEmissionCycle() public {
-        vm.warp(emissionScheduler.getEpochStart(2));
-
         // Mint several epochs
         uint256 totalMinted = 0;
-        for (uint256 i = 2; i <= 7; i++) {
+        for (uint256 i = 0; i < 7; i++) {
             // Move to epoch i
-            vm.warp(emissionScheduler.getEpochStart(i));
+            vm.warp(emissionScheduler.getEpochStart(i + START_EPOCH));
 
             uint256 expectedAmount = emissionsCalculator.getNextEmission();
 
@@ -299,30 +299,28 @@ contract EmissionsSchedulerTest is Test {
             assertTrue(emissionScheduler.epochMinted(i));
         }
 
-        assertEq(emissionScheduler.getCurrentEpoch(), 7);
+        assertEq(emissionScheduler.getCurrentEpoch(), 6 + START_EPOCH);
         assertEq(emissionScheduler.totalEmissionsMinted(), totalMinted);
         assertFalse(emissionScheduler.emissionsEnded());
     }
 
     function test_Integration_LastEpoch() public {
-        vm.warp(emissionScheduler.getEpochStart(2));
-
         // Complete 47 epochs
-        for (uint256 i = 2; i <= 48; i++) {
-            vm.warp(emissionScheduler.getEpochStart(i));
+        for (uint256 i = 0; i < 47; i++) {
+            vm.warp(emissionScheduler.getEpochStart(i + START_EPOCH));
             emissionScheduler.mintEmission(i);
         }
 
-        assertEq(emissionScheduler.getCurrentEpoch(), 48);
+        assertEq(emissionScheduler.getCurrentEpoch(), 46 + START_EPOCH);
         assertFalse(emissionScheduler.emissionsEnded());
 
         // Final epoch
-        vm.warp(emissionScheduler.getEpochStart(49));
-        emissionScheduler.mintEmission(49);
+        vm.warp(emissionScheduler.getEpochStart(47 + START_EPOCH));
+        emissionScheduler.mintEmission(47);
 
-        assertEq(emissionScheduler.getCurrentEpoch(), 49);
+        assertEq(emissionScheduler.getCurrentEpoch(), 47 + START_EPOCH);
         assertTrue(emissionScheduler.emissionsEnded());
-        assertTrue(emissionScheduler.epochMinted(49));
+        assertTrue(emissionScheduler.epochMinted(47));
     }
 
     // ============ SECURITY TESTS ============

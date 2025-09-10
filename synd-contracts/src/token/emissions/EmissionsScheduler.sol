@@ -145,30 +145,27 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
     /**
      * @notice Mint emission tokens and bridge them to the commons L3 chain
      * @dev This function can be called by anyone.
-     *      The epoch index must be equal or greater to the start epoch index.
+     *      The epoch index is the relative epoch index to the start epoch index.
      *      The epoch index must be the next epoch index to be emitted.
      *      The epoch index must be equal to or less than the current epoch index.
      *      The epoch index must not have been minted yet.
-     * @param epochIndex The epoch index to mint emissions for
+     * @param epochIndex The relative epoch index to mint emissions for
      */
     function mintEmission(uint256 epochIndex) external whenNotPaused nonReentrant {
         // Validate emissions state
         if (emissionsEnded()) revert AllEmissionsCompleted();
-        if (epochIndex < epochStartIndex) revert InvalidEpoch();
         if (epochMinted[epochIndex]) revert EpochAlreadyMinted();
-
-        uint256 relativeEpoch = epochIndex - epochStartIndex;
-        if (relativeEpoch != emissionsCalculator.currentEpoch()) revert InvalidEpoch();
-        if (epochIndex > getCurrentEpoch()) revert InvalidEpoch();
+        if (epochIndex != emissionsCalculator.currentEpoch()) revert InvalidEpoch();
+        if (epochIndex + epochStartIndex > getCurrentEpoch()) revert InvalidEpoch();
 
         // Mark epoch as minted
         epochMinted[epochIndex] = true;
 
         // Calculate and mint emission to this contract, passing expected epoch for synchronization
-        uint256 emissionAmount = emissionsCalculator.calculateAndMintEmission(address(relayer), relativeEpoch);
+        uint256 emissionAmount = emissionsCalculator.calculateAndMintEmission(address(relayer), epochIndex);
 
         // Bridge the emission to the commons L3 chain
-        relayer.relay(relayDestinationL3, epochIndex);
+        relayer.relay(relayDestinationL3, epochIndex + epochStartIndex);
 
         emit EmissionMinted(epochIndex, emissionAmount);
     }
