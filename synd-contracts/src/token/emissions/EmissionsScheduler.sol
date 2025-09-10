@@ -44,7 +44,7 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
     error AllEmissionsCompleted();
 
     /// @notice Thrown when trying to mint emissions for an epoch that's already been minted
-    error EpochAlreadyMinted();
+    error NoEmissionsToMint();
 
     /*//////////////////////////////////////////////////////////////
                                  ROLES
@@ -68,9 +68,6 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
 
     /// @notice The destination address for the relayer (ON THE COMMONS L3 CHAIN)
     address public relayDestinationL3;
-
-    /// @notice Tracks which epochs have been minted
-    mapping(uint256 epochIndex => bool isMinted) public epochMinted;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -145,21 +142,13 @@ contract EmissionsScheduler is AccessControl, Pausable, ReentrancyGuard, EpochTr
     /**
      * @notice Mint emission tokens and bridge them to the commons L3 chain
      * @dev This function can be called by anyone.
-     *      The epoch index is the relative epoch index to the start epoch index.
-     *      The epoch index must be the next epoch index to be emitted.
-     *      The epoch index must be equal to or less than the current epoch index.
-     *      The epoch index must not have been minted yet.
-     * @param epochIndex The relative epoch index to mint emissions for
+     *      Uses the current epoch index from the emissions calculator.
      */
-    function mintEmission(uint256 epochIndex) external whenNotPaused nonReentrant {
+    function mintEmission() external whenNotPaused nonReentrant {
         // Validate emissions state
         if (emissionsEnded()) revert AllEmissionsCompleted();
-        if (epochMinted[epochIndex]) revert EpochAlreadyMinted();
-        if (epochIndex != emissionsCalculator.currentEpoch()) revert InvalidEpoch();
-        if (epochIndex + epochStartIndex > getCurrentEpoch()) revert InvalidEpoch();
-
-        // Mark epoch as minted
-        epochMinted[epochIndex] = true;
+        uint256 epochIndex = emissionsCalculator.currentEpoch();
+        if (epochIndex + epochStartIndex > getCurrentEpoch()) revert NoEmissionsToMint();
 
         // Calculate and mint emission to this contract, passing expected epoch for synchronization
         uint256 emissionAmount = emissionsCalculator.calculateAndMintEmission(address(relayer), epochIndex);
