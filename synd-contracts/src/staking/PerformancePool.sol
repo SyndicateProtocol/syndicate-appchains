@@ -40,6 +40,9 @@ contract PerformancePool is IUserPool, RewardPoolBase {
 
     function _claim(uint256 epochIndex, address user, address destination, uint256 appchainId) internal {
         _preChecks(epochIndex);
+        if (destination == address(0)) {
+            revert InvalidDestination();
+        }
 
         uint256 amount = getClaimableAmount(epochIndex, user, appchainId);
         if (amount == 0) revert ClaimNotAvailable();
