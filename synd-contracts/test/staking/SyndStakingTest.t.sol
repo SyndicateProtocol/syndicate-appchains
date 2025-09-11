@@ -1188,7 +1188,7 @@ contract SyndStakingTest is Test {
         // Test stageStakeTransfer reverts when paused
         vm.startPrank(user1);
         vm.expectRevert();
-        staking.stageStakeTransfer{value: 0}(appchainId1, appchainId2, 25 ether);
+        staking.stageStakeTransfer(appchainId1, appchainId2, 25 ether);
         vm.stopPrank();
 
         // Unpause the contract
