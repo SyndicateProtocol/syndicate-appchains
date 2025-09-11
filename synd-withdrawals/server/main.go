@@ -22,6 +22,8 @@ const RequestID = "1"
 
 var cache = ttlcache.New(
 	ttlcache.WithTTL[common.Hash, json.RawMessage](TTL),
+	// in case a cached response is invalid, e.g. the signer key changes, expire it after the timeout
+	ttlcache.WithDisableTouchOnHit[common.Hash, json.RawMessage](),
 )
 
 var pool = sync.Pool{
@@ -37,8 +39,16 @@ var pool = sync.Pool{
 
 type EnclaveRequest struct {
 	request  []byte
+	cacheKey common.Hash
 	ctx      context.Context
 	response chan<- json.RawMessage
+}
+
+type RequestData struct {
+	Jsonrpc string          `json:"jsonrpc"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params"`
+	Id      json.RawMessage `json:"id"`
 }
 
 var requestChan = make(chan EnclaveRequest)
@@ -49,7 +59,12 @@ func processEnclaveRequest(req []byte) json.RawMessage {
 		slog.Error("Error getting vsock connection from pool")
 		return nil
 	}
-	defer pool.Put(conn)
+
+	defer func() {
+		if conn != nil {
+			conn.Close()
+		}
+	}()
 
 	_, err := conn.Write(req)
 	if err != nil {
@@ -66,6 +81,8 @@ func processEnclaveRequest(req []byte) json.RawMessage {
 		return nil
 	}
 
+	pool.Put(conn)
+	conn = nil
 	return raw
 }
 
@@ -82,12 +99,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = r.Body.Close()
 
-	reqData := struct {
-		Jsonrpc string          `json:"jsonrpc"`
-		Method  string          `json:"method"`
-		Params  json.RawMessage `json:"params"`
-		Id      json.RawMessage `json:"id"`
-	}{}
+	var reqData RequestData
 
 	if err := json.Unmarshal(req, &reqData); err != nil || reqData.Jsonrpc != "2.0" {
 		slog.Error("Error unmarshalling request", "error", err, "jsonrpc", reqData.Jsonrpc)
@@ -110,30 +122,33 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Cache resource intensive proof generation requests that time out
 	if reqData.Method == "enclave_verifyAppchain" || reqData.Method == "enclave_verifySequencingChain" {
 		cacheKey = crypto.Keccak256Hash(crypto.Keccak256([]byte(reqData.Method)), []byte(reqData.Params))
-		if entry, found := cache.GetAndDelete(cacheKey); found {
+		if entry := cache.Get(cacheKey); entry != nil {
 			slog.Debug("Found entry in cache")
 			raw = entry.Value()
 		} else {
 			responseChan := make(chan json.RawMessage)
-			requestChan <- EnclaveRequest{request: req, ctx: ctx, response: responseChan}
+			requestChan <- EnclaveRequest{request: req, ctx: ctx, cacheKey: cacheKey, response: responseChan}
 			raw = <-responseChan
 		}
 	} else {
 		raw = processEnclaveRequest(req)
 	}
 
-	m := make(map[string]json.RawMessage)
-	if err := json.Unmarshal(raw, &m); err != nil {
-		slog.Error("failed to unmarshal response")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	var m map[string]json.RawMessage
+	if raw != nil {
+		m := make(map[string]json.RawMessage)
+		if err := json.Unmarshal(raw, &m); err != nil {
+			slog.Error("failed to unmarshal response")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !bytes.Equal(m["id"], json.RawMessage(RequestID)) {
+			slog.Error("unexpected response id", "response_id", string(m["id"]), "request_id", string(RequestID))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		m["id"] = reqId
 	}
-	if !bytes.Equal(m["id"], json.RawMessage(RequestID)) {
-		slog.Error("unexpected response id", "response_id", string(m["id"]), "request_id", string(RequestID))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	m["id"] = reqId
 
 	if ctx.Err() != nil {
 		if raw != nil && cacheKey != (common.Hash{}) {
@@ -174,7 +189,10 @@ func main() {
 	// Process resource intensive requests sequentially
 	go func() {
 		for req := range requestChan {
-			if err := req.ctx.Err(); err != nil {
+			if entry := cache.Get(req.cacheKey); entry != nil {
+				slog.Debug("Found entry in cache")
+				req.response <- entry.Value()
+			} else if err := req.ctx.Err(); err != nil {
 				slog.Warn("Request timed out in queue", "error", err)
 				req.response <- nil
 			} else {
