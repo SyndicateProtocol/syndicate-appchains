@@ -19,7 +19,7 @@ contract DeployBlockHashRelayer is Script {
         console2.log("SYND Token:", syndToken);
 
         // Deploy BlockHashRelayer
-        BlockHashRelayer messenger = new BlockHashRelayer(IArbInbox(arbInbox), IERC20(syndToken));
+        BlockHashRelayer messenger = new BlockHashRelayer(IArbInbox(arbInbox), IERC20(syndToken), msg.sender);
 
         console2.log("BlockHashMessenger deployed to:", address(messenger));
 

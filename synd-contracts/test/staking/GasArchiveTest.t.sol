@@ -406,6 +406,24 @@ contract GasArchiveTest is Test {
             address(0x456),
             "Appchain 456 receiver should be 0x456"
         );
+
+        // Test resubmission prevention - second submission with same parameters should revert
+        vm.expectRevert(GasArchive.AlreadySubmitted.selector);
+        gasArchive.confirmEpochDataHash(
+            EPOCH,
+            SEQ_CHAIN_ID,
+            seqChainHeader,
+            accountProofArray,
+            storageProofArray,
+            appchains,
+            tokens,
+            emissionsReceivers
+        );
+
+        // Verify that the numbers haven't been inflated after the failed resubmission
+        assertEq(gasArchive.getTotalGasFees(EPOCH), 300, "Total gas fees should still be 100 + 200 = 300");
+        assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_1), 100, "Appchain 123 should still have 100 tokens");
+        assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_2), 200, "Appchain 456 should still have 200 tokens");
     }
 
     function testConfirmEpochDataHashInvalidSeqChainBlockHeader() public {

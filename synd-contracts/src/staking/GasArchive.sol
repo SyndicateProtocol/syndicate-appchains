@@ -90,6 +90,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     error NotArchivedEpoch();
     error ZeroLengthArray();
     error EpochAlreadyCompleted();
+    error AlreadySubmitted();
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -191,7 +192,10 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
         uint256[] calldata tokens,
         address[] calldata emissionsReceivers
     ) external {
-        // note: we skip validating that appchains.length == tokens.length == emissionsReceivers.length 
+        // prevent resubmission for the same epoch and chain
+        if (epochChainDataSubmitted[epoch][seqChainID]) revert AlreadySubmitted();
+
+        // note: we skip validating that appchains.length == tokens.length == emissionsReceivers.length
         // because the GasAggregator already enforces this. However, we still need to check for empty arrays
         // to prevent someone from submitting a proof for an epoch with no data and marking it as "submitted"
         if (appchains.length == 0) revert ZeroLengthArray();
