@@ -4,8 +4,6 @@ import {Test, console} from "forge-std/Test.sol";
 import {GasArchive} from "../../src/staking/GasArchive.sol";
 import {MerklePatriciaProofVerifier} from "../../src/staking/lib/MerklePatriciaProofVerifier.sol";
 import {RLPReader} from "../../src/staking/lib/RLPReader.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
 contract MockGasAggregator {
     mapping(uint256 => bytes32) public aggregatedEpochDataHash;
@@ -24,6 +22,10 @@ contract MockBridge {
 }
 
 contract GasUsageArchiveTestHelper is GasArchive {
+    constructor(address _blockHashSender, uint256 _settlementChainID, address admin)
+        GasArchive(_blockHashSender, _settlementChainID, admin)
+    {}
+
     function setArchivedEpochDataForTesting(
         uint256 epoch,
         uint256[] memory appchainIds,
@@ -95,14 +97,8 @@ contract GasArchiveTest is Test {
 
         mockBridge = new MockBridge();
 
-        // Deploy using TransparentUpgradeableProxy pattern
-        GasUsageArchiveTestHelper implementation = new GasUsageArchiveTestHelper();
-        bytes memory initData =
-            abi.encodeWithSelector(GasArchive.initialize.selector, blockHashSender, SETTLEMENT_CHAIN_ID, admin);
-        ProxyAdmin proxyAdmin = new ProxyAdmin(admin);
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), initData);
-        gasArchive = GasUsageArchiveTestHelper(address(proxy));
+        // Deploy GasArchive directly without proxy
+        gasArchive = new GasUsageArchiveTestHelper(blockHashSender, SETTLEMENT_CHAIN_ID, admin);
 
         // Set up sequencing chain
         vm.startPrank(admin);
@@ -112,50 +108,22 @@ contract GasArchiveTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        INITIALIZATION TESTS
+                        CONSTRUCTOR TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testInitialize() public {
-        // Deploy new instances to test initialization with different parameters
+    function testConstructor() public {
         // Test zero blockHashSender
-        {
-            ProxyAdmin proxyAdmin = new ProxyAdmin(admin);
-            GasArchive implementation = new GasArchive();
-            bytes memory badInitData = abi.encodeWithSelector(
-                GasArchive.initialize.selector,
-                address(0), // zero address
-                SETTLEMENT_CHAIN_ID,
-                admin
-            );
-
-            vm.expectRevert(GasArchive.ZeroAddress.selector);
-            new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), badInitData);
-        }
+        vm.expectRevert(GasArchive.ZeroAddress.selector);
+        new GasArchive(address(0), SETTLEMENT_CHAIN_ID, admin);
 
         // Test zero admin
-        {
-            ProxyAdmin proxyAdmin = new ProxyAdmin(admin);
-            GasArchive implementation = new GasArchive();
-            bytes memory badInitData = abi.encodeWithSelector(
-                GasArchive.initialize.selector,
-                blockHashSender,
-                SETTLEMENT_CHAIN_ID,
-                address(0) // zero address
-            );
+        vm.expectRevert(GasArchive.ZeroAddress.selector);
+        new GasArchive(blockHashSender, SETTLEMENT_CHAIN_ID, address(0));
 
-            vm.expectRevert(GasArchive.ZeroAddress.selector);
-            new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), badInitData);
-        }
-
-        // Test successful initialization (already tested in setUp, but let's verify)
+        // Test successful deployment (already tested in setUp, but let's verify)
         assertEq(gasArchive.blockHashSender(), blockHashSender);
         assertEq(gasArchive.settlementChainID(), SETTLEMENT_CHAIN_ID);
         assertTrue(gasArchive.hasRole(gasArchive.DEFAULT_ADMIN_ROLE(), admin));
-    }
-
-    function testCannotInitializeTwice() public {
-        vm.expectRevert();
-        gasArchive.initialize(blockHashSender, SETTLEMENT_CHAIN_ID, admin);
     }
 
     /*//////////////////////////////////////////////////////////////

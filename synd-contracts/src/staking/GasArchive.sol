@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {MerklePatriciaProofVerifier} from "./lib/MerklePatriciaProofVerifier.sol";
 import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {RLPReader} from "./lib/RLPReader.sol";
@@ -10,7 +9,7 @@ import {RLPReader} from "./lib/RLPReader.sol";
 /// @title GasArchive
 /// @notice Lives on the staking appchain and trustlessly validates and stores gas usage data from multiple sequencing chains using storage proofs
 /// @dev This contract supports arbitrum-based sequencing chains only (with the exception of the settlement chain, which can be any chain)
-contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider {
+contract GasArchive is AccessControl, IGasDataProvider {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for bytes;
 
@@ -34,7 +33,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     address public blockHashSender;
 
     /// @notice when using the settlement chain as the sequencing chain, the rollup hash proof is not required and `lastKnownSettlementChainBlockHash` will be used intead
-    uint256 public settlementChainID;
+    uint256 public immutable settlementChainID;
 
     /// @notice chainIDs of the sequencing chains to expect data from
     uint256[] public seqChainIDs;
@@ -100,20 +99,15 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     error OldSettlementChainBlockNumber();
 
     /*//////////////////////////////////////////////////////////////
-                            INITIALIZER
+                            CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(address _blockHashSender, uint256 _settlementChainID, address admin) external initializer {
+    constructor(address _blockHashSender, uint256 _settlementChainID, address admin) {
         if (_blockHashSender == address(0)) revert ZeroAddress();
         if (admin == address(0)) revert ZeroAddress();
         blockHashSender = _blockHashSender;
         settlementChainID = _settlementChainID;
 
-        __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
