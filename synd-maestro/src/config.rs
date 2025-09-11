@@ -177,7 +177,7 @@ impl Config {
                             std::process::exit(1);
                         }
                         // Also exit for no providers configured (shouldn't happen but be safe)
-                        shared::multi_rpc_provider::MultiRpcError::NoProvidersConfigured => {
+                        MultiRpcError::NoProvidersConfigured => {
                             error!(%chain_id, "No providers configured for chain");
                             std::process::exit(1);
                         }
