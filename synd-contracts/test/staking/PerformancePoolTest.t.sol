@@ -825,4 +825,37 @@ contract PerformancePoolTest is Test {
         uint256 thirdCall = performancePool.getClaimableAmount(epoch, user1, appchainId1);
         assertEq(thirdCall, firstCall, "Setting fee multiplier should not change claimable amount until next epoch");
     }
+
+    function test_claim_zero_destination() public {
+        setupStake(100 ether, 0, 0);
+
+        uint256 epoch = _settledEpoch();
+        setGasShares(epoch, 1, 0, 0);
+
+        performancePool.deposit{value: 100 ether}(epoch);
+
+        assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 100 ether);
+
+        vm.startPrank(user1);
+        vm.expectRevert(RewardPoolBase.InvalidDestination.selector);
+        performancePool.claim(epoch, address(0), appchainId1);
+        vm.stopPrank();
+    }
+
+    function test_claimFor_zero_destination() public {
+        setupStake(100 ether, 0, 0);
+
+        uint256 epoch = _settledEpoch();
+        setGasShares(epoch, 1, 0, 0);
+
+        performancePool.deposit{value: 100 ether}(epoch);
+
+        assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 100 ether);
+
+        // Only staking contract can call claimFor
+        vm.startPrank(address(staking));
+        vm.expectRevert(RewardPoolBase.InvalidDestination.selector);
+        performancePool.claimFor(epoch, user1, address(0), appchainId1);
+        vm.stopPrank();
+    }
 }

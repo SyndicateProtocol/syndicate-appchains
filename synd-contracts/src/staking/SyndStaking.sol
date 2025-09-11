@@ -308,7 +308,6 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
      */
     function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount)
         external
-        payable
         nonReentrant
         whenNotPaused
     {

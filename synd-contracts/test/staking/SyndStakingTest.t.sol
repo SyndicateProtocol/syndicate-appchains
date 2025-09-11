@@ -1126,6 +1126,34 @@ contract SyndStakingTest is Test {
         assertEq(address(user1).balance, initialBalance + 60 ether);
     }
 
+    function test_claimAllRewards_zero_destination() public {
+        // Deploy a pool
+        BasePool pool = new BasePool(address(staking));
+
+        // Setup stake
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Deposit rewards to pool
+        pool.deposit{value: 50 ether}(2);
+
+        // Move to next epoch so we can claim from epoch 2
+        stepEpoch(1);
+
+        // Create claim request
+        SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
+
+        // Test that claiming to zero address reverts
+        vm.startPrank(user1);
+        vm.expectRevert(SyndStaking.InvalidDestination.selector);
+        staking.claimAllRewards(claims, address(0));
+        vm.stopPrank();
+    }
+
     // ==================== PAUSABLE FUNCTIONALITY TESTS ====================
 
     function test_pause_unpause_only_owner() public {
@@ -1188,7 +1216,7 @@ contract SyndStakingTest is Test {
         // Test stageStakeTransfer reverts when paused
         vm.startPrank(user1);
         vm.expectRevert();
-        staking.stageStakeTransfer{value: 0}(appchainId1, appchainId2, 25 ether);
+        staking.stageStakeTransfer(appchainId1, appchainId2, 25 ether);
         vm.stopPrank();
 
         // Unpause the contract

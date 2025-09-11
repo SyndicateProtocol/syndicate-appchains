@@ -1180,4 +1180,24 @@ contract AppchainPoolTest is Test {
         assertEq(fullReward, fullRewardAfterEpoch, "Full reward should be consistent");
         assertEq(fullReward, fullRewardAfter1Year, "Full reward should be consistent");
     }
+
+    function test_claim_zero_destination() public {
+        setupStake(100 ether, 0, 0);
+
+        uint256 epoch = _settledEpoch();
+        setGasShares(epoch, 1, 0, 0);
+        setDefaultReceivers(epoch);
+
+        appchainPool.deposit{value: 100 ether}(epoch);
+
+        // Move to after epoch end + vesting duration
+        vm.warp(staking.getEpochEnd(epoch) + appchainPool.VESTING_DURATION());
+
+        assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 100 ether);
+
+        vm.startPrank(appchainDest1);
+        vm.expectRevert(RewardPoolBase.InvalidDestination.selector);
+        appchainPool.claim(epoch, appchainId1, address(0));
+        vm.stopPrank();
+    }
 }
