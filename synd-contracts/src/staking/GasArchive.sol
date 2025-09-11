@@ -50,6 +50,9 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     /// @notice tracks which sequencing chains have submitted data for each epoch
     mapping(uint256 epoch => mapping(uint256 chainId => bool submitted)) public epochChainDataSubmitted;
 
+    /// @notice Stores the verified epoch data hash
+    mapping(uint256 epoch => mapping(uint256 seqChainID => bytes32 dataHash)) public epochVerifiedDataHash;
+
     /// @notice tracks which epochs have received data from all expected sequencing chains
     mapping(uint256 epoch => bool completed) public epochCompleted;
 
@@ -91,6 +94,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     error ZeroLengthArray();
     error EpochAlreadyCompleted();
     error AlreadySubmitted();
+    error EmptyDataHash();
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -172,33 +176,24 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
         lastKnownSeqChainBlockHashes[seqChainID] = verifiedSeqChainBlockHash;
     }
 
-    /// @notice Validates and stores epoch gas usage data using sequencing chain storage proofs
-    /// @dev Verifies epoch data against the sequencing chain's GasAggregator contract storage
+    /// @notice Validates and stores the epochDataHash for a given sequencing chain / epoch using sequencing chain storage proofs
+    /// @dev Verifies the proof data of the sequencing chain's proof against the confirmed seq chain block hash
     /// @param epoch The epoch number to validate
     /// @param seqChainID The sequencing chain ID
     /// @param seqChainBlockHeader RLP-encoded sequencing chain block header
     /// @param seqChainAccountProof Merkle proof of the GasAggregator account
     /// @param seqChainStorageProof Merkle proof of the epoch data storage slot
-    /// @param appchains Array of appchain IDs
-    /// @param tokens Array of token amounts used to pay for gas by each appchain on the sequencing chain
-    /// @param emissionsReceivers Array of emissions receiver addresses for each appchain
     function confirmEpochDataHash(
         uint256 epoch,
         uint256 seqChainID,
         bytes calldata seqChainBlockHeader,
         bytes[] calldata seqChainAccountProof,
-        bytes[] calldata seqChainStorageProof,
-        uint256[] calldata appchains,
-        uint256[] calldata tokens,
-        address[] calldata emissionsReceivers
+        bytes[] calldata seqChainStorageProof
     ) external {
         // prevent resubmission for the same epoch and chain
-        if (epochChainDataSubmitted[epoch][seqChainID]) revert AlreadySubmitted();
-
-        // note: we skip validating that appchains.length == tokens.length == emissionsReceivers.length
-        // because the GasAggregator already enforces this. However, we still need to check for empty arrays
-        // to prevent someone from submitting a proof for an epoch with no data and marking it as "submitted"
-        if (appchains.length == 0) revert ZeroLengthArray();
+        if (epochChainDataSubmitted[epoch][seqChainID] || epochVerifiedDataHash[epoch][seqChainID] != bytes32(0)) {
+            revert AlreadySubmitted();
+        }
 
         // seq chain header must matches the last confirmed block hash for this sequencing chain
         bytes32 seqChainBlockHash = keccak256(seqChainBlockHeader);
@@ -209,7 +204,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
         if (expectedBlockHash != seqChainBlockHash) {
             revert InvalidSeqChainBlockHeader();
         }
-        // verify that the provided epoch data is valid according to the sequencingchain proofs
+        // verify that the provided epoch data is valid according to the sequencing chain proof
         bytes32 verifiedEpochDataHash = _epochDataHashFromSeqChainStorageProof({
             epoch: epoch,
             seqChainID: seqChainID,
@@ -217,20 +212,43 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
             accountProof: seqChainAccountProof,
             storageProof: seqChainStorageProof
         });
-        bytes32 epochDataHash = keccak256(abi.encode(appchains, tokens, emissionsReceivers));
-        if (verifiedEpochDataHash != epochDataHash) {
-            revert InvalidData();
-        }
+
+        if (verifiedEpochDataHash == bytes32(0)) revert EmptyDataHash();
 
         // data submitted is valid, store it
-        emit EpochDataValidated(epoch, seqChainID, epochDataHash);
+        emit EpochDataValidated(epoch, seqChainID, verifiedEpochDataHash);
 
-        // mark this chain as having submitted data for this epoch
-        epochChainDataSubmitted[epoch][seqChainID] = true;
+        epochVerifiedDataHash[epoch][seqChainID] = verifiedEpochDataHash;
 
         // if this is the first chain to submit for this epoch, snapshot the expected chains
         if (epochExpectedChains[epoch].length == 0) {
             _snapshotExpectedChainsForEpoch(epoch);
+        }
+    }
+
+    /// @notice Receives the pre-image data for a verified epoch
+    /// @param epoch The epoch number to validate
+    /// @param seqChainID The sequencing chain ID
+    /// @param appchains Array of appchain IDs
+    /// @param tokens Array of token amounts used to pay for gas by each appchain on the sequencing chain
+    /// @param emissionsReceivers Array of emissions receiver addresses for each appchain
+    function submitEpochPreImageData(
+        uint256 epoch,
+        uint256 seqChainID,
+        uint256[] calldata appchains,
+        uint256[] calldata tokens,
+        address[] calldata emissionsReceivers
+    ) external {
+        // prevent resubmission for the same epoch and chain
+        if (epochChainDataSubmitted[epoch][seqChainID]) revert AlreadySubmitted();
+
+        // note: we skip validating that appchains.length == tokens.length == emissionsReceivers.length
+        // because the GasAggregator already enforces this.
+
+        bytes32 verifiedEpochDataHash = epochVerifiedDataHash[epoch][seqChainID];
+        bytes32 epochDataHash = keccak256(abi.encode(appchains, tokens, emissionsReceivers));
+        if (verifiedEpochDataHash != epochDataHash) {
+            revert InvalidData();
         }
 
         uint256 totalTokensUsed = 0;
@@ -241,6 +259,12 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
             epochAppchainEmissionsReceiver[epoch][appchains[i]] = emissionsReceivers[i];
         }
         epochTotalTokensUsed[epoch] = totalTokensUsed;
+
+        // mark this chain as having submitted data for this epoch
+        epochChainDataSubmitted[epoch][seqChainID] = true;
+
+        // cleanup storage
+        delete epochVerifiedDataHash[epoch][seqChainID];
 
         // check if all expected chains have now submitted data for this epoch
         _checkEpochCompletion(epoch);
