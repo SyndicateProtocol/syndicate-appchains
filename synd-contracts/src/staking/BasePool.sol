@@ -47,6 +47,8 @@ contract BasePool is IUserPool, ReentrancyGuard {
     error ClaimNotAvailable();
     /// @notice Error thrown when caller is not authorized forwarder
     error UnauthorizedCaller();
+    /// @notice Error thrown when destination is zero address
+    error InvalidDestination();
 
     /**
      * @notice Constructor to initialize the pool with staking contract and depositor
@@ -87,6 +89,9 @@ contract BasePool is IUserPool, ReentrancyGuard {
     function _claim(uint256 epochIndex, address user, address destination) internal {
         if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
+        }
+        if (destination == address(0)) {
+            revert InvalidDestination();
         }
         // AppchainId is unused for BasePool - using 0
         uint256 claimAmount = getClaimableAmount(epochIndex, user, 0);

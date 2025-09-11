@@ -31,6 +31,9 @@ contract AppchainPool is IPool, RewardPoolBase {
         {
             revert InvalidClaimer();
         }
+        if (destination == address(0)) {
+            revert InvalidDestination();
+        }
 
         uint256 amount = getClaimableAmount(epochIndex, appchainId);
         if (amount == 0) revert ClaimNotAvailable();
