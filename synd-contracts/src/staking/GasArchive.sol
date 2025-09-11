@@ -27,6 +27,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     //////////////////////////////////////////////////////////////*/
 
     /// @notice known block hashes for the ETH and SETTLEMENT chains are passed trustlessly via the bridge by a known source
+    // @dev The `BlockHashRelayer` contract is deployed on the settlement chain and is responsible for sending the block hashes to the `GasArchive` contract. Anyone can call `sendBlockHashes` on the relayer to send the block hashes.
     bytes32 public lastKnownEthereumBlockHash;
     bytes32 public lastKnownSettlementChainBlockHash;
     address public blockHashSender;
@@ -38,28 +39,28 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     uint256[] public seqChainIDs;
 
     /// @notice mapping of sequencing chain IDs to the address of the gas aggregator contract
-    mapping(uint256 => address) public seqChainGasAggregatorAddresses;
+    mapping(uint256 chainId => address aggregatorAddress) public seqChainGasAggregatorAddresses;
     /// @notice mapping of sequencing chain IDs to the address of the Outbox contract for that sequencing chain (where the confirmed rollup hash can be found)
-    mapping(uint256 => address) public seqChainEthOutbox;
+    mapping(uint256 chainId => address outboxAddress) public seqChainEthOutbox;
     /// @notice mapping of sequencing chain IDs to the storage slot index of the `roots` mapping in the ABSOutbox contract for that seq chain that lives on ethereum
-    mapping(uint256 => uint256) public seqChainEthSendRootStorageSlot;
+    mapping(uint256 chainId => uint256 sendRootStorageSlotIndex) public seqChainEthSendRootStorageSlot;
     // @notice mapping of sequencing chain IDs to the respective last confirmed block hash
-    mapping(uint256 => bytes32) public lastKnownSeqChainBlockHashes;
+    mapping(uint256 chainId => bytes32 blockHash) public lastKnownSeqChainBlockHashes;
 
     /// @notice tracks which sequencing chains have submitted data for each epoch
-    mapping(uint256 => mapping(uint256 => bool)) public epochChainDataSubmitted;
+    mapping(uint256 epoch => mapping(uint256 chainId => bool submitted)) public epochChainDataSubmitted;
 
     /// @notice tracks which epochs have received data from all expected sequencing chains
-    mapping(uint256 => bool) public epochCompleted;
+    mapping(uint256 epoch => bool completed) public epochCompleted;
 
     /// @notice stores the snapshot of active sequencing chains when first chain submits data for an epoch
-    mapping(uint256 => uint256[]) public epochExpectedChains;
+    mapping(uint256 epoch => uint256[] chainIds) public epochExpectedChains;
 
     /// @notice Validated epoch data
-    mapping(uint256 => uint256) public epochTotalTokensUsed;
-    mapping(uint256 => uint256[]) public epochAppchainIDs;
-    mapping(uint256 => mapping(uint256 => uint256)) public epochAppchainTokensUsed;
-    mapping(uint256 => mapping(uint256 => address)) public epochAppchainEmissionsReceiver;
+    mapping(uint256 epoch => uint256 totalTokens) public epochTotalTokensUsed;
+    mapping(uint256 epoch => uint256[] appchainIds) public epochAppchainIDs;
+    mapping(uint256 epoch => mapping(uint256 appchainId => uint256 tokens)) public epochAppchainTokensUsed;
+    mapping(uint256 epoch => mapping(uint256 appchainId => address receiver)) public epochAppchainEmissionsReceiver;
     // NOTE: if an appchain has different emissions receivers across different sequencing chains, the latest one to be validated will be used
 
     /*//////////////////////////////////////////////////////////////
@@ -190,7 +191,9 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
         uint256[] calldata tokens,
         address[] calldata emissionsReceivers
     ) external {
-        // note: it's not necessary to validate the array lengths match because the GasAggregator already does that
+        // note: we skip validating that appchains.length == tokens.length == emissionsReceivers.length 
+        // because the GasAggregator already enforces this. However, we still need to check for empty arrays
+        // to prevent someone from submitting a proof for an epoch with no data and marking it as "submitted"
         if (appchains.length == 0) revert ZeroLengthArray();
 
         // seq chain header must matches the last confirmed block hash for this sequencing chain
@@ -286,7 +289,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     ) internal pure returns (bytes32) {
         bytes32 storageRoot = _storageRootFromAccountProof(account, stateRoot, accountProof);
 
-        // storage slot must be hashed to be used as the path in the MPT proof
+        // storage slot must be hashed to be used as the path in the Merkle Partricia Trie proof
         bytes32 hashedStorageSlot = keccak256(abi.encode(storageSlot));
         RLPReader.RLPItem memory slotContents = MerklePatriciaProofVerifier.extractProofValue({
             rootHash: storageRoot,

@@ -346,7 +346,7 @@ contract GasArchiveTest is Test {
         bytes[] memory accountProofArray = vm.parseJsonBytesArray(proofJson, ".accountProof");
         bytes[] memory storageProofArray = vm.parseJsonBytesArray(proofJson, ".storageProof[0].proof");
 
-        // RLP encoded block header obtained with the followin rust code:
+        // RLP encoded block header obtained with the following rust code:
         //
         // use alloy::rlp::Encodable;
         // let provider =

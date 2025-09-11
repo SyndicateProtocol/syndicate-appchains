@@ -7,6 +7,7 @@
  *   - https://github.com/lorenzb/proveth/blob/c74b20e/onchain/ProvethVerifier.sol
  * we add a security fix for a vulnerability that was discovered on March 2025:
  *  https://www.chainsecurity.com/blog/when-empty-means-valid-exploiting-mpt-proof-verification-for-an-alternative-truth
+ * the fix is a single line that can be found on line 171 of this file
  */
 pragma solidity >=0.8.12;
 
@@ -167,7 +168,7 @@ library MerklePatriciaProofVerifier {
             }
         }
         // If execution reaches here, the proof was inconclusive or malformed
-        revert("Invalid MPT proof");
+        revert("Invalid MPT proof"); // fix for the vulnerability found on March 2025
     }
 
     /// @dev Computes the hash of the Merkle-Patricia-Trie hash of the RLP item.
