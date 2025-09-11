@@ -33,7 +33,7 @@ contract BlockHashRelayer is AccessControl {
     IArbInbox public immutable arbInbox;
     IERC20 public immutable syndToken;
 
-    uint256 gasLimit = 73829;
+    uint256 gasLimit = 100_000;
     uint256 maxFeePerGas = 0.1 gwei;
 
     error InsufficientAllowance(uint256 allowance, uint256 amount);
@@ -66,9 +66,11 @@ contract BlockHashRelayer is AccessControl {
 
         bytes32 ethBlockHash = IL1Block(L1_BLOCK_ADDRESS).hash();
         bytes32 baseBlockHash = blockhash(block.number - 1);
+        uint256 blockNumber = block.number - 1;
 
         // Encode the call to the GasArchive contract
-        bytes memory callData = abi.encodeCall(GasArchive.setLastKnownBlockHashes, (ethBlockHash, baseBlockHash));
+        bytes memory callData =
+            abi.encodeCall(GasArchive.setLastKnownBlockHashes, (ethBlockHash, baseBlockHash, blockNumber));
 
         address destination = _gasArchive;
         uint256 l2CallValue = 0; // the value of the transaction on the rollup - 0 because we don't want to send any tokens to the target

@@ -163,7 +163,7 @@ contract GasArchiveTest is Test {
 
     function testSetLastKnownBlockHashes() public {
         vm.prank(blockHashSender);
-        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 1);
 
         assertEq(gasArchive.lastKnownEthereumBlockHash(), TEST_ETH_BLOCK_HASH);
         assertEq(gasArchive.lastKnownSettlementChainBlockHash(), TEST_SETTLEMENT_BLOCK_HASH);
@@ -172,7 +172,33 @@ contract GasArchiveTest is Test {
     function testSetLastKnownBlockHashesUnauthorized() public {
         vm.prank(user);
         vm.expectRevert(GasArchive.NotBlockHashSender.selector);
-        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 1);
+    }
+
+    function testSetLastKnownBlockHashesInvalidBlockNumber() public {
+        // First set with block number 5
+        vm.prank(blockHashSender);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 5);
+
+        assertEq(gasArchive.lastKnownSettlementChainBlockNumber(), 5);
+
+        // Try to set with same block number - should revert
+        vm.prank(blockHashSender);
+        vm.expectRevert(GasArchive.OldSettlementChainBlockNumber.selector);
+        gasArchive.setLastKnownBlockHashes(keccak256("new_eth"), keccak256("new_settlement"), 5);
+
+        // Try to set with lower block number - should revert
+        vm.prank(blockHashSender);
+        vm.expectRevert(GasArchive.OldSettlementChainBlockNumber.selector);
+        gasArchive.setLastKnownBlockHashes(keccak256("new_eth"), keccak256("new_settlement"), 3);
+
+        // Setting with higher block number should succeed
+        vm.prank(blockHashSender);
+        gasArchive.setLastKnownBlockHashes(keccak256("new_eth"), keccak256("new_settlement"), 10);
+
+        assertEq(gasArchive.lastKnownSettlementChainBlockNumber(), 10);
+        assertEq(gasArchive.lastKnownEthereumBlockHash(), keccak256("new_eth"));
+        assertEq(gasArchive.lastKnownSettlementChainBlockHash(), keccak256("new_settlement"));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -298,7 +324,7 @@ contract GasArchiveTest is Test {
     function testConfirmEpochDataHashSuccess() public {
         // Setup: Set block hashes
         vm.prank(blockHashSender);
-        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 1);
 
         uint256[] memory appchains = new uint256[](2);
         appchains[0] = APPCHAIN_ID_1;
@@ -446,7 +472,7 @@ contract GasArchiveTest is Test {
             hex"f90262a0605defa624498989bf665b3a40ae020f887dcfe2416d768c9d42a5f19b22fcc1a01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347940000000000000000000000000000000000000000a00d663178efa9bfb74511ae198171076765cdde527748f2b403dc0098f8b5a77ca07b6f777b47600b2184243dd7a8acd4718ac39b7cacff19d7cc7e4859d7b4babda0a4eb1fbd62f3905dbeead463382bd44cadbb8aab9c8ca947071cecded7cf7b51b901000000000400000000040000000000000040000000000000000080000000000000000000000000000000000000000000001000000000004020000000000004000100000000000000000000000000000200000100000004000000000000000000000000000002000000000000010080080000000480000000000000000400000040000000000000000000080000000000000000000000008000000000000080000000000000000000000000000200000000000000000000000000100000000000000000002000000020000000000000180000000000240c000100000008000060000000000000000000000000000000000000000000000000c0000000000000000080028401c9c3808325da7a8468b97c7980a01735d51a6bf99e813a40505ea196a5b79e0ab7d9d0dfb579ecee9499bccca784880000000000000000843455cb4aa056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b4218080a00000000000000000000000000000000000000000000000000000000000000000a0e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
         vm.prank(blockHashSender);
-        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 1);
         gasArchive.setLastKnownSeqChainBlockHashForTesting(
             SEQ_CHAIN_ID, 0x55c3e74a2dec0e3d150636b57e5c988c570215255b1b7670e9366914ba597018
         );
@@ -564,7 +590,7 @@ contract GasArchiveTest is Test {
 
         // Set the last known Ethereum block hash (this would come from the bridge in practice)
         vm.prank(blockHashSender);
-        gasArchive.setLastKnownBlockHashes(ethereumBlockHash, keccak256("set chain bloch hash"));
+        gasArchive.setLastKnownBlockHashes(ethereumBlockHash, keccak256("set chain bloch hash"), 1);
 
         gasArchive.confirmSequencingChainBlockHash(
             arbNovaChainId, sendRoot, ethBlockHeaderRLP, accountProofArray, storageProofArray
@@ -589,7 +615,7 @@ contract GasArchiveTest is Test {
 
         // Set ethereum block hash first to avoid InvalidEthereumBlockHeader
         vm.prank(blockHashSender);
-        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 1);
 
         // We need to create a header that when hashed equals TEST_ETH_BLOCK_HASH
         // Since TEST_ETH_BLOCK_HASH = keccak256("eth_block"), we use that exact data
@@ -610,7 +636,7 @@ contract GasArchiveTest is Test {
 
         // Set ethereum block hash first to avoid InvalidEthereumBlockHeader
         vm.prank(blockHashSender);
-        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 1);
 
         bytes memory mockEthHeader = "eth_block";
         bytes[] memory mockAccountProof = new bytes[](0);
@@ -771,7 +797,7 @@ contract GasArchiveTest is Test {
 
         // Set up block hashes for all chains
         vm.prank(blockHashSender);
-        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 1);
         gasArchive.setLastKnownSeqChainBlockHashForTesting(SEQ_CHAIN_ID, TEST_SEQ_BLOCK_HASH);
         gasArchive.setLastKnownSeqChainBlockHashForTesting(chain2, keccak256("chain2_block"));
         gasArchive.setLastKnownSeqChainBlockHashForTesting(chain3, keccak256("chain3_block"));
@@ -1057,6 +1083,6 @@ contract GasArchiveTest is Test {
         // Test that blockHashSender can only set block hashes
         vm.prank(user);
         vm.expectRevert(GasArchive.NotBlockHashSender.selector);
-        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH, 1);
     }
 }

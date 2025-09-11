@@ -30,6 +30,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     // @dev The `BlockHashRelayer` contract is deployed on the settlement chain and is responsible for sending the block hashes to the `GasArchive` contract. Anyone can call `sendBlockHashes` on the relayer to send the block hashes.
     bytes32 public lastKnownEthereumBlockHash;
     bytes32 public lastKnownSettlementChainBlockHash;
+    uint256 public lastKnownSettlementChainBlockNumber;
     address public blockHashSender;
 
     /// @notice when using the settlement chain as the sequencing chain, the rollup hash proof is not required and `lastKnownSettlementChainBlockHash` will be used intead
@@ -95,6 +96,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     error EpochAlreadyCompleted();
     error AlreadySubmitted();
     error EmptyDataHash();
+    error OldSettlementChainBlockNumber();
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -131,10 +133,18 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     /// @dev This function is called by the block hash sender on the settlement chain to share the last known block hashes
     /// @param ethBlockHash The last known block hash for the ETH chain
     /// @param settlementBlockHash The last known block hash for the SETTLEMENT chain
-    function setLastKnownBlockHashes(bytes32 ethBlockHash, bytes32 settlementBlockHash) external {
+    /// @param settlementBlockNumber The block number for the settlement chain block
+    function setLastKnownBlockHashes(bytes32 ethBlockHash, bytes32 settlementBlockHash, uint256 settlementBlockNumber)
+        external
+    {
         if (msg.sender != blockHashSender) revert NotBlockHashSender();
+
+        // Ensure block number is always increasing
+        if (settlementBlockNumber <= lastKnownSettlementChainBlockNumber) revert OldSettlementChainBlockNumber();
+
         lastKnownEthereumBlockHash = ethBlockHash;
         lastKnownSettlementChainBlockHash = settlementBlockHash;
+        lastKnownSettlementChainBlockNumber = settlementBlockNumber;
     }
 
     /// @notice Confirms and stores a sequencing chain block hash using Ethereum storage proofs
