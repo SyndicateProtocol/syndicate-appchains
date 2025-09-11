@@ -86,6 +86,7 @@ contract GasArchiveTest is Test {
     event EpochCompleted(uint256 indexed epoch);
     event EpochExpectedChainsUpdated(uint256 indexed epoch, uint256[] chainIds);
     event GasAggregatorAddressUpdated(address indexed oldAddress, address indexed newAddress);
+    event LastKnownBlockHashesUpdated(bytes32 ethBlockHash, bytes32 settlementBlockHash, uint256 settlementBlockNumber);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -192,7 +193,10 @@ contract GasArchiveTest is Test {
         vm.expectRevert(GasArchive.OldSettlementChainBlockNumber.selector);
         gasArchive.setLastKnownBlockHashes(keccak256("new_eth"), keccak256("new_settlement"), 3);
 
-        // Setting with higher block number should succeed
+        // Setting with higher block number should succeed and emit event
+        vm.expectEmit(true, true, true, true);
+        emit LastKnownBlockHashesUpdated(keccak256("new_eth"), keccak256("new_settlement"), 10);
+
         vm.prank(blockHashSender);
         gasArchive.setLastKnownBlockHashes(keccak256("new_eth"), keccak256("new_settlement"), 10);
 

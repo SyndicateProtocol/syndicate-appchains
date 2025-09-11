@@ -75,6 +75,7 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
     event EpochCompleted(uint256 indexed epoch);
     event EpochExpectedChainsUpdated(uint256 indexed epoch, uint256[] chainIds);
     event GasAggregatorAddressUpdated(address indexed oldAddress, address indexed newAddress);
+    event LastKnownBlockHashesUpdated(bytes32 ethBlockHash, bytes32 settlementBlockHash, uint256 settlementBlockNumber);
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
@@ -145,6 +146,9 @@ contract GasArchive is Initializable, AccessControlUpgradeable, IGasDataProvider
         lastKnownEthereumBlockHash = ethBlockHash;
         lastKnownSettlementChainBlockHash = settlementBlockHash;
         lastKnownSettlementChainBlockNumber = settlementBlockNumber;
+        emit LastKnownBlockHashesUpdated(
+            lastKnownEthereumBlockHash, lastKnownSettlementChainBlockHash, lastKnownSettlementChainBlockNumber
+        );
     }
 
     /// @notice Confirms and stores a sequencing chain block hash using Ethereum storage proofs

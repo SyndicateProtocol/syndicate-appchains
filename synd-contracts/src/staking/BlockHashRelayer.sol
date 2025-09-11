@@ -59,9 +59,6 @@ contract BlockHashRelayer is AccessControl {
     /// @notice Sends Ethereum and Base block hashes to the L3 contract
     function sendBlockHashes(address _gasArchive, uint256 _gasLimit, uint256 _maxFeePerGas) public {
         uint256 syndAmount = _gasLimit * _maxFeePerGas;
-
-        uint256 syndAllowance = syndToken.allowance(msg.sender, address(this));
-        if (syndAllowance < syndAmount) revert InsufficientAllowance(syndAllowance, syndAmount);
         syndToken.transferFrom(msg.sender, address(this), syndAmount);
 
         bytes32 ethBlockHash = IL1Block(L1_BLOCK_ADDRESS).hash();
