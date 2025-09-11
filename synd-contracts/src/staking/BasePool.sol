@@ -131,6 +131,9 @@ contract BasePool is IUserPool, ReentrancyGuard {
     /**
      * @notice Calculates the claimable reward amount for a user in a specific epoch
      * @dev Returns the amount of rewards the user can claim for the given epoch, based on their stake share and any previously claimed amount.
+     * @dev Uses integer division which may result in small precision loss (dust) when
+     *      reward amounts are not evenly divisible. This is expected behavior to maintain
+     *      gas efficiency. Dust amounts are typically negligible in normal operations.
      * @param epochIndex The epoch index to query
      * @param user The address of the user
      * @param appchainId This field is unused for BasePool
