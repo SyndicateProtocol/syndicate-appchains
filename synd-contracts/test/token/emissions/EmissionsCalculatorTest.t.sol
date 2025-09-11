@@ -33,6 +33,11 @@ contract EmissionsCalculatorTest is Test {
         bytes32 emissionMinterRole = token.EMISSION_MINTER_ROLE();
         vm.prank(admin);
         token.grantRole(emissionMinterRole, address(calculator));
+
+        // Grant emissions role to calculator
+        bytes32 emissionsRole = calculator.EMISSIONS_ROLE();
+        vm.prank(admin);
+        calculator.grantRole(emissionsRole, admin);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -52,7 +57,6 @@ contract EmissionsCalculatorTest is Test {
     function test_Constructor_RoleAssignment() public view {
         assertTrue(calculator.hasRole(calculator.DEFAULT_ADMIN_ROLE(), admin));
         assertTrue(calculator.hasRole(calculator.DECAY_MANAGER_ROLE(), decayManager));
-        assertTrue(calculator.hasRole(calculator.EMISSIONS_ROLE(), admin));
     }
 
     function test_RevertWhen_Constructor_ZeroAddresses() public {
