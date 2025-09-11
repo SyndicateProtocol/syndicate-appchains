@@ -320,14 +320,7 @@ contract GasArchiveTest is Test {
         // This will revert because we don't have a valid block header
         vm.expectRevert(GasArchive.InvalidSeqChainBlockHeader.selector);
         gasArchive.confirmEpochDataHash(
-            EPOCH,
-            SEQ_CHAIN_ID,
-            abi.encode("mock_header"),
-            mockAccountProof,
-            mockStorageProof,
-            appchains,
-            tokens,
-            emissionsReceivers
+            EPOCH, SEQ_CHAIN_ID, abi.encode("mock_header"), mockAccountProof, mockStorageProof
         );
 
         // NOTE: the proof on `./fixtures/epochDataHash.json` was generated using a local anvil node and the following data:
@@ -364,22 +357,21 @@ contract GasArchiveTest is Test {
             SEQ_CHAIN_ID, 0x55c3e74a2dec0e3d150636b57e5c988c570215255b1b7670e9366914ba597018
         );
 
-        // Now the test should pass with valid proofs
         vm.expectEmit(true, false, false, true);
         emit EpochDataValidated(EPOCH, SEQ_CHAIN_ID, bytes32(vm.parseJsonBytes(proofJson, ".storageProof[0].value")));
 
-        gasArchive.confirmEpochDataHash(
-            EPOCH,
-            SEQ_CHAIN_ID,
-            seqChainHeader,
-            accountProofArray,
-            storageProofArray,
-            appchains,
-            tokens,
-            emissionsReceivers
-        );
+        gasArchive.confirmEpochDataHash(EPOCH, SEQ_CHAIN_ID, seqChainHeader, accountProofArray, storageProofArray);
 
-        // Assert the epoch data was stored correctly
+        // Test resubmission prevention for confirmEpochDataHash
+        vm.expectRevert(GasArchive.AlreadySubmitted.selector);
+        gasArchive.confirmEpochDataHash(EPOCH, SEQ_CHAIN_ID, seqChainHeader, accountProofArray, storageProofArray);
+
+        // At this point, the epoch data hash is verified but epoch is not yet completed
+        assertFalse(gasArchive.epochCompleted(EPOCH), "Epoch should not be completed yet");
+
+        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, appchains, tokens, emissionsReceivers);
+
+        // Now the epoch should be completed
         assertTrue(gasArchive.epochCompleted(EPOCH), "Epoch should be marked as completed");
 
         // Check total gas fees
@@ -407,26 +399,30 @@ contract GasArchiveTest is Test {
             "Appchain 456 receiver should be 0x456"
         );
 
-        // Test resubmission prevention - second submission with same parameters should revert
+        // Test resubmission prevention for confirmEpochDataHash (after the data has been submitted and the datahash deleted from storage)
         vm.expectRevert(GasArchive.AlreadySubmitted.selector);
-        gasArchive.confirmEpochDataHash(
-            EPOCH,
-            SEQ_CHAIN_ID,
-            seqChainHeader,
-            accountProofArray,
-            storageProofArray,
-            appchains,
-            tokens,
-            emissionsReceivers
-        );
+        gasArchive.confirmEpochDataHash(EPOCH, SEQ_CHAIN_ID, seqChainHeader, accountProofArray, storageProofArray);
 
-        // Verify that the numbers haven't been inflated after the failed resubmission
+        // Test resubmission prevention for submitEpochPreImageData
+        vm.expectRevert(GasArchive.AlreadySubmitted.selector);
+        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, appchains, tokens, emissionsReceivers);
+
+        // Verify that the numbers haven't been inflated after the failed resubmissions
         assertEq(gasArchive.getTotalGasFees(EPOCH), 300, "Total gas fees should still be 100 + 200 = 300");
         assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_1), 100, "Appchain 123 should still have 100 tokens");
         assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_2), 200, "Appchain 456 should still have 200 tokens");
     }
 
     function testConfirmEpochDataHashInvalidSeqChainBlockHeader() public {
+        bytes memory mockHeader = abi.encode("invalid_header");
+        bytes[] memory mockAccountProof = new bytes[](0);
+        bytes[] memory mockStorageProof = new bytes[](0);
+
+        vm.expectRevert(GasArchive.InvalidSeqChainBlockHeader.selector);
+        gasArchive.confirmEpochDataHash(EPOCH, SEQ_CHAIN_ID, mockHeader, mockAccountProof, mockStorageProof);
+    }
+
+    function testSubmitEpochPreImageDataWithoutVerifiedHash() public {
         uint256[] memory appchains = new uint256[](1);
         appchains[0] = APPCHAIN_ID_1;
 
@@ -436,14 +432,40 @@ contract GasArchiveTest is Test {
         address[] memory emissionsReceivers = new address[](1);
         emissionsReceivers[0] = makeAddr("receiver1");
 
-        bytes memory mockHeader = abi.encode("invalid_header");
-        bytes[] memory mockAccountProof = new bytes[](0);
-        bytes[] memory mockStorageProof = new bytes[](0);
+        // Should revert if no verified hash exists
+        vm.expectRevert(GasArchive.InvalidData.selector);
+        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, appchains, tokens, emissionsReceivers);
+    }
 
-        vm.expectRevert(GasArchive.InvalidSeqChainBlockHeader.selector);
-        gasArchive.confirmEpochDataHash(
-            EPOCH, SEQ_CHAIN_ID, mockHeader, mockAccountProof, mockStorageProof, appchains, tokens, emissionsReceivers
+    function testSubmitEpochPreImageDataWithIncorrectData() public {
+        // First, set up a verified epoch data hash
+        string memory proofJson = vm.readFile("./test/staking/fixtures/gasAggregatorEpochDataHashProof.json");
+        bytes[] memory accountProofArray = vm.parseJsonBytesArray(proofJson, ".accountProof");
+        bytes[] memory storageProofArray = vm.parseJsonBytesArray(proofJson, ".storageProof[0].proof");
+        bytes memory seqChainHeader =
+            hex"f90262a0605defa624498989bf665b3a40ae020f887dcfe2416d768c9d42a5f19b22fcc1a01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347940000000000000000000000000000000000000000a00d663178efa9bfb74511ae198171076765cdde527748f2b403dc0098f8b5a77ca07b6f777b47600b2184243dd7a8acd4718ac39b7cacff19d7cc7e4859d7b4babda0a4eb1fbd62f3905dbeead463382bd44cadbb8aab9c8ca947071cecded7cf7b51b901000000000400000000040000000000000040000000000000000080000000000000000000000000000000000000000000001000000000004020000000000004000100000000000000000000000000000200000100000004000000000000000000000000000002000000000000010080080000000480000000000000000400000040000000000000000000080000000000000000000000008000000000000080000000000000000000000000000200000000000000000000000000100000000000000000002000000020000000000000180000000000240c000100000008000060000000000000000000000000000000000000000000000000c0000000000000000080028401c9c3808325da7a8468b97c7980a01735d51a6bf99e813a40505ea196a5b79e0ab7d9d0dfb579ecee9499bccca784880000000000000000843455cb4aa056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b4218080a00000000000000000000000000000000000000000000000000000000000000000a0e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+        vm.prank(blockHashSender);
+        gasArchive.setLastKnownBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+        gasArchive.setLastKnownSeqChainBlockHashForTesting(
+            SEQ_CHAIN_ID, 0x55c3e74a2dec0e3d150636b57e5c988c570215255b1b7670e9366914ba597018
         );
+
+        // Confirm epoch data hash
+        gasArchive.confirmEpochDataHash(EPOCH, SEQ_CHAIN_ID, seqChainHeader, accountProofArray, storageProofArray);
+
+        // Now try to submit incorrect pre-image data
+        uint256[] memory wrongAppchains = new uint256[](1);
+        wrongAppchains[0] = 999; // Different from the fixture data
+
+        uint256[] memory wrongTokens = new uint256[](1);
+        wrongTokens[0] = 999; // Different from the fixture data
+
+        address[] memory wrongEmissionsReceivers = new address[](1);
+        wrongEmissionsReceivers[0] = makeAddr("wrongReceiver");
+
+        vm.expectRevert(GasArchive.InvalidData.selector);
+        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, wrongAppchains, wrongTokens, wrongEmissionsReceivers);
     }
 
     /*//////////////////////////////////////////////////////////////
