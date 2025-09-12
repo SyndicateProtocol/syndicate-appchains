@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - main
+      - staging
   # Only run on PRs that touch shared contracts
   pull_request:
 

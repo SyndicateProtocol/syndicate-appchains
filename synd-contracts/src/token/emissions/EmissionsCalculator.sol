@@ -125,7 +125,6 @@ contract EmissionsCalculator is AccessControl {
         // Grant roles
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(DECAY_MANAGER_ROLE, decayManager);
-        _grantRole(EMISSIONS_ROLE, defaultAdmin);
     }
 
     /*//////////////////////////////////////////////////////////////

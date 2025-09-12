@@ -33,8 +33,8 @@
                 "GenesisBlockNum": 0,
                 "MaxCodeSize": 0,
                 "MaxInitCodeSize": 0,
-                "Syndicate": true,
-                "InitialChainOwner": "0xREPLACEME"
+                "InitialChainOwner": "0xa20954D3bB996B098Ad86f9976BcBD13cF384D1C",
+                "Syndicate": true
             },
             "chainId": 510003
         },
@@ -44,7 +44,7 @@
             "sequencer-inbox": "0x0000000000000000000000000000000000511000",
             "deployed-at": 1,
             "rollup": "0x0000000000000000000000000000000000000000",
-            "native-token": "0xREPLACEME",
+            "native-token": "0x11dC28D01984079b7efE7763b533e6ed9E3722B9",
             "upgrade-executor": "0x0000000000000000000000000000000000000000",
             "validator-wallet-creator": "0x0000000000000000000000000000000000000000"
         }

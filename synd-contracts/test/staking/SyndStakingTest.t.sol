@@ -851,7 +851,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -883,8 +883,8 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool1)});
-        claims[1] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool2)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool1), appchainId: 0});
+        claims[1] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool2), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -925,8 +925,8 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
-        claims[1] = SyndStaking.ClaimRequest({epochIndex: 3, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
+        claims[1] = SyndStaking.ClaimRequest({epochIndex: 3, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -962,7 +962,7 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 user1InitialBalance = address(user1).balance;
         uint256 user2InitialBalance = address(user2).balance;
@@ -1004,7 +1004,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         vm.startPrank(user1);
         vm.expectRevert(BasePool.ClaimNotAvailable.selector);
@@ -1023,7 +1023,7 @@ contract SyndStakingTest is Test {
 
         // Try to claim from current epoch (should fail)
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 1, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 1, poolAddress: address(pool), appchainId: 0});
 
         vm.startPrank(user1);
         vm.expectRevert(BasePool.ClaimNotAvailable.selector);
@@ -1050,7 +1050,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         address destination = makeAddr("destination");
         uint256 initialBalance = destination.balance;
@@ -1082,7 +1082,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         // The function should be protected against reentrancy
         vm.startPrank(user1);
@@ -1114,7 +1114,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -1124,6 +1124,34 @@ contract SyndStakingTest is Test {
 
         // User should get rewards based on their stake share (50 ether full stake + stake share)
         assertEq(address(user1).balance, initialBalance + 60 ether);
+    }
+
+    function test_claimAllRewards_zero_destination() public {
+        // Deploy a pool
+        BasePool pool = new BasePool(address(staking));
+
+        // Setup stake
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Deposit rewards to pool
+        pool.deposit{value: 50 ether}(2);
+
+        // Move to next epoch so we can claim from epoch 2
+        stepEpoch(1);
+
+        // Create claim request
+        SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
+
+        // Test that claiming to zero address reverts
+        vm.startPrank(user1);
+        vm.expectRevert(SyndStaking.InvalidDestination.selector);
+        staking.claimAllRewards(claims, address(0));
+        vm.stopPrank();
     }
 
     // ==================== PAUSABLE FUNCTIONALITY TESTS ====================
@@ -1188,7 +1216,7 @@ contract SyndStakingTest is Test {
         // Test stageStakeTransfer reverts when paused
         vm.startPrank(user1);
         vm.expectRevert();
-        staking.stageStakeTransfer{value: 0}(appchainId1, appchainId2, 25 ether);
+        staking.stageStakeTransfer(appchainId1, appchainId2, 25 ether);
         vm.stopPrank();
 
         // Unpause the contract
@@ -1329,5 +1357,56 @@ contract SyndStakingTest is Test {
         vm.startPrank(address(attacker));
         staking.withdraw(2, address(attacker));
         vm.stopPrank();
+    }
+}
+
+contract H04_MissingFinalizationForDestinationAppchain_PoC is Test {
+    SyndStaking public staking;
+    address public user;
+    uint256 public appchainA;
+    uint256 public appchainB;
+
+    function setUp() public {
+        user = makeAddr("user");
+        appchainA = 1;
+        appchainB = 2;
+        staking = new SyndStaking(address(this));
+        vm.deal(user, 100 ether);
+        vm.warp(staking.START_TIMESTAMP());
+    }
+
+    function test_missing_finalization_for_destination_appchain() public {
+        // User stakes 50 ether in appchainA in epoch 1
+        vm.startPrank(user);
+        staking.stakeSynd{value: 50 ether}(appchainA);
+        vm.stopPrank();
+
+        // Move to epoch 2
+        vm.warp(block.timestamp + 30 days);
+
+        // Check initial finalization status before transfer
+        uint256 appchainA_finalized_before = staking.appchainFinalizedEpochCount(appchainA);
+        uint256 appchainB_finalized_before = staking.appchainFinalizedEpochCount(appchainB);
+
+        // User transfers 20 ether from appchainA to appchainB in epoch 2
+        vm.startPrank(user);
+        staking.stageStakeTransfer(appchainA, appchainB, 20 ether);
+        vm.stopPrank();
+
+        // Check finalization status after transfer
+        uint256 appchainA_finalized_after = staking.appchainFinalizedEpochCount(appchainA);
+        uint256 appchainB_finalized_after = staking.appchainFinalizedEpochCount(appchainB);
+
+        // The bug: stageStakeTransfer finalizes source appchain but not destination
+        assertTrue(
+            appchainA_finalized_after > appchainA_finalized_before, "appchainA should be more finalized after transfer"
+        );
+        assertTrue(
+            appchainB_finalized_after > appchainB_finalized_before,
+            "appchainB finalization should also be more after transfer"
+        );
+
+        assertEq(staking.appchainFinalizedEpochCount(appchainA), 2, "appchainA should be finalized to epoch 2");
+        assertEq(staking.appchainFinalizedEpochCount(appchainB), 2, "appchainB should be finalized to epoch 2");
     }
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {IPool} from "./IPool.sol";
-import {ISyndStaking} from "./ISyndStaking.sol";
+import {IPool} from "./interfaces/IPool.sol";
+import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
