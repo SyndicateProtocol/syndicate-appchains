@@ -1359,3 +1359,54 @@ contract SyndStakingTest is Test {
         vm.stopPrank();
     }
 }
+
+contract H04_MissingFinalizationForDestinationAppchain_PoC is Test {
+    SyndStaking public staking;
+    address public user;
+    uint256 public appchainA;
+    uint256 public appchainB;
+
+    function setUp() public {
+        user = makeAddr("user");
+        appchainA = 1;
+        appchainB = 2;
+        staking = new SyndStaking(address(this));
+        vm.deal(user, 100 ether);
+        vm.warp(staking.START_TIMESTAMP());
+    }
+
+    function test_missing_finalization_for_destination_appchain() public {
+        // User stakes 50 ether in appchainA in epoch 1
+        vm.startPrank(user);
+        staking.stakeSynd{value: 50 ether}(appchainA);
+        vm.stopPrank();
+
+        // Move to epoch 2
+        vm.warp(block.timestamp + 30 days);
+
+        // Check initial finalization status before transfer
+        uint256 appchainA_finalized_before = staking.appchainFinalizedEpochCount(appchainA);
+        uint256 appchainB_finalized_before = staking.appchainFinalizedEpochCount(appchainB);
+
+        // User transfers 20 ether from appchainA to appchainB in epoch 2
+        vm.startPrank(user);
+        staking.stageStakeTransfer(appchainA, appchainB, 20 ether);
+        vm.stopPrank();
+
+        // Check finalization status after transfer
+        uint256 appchainA_finalized_after = staking.appchainFinalizedEpochCount(appchainA);
+        uint256 appchainB_finalized_after = staking.appchainFinalizedEpochCount(appchainB);
+
+        // The bug: stageStakeTransfer finalizes source appchain but not destination
+        assertTrue(
+            appchainA_finalized_after > appchainA_finalized_before, "appchainA should be more finalized after transfer"
+        );
+        assertTrue(
+            appchainB_finalized_after > appchainB_finalized_before,
+            "appchainB finalization should also be more after transfer"
+        );
+
+        assertEq(staking.appchainFinalizedEpochCount(appchainA), 2, "appchainA should be finalized to epoch 2");
+        assertEq(staking.appchainFinalizedEpochCount(appchainB), 2, "appchainB should be finalized to epoch 2");
+    }
+}
