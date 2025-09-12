@@ -16,6 +16,9 @@ jobs:
     runs-on: shared-medium-01
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for full diff detection
+          submodules: recursive
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
