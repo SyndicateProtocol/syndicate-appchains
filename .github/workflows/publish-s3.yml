@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'S3 object version tag (e.g., v1.2.3, v0.10.15-dev.1)'
+        description: "S3 object version tag (e.g., v1.2.3, v0.10.15-dev.1)"
         required: true
         type: string
 
@@ -23,15 +23,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build synd-withdrawals/server
-        run: |
-          cd synd-withdrawals/server
-          docker build --output=. .
-
       - name: Pull submodules
         run: |
           cd synd-withdrawals/synd-enclave && \
           git submodule update --init --recursive
+
+      - name: Build synd-withdrawals/server
+        run: |
+          cd synd-withdrawals/server
+          docker build --output=. .
 
       - name: Build eif.bin file
         run: |
