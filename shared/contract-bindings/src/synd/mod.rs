@@ -157,6 +157,7 @@ pub mod r#i_upgrade_executor;
 pub mod r#i_votes;
 pub mod r#initializable;
 pub mod r#instructions;
+pub mod r#il2_relayer;
 pub mod r#iop_bridge;
 pub mod r#iop_message_relayer;
 pub mod r#l1_relayer;
