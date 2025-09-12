@@ -21,9 +21,13 @@ abstract contract EpochTracker {
     /**
      * @notice Get the current epoch index based on the current block timestamp
      * @dev Epochs are 1-indexed to ensure proper initialization of finalization counts
-     * @return The current epoch index (1-based)
+     * @dev Returns 0 if called before START_TIMESTAMP to prevent underflow
+     * @return The current epoch index (1-based), or 0 if before start time
      */
     function getCurrentEpoch() public view returns (uint256) {
+        if (block.timestamp < START_TIMESTAMP) {
+            return 0;
+        }
         // Since all the epoch finalization counts are initialized to 0,
         // we start the epochs at 1 to make sure we will finalize the first epoch.
         return ((block.timestamp - START_TIMESTAMP) / EPOCH_DURATION) + 1;
