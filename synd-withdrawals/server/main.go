@@ -31,7 +31,6 @@ var pool = sync.Pool{
 		conn, err := vsock.Dial(16, 1234, &vsock.Config{})
 		if err != nil {
 			slog.Error("Error dialing vsock", "error", err)
-			return nil
 		}
 		return conn
 	},
@@ -47,8 +46,8 @@ type EnclaveRequest struct {
 type RequestData struct {
 	Jsonrpc string          `json:"jsonrpc"`
 	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params"`
-	Id      json.RawMessage `json:"id"`
+	Params  json.RawMessage `json:"params,omitempty"`
+	Id      json.RawMessage `json:"id,omitempty"`
 }
 
 var requestChan = make(chan EnclaveRequest)
@@ -101,8 +100,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	var reqData RequestData
 
-	if err := json.Unmarshal(req, &reqData); err != nil || reqData.Jsonrpc != "2.0" {
-		slog.Error("Error unmarshalling request", "error", err, "jsonrpc", reqData.Jsonrpc)
+	if err := json.Unmarshal(req, &reqData); err != nil || reqData.Jsonrpc != "2.0" || len(reqData.Method) == 0 || len(reqData.Id) == 0 {
+		slog.Error("Error unmarshalling request", "error", err, "request", string(req))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -136,21 +135,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	var m map[string]json.RawMessage
 	if raw != nil {
-		m := make(map[string]json.RawMessage)
 		if err := json.Unmarshal(raw, &m); err != nil {
-			slog.Error("failed to unmarshal response")
+			slog.Error("Failed to unmarshal response", "error", err, "response", string(raw))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		if !bytes.Equal(m["id"], json.RawMessage(RequestID)) {
-			slog.Error("unexpected response id", "response_id", string(m["id"]), "request_id", string(RequestID))
+			slog.Error("Unexpected response id", "response_id", string(m["id"]), "request_id", string(RequestID))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		m["id"] = reqId
 	}
 
-	if ctx.Err() != nil {
+	if err := ctx.Err(); err != nil {
 		if raw != nil && cacheKey != (common.Hash{}) {
 			slog.Warn("Request timed out: storing to cache instead", "error", err)
 			cache.Set(cacheKey, raw, ttlcache.DefaultTTL)
@@ -212,7 +210,7 @@ func main() {
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+		w.Write([]byte("ok"))
 	})
 
 	http.HandleFunc("/", handler)
