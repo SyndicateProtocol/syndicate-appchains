@@ -28,20 +28,18 @@ var cache = ttlcache.New(
 
 var pool = sync.Pool{
 	New: func() any {
-		conn, err := vsock.Dial(16, 1234, &vsock.Config{})
-		if err != nil {
-			slog.Error("Error dialing vsock", "error", err)
-			return nil
-		}
-		return conn
+		// Pool's New function should not return nil as it causes type assertion panics
+		// We'll handle connection creation in processEnclaveRequest instead
+		return (*vsock.Conn)(nil)
 	},
 }
 
 type EnclaveRequest struct {
-	request  []byte
-	cacheKey common.Hash
-	ctx      context.Context
-	response chan<- json.RawMessage
+	request    []byte
+	cacheKey   common.Hash
+	httpCtx    context.Context // HTTP request context for timeout detection
+	enclaveCtx context.Context // Detached context for enclave computation
+	response   chan<- json.RawMessage
 }
 
 type RequestData struct {
@@ -54,10 +52,17 @@ type RequestData struct {
 var requestChan = make(chan EnclaveRequest)
 
 func processEnclaveRequest(req []byte) json.RawMessage {
-	conn := pool.Get().(*vsock.Conn)
-	if conn == nil {
-		slog.Error("Error getting vsock connection from pool")
-		return nil
+	// Safely get connection from pool with proper type checking
+	poolItem := pool.Get()
+	conn, ok := poolItem.(*vsock.Conn)
+	if !ok || conn == nil {
+		// Try to create a new connection directly
+		newConn, err := vsock.Dial(16, 1234, &vsock.Config{})
+		if err != nil {
+			slog.Error("Error creating new vsock connection", "error", err)
+			return nil
+		}
+		conn = newConn
 	}
 
 	defer func() {
@@ -81,7 +86,10 @@ func processEnclaveRequest(req []byte) json.RawMessage {
 		return nil
 	}
 
-	pool.Put(conn)
+	// Only put back healthy connections
+	if conn != nil {
+		pool.Put(conn)
+	}
 	conn = nil
 	return raw
 }
@@ -127,7 +135,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			raw = entry.Value()
 		} else {
 			responseChan := make(chan json.RawMessage)
-			requestChan <- EnclaveRequest{request: req, ctx: ctx, cacheKey: cacheKey, response: responseChan}
+			// Use detached context for enclave computation to allow background processing
+			enclaveCtx := context.Background()
+			requestChan <- EnclaveRequest{
+				request:    req,
+				httpCtx:    ctx,
+				enclaveCtx: enclaveCtx,
+				cacheKey:   cacheKey,
+				response:   responseChan,
+			}
 			raw = <-responseChan
 		}
 	} else {
@@ -192,13 +208,34 @@ func main() {
 			if entry := cache.Get(req.cacheKey); entry != nil {
 				slog.Debug("Found entry in cache")
 				req.response <- entry.Value()
-			} else if err := req.ctx.Err(); err != nil {
-				slog.Warn("Request timed out in queue", "error", err)
-				req.response <- nil
-			} else {
-				req.response <- processEnclaveRequest(req.request)
+				close(req.response)
+				continue
 			}
-			close(req.response)
+			
+			// Check if HTTP request already timed out
+			if err := req.httpCtx.Err(); err != nil {
+				slog.Warn("HTTP request timed out, but continuing enclave computation in background", "error", err)
+				req.response <- nil // Return nil to HTTP client immediately
+				close(req.response)
+				// Continue computation in background for caching
+				go func(r EnclaveRequest) {
+					result := processEnclaveRequest(r.request)
+					if result != nil {
+						cache.Set(r.cacheKey, result, ttlcache.DefaultTTL)
+						slog.Info("Background enclave computation completed and cached")
+					} else {
+						slog.Warn("Background enclave computation failed")
+					}
+				}(req)
+			} else {
+				// HTTP request still active, process normally
+				result := processEnclaveRequest(req.request)
+				if result != nil {
+					cache.Set(req.cacheKey, result, ttlcache.DefaultTTL)
+				}
+				req.response <- result
+				close(req.response)
+			}
 		}
 		panic("request channel is closed")
 	}()
