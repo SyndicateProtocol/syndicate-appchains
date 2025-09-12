@@ -44,6 +44,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
 
     error ClaimNotAvailable();
     error ZeroAddress();
+    error InvalidDestination();
 
     constructor(address _defaultAdmin, address _staking, address _gas) Ownable(_defaultAdmin) {
         if (_staking == address(0) || _gas == address(0)) revert ZeroAddress();

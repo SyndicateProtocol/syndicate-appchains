@@ -31,6 +31,9 @@ contract AppchainPool is IPool, RewardPoolBase {
         {
             revert InvalidClaimer();
         }
+        if (destination == address(0)) {
+            revert InvalidDestination();
+        }
 
         uint256 amount = getClaimableAmount(epochIndex, appchainId);
         if (amount == 0) revert ClaimNotAvailable();
@@ -55,6 +58,9 @@ contract AppchainPool is IPool, RewardPoolBase {
     /**
      * @notice Calculates the claimable reward amount for an appchain in a specific epoch (with vesting)
      * @dev Returns the amount of rewards the appchain can claim for the given epoch, considering vesting schedule
+     * @dev Uses integer division which may result in small precision loss (dust) when
+     *      reward amounts are not evenly divisible. This is expected behavior to maintain
+     *      gas efficiency. Dust amounts are typically negligible in normal operations.
      * @param epochIndex The epoch index for which to calculate claimable rewards
      * @param appchainId The ID of the appchain
      * @return The claimable reward amount for the appchain in the epoch

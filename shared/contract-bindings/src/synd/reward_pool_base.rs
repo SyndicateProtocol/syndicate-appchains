@@ -6,6 +6,7 @@ interface RewardPoolBase {
     type UD60x18 is uint256;
 
     error ClaimNotAvailable();
+    error InvalidDestination();
     error OwnableInvalidOwner(address owner);
     error OwnableUnauthorizedAccount(address account);
     error ReentrancyGuardReentrantCall();
@@ -261,6 +262,11 @@ interface RewardPoolBase {
   {
     "type": "error",
     "name": "ClaimNotAvailable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDestination",
     "inputs": []
   },
   {
@@ -526,6 +532,79 @@ error ClaimNotAvailable();
             > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "ClaimNotAvailable()";
             const SELECTOR: [u8; 4] = [60u8, 33u8, 249u8, 15u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `InvalidDestination()` and selector `0xac6b05f5`.
+```solidity
+error InvalidDestination();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct InvalidDestination;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<InvalidDestination> for UnderlyingRustTuple<'_> {
+            fn from(value: InvalidDestination) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for InvalidDestination {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for InvalidDestination {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "InvalidDestination()";
+            const SELECTOR: [u8; 4] = [172u8, 107u8, 5u8, 245u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -3514,6 +3593,8 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         ClaimNotAvailable(ClaimNotAvailable),
         #[allow(missing_docs)]
+        InvalidDestination(InvalidDestination),
+        #[allow(missing_docs)]
         OwnableInvalidOwner(OwnableInvalidOwner),
         #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
@@ -3535,6 +3616,7 @@ function transferOwnership(address newOwner) external;
             [30u8, 79u8, 189u8, 247u8],
             [60u8, 33u8, 249u8, 15u8],
             [62u8, 229u8, 174u8, 181u8],
+            [172u8, 107u8, 5u8, 245u8],
             [217u8, 46u8, 35u8, 61u8],
         ];
     }
@@ -3542,12 +3624,15 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for RewardPoolBaseErrors {
         const NAME: &'static str = "RewardPoolBaseErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 5usize;
+        const COUNT: usize = 6usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
                 Self::ClaimNotAvailable(_) => {
                     <ClaimNotAvailable as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::InvalidDestination(_) => {
+                    <InvalidDestination as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::OwnableInvalidOwner(_) => {
                     <OwnableInvalidOwner as alloy_sol_types::SolError>::SELECTOR
@@ -3625,6 +3710,17 @@ function transferOwnership(address newOwner) external;
                     ReentrancyGuardReentrantCall
                 },
                 {
+                    fn InvalidDestination(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <InvalidDestination as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::InvalidDestination)
+                    }
+                    InvalidDestination
+                },
+                {
                     fn ZeroAddress(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
@@ -3698,6 +3794,17 @@ function transferOwnership(address newOwner) external;
                     ReentrancyGuardReentrantCall
                 },
                 {
+                    fn InvalidDestination(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <InvalidDestination as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::InvalidDestination)
+                    }
+                    InvalidDestination
+                },
+                {
                     fn ZeroAddress(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
@@ -3727,6 +3834,11 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
+                Self::InvalidDestination(inner) => {
+                    <InvalidDestination as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::OwnableInvalidOwner(inner) => {
                     <OwnableInvalidOwner as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -3752,6 +3864,12 @@ function transferOwnership(address newOwner) external;
             match self {
                 Self::ClaimNotAvailable(inner) => {
                     <ClaimNotAvailable as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::InvalidDestination(inner) => {
+                    <InvalidDestination as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )

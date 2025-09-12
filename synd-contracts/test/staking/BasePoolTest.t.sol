@@ -216,4 +216,31 @@ contract BasePoolTest is Test {
         basePool.claim(2, user2);
         vm.stopPrank();
     }
+
+    function test_claim_zero_destination() public {
+        setupStake(100 ether, 0 ether, 0 ether);
+
+        basePool.deposit{value: 100 ether}(2);
+
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 100 ether);
+
+        vm.startPrank(user1);
+        vm.expectRevert(BasePool.InvalidDestination.selector);
+        basePool.claim(2, address(0));
+        vm.stopPrank();
+    }
+
+    function test_claimFor_zero_destination() public {
+        setupStake(100 ether, 0 ether, 0 ether);
+
+        basePool.deposit{value: 100 ether}(2);
+
+        assertEq(basePool.getClaimableAmount(2, user1, 0), 100 ether);
+
+        // Only staking contract can call claimFor
+        vm.startPrank(address(staking));
+        vm.expectRevert(BasePool.InvalidDestination.selector);
+        basePool.claimFor(2, user1, address(0), 0);
+        vm.stopPrank();
+    }
 }
