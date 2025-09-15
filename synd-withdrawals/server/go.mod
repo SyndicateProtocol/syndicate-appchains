@@ -4,6 +4,7 @@ go 1.24.4
 
 require (
 	github.com/ethereum/go-ethereum v1.16.1
+	github.com/goccy/go-yaml v1.18.0
 	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/mdlayher/vsock v1.2.1
 )

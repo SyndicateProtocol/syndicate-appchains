@@ -160,7 +160,7 @@ func (p *Proposer) closeChallengeLoop(ctx context.Context) {
 			// for more info.
 			if _, err := p.TeeModule.CloseChallengeWindow(p.makeTransactOptsCopy(ctx)); err != nil {
 				var event *zerolog.Event
-				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) && strings.Contains(err.Error(), "cannot close challenge window") {
 					event = log.Debug()
 				} else {
 					event = log.Error()
@@ -236,7 +236,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			// for more info.
 			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature, keyAddress)
 			if err != nil {
-				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) && strings.Contains(err.Error(), "assertion already exists") {
 					log.Debug().Msgf("Submit assertion reverted with error: %v", err)
 				} else {
 					msg, wrappedErr := logger.WrapErrorWithMsg("Failed to submit assertion", err)
