@@ -154,7 +154,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			raw = entry.Value()
 		} else {
 			if _, ok := pending.LoadOrStore(cacheKey, struct{}{}); ok {
-				slog.Info("ignoring duplicate request: request already pending", "cacheKey", cacheKey)
+				slog.Info("Ignoring duplicate request: request already pending", "cacheKey", cacheKey)
 			} else {
 				defer pending.Delete(cacheKey)
 				// remove extra fields from the request & normalize the id
