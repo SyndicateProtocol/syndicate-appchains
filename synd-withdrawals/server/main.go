@@ -191,7 +191,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !bytes.Equal(m["id"], json.RawMessage(RequestID)) {
-			slog.Error("Unexpected response id", "response_id", string(m["id"]), "request_id", string(RequestID))
+			slog.Error("Unexpected response id", "response_id", fmt.Sprintf("%q", m["id"]), "request_id", fmt.Sprintf("%q", RequestID))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
