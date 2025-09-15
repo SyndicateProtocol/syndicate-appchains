@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/goccy/go-yaml"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/mdlayher/vsock"
 )
@@ -51,6 +52,10 @@ type RequestData struct {
 	Method  string          `json:"method"`
 	Params  json.RawMessage `json:"params,omitempty"`
 	Id      json.RawMessage `json:"id,omitempty"`
+}
+
+type AllocatorConfig struct {
+	Cpu_count uint
 }
 
 var requestChan = make(chan EnclaveRequest)
@@ -242,7 +247,17 @@ func main() {
 	go cache.Start()
 
 	// Process a resource intensive request on each CPU core
-	for range runtime.NumCPU() {
+	cfgData, err := os.ReadFile("/etc/nitro_enclaves/allocator.yaml")
+	if err != nil {
+		panic("failed to read allocator.yaml file")
+	}
+
+	var cfg AllocatorConfig
+	if err := yaml.Unmarshal(cfgData, &cfg); err != nil || cfg.Cpu_count == 0 {
+		panic(fmt.Errorf("failed to parse allocator.yaml file: %w", err))
+	}
+
+	for range cfg.Cpu_count {
 		go worker()
 	}
 
@@ -276,9 +291,8 @@ func main() {
 
 	http.HandleFunc("/", handler)
 
-	slog.Info("Starting server", "bind_address", bindAddr)
-	err := http.ListenAndServe(bindAddr, nil)
-	if err != nil {
+	slog.Info("Starting server", "bind_address", bindAddr, "cpu_count", cfg.Cpu_count)
+	if err = http.ListenAndServe(bindAddr, nil); err != nil {
 		slog.Error("Error starting server", "error", err)
 	}
 }
