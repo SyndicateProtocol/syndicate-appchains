@@ -156,7 +156,6 @@ contract EmissionsForkTest is Test {
         assertEq(emissionsScheduler.totalEmissionsMinted(), totalMinted);
         assertTrue(emissionsScheduler.emissionsEnded());
 
-
         // Confirm we cant mint after all epochs are minted
         vm.expectRevert(EmissionsScheduler.AllEmissionsCompleted.selector);
         emissionsScheduler.mintEmission();

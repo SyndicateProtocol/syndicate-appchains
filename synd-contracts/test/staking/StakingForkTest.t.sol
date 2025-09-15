@@ -30,7 +30,7 @@ contract StakingForkTest is Test {
     function setUp() public {
         // Start fork
         vm.createSelectFork("https://commons.rpc.syndicate.io");
-        
+
         if (address(staking) == address(0) || address(basePool) == address(0)) {
             admin = makeAddr("admin");
             console2.log("Staking contracts not found, deploying ones to fork");
@@ -91,7 +91,7 @@ contract StakingForkTest is Test {
     function test_multipleAppchainStakingEdgeCases() public {
         uint256[] memory appchainIds = new uint256[](3);
         uint256[] memory amounts = new uint256[](3);
-        
+
         appchainIds[0] = 111;
         appchainIds[1] = 222;
         appchainIds[2] = 333;
@@ -235,10 +235,10 @@ contract StakingForkTest is Test {
         // Test 1: Staking at very end of epoch
         uint256 currentEpoch = staking.getCurrentEpoch();
         uint256 epochEnd = staking.getEpochEnd(currentEpoch);
-        
+
         // Warp to 1 second before epoch end
         vm.warp(epochEnd - 1);
-        
+
         vm.startPrank(user1);
         staking.stakeSynd{value: 10 ether}(appchainId);
         vm.stopPrank();
@@ -343,11 +343,7 @@ contract StakingForkTest is Test {
 
         // Test 2: Valid claim
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({
-            poolAddress: address(basePool),
-            epochIndex: 2,
-            appchainId: appchainId
-        });
+        claims[0] = SyndStaking.ClaimRequest({poolAddress: address(basePool), epochIndex: 2, appchainId: appchainId});
 
         vm.startPrank(user1);
         staking.claimAllRewards(claims, user1);
@@ -450,7 +446,7 @@ contract StakingForkTest is Test {
             vm.startPrank(user3);
             staking.stakeSynd{value: 1 ether}(111);
             vm.stopPrank();
-            
+
             stepEpoch(1);
         }
 
@@ -461,210 +457,209 @@ contract StakingForkTest is Test {
     function test_allUsersComplexInteractions() public {
         // This test uses all 10 users in a complex scenario to test interactions
         // between multiple users performing different operations simultaneously
-        
+
         console2.log("=== Starting complex multi-user interaction test ===");
 
         uint256 currentEpoch = staking.getCurrentEpoch();
-        
+
         // Phase 1: Initial staking across multiple appchains
         console2.log("Phase 1: Initial staking");
-        
+
         // Users 1-3 stake on appchain 111
         vm.startPrank(user1);
         staking.stakeSynd{value: 20 ether}(111);
         vm.stopPrank();
-        
+
         vm.startPrank(user2);
         staking.stakeSynd{value: 30 ether}(111);
         vm.stopPrank();
-        
+
         vm.startPrank(user3);
         staking.stakeSynd{value: 25 ether}(111);
         vm.stopPrank();
-        
+
         // Users 4-6 stake on appchain 222
         vm.startPrank(user4);
         staking.stakeSynd{value: 15 ether}(222);
         vm.stopPrank();
-        
+
         vm.startPrank(user5);
         staking.stakeSynd{value: 35 ether}(222);
         vm.stopPrank();
-        
+
         vm.startPrank(user6);
         staking.stakeSynd{value: 10 ether}(222);
         vm.stopPrank();
-        
+
         // Users 7-9 stake on appchain 333
         vm.startPrank(user7);
         staking.stakeSynd{value: 40 ether}(333);
         vm.stopPrank();
-        
+
         vm.startPrank(user8);
         staking.stakeSynd{value: 20 ether}(333);
         vm.stopPrank();
-        
+
         vm.startPrank(user9);
         staking.stakeSynd{value: 30 ether}(333);
         vm.stopPrank();
-        
+
         // User 10 stakes on multiple appchains
         vm.startPrank(user10);
         staking.stakeSynd{value: 10 ether}(111);
         staking.stakeSynd{value: 15 ether}(222);
         staking.stakeSynd{value: 25 ether}(333);
         vm.stopPrank();
-        
+
         // Verify initial stakes
         assertEq(staking.getAppchainStake(currentEpoch + 1, 111), 85 ether); // 20+30+25+10 = 85
         assertEq(staking.getAppchainStake(currentEpoch + 1, 222), 75 ether); // 15+35+10+15 = 75
         assertEq(staking.getAppchainStake(currentEpoch + 1, 333), 115 ether); // 40+20+30+25 = 115
-        
+
         console2.log("Phase 1 complete - Total stake distributed across 3 appchains");
-        
+
         // Phase 2: Move to next epoch and add more stakes
         console2.log("Phase 2: Epoch transition and additional staking");
         stepEpoch(1);
         currentEpoch++;
-        
+
         // Users 1-5 add more stakes in epoch 2
         vm.startPrank(user1);
         staking.stakeSynd{value: 10 ether}(111);
         vm.stopPrank();
-        
+
         vm.startPrank(user2);
         staking.stakeSynd{value: 5 ether}(222); // Cross-appchain staking
         vm.stopPrank();
-        
+
         vm.startPrank(user3);
         staking.stakeSynd{value: 15 ether}(333); // Cross-appchain staking
         vm.stopPrank();
-        
+
         vm.startPrank(user4);
         staking.stakeSynd{value: 20 ether}(111); // Cross-appchain staking
         vm.stopPrank();
-        
+
         vm.startPrank(user5);
         staking.stakeSynd{value: 10 ether}(333); // Cross-appchain staking
         vm.stopPrank();
-        
+
         // Users 6-10 perform stake transfers
         vm.startPrank(user6);
         staking.stageStakeTransfer(222, 111, 5 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user7);
         staking.stageStakeTransfer(333, 222, 10 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user8);
         staking.stageStakeTransfer(333, 111, 10 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user9);
         staking.stageStakeTransfer(333, 222, 15 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user10);
         staking.stageStakeTransfer(111, 333, 5 ether);
         staking.stageStakeTransfer(222, 111, 5 ether);
         vm.stopPrank();
-        
+
         console2.log("Phase 2 complete - Cross-appchain staking and transfers");
-        
+
         // Phase 2 calculations:
         // Appchain 111: 85 + 10(user1) + 20(user4) + 5(user6 transfer) + 10(user8 transfer) = 130
-        // Appchain 222: 75 - 5(user10 transfer) + 5(user2) + 10(user7 transfer) + 15(user9 transfer) - 5(user10 transfer) = 95  
+        // Appchain 222: 75 - 5(user10 transfer) + 5(user2) + 10(user7 transfer) + 15(user9 transfer) - 5(user10 transfer) = 95
         // Appchain 333: 115 + 15(user3) + 10(user5) - 10(user7 transfer) - 10(user8 transfer) - 15(user9 transfer) + 5(user10 transfer) = 110
         // Global: 130 + 95 + 110 = 335
-        
+
         // Phase 3: Initialize withdrawals for some users
         console2.log("Phase 3: Withdrawal initialization");
         stepEpoch(1);
         currentEpoch++;
-        
+
         // Users 1, 3, 5, 7, 9 initialize withdrawals
         vm.startPrank(user1);
         staking.initializeWithdrawal(111, 15 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user3);
         staking.initializeWithdrawal(111, 20 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user5);
         staking.initializeWithdrawal(222, 25 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user7);
         staking.initializeWithdrawal(333, 20 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user9);
         staking.initializeWithdrawal(333, 15 ether);
         vm.stopPrank();
-        
+
         // Users 2, 4, 6, 8, 10 continue staking
         vm.startPrank(user2);
         staking.stakeSynd{value: 8 ether}(111);
         vm.stopPrank();
-        
+
         vm.startPrank(user4);
         staking.stakeSynd{value: 12 ether}(222);
         vm.stopPrank();
-        
+
         vm.startPrank(user6);
         staking.stakeSynd{value: 7 ether}(333);
         vm.stopPrank();
-        
+
         vm.startPrank(user8);
         staking.stakeSynd{value: 5 ether}(111);
         vm.stopPrank();
-        
+
         vm.startPrank(user10);
         staking.stakeSynd{value: 3 ether}(222);
         vm.stopPrank();
-        
+
         console2.log("Phase 3 complete - Mixed withdrawals and continued staking");
-        
+
         // Phase 3 calculations (after withdrawals and additional staking):
         // Appchain 111: 130 - 15(user1 withdrawal) - 20(user3 withdrawal) + 8(user2) + 5(user8) = 108
         // Appchain 222: 95 - 25(user5 withdrawal) + 12(user10) + 3(user10) = 85
         // Appchain 333: 110 - 20(user7 withdrawal) - 15(user9 withdrawal) + 7(user6) = 82
         // Global: 108 + 85 + 82 = 275
-        
+
         // Phase 4: Complete withdrawals and more complex operations
         console2.log("Phase 4: Withdrawal completion and complex operations");
         stepEpoch(1);
-        
+
         // Complete the withdrawals from epoch 3
         vm.startPrank(user1);
         staking.withdraw(currentEpoch, user1);
         vm.stopPrank();
-        
+
         vm.startPrank(user3);
         staking.withdraw(currentEpoch, user3);
         vm.stopPrank();
-        
+
         vm.startPrank(user5);
         staking.withdraw(currentEpoch, user5);
         vm.stopPrank();
-        
+
         vm.startPrank(user7);
         staking.withdraw(currentEpoch, user7);
         vm.stopPrank();
-        
+
         vm.startPrank(user9);
         staking.withdraw(currentEpoch, user9);
         vm.stopPrank();
 
-
         currentEpoch++;
-        
+
         // Users 2, 4, 6, 8, 10 perform bulk operations
         uint256[] memory appchainIds = new uint256[](2);
         uint256[] memory amounts = new uint256[](2);
-        
+
         // User 2 bulk withdrawal
         appchainIds[0] = 111;
         appchainIds[1] = 222;
@@ -673,7 +668,7 @@ contract StakingForkTest is Test {
         vm.startPrank(user2);
         staking.initializeWithdrawals(appchainIds, amounts);
         vm.stopPrank();
-        
+
         // User 4 bulk withdrawal
         appchainIds[0] = 222;
         appchainIds[1] = 111;
@@ -682,7 +677,7 @@ contract StakingForkTest is Test {
         vm.startPrank(user4);
         staking.initializeWithdrawals(appchainIds, amounts);
         vm.stopPrank();
-        
+
         // User 6 bulk withdrawal
         appchainIds[0] = 222;
         appchainIds[1] = 333;
@@ -691,7 +686,7 @@ contract StakingForkTest is Test {
         vm.startPrank(user6);
         staking.initializeWithdrawals(appchainIds, amounts);
         vm.stopPrank();
-        
+
         // User 8 bulk withdrawal
         appchainIds[0] = 111;
         appchainIds[1] = 333;
@@ -700,7 +695,7 @@ contract StakingForkTest is Test {
         vm.startPrank(user8);
         staking.initializeWithdrawals(appchainIds, amounts);
         vm.stopPrank();
-        
+
         // User 10 bulk withdrawal
         appchainIds = new uint256[](3);
         amounts = new uint256[](3);
@@ -714,102 +709,102 @@ contract StakingForkTest is Test {
         vm.startPrank(user10);
         staking.initializeWithdrawals(appchainIds, amounts);
         vm.stopPrank();
-        
+
         console2.log("Phase 4 complete - Bulk withdrawals initialized");
-        
+
         // Phase 4 calculations (after bulk withdrawals):
         // Appchain 111: 108 - 10(user2 bulk) - 5(user4 bulk) - 5(user8 bulk) - 2(user10 bulk) = 86
         // Appchain 222: 85 - 5(user2 bulk) - 8(user4 bulk) - 3(user6 bulk) - 3(user10 bulk) = 66
         // Appchain 333: 82 - 7(user6 bulk) - 5(user8 bulk) - 5(user10 bulk) = 65
         // Global: 86 + 66 + 65 = 217
-        
+
         // Phase 5: Final epoch with complex interactions
         console2.log("Phase 5: Final complex interactions");
         stepEpoch(1);
-        
+
         // Complete bulk withdrawals
         uint256[] memory epochs = new uint256[](1);
         epochs[0] = currentEpoch;
-        
+
         vm.startPrank(user2);
         staking.withdrawBulk(epochs, user2);
         vm.stopPrank();
-        
+
         vm.startPrank(user4);
         staking.withdrawBulk(epochs, user4);
         vm.stopPrank();
-        
+
         vm.startPrank(user6);
         staking.withdrawBulk(epochs, user6);
         vm.stopPrank();
-        
+
         vm.startPrank(user8);
         staking.withdrawBulk(epochs, user8);
         vm.stopPrank();
-        
+
         // User 10 has 3 appchains, so we need to handle that
         uint256[] memory epochs3 = new uint256[](1);
         epochs3[0] = currentEpoch;
         vm.startPrank(user10);
         staking.withdrawBulk(epochs3, user10);
         vm.stopPrank();
-        
+
         // Final staking round - users 1, 3, 5, 7, 9 stake again after withdrawals
         vm.startPrank(user1);
         staking.stakeSynd{value: 5 ether}(222); // New appchain
         vm.stopPrank();
-        
+
         vm.startPrank(user3);
         staking.stakeSynd{value: 8 ether}(333); // New appchain
         vm.stopPrank();
-        
+
         vm.startPrank(user5);
         staking.stakeSynd{value: 12 ether}(111); // New appchain
         vm.stopPrank();
-        
+
         vm.startPrank(user7);
         staking.stakeSynd{value: 6 ether}(111); // New appchain
         vm.stopPrank();
-        
+
         vm.startPrank(user9);
         staking.stakeSynd{value: 10 ether}(222); // New appchain
         vm.stopPrank();
-        
+
         // Users 2, 4, 6, 8, 10 perform final transfers
         vm.startPrank(user2);
         staking.stageStakeTransfer(111, 333, 3 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user4);
         staking.stageStakeTransfer(222, 111, 4 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user8);
         staking.stageStakeTransfer(111, 333, 3 ether);
         vm.stopPrank();
-        
+
         vm.startPrank(user10);
         staking.stageStakeTransfer(111, 222, 1 ether);
         vm.stopPrank();
 
         currentEpoch++;
-        
+
         console2.log("Phase 5 complete - Final complex interactions");
-        
+
         // Phase 5 calculations (after final staking and transfers):
         // Appchain 111: 86 + 12(user5) + 6(user7) - 3(user2 transfer) + 4(user4 transfer) - 3(user8 transfer) + 1(user10 transfer) = 101
         // Appchain 222: 66 + 5(user1) + 10(user9) - 4(user4 transfer) + 1(user10 transfer) = 78
         // Appchain 333: 65 + 8(user3) + 3(user2 transfer) + 3(user8 transfer) = 79
         // Global: 101 + 78 + 79 = 258
-        
+
         // Phase 6: Verification and final state checks
         console2.log("Phase 6: Final verification");
         stepEpoch(1);
         currentEpoch++;
-        
+
         // Calculate exact expected values for each user:
         // User1: 30(111) - 15(withdrawal) + 5(222) = 20 total
-        // User2: 35(111) + 5(222) - 10(111 bulk) - 5(222 bulk) + 3(333 transfer) = 28 total  
+        // User2: 35(111) + 5(222) - 10(111 bulk) - 5(222 bulk) + 3(333 transfer) = 28 total
         // User3: 40(111) - 20(withdrawal) + 8(333) = 28 total
         // User4: 15(222) + 20(111) + 12(222) - 8(222 bulk) - 5(111 bulk) = 34 total
         // User5: 45(222) - 25(withdrawal) + 12(111) = 32 total
@@ -818,7 +813,7 @@ contract StakingForkTest is Test {
         // User8: 20(111) + 5(333) - 5(111 bulk) - 5(333 bulk) = 15 total
         // User9: 30(333) - 15(withdrawal) + 10(222) = 25 total
         // User10: 10(111) + 15(222) + 25(333) + 3(222) - 2(111 bulk) - 3(222 bulk) - 5(333 bulk) = 43 total
-        
+
         // Verify all users have exact expected stake amounts
         assertEq(staking.getUserStake(currentEpoch, user1), 20 ether, "User1 should have 20 ether total");
         assertEq(staking.getUserStake(currentEpoch, user2), 28 ether, "User2 should have 28 ether total");
@@ -830,26 +825,28 @@ contract StakingForkTest is Test {
         assertEq(staking.getUserStake(currentEpoch, user8), 15 ether, "User8 should have 18 ether total");
         assertEq(staking.getUserStake(currentEpoch, user9), 25 ether, "User9 should have 10 ether total");
         assertEq(staking.getUserStake(currentEpoch, user10), 43 ether, "User10 should have 32 ether total");
-        
+
         // Verify exact appchain totals
         uint256 totalStake111 = staking.getAppchainStake(currentEpoch, 111);
         uint256 totalStake222 = staking.getAppchainStake(currentEpoch, 222);
         uint256 totalStake333 = staking.getAppchainStake(currentEpoch, 333);
-        
+
         assertEq(totalStake111, 101 ether, "Appchain 111 should have exactly 101 ether");
         assertEq(totalStake222, 78 ether, "Appchain 222 should have exactly 78 ether");
         assertEq(totalStake333, 79 ether, "Appchain 333 should have exactly 79 ether");
-        
+
         console2.log("Final appchain totals:");
         console2.log("Appchain 111:", totalStake111);
         console2.log("Appchain 222:", totalStake222);
         console2.log("Appchain 333:", totalStake333);
-        
+
         // Verify exact global total stake
         uint256 globalTotal = staking.getTotalStake(currentEpoch);
         assertEq(globalTotal, 258 ether, "Global total should be exactly 258 ether");
-        assertEq(globalTotal, totalStake111 + totalStake222 + totalStake333, "Global total should equal sum of appchains");
-        
+        assertEq(
+            globalTotal, totalStake111 + totalStake222 + totalStake333, "Global total should equal sum of appchains"
+        );
+
         console2.log("Global total stake:", globalTotal);
         console2.log("=== Complex multi-user interaction test completed successfully ===");
     }

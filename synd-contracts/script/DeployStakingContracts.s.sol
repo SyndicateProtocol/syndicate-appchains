@@ -98,7 +98,7 @@ contract DeployStakingContracts is Script {
         Refunder _refunder = new Refunder(address(_basePool), address(_syndStaking), l3Admin);
         console2.log("Refunder deployed to:", address(_refunder));
     }
-    
+
     function deployCoreStakingContracts() public {
         assert(block.chainid == 510003);
         assert(l3Admin != address(0));
