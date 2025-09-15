@@ -253,7 +253,7 @@ func main() {
 
 	var cfg AllocatorConfig
 	if err := yaml.Unmarshal(cfgData, &cfg); err != nil || cfg.Cpu_count == 0 {
-		panic(fmt.Errorf("failed to parse allocator.yaml file: %w", err))
+		panic(fmt.Errorf("failed to parse allocator.yaml file: data=%s, cpu_count=%d, err=%w", cfgData, cfg.Cpu_count, err))
 	}
 
 	for range cfg.Cpu_count {
