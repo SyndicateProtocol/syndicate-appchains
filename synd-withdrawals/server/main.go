@@ -8,6 +8,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -106,25 +109,51 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// remove extra fields from the request & normalize the id
-	reqId := reqData.Id
-	reqData.Id = json.RawMessage(RequestID)
-
-	req, err = json.Marshal(reqData)
-	if err != nil {
-		panic("failed to marshal request data object")
-	}
-
+	var reqId json.RawMessage
 	var cacheKey common.Hash
 	var raw json.RawMessage
 	ctx := r.Context()
 	// Cache resource intensive proof generation requests that time out
 	if reqData.Method == "enclave_verifyAppchain" || reqData.Method == "enclave_verifySequencingChain" {
+		params := [1]map[string]json.RawMessage{}
+		if err := json.Unmarshal(reqData.Params, &params); err != nil {
+			slog.Error("Error unmarshalling enclave request params", "error", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// sort preimage data
+		{
+			preimageData := params[0]["preimageData"]
+			if preimageData != nil {
+				var data map[uint8][][]byte
+				if err := json.Unmarshal(preimageData, &data); err != nil {
+					slog.Error("Error unmarshalling preimage data")
+				}
+				for _, entry := range data {
+					sort.Slice(entry, func(i, j int) bool {
+						return bytes.Compare(entry[i], entry[j]) < 0
+					})
+				}
+				params[0]["preimageData"], err = json.Marshal(data)
+				if err != nil {
+					panic("failed to marshal preimage data object")
+				}
+			}
+		}
+		if reqData.Params, err = json.Marshal(params); err != nil {
+			panic("failed to marshal request params")
+		}
 		cacheKey = crypto.Keccak256Hash(crypto.Keccak256([]byte(reqData.Method)), []byte(reqData.Params))
 		if entry := cache.Get(cacheKey); entry != nil {
-			slog.Debug("Found entry in cache")
+			slog.Warn("Found entry in cache", "cacheKey", "cacheKey")
 			raw = entry.Value()
 		} else {
+			// remove extra fields from the request & normalize the id
+			reqData.Id = json.RawMessage(RequestID)
+			req, err = json.Marshal(reqData)
+			if err != nil {
+				panic("failed to marshal request data object")
+			}
 			responseChan := make(chan json.RawMessage)
 			requestChan <- EnclaveRequest{request: req, ctx: ctx, cacheKey: cacheKey, response: responseChan}
 			raw = <-responseChan
@@ -133,8 +162,25 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		raw = processEnclaveRequest(req)
 	}
 
-	var m map[string]json.RawMessage
-	if raw != nil {
+	if err := ctx.Err(); err != nil {
+		if raw != nil && cacheKey != (common.Hash{}) {
+			slog.Warn("Request timed out: storing to cache instead", "error", err, "cacheKey", cacheKey)
+			cache.Set(cacheKey, raw, ttlcache.DefaultTTL)
+		} else {
+			slog.Warn("Request timed out", "error", err, "cacheKey", cacheKey)
+		}
+		w.WriteHeader(http.StatusRequestTimeout)
+		return
+	}
+
+	if raw == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	response := raw
+	if cacheKey != (common.Hash{}) {
+		var m map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &m); err != nil {
 			slog.Error("Failed to unmarshal response", "error", err, "response", string(raw))
 			w.WriteHeader(http.StatusInternalServerError)
@@ -146,27 +192,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m["id"] = reqId
-	}
-
-	if err := ctx.Err(); err != nil {
-		if raw != nil && cacheKey != (common.Hash{}) {
-			slog.Warn("Request timed out: storing to cache instead", "error", err)
-			cache.Set(cacheKey, raw, ttlcache.DefaultTTL)
-		} else {
-			slog.Warn("Request timed out", "error", err)
+		response, err = json.Marshal(m)
+		if err != nil {
+			panic("failed to marshal response")
 		}
-		w.WriteHeader(http.StatusRequestTimeout)
-		return
-	}
-
-	if raw == nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	response, err := json.Marshal(m)
-	if err != nil {
-		panic("failed to marshal response")
 	}
 
 	if _, err = w.Write(response); err != nil {
@@ -177,21 +206,53 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			slog.Warn("Response failed", "error", err)
 		}
 	}
+
+}
+
+func worker() {
+	for req := range requestChan {
+		if entry := cache.Get(req.cacheKey); entry != nil {
+			slog.Info("Found entry in cache", "cacheKey", req.cacheKey)
+			req.response <- entry.Value()
+		} else if err := req.ctx.Err(); err != nil {
+			slog.Warn("Request timed out in queue", "error", err, "cacheKey", req.cacheKey)
+			req.response <- nil
+		} else {
+			req.response <- processEnclaveRequest(req.request)
+		}
+		close(req.response)
+	}
+	panic("request channel is closed")
 }
 
 // small HTTP proxy that forwards requests to a vsock service
 func main() {
+	programLevel := new(slog.LevelVar) // Info by default
+	switch strings.ToLower(os.Getenv("GO_LOG")) {
+	case "debug":
+		programLevel.Set(slog.LevelDebug)
+	case "warn":
+		programLevel.Set(slog.LevelWarn)
+	case "error":
+		programLevel.Set(slog.LevelError)
+	}
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})))
+
 	// Automatically remove expired items from the ttl cache
 	go cache.Start()
 
-	// Process resource intensive requests sequentially
+	// Process a resource intensive request on each CPU core
+	for range runtime.NumCPU() {
+		go worker()
+	}
+
 	go func() {
 		for req := range requestChan {
 			if entry := cache.Get(req.cacheKey); entry != nil {
-				slog.Debug("Found entry in cache")
+				slog.Warn("Found entry in cache", "cacheKey", req.cacheKey)
 				req.response <- entry.Value()
 			} else if err := req.ctx.Err(); err != nil {
-				slog.Warn("Request timed out in queue", "error", err)
+				slog.Warn("Request timed out in queue", "error", err, "cacheKey", req.cacheKey)
 				req.response <- nil
 			} else {
 				req.response <- processEnclaveRequest(req.request)
