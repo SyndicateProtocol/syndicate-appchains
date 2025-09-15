@@ -60,6 +60,7 @@ type AllocatorConfig struct {
 }
 
 var requestChan = make(chan EnclaveRequest)
+var pending sync.Map
 
 func processEnclaveRequest(req []byte) json.RawMessage {
 	conn := pool.Get().(*vsock.Conn)
@@ -152,15 +153,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			slog.Info("Found entry in cache", "cacheKey", cacheKey)
 			raw = entry.Value()
 		} else {
-			// remove extra fields from the request & normalize the id
-			reqData.Id = json.RawMessage(RequestID)
-			req, err = json.Marshal(reqData)
-			if err != nil {
-				panic(fmt.Errorf("failed to marshal request data object, RequestID: %s", RequestID))
+			if _, ok := pending.LoadOrStore(cacheKey, struct{}{}); ok {
+				slog.Info("ignoring duplicate request: request already pending", "cacheKey", cacheKey)
+			} else {
+				defer pending.Delete(cacheKey)
+				// remove extra fields from the request & normalize the id
+				reqData.Id = json.RawMessage(RequestID)
+				req, err = json.Marshal(reqData)
+				if err != nil {
+					panic(fmt.Errorf("failed to marshal request data object, RequestID: %s", RequestID))
+				}
+				responseChan := make(chan json.RawMessage)
+				requestChan <- EnclaveRequest{request: req, ctx: ctx, cacheKey: cacheKey, response: responseChan}
+				raw = <-responseChan
 			}
-			responseChan := make(chan json.RawMessage)
-			requestChan <- EnclaveRequest{request: req, ctx: ctx, cacheKey: cacheKey, response: responseChan}
-			raw = <-responseChan
 		}
 	} else {
 		raw = processEnclaveRequest(req)
