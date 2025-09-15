@@ -128,7 +128,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// sort preimage data
-		if preimageData := params[0]["preimageData"]; preimageData != nil {
+		if preimageData := params[0]["PreimageData"]; preimageData != nil {
 			var data map[uint8][][]byte
 			if err := json.Unmarshal(preimageData, &data); err != nil {
 				slog.Error("Error unmarshalling preimage data", "error", err, "length", len(preimageData), "is_valid_utf8", utf8.Valid(preimageData))
@@ -138,7 +138,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 					return bytes.Compare(entry[i], entry[j]) < 0
 				})
 			}
-			params[0]["preimageData"], err = json.Marshal(data)
+			params[0]["PreimageData"], err = json.Marshal(data)
 			if err != nil {
 				panic("failed to marshal preimage data object")
 			}
