@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -109,7 +110,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	var reqData RequestData
 
 	if err := json.Unmarshal(req, &reqData); err != nil || reqData.Jsonrpc != "2.0" || len(reqData.Method) == 0 || len(reqData.Id) == 0 {
-		slog.Error("Error unmarshalling request", "error", err, "request", string(req))
+		slog.Error("Error unmarshalling request", "error", err, "length", len(req), "is_valid_utf8", utf8.Valid(req))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -127,37 +128,35 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// sort preimage data
-		{
-			preimageData := params[0]["preimageData"]
-			if preimageData != nil {
-				var data map[uint8][][]byte
-				if err := json.Unmarshal(preimageData, &data); err != nil {
-					slog.Error("Error unmarshalling preimage data")
-				}
-				for _, entry := range data {
-					sort.Slice(entry, func(i, j int) bool {
-						return bytes.Compare(entry[i], entry[j]) < 0
-					})
-				}
-				params[0]["preimageData"], err = json.Marshal(data)
-				if err != nil {
-					panic("failed to marshal preimage data object")
-				}
+		if preimageData := params[0]["preimageData"]; preimageData != nil {
+			var data map[uint8][][]byte
+			if err := json.Unmarshal(preimageData, &data); err != nil {
+				slog.Error("Error unmarshalling preimage data", "error", err, "length", len(preimageData), "is_valid_utf8", utf8.Valid(preimageData))
+			}
+			for _, entry := range data {
+				sort.Slice(entry, func(i, j int) bool {
+					return bytes.Compare(entry[i], entry[j]) < 0
+				})
+			}
+			params[0]["preimageData"], err = json.Marshal(data)
+			if err != nil {
+				panic("failed to marshal preimage data object")
 			}
 		}
+
 		if reqData.Params, err = json.Marshal(params); err != nil {
 			panic("failed to marshal request params")
 		}
 		cacheKey = crypto.Keccak256Hash(crypto.Keccak256([]byte(reqData.Method)), []byte(reqData.Params))
 		if entry := cache.Get(cacheKey); entry != nil {
-			slog.Warn("Found entry in cache", "cacheKey", "cacheKey")
+			slog.Info("Found entry in cache", "cacheKey", cacheKey)
 			raw = entry.Value()
 		} else {
 			// remove extra fields from the request & normalize the id
 			reqData.Id = json.RawMessage(RequestID)
 			req, err = json.Marshal(reqData)
 			if err != nil {
-				panic("failed to marshal request data object")
+				panic(fmt.Errorf("failed to marshal request data object, RequestID: %s", RequestID))
 			}
 			responseChan := make(chan json.RawMessage)
 			requestChan <- EnclaveRequest{request: req, ctx: ctx, cacheKey: cacheKey, response: responseChan}
@@ -187,7 +186,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if cacheKey != (common.Hash{}) {
 		var m map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &m); err != nil {
-			slog.Error("Failed to unmarshal response", "error", err, "response", string(raw))
+			slog.Error("Failed to unmarshal response", "error", err, "length", len(raw), "is_valid_utf8", utf8.Valid(raw))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -260,22 +259,6 @@ func main() {
 	for range cfg.Cpu_count {
 		go worker()
 	}
-
-	go func() {
-		for req := range requestChan {
-			if entry := cache.Get(req.cacheKey); entry != nil {
-				slog.Warn("Found entry in cache", "cacheKey", req.cacheKey)
-				req.response <- entry.Value()
-			} else if err := req.ctx.Err(); err != nil {
-				slog.Warn("Request timed out in queue", "error", err, "cacheKey", req.cacheKey)
-				req.response <- nil
-			} else {
-				req.response <- processEnclaveRequest(req.request)
-			}
-			close(req.response)
-		}
-		panic("request channel is closed")
-	}()
 
 	// Get bind address from environment variable, default to all interfaces if unset
 	// Use BIND_ADDRESS=127.0.0.1:7333 for localhost only
