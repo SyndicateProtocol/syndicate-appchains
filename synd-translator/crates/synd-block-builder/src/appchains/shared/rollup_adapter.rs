@@ -23,7 +23,7 @@ pub trait RollupAdapter: Send + Sync {
     /// * `input` - A block along with its associated receipts.
     ///
     /// # Returns
-    /// A vector of extracted transactions in raw `Bytes` format.
+    /// A vector of extracted transaction data containing the raw `Bytes` and tx hash
     fn parse_block_to_mbtxs(&self, input: &PartialBlock) -> Vec<(Bytes, TxHash)> {
         input
             .logs

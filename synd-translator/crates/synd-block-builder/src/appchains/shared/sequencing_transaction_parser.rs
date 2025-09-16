@@ -82,7 +82,7 @@ impl TryFrom<u8> for L2MessageKind {
     }
 }
 
-// matches the tx validation code in the enclave & in nitro for batch messages
+// matches the tx validation code in `synd-enclave` & in Arbitrum Nitro for batch messages
 fn signed_tx_hash(mut b: &[u8]) -> Result<TxHash, Eip2718Error> {
     if b.is_empty() {
         return Err(Eip2718Error::RlpError(alloy::rlp::Error::Custom("dropping empty signed tx")));
