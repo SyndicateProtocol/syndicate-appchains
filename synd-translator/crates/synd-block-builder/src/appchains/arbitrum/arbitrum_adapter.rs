@@ -156,7 +156,7 @@ impl ArbitrumAdapter {
             mb_transactions
                 .iter()
                 .filter_map(|b: &Bytes| match b[0].try_into() {
-                    Ok(L2MessageKind::SignedTx) => TxEnvelope::decode(&mut &b[1..]).ok().map(|tx|tx.hash().to_owned()),
+                    Ok(L2MessageKind::SignedTx) => TxEnvelope::decode(&mut &b[1..]).ok().map(|tx|*tx.hash()),
                     _ => None
                 })
                 .collect::<Vec<_>>()
