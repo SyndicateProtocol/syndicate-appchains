@@ -3,7 +3,8 @@ src = "src"
 out = "out"
 libs = ["lib"]
 fs_permissions = [
-    { access = "read", path = "./test/withdrawal/fixtures/"}
+    { access = "read", path = "./test/withdrawal/fixtures/"},
+    { access = "read", path = "./test/staking/fixtures/"}
 ]
 via_ir = true
 evm_version = "cancun"
