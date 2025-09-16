@@ -4,15 +4,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"sort"
+	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/goccy/go-yaml"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/mdlayher/vsock"
 )
@@ -31,7 +36,6 @@ var pool = sync.Pool{
 		conn, err := vsock.Dial(16, 1234, &vsock.Config{})
 		if err != nil {
 			slog.Error("Error dialing vsock", "error", err)
-			return nil
 		}
 		return conn
 	},
@@ -47,11 +51,16 @@ type EnclaveRequest struct {
 type RequestData struct {
 	Jsonrpc string          `json:"jsonrpc"`
 	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params"`
-	Id      json.RawMessage `json:"id"`
+	Params  json.RawMessage `json:"params,omitempty"`
+	Id      json.RawMessage `json:"id,omitempty"`
+}
+
+type AllocatorConfig struct {
+	Cpu_count uint
 }
 
 var requestChan = make(chan EnclaveRequest)
+var pending sync.Map
 
 func processEnclaveRequest(req []byte) json.RawMessage {
 	conn := pool.Get().(*vsock.Conn)
@@ -101,61 +110,74 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	var reqData RequestData
 
-	if err := json.Unmarshal(req, &reqData); err != nil || reqData.Jsonrpc != "2.0" {
-		slog.Error("Error unmarshalling request", "error", err, "jsonrpc", reqData.Jsonrpc)
+	if err := json.Unmarshal(req, &reqData); err != nil || reqData.Jsonrpc != "2.0" || len(reqData.Method) == 0 || len(reqData.Id) == 0 {
+		slog.Error("Error unmarshalling request", "error", err, "length", len(req), "is_valid_utf8", utf8.Valid(req))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// remove extra fields from the request & normalize the id
-	reqId := reqData.Id
-	reqData.Id = json.RawMessage(RequestID)
-
-	req, err = json.Marshal(reqData)
-	if err != nil {
-		panic("failed to marshal request data object")
-	}
-
+	var reqId json.RawMessage
 	var cacheKey common.Hash
 	var raw json.RawMessage
 	ctx := r.Context()
 	// Cache resource intensive proof generation requests that time out
 	if reqData.Method == "enclave_verifyAppchain" || reqData.Method == "enclave_verifySequencingChain" {
+		params := [1]map[string]json.RawMessage{}
+		if err := json.Unmarshal(reqData.Params, &params); err != nil {
+			slog.Error("Error unmarshalling enclave request params", "error", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// sort preimage data
+		if preimageData := params[0]["PreimageData"]; preimageData != nil {
+			var data map[uint8][][]byte
+			if err := json.Unmarshal(preimageData, &data); err != nil {
+				slog.Error("Error unmarshalling preimage data", "error", err, "length", len(preimageData), "is_valid_utf8", utf8.Valid(preimageData))
+			}
+			for _, entry := range data {
+				sort.Slice(entry, func(i, j int) bool {
+					return bytes.Compare(entry[i], entry[j]) < 0
+				})
+			}
+			params[0]["PreimageData"], err = json.Marshal(data)
+			if err != nil {
+				panic("failed to marshal preimage data object")
+			}
+		}
+
+		if reqData.Params, err = json.Marshal(params); err != nil {
+			panic("failed to marshal request params")
+		}
 		cacheKey = crypto.Keccak256Hash(crypto.Keccak256([]byte(reqData.Method)), []byte(reqData.Params))
 		if entry := cache.Get(cacheKey); entry != nil {
-			slog.Debug("Found entry in cache")
+			slog.Info("Found entry in cache", "cacheKey", cacheKey)
 			raw = entry.Value()
 		} else {
-			responseChan := make(chan json.RawMessage)
-			requestChan <- EnclaveRequest{request: req, ctx: ctx, cacheKey: cacheKey, response: responseChan}
-			raw = <-responseChan
+			if _, ok := pending.LoadOrStore(cacheKey, struct{}{}); ok {
+				slog.Info("Ignoring duplicate request: request already pending", "cacheKey", cacheKey)
+			} else {
+				defer pending.Delete(cacheKey)
+				// remove extra fields from the request & normalize the id
+				reqData.Id = json.RawMessage(RequestID)
+				req, err = json.Marshal(reqData)
+				if err != nil {
+					panic(fmt.Errorf("failed to marshal request data object, RequestID: %s", RequestID))
+				}
+				responseChan := make(chan json.RawMessage)
+				requestChan <- EnclaveRequest{request: req, ctx: ctx, cacheKey: cacheKey, response: responseChan}
+				raw = <-responseChan
+			}
 		}
 	} else {
 		raw = processEnclaveRequest(req)
 	}
 
-	var m map[string]json.RawMessage
-	if raw != nil {
-		m := make(map[string]json.RawMessage)
-		if err := json.Unmarshal(raw, &m); err != nil {
-			slog.Error("failed to unmarshal response")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if !bytes.Equal(m["id"], json.RawMessage(RequestID)) {
-			slog.Error("unexpected response id", "response_id", string(m["id"]), "request_id", string(RequestID))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		m["id"] = reqId
-	}
-
-	if ctx.Err() != nil {
+	if err := ctx.Err(); err != nil {
 		if raw != nil && cacheKey != (common.Hash{}) {
-			slog.Warn("Request timed out: storing to cache instead", "error", err)
+			slog.Warn("Request timed out: storing to cache instead", "error", err, "cacheKey", cacheKey)
 			cache.Set(cacheKey, raw, ttlcache.DefaultTTL)
 		} else {
-			slog.Warn("Request timed out", "error", err)
+			slog.Warn("Request timed out", "error", err, "cacheKey", cacheKey)
 		}
 		w.WriteHeader(http.StatusRequestTimeout)
 		return
@@ -166,9 +188,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := json.Marshal(m)
-	if err != nil {
-		panic("failed to marshal response")
+	response := raw
+	if cacheKey != (common.Hash{}) {
+		var m map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &m); err != nil {
+			slog.Error("Failed to unmarshal response", "error", err, "length", len(raw), "is_valid_utf8", utf8.Valid(raw))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !bytes.Equal(m["id"], json.RawMessage(RequestID)) {
+			slog.Error("Unexpected response id", "response_id", fmt.Sprintf("%q", m["id"]), "request_id", fmt.Sprintf("%q", RequestID))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		m["id"] = reqId
+		response, err = json.Marshal(m)
+		if err != nil {
+			panic("failed to marshal response")
+		}
 	}
 
 	if _, err = w.Write(response); err != nil {
@@ -179,29 +216,55 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			slog.Warn("Response failed", "error", err)
 		}
 	}
+
+}
+
+func worker() {
+	for req := range requestChan {
+		if entry := cache.Get(req.cacheKey); entry != nil {
+			slog.Info("Found entry in cache", "cacheKey", req.cacheKey)
+			req.response <- entry.Value()
+		} else if err := req.ctx.Err(); err != nil {
+			slog.Warn("Request timed out in queue", "error", err, "cacheKey", req.cacheKey)
+			req.response <- nil
+		} else {
+			req.response <- processEnclaveRequest(req.request)
+		}
+		close(req.response)
+	}
+	panic("request channel is closed")
 }
 
 // small HTTP proxy that forwards requests to a vsock service
 func main() {
+	programLevel := new(slog.LevelVar) // Info by default
+	switch strings.ToLower(os.Getenv("GO_LOG")) {
+	case "debug":
+		programLevel.Set(slog.LevelDebug)
+	case "warn":
+		programLevel.Set(slog.LevelWarn)
+	case "error":
+		programLevel.Set(slog.LevelError)
+	}
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})))
+
 	// Automatically remove expired items from the ttl cache
 	go cache.Start()
 
-	// Process resource intensive requests sequentially
-	go func() {
-		for req := range requestChan {
-			if entry := cache.Get(req.cacheKey); entry != nil {
-				slog.Debug("Found entry in cache")
-				req.response <- entry.Value()
-			} else if err := req.ctx.Err(); err != nil {
-				slog.Warn("Request timed out in queue", "error", err)
-				req.response <- nil
-			} else {
-				req.response <- processEnclaveRequest(req.request)
-			}
-			close(req.response)
-		}
-		panic("request channel is closed")
-	}()
+	// Process a resource intensive request on each CPU core
+	cfgData, err := os.ReadFile("/etc/nitro_enclaves/allocator.yaml")
+	if err != nil {
+		panic("failed to read allocator.yaml file")
+	}
+
+	var cfg AllocatorConfig
+	if err := yaml.Unmarshal(cfgData, &cfg); err != nil || cfg.Cpu_count == 0 {
+		panic(fmt.Errorf("failed to parse allocator.yaml file: data=%s, cpu_count=%d, err=%w", cfgData, cfg.Cpu_count, err))
+	}
+
+	for range cfg.Cpu_count {
+		go worker()
+	}
 
 	// Get bind address from environment variable, default to all interfaces if unset
 	// Use BIND_ADDRESS=127.0.0.1:7333 for localhost only
@@ -212,14 +275,13 @@ func main() {
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+		w.Write([]byte("ok"))
 	})
 
 	http.HandleFunc("/", handler)
 
-	slog.Info("Starting server", "bind_address", bindAddr)
-	err := http.ListenAndServe(bindAddr, nil)
-	if err != nil {
+	slog.Info("Starting server", "bind_address", bindAddr, "cpu_count", cfg.Cpu_count)
+	if err = http.ListenAndServe(bindAddr, nil); err != nil {
 		slog.Error("Error starting server", "error", err)
 	}
 }

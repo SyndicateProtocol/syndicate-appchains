@@ -173,3 +173,6 @@ syndicate-appchains/
 - **Documentation**: [docs.syndicate.io](https://docs.syndicate.io/)
 - **Issues**: [GitHub Issues](https://github.com/syndicateio/syndicate-appchains/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/syndicateio/syndicate-appchains/discussions)
+
+## Audits
+PDF reports for the latest audits are available in the [audits](./audits) directory.

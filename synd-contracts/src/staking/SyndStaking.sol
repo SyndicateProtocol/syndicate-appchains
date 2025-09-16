@@ -331,6 +331,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
         if (appchainFinalizedEpochCount[fromAppchainId] < epochIndex) {
             finalizeAppchainEpochs(fromAppchainId);
         }
+        if (appchainFinalizedEpochCount[toAppchainId] < epochIndex) {
+            finalizeAppchainEpochs(toAppchainId);
+        }
         if (userAppchainFinalizedEpochCount[msg.sender][fromAppchainId] < epochIndex) {
             finalizeUserAppchainEpochs(msg.sender, fromAppchainId);
         }
