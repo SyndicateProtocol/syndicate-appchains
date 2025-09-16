@@ -6,14 +6,15 @@
 use crate::appchains::arbitrum::batch::MAX_L2_MESSAGE_SIZE;
 use alloy::{
     consensus::{transaction::RlpEcdsaDecodableTx as _, TxEip1559, TxEip2930, TxEip7702, TxLegacy},
-    primitives::{keccak256, Address, Bytes, Log},
+    eips::eip2718::Eip2718Error,
+    primitives::{keccak256, Address, Bytes, Log, TxHash},
     sol_types::SolEvent,
 };
 use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
 use rlp::Rlp;
 use std::io::Cursor;
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::{error, warn};
 
 /// Represents errors that can occur during sequencing transaction parsing.
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -29,6 +30,10 @@ pub enum SequencingParserError {
     /// The decoded event data contains an unexpected type.
     #[error("Unexpected type for data")]
     UnexpectedDataType,
+
+    /// The decoded tx contains invalid rlp data
+    #[error("Invalid tx data: {0:?}")]
+    InvalidTxData(String),
 
     /// The log does not correspond to a `TransactionProcessed` event.
     #[error("Log is not a TransactionProcessed event")]
@@ -77,34 +82,38 @@ impl TryFrom<u8> for L2MessageKind {
     }
 }
 
-fn is_signed_tx_valid(mut b: &[u8]) -> bool {
+// matches the tx validation code in `synd-enclave` & in Arbitrum Nitro for batch messages
+fn signed_tx_hash(mut b: &[u8]) -> Result<TxHash, Eip2718Error> {
     if b.is_empty() {
-        debug!("dropping empty signed tx");
-        return false;
+        return Err(Eip2718Error::RlpError(alloy::rlp::Error::Custom("dropping empty signed tx")));
     }
 
-    if let Some(err) = match b[0] {
-        0x80.. => TxLegacy::eip2718_decode(&mut b).err(),
-        TxEip2930::DEFAULT_TX_TYPE => TxEip2930::eip2718_decode(&mut b).err(), // AccessListTxType
-        TxEip1559::DEFAULT_TX_TYPE => TxEip1559::eip2718_decode(&mut b).err(), // DynamicFeeTxType
-        TxEip7702::DEFAULT_TX_TYPE => TxEip7702::eip2718_decode(&mut b).err(), // SetCodeTxType
-        // Arbitrum doesn't support EIP-4844 blob txs yet
-        x => Some(alloy::eips::eip2718::Eip2718Error::UnexpectedType(x)),
-    } {
-        debug!("dropping tx with invalid rlp encoding: {}", err);
-        return false;
+    if b.len() >= MAX_L2_MESSAGE_SIZE {
+        return Err(Eip2718Error::RlpError(alloy::rlp::Error::Custom(
+            "dropping tx greater than the max l2 message size",
+        )));
     }
+
+    let hash = match b[0] {
+        0x80.. => TxLegacy::eip2718_decode(&mut b).map(|x| *x.hash()),
+        TxEip2930::DEFAULT_TX_TYPE => TxEip2930::eip2718_decode(&mut b).map(|x| *x.hash()), /* AccessListTxType */
+        TxEip1559::DEFAULT_TX_TYPE => TxEip1559::eip2718_decode(&mut b).map(|x| *x.hash()), /* DynamicFeeTxType */
+        TxEip7702::DEFAULT_TX_TYPE => TxEip7702::eip2718_decode(&mut b).map(|x| *x.hash()), /* SetCodeTxType */
+        // Arbitrum doesn't support EIP-4844 blob txs yet
+        x => Err(Eip2718Error::UnexpectedType(x)),
+    }?;
 
     if !b.is_empty() {
-        debug!("dropping tx with extra bytes");
-        return false;
+        return Err(Eip2718Error::RlpError(alloy::rlp::Error::Custom(
+            "dropping tx with extra bytes",
+        )));
     }
 
-    true
+    Ok(hash)
 }
 
 /// Decompresses `brotli`-compressed Ethereum transactions back into their original form
-fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, SequencingParserError> {
+fn decompress_transactions(data: &[u8]) -> Result<Vec<(Bytes, TxHash)>, SequencingParserError> {
     // Check for empty data first
     if data.is_empty() {
         return Err(SequencingParserError::DecompressionError("Empty compressed data".to_string()));
@@ -128,10 +137,15 @@ fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, SequencingParserEr
             vec_list
                 .into_iter()
                 .filter_map(|mut tx| {
-                    (tx.len() < MAX_L2_MESSAGE_SIZE && is_signed_tx_valid(&tx)).then(|| {
-                        tx.insert(0, L2MessageKind::SignedTx as u8);
-                        Bytes::from(tx)
-                    })
+                    signed_tx_hash(&tx)
+                        .inspect_err(|err| {
+                            warn!("Dropping invalid tx from batch: {:?}, error: {:?}", tx, err)
+                        })
+                        .ok()
+                        .map(|hash| {
+                            tx.insert(0, L2MessageKind::SignedTx as u8);
+                            (Bytes::from(tx), hash)
+                        })
                 })
                 .collect()
         })
@@ -154,35 +168,36 @@ impl SequencingTransactionParser {
     }
 
     /// Decodes the event data into a vector of typed transactions
-    pub fn decode_event_data(data: &Bytes) -> Result<Vec<Bytes>, SequencingParserError> {
+    pub fn decode_event_data(data: &Bytes) -> Result<Vec<(Bytes, TxHash)>, SequencingParserError> {
         if data.is_empty() {
             return Err(SequencingParserError::NoDataProvided);
         }
 
-        let mut transactions = Vec::new();
         match data[0].try_into().map_err(|_| SequencingParserError::UnexpectedDataType)? {
-            L2MessageKind::Batch => transactions.append(&mut decompress_transactions(&data[1..])?),
-            L2MessageKind::SignedTx => {
-                if data.len() <= MAX_L2_MESSAGE_SIZE && is_signed_tx_valid(&data[1..]) {
-                    transactions.push(data.clone());
-                }
-            }
+            L2MessageKind::Batch => decompress_transactions(&data[1..]),
+            L2MessageKind::SignedTx => Ok(vec![(
+                data.clone(),
+                signed_tx_hash(&data[1..])
+                    .map_err(|e| SequencingParserError::InvalidTxData(e.to_string()))?,
+            )]),
             // The sequencing contract ensures that unsigned transactions are valid
             L2MessageKind::UnsignedUserTx | L2MessageKind::ContractTx => {
-                if data.len() <= MAX_L2_MESSAGE_SIZE {
-                    transactions.push(data.clone());
+                if data.len() > MAX_L2_MESSAGE_SIZE {
+                    return Err(SequencingParserError::InvalidTxData(
+                        "dropping tx greater than the max l2 message size".to_string(),
+                    ))
                 }
+                // TODO(SEQ-1370): compute tx hash for unsigned txs
+                Ok(vec![(data.clone(), Default::default())])
             }
         }
-
-        Ok(transactions)
     }
 
     /// Decodes the event data into a vector of transactions
     pub fn get_event_transactions(
         &self,
         eth_log: &Log,
-    ) -> Result<Vec<Bytes>, SequencingParserError> {
+    ) -> Result<Vec<(Bytes, TxHash)>, SequencingParserError> {
         if !self.is_log_transaction_processed(eth_log) {
             return Err(SequencingParserError::InvalidLogEvent);
         }
@@ -190,10 +205,7 @@ impl SequencingTransactionParser {
             .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Decode the transactions
-        Self::decode_event_data(&decoded_event.data).map_err(|e| {
-            error!("Error decoding event data: {:?}", e);
-            e
-        })
+        Self::decode_event_data(&decoded_event.data)
     }
 }
 
@@ -253,7 +265,7 @@ mod tests {
         assert!(result.is_ok());
         let transactions = result.unwrap();
         assert_eq!(transactions.len(), 1);
-        assert_eq!(transactions[0], Bytes::from(DUMMY_TXN_VALUE));
+        assert_eq!(transactions[0].0, Bytes::from(DUMMY_TXN_VALUE));
     }
 
     #[tokio::test]
