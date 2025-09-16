@@ -2,6 +2,7 @@
 
 use clap::{Parser, Subcommand};
 use synd_stake_cli::{
+    gas_agg::{gas_agg, GasAggArgs},
     mint::{mint, MintArgs},
     refund_gas::{refund_gas, RefundGasArgs},
 };
@@ -31,8 +32,8 @@ enum Commands {
 
     /// Aggregate gas usage of appchains
     ///
-    /// TODO: Implement
-    GasAgg,
+    /// This command aggregates gas usage data from all appchains registered in the factory.
+    GasAgg(GasAggArgs),
 
     /// Ethereum and Base block hashes to Commons Chain
     ///
@@ -66,8 +67,8 @@ async fn main() {
         Some(Commands::RefundGas(refund_gas_args)) => {
             refund_gas(refund_gas_args).await;
         }
-        Some(Commands::GasAgg) => {
-            println!("TODO: Implement gas aggregation call");
+        Some(Commands::GasAgg(gas_agg_args)) => {
+            gas_agg(gas_agg_args).await;
         }
         Some(Commands::Relay) => {
             println!("TODO: Implement relay command");
