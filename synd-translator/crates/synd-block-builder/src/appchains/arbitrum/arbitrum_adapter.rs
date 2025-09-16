@@ -153,7 +153,14 @@ impl ArbitrumAdapter {
             "Processing sequencer transactions: {:?}",
             mb_transactions
                 .iter()
-                .filter_map(|b: &Bytes| validate_transaction(b).ok().map(|(tx, _signer)| *tx.hash()))
+                .filter_map(|b: &Bytes| {
+                    if b.len() > 1 {
+                        let tx_bytes = &b[1..];
+                        validate_transaction(&Bytes::copy_from_slice(tx_bytes)).ok().map(|(tx, _signer)| *tx.hash())
+                    } else {
+                        None
+                    }
+                })
                 .collect::<Vec<_>>()
         );
 
