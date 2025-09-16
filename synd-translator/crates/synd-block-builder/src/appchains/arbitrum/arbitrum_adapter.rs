@@ -9,12 +9,17 @@ use crate::{
         arbitrum::batch::{
             Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader, MAX_L2_MESSAGE_SIZE,
         },
-        shared::{RollupAdapter, SequencingTransactionParser},
+        shared::{
+            sequencing_transaction_parser::L2MessageKind, RollupAdapter,
+            SequencingTransactionParser,
+        },
     },
     config::BlockBuilderConfig,
 };
 use alloy::{
+    consensus::TxEnvelope,
     primitives::{Address, Bytes, FixedBytes, Log, U256},
+    rlp::Decodable as _,
     sol_types::SolEvent,
 };
 use common::types::{SequencingBlock, SettlementBlock};
@@ -25,10 +30,7 @@ use contract_bindings::synd::{
     },
 };
 use eyre::Result;
-use shared::{
-    tx_validation::validate_transaction,
-    types::{BlockBuilder, PartialBlock},
-};
+use shared::types::{BlockBuilder, PartialBlock};
 use std::collections::HashMap;
 use synd_mchain::db::DelayedMessage;
 use thiserror::Error;
@@ -153,7 +155,10 @@ impl ArbitrumAdapter {
             "Processing sequencer transactions: {:?}",
             mb_transactions
                 .iter()
-                .filter_map(|b: &Bytes| validate_transaction(b).ok().map(|(tx, _signer)| *tx.hash()))
+                .filter_map(|b: &Bytes| match b[0].try_into() {
+                    Ok(L2MessageKind::SignedTx) => TxEnvelope::decode(&mut &b[1..]).ok().map(|tx|tx.hash().to_owned()),
+                    _ => None
+                })
                 .collect::<Vec<_>>()
         );
 
