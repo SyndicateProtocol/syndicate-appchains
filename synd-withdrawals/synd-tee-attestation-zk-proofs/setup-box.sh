@@ -5,9 +5,6 @@ set -euo pipefail
 echo "🔧 Fixing hostname resolution..."
 HOSTNAME=$(hostname)
 
-GITHUB_USERNAME="your-github-username"
-GITHUB_TOKEN="your-github-pat-with-repo-read-access"
-
 grep -q "$HOSTNAME" /etc/hosts || echo "127.0.1.1 $HOSTNAME" | sudo tee -a /etc/hosts
 
 echo "🚀 Updating system and removing Docker conflicts..."
