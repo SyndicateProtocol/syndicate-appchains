@@ -40,8 +40,7 @@ contract DeployStakingContracts is Script {
     function run() public {
         vm.startBroadcast();
 
-        // deployCoreStakingContracts();
-        // deployL3Contracts();
+        deployL3Contracts();
         // deployL2Contracts();
         // deployL1Contracts();
 
@@ -97,13 +96,5 @@ contract DeployStakingContracts is Script {
 
         Refunder _refunder = new Refunder(address(_basePool), address(_syndStaking), l3Admin);
         console2.log("Refunder deployed to:", address(_refunder));
-    }
-
-    function deployCoreStakingContracts() public {
-        assert(block.chainid == 510003);
-        assert(l3Admin != address(0));
-
-        SyndStaking _syndStaking = new SyndStaking(l3Admin);
-        console2.log("SyndStaking deployed to:", address(_syndStaking));
     }
 }
