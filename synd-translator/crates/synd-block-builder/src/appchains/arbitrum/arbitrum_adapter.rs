@@ -434,17 +434,17 @@ mod tests {
     #[test]
     fn test_validation_strips_l2_message_kind_prefix() {
         use shared::tx_validation::validate_transaction;
-        
+
         let valid_tx = hex!("02f86c8307c83081f001840bebc201825208947eb42260581c629da63b3375f0aec9de06cb14e68203e880c001a002365ba5bc3fe6776e74fd5ffb570f637bc59780cb86d0fa1b7b4d5e581781d7a07617560be9af720315d802442ed5de621f1407c9b4f2f73afd12fcde5ef42c9c");
         let prefixed_tx = {
             let mut tx = vec![0x04]; // L2MessageKind::SignedTx
             tx.extend_from_slice(&valid_tx);
             Bytes::from(tx)
         };
-        
+
         // Validation should fail with prefix
         assert!(validate_transaction(&prefixed_tx).is_err());
-        
+
         // Validation should succeed without prefix (simulating our fix)
         let tx_without_prefix = Bytes::copy_from_slice(&prefixed_tx[1..]);
         assert!(validate_transaction(&tx_without_prefix).is_ok());
