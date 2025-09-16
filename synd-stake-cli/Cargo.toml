@@ -1,0 +1,18 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-stake-cli"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy             = { workspace = true, features = ["contract", "reqwest", "signer-local", "signers"] }
+clap              = { workspace = true, features = ["derive", "env"] }
+contract-bindings = { workspace = true }
+tokio             = { workspace = true, features = ["full"] }
+
+[lints]
+workspace = true

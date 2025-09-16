@@ -7055,6 +7055,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-stake-cli"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "clap",
+ "contract-bindings",
+ "tokio",
+]
+
+[[package]]
 name = "synd-tee-attestation-zk-proofs-aws-nitro"
 version = "0.1.0"
 dependencies = [
