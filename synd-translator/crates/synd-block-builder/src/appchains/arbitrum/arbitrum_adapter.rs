@@ -15,7 +15,7 @@ use crate::{
 };
 use alloy::{
     primitives::{Address, Bytes, FixedBytes, Log, U256},
-    sol_types::SolEvent,
+    sol_types::SolEvent as _,
 };
 use common::types::{SequencingBlock, SettlementBlock};
 use contract_bindings::synd::{
@@ -25,10 +25,7 @@ use contract_bindings::synd::{
     },
 };
 use eyre::Result;
-use shared::{
-    tx_validation::validate_transaction,
-    types::{BlockBuilder, PartialBlock},
-};
+use shared::types::{BlockBuilder, PartialBlock};
 use std::collections::HashMap;
 use synd_mchain::db::DelayedMessage;
 use thiserror::Error;
@@ -153,14 +150,13 @@ impl ArbitrumAdapter {
             "Processing sequencer transactions: {:?}",
             mb_transactions
                 .iter()
-                .filter_map(|b: &Bytes| validate_transaction(b).ok().map(|(tx, _signer)| *tx.hash()))
-                .collect::<Vec<_>>()
+                .map(|x|x.1).collect::<Vec<_>>()
         );
 
         Ok((
             mb_transactions.len() as u64,
             self.build_batch_txn(
-                mb_transactions,
+                mb_transactions.into_iter().map(|x| x.0).collect(),
                 block.block_ref.number,
                 block.block_ref.timestamp,
             )?,
@@ -376,8 +372,16 @@ impl BlockBuilder<SettlementBlock> for ArbitrumAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::primitives::{hex, keccak256};
+    use crate::appchains::shared::sequencing_transaction_parser::L2MessageKind;
+    use alloy::{
+        eips::Encodable2718,
+        network::{EthereumWallet, TransactionBuilder as _},
+        primitives::{hex, keccak256},
+        rpc::types::TransactionRequest,
+        signers::local::PrivateKeySigner,
+    };
     use assert_matches::assert_matches;
+    use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
     use std::str::FromStr;
 
     fn test_config() -> BlockBuilderConfig {
@@ -393,6 +397,65 @@ mod tests {
             ),
             ..Default::default()
         }
+    }
+
+    #[tokio::test]
+    async fn test_parse_tx() {
+        let sequencing_contract_address = test_config().sequencing_contract_address.unwrap();
+        let tx = TransactionRequest::default()
+            .with_to(Address::ZERO)
+            .with_nonce(0)
+            .with_gas_limit(0)
+            .with_max_fee_per_gas(0)
+            .with_max_priority_fee_per_gas(0)
+            .build(&EthereumWallet::from(PrivateKeySigner::random()))
+            .await
+            .unwrap();
+        let mut encoded_tx = tx.encoded_2718();
+        encoded_tx.splice(0..0, vec![L2MessageKind::SignedTx as u8]);
+        let block = PartialBlock {
+            logs: vec![
+                // empty tx
+                Log {
+                    address: sequencing_contract_address,
+                    data: TransactionProcessed {
+                        sender: Default::default(),
+                        data: Default::default(),
+                    }
+                    .encode_log_data(),
+                },
+                // invalid txs
+                Log {
+                    address: sequencing_contract_address,
+                    data: TransactionProcessed {
+                        sender: Default::default(),
+                        data: vec![L2MessageKind::SignedTx as u8].into(),
+                    }
+                    .encode_log_data(),
+                },
+                Log {
+                    address: sequencing_contract_address,
+                    data: TransactionProcessed {
+                        sender: Default::default(),
+                        data: vec![L2MessageKind::SignedTx as u8, 0].into(),
+                    }
+                    .encode_log_data(),
+                },
+                // valid tx
+                Log {
+                    address: sequencing_contract_address,
+                    data: TransactionProcessed {
+                        sender: Default::default(),
+                        data: encoded_tx.clone().into(),
+                    }
+                    .encode_log_data(),
+                },
+            ],
+            ..Default::default()
+        };
+        // parse mbtxs
+        let txs = ArbitrumAdapter::new(&test_config()).parse_block_to_mbtxs(&block);
+        assert_eq!(txs, vec![(encoded_tx.into(), *tx.hash())])
     }
 
     #[test]
