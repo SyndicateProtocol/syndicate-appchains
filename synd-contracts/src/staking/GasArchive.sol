@@ -64,6 +64,7 @@ contract GasArchive is AccessControl, IGasDataProvider {
     mapping(uint256 epoch => uint256[] appchainIds) public epochAppchainIDs;
     mapping(uint256 epoch => mapping(uint256 appchainId => uint256 tokens)) public epochAppchainTokensUsed;
     mapping(uint256 epoch => mapping(uint256 appchainId => address receiver)) public epochAppchainEmissionsReceiver;
+    mapping(uint256 appchainId => uint256 latestEpoch) public appchainLatestEpoch;
     // NOTE: if an appchain has different emissions receivers across different sequencing chains, the latest one to be validated will be used
 
     /*//////////////////////////////////////////////////////////////
@@ -265,6 +266,7 @@ contract GasArchive is AccessControl, IGasDataProvider {
             totalTokensUsed += tokens[i];
             epochAppchainTokensUsed[epoch][appchains[i]] += tokens[i];
             epochAppchainEmissionsReceiver[epoch][appchains[i]] = emissionsReceivers[i];
+            appchainLatestEpoch[appchains[i]] = epoch;
         }
         epochTotalTokensUsed[epoch] = totalTokensUsed;
 
@@ -449,13 +451,8 @@ contract GasArchive is AccessControl, IGasDataProvider {
         return appchainIDs;
     }
 
-    function getAppchainRewardsReceiver(uint256 epochIndex, uint256 appchainId)
-        external
-        view
-        onlyArchivedEpoch(epochIndex)
-        returns (address)
-    {
-        return epochAppchainEmissionsReceiver[epochIndex][appchainId];
+    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address) {
+        return epochAppchainEmissionsReceiver[appchainLatestEpoch[appchainId]][appchainId];
     }
 
     /// @notice Returns the list of sequencing chains expected to submit data for a given epoch

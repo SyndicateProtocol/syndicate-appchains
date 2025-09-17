@@ -42,6 +42,7 @@ contract GasUsageArchiveTestHelper is GasArchive {
             totalTokensUsed += tokensUsed[i];
             epochAppchainTokensUsed[epoch][appchainIds[i]] = tokensUsed[i];
             epochAppchainEmissionsReceiver[epoch][appchainIds[i]] = emissionsReceivers[i];
+            appchainLatestEpoch[appchainIds[i]] = epoch; // Set the latest epoch for each appchain
         }
 
         epochTotalTokensUsed[epoch] = totalTokensUsed;
@@ -387,12 +388,12 @@ contract GasArchiveTest is Test {
 
         // Check emissions receivers
         assertEq(
-            gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_1),
+            gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1),
             address(0x123),
             "Appchain 123 receiver should be 0x123"
         );
         assertEq(
-            gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_2),
+            gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_2),
             address(0x456),
             "Appchain 456 receiver should be 0x456"
         );
@@ -673,8 +674,9 @@ contract GasArchiveTest is Test {
     }
 
     function testGetAppchainRewardsReceiverNotArchivedEpoch() public {
-        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
-        gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_1);
+        // getAppchainRewardsReceiver doesn't require archived epoch since it uses appchainLatestEpoch
+        // It will return address(0) for non-existent appchains
+        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1), address(0));
     }
 
     function testViewFunctionsWithArchivedData() public {
@@ -708,8 +710,8 @@ contract GasArchiveTest is Test {
         assertEq(activeAppchains[1], APPCHAIN_ID_2);
 
         // Test getAppchainRewardsReceiver
-        assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_1), rewardsReceivers[0]);
-        assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_2), rewardsReceivers[1]);
+        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1), rewardsReceivers[0]);
+        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_2), rewardsReceivers[1]);
     }
 
     function testGetAppchainGasFeesZeroForNonExistentAppchain() public {
@@ -746,10 +748,10 @@ contract GasArchiveTest is Test {
         gasArchive.setArchivedEpochDataForTesting(EPOCH, appchainIds, gasUsageAmounts, rewardsReceivers);
 
         // Test existing appchain
-        assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_1), rewardsReceivers[0]);
+        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1), rewardsReceivers[0]);
 
         // Test non-existent appchain returns zero address
-        assertEq(gasArchive.getAppchainRewardsReceiver(EPOCH, APPCHAIN_ID_2), address(0));
+        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_2), address(0));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -878,8 +880,9 @@ contract GasArchiveTest is Test {
         vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         gasArchive.getActiveAppchainIds(epoch);
 
-        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
-        gasArchive.getAppchainRewardsReceiver(epoch, APPCHAIN_ID_1);
+        // getAppchainRewardsReceiver doesn't require archived epoch since it uses appchainLatestEpoch
+        // It will return address(0) for non-existent appchains
+        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1), address(0));
 
         // But our new utility functions should work
         assertTrue(gasArchive.hasChainSubmittedForEpoch(epoch, SEQ_CHAIN_ID));

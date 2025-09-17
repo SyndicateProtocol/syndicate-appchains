@@ -7,5 +7,5 @@ interface IGasDataProvider {
     function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
     function getTotalGasFees(uint256 epochIndex) external view returns (uint256);
     function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory _chainIDs);
-    function getAppchainRewardsReceiver(uint256 epochIndex, uint256 appchainId) external view returns (address);
+    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address);
 }
