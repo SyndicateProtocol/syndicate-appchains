@@ -7,26 +7,19 @@ import {Vm} from "forge-std/Vm.sol";
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {AppchainPool} from "src/staking/AppchainPool.sol";
 import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
+import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 
-/// @notice Interface the pool expects for gas accounting
-interface IGasProvider {
-    function getTotalGasFees(uint256 epochIndex) external view returns (uint256);
-    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory);
-    function getAppchainRewardsReceiver(uint256 epochIndex, uint256 appchainId) external view returns (address);
-}
-
 /// @notice Mock gas provider: programmable per-epoch fees + active IDs + reward receivers
-contract MockGasProvider is IGasProvider {
+contract MockGasProvider is IGasDataProvider {
     // epoch => total fees
     mapping(uint256 => uint256) public totals;
     // epoch => appchainId => fees
     mapping(uint256 => mapping(uint256 => uint256)) public fee;
     // epoch => list of appchainIds (we keep exactly what tests set)
     mapping(uint256 => uint256[]) private idsByEpoch;
-    // epoch => appchainId => rewards receiver
-    mapping(uint256 => mapping(uint256 => address)) public receiver;
+    // appchainId => rewards receiver (latest epoch)
+    mapping(uint256 => address) public receiver;
 
     function setFees(uint256 epoch, uint256[] memory appchainIds, uint256[] memory amounts) external {
         require(appchainIds.length == amounts.length, "length mismatch");
@@ -62,14 +55,14 @@ contract MockGasProvider is IGasProvider {
         totals[epoch] = totals[epoch] + amount - prev;
     }
 
-    function setReceiver(uint256 epoch, uint256 appchainId, address to) external {
-        receiver[epoch][appchainId] = to;
+    function setReceiver(uint256 appchainId, address to) external {
+        receiver[appchainId] = to;
     }
 
-    function setReceivers(uint256 epoch, uint256[] memory appchainIds, address[] memory dests) external {
+    function setReceivers(uint256[] memory appchainIds, address[] memory dests) external {
         require(appchainIds.length == dests.length, "length mismatch");
         for (uint256 i = 0; i < appchainIds.length; i++) {
-            receiver[epoch][appchainIds[i]] = dests[i];
+            receiver[appchainIds[i]] = dests[i];
         }
     }
 
@@ -89,8 +82,8 @@ contract MockGasProvider is IGasProvider {
         }
     }
 
-    function getAppchainRewardsReceiver(uint256 epochIndex, uint256 appchainId) external view returns (address) {
-        return receiver[epochIndex][appchainId];
+    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address) {
+        return receiver[appchainId];
     }
 }
 
@@ -182,7 +175,7 @@ contract AppchainPoolTest is Test {
         dests[1] = appchainDest2;
         idsLocal[2] = appchainId3;
         dests[2] = appchainDest3;
-        gasProvider.setReceivers(epoch, idsLocal, dests);
+        gasProvider.setReceivers(idsLocal, dests);
     }
 
     /// Returns a finalized epoch index (< current). Warps if needed.
@@ -485,7 +478,7 @@ contract AppchainPoolTest is Test {
 
         // Intentionally DO NOT set receiver for appchainId1
         // (but set one for id2 just to show the epoch has some config)
-        gasProvider.setReceiver(epoch, appchainId2, appchainDest2);
+        gasProvider.setReceiver(appchainId2, appchainDest2);
 
         appchainPool.deposit{value: 100 ether}(epoch);
 
@@ -531,7 +524,7 @@ contract AppchainPoolTest is Test {
         // Epoch 1
         uint256 e1 = _settledEpoch();
         setGasShares(e1, 1, 0, 0);
-        gasProvider.setReceiver(e1, appchainId1, appchainDest1);
+        gasProvider.setReceiver(appchainId1, appchainDest1);
         appchainPool.deposit{value: 40 ether}(e1);
 
         // Move to after epoch end + vesting duration
@@ -557,7 +550,7 @@ contract AppchainPoolTest is Test {
         uint256 e2 = _settledEpoch();
         require(e2 != e1, "need a different epoch after warp");
         setGasShares(e2, 1, 0, 0);
-        gasProvider.setReceiver(e2, appchainId1, appchainDest2); // <— different receiver
+        gasProvider.setReceiver(appchainId1, appchainDest2); // <— different receiver
         appchainPool.deposit{value: 60 ether}(e2);
 
         uint256 dest2Before = appchainDest2.balance;
@@ -618,7 +611,7 @@ contract AppchainPoolTest is Test {
 
         // Configure data & deposit into currentEpoch (math fine, but reads should revert per gating)
         setGasShares(currentEpoch, 1, 0, 0);
-        gasProvider.setReceiver(currentEpoch, appchainId1, appchainDest1);
+        gasProvider.setReceiver(appchainId1, appchainDest1);
         appchainPool.deposit{value: 10 ether}(currentEpoch);
 
         // Expect revert on getClaimableAmount for current
