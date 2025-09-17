@@ -66,9 +66,9 @@ jobs:
 
       - name: Rename artifacts with version
         run: |
-          mv synd-enclave/out/eif.bin eif-${{ env.TAG_NAME }}.bin
-          mv server/app/server server-${{ env.TAG_NAME }}.bin
-          mv sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program sp1-zk-${{ env.TAG_NAME }}.elf
+          mv eif.bin eif-${{ env.TAG_NAME }}.bin
+          mv server server-${{ env.TAG_NAME }}.bin
+          mv synd-tee-attestation-zk-proofs-sp1-program sp1-zk-${{ env.TAG_NAME }}.elf
 
       - name: Attach binaries to release
         uses: softprops/action-gh-release@v1
