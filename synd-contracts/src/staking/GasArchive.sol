@@ -266,7 +266,9 @@ contract GasArchive is AccessControl, IGasDataProvider {
             totalTokensUsed += tokens[i];
             epochAppchainTokensUsed[epoch][appchains[i]] += tokens[i];
             epochAppchainEmissionsReceiver[epoch][appchains[i]] = emissionsReceivers[i];
-            appchainLatestEpoch[appchains[i]] = epoch;
+            if (epoch > appchainLatestEpoch[appchains[i]]) {
+                appchainLatestEpoch[appchains[i]] = epoch;
+            }
         }
         epochTotalTokensUsed[epoch] = totalTokensUsed;
 
