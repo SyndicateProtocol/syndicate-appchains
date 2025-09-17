@@ -1,11 +1,11 @@
 # root files
-/*.* @WillPapper @daniilrrr @ericvelazquez @ibremseth @jorgemmsilva @tsite @Br1ght0ne
+/*.* @WillPapper @sammdec @daniilrrr @ericvelazquez @ibremseth @jorgemmsilva @tsite @Br1ght0ne
 
 
-/synd-contracts @WillPapper @gustavoguimaraes
+/synd-contracts @WillPapper @sammdec @gustavoguimaraes @ibremseth @ericvelazquez
 
-/synd-translator @WillPapper @daniilrrr @ericvelazquez @ibremseth @jorgemmsilva @tsite @Br1ght0ne
+/synd-translator @WillPapper @sammdec @daniilrrr @ericvelazquez @ibremseth @jorgemmsilva @tsite @Br1ght0ne
 
-/synd-proposer @WillPapper @daniilrrr @ericvelazquez @ibremseth @jorgemmsilva @tsite @Br1ght0ne
+/synd-proposer @WillPapper @sammdec @daniilrrr @ericvelazquez @ibremseth @jorgemmsilva @tsite @Br1ght0ne
 
-/synd-maestro @WillPapper @daniilrrr @ericvelazquez @ibremseth @jorgemmsilva @tsite @Br1ght0ne
+/synd-maestro @WillPapper @sammdec @daniilrrr @ericvelazquez @ibremseth @jorgemmsilva @tsite @Br1ght0ne
