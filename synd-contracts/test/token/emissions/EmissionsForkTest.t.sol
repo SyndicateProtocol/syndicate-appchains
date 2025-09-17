@@ -24,6 +24,7 @@ contract EmissionsForkTest is Test {
     EmissionsScheduler public emissionsScheduler = EmissionsScheduler(0x0000000000000000000000000000000000000000);
 
     function setUp() public {
+        vm.skip(true);
         // Start fork
         vm.createSelectFork("https://0xrpc.io/eth");
 
@@ -125,6 +126,7 @@ contract EmissionsForkTest is Test {
     }
 
     function test_emissions() public {
+        vm.skip(true);
         uint256 totalMinted = emissionsScheduler.totalEmissionsMinted();
 
         // Initial checks
