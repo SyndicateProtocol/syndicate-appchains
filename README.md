@@ -4,7 +4,7 @@
 [![Go](https://img.shields.io/badge/go-1.24.3+-blue.svg)](https://golang.org/)
 [![Foundry](https://img.shields.io/badge/foundry-1.3.1--stable+-green.svg)](https://getfoundry.sh/)
 [![Docker](https://img.shields.io/badge/docker-28.2.2+-blue.svg)](https://www.docker.com/)
-<!-- [![License](https://img.shields.io/badge/license-XXX-green.svg)](LICENSE) -->
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A comprehensive monorepo containing the complete Syndicate Appchains infrastructure stack.
 This repository includes the core components for building, deploying, and managing syndicate appchains.
@@ -164,9 +164,9 @@ syndicate-appchains/
 - Update documentation for any API changes
 - Ensure all tests and pre-commit hooks pass before submitting PRs
 
-<!-- ## 📄 License -->
+## 📄 License
 
-<!-- This project is licensed under the XXX License - see the [LICENSE](LICENSE) file for details. -->
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
