@@ -33,14 +33,14 @@ contract DeployStakingContracts is Script {
     address public L2_TOKEN = address(0x11dC28D01984079b7efE7763b533e6ed9E3722B9); // https://basescan.org/address/0x11dc28d01984079b7efe7763b533e6ed9e3722b9
 
     // Populate after deployment
-    address public l2Relayer = address(0x0000000000000000000000000000000000000000);
-    address public basePool = address(0x0000000000000000000000000000000000000000);
-    address public refunder = address(0x0000000000000000000000000000000000000000);
+    address public l2Relayer = address(0x5c1aD8136FF7C1bEF7fAc1AD09ccCdc40488119E);
+    address public basePool = address(0x71cF8bf70Bb4f5ba8e4B4588bacB5ee108f3Ed10);
+    address public refunder = address(0x9BE716F21428a254a2e4825cfa1d8A0893B9827B);
 
     function run() public {
         vm.startBroadcast();
 
-        deployL3Contracts();
+        // deployL3Contracts();
         // deployL2Contracts();
         // deployL1Contracts();
 
@@ -65,6 +65,10 @@ contract DeployStakingContracts is Script {
         );
         console2.log("EmissionsScheduler deployed to:", address(_emissionsScheduler));
 
+        // L1Relayer deployed to: 0x96f93df52B769AD3E7f633E4fc68cb2Cc1E33686
+        // EmissionsCalculator deployed to: 0x83D41A09D8A01dDa13e380f74032D4f2afc3545D
+        // EmissionsScheduler deployed to: 0xff8eb6318A3960863004f18eDd36aD8C8C711b29
+
         // Initialize emissions calculator
         _emissionsCalculator.initializeEmissions(decayFactor);
         _emissionsCalculator.grantRole(_emissionsCalculator.EMISSIONS_ROLE(), address(_emissionsScheduler));
@@ -78,10 +82,13 @@ contract DeployStakingContracts is Script {
 
     function deployL2Contracts() public {
         assert(block.chainid == 8453);
+        assert(refunder != address(0));
         assert(l2Admin != address(0));
 
         L2Relayer _l2Relayer = new L2Relayer(ARB_INBOX, L2_TOKEN, refunder, l2Admin);
         console2.log("L2Relayer deployed to:", address(_l2Relayer));
+
+        // L2Relayer deployed to: 0x5c1aD8136FF7C1bEF7fAc1AD09ccCdc40488119E
     }
 
     function deployL3Contracts() public {
@@ -96,5 +103,9 @@ contract DeployStakingContracts is Script {
 
         Refunder _refunder = new Refunder(address(_basePool), address(_syndStaking), l3Admin);
         console2.log("Refunder deployed to:", address(_refunder));
+
+        // SyndStaking deployed to: 0xF9637B60f27AF139FC46EAa655cFBbe4E731BCdF
+        // BasePool deployed to: 0x71cF8bf70Bb4f5ba8e4B4588bacB5ee108f3Ed10
+        // Refunder deployed to: 0x9BE716F21428a254a2e4825cfa1d8A0893B9827B
     }
 }

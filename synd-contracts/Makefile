@@ -88,5 +88,4 @@ airdrop-dry-run :; DRY_RUN=true AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRE
 airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_ADDRESS} RPC_URL=${RPC_URL} ACCOUNT=${ACCOUNT} DEV_PUB_ADDRESS=${DEV_PUB_ADDRESS} ./script/airdrop/airdrop.sh
 
 ## Staking Commands
-
-deploy-staking-contracts-commons :; forge script script/DeployStakingContracts.s.sol:DeployStakingContracts --rpc-url https://commons.rpc.syndicate.io --private-key ${PRIVATE_KEY} --broadcast -vv
+deploy-staking-contracts :; forge script script/DeployStakingContracts.s.sol:DeployStakingContracts --rpc-url ${RPC_URL} --private-key ${PRIVATE_KEY} --broadcast -vv

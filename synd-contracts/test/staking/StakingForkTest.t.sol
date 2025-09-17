@@ -8,9 +8,9 @@ import {Vm} from "forge-std/Vm.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract StakingForkTest is Test {
-    SyndStaking public staking = SyndStaking(0x0000000000000000000000000000000000000000);
-    BasePool public basePool = BasePool(0x0000000000000000000000000000000000000000);
-    address public admin = 0x0000000000000000000000000000000000000000;
+    SyndStaking public staking = SyndStaking(0xF9637B60f27AF139FC46EAa655cFBbe4E731BCdF);
+    BasePool public basePool = BasePool(0x71cF8bf70Bb4f5ba8e4B4588bacB5ee108f3Ed10);
+    address public admin = 0x03F8b8f48a3F22109bf1F4b54b54d0fdc96E7A67;
 
     address public user1 = makeAddr("user1");
     address public user2 = makeAddr("user2");
@@ -36,10 +36,10 @@ contract StakingForkTest is Test {
             console2.log("Staking contracts not found, deploying ones to fork");
             staking = new SyndStaking(admin);
             basePool = new BasePool(address(staking));
+        }
 
-            for (uint256 i = 0; i < users.length; i++) {
-                vm.deal(users[i], 100 ether);
-            }
+        for (uint256 i = 0; i < users.length; i++) {
+            vm.deal(users[i], 100 ether);
         }
     }
 
