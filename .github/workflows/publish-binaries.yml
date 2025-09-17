@@ -38,6 +38,10 @@ jobs:
           cd synd-withdrawals/synd-enclave
           docker build --target eif-bin --output=out .
 
+      - name: Build sp1-zk-proofs elf file
+        run: |
+          docker build -f synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/Dockerfile . --output ./sp1-build --platform linux/amd64
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -45,6 +49,7 @@ jobs:
           path: |
             synd-withdrawals/synd-enclave/out/eif.bin
             synd-withdrawals/server/app/server
+            sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program
           retention-days: 1
 
   publish-release:
@@ -63,6 +68,7 @@ jobs:
         run: |
           mv synd-enclave/out/eif.bin eif-${{ env.TAG_NAME }}.bin
           mv server/app/server server-${{ env.TAG_NAME }}.bin
+          mv sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program sp1-zk-${{ env.TAG_NAME }}.elf
 
       - name: Attach binaries to release
         uses: softprops/action-gh-release@v1
@@ -71,6 +77,7 @@ jobs:
           files: |
             eif-${{ env.TAG_NAME }}.bin
             server-${{ env.TAG_NAME }}.bin
+            sp1-zk-${{ env.TAG_NAME }}.elf
 
   notify-failure:
     name: Notify on failure
