@@ -17,10 +17,10 @@ import {BasePool} from "../src/staking/BasePool.sol";
 
 contract DeployStakingContracts is Script {
     // Settings
-    address public l1Admin = address(0x0000000000000000000000000000000000000000);
-    address public l2Admin = address(0x0000000000000000000000000000000000000000);
-    address public l3Admin = address(0x0000000000000000000000000000000000000000);
-    uint256 public decayFactor = 0.95e18;
+    address public l1Admin = address(0x243c63d5DBcF619ee36Fde7fF63D1564d5665b41); // Syndicate Gnosis Safe
+    address public l2Admin = address(0x243c63d5DBcF619ee36Fde7fF63D1564d5665b41); // Syndicate Gnosis Safe
+    address public l3Admin = address(0x03F8b8f48a3F22109bf1F4b54b54d0fdc96E7A67); // Ledger
+    uint256 public decayFactor = 0.98e18;
     uint256 public startingEpoch = 3;
 
     // DEPLOYED ON ETHEREUM
@@ -57,7 +57,7 @@ contract DeployStakingContracts is Script {
             new L1Relayer(L1_STANDARD_BRIDGE, L1_CROSS_DOMAIN_MESSENGER, L1_TOKEN, L2_TOKEN, l2Relayer, l1Admin);
         console2.log("L1Relayer deployed to:", address(_l1Relayer));
 
-        EmissionsCalculator _emissionsCalculator = new EmissionsCalculator(address(L1_TOKEN), l1Admin, l1Admin);
+        EmissionsCalculator _emissionsCalculator = new EmissionsCalculator(address(L1_TOKEN), msg.sender, l1Admin);
         console2.log("EmissionsCalculator deployed to:", address(_emissionsCalculator));
 
         EmissionsScheduler _emissionsScheduler = new EmissionsScheduler(
@@ -70,10 +70,10 @@ contract DeployStakingContracts is Script {
         _emissionsCalculator.grantRole(_emissionsCalculator.EMISSIONS_ROLE(), address(_emissionsScheduler));
         console2.log("Emissions setup completed successfully");
 
-        // Set calculator to MINTER role
-        SyndicateToken token = SyndicateToken(L1_TOKEN);
-        token.grantRole(token.EMISSION_MINTER_ROLE(), address(_emissionsCalculator));
-        console2.log("EmissionsCalculator granted MINTER role");
+        // Renounce default admin role
+        _emissionsCalculator.grantRole(_emissionsCalculator.DEFAULT_ADMIN_ROLE(), l1Admin);
+        _emissionsCalculator.renounceRole(_emissionsCalculator.DEFAULT_ADMIN_ROLE(), msg.sender);
+        console2.log("EmissionsCalculator default admin transferred to:", l1Admin);
     }
 
     function deployL2Contracts() public {
