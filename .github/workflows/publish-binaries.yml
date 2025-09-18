@@ -10,6 +10,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build artifacts
@@ -54,6 +57,8 @@ jobs:
 
   publish-release:
     name: Attach binaries to GitHub release
+    permissions:
+      contents: write
     needs: build
     runs-on: shared-medium-01
     env:
@@ -81,6 +86,7 @@ jobs:
 
   notify-failure:
     name: Notify on failure
+    permissions: {}
     if: always() && (needs.build.result == 'failure' || needs.publish-release.result == 'failure')
     needs: [build, publish-release]
     runs-on: ubuntu-latest
