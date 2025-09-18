@@ -26,15 +26,11 @@ The script performs the following actions:
 Update the env vars in the `setup-box.sh` script:
 
 ```
-GITHUB_USERNAME=yourgithubusername
-GITHUB_TOKEN=gpg_yourgithubpat
-...
 KEY_MANAGER_ADDRESS=0xYourKeyManagerAddress
 PRIVATE_KEY=0xYourPrivateKey
 ```
 
 PRIVATE_KEY just needs to be any wallet with settlement funds.
-GITHUB_TOKEN should be a "classic" github PAT with repo:read access
 
 ### 2. Generate the file to copy
 
