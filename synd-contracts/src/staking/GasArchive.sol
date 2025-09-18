@@ -502,12 +502,12 @@ contract GasArchive is AccessControl, IGasDataProvider {
     /// @param chainID The chain ID of the sequencing chain
     /// @param aggregatorAddress Address of the GasAggregator contract on the sequencing chain
     /// @param bridgeAddress Address of the bridge contract on Ethereum (not needed for settlement chain)
-    /// @param storageSlotIndex Index of the storage slot in the Outbox contract where the mapping of sendRoot to block hash is stored
+    /// @param epochDataHashStorageSlotIndex Index of the storage slot in the Outbox contract where the mapping of sendRoot to block hash is stored
     function addSequencingChain(
         uint256 chainID,
         address aggregatorAddress,
         address bridgeAddress,
-        uint256 storageSlotIndex
+        uint256 epochDataHashStorageSlotIndex
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (seqChainGasAggregatorAddresses[chainID] != address(0)) {
             revert SequencingChainAlreadyExists();
@@ -528,7 +528,7 @@ contract GasArchive is AccessControl, IGasDataProvider {
         seqChainIDs.push(chainID);
         seqChainGasAggregatorAddresses[chainID] = aggregatorAddress;
         seqChainEthOutbox[chainID] = bridgeAddress;
-        seqChainEthSendRootStorageSlot[chainID] = storageSlotIndex;
+        seqChainEthSendRootStorageSlot[chainID] = epochDataHashStorageSlotIndex;
     }
 
     /// @notice Removes a sequencing chain configuration

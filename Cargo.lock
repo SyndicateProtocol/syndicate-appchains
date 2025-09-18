@@ -7689,7 +7689,9 @@ dependencies = [
  "alloy",
  "clap",
  "contract-bindings",
+ "shared",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

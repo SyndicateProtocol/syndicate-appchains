@@ -4,6 +4,10 @@ use clap::{Parser, Subcommand};
 use synd_stake_cli::{
     gas_agg::{gas_agg, GasAggArgs},
     mint::{mint, MintArgs},
+    proofs::{
+        aggregate_gas_data_top_n_chains, submit_gas_proofs, update_base_and_ethereum_block_hashes,
+        AggregateGasDataTopNChainsArgs, SubmitGasProofsArgs, UpdateBaseAndEthereumBlockHashesArgs,
+    },
     refund_gas::{refund_gas, RefundGasArgs},
 };
 use tokio;
@@ -54,36 +58,35 @@ enum Commands {
     ///
     /// TODO: Implement
     SubmitGas,
+
+    /// call the BlockHashRelayer to update the base/ethereum block hashes on the staking appchain
+    UpdateBaseAndEthereumBlockHashes(UpdateBaseAndEthereumBlockHashesArgs),
+
+    /// call eth_getProof for the sequencing chain(s) and submit it to the staking appchain (twice
+    /// 1 proof for block hash, another for the gasAggregation data)
+    SubmitGasProofs(SubmitGasProofsArgs),
+
+    /// submit the gas data for the top N chains, if we are over the "offchain aggregation"
+    /// threshold
+    AggregateGasDataTopNChains(AggregateGasDataTopNChainsArgs),
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
 
-    match &args.command {
-        Some(Commands::Mint(mint_args)) => {
-            mint(mint_args).await;
+    match &args.command.unwrap_or_else(|| panic!("No command provided. use --help for more info")) {
+        Commands::Mint(mint_args) => mint(mint_args).await,
+        Commands::RefundGas(refund_gas_args) => refund_gas(refund_gas_args).await,
+        Commands::GasAgg(gas_agg_args) => gas_agg(gas_agg_args).await,
+        Commands::Relay => todo!(),
+        Commands::ConfirmSeq => todo!(),
+        Commands::ConfirmGas => todo!(),
+        Commands::SubmitGas => todo!(),
+        Commands::UpdateBaseAndEthereumBlockHashes(args) => {
+            update_base_and_ethereum_block_hashes(args).await
         }
-        Some(Commands::RefundGas(refund_gas_args)) => {
-            refund_gas(refund_gas_args).await;
-        }
-        Some(Commands::GasAgg(gas_agg_args)) => {
-            gas_agg(gas_agg_args).await;
-        }
-        Some(Commands::Relay) => {
-            println!("TODO: Implement relay command");
-        }
-        Some(Commands::ConfirmSeq) => {
-            println!("TODO: Implement confirm sequence command");
-        }
-        Some(Commands::ConfirmGas) => {
-            println!("TODO: Implement confirm gas command");
-        }
-        Some(Commands::SubmitGas) => {
-            println!("TODO: Implement submit gas command");
-        }
-        None => {
-            println!("No command provided. Use --help for usage.");
-        }
-    }
+        Commands::SubmitGasProofs(args) => submit_gas_proofs(args).await,
+        Commands::AggregateGasDataTopNChains(args) => aggregate_gas_data_top_n_chains(args).await,
+    };
 }

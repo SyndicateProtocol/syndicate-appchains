@@ -2,4 +2,5 @@
 
 pub mod gas_agg;
 pub mod mint;
+pub mod proofs;
 pub mod refund_gas;
