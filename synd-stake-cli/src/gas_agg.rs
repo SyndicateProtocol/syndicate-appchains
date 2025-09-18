@@ -67,8 +67,8 @@ pub async fn gas_agg(args: &GasAggArgs) {
     let provider = ProviderBuilder::new().connect(args.rpc_url.as_str()).await.unwrap();
 
     let gas_aggregator = GasAggregator::new(gas_aggregator_address, provider);
-    if gas_aggregator.pendingEpoch().call().await.unwrap()
-        == gas_aggregator.getCurrentEpoch().call().await.unwrap()
+    if gas_aggregator.pendingEpoch().call().await.unwrap() ==
+        gas_aggregator.getCurrentEpoch().call().await.unwrap()
     {
         println!("Epoch not over");
         return;
