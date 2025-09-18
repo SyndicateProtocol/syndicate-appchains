@@ -27,8 +27,7 @@ contract AppchainPool is IPool, RewardPoolBase {
         _preChecks(epochIndex);
 
         // Only the configured receiver can claim
-        if (msg.sender != IGasDataProvider(address(gasDataProvider)).getAppchainRewardsReceiver(epochIndex, appchainId))
-        {
+        if (msg.sender != IGasDataProvider(address(gasDataProvider)).getAppchainRewardsReceiver(appchainId)) {
             revert InvalidClaimer();
         }
         if (destination == address(0)) {
