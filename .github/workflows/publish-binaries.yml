@@ -31,14 +31,9 @@ jobs:
           cd synd-withdrawals/server
           docker build --output=. .
 
-      - name: Pull submodules
-        run: |
-          cd synd-withdrawals/synd-enclave && \
-          git submodule update --init --recursive
-
       - name: Build eif.bin file
         run: |
-          cd synd-withdrawals/synd-enclave
+          cd synd-withdrawals
           docker build --target eif-bin --output=out .
 
       - name: Build sp1-zk-proofs elf file
@@ -50,7 +45,7 @@ jobs:
         with:
           name: built-artifacts
           path: |
-            synd-withdrawals/synd-enclave/out/eif.bin
+            synd-withdrawals/out/eif.bin
             synd-withdrawals/server/app/server
             sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program
           retention-days: 1
@@ -71,7 +66,7 @@ jobs:
 
       - name: Rename artifacts with version
         run: |
-          mv synd-withdrawals/synd-enclave/out/eif.bin eif-${{ env.TAG_NAME }}.bin
+          mv synd-withdrawals/out/eif.bin eif-${{ env.TAG_NAME }}.bin
           mv synd-withdrawals/server/app/server server-${{ env.TAG_NAME }}.bin
           mv sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program sp1-zk-${{ env.TAG_NAME }}.elf
 

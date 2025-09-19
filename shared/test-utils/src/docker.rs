@@ -25,7 +25,6 @@ use std::{
 };
 use synd_mchain::client::MProvider;
 use tokio::{
-    fs,
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
 };
@@ -123,61 +122,6 @@ impl Drop for E2EProcess {
     }
 }
 
-async fn ensure_nitro_node_deps() -> Result<()> {
-    let workspace_dir = env!("CARGO_WORKSPACE_DIR");
-    let nitro_solgen_dir = Path::new(workspace_dir)
-        .join("synd-withdrawals/synd-enclave/nitro/solgen")
-        .to_string_lossy()
-        .to_string();
-
-    // consider deps installed if there is more than 1 file (`gen.go`) in the solgen directory
-    let mut entries = fs::read_dir(&nitro_solgen_dir).await?;
-    let mut count = 0;
-    while (entries.next_entry().await?).is_some() {
-        count += 1;
-        if count > 1 {
-            info!("nitro node-deps already installed");
-            return Ok(());
-        }
-    }
-    warn!("building nitro node-deps... (this can take a long time");
-
-    // fist run `yarn install --ignore-engines` in the`safe-smart-account` dir to circumvent
-    // NodeJS version error
-    let status = E2EProcess::new(
-        Command::new("yarn")
-            .current_dir(format!(
-                "{workspace_dir}/synd-withdrawals/synd-enclave/nitro/safe-smart-account"
-            ))
-            .arg("install")
-            .arg("--ignore-engines"),
-        "yarn-install-safe-smart-account",
-    )?
-    .wait()
-    .await?;
-    if !status.success() {
-        return Err(eyre::eyre!(
-            "Failed to run yarn install in safe-smart-account. Exit status: {}",
-            status
-        ));
-    }
-
-    let status = E2EProcess::new(
-        Command::new("make")
-            .current_dir(format!("{workspace_dir}/synd-withdrawals/synd-enclave/nitro"))
-            .arg("build-node-deps"),
-        "build-node-deps",
-    )?
-    .wait()
-    .await?;
-    if !status.success() {
-        return Err(eyre::eyre!("Failed to build nitro node-deps. Exit status: {}", status));
-    }
-
-    info!("nitro node-deps built successfully");
-    Ok(())
-}
-
 pub async fn start_component(
     executable_name: &str,
     api_port: u16,
@@ -186,110 +130,72 @@ pub async fn start_component(
 ) -> Result<E2EProcess> {
     info!("launching {}", executable_name);
     let needs_rocksdb = executable_name == "synd-mchain";
-    let mut docker =
-        if let Ok(tag) = env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG") {
-            E2EProcess::new(
-                Command::new("docker")
-                    .arg("run")
-                    .arg("--init")
-                    .arg("--rm")
-                    .arg("--net=host")
-                    .arg(format!(
-                        "ghcr.io/syndicateprotocol/syndicate-appchains/{executable_name}:{tag}"
-                    ))
-                    .args(args),
-                executable_name,
-            )
-        } else if executable_name == "synd-proposer" {
-            let proposer_mode =
-                if cfg!(target_os = "macos") { ProposerMode::Go } else { ProposerMode::Docker };
-            launch_proposer(args, proposer_mode).await
-        } else {
-            let mut cmd = Command::new("cargo");
-            // ring has a custom build.rs script that rebuilds whenever certain environment
-            // vars change
-            cmd.env_remove("CARGO_MANIFEST_DIR")
-                .env_remove("CARGO_PKG_NAME")
-                .env_remove("CARGO_PKG_VERSION_MAJOR")
-                .env_remove("CARGO_PKG_VERSION_MINOR")
-                .env_remove("CARGO_PKG_VERSION_PATCH")
-                .env_remove("CARGO_PKG_VERSION_PRE")
-                .env_remove("CARGO_MANIFEST_LINKS")
-                .current_dir(env!("CARGO_WORKSPACE_DIR"))
-                .arg("run");
+    let mut tag = env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG");
+    if executable_name == "synd-proposer" && tag.is_err() {
+        let image_name =
+            "ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:dev".to_string();
+        let project_root = env!("CARGO_WORKSPACE_DIR");
+        let build_status = E2EProcess::new(
+            Command::new("docker")
+                .arg("buildx")
+                .arg("build")
+                .arg("--load")
+                .arg(project_root)
+                .arg("--tag")
+                .arg(&image_name)
+                .arg("--target")
+                .arg("synd-proposer"),
+            "building-synd-proposer",
+        )?
+        .wait()
+        .await?;
 
-            if needs_rocksdb {
-                cmd.arg("--features").arg("rocksdb");
-            }
+        if !build_status.success() {
+            return Err(eyre::eyre!(
+                "failed to build synd-proposer docker image. Exit status: {}",
+                build_status
+            ));
+        };
 
-            cmd.arg("--bin").arg(executable_name).arg("--").args(args).args(cargs);
-            E2EProcess::new(&mut cmd, executable_name)
-        }?;
+        tag = Ok("dev".to_string());
+    }
+    let mut docker = if let Ok(tag) = tag {
+        E2EProcess::new(
+            Command::new("docker")
+                .arg("run")
+                .arg("--init")
+                .arg("--rm")
+                .arg("--net=host")
+                .arg(format!(
+                    "ghcr.io/syndicateprotocol/syndicate-appchains/{executable_name}:{tag}"
+                ))
+                .args(args),
+            executable_name,
+        )
+    } else {
+        let mut cmd = Command::new("cargo");
+        // ring has a custom build.rs script that rebuilds whenever certain environment
+        // vars change
+        cmd.env_remove("CARGO_MANIFEST_DIR")
+            .env_remove("CARGO_PKG_NAME")
+            .env_remove("CARGO_PKG_VERSION_MAJOR")
+            .env_remove("CARGO_PKG_VERSION_MINOR")
+            .env_remove("CARGO_PKG_VERSION_PATCH")
+            .env_remove("CARGO_PKG_VERSION_PRE")
+            .env_remove("CARGO_MANIFEST_LINKS")
+            .current_dir(env!("CARGO_WORKSPACE_DIR"))
+            .arg("run");
+
+        if needs_rocksdb {
+            cmd.arg("--features").arg("rocksdb");
+        }
+
+        cmd.arg("--bin").arg(executable_name).arg("--").args(args).args(cargs);
+        E2EProcess::new(&mut cmd, executable_name)
+    }?;
 
     health_check(executable_name, api_port, &mut docker).await;
     Ok(docker)
-}
-
-pub enum ProposerMode {
-    Docker,
-    Go,
-}
-
-pub async fn launch_proposer(args: Vec<String>, mode: ProposerMode) -> Result<E2EProcess> {
-    match mode {
-        ProposerMode::Docker => {
-            let image_name =
-                "ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:dev".to_string();
-            let project_root = env!("CARGO_WORKSPACE_DIR");
-            let build_status = E2EProcess::new(
-                Command::new("docker")
-                    .arg("buildx")
-                    .arg("build")
-                    .arg("--load")
-                    .arg(project_root)
-                    .arg("--tag")
-                    .arg(&image_name)
-                    .arg("--platform=linux/amd64")
-                    .arg("--target")
-                    .arg("synd-proposer"),
-                "building-synd-proposer",
-            )?
-            .wait()
-            .await?;
-
-            if !build_status.success() {
-                return Err(eyre::eyre!(
-                    "failed to build synd-proposer docker image. Exit status: {}",
-                    build_status
-                ));
-            };
-
-            E2EProcess::new(
-                Command::new("docker")
-                    .arg("run")
-                    .arg("--init")
-                    .arg("--rm")
-                    .arg("--net=host")
-                    .arg(&image_name)
-                    .args(args),
-                "synd-proposer",
-            )
-        }
-        ProposerMode::Go => {
-            ensure_nitro_node_deps().await?;
-            // Synd-proposer is a Go service, so we need to use the Go command to run it
-            let mut cmd = Command::new("go");
-            let project_root = env!("CARGO_WORKSPACE_DIR");
-            let proposer_dir = Path::new(project_root)
-                .join("synd-withdrawals/synd-proposer")
-                .to_string_lossy()
-                .to_string();
-            cmd.current_dir(proposer_dir);
-            cmd.arg("run").arg("./cmd/synd-proposer");
-            cmd.args(args);
-            E2EProcess::new(&mut cmd, "synd-proposer")
-        }
-    }
 }
 
 pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2EProcess) {
