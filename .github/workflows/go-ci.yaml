@@ -36,14 +36,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Pull submodules
-        run: |
-          cd synd-withdrawals/synd-enclave && \
-          git submodule update --init --recursive
-
       - name: Build enclave image
         run: |
-          cd synd-withdrawals/synd-enclave
+          cd synd-withdrawals
           docker build --target eif-bin .
 
   proposer-test:
