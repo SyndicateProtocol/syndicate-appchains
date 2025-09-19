@@ -31,7 +31,7 @@
         cp -rv ${nitro-arbitrator-stylus-lib}/lib/* vendor/github.com/offchainlabs/nitro/target/lib
       fi
     '';
-    vendorHash = "sha256-IWk71nxHQH/Uw3MfMTrJYVHndy89GZjOx1d0wN1TYek=";
+    vendorHash = "sha256-zIk55iKad9UB4kvdlH5Qb4yLj3dDd39AH4JzBuqPpbg=";
     subPackages = ["cmd/enclave"];
     ldFlags = [
       "-linkmode external"
@@ -105,63 +105,27 @@
     src = "${inputs.nitro}/contracts";
     nativeBuildInputs = with lib.pkgs-2505;
       [
-        foundry
         yarnConfigHook
         yarnBuildHook
         yarnInstallHook
         writableTmpDirAsHomeHook
         nodejs
-      ]
-      ++ [lib.solc-pkgs.solc_0_8_28];
+      ];
     offlineCache = lib.pkgs-2505.fetchYarnDeps {
       yarnLock = "${final.src}/yarn.lock";
       hash = "sha256-1DqXlJvhWf7OugnTdNfqupHGyPz2AphZjTLuKjOyppY=";
     };
-    patchPhase = let
-      solcBin = version: let
-        cleanVersion = builtins.head (builtins.split "-" version);
-        pkg = lib.solc-pkgs."solc_${builtins.replaceStrings ["."] ["_"] cleanVersion}";
-      in "${pkg}/bin/solc-${cleanVersion}";
-      hardhatPatch = ''
-        import { HardhatUserConfig, subtask } from 'hardhat/config';
-
-        const {
-          TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
-        } = require('hardhat/builtin-tasks/task-names');
-
-        subtask(
-          TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
-          async (
-            args: {
-              solcVersion: string;
-            },
-            hre,
-            runSuper
-          ) => {
-            var compilerPath;
-            switch (args.solcVersion) {
-              case '0.8.17':
-                compilerPath = '${solcBin "0.8.17"}';
-                break;
-              case '0.8.24':
-                compilerPath = '${solcBin "0.8.24"}';
-                break;
-              default:
-                return runSuper();
-            }
-            return {
-              compilerPath,
-              isSolcJs: false,
-              version: args.solcVersion,
-              // This is used as extra information in the build-info files,
-              // but other than that is not important
-              longVersion: args.solcVersion,
-            };
-          }
-        );
-      '';
-    in ''
-      awk -v n=113 -v s="${hardhatPatch}" "NR == n {print s} {print}" hardhat.config.ts > tmp && mv tmp hardhat.config.ts
+    preBuild = ''
+      mkdir -p ~/.cache/hardhat-nodejs/compilers-v2/linux-amd64
+      echo '{"builds":[{"version":"0.8.17","path":"solc"},{"version":"0.8.24","path":"solc"}]}' > ~/.cache/hardhat-nodejs/compilers-v2/linux-amd64/list.json
+      touch ~/.cache/hardhat-nodejs/compilers-v2/linux-amd64/solc
+      touch ~/.cache/hardhat-nodejs/compilers-v2/linux-amd64/solc.does.not.work
+      mkdir -p ~/.cache/hardhat-nodejs/compilers-v2/wasm
+      echo '{"builds":[{"version":"0.8.17","path":"solc-0.8.17"},{"version":"0.8.24","path":"solc-0.8.24"}]}' > ~/.cache/hardhat-nodejs/compilers-v2/wasm/list.json
+      cp ${inputs.solc-0-8-17} ~/.cache/hardhat-nodejs/compilers-v2/wasm/solc-0.8.17
+      chmod +x ~/.cache/hardhat-nodejs/compilers-v2/wasm/solc-0.8.17
+      cp ${inputs.solc-0-8-24} ~/.cache/hardhat-nodejs/compilers-v2/wasm/solc-0.8.24
+      chmod +x ~/.cache/hardhat-nodejs/compilers-v2/wasm/solc-0.8.24
     '';
   });
 
@@ -220,14 +184,15 @@
       go run solgen/gen.go
       cp -r solgen/go/* $out/
     '';
-    vendorHash = "sha256-dJUOTd/LSeIMO2m8DmTc1tkphBn3bA2OM4Vl66PgJR8=";
+    vendorHash = "sha256-lmTzAxidFSPiDGLPziItkUY0xjvsYhqyfhvQo6g50nM=";
   };
 
   enclave-src-with-generated = let
     enclave-src = pkgs.lib.fileset.toSource {
       root = ../synd-enclave;
       fileset = pkgs.lib.fileset.unions [
-        ../synd-enclave/cmd/enclave
+        ../synd-enclave/cmd/enclave/main.go
+        ../synd-enclave/cmd/enclave/g1.point
         ../synd-enclave/enclave
         ../synd-enclave/teemodule
         ../synd-enclave/teetypes
