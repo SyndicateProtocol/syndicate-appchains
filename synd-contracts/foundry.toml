@@ -13,6 +13,10 @@ out = "out"
 src = "src"
 via_ir = true
 
+[lint]
+lint_on_build = false
+
+
 [rpc_endpoints]
 base_sepolia    = "https://sepolia.base.org"
 exo             = "${EXO_RPC_URL}"

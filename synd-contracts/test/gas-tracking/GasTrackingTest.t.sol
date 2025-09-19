@@ -48,11 +48,11 @@ contract MockAppchainFactory is AppchainFactory {
         appchainChainIDs.push(chainId);
     }
 
-    function getTotalAppchains() external view returns (uint256) {
+    function getTotalAppchainsForGasTracking() external view returns (uint256) {
         return totalAppchains;
     }
 
-    function getContractsForAppchains(uint256[] memory chainIDs) external view returns (address[] memory) {
+    function getContractsForGasTracking(uint256[] memory chainIDs) external view returns (address[] memory) {
         address[] memory contracts = new address[](chainIDs.length);
         for (uint256 i = 0; i < chainIDs.length; i++) {
             contracts[i] = appchainContracts[chainIDs[i]];
@@ -60,7 +60,7 @@ contract MockAppchainFactory is AppchainFactory {
         return contracts;
     }
 
-    function getAppchainsAndContracts() external view returns (uint256[] memory, address[] memory) {
+    function getAppchainsAndContractsForGasTracking() external view returns (uint256[] memory, address[] memory) {
         address[] memory contracts = new address[](appchainChainIDs.length);
         for (uint256 i = 0; i < appchainChainIDs.length; i++) {
             contracts[i] = appchainContracts[appchainChainIDs[i]];

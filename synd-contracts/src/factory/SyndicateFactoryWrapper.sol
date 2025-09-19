@@ -51,22 +51,19 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
     }
 
     /// @notice Deploy a complete syndicate with permission module and sequencing chain
-    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param appchainId The app chain ID (0 for deterministic generation)
     /// @param admin The admin address for both contracts
     /// @param moduleType The type of permission module to deploy (And or Or)
     /// @param moduleSalt The salt for the permission module deployment
-    /// @param chainSalt The salt for the sequencing chain deployment
     /// @return sequencingChain The deployed sequencing chain address
     /// @return permissionModule The deployed permission module address
     /// @return actualChainId The chain ID that was used
     //#olympix-ignore-reentrancy-events
-    function deployCompleteSyndicate(
-        uint256 appchainId,
-        address admin,
-        ModuleType moduleType,
-        bytes32 moduleSalt,
-        bytes32 chainSalt
-    ) public whenNotPaused returns (address sequencingChain, address permissionModule, uint256 actualChainId) {
+    function deployCompleteSyndicate(uint256 appchainId, address admin, ModuleType moduleType, bytes32 moduleSalt)
+        public
+        whenNotPaused
+        returns (address sequencingChain, address permissionModule, uint256 actualChainId)
+    {
         if (admin == address(0)) revert ZeroAddress();
 
         // Deploy the appropriate permission module
@@ -79,9 +76,16 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
         }
 
         // Deploy the sequencing chain with the permission module
-        (sequencingChain, actualChainId) = syndicateFactory.createSyndicateSequencingChain(
-            appchainId, admin, IRequirementModule(permissionModule), chainSalt
-        );
+        if (appchainId == 0) {
+            // Use deterministic deployment when appchainId is 0
+            (sequencingChain, actualChainId) =
+                syndicateFactory.createSyndicateSequencingChain(admin, IRequirementModule(permissionModule));
+        } else {
+            // Use custom chain ID when appchainId is provided
+            (sequencingChain, actualChainId) = syndicateFactory.createSyndicateSequencingChainWithCustomId(
+                appchainId, admin, IRequirementModule(permissionModule)
+            );
+        }
 
         emit CompleteSyndicateDeployed(actualChainId, sequencingChain, permissionModule, moduleType, admin);
 
@@ -92,7 +96,6 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
     /// @param admin The admin address for the module
     /// @param moduleType The type of permission module
     /// @param moduleSalt The salt for the permission module
-    /// @param chainSalt The salt for the sequencing chain
     /// @param chainId The chain ID for the sequencing chain
     /// @return permissionModuleAddress The computed permission module address
     /// @return sequencingChainAddress The computed sequencing chain address
@@ -100,7 +103,6 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
         address admin,
         ModuleType moduleType,
         bytes32 moduleSalt,
-        bytes32 chainSalt,
         uint256 chainId
     ) external view returns (address permissionModuleAddress, address sequencingChainAddress) {
         // Compute permission module address
@@ -113,15 +115,9 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
         }
 
         // Compute sequencing chain address
-        sequencingChainAddress = syndicateFactory.computeSequencingChainAddress(chainSalt, chainId);
+        sequencingChainAddress = syndicateFactory.computeSequencingChainAddress(chainId);
 
         return (permissionModuleAddress, sequencingChainAddress);
-    }
-
-    /// @notice Get the next auto-generated chain ID from the syndicate factory
-    /// @return The next available chain ID
-    function getNextAutoChainId() external view returns (uint256) {
-        return syndicateFactory.getNextChainId();
     }
 
     /// @notice Check if a chain ID has been used in the syndicate factory
@@ -131,42 +127,34 @@ contract SyndicateFactoryWrapper is AccessControl, Pausable {
         return syndicateFactory.isChainIdUsed(chainId);
     }
 
-    /// @notice Get the namespace prefix from the syndicate factory
-    /// @return The current namespace prefix
-    function getNamespacePrefix() external view returns (uint256) {
-        return syndicateFactory.namespacePrefix();
-    }
-
     /// @notice Deploy a syndicate with RequireAndModule
-    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param appchainId The app chain ID (0 for deterministic generation)
     /// @param admin The admin address for both contracts
     /// @param moduleSalt The salt for the permission module deployment
-    /// @param chainSalt The salt for the sequencing chain deployment
     /// @return sequencingChain The deployed sequencing chain address
     /// @return permissionModule The deployed permission module address
     /// @return actualChainId The chain ID that was used
-    function deployWithRequireAndModule(uint256 appchainId, address admin, bytes32 moduleSalt, bytes32 chainSalt)
+    function deployWithRequireAndModule(uint256 appchainId, address admin, bytes32 moduleSalt)
         external
         whenNotPaused
         returns (address sequencingChain, address permissionModule, uint256 actualChainId)
     {
-        return deployCompleteSyndicate(appchainId, admin, ModuleType.RequireAnd, moduleSalt, chainSalt);
+        return deployCompleteSyndicate(appchainId, admin, ModuleType.RequireAnd, moduleSalt);
     }
 
     /// @notice Deploy a syndicate with RequireOrModule
-    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param appchainId The app chain ID (0 for deterministic generation)
     /// @param admin The admin address for both contracts
     /// @param moduleSalt The salt for the permission module deployment
-    /// @param chainSalt The salt for the sequencing chain deployment
     /// @return sequencingChain The deployed sequencing chain address
     /// @return permissionModule The deployed permission module address
     /// @return actualChainId The chain ID that was used
-    function deployWithRequireOrModule(uint256 appchainId, address admin, bytes32 moduleSalt, bytes32 chainSalt)
+    function deployWithRequireOrModule(uint256 appchainId, address admin, bytes32 moduleSalt)
         external
         whenNotPaused
         returns (address sequencingChain, address permissionModule, uint256 actualChainId)
     {
-        return deployCompleteSyndicate(appchainId, admin, ModuleType.RequireOr, moduleSalt, chainSalt);
+        return deployCompleteSyndicate(appchainId, admin, ModuleType.RequireOr, moduleSalt);
     }
 
     /// @notice Pause the wrapper factory (admin only)

@@ -12,15 +12,17 @@ use crate::components::{
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
-    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U160, U256},
+    primitives::{address, hex, keccak256, utils::parse_ether, Address, Bytes, TxHash, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, TransactionReceipt},
     sol_types::SolCall,
 };
 use contract_bindings::synd::{
     assertion_poster::AssertionPoster,
+    erc1967_proxy::ERC1967Proxy,
     i_inbox::IInbox,
     i_upgrade_executor::IUpgradeExecutor,
+    r#always_allowed_module::AlwaysAllowedModule,
     rollup::Rollup,
     syndicate_sequencing_chain::SyndicateSequencingChain::{
         self, SyndicateSequencingChainInstance,
@@ -253,21 +255,33 @@ impl TestComponents {
 
         info!("Sequencing chain Nitro URL: {}", seq_rpc_ws_url);
 
-        let _ = SyndicateSequencingChain::deploy_builder(
+        let _ = SyndicateSequencingChain::deploy_builder(&seq_provider).send().await?;
+        let sequencing_contract_address_impl = seq_provider.default_signer_address().create(0);
+
+        let _ = ERC1967Proxy::deploy_builder(
             &seq_provider,
-            U256::from(options.appchain_chain_id),
+            sequencing_contract_address_impl,
+            Bytes::new(),
         )
         .send()
         .await?;
-        let sequencing_contract_address = seq_provider.default_signer_address().create(0);
+        let sequencing_contract_address = seq_provider.default_signer_address().create(1);
+
+        let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+        let always_allowed_module_address = seq_provider.default_signer_address().create(2);
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
             SyndicateSequencingChain::new(sequencing_contract_address, provider_clone);
-
-        // Set the requirement module to address(1) to allow all transactions
-        let _ = sequencing_contract.updateRequirementModule(U160::from(1).into()).send().await?;
+        let _ = sequencing_contract
+            .initialize(
+                seq_provider.default_signer_address(),
+                always_allowed_module_address,
+                U256::from(options.appchain_chain_id),
+            )
+            .send()
+            .await?;
 
         match options.base_chains_type {
             BaseChainsType::Anvil => {

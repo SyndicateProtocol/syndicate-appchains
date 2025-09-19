@@ -1,0 +1,57 @@
+name: Check storage layout
+
+on:
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on synd-contracts are tested.
+  push:
+    branches:
+      - main
+  # Only run on PRs that touch shared contracts
+  pull_request:
+    paths:
+      - "synd-contracts/**"
+
+permissions:
+  contents: read
+
+jobs:
+  storage-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Build contracts
+        working-directory: synd-contracts
+        run: forge build --sizes
+
+      - name: Inspect storage layout
+        working-directory: synd-contracts
+        run: |
+          forge inspect SyndicateSequencingChain storageLayout --json > actual_storage_layout.json
+          jq -S . actual_storage_layout.json > actual_storage_layout.norm.json
+
+      - name: Normalize expected layout
+        working-directory: synd-contracts
+        run: |
+          jq -S . syndicate_sequencing_chain_layout.json > expected_storage_layout.norm.json
+
+      - name: Compare layouts
+        working-directory: synd-contracts
+        run: |
+          set -e
+          echo "Comparing expected vs actual storage layouts..."
+          if ! diff -u expected_storage_layout.norm.json actual_storage_layout.norm.json; then
+            echo
+            echo "❌ Storage layout changed. If intentional, update syndicate_sequencing_chain_layout.json."
+            exit 1
+          fi
+          echo "✅ Storage layout matches."

@@ -7,6 +7,7 @@ import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequenc
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract MockIsAllowed is IPermissionModule {
     bool allowed;
@@ -49,10 +50,12 @@ contract AtomicSequencerTest is Test {
     }
 
     function deployFromFactory(uint256 appchainId) public returns (SyndicateSequencingChain) {
-        SyndicateFactory factory = new SyndicateFactory(admin);
-        (address chainAddress,) = factory.createSyndicateSequencingChain(
-            appchainId, admin, permissionModule, keccak256(abi.encodePacked("test-salt"))
-        );
+        SyndicateFactory implementation = new SyndicateFactory();
+        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        SyndicateFactory factory = SyndicateFactory(address(proxy));
+        (address chainAddress,) =
+            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
         return SyndicateSequencingChain(chainAddress);
     }
 
@@ -102,9 +105,9 @@ contract AtomicSequencerTest is Test {
     }
 
     function testProcessMultipleChains() public {
-        SyndicateSequencingChain chainC = new SyndicateSequencingChain(10042003);
-        chainC.updateRequirementModule(address(permissionModule));
-        chainC.transferOwnership(admin);
+        vm.startPrank(admin);
+        SyndicateSequencingChain chainC = deployFromFactory(10042003);
+        vm.stopPrank();
 
         SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](3);
         chains[0] = chainA;

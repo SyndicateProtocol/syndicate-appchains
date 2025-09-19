@@ -9,6 +9,8 @@ import {
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -52,10 +54,12 @@ contract SyndicateSequencingChainTestSetUp is Test {
     function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
         vm.startPrank(admin);
-        factory = new SyndicateFactory(admin);
-        (address chainAddress,) = factory.createSyndicateSequencingChain(
-            appchainId, admin, _permissionModule, keccak256(abi.encodePacked("test-salt"))
-        );
+        SyndicateFactory implementation = new SyndicateFactory();
+        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        factory = SyndicateFactory(address(proxy));
+        (address chainAddress,) =
+            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
         vm.stopPrank();
         return SyndicateSequencingChain(chainAddress);
     }
@@ -72,6 +76,14 @@ contract SyndicateSequencingChainTestSetUp is Test {
 }
 
 contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
+    function isImplementationAllowed(address) external pure returns (bool) {
+        return true;
+    }
+
+    function notifyChainUpgrade(uint256, address) external {
+        // Mock implementation - no-op
+    }
+
     function testProcessRawTransaction() public {
         bytes memory validTxn = abi.encode("valid transaction");
 
@@ -161,8 +173,166 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testConstructorWithZeroAppChainId() public {
+        address chainImpl = address(new SyndicateSequencingChain());
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+
         vm.expectRevert("App chain ID cannot be 0");
-        new SyndicateSequencingChain(0);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 0);
+    }
+
+    function testUpgradeBadguy() public {
+        address chainImpl = address(new SyndicateSequencingChain());
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
+
+        address badguy = makeAddr("badguy");
+        vm.prank(badguy);
+        vm.expectRevert();
+        UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
+    }
+
+    function testUpgradeOwner() public {
+        address chainImpl = address(new SyndicateSequencingChain());
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
+
+        vm.prank(admin);
+        UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
+    }
+
+    function testUpgradeWithAllowedImplementation() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Deploy chain through factory to get proper factory setup
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
+
+        vm.startPrank(admin);
+        testFactory.addAllowedImplementation(address(newImpl), false);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        // Upgrade should succeed since implementation is allowed
+        // Set allowGasTrackingBanOnUpgrade to false (default is true)
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
+
+        // Perform the upgrade
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
+    }
+
+    function testUpgradeWithDisallowedImplementationAllowBan() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Deploy chain through factory
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
+
+        vm.startPrank(admin);
+        (address chainAddr, uint256 chainId) =
+            testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        // Upgrade should succeed with allowGasTrackingBan=true even though implementation not allowed
+        // Set allowGasTrackingBanOnUpgrade to true (this is the default)
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(true);
+
+        // Perform the upgrade
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
+
+        // Chain should be banned from gas tracking
+        assertTrue(testFactory.isChainBannedFromGasTracking(chainId));
+    }
+
+    function testUpgradeWithDisallowedImplementationRevertsBan() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Deploy chain through factory
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
+
+        vm.startPrank(admin);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        // Upgrade should revert with allowGasTrackingBan=false
+        // Set allowGasTrackingBanOnUpgrade to false
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
+
+        // Attempt upgrade - should fail
+        vm.prank(admin);
+        vm.expectRevert("Upgrade would result in gas tracking ban");
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
+    }
+
+    function testUpgradeAuthorizationOnlyOwner() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Deploy chain through factory
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
+
+        vm.startPrank(admin);
+        testFactory.addAllowedImplementation(address(newImpl), false);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        address nonOwner = makeAddr("nonOwner");
+
+        // Non-owner should not be able to perform upgrade
+        vm.prank(nonOwner);
+        vm.expectRevert(); // Ownable revert from _authorizeUpgrade
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
+    }
+
+    function testUpgradeChecksImplementationCorrectly() public {
+        // Deploy chain through factory
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+        SyndicateFactory implementation2 = new SyndicateFactory();
+        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
+        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
+
+        vm.startPrank(admin);
+        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        vm.stopPrank();
+
+        // Create two different implementations
+        SyndicateSequencingChain impl1 = new SyndicateSequencingChain();
+        SyndicateSequencingChain impl2 = new SyndicateSequencingChain();
+
+        // Allow only impl1
+        vm.prank(admin);
+        testFactory.addAllowedImplementation(address(impl1), false);
+
+        // Verify impl1 upgrade works
+        // Set allowGasTrackingBanOnUpgrade to false first
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl1), "");
+
+        // Verify impl2 upgrade fails with allowGasTrackingBan=false
+        vm.prank(admin);
+        vm.expectRevert("Upgrade would result in gas tracking ban");
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
     }
 
     function testProcessTransactionsBulkAllAllowed() public {

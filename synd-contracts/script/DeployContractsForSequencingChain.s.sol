@@ -10,6 +10,8 @@ import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {RequireAndModuleFactory} from "src/factory/PermissionModuleFactories.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 contract DeploySyndicateFactory is Script {
     SyndicateFactory public syndicateFactory;
     RequireAndModuleFactory public requireAndModuleFactory;
@@ -23,23 +25,21 @@ contract DeploySyndicateFactory is Script {
         // syndicate admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
-        syndicateFactory = new SyndicateFactory(admin);
+        // Deploy implementation and proxy
+        SyndicateFactory implementation = new SyndicateFactory();
+        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        syndicateFactory = SyndicateFactory(address(proxy));
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
         requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
 
-        bytes32 salt = bytes32(appchainId);
-
-        address module = requireAndModuleFactory.createRequireAndModule(admin, salt);
+        address module = requireAndModuleFactory.createRequireAndModule(admin, bytes32(appchainId));
         console.log("Deployed RequireAndModule", module);
 
         // create SyndicateSequencingChain with the permission module
-        (address sequencingChain, uint256 chainId) = syndicateFactory.createSyndicateSequencingChain(
-            0, // auto-increment
-            admin,
-            IRequirementModule(module),
-            salt
-        );
+        (address sequencingChain, uint256 chainId) =
+            syndicateFactory.createSyndicateSequencingChain(admin, IRequirementModule(module));
 
         console.log("Deployed SyndicateSequencingChain", sequencingChain);
         console.log("Deployed RequireAndModule", address(module));
@@ -65,14 +65,8 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
         console.log("Deployed RequireAndModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencingChain = new SyndicateSequencingChain(appchainId);
-
-        // Set sequencing module
-        sequencingChain.updateRequirementModule(address(permissionModule));
-
-        // Transfer ownership
-        sequencingChain.transferOwnership(admin);
-
+        sequencingChain = new SyndicateSequencingChain();
+        sequencingChain.initialize(admin, address(permissionModule), appchainId);
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 
         // Deploy and add always allowed module
