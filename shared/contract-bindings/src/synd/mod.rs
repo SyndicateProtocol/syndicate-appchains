@@ -258,6 +258,7 @@ pub mod r#value_stack_lib;
 pub mod r#votes;
 pub mod r#wallet_pool_wrapper_module;
 pub mod r#mock_syndicate_sequencing_chain;
+pub mod r#withdrawal_governor;
 pub mod r#ierc1155_errors;
 pub mod r#ierc20_errors;
 pub mod r#ierc721_errors;
