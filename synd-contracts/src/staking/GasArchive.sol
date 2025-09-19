@@ -1,0 +1,587 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {MerklePatriciaProofVerifier} from "./lib/MerklePatriciaProofVerifier.sol";
+import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
+import {RLPReader} from "./lib/RLPReader.sol";
+
+/// @title GasArchive
+/// @notice Lives on the staking appchain and trustlessly validates and stores gas usage data from multiple sequencing chains using storage proofs
+/// @dev This contract supports arbitrum-based sequencing chains only (with the exception of the settlement chain, which can be any chain)
+contract GasArchive is AccessControl, IGasDataProvider {
+    using RLPReader for RLPReader.RLPItem;
+    using RLPReader for bytes;
+
+    /*//////////////////////////////////////////////////////////////
+                            CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Storage slot of aggregatedEpochDataHash in GasAggregator (slot 7) (see `forge inspect GasAggregator storageLayout`)
+    uint256 public constant AGGREGATED_EPOCH_DATA_HASH_SLOT = 7;
+    uint256 public constant HEADER_STATE_ROOT_INDEX = 3;
+    uint256 public constant STORAGE_ROOT_ACCOUNT_FIELDS_INDEX = 2;
+
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice known block hashes for the ETH and SETTLEMENT chains are passed trustlessly via the bridge by a known source
+    // @dev The `BlockHashRelayer` contract is deployed on the settlement chain and is responsible for sending the block hashes to the `GasArchive` contract. Anyone can call `sendBlockHashes` on the relayer to send the block hashes.
+    bytes32 public lastKnownEthereumBlockHash;
+    bytes32 public lastKnownSettlementChainBlockHash;
+    uint256 public lastKnownSettlementChainBlockNumber;
+    address public blockHashSender;
+
+    /// @notice when using the settlement chain as the sequencing chain, the rollup hash proof is not required and `lastKnownSettlementChainBlockHash` will be used intead
+    uint256 public immutable settlementChainID;
+
+    /// @notice chainIDs of the sequencing chains to expect data from
+    uint256[] public seqChainIDs;
+
+    /// @notice mapping of sequencing chain IDs to the address of the gas aggregator contract
+    mapping(uint256 chainId => address aggregatorAddress) public seqChainGasAggregatorAddresses;
+    /// @notice mapping of sequencing chain IDs to the address of the Outbox contract for that sequencing chain (where the confirmed rollup hash can be found)
+    mapping(uint256 chainId => address outboxAddress) public seqChainEthOutbox;
+    /// @notice mapping of sequencing chain IDs to the storage slot index of the `roots` mapping in the ABSOutbox contract for that seq chain that lives on ethereum
+    mapping(uint256 chainId => uint256 sendRootStorageSlotIndex) public seqChainEthSendRootStorageSlot;
+    // @notice mapping of sequencing chain IDs to the respective last confirmed block hash
+    mapping(uint256 chainId => bytes32 blockHash) public lastKnownSeqChainBlockHashes;
+
+    /// @notice tracks which sequencing chains have submitted data for each epoch
+    mapping(uint256 epoch => mapping(uint256 chainId => bool submitted)) public epochChainDataSubmitted;
+
+    /// @notice Stores the verified epoch data hash
+    mapping(uint256 epoch => mapping(uint256 seqChainID => bytes32 dataHash)) public epochVerifiedDataHash;
+
+    /// @notice tracks which epochs have received data from all expected sequencing chains
+    mapping(uint256 epoch => bool completed) public epochCompleted;
+
+    /// @notice stores the snapshot of active sequencing chains when first chain submits data for an epoch
+    mapping(uint256 epoch => uint256[] chainIds) public epochExpectedChains;
+
+    /// @notice Validated epoch data
+    mapping(uint256 epoch => uint256 totalTokens) public epochTotalTokensUsed;
+    mapping(uint256 epoch => uint256[] appchainIds) public epochAppchainIDs;
+    mapping(uint256 epoch => mapping(uint256 appchainId => uint256 tokens)) public epochAppchainTokensUsed;
+    mapping(uint256 epoch => mapping(uint256 appchainId => address receiver)) public epochAppchainEmissionsReceiver;
+    mapping(uint256 appchainId => uint256 latestEpoch) public appchainLatestEpoch;
+    // NOTE: if an appchain has different emissions receivers across different sequencing chains, the latest one to be validated will be used
+
+    /*//////////////////////////////////////////////////////////////
+                                EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event EpochDataValidated(uint256 indexed epoch, uint256 indexed seqChainID, bytes32 dataHash);
+    event EpochCompleted(uint256 indexed epoch);
+    event EpochExpectedChainsUpdated(uint256 indexed epoch, uint256[] chainIds);
+    event GasAggregatorAddressUpdated(address indexed oldAddress, address indexed newAddress);
+    event LastKnownBlockHashesUpdated(bytes32 ethBlockHash, bytes32 settlementBlockHash, uint256 settlementBlockNumber);
+
+    /*//////////////////////////////////////////////////////////////
+                                ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error ZeroAddress();
+    error InvalidProof();
+    error AccountDoesNotExistInProof();
+    error EmptySlot();
+    error InvalidData();
+    error ChainIDNotFound();
+    error CannotSubmitProofForSettlementChain();
+    error NotBlockHashSender();
+    error InvalidEthereumBlockHeader();
+    error InvalidSeqChainBlockHeader();
+    error SequencingChainAlreadyExists();
+    error NotArchivedEpoch();
+    error ZeroLengthArray();
+    error EpochAlreadyCompleted();
+    error AlreadySubmitted();
+    error EmptyDataHash();
+    error OldSettlementChainBlockNumber();
+
+    /*//////////////////////////////////////////////////////////////
+                            CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    constructor(address _blockHashSender, uint256 _settlementChainID, address admin) {
+        if (_blockHashSender == address(0)) revert ZeroAddress();
+        if (admin == address(0)) revert ZeroAddress();
+        blockHashSender = _blockHashSender;
+        settlementChainID = _settlementChainID;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+
+    modifier onlyArchivedEpoch(uint256 epochIndex) {
+        if (!epochCompleted[epochIndex]) revert NotArchivedEpoch();
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        EXTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sets the last known block hashes for the ETH and SETTLEMENT chains
+    /// @dev This function is called by the block hash sender on the settlement chain to share the last known block hashes
+    /// @param ethBlockHash The last known block hash for the ETH chain
+    /// @param settlementBlockHash The last known block hash for the SETTLEMENT chain
+    /// @param settlementBlockNumber The block number for the settlement chain block
+    function setLastKnownBlockHashes(bytes32 ethBlockHash, bytes32 settlementBlockHash, uint256 settlementBlockNumber)
+        external
+    {
+        if (msg.sender != blockHashSender) revert NotBlockHashSender();
+
+        // Ensure block number is always increasing
+        if (settlementBlockNumber <= lastKnownSettlementChainBlockNumber) revert OldSettlementChainBlockNumber();
+
+        lastKnownEthereumBlockHash = ethBlockHash;
+        lastKnownSettlementChainBlockHash = settlementBlockHash;
+        lastKnownSettlementChainBlockNumber = settlementBlockNumber;
+        emit LastKnownBlockHashesUpdated(
+            lastKnownEthereumBlockHash, lastKnownSettlementChainBlockHash, lastKnownSettlementChainBlockNumber
+        );
+    }
+
+    /// @notice Confirms and stores a sequencing chain block hash using Ethereum storage proofs
+    /// @dev Verifies that the provided block hash is confirmed in the respective Ethereum bridge contract storage
+    /// @param seqChainID The ID of the sequencing chain
+    /// @param sendRoot The send root stored in the the Arbitrum Outbox contract that the proof was generated for
+    /// @param ethereumBlockHeader RLP-encoded Ethereum block header
+    /// @param ethereumAccountProof Merkle proof of the bridge contract account
+    /// @param ethereumStorageProof Merkle proof of the storage slot containing the block hash
+    function confirmSequencingChainBlockHash(
+        uint256 seqChainID,
+        bytes32 sendRoot,
+        bytes calldata ethereumBlockHeader,
+        bytes[] calldata ethereumAccountProof,
+        bytes[] calldata ethereumStorageProof
+    ) external {
+        if (keccak256(ethereumBlockHeader) != lastKnownEthereumBlockHash) {
+            revert InvalidEthereumBlockHeader();
+        }
+        address account = seqChainEthOutbox[seqChainID];
+        if (account == address(0)) {
+            if (seqChainID == settlementChainID) {
+                revert CannotSubmitProofForSettlementChain();
+            }
+            revert ChainIDNotFound();
+        }
+
+        uint256 mappingSlot = seqChainEthSendRootStorageSlot[seqChainID];
+        bytes32 storageSlot = _getSendRootStorageSlot(sendRoot, mappingSlot);
+
+        bytes32 verifiedSeqChainBlockHash = _getSlotValueFromProof({
+            stateRoot: _getStateRootFromHeader(ethereumBlockHeader),
+            accountProof: ethereumAccountProof,
+            storageProof: ethereumStorageProof,
+            account: account,
+            storageSlot: storageSlot
+        });
+
+        lastKnownSeqChainBlockHashes[seqChainID] = verifiedSeqChainBlockHash;
+    }
+
+    /// @notice Validates and stores the epochDataHash for a given sequencing chain / epoch using sequencing chain storage proofs
+    /// @dev Verifies the proof data of the sequencing chain's proof against the confirmed seq chain block hash
+    /// @param epoch The epoch number to validate
+    /// @param seqChainID The sequencing chain ID
+    /// @param seqChainBlockHeader RLP-encoded sequencing chain block header
+    /// @param seqChainAccountProof Merkle proof of the GasAggregator account
+    /// @param seqChainStorageProof Merkle proof of the epoch data storage slot
+    function confirmEpochDataHash(
+        uint256 epoch,
+        uint256 seqChainID,
+        bytes calldata seqChainBlockHeader,
+        bytes[] calldata seqChainAccountProof,
+        bytes[] calldata seqChainStorageProof
+    ) external {
+        // prevent resubmission for the same epoch and chain
+        if (epochChainDataSubmitted[epoch][seqChainID] || epochVerifiedDataHash[epoch][seqChainID] != bytes32(0)) {
+            revert AlreadySubmitted();
+        }
+
+        // seq chain header must matches the last confirmed block hash for this sequencing chain
+        bytes32 seqChainBlockHash = keccak256(seqChainBlockHeader);
+        bytes32 expectedBlockHash = lastKnownSeqChainBlockHashes[seqChainID];
+        if (seqChainID == settlementChainID) {
+            expectedBlockHash = lastKnownSettlementChainBlockHash;
+        }
+        if (expectedBlockHash != seqChainBlockHash) {
+            revert InvalidSeqChainBlockHeader();
+        }
+        // verify that the provided epoch data is valid according to the sequencing chain proof
+        bytes32 verifiedEpochDataHash = _epochDataHashFromSeqChainStorageProof({
+            epoch: epoch,
+            seqChainID: seqChainID,
+            blockHeader: seqChainBlockHeader,
+            accountProof: seqChainAccountProof,
+            storageProof: seqChainStorageProof
+        });
+
+        if (verifiedEpochDataHash == bytes32(0)) revert EmptyDataHash();
+
+        // data submitted is valid, store it
+        emit EpochDataValidated(epoch, seqChainID, verifiedEpochDataHash);
+
+        epochVerifiedDataHash[epoch][seqChainID] = verifiedEpochDataHash;
+
+        // if this is the first chain to submit for this epoch, snapshot the expected chains
+        if (epochExpectedChains[epoch].length == 0) {
+            _snapshotExpectedChainsForEpoch(epoch);
+        }
+    }
+
+    /// @notice Receives the pre-image data for a verified epoch
+    /// @param epoch The epoch number to validate
+    /// @param seqChainID The sequencing chain ID
+    /// @param appchains Array of appchain IDs
+    /// @param tokens Array of token amounts used to pay for gas by each appchain on the sequencing chain
+    /// @param emissionsReceivers Array of emissions receiver addresses for each appchain
+    function submitEpochPreImageData(
+        uint256 epoch,
+        uint256 seqChainID,
+        uint256[] calldata appchains,
+        uint256[] calldata tokens,
+        address[] calldata emissionsReceivers
+    ) external {
+        // prevent resubmission for the same epoch and chain
+        if (epochChainDataSubmitted[epoch][seqChainID]) revert AlreadySubmitted();
+
+        // note: we skip validating that appchains.length == tokens.length == emissionsReceivers.length
+        // because the GasAggregator already enforces this.
+
+        bytes32 verifiedEpochDataHash = epochVerifiedDataHash[epoch][seqChainID];
+        bytes32 epochDataHash = keccak256(abi.encode(appchains, tokens, emissionsReceivers));
+        if (verifiedEpochDataHash != epochDataHash) {
+            revert InvalidData();
+        }
+
+        uint256 totalTokensUsed = 0;
+        epochAppchainIDs[epoch] = appchains;
+        for (uint256 i = 0; i < appchains.length; i++) {
+            totalTokensUsed += tokens[i];
+            epochAppchainTokensUsed[epoch][appchains[i]] += tokens[i];
+            epochAppchainEmissionsReceiver[epoch][appchains[i]] = emissionsReceivers[i];
+            if (epoch > appchainLatestEpoch[appchains[i]]) {
+                appchainLatestEpoch[appchains[i]] = epoch;
+            }
+        }
+        epochTotalTokensUsed[epoch] = totalTokensUsed;
+
+        // mark this chain as having submitted data for this epoch
+        epochChainDataSubmitted[epoch][seqChainID] = true;
+
+        // cleanup storage
+        delete epochVerifiedDataHash[epoch][seqChainID];
+
+        // check if all expected chains have now submitted data for this epoch
+        _checkEpochCompletion(epoch);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Validates gas usage data from an appchain using storage proof
+    /// @param epoch The epoch to validate
+    /// @param blockHeader the header of the block for which the proof was generated
+    /// @param accountProof RLP-encoded proof of the GasAggregator account
+    /// @param storageProof RLP-encoded proof of the storage slot
+    function _epochDataHashFromSeqChainStorageProof(
+        uint256 epoch,
+        uint256 seqChainID,
+        bytes calldata blockHeader,
+        bytes[] calldata accountProof,
+        bytes[] calldata storageProof
+    ) internal view returns (bytes32) {
+        address account = seqChainGasAggregatorAddresses[seqChainID];
+        if (account == address(0)) {
+            revert ChainIDNotFound();
+        }
+        return _getSlotValueFromProof({
+            stateRoot: _getStateRootFromHeader(blockHeader),
+            accountProof: accountProof,
+            storageProof: storageProof,
+            account: account,
+            storageSlot: _getStorageSlot(epoch)
+        });
+    }
+
+    /// @notice Retrieves a storage slot value using Merkle Patricia proofs (can be obtained from `eth_getProof`)
+    /// @dev First verifies the account proof to get the storage root, then verifies the storage proof
+    ///      to extract the value at the specified storage slot
+    /// @param stateRoot The Ethereum state root to verify against
+    /// @param accountProof Merkle proof of the account in the state trie
+    /// @param storageProof Merkle proof of the storage slot in the account's storage trie
+    /// @param account The account address containing the storage slot
+    /// @param storageSlot The storage slot to retrieve the value from
+    /// @return The value stored in the specified storage slot
+    function _getSlotValueFromProof(
+        bytes32 stateRoot,
+        bytes[] calldata accountProof,
+        bytes[] calldata storageProof,
+        address account,
+        bytes32 storageSlot
+    ) internal pure returns (bytes32) {
+        bytes32 storageRoot = _storageRootFromAccountProof(account, stateRoot, accountProof);
+
+        // storage slot must be hashed to be used as the path in the Merkle Partricia Trie proof
+        bytes32 hashedStorageSlot = keccak256(abi.encode(storageSlot));
+        RLPReader.RLPItem memory slotContents = MerklePatriciaProofVerifier.extractProofValue({
+            rootHash: storageRoot,
+            path: abi.encodePacked(hashedStorageSlot),
+            stack: _RLPItemsFromProofBytes(storageProof)
+        }).toRlpItem();
+
+        if (slotContents.len == 0) {
+            revert EmptySlot();
+        }
+
+        return bytes32(slotContents.toUint());
+    }
+
+    /// @notice Extracts the storage root from an account proof
+    /// @dev Verifies the account proof against the state root and returns the account's storage root
+    ///      from the RLP-decoded account fields
+    /// @param account The account address to verify
+    /// @param stateRoot The Ethereum state root to verify against
+    /// @param accountProof Merkle proof of the account in the state trie
+    /// @return The storage root hash of the verified account
+    function _storageRootFromAccountProof(address account, bytes32 stateRoot, bytes[] calldata accountProof)
+        internal
+        pure
+        returns (bytes32)
+    {
+        bytes32 accountHash = keccak256(abi.encodePacked(account));
+        RLPReader.RLPItem memory accountRlp = MerklePatriciaProofVerifier.extractProofValue({
+            rootHash: stateRoot,
+            path: abi.encodePacked(accountHash),
+            stack: _RLPItemsFromProofBytes(accountProof)
+        }).toRlpItem();
+
+        // If the account does not exist, return the hash of an empty trie.
+        if (accountRlp.len == 0) {
+            revert AccountDoesNotExistInProof();
+        }
+
+        RLPReader.RLPItem[] memory accountFields = accountRlp.toList();
+
+        return bytes32(accountFields[STORAGE_ROOT_ACCOUNT_FIELDS_INDEX].toUint());
+    }
+
+    function _getStateRootFromHeader(bytes calldata blockHeader) internal pure returns (bytes32) {
+        RLPReader.RLPItem[] memory headerFields = blockHeader.toRlpItem().toList();
+        return bytes32(headerFields[HEADER_STATE_ROOT_INDEX].toUint());
+    }
+
+    /// @notice Calculates the storage slot for a given epoch in the aggregatedEpochDataHash mapping
+    /// @param epoch The epoch to get the storage slot for
+    /// @return The storage slot
+    function _getStorageSlot(uint256 epoch) internal pure returns (bytes32) {
+        return keccak256(abi.encode(epoch, AGGREGATED_EPOCH_DATA_HASH_SLOT));
+    }
+
+    function _getSendRootStorageSlot(bytes32 sendroot, uint256 mappingSlot) internal pure returns (bytes32) {
+        return keccak256(abi.encode(sendroot, mappingSlot));
+    }
+
+    /// @notice creates RLP items from the given proof bytes.
+    ///
+    /// @param proof The proof bytes.
+    ///
+    /// @return The RLP items.
+    function _RLPItemsFromProofBytes(bytes[] memory proof) private pure returns (RLPReader.RLPItem[] memory) {
+        RLPReader.RLPItem[] memory proofItems = new RLPReader.RLPItem[](proof.length);
+        for (uint256 i; i < proof.length; i++) {
+            proofItems[i] = proof[i].toRlpItem();
+        }
+        return proofItems;
+    }
+
+    /// @notice Snapshots the current list of sequencing chains that are expected to submit data for an epoch
+    /// @param epoch The epoch to create the snapshot for
+    function _snapshotExpectedChainsForEpoch(uint256 epoch) internal {
+        epochExpectedChains[epoch] = seqChainIDs;
+        // also include the settlement chain if it has a gas aggregator configured
+        if (seqChainGasAggregatorAddresses[settlementChainID] != address(0)) {
+            epochExpectedChains[epoch].push(settlementChainID);
+        }
+    }
+
+    /// @notice Checks if all expected sequencing chains have submitted data for an epoch
+    /// @param epoch The epoch to check completion for
+    function _checkEpochCompletion(uint256 epoch) internal {
+        uint256[] memory expectedChains = epochExpectedChains[epoch];
+        for (uint256 i = 0; i < expectedChains.length; i++) {
+            if (!epochChainDataSubmitted[epoch][expectedChains[i]]) {
+                return; // not all chains have submitted yet
+            }
+        }
+        // all expected chains have submitted data
+        epochCompleted[epoch] = true;
+        emit EpochCompleted(epoch);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             VIEWS
+    //////////////////////////////////////////////////////////////*/
+
+    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId)
+        external
+        view
+        onlyArchivedEpoch(epochIndex)
+        returns (uint256)
+    {
+        return epochAppchainTokensUsed[epochIndex][appchainId];
+    }
+
+    function getTotalGasFees(uint256 epochIndex) external view onlyArchivedEpoch(epochIndex) returns (uint256) {
+        return epochTotalTokensUsed[epochIndex];
+    }
+
+    function getActiveAppchainIds(uint256 epochIndex)
+        external
+        view
+        onlyArchivedEpoch(epochIndex)
+        returns (uint256[] memory _chainIDs)
+    {
+        uint256[] memory appchainIDs = epochAppchainIDs[epochIndex];
+        return appchainIDs;
+    }
+
+    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address) {
+        return epochAppchainEmissionsReceiver[appchainLatestEpoch[appchainId]][appchainId];
+    }
+
+    /// @notice Returns the list of sequencing chains expected to submit data for a given epoch
+    /// @param epochIndex The epoch to query
+    /// @return Array of chain IDs expected for this epoch
+    function getEpochExpectedChains(uint256 epochIndex) external view returns (uint256[] memory) {
+        return epochExpectedChains[epochIndex];
+    }
+
+    /// @notice Checks if a specific sequencing chain has submitted data for an epoch
+    /// @param epochIndex The epoch to check
+    /// @param chainId The chain ID to check
+    /// @return Whether the chain has submitted data for this epoch
+    function hasChainSubmittedForEpoch(uint256 epochIndex, uint256 chainId) external view returns (bool) {
+        return epochChainDataSubmitted[epochIndex][chainId];
+    }
+
+    /// @notice Returns completion status and progress for an epoch
+    /// @param epochIndex The epoch to check
+    /// @return completed Whether all expected chains have submitted
+    /// @return totalExpected Total number of chains expected
+    /// @return totalSubmitted Number of chains that have submitted
+    function getEpochProgress(uint256 epochIndex)
+        external
+        view
+        returns (bool completed, uint256 totalExpected, uint256 totalSubmitted)
+    {
+        completed = epochCompleted[epochIndex];
+        uint256[] memory expectedChains = epochExpectedChains[epochIndex];
+        totalExpected = expectedChains.length;
+
+        for (uint256 i = 0; i < expectedChains.length; i++) {
+            if (epochChainDataSubmitted[epochIndex][expectedChains[i]]) {
+                totalSubmitted++;
+            }
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Adds a new sequencing chain configuration
+    /// @dev Only admin can add sequencing chains. Special handling for settlement chain as sequencing chain
+    /// @param chainID The chain ID of the sequencing chain
+    /// @param aggregatorAddress Address of the GasAggregator contract on the sequencing chain
+    /// @param bridgeAddress Address of the bridge contract on Ethereum (not needed for settlement chain)
+    /// @param storageSlotIndex Index of the storage slot in the Outbox contract where the mapping of sendRoot to block hash is stored
+    function addSequencingChain(
+        uint256 chainID,
+        address aggregatorAddress,
+        address bridgeAddress,
+        uint256 storageSlotIndex
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (seqChainGasAggregatorAddresses[chainID] != address(0)) {
+            revert SequencingChainAlreadyExists();
+        }
+        if (aggregatorAddress == address(0)) {
+            revert ZeroAddress();
+        }
+
+        if (chainID == settlementChainID) {
+            seqChainGasAggregatorAddresses[chainID] = aggregatorAddress;
+            return;
+        }
+
+        if (bridgeAddress == address(0)) {
+            revert ZeroAddress();
+        }
+
+        seqChainIDs.push(chainID);
+        seqChainGasAggregatorAddresses[chainID] = aggregatorAddress;
+        seqChainEthOutbox[chainID] = bridgeAddress;
+        seqChainEthSendRootStorageSlot[chainID] = storageSlotIndex;
+    }
+
+    /// @notice Removes a sequencing chain configuration
+    /// @dev Only admin can remove sequencing chains. Special handling for settlement chain
+    /// @param chainID The chain ID of the sequencing chain to remove
+    function removeSeqChain(uint256 chainID) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (chainID == settlementChainID) {
+            delete seqChainGasAggregatorAddresses[chainID];
+            return;
+        }
+
+        uint256 index = seqChainIDs.length;
+        for (uint256 i = 0; i < seqChainIDs.length; i++) {
+            if (seqChainIDs[i] == chainID) {
+                index = i;
+                break;
+            }
+        }
+        if (index == seqChainIDs.length) {
+            revert ChainIDNotFound();
+        }
+        seqChainIDs[index] = seqChainIDs[seqChainIDs.length - 1];
+        seqChainIDs.pop();
+        delete seqChainGasAggregatorAddresses[chainID];
+        delete seqChainEthOutbox[chainID];
+        delete seqChainEthSendRootStorageSlot[chainID];
+    }
+
+    /// @notice Updates the authorized block hash sender address
+    /// @dev Only admin can change the block hash sender
+    /// @param newBlockHashSender The new address authorized to send block hashes
+    function setBlockHashSender(address newBlockHashSender) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        blockHashSender = newBlockHashSender;
+    }
+
+    /// @notice Manually sets the expected sequencing chains for an epoch
+    /// @dev Only admin can override expected chains. Useful for handling chain additions/removals
+    /// @param epoch The epoch to update
+    /// @param chainIds Array of chain IDs expected to submit data for this epoch
+    function setEpochExpectedChains(uint256 epoch, uint256[] calldata chainIds) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (epochCompleted[epoch]) revert EpochAlreadyCompleted();
+
+        // Clear existing expected chains
+        delete epochExpectedChains[epoch];
+
+        // Set new expected chains
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            epochExpectedChains[epoch].push(chainIds[i]);
+        }
+
+        emit EpochExpectedChainsUpdated(epoch, chainIds);
+
+        // Check if this change makes the epoch complete
+        _checkEpochCompletion(epoch);
+    }
+}

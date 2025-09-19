@@ -4,7 +4,7 @@
 //! different rollup implementations can construct and process their blocks.
 
 use crate::appchains::shared::SequencingTransactionParser;
-use alloy::primitives::Bytes;
+use alloy::primitives::{Bytes, TxHash};
 use async_trait::async_trait;
 use shared::types::PartialBlock;
 use std::marker::{Send, Sync};
@@ -23,8 +23,8 @@ pub trait RollupAdapter: Send + Sync {
     /// * `input` - A block along with its associated receipts.
     ///
     /// # Returns
-    /// A vector of extracted transactions in raw `Bytes` format.
-    fn parse_block_to_mbtxs(&self, input: &PartialBlock) -> Vec<Bytes> {
+    /// A vector of extracted transaction data containing the raw `Bytes` and tx hash
+    fn parse_block_to_mbtxs(&self, input: &PartialBlock) -> Vec<(Bytes, TxHash)> {
         input
             .logs
             .iter()

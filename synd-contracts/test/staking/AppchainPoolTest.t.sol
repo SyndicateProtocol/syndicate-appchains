@@ -6,26 +6,20 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {AppchainPool} from "src/staking/AppchainPool.sol";
+import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
+import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 
-/// @notice Interface the pool expects for gas accounting
-interface IGasProvider {
-    function getTotalGasFees(uint256 epochIndex) external view returns (uint256);
-    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory);
-    function getAppchainRewardsReceiver(uint256 epochIndex, uint256 appchainId) external view returns (address);
-}
-
 /// @notice Mock gas provider: programmable per-epoch fees + active IDs + reward receivers
-contract MockGasProvider is IGasProvider {
+contract MockGasProvider is IGasDataProvider {
     // epoch => total fees
     mapping(uint256 => uint256) public totals;
     // epoch => appchainId => fees
     mapping(uint256 => mapping(uint256 => uint256)) public fee;
     // epoch => list of appchainIds (we keep exactly what tests set)
     mapping(uint256 => uint256[]) private idsByEpoch;
-    // epoch => appchainId => rewards receiver
-    mapping(uint256 => mapping(uint256 => address)) public receiver;
+    // appchainId => rewards receiver (latest epoch)
+    mapping(uint256 => address) public receiver;
 
     function setFees(uint256 epoch, uint256[] memory appchainIds, uint256[] memory amounts) external {
         require(appchainIds.length == amounts.length, "length mismatch");
@@ -61,14 +55,14 @@ contract MockGasProvider is IGasProvider {
         totals[epoch] = totals[epoch] + amount - prev;
     }
 
-    function setReceiver(uint256 epoch, uint256 appchainId, address to) external {
-        receiver[epoch][appchainId] = to;
+    function setReceiver(uint256 appchainId, address to) external {
+        receiver[appchainId] = to;
     }
 
-    function setReceivers(uint256 epoch, uint256[] memory appchainIds, address[] memory dests) external {
+    function setReceivers(uint256[] memory appchainIds, address[] memory dests) external {
         require(appchainIds.length == dests.length, "length mismatch");
         for (uint256 i = 0; i < appchainIds.length; i++) {
-            receiver[epoch][appchainIds[i]] = dests[i];
+            receiver[appchainIds[i]] = dests[i];
         }
     }
 
@@ -88,8 +82,8 @@ contract MockGasProvider is IGasProvider {
         }
     }
 
-    function getAppchainRewardsReceiver(uint256 epochIndex, uint256 appchainId) external view returns (address) {
-        return receiver[epochIndex][appchainId];
+    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address) {
+        return receiver[appchainId];
     }
 }
 
@@ -181,7 +175,7 @@ contract AppchainPoolTest is Test {
         dests[1] = appchainDest2;
         idsLocal[2] = appchainId3;
         dests[2] = appchainDest3;
-        gasProvider.setReceivers(epoch, idsLocal, dests);
+        gasProvider.setReceivers(idsLocal, dests);
     }
 
     /// Returns a finalized epoch index (< current). Warps if needed.
@@ -364,7 +358,7 @@ contract AppchainPoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(appchainDest1);
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(currentEpoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -380,7 +374,7 @@ contract AppchainPoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(appchainDest1);
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(currentEpoch + 1, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -397,7 +391,7 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
 
         vm.startPrank(address(appchainDest1));
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -484,7 +478,7 @@ contract AppchainPoolTest is Test {
 
         // Intentionally DO NOT set receiver for appchainId1
         // (but set one for id2 just to show the epoch has some config)
-        gasProvider.setReceiver(epoch, appchainId2, appchainDest2);
+        gasProvider.setReceiver(appchainId2, appchainDest2);
 
         appchainPool.deposit{value: 100 ether}(epoch);
 
@@ -518,7 +512,7 @@ contract AppchainPoolTest is Test {
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "should be zero when totalStake==0");
 
         vm.startPrank(address(appchainDest1));
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.claim(epoch, appchainId1, address(user1));
         vm.stopPrank();
     }
@@ -530,7 +524,7 @@ contract AppchainPoolTest is Test {
         // Epoch 1
         uint256 e1 = _settledEpoch();
         setGasShares(e1, 1, 0, 0);
-        gasProvider.setReceiver(e1, appchainId1, appchainDest1);
+        gasProvider.setReceiver(appchainId1, appchainDest1);
         appchainPool.deposit{value: 40 ether}(e1);
 
         // Move to after epoch end + vesting duration
@@ -556,7 +550,7 @@ contract AppchainPoolTest is Test {
         uint256 e2 = _settledEpoch();
         require(e2 != e1, "need a different epoch after warp");
         setGasShares(e2, 1, 0, 0);
-        gasProvider.setReceiver(e2, appchainId1, appchainDest2); // <— different receiver
+        gasProvider.setReceiver(appchainId1, appchainDest2); // <— different receiver
         appchainPool.deposit{value: 60 ether}(e2);
 
         uint256 dest2Before = appchainDest2.balance;
@@ -617,15 +611,15 @@ contract AppchainPoolTest is Test {
 
         // Configure data & deposit into currentEpoch (math fine, but reads should revert per gating)
         setGasShares(currentEpoch, 1, 0, 0);
-        gasProvider.setReceiver(currentEpoch, appchainId1, appchainDest1);
+        gasProvider.setReceiver(appchainId1, appchainDest1);
         appchainPool.deposit{value: 10 ether}(currentEpoch);
 
         // Expect revert on getClaimableAmount for current
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.getClaimableAmount(currentEpoch, appchainId1);
 
         // Future epoch should also revert
-        vm.expectRevert(AppchainPool.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         appchainPool.getClaimableAmount(currentEpoch + 1, appchainId1);
     }
 
@@ -771,51 +765,6 @@ contract AppchainPoolTest is Test {
         appchainPool.setDecayFactor(2.5e18);
 
         vm.stopPrank();
-    }
-
-    /// Test edge case where appchainReward - alreadyClaimed could be negative
-    /// This tests the line: return appchainReward - alreadyClaimed;
-    /// This should never happen
-    function test_negative_claimable_amount_edge_case() public {
-        setupStake(100 ether, 0, 0);
-
-        uint256 epoch = _settledEpoch();
-        setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
-
-        // Initial deposit
-        appchainPool.deposit{value: 100 ether}(epoch);
-
-        // First claim - should work normally
-        uint256 firstClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        assertEq(firstClaimable, 0, "First claimable should be 0 before epoch ends");
-
-        // Move to after epoch end + vesting duration
-        vm.warp(staking.getEpochEnd(epoch) + appchainPool.VESTING_DURATION());
-
-        firstClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        assertGt(firstClaimable, 0, "Should have claimable amount after epoch ends");
-
-        vm.startPrank(appchainDest1);
-        appchainPool.claim(epoch, appchainId1, address(appchainDest1));
-        vm.stopPrank();
-
-        // Verify first claim was successful
-        assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "Should be fully claimed");
-
-        // Manually set the claimed amount to be greater than the reward
-        // claimed is the first state variable (slot 6)
-        bytes32 epochSlot = keccak256(abi.encode(epoch, uint256(6)));
-        bytes32 finalSlot = keccak256(abi.encode(appchainId1, epochSlot));
-
-        // Set claimed amount to be greater than the reward
-        // This will cause: appchainReward - alreadyClaimed = 100 - 200 = -100 (underflow)
-        vm.store(address(appchainPool), finalSlot, bytes32(uint256(200 ether)));
-
-        // Now getClaimableAmount should handle this gracefully
-        // In Solidity >=0.8.0, this should revert due to underflow protection
-        vm.expectRevert(abi.encodeWithSignature("Panic(uint256)", 0x11)); // Panic code 0x11 = arithmetic overflow/underflow
-        appchainPool.getClaimableAmount(epoch, appchainId1);
     }
 
     /// Test multiple deposits and claims to ensure no underflow issues
@@ -1087,15 +1036,17 @@ contract AppchainPoolTest is Test {
 
         // First claim after 30 days
         uint256 firstClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        uint256 expectedAfter30Days = convert(convert(100 ether).mul(convert(30 days)).div(convert(365 days)));
+        uint256 fullReward = appchainPool.getFullRewardAmount(epoch, appchainId1);
+        uint256 expectedAfter30Days = convert(convert(fullReward).mul(convert(30 days)).div(convert(365 days)));
         assertApproxEqAbs(firstClaimable, expectedAfter30Days, 1, "Should have correct amount after 30 days");
 
+        uint256 balanceBeforeFirstClaim = appchainDest1.balance;
         vm.startPrank(appchainDest1);
         appchainPool.claim(epoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
 
         // Verify claim was successful
-        assertEq(appchainDest1.balance, firstClaimable, "First claim should have been paid");
+        assertEq(appchainDest1.balance, balanceBeforeFirstClaim + firstClaimable, "First claim should have been paid");
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0, "Should be fully claimed after first claim");
 
         // Move to epoch end + 60 days
@@ -1103,7 +1054,7 @@ contract AppchainPoolTest is Test {
 
         // Second claim after 60 days
         uint256 secondClaimable = appchainPool.getClaimableAmount(epoch, appchainId1);
-        uint256 expectedAfter60Days = convert(convert(100 ether).mul(convert(60 days)).div(convert(365 days)));
+        uint256 expectedAfter60Days = convert(convert(fullReward).mul(convert(60 days)).div(convert(365 days)));
         uint256 additionalClaimable = expectedAfter60Days - firstClaimable;
         assertApproxEqAbs(
             secondClaimable, additionalClaimable, 1, "Should have correct additional amount after 60 days"
@@ -1221,5 +1172,25 @@ contract AppchainPoolTest is Test {
         // It should always return the total earned amount
         assertEq(fullReward, fullRewardAfterEpoch, "Full reward should be consistent");
         assertEq(fullReward, fullRewardAfter1Year, "Full reward should be consistent");
+    }
+
+    function test_claim_zero_destination() public {
+        setupStake(100 ether, 0, 0);
+
+        uint256 epoch = _settledEpoch();
+        setGasShares(epoch, 1, 0, 0);
+        setDefaultReceivers(epoch);
+
+        appchainPool.deposit{value: 100 ether}(epoch);
+
+        // Move to after epoch end + vesting duration
+        vm.warp(staking.getEpochEnd(epoch) + appchainPool.VESTING_DURATION());
+
+        assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 100 ether);
+
+        vm.startPrank(appchainDest1);
+        vm.expectRevert(RewardPoolBase.InvalidDestination.selector);
+        appchainPool.claim(epoch, appchainId1, address(0));
+        vm.stopPrank();
     }
 }

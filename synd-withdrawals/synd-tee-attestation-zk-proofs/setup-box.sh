@@ -5,9 +5,6 @@ set -euo pipefail
 echo "🔧 Fixing hostname resolution..."
 HOSTNAME=$(hostname)
 
-GITHUB_USERNAME="your-github-username"
-GITHUB_TOKEN="your-github-pat-with-repo-read-access"
-
 grep -q "$HOSTNAME" /etc/hosts || echo "127.0.1.1 $HOSTNAME" | sudo tee -a /etc/hosts
 
 echo "🚀 Updating system and removing Docker conflicts..."
@@ -22,7 +19,7 @@ echo "📦 Installing base dependencies..."
 sudo apt install -y git pkg-config libssl-dev curl nano
 
 echo "🐙 Cloning appchains repo..."
-git clone https://$GITHUB_USERNAME:$GITHUB_TOKEN@github.com/SyndicateProtocol/syndicate-appchains.git
+git clone https://github.com/SyndicateProtocol/syndicate-appchains.git
 
 echo "🦀 Installing Rust (non-interactive)..."
 curl https://sh.rustup.rs -sSf | sh -s -- -y

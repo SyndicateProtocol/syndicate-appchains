@@ -4,10 +4,16 @@
 [![Go](https://img.shields.io/badge/go-1.24.3+-blue.svg)](https://golang.org/)
 [![Foundry](https://img.shields.io/badge/foundry-1.3.1--stable+-green.svg)](https://getfoundry.sh/)
 [![Docker](https://img.shields.io/badge/docker-28.2.2+-blue.svg)](https://www.docker.com/)
-<!-- [![License](https://img.shields.io/badge/license-XXX-green.svg)](LICENSE) -->
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A comprehensive monorepo containing the complete Syndicate Appchains infrastructure stack.
-This repository includes the core components for building, deploying, and managing syndicate appchains.
+This monorepo contains the complete Syndicate Appchains infrastructure stack.
+It includes the core components for building, deploying, and managing Syndicate appchains.
+
+## 👾 Note to developers
+
+If you wish to fork or build on top of the Syndicate Appchains stack, be mindful of potential rough edges or undocumented functionality in early versions of the software. While we aim to maintain semantic versioning (SemVer) in our releases, breaking changes may still occur. 
+
+Please reach out at https://syndicate.io/contact or create a Github issue in the repo for additional support. 
 
 ## 📖 Documentation
 
@@ -15,12 +21,12 @@ For detailed documentation, architecture guides, and tutorials, visit [docs.synd
 
 ## 🏗️ Architecture Overview
 
-Syndicate Appchains enables the creation of custom rollups that utilize a two-source chain architecture:
+Syndicate Appchains enables the creation of custom blockchains that utilize a two-source chain architecture:
 
 - **Sequencing Chain**: Stores transaction data and handles appchain sequencing
 - **Settlement Chain**: Manages fund bridging from/to the rollup
 
-This design provides cost-effective, customizable sequencing while leveraging the liquidity and security of established blockchain networks.
+This design provides cost-effective, customizable sequencing while leveraging the liquidity and security of existing blockchain networks.
 
 ## 🚀 Quick Start
 
@@ -164,12 +170,15 @@ syndicate-appchains/
 - Update documentation for any API changes
 - Ensure all tests and pre-commit hooks pass before submitting PRs
 
-<!-- ## 📄 License -->
+## 📄 License
 
-<!-- This project is licensed under the XXX License - see the [LICENSE](LICENSE) file for details. -->
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
 - **Documentation**: [docs.syndicate.io](https://docs.syndicate.io/)
 - **Issues**: [GitHub Issues](https://github.com/syndicateio/syndicate-appchains/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/syndicateio/syndicate-appchains/discussions)
+
+## Audits
+PDF reports for the latest audits are available in the [audits](./audits) directory.

@@ -11,6 +11,9 @@ on:
     paths:
       - "synd-contracts/**"
 
+permissions:
+  contents: read
+
 jobs:
   storage-layout:
     runs-on: ubuntu-latest

@@ -3,9 +3,77 @@ pragma solidity 0.8.28;
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {BasePool} from "src/staking/BasePool.sol";
+import {PerformancePool} from "src/staking/PerformancePool.sol";
 import {EpochTracker} from "src/staking/EpochTracker.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
+
+/// @notice Mock gas provider: programmable per-epoch fees + active IDs
+contract MockGasProvider is IGasDataProvider {
+    // epoch => total fees
+    mapping(uint256 => uint256) public totals;
+    // epoch => appchainId => fees
+    mapping(uint256 => mapping(uint256 => uint256)) public fee;
+    // epoch => list of appchainIds (we keep exactly what tests set)
+    mapping(uint256 => uint256[]) private idsByEpoch;
+    // appchainId => rewards receiver (latest epoch)
+    mapping(uint256 => address) public receiver;
+
+    function setFees(uint256 epoch, uint256[] memory appchainIds, uint256[] memory amounts) external {
+        require(appchainIds.length == amounts.length, "length mismatch");
+
+        // reset ids list
+        delete idsByEpoch[epoch];
+
+        uint256 t;
+        for (uint256 i = 0; i < appchainIds.length; i++) {
+            uint256 id = appchainIds[i];
+            uint256 amt = amounts[i];
+            fee[epoch][id] = amt;
+            idsByEpoch[epoch].push(id);
+            t += amt;
+        }
+        totals[epoch] = t;
+    }
+
+    function setFee(uint256 epoch, uint256 appchainId, uint256 amount) external {
+        // if appchainId not in ids list, push it
+        bool present = false;
+        uint256[] storage ids = idsByEpoch[epoch];
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (ids[i] == appchainId) {
+                present = true;
+                break;
+            }
+        }
+        if (!present) ids.push(appchainId);
+
+        uint256 prev = fee[epoch][appchainId];
+        fee[epoch][appchainId] = amount;
+        totals[epoch] = totals[epoch] + amount - prev;
+    }
+
+    function getTotalGasFees(uint256 epochIndex) external view returns (uint256) {
+        return totals[epochIndex];
+    }
+
+    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256) {
+        return fee[epochIndex][appchainId];
+    }
+
+    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory out) {
+        uint256[] storage ids = idsByEpoch[epochIndex];
+        out = new uint256[](ids.length);
+        for (uint256 i = 0; i < ids.length; i++) {
+            out[i] = ids[i];
+        }
+    }
+
+    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address) {
+        return receiver[appchainId];
+    }
+}
 
 contract ReentrantContract {
     SyndStaking public staking;
@@ -851,7 +919,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -883,8 +951,8 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool1)});
-        claims[1] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool2)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool1), appchainId: 0});
+        claims[1] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool2), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -925,8 +993,8 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
-        claims[1] = SyndStaking.ClaimRequest({epochIndex: 3, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
+        claims[1] = SyndStaking.ClaimRequest({epochIndex: 3, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -962,7 +1030,7 @@ contract SyndStakingTest is Test {
 
         // Create claim requests
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 user1InitialBalance = address(user1).balance;
         uint256 user2InitialBalance = address(user2).balance;
@@ -1004,7 +1072,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         vm.startPrank(user1);
         vm.expectRevert(BasePool.ClaimNotAvailable.selector);
@@ -1023,7 +1091,7 @@ contract SyndStakingTest is Test {
 
         // Try to claim from current epoch (should fail)
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 1, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 1, poolAddress: address(pool), appchainId: 0});
 
         vm.startPrank(user1);
         vm.expectRevert(BasePool.ClaimNotAvailable.selector);
@@ -1050,7 +1118,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         address destination = makeAddr("destination");
         uint256 initialBalance = destination.balance;
@@ -1082,7 +1150,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         // The function should be protected against reentrancy
         vm.startPrank(user1);
@@ -1114,7 +1182,7 @@ contract SyndStakingTest is Test {
 
         // Create claim request
         SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
-        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool)});
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
 
         uint256 initialBalance = address(user1).balance;
 
@@ -1124,6 +1192,193 @@ contract SyndStakingTest is Test {
 
         // User should get rewards based on their stake share (50 ether full stake + stake share)
         assertEq(address(user1).balance, initialBalance + 60 ether);
+    }
+
+    function test_claimAllRewards_zero_destination() public {
+        // Deploy a pool
+        BasePool pool = new BasePool(address(staking));
+
+        // Setup stake
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Deposit rewards to pool
+        pool.deposit{value: 50 ether}(2);
+
+        // Move to next epoch so we can claim from epoch 2
+        stepEpoch(1);
+
+        // Create claim request
+        SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](1);
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(pool), appchainId: 0});
+
+        // Test that claiming to zero address reverts
+        vm.startPrank(user1);
+        vm.expectRevert(SyndStaking.InvalidDestination.selector);
+        staking.claimAllRewards(claims, address(0));
+        vm.stopPrank();
+    }
+
+    function test_claimAllRewards_mixed_pools() public {
+        // Deploy both BasePool and PerformancePool
+        BasePool basePool = new BasePool(address(staking));
+
+        // Create a mock gas provider for PerformancePool
+        MockGasProvider gasProvider = new MockGasProvider();
+        PerformancePool performancePool = new PerformancePool(address(this), address(staking), address(gasProvider));
+
+        // Setup stake for user1
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Setup gas data for PerformancePool
+        uint256[] memory appchainIds = new uint256[](1);
+        uint256[] memory gasFees = new uint256[](1);
+        appchainIds[0] = appchainId1;
+        gasFees[0] = 100 ether; // Set gas fees for appchainId1
+        gasProvider.setFees(2, appchainIds, gasFees);
+
+        // Deposit rewards to both pools
+        basePool.deposit{value: 50 ether}(2);
+        performancePool.deposit{value: 60 ether}(2);
+
+        // Move to next epoch so we can claim from epoch 2
+        stepEpoch(1);
+
+        // Create claim requests for both pools
+        SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(basePool), appchainId: 0});
+        claims[1] =
+            SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(performancePool), appchainId: appchainId1});
+
+        uint256 initialBalance = address(user1).balance;
+
+        // Claim from both pools in a single transaction
+        vm.startPrank(user1);
+        staking.claimAllRewards(claims, user1);
+        vm.stopPrank();
+
+        // User should receive rewards from both pools
+        // BasePool: 50 ether (100% since user1 is the only staker)
+        // PerformancePool: 60 ether (100% since user1 is the only staker on appchainId1)
+        assertEq(address(user1).balance, initialBalance + 110 ether);
+    }
+
+    function test_claimAllRewards_mixed_pools_multiple_users() public {
+        // Deploy both BasePool and PerformancePool
+        BasePool basePool = new BasePool(address(staking));
+
+        // Create a mock gas provider for PerformancePool
+        MockGasProvider gasProvider = new MockGasProvider();
+        PerformancePool performancePool = new PerformancePool(address(this), address(staking), address(gasProvider));
+
+        // Setup stakes for both users
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 60 ether}(appchainId1);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        staking.stakeSynd{value: 40 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Setup gas data for PerformancePool
+        uint256[] memory appchainIds = new uint256[](1);
+        uint256[] memory gasFees = new uint256[](1);
+        appchainIds[0] = appchainId1;
+        gasFees[0] = 100 ether; // Set gas fees for appchainId1
+        gasProvider.setFees(2, appchainIds, gasFees);
+
+        // Deposit rewards to both pools
+        basePool.deposit{value: 100 ether}(2);
+        performancePool.deposit{value: 120 ether}(2);
+
+        // Move to next epoch so we can claim from epoch 2
+        stepEpoch(1);
+
+        // Create claim requests for both pools
+        SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(basePool), appchainId: 0});
+        claims[1] =
+            SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(performancePool), appchainId: appchainId1});
+
+        uint256 user1InitialBalance = address(user1).balance;
+        uint256 user2InitialBalance = address(user2).balance;
+
+        // User1 claims from both pools
+        vm.startPrank(user1);
+        staking.claimAllRewards(claims, user1);
+        vm.stopPrank();
+
+        // User2 claims from both pools
+        vm.startPrank(user2);
+        staking.claimAllRewards(claims, user2);
+        vm.stopPrank();
+
+        // User1 should get 60% of rewards from both pools
+        // BasePool: 60% of 100 ether = 60 ether
+        // PerformancePool: 60% of 120 ether = 72 ether
+        assertEq(address(user1).balance, user1InitialBalance + 132 ether);
+
+        // User2 should get 40% of rewards from both pools
+        // BasePool: 40% of 100 ether = 40 ether
+        // PerformancePool: 40% of 120 ether = 48 ether
+        assertEq(address(user2).balance, user2InitialBalance + 88 ether);
+    }
+
+    function test_claimAllRewards_mixed_pools_same_appchain() public {
+        // Deploy both BasePool and PerformancePool
+        BasePool basePool = new BasePool(address(staking));
+
+        // Create a mock gas provider for PerformancePool
+        MockGasProvider gasProvider = new MockGasProvider();
+        PerformancePool performancePool = new PerformancePool(address(this), address(staking), address(gasProvider));
+
+        // Setup stake for user1 on appchainId1
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 100 ether}(appchainId1);
+        vm.stopPrank();
+
+        stepEpoch(1);
+
+        // Setup gas data for PerformancePool
+        uint256[] memory appchainIds = new uint256[](1);
+        uint256[] memory gasFees = new uint256[](1);
+        appchainIds[0] = appchainId1;
+        gasFees[0] = 100 ether; // Set gas fees for appchainId1
+        gasProvider.setFees(2, appchainIds, gasFees);
+
+        // Deposit rewards to both pools
+        basePool.deposit{value: 50 ether}(2);
+        performancePool.deposit{value: 60 ether}(2);
+
+        // Move to next epoch so we can claim from epoch 2
+        stepEpoch(1);
+
+        // Create claim requests for both pools
+        SyndStaking.ClaimRequest[] memory claims = new SyndStaking.ClaimRequest[](2);
+        claims[0] = SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(basePool), appchainId: 0});
+        claims[1] =
+            SyndStaking.ClaimRequest({epochIndex: 2, poolAddress: address(performancePool), appchainId: appchainId1});
+
+        uint256 initialBalance = address(user1).balance;
+
+        // Claim from both pools in a single transaction
+        vm.startPrank(user1);
+        staking.claimAllRewards(claims, user1);
+        vm.stopPrank();
+
+        // User should receive rewards from both pools
+        // BasePool: 50 ether (100% since user1 is the only staker)
+        // PerformancePool: 60 ether (100% since user1 is the only staker on appchainId1)
+        assertEq(address(user1).balance, initialBalance + 110 ether);
     }
 
     // ==================== PAUSABLE FUNCTIONALITY TESTS ====================
@@ -1188,7 +1443,7 @@ contract SyndStakingTest is Test {
         // Test stageStakeTransfer reverts when paused
         vm.startPrank(user1);
         vm.expectRevert();
-        staking.stageStakeTransfer{value: 0}(appchainId1, appchainId2, 25 ether);
+        staking.stageStakeTransfer(appchainId1, appchainId2, 25 ether);
         vm.stopPrank();
 
         // Unpause the contract
@@ -1329,5 +1584,56 @@ contract SyndStakingTest is Test {
         vm.startPrank(address(attacker));
         staking.withdraw(2, address(attacker));
         vm.stopPrank();
+    }
+}
+
+contract H04_MissingFinalizationForDestinationAppchain_PoC is Test {
+    SyndStaking public staking;
+    address public user;
+    uint256 public appchainA;
+    uint256 public appchainB;
+
+    function setUp() public {
+        user = makeAddr("user");
+        appchainA = 1;
+        appchainB = 2;
+        staking = new SyndStaking(address(this));
+        vm.deal(user, 100 ether);
+        vm.warp(staking.START_TIMESTAMP());
+    }
+
+    function test_missing_finalization_for_destination_appchain() public {
+        // User stakes 50 ether in appchainA in epoch 1
+        vm.startPrank(user);
+        staking.stakeSynd{value: 50 ether}(appchainA);
+        vm.stopPrank();
+
+        // Move to epoch 2
+        vm.warp(block.timestamp + 30 days);
+
+        // Check initial finalization status before transfer
+        uint256 appchainA_finalized_before = staking.appchainFinalizedEpochCount(appchainA);
+        uint256 appchainB_finalized_before = staking.appchainFinalizedEpochCount(appchainB);
+
+        // User transfers 20 ether from appchainA to appchainB in epoch 2
+        vm.startPrank(user);
+        staking.stageStakeTransfer(appchainA, appchainB, 20 ether);
+        vm.stopPrank();
+
+        // Check finalization status after transfer
+        uint256 appchainA_finalized_after = staking.appchainFinalizedEpochCount(appchainA);
+        uint256 appchainB_finalized_after = staking.appchainFinalizedEpochCount(appchainB);
+
+        // The bug: stageStakeTransfer finalizes source appchain but not destination
+        assertTrue(
+            appchainA_finalized_after > appchainA_finalized_before, "appchainA should be more finalized after transfer"
+        );
+        assertTrue(
+            appchainB_finalized_after > appchainB_finalized_before,
+            "appchainB finalization should also be more after transfer"
+        );
+
+        assertEq(staking.appchainFinalizedEpochCount(appchainA), 2, "appchainA should be finalized to epoch 2");
+        assertEq(staking.appchainFinalizedEpochCount(appchainB), 2, "appchainB should be finalized to epoch 2");
     }
 }

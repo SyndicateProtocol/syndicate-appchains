@@ -47,6 +47,8 @@ contract BasePool is IUserPool, ReentrancyGuard {
     error ClaimNotAvailable();
     /// @notice Error thrown when caller is not authorized forwarder
     error UnauthorizedCaller();
+    /// @notice Error thrown when destination is zero address
+    error InvalidDestination();
 
     /**
      * @notice Constructor to initialize the pool with staking contract and depositor
@@ -68,7 +70,7 @@ contract BasePool is IUserPool, ReentrancyGuard {
      * @dev Since rewards are additive, we dont care who deposits
      * @param epochIndex The epoch index for which rewards are being deposited
      */
-    function deposit(uint256 epochIndex) external payable {
+    function deposit(uint256 epochIndex) external payable nonReentrant {
         uint256 amount = msg.value;
         epochRewardTotal[epochIndex] += amount;
 
@@ -88,8 +90,11 @@ contract BasePool is IUserPool, ReentrancyGuard {
         if (epochRewardTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
-
-        uint256 claimAmount = getClaimableAmount(epochIndex, user);
+        if (destination == address(0)) {
+            revert InvalidDestination();
+        }
+        // AppchainId is unused for BasePool - using 0
+        uint256 claimAmount = getClaimableAmount(epochIndex, user, 0);
         if (claimAmount == 0) {
             revert ClaimNotAvailable();
         }
@@ -116,23 +121,30 @@ contract BasePool is IUserPool, ReentrancyGuard {
      * @dev This function allows the forwarder to claim rewards on behalf of a user
      * @param epochIndex The epoch index for which to claim rewards
      * @param user The address of the user to claim rewards for
+     * @param destination The address where rewards should be sent
+     * @param _appchainId This field is unused for BasePool
      */
-    function claimFor(uint256 epochIndex, address user, address destination)
+    function claimFor(uint256 epochIndex, address user, address destination, uint256 _appchainId)
         external
         nonReentrant
         onlyStakingContract
     {
+        // AppchainId is unused for BasePool
         _claim(epochIndex, user, destination);
     }
 
     /**
      * @notice Calculates the claimable reward amount for a user in a specific epoch
      * @dev Returns the amount of rewards the user can claim for the given epoch, based on their stake share and any previously claimed amount.
+     * @dev Uses integer division which may result in small precision loss (dust) when
+     *      reward amounts are not evenly divisible. This is expected behavior to maintain
+     *      gas efficiency. Dust amounts are typically negligible in normal operations.
      * @param epochIndex The epoch index to query
      * @param user The address of the user
+     * @param appchainId This field is unused for BasePool
      * @return The amount of rewards claimable by the user for the specified epoch
      */
-    function getClaimableAmount(uint256 epochIndex, address user) public view returns (uint256) {
+    function getClaimableAmount(uint256 epochIndex, address user, uint256 appchainId) public view returns (uint256) {
         if (epochRewardTotal[epochIndex] == 0) {
             return 0;
         }

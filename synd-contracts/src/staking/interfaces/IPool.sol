@@ -8,6 +8,6 @@ interface IPool {
 
 /// @notice Interface for user pools (BasePool & PerformancePool)
 interface IUserPool is IPool {
-    function getClaimableAmount(uint256 epochIndex, address user) external view returns (uint256);
-    function claimFor(uint256 epochIndex, address user, address destination) external;
+    function getClaimableAmount(uint256 epochIndex, address user, uint256 appchainId) external returns (uint256);
+    function claimFor(uint256 epochIndex, address user, address destination, uint256 appchainId) external;
 }
