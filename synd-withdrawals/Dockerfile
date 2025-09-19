@@ -10,7 +10,6 @@ COPY synd-enclave/teetypes synd-enclave/teetypes
 COPY synd-enclave/go.mod synd-enclave/go.sum synd-enclave
 COPY synd-enclave/eif synd-enclave/eif
 
-#RUN nix --extra-experimental-features "nix-command flakes" --accept-flake-config flake update
 RUN nix --extra-experimental-features "nix-command flakes" --accept-flake-config build .#eif-bin --no-update-lock-file
 
 FROM scratch AS eif-bin
