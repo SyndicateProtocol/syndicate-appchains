@@ -53,7 +53,7 @@ contract EmissionsForkTest is Test {
         }
     }
 
-    function expectedMintAmount_DecayFactor101(uint256 epoch) public pure returns (uint256) {
+    function expectedMintAmount_ChangeFactor101(uint256 epoch) public pure returns (uint256) {
         // Token amounts per epoch based on the provided data (in wei)
 
         uint256[48] memory tokensPerEpoch = [
@@ -114,7 +114,7 @@ contract EmissionsForkTest is Test {
         return tokensPerEpoch[epoch];
     }
 
-    function expectedMintAmount_DecayFactor098(uint256 epoch) public pure returns (uint256) {
+    function expectedMintAmount_ChangeFactor098(uint256 epoch) public pure returns (uint256) {
         // Token amounts per epoch based on the provided data (in wei)
         uint256[48] memory tokensPerEpoch = [
             uint256(2577259), // Epoch 0
@@ -179,7 +179,7 @@ contract EmissionsForkTest is Test {
         return (_weiAmount + (1 ether / 2)) / 1 ether;
     }
 
-    function test_emissions_DecayFactor101() public {
+    function test_emissions_ChangeFactor101() public {
         // Initialize emissions calculator
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(1.01e18);
@@ -200,7 +200,7 @@ contract EmissionsForkTest is Test {
             vm.warp(emissionsScheduler.getEpochStart(i + startEpoch));
             emissionsScheduler.mintEmission();
             uint256 mintAmount = round(emissionsScheduler.totalEmissionsMinted() - totalMinted);
-            uint256 expected = expectedMintAmount_DecayFactor101(i);
+            uint256 expected = expectedMintAmount_ChangeFactor101(i);
             if (mintAmount != expected) {
                 console2.log("Epoch %s: Expected %s, Actual %s", i, expected, mintAmount);
                 if (mintAmount > expected + acceptedDiff || mintAmount < expected - acceptedDiff) {
@@ -220,7 +220,7 @@ contract EmissionsForkTest is Test {
         emissionsScheduler.mintEmission();
     }
 
-    function test_emissions_DecayFactor098() public {
+    function test_emissions_ChangeFactor098() public {
         // Initialize emissions calculator
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(0.98e18);
@@ -242,7 +242,49 @@ contract EmissionsForkTest is Test {
             vm.warp(emissionsScheduler.getEpochStart(i + startEpoch));
             emissionsScheduler.mintEmission();
             uint256 mintAmount = round(emissionsScheduler.totalEmissionsMinted() - totalMinted);
-            uint256 expected = expectedMintAmount_DecayFactor098(i);
+            uint256 expected = expectedMintAmount_ChangeFactor098(i);
+            if (mintAmount != expected) {
+                console2.log("Epoch %s: Expected %s, Actual %s", i, expected, mintAmount);
+                if (mintAmount > expected + acceptedDiff || mintAmount < expected - acceptedDiff) {
+                    revert("Mint amount is not within accepted diff");
+                }
+            }
+            totalMinted = emissionsScheduler.totalEmissionsMinted();
+        }
+
+        // Final checks
+        assertEq(emissionsScheduler.getCurrentEpoch(), startEpoch + 47);
+        assertEq(emissionsScheduler.totalEmissionsMinted(), totalMinted);
+        assertTrue(emissionsScheduler.emissionsEnded());
+
+        // Confirm we cant mint after all epochs are minted
+        vm.expectRevert(EmissionsScheduler.AllEmissionsCompleted.selector);
+        emissionsScheduler.mintEmission();
+    }
+
+    function test_emissions_ChangeFactorToScale() public {
+        // Initialize emissions calculator
+        vm.prank(syndTokenAdmin);
+        emissionsCalculator.initializeEmissions(1e18);
+        vm.stopPrank();
+
+        uint256 totalMinted = emissionsScheduler.totalEmissionsMinted();
+
+        // Initial checks
+        assertEq(emissionsCalculator.currentEpoch(), 0);
+        assertEq(emissionsScheduler.getCurrentEpoch(), startEpoch - 1);
+        assertEq(totalMinted, 0);
+        assertFalse(emissionsScheduler.emissionsStarted());
+
+        // Confirm we cant mint yet
+        vm.expectRevert(EmissionsScheduler.NoEmissionsToMint.selector);
+        emissionsScheduler.mintEmission();
+
+        for (uint256 i = 0; i <= 47; i++) {
+            vm.warp(emissionsScheduler.getEpochStart(i + startEpoch));
+            emissionsScheduler.mintEmission();
+            uint256 mintAmount = round(emissionsScheduler.totalEmissionsMinted() - totalMinted);
+            uint256 expected = uint256(1666667);
             if (mintAmount != expected) {
                 console2.log("Epoch %s: Expected %s, Actual %s", i, expected, mintAmount);
                 if (mintAmount > expected + acceptedDiff || mintAmount < expected - acceptedDiff) {
