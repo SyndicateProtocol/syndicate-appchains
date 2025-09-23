@@ -1,0 +1,149 @@
+name: Storage Layout Validation
+
+on:
+  pull_request:
+    paths:
+      - 'synd-contracts/src/**/*.sol'
+      - 'synd-contracts/foundry.toml'
+      - 'synd-contracts/remappings.txt'
+  push:
+    branches: [main]
+    paths:
+      - 'synd-contracts/src/**/*.sol'
+      - 'synd-contracts/foundry.toml'
+      - 'synd-contracts/remappings.txt'
+
+env:
+  FOUNDRY_PROFILE: default
+
+jobs:
+  storage-layout-validation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: synd-contracts
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for comparison
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: synd-contracts/package-lock.json
+
+      - name: Install Node.js dependencies
+        run: npm install
+
+      - name: Install Foundry dependencies
+        run: forge install
+
+      - name: Check inheritance ordering (current)
+        run: |
+          echo "🔍 Checking inheritance ordering for current branch..."
+          make storage-layout-inheritance
+
+      - name: Build and extract current layout
+        run: |
+          echo "🏗️ Building contracts and extracting current storage layout..."
+          make storage-layout-extract
+
+      - name: Setup baseline for comparison (if not push to main)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "📋 Setting up baseline layout from main branch..."
+          git fetch origin main:main
+          git checkout main
+
+          # Build main branch and extract baseline
+          forge install
+          make storage-layout-baseline
+
+          # Switch back to PR branch
+          git checkout ${{ github.head_ref }}
+
+          # Rebuild current branch
+          forge install
+          make storage-layout-extract
+
+      - name: Compare storage layouts
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "⚖️ Comparing storage layouts between main and current branch..."
+          make storage-layout-compare
+
+      - name: Upload storage layouts as artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: storage-layouts-${{ github.sha }}
+          path: |
+            synd-contracts/.storage-layouts/
+          retention-days: 30
+
+      - name: Storage layout validation summary
+        if: success()
+        run: |
+          echo "✅ Storage layout validation completed successfully!"
+          echo ""
+          echo "📊 Validation checks performed:"
+          echo "  - Contract inheritance ordering ✅"
+          echo "  - Storage layout extraction ✅"
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "  - Storage layout compatibility ✅"
+          fi
+          echo ""
+          echo "🛡️ Your upgradeable contracts are safe from storage collisions!"
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ✅ Storage Layout Validation Passed
+
+              🛡️ **All storage layout checks completed successfully!**
+
+              ### Checks Performed:
+              - ✅ Contract inheritance ordering validation
+              - ✅ Storage layout extraction and analysis
+              - ✅ Storage layout compatibility between \`main\` and current branch
+
+              ### What this means:
+              Your upgradeable contracts (like \`SyndicateFactory\`) are **safe from storage collisions** during upgrades. No existing storage slots will be corrupted or overwritten.
+
+              📊 Storage layout artifacts have been uploaded and can be reviewed in the workflow run.`
+            })
+
+      - name: Fail with helpful message
+        if: failure()
+        run: |
+          echo "❌ Storage layout validation failed!"
+          echo ""
+          echo "🔍 This could indicate:"
+          echo "  - Storage slot conflicts in upgradeable contracts"
+          echo "  - Inconsistent contract inheritance ordering"
+          echo "  - Breaking changes to existing storage layouts"
+          echo ""
+          echo "🛠️ To fix:"
+          echo "  1. Review the error output above"
+          echo "  2. Check for storage layout conflicts in your upgradeable contracts"
+          echo "  3. Ensure new storage variables are added at the end"
+          echo "  4. Consider using storage gaps for future upgrades"
+          echo ""
+          echo "📖 Learn more: https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable"
+          exit 1

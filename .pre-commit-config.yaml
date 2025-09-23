@@ -65,3 +65,11 @@ repos:
         language: system
         types: [cargo]
         pass_filenames: false
+      - id: storage-layout-update
+        name: Update storage layout baseline
+        entry: synd-contracts/scripts/storage-checks/update-baseline.sh
+        language: script
+        files: 'synd-contracts/src/.*\.sol$'
+        pass_filenames: false
+        always_run: false
+        stages: [pre-commit]

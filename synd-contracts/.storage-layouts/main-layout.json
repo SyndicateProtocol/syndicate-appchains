@@ -1,0 +1,375 @@
+{
+  "SyndicateFactory": {
+    "storage": [
+      {
+        "astId": 8109,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "appchainContracts",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_uint256,t_address)"
+      },
+      {
+        "astId": 8112,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "chainIDs",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_array(t_uint256)dyn_storage"
+      },
+      {
+        "astId": 8115,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "stubImplementation",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_address"
+      },
+      {
+        "astId": 8118,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "syndicateChainImpl",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_address"
+      },
+      {
+        "astId": 8122,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "allowedImplementations",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_array(t_address)dyn_storage"
+      },
+      {
+        "astId": 8126,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "isImplementationAllowed",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_mapping(t_address,t_bool)"
+      },
+      {
+        "astId": 8131,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "gasTrackingBanlist",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_mapping(t_uint256,t_bool)"
+      },
+      {
+        "astId": 8133,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "numberOfChainsBannedFromGasTracking",
+        "offset": 0,
+        "slot": "7",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 8138,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "senderNonces",
+        "offset": 0,
+        "slot": "8",
+        "type": "t_mapping(t_address,t_uint256)"
+      },
+      {
+        "astId": 8141,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "creationFee",
+        "offset": 0,
+        "slot": "9",
+        "type": "t_uint256"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_address)dyn_storage": {
+        "encoding": "dynamic_array",
+        "label": "address[]",
+        "numberOfBytes": "32",
+        "base": "t_address"
+      },
+      "t_array(t_uint256)dyn_storage": {
+        "encoding": "dynamic_array",
+        "label": "uint256[]",
+        "numberOfBytes": "32",
+        "base": "t_uint256"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_mapping(t_address,t_uint256)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => uint256)",
+        "numberOfBytes": "32",
+        "value": "t_uint256"
+      },
+      "t_mapping(t_uint256,t_address)": {
+        "encoding": "mapping",
+        "key": "t_uint256",
+        "label": "mapping(uint256 => address)",
+        "numberOfBytes": "32",
+        "value": "t_address"
+      },
+      "t_mapping(t_uint256,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_uint256",
+        "label": "mapping(uint256 => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    },
+    "layoutVersion": "1.2",
+    "contractPath": "src/SyndicateFactory.sol",
+    "contractKind": "contract"
+  },
+  "SyndicateSequencingChain": {
+    "storage": [],
+    "types": {},
+    "layoutVersion": "1.2",
+    "contractPath": "src/SyndicateSequencingChain.sol",
+    "contractKind": "contract"
+  },
+  "ArbChainConfig": {
+    "storage": [
+      {
+        "astId": 276,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 278,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "INITIAL_APPCHAIN_OWNER",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_address"
+      },
+      {
+        "astId": 280,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "ARBITRUM_BRIDGE_ADDRESS",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_address"
+      },
+      {
+        "astId": 282,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "ARBITRUM_INBOX_ADDRESS",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_address"
+      },
+      {
+        "astId": 284,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "SEQUENCING_CONTRACT_ADDRESS",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_address"
+      },
+      {
+        "astId": 286,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "CHAIN_ID",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 288,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "SEQUENCING_CHAIN_ID",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 290,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "SETTLEMENT_DELAY",
+        "offset": 0,
+        "slot": "7",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 292,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "SETTLEMENT_START_BLOCK",
+        "offset": 0,
+        "slot": "8",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 294,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "SEQUENCING_START_BLOCK",
+        "offset": 0,
+        "slot": "9",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 296,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL",
+        "offset": 0,
+        "slot": "10",
+        "type": "t_string_storage"
+      },
+      {
+        "astId": 298,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "APPCHAIN_BLOCK_EXPLORER_URL",
+        "offset": 0,
+        "slot": "11",
+        "type": "t_string_storage"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    },
+    "layoutVersion": "1.2",
+    "contractPath": "src/ArbChainConfig.sol",
+    "contractKind": "contract"
+  },
+  "SequencingModuleChecker": {
+    "storage": [],
+    "types": {},
+    "layoutVersion": "1.2",
+    "contractPath": "src/SequencingModuleChecker.sol",
+    "contractKind": "contract"
+  },
+  "GasAggregator": {
+    "storage": [
+      {
+        "astId": 941,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "factory",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_contract(AppchainFactory)931"
+      },
+      {
+        "astId": 943,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "maxAppchainsToQuery",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 946,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "challengeWindow",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 948,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "pendingEpoch",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 950,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "pendingEpochFirstSubmissionTime",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 952,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "pendingDataHash",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_bytes32"
+      },
+      {
+        "astId": 954,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "pendingTotalTokensUsed",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 959,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "aggregatedEpochDataHash",
+        "offset": 0,
+        "slot": "7",
+        "type": "t_mapping(t_uint256,t_bytes32)"
+      }
+    ],
+    "types": {
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      },
+      "t_contract(AppchainFactory)931": {
+        "encoding": "inplace",
+        "label": "contract AppchainFactory",
+        "numberOfBytes": "20"
+      },
+      "t_mapping(t_uint256,t_bytes32)": {
+        "encoding": "mapping",
+        "key": "t_uint256",
+        "label": "mapping(uint256 => bytes32)",
+        "numberOfBytes": "32",
+        "value": "t_bytes32"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    },
+    "layoutVersion": "1.2",
+    "contractPath": "src/GasAggregator.sol",
+    "contractKind": "contract"
+  }
+}

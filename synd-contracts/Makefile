@@ -86,3 +86,59 @@ airdrop-dry-run :; DRY_RUN=true AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRE
 
 # Execute airdrop with bash script
 airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_ADDRESS} RPC_URL=${RPC_URL} ACCOUNT=${ACCOUNT} DEV_PUB_ADDRESS=${DEV_PUB_ADDRESS} ./script/airdrop/airdrop.sh
+
+## Storage Layout Validation Commands
+
+# Create storage layout baseline (run this on main branch)
+storage-layout-baseline :; @echo "Creating storage layout baseline..." && \
+	forge build && \
+	mkdir -p .storage-layouts && \
+	node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json && \
+	echo "Baseline created at .storage-layouts/main-layout.json"
+
+# Extract current storage layout
+storage-layout-extract :; @echo "Extracting current storage layout..." && \
+	forge build && \
+	mkdir -p .storage-layouts && \
+	node scripts/storage-checks/forge-extract.js > .storage-layouts/current-layout.json && \
+	echo "Current layout extracted to .storage-layouts/current-layout.json"
+
+# Compare storage layouts (requires baseline)
+storage-layout-compare :; @echo "Comparing storage layouts..." && \
+	if [ ! -f .storage-layouts/main-layout.json ]; then \
+		echo "ERROR: No baseline layout found. Run 'make storage-layout-baseline' first."; \
+		exit 1; \
+	fi && \
+	npm run storage:compare -- --ref .storage-layouts/main-layout.json --head .storage-layouts/current-layout.json && \
+	echo "Storage layout comparison completed successfully"
+
+# Check inheritance ordering
+storage-layout-inheritance :; @echo "Checking inheritance ordering..." && \
+	forge build --build-info && \
+	mkdir -p .storage-layouts && \
+	cp out/build-info/*.json .storage-layouts/current.json && \
+	npm run storage:inheritance .storage-layouts/current.json && \
+	echo "Inheritance ordering check completed successfully"
+
+# Full storage layout validation (extract + compare + inheritance)
+storage-layout-check :; @echo "Running full storage layout validation..." && \
+	$(MAKE) storage-layout-extract && \
+	$(MAKE) storage-layout-inheritance && \
+	$(MAKE) storage-layout-compare && \
+	echo "All storage layout checks passed!"
+
+# Clean storage layout artifacts
+storage-layout-clean :; rm -rf .storage-layouts out/build-info
+
+# Auto-update baseline when contracts change (for development)
+storage-layout-auto-update :; @echo "🔄 Auto-updating storage layout baseline..." && \
+	forge build && \
+	mkdir -p .storage-layouts && \
+	node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json && \
+	echo "✅ Storage layout baseline auto-updated"
+
+# Smart build that updates baseline if needed
+build-with-storage :; @echo "🏗️ Building with storage layout tracking..." && \
+	$(MAKE) storage-layout-auto-update && \
+	forge build && \
+	echo "Build complete with updated storage layouts"
