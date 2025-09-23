@@ -1,9 +1,7 @@
 //! The `gas-agg` module contains the functions for aggregating gas usage from appchains.
 
 use alloy::{
-    network::EthereumWallet,
-    primitives::{Address, U256},
-    providers::{Provider, ProviderBuilder},
+    network::EthereumWallet, primitives::Address, providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
 use clap::Args;

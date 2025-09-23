@@ -7,6 +7,7 @@ members = [
   "synd-chain-ingestor",
   "synd-maestro",
   "synd-mchain",
+  "synd-stake-cli",
   "synd-translator/bin/synd-translator",
   "synd-translator/crates/common",
   "synd-translator/crates/metrics",
@@ -16,7 +17,7 @@ members = [
   "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program",
-  "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script", "synd-stake-cli",
+  "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script",
   "test-framework",
 ]
 

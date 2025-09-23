@@ -75,6 +75,9 @@ enum Commands {
 async fn main() {
     let args = Args::parse();
 
+    shared::tracing::setup_global_logging()
+        .unwrap_or_else(|e| panic!("failed to setup logging: {e}"));
+
     match &args.command.unwrap_or_else(|| panic!("No command provided. use --help for more info")) {
         Commands::Mint(mint_args) => mint(mint_args).await,
         Commands::RefundGas(refund_gas_args) => refund_gas(refund_gas_args).await,

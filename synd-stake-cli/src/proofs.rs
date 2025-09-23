@@ -1,3 +1,6 @@
+//! The `proofs` module contains the functions for submitting proofs to confirm epoch data on the
+//! staking appchain.
+
 use alloy::{
     eips::BlockNumberOrTag,
     network::EthereumWallet,
@@ -12,7 +15,7 @@ use clap::Args;
 use contract_bindings::synd::{
     block_hash_relayer::BlockHashRelayer,
     gas_aggregator::GasAggregator::{self, GasAggregatorInstance},
-    gas_archive::GasArchive,
+    gas_archive::GasArchive::{self, GasArchiveInstance},
     syndicate_factory::SyndicateFactory::{self, getAppchainsAndContractsReturn},
     syndicate_sequencing_chain::SyndicateSequencingChain,
 };
@@ -35,6 +38,9 @@ pub struct UpdateBaseAndEthereumBlockHashesArgs {
     /// Address of the gas archive contract
     #[arg(long, value_parser=parse_address)]
     pub gas_archive_address: Address,
+    /// Sequencing chain RPC URL (will be used to wait for new block hashes)
+    #[arg(long)]
+    pub appchain_rpc_url: Option<String>,
 }
 
 /// Updates base and ethereum block hashes on the staking appchain
@@ -42,8 +48,19 @@ pub struct UpdateBaseAndEthereumBlockHashesArgs {
 /// This function calls the `sendBlockHashes` function on the `BlockHashRelayer` contract
 /// to update the known block hashes from Ethereum and the settlement chain.
 pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumBlockHashesArgs) {
-    let provider = new_provider(&args.base_rpc_url, &args.private_key).await;
-    let receipt = BlockHashRelayer::new(args.relayer_address, provider)
+    let set_provider = new_provider(&args.base_rpc_url, &args.private_key).await;
+    let appchain_provider = match &args.appchain_rpc_url {
+        Some(appchain_rpc_url) => Some(new_provider(appchain_rpc_url, &args.private_key).await),
+        None => None,
+    };
+    let initial_appchain_block_number = match appchain_provider {
+        Some(ref appchain_provider) => appchain_provider
+            .get_block_number()
+            .await
+            .unwrap_or_else(|e| panic!("failed to get appchain block number: {e}")),
+        None => 0,
+    };
+    let receipt = BlockHashRelayer::new(args.relayer_address, set_provider)
         .sendBlockHashes_0(args.gas_archive_address)
         .send()
         .await
@@ -60,7 +77,38 @@ pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumB
     info!("successfully updated base and ethereum block hashes");
     debug!("receipt: {receipt:?}");
 
-    // TODO wait until we see new block hashes on the staking appchain (?)
+    if let Some(p) = appchain_provider {
+        let expected_set_block_number =
+            receipt.block_number.unwrap_or_else(|| panic!("no block number in receipt")) - 1;
+        let gas_archive = GasArchive::new(args.gas_archive_address, p);
+        wait_for_block_hashes_updated(
+            gas_archive,
+            initial_appchain_block_number,
+            expected_set_block_number,
+        )
+        .await;
+    }
+}
+
+async fn wait_for_block_hashes_updated<P: Provider>(
+    gas_archive: GasArchiveInstance<P>,
+    initial_appchain_block_number: u64,
+    expected_set_block_number: u64,
+) {
+    info!("waiting until new block hashes are seen on the staking appchain");
+    let filter = gas_archive
+        .LastKnownBlockHashesUpdated_filter()
+        .from_block(initial_appchain_block_number + 1);
+    loop {
+        let logs = filter.query().await.unwrap_or_else(|e| panic!("failed to get logs: {e}"));
+        for (log, _) in logs {
+            if log.settlementBlockNumber == expected_set_block_number {
+                info!("block hashes successfully updated on staking appchain");
+                return;
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    }
 }
 
 /// Arguments for submitting gas proofs to confirm epoch data hash
@@ -115,6 +163,11 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         .call()
         .await
         .unwrap_or_else(|e| panic!("failed to get outbox contract address: {e}"));
+    let roots_mapping_storage_slot_index = gas_archive
+        .seqChainEthSendRootStorageSlot(U256::from(seq_chain_id))
+        .call()
+        .await
+        .unwrap_or_else(|e| panic!("failed to get roots mapping storage slot index: {e}"));
     let gas_aggregator_address = gas_archive
         .seqChainGasAggregatorAddresses(U256::from(seq_chain_id))
         .call()
@@ -126,9 +179,7 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         .await
         .unwrap_or_else(|e| panic!("failed to get epoch data hash storage slot index: {e}"));
 
-    //
     // submit proof for the sequencing chain Hash that was settled on ethereum
-
     let eth_block = eth_provider
         .get_block_by_hash(eth_block_hash)
         .await
@@ -139,9 +190,6 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
     let eth_block_number = eth_block.number();
 
     info!("latest eth block hash known to the gas archive: {eth_block_hash}");
-
-    // TODO make this configurable and explain how to get it from the nitro contracts
-    let roots_mapping_storage_slot_index = U256::from(3);
 
     sol! {
         event SendRootUpdated(bytes32 indexed outputRoot, bytes32 indexed l2BlockHash);
