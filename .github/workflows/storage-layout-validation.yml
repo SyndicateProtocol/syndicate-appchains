@@ -86,7 +86,15 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           echo "⚖️ Comparing storage layouts between main and current branch..."
-          make storage-layout-compare
+          if [ ! -f .storage-layouts/main-layout.json ]; then
+            echo "📋 No baseline found on main branch. Creating initial baseline..."
+            echo "ℹ️ This PR will establish the storage layout baseline for future comparisons."
+            cp .storage-layouts/current-layout.json .storage-layouts/main-layout.json
+            echo "✅ Baseline established - future PRs will be validated against this."
+          else
+            echo "📊 Comparing against existing baseline..."
+            make storage-layout-compare
+          fi
 
       - name: Upload storage layouts as artifacts
         uses: actions/upload-artifact@v4
@@ -116,23 +124,39 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+            let message = `## ✅ Storage Layout Validation Passed
+
+            🛡️ **All storage layout checks completed successfully!**
+
+            ### Checks Performed:
+            - ✅ Contract inheritance ordering validation
+            - ✅ Storage layout extraction and analysis`;
+
+            // Check if this established a new baseline
+            if (!fs.existsSync('.storage-layouts/main-layout.json') || fs.readFileSync('.storage-layouts/main-layout.json', 'utf8') === '{}') {
+              message += `
+            - ✅ **Initial baseline established** for future storage layout comparisons
+
+            ### What this means:
+            This PR establishes the **storage layout baseline** for your upgradeable contracts. Future PRs will be validated against this baseline to prevent storage collisions.`;
+            } else {
+              message += `
+            - ✅ Storage layout compatibility between \`main\` and current branch
+
+            ### What this means:
+            Your upgradeable contracts (like \`SyndicateFactory\`) are **safe from storage collisions** during upgrades. No existing storage slots will be corrupted or overwritten.`;
+            }
+
+            message += `
+
+            📊 Storage layout artifacts have been uploaded and can be reviewed in the workflow run.`;
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ✅ Storage Layout Validation Passed
-
-              🛡️ **All storage layout checks completed successfully!**
-
-              ### Checks Performed:
-              - ✅ Contract inheritance ordering validation
-              - ✅ Storage layout extraction and analysis
-              - ✅ Storage layout compatibility between \`main\` and current branch
-
-              ### What this means:
-              Your upgradeable contracts (like \`SyndicateFactory\`) are **safe from storage collisions** during upgrades. No existing storage slots will be corrupted or overwritten.
-
-              📊 Storage layout artifacts have been uploaded and can be reviewed in the workflow run.`
+              body: message
             })
 
       - name: Fail with helpful message
