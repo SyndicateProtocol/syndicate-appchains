@@ -1,12 +1,9 @@
 //! The `gas-agg` module contains the functions for aggregating gas usage from appchains.
 
-use alloy::{
-    network::EthereumWallet, primitives::Address, providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
-};
+use alloy::{primitives::Address, providers::ProviderBuilder};
 use clap::Args;
 use contract_bindings::synd::gas_aggregator::GasAggregator;
-use std::str::FromStr;
+use shared::{parse::parse_address, types::new_provider};
 
 /// Arguments for the `gas-agg` command.
 ///
@@ -21,16 +18,16 @@ pub struct GasAggArgs {
 
     /// The private key to use for the transaction.
     #[arg(short = 'k', long, env = "PRIVATE_KEY")]
-    pub private_key: Option<String>,
+    pub private_key: String,
 
     /// The address of the gas aggregator contract.
     #[arg(
         short = 'a',
         long,
         env = "GAS_AGGREGATOR_ADDRESS",
-        default_value = "0x0000000000000000000000000000000000000000"
+        value_parser = parse_address,
     )]
-    pub gas_aggregator_address: String,
+    pub gas_aggregator_address: Address,
 
     /// The RPC URL to use for the transaction.
     #[arg(short = 'r', long, env = "RPC_URL", default_value = "")]
@@ -61,12 +58,20 @@ pub struct GasAggArgs {
 /// This function may return an error if:
 /// - The transaction/simulation fails
 pub async fn gas_agg(args: &GasAggArgs) {
-    let gas_aggregator_address = Address::from_str(args.gas_aggregator_address.as_str()).unwrap();
-    let provider = ProviderBuilder::new().connect(args.rpc_url.as_str()).await.unwrap();
+    let provider = ProviderBuilder::new()
+        .connect(args.rpc_url.as_str())
+        .await
+        .unwrap_or_else(|e| panic!("Failed to connect to RPC URL '{}': {}", args.rpc_url, e));
 
-    let gas_aggregator = GasAggregator::new(gas_aggregator_address, provider);
-    if gas_aggregator.pendingEpoch().call().await.unwrap() ==
-        gas_aggregator.getCurrentEpoch().call().await.unwrap()
+    let gas_aggregator = GasAggregator::new(args.gas_aggregator_address, provider);
+    if gas_aggregator
+        .pendingEpoch()
+        .call()
+        .await
+        .unwrap_or_else(|e| panic!("Failed to call pendingEpoch on gas aggregator contract: {}", e)) ==
+        gas_aggregator.getCurrentEpoch().call().await.unwrap_or_else(|e| {
+            panic!("Failed to call getCurrentEpoch on gas aggregator contract: {}", e)
+        })
     {
         println!("Epoch not over");
         return;
@@ -86,22 +91,10 @@ pub async fn gas_agg(args: &GasAggArgs) {
             }
         }
     } else {
-        if args.private_key.is_none() {
-            println!(
-                "Private key is required for aggregating gas. Use the -k flag to provide the private key."
-            );
-            return;
-        }
         println!("Aggregating gas...");
         match GasAggregator::new(
-            gas_aggregator_address,
-            ProviderBuilder::new()
-                .wallet(EthereumWallet::from(
-                    PrivateKeySigner::from_str(args.private_key.as_ref().unwrap()).unwrap(),
-                ))
-                .connect(args.rpc_url.as_str())
-                .await
-                .unwrap(),
+            args.gas_aggregator_address,
+            new_provider(args.rpc_url.as_str(), &args.private_key).await,
         )
         .aggregateTokensUsed()
         .send()

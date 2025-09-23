@@ -1,14 +1,12 @@
 //! The `refund-gas` module contains the functions for refunding gas from the refunder contract.
 
 use alloy::{
-    network::EthereumWallet,
     primitives::{Address, U256},
     providers::{Provider, ProviderBuilder},
-    signers::local::PrivateKeySigner,
 };
 use clap::Args;
 use contract_bindings::synd::refunder::Refunder;
-use std::str::FromStr;
+use shared::{parse::parse_address, types::new_provider};
 
 /// Arguments for the `refund-gas` command.
 ///
@@ -24,16 +22,16 @@ pub struct RefundGasArgs {
 
     /// The private key to use for the transaction.
     #[arg(short = 'k', long, env = "PRIVATE_KEY")]
-    pub private_key: Option<String>,
+    pub private_key: String,
 
     /// The address of the refunder contract.
     #[arg(
         short = 'a',
         long,
         env = "REFUNDER_ADDRESS",
-        default_value = "0x0000000000000000000000000000000000000000"
+        value_parser = parse_address,
     )]
-    pub refunder_address: String,
+    pub refunder_address: Address,
 
     /// The RPC URL to use for the transaction.
     #[arg(short = 'r', long, env = "RPC_URL", default_value = "https://commons.rpc.syndicate.io")]
@@ -65,17 +63,22 @@ pub struct RefundGasArgs {
 /// This function may return an error if:
 /// - The transaction/simulation fails
 pub async fn refund_gas(args: &RefundGasArgs) {
-    let refunder_address = Address::from_str(args.refunder_address.as_str()).unwrap();
-    let provider = ProviderBuilder::new().connect(args.rpc_url.as_str()).await.unwrap();
+    let provider = ProviderBuilder::new()
+        .connect(args.rpc_url.as_str())
+        .await
+        .unwrap_or_else(|e| panic!("Failed to connect to RPC URL '{}': {}", args.rpc_url, e));
 
-    if provider.get_balance(refunder_address).await.unwrap() == U256::from(0) {
+    if provider.get_balance(args.refunder_address).await.unwrap_or_else(|e| {
+        panic!("Failed to get balance for refunder address '{}': {}", args.refunder_address, e)
+    }) == U256::from(0)
+    {
         println!("No excess gas to refund");
         return;
     }
 
     if args.sim {
         println!("Simulating refund gas...");
-        match Refunder::new(refunder_address, provider).recover().call().await {
+        match Refunder::new(args.refunder_address, provider).recover().call().await {
             Ok(_) => {
                 println!("Simulation succeeded")
             }
@@ -87,22 +90,10 @@ pub async fn refund_gas(args: &RefundGasArgs) {
             }
         }
     } else {
-        if args.private_key.is_none() {
-            println!(
-                "Private key is required for refunding gas. Use the -k flag to provide the private key."
-            );
-            return;
-        }
         println!("Refunding gas...");
         match Refunder::new(
-            refunder_address,
-            ProviderBuilder::new()
-                .wallet(EthereumWallet::from(
-                    PrivateKeySigner::from_str(args.private_key.as_ref().unwrap()).unwrap(),
-                ))
-                .connect(args.rpc_url.as_str())
-                .await
-                .unwrap(),
+            args.refunder_address,
+            new_provider(args.rpc_url.as_str(), &args.private_key).await,
         )
         .recover()
         .send()

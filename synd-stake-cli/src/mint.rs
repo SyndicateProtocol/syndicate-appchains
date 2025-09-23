@@ -1,16 +1,14 @@
 //! The `mint` module contains the functions for minting emissions.
 
 use alloy::{
-    network::EthereumWallet,
     primitives::{utils::format_ether, Address},
     providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
 };
 use clap::Args;
 use contract_bindings::synd::{
     emissions_calculator::EmissionsCalculator, emissions_scheduler::EmissionsScheduler,
 };
-use std::str::FromStr;
+use shared::{parse::parse_address, types::new_provider};
 
 /// Arguments for the `mint` command.
 ///
@@ -25,16 +23,16 @@ pub struct MintArgs {
 
     /// The private key of the account to mint the emissions.
     #[arg(short = 'k', long, env = "PRIVATE_KEY")]
-    pub private_key: Option<String>,
+    pub private_key: String,
 
     /// The address to mint the emissions to.
     #[arg(
         short = 'a',
         long,
         env = "EMISSIONS_ADDRESS",
-        default_value = "0x0000000000000000000000000000000000000000"
+        value_parser = parse_address,
     )]
-    pub emissions_address: String,
+    pub emissions_address: Address,
 
     /// The RPC URL to use for the transaction.
     #[arg(short = 'r', long, env = "RPC_URL", default_value = "https://eth.drpc.org")]
@@ -66,19 +64,22 @@ pub struct MintArgs {
 /// This function may return an error if:
 /// - The transaction/simulation fails
 pub async fn mint(args: &MintArgs) {
-    let emissions_address = Address::from_str(args.emissions_address.as_str()).unwrap();
-
     if args.sim {
         println!("Simulating mint...");
-        let provider = ProviderBuilder::new().connect(args.rpc_url.as_str()).await.unwrap();
-        let emissions_scheduler = EmissionsScheduler::new(emissions_address, &provider);
+        let provider = ProviderBuilder::new()
+            .connect(args.rpc_url.as_str())
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to RPC URL '{}': {}", args.rpc_url, e));
+        let emissions_scheduler = EmissionsScheduler::new(args.emissions_address, &provider);
 
         match emissions_scheduler.mintEmission().call().await {
             Ok(_) => {
                 println!("Simulation succeeded!");
 
                 if let Ok(next_emission) = EmissionsCalculator::new(
-                    emissions_scheduler.emissionsCalculator().call().await.unwrap(),
+                    emissions_scheduler.emissionsCalculator().call().await.unwrap_or_else(|e| {
+                        panic!("Failed to call emissionsCalculator on emissions scheduler contract: {}", e)
+                    }),
                     &provider,
                 )
                 .getNextEmission()
@@ -87,7 +88,9 @@ pub async fn mint(args: &MintArgs) {
                 {
                     println!(
                         "Transaction would mint: ${:.2} SYND",
-                        format_ether(next_emission).parse::<f64>().unwrap()
+                        format_ether(next_emission).parse::<f64>().unwrap_or_else(|e| {
+                            panic!("Failed to parse emission amount as f64: {}", e)
+                        })
                     );
                 }
             }
@@ -99,22 +102,10 @@ pub async fn mint(args: &MintArgs) {
             }
         }
     } else {
-        if args.private_key.is_none() {
-            println!(
-                "Private key is required for minting. Use the -k flag to provide the private key."
-            );
-            return;
-        }
         println!("Minting emissions...");
         match EmissionsScheduler::new(
-            emissions_address,
-            ProviderBuilder::new()
-                .wallet(EthereumWallet::from(
-                    PrivateKeySigner::from_str(args.private_key.as_ref().unwrap()).unwrap(),
-                ))
-                .connect(args.rpc_url.as_str())
-                .await
-                .unwrap(),
+            args.emissions_address,
+            new_provider(&args.rpc_url, &args.private_key).await,
         )
         .mintEmission()
         .send()

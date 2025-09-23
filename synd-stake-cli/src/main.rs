@@ -10,7 +10,6 @@ use synd_stake_cli::{
     },
     refund_gas::{refund_gas, RefundGasArgs},
 };
-use tokio;
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -59,11 +58,12 @@ enum Commands {
     /// TODO: Implement
     SubmitGas,
 
-    /// call the BlockHashRelayer to update the base/ethereum block hashes on the staking appchain
+    /// call the `BlockHashRelayer` to update the base/ethereum block hashes on the staking
+    /// appchain
     UpdateBaseAndEthereumBlockHashes(UpdateBaseAndEthereumBlockHashesArgs),
 
-    /// call eth_getProof for the sequencing chain(s) and submit it to the staking appchain (twice
-    /// 1 proof for block hash, another for the gasAggregation data)
+    /// call `eth_getProof` for the sequencing chain(s) and submit it to the staking appchain
+    /// (twice 1 proof for block hash, another for the gasAggregation data)
     SubmitGasProofs(SubmitGasProofsArgs),
 
     /// submit the gas data for the top N chains, if we are over the "offchain aggregation"

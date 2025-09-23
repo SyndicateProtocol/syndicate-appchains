@@ -3,11 +3,9 @@
 
 use alloy::{
     eips::BlockNumberOrTag,
-    network::EthereumWallet,
     primitives::{keccak256, Address, FixedBytes, StorageKey, U256},
-    providers::{Provider, ProviderBuilder},
+    providers::Provider,
     rlp::Encodable,
-    signers::local::PrivateKeySigner,
     sol,
     sol_types::{SolEvent, SolValue},
 };
@@ -19,8 +17,7 @@ use contract_bindings::synd::{
     syndicate_factory::SyndicateFactory::{self, getAppchainsAndContractsReturn},
     syndicate_sequencing_chain::SyndicateSequencingChain,
 };
-use shared::{parse::parse_address, types::FilledProvider};
-use std::str::FromStr;
+use shared::{parse::parse_address, types::new_provider};
 use tracing::{debug, info};
 
 /// Arguments for updating base and ethereum block hashes
@@ -479,15 +476,4 @@ pub async fn aggregate_gas_data_top_n_chains(args: &AggregateGasDataTopNChainsAr
         .unwrap_or_else(|e| panic!("failed to get receipt for offchain top chains: {e}"));
     assert!(receipt.status(), "failed to submit offchain top chains. receipt: {receipt:?}");
     info!("successfully submitted top chains");
-}
-
-async fn new_provider(rpc_url: &str, private_key: &str) -> FilledProvider {
-    ProviderBuilder::new()
-        .wallet(EthereumWallet::from(
-            PrivateKeySigner::from_str(private_key)
-                .unwrap_or_else(|e| panic!("invalid private key: {e}")),
-        ))
-        .connect(rpc_url)
-        .await
-        .unwrap_or_else(|e| panic!("unable to create provider: {e}"))
 }
