@@ -276,25 +276,36 @@ contract EmissionsCalculator is AccessControl {
      */
     function getNextEmission() public view returns (uint256) {
         if (!initialized || currentEpoch >= TOTAL_EPOCHS) return 0;
+        uint256 epochsLeft = TOTAL_EPOCHS - currentEpoch;
 
         uint256 remainingSupply = getRemainingSupply();
 
-        if (currentEpoch == TOTAL_EPOCHS - 1) {
-            // Final epoch: sweep all remaining tokens
+        // Final epoch (47): sweep all remaining tokens
+        if (epochsLeft == 1) {
             return remainingSupply;
         }
 
-        // Calculate emission for current epoch
-        uint256 rt = changeFactors[currentEpoch];
-        if (rt == SCALE) {
-            return remainingSupply / (TOTAL_EPOCHS - currentEpoch);
+        // Get the change factor for current epoch
+        uint256 currentChangeFactor = changeFactors[currentEpoch];
+
+        // Special case: when change factor equals SCALE (1.0), use linear distribution
+        if (currentChangeFactor == SCALE) {
+            return remainingSupply / epochsLeft;
         }
-        uint256 pt = calculateCumulativeProduct(currentEpoch);
-        uint256 ptDiff = pt > SCALE ? pt - SCALE : SCALE - pt;
-        // Near-zero denominator check
-        // Use minimum denominator to prevent precision issues
-        uint256 denominator = ptDiff < 1000 ? 1000 : ptDiff;
-        uint256 numerator = rt > SCALE ? remainingSupply * (rt - SCALE) : remainingSupply * (SCALE - rt);
+
+        // Calculate the cumulative product P_t from current epoch to end
+        uint256 cumulativeProduct = calculateCumulativeProduct(currentEpoch);
+
+        // Calculate |1 - P_t|
+        uint256 productDifference = cumulativeProduct > SCALE ? cumulativeProduct - SCALE : SCALE - cumulativeProduct;
+
+        // Use minimum denominator to avoid precision issues with near-zero values
+        uint256 denominator = productDifference < 1000 ? 1000 : productDifference;
+
+        // Calculate |1 - r_t| * remainingSupply
+        uint256 numerator = currentChangeFactor > SCALE
+            ? remainingSupply * (currentChangeFactor - SCALE)
+            : remainingSupply * (SCALE - currentChangeFactor);
 
         // E_t = R_t * |1 - r_t| / |1 - P_t|
         return numerator / denominator;
