@@ -16,8 +16,9 @@ interface ISyndicateTokenMintable {
  *      while maintaining the 80M cap and 48-epoch limit constraints.
  *
  * Formula:
- * - For epoch t < 47: E_t = R_t * (1 - r_t) / (1 - P_t)
+ * - For epoch t < 47: E_t = R_t * |1 - r_t| / |1 - P_t|
  * - For epoch 47: E_t = R_t (sweep remainder)
+ * - SPECIAL CASE: When r_t = 1e18: E_t = R_t / (48 - t)
  *
  * Where:
  * - R_t = remaining supply = CAP - M (M = total minted so far)
@@ -40,7 +41,7 @@ contract EmissionsCalculator is AccessControl {
     /// @notice Thrown when all emissions are completed
     error EmissionsCompleted();
 
-    /// @notice Thrown when change factor is invalid (0 or >= 1e18)
+    /// @notice Thrown when change factor is invalid (0)
     error InvalidChangeFactor();
 
     /// @notice Thrown when trying to set change factor for past epochs
@@ -199,8 +200,9 @@ contract EmissionsCalculator is AccessControl {
      * @param to Address to mint tokens to
      * @param expectedEpoch The epoch number that the caller expects to mint for
      * @dev Implements the piece-wise geometric change factor formula:
-     *      E_t = R_t * (1 - r_t) / (1 - P_t) for t < 47
+     *      E_t = R_t * |1 - r_t| / |1 - P_t| for t < 47
      *      E_t = R_t for t = 47 (final epoch sweeps remainder)
+     *      E_t = R_t / (48 - t) for r_t = 1e18
      *      Requires expectedEpoch to match currentEpoch for synchronization
      */
     function calculateAndMintEmission(address to, uint256 expectedEpoch)
@@ -288,15 +290,13 @@ contract EmissionsCalculator is AccessControl {
             return remainingSupply / (TOTAL_EPOCHS - currentEpoch);
         }
         uint256 pt = calculateCumulativeProduct(currentEpoch);
-
+        uint256 ptDiff = pt > SCALE ? pt - SCALE : SCALE - pt;
         // Near-zero denominator check
         // Use minimum denominator to prevent precision issues
-        uint256 ptDiff = pt > SCALE ? pt - SCALE : SCALE - pt;
         uint256 denominator = ptDiff < 1000 ? 1000 : ptDiff;
         uint256 numerator = rt > SCALE ? remainingSupply * (rt - SCALE) : remainingSupply * (SCALE - rt);
 
-        // E_t = R_t * (1 - r_t) / (1 - P_t)
-        // precision in fixed-point arithmetic
+        // E_t = R_t * |1 - r_t| / |1 - P_t|
         return numerator / denominator;
     }
 
