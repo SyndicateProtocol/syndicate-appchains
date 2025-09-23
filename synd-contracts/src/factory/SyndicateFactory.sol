@@ -36,7 +36,7 @@ enum NamespaceState {
 }
 
 /// @title SyndicateFactory
-/// @notice Factory contract for creating SyndicateSequencingChain contracts with centralized gas tracking
+/// @notice Factory contract for creating SyndicateSequencingChain contracts
 /// @dev Uses UUPS proxy pattern for upgradeability and CREATE2 pattern for deterministic deployments
 contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     /// @notice Emitted when a new SyndicateSequencingChain is created
@@ -50,9 +50,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
     /// @notice Emitted when a new implementation is added to allowed list
     event ImplementationAdded(address indexed implementation);
-
-    /// @notice Emitted when a chain is banned from gas tracking
-    event ChainBannedFromGasTracking(uint256 indexed chainId, address indexed notAllowedImplementation);
 
     /// @notice Emitted when a deterministic chainID is generated
     event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
@@ -78,10 +75,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice List of allowed implementation addresses for sequencing chains
     address[] public allowedImplementations;
     mapping(address => bool) public isImplementationAllowed;
-
-    /// @notice Chains banned from gas tracking due to not allowed implementation
-    mapping(uint256 => bool) public gasTrackingBanlist;
-    uint256 public numberOfChainsBannedFromGasTracking;
 
     /// @notice Per-sender nonce tracking for deterministic chainID generation
     mapping(address sender => uint256 nonce) public senderNonces;
@@ -303,52 +296,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         return senderNonces[sender];
     }
 
-    /// @notice returns the number of appchains not banned from gas tracking
-    function getTotalAppchainsForGasTracking() external view returns (uint256) {
-        return chainIDs.length - numberOfChainsBannedFromGasTracking;
-    }
-
-    /// @notice returns the contracts for a given list of appchain chainIDs that are not banned from gas tracking
-    /// @param _chainIDs the list of chain IDs
-    /// @return _contracts contracts for the given chain IDs (zero address if banned)
-    function getContractsForGasTracking(uint256[] memory _chainIDs)
-        external
-        view
-        returns (address[] memory _contracts)
-    {
-        address[] memory contracts = new address[](_chainIDs.length);
-        for (uint256 i = 0; i < _chainIDs.length; i++) {
-            if (!gasTrackingBanlist[_chainIDs[i]]) {
-                contracts[i] = appchainContracts[_chainIDs[i]];
-            }
-        }
-        return contracts;
-    }
-
-    /// @notice returns all appchains chainIDs and associated contracts that are not banned from gas tracking
-    /// @return _chainIDs chain IDs not banned from gas tracking
-    /// @return _contracts contracts for non-banned chains
-    function getAppchainsAndContractsForGasTracking()
-        external
-        view
-        returns (uint256[] memory _chainIDs, address[] memory _contracts)
-    {
-        uint256 validCount = chainIDs.length - numberOfChainsBannedFromGasTracking;
-        uint256[] memory validChainIDs = new uint256[](validCount);
-        address[] memory validContracts = new address[](validCount);
-        uint256 index = 0;
-
-        for (uint256 i = 0; i < chainIDs.length; i++) {
-            if (!gasTrackingBanlist[chainIDs[i]]) {
-                validChainIDs[index] = chainIDs[i];
-                validContracts[index] = appchainContracts[chainIDs[i]];
-                index++;
-            }
-        }
-
-        return (validChainIDs, validContracts);
-    }
-
     /// @notice Pause the factory (admin only)
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
@@ -398,49 +345,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         syndicateChainImpl = implementation;
     }
 
-    /// @notice Ban a chain from gas tracking due to not allowed implementation (admin only)
-    /// @param chainId The chain ID to ban
-    /// @param notAllowedImplementation The address of the not allowed implementation
-    function banChainFromGasTracking(uint256 chainId, address notAllowedImplementation)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        _banChainFromGasTracking(chainId);
-        emit ChainBannedFromGasTracking(chainId, notAllowedImplementation);
-    }
-
-    /// @notice Check if a chain is banned from gas tracking
-    /// @param chainId The chain ID to check
-    /// @return True if the chain is banned from gas tracking
-    function isChainBannedFromGasTracking(uint256 chainId) external view returns (bool) {
-        return gasTrackingBanlist[chainId];
-    }
-
     /// @notice Get all allowed implementation addresses
     /// @return Array of allowed implementation addresses
     function getAllowedImplementations() external view returns (address[] memory) {
         return allowedImplementations;
-    }
-
-    /// @notice Internal function to ban a chain from gas tracking
-    /// @param chainId The chain ID to ban
-    function _banChainFromGasTracking(uint256 chainId) internal {
-        if (!gasTrackingBanlist[chainId]) {
-            gasTrackingBanlist[chainId] = true;
-            numberOfChainsBannedFromGasTracking++;
-        }
-    }
-
-    /// @notice Called by sequencing chains to notify about upgrades
-    /// @dev Automatically bans chain from gas tracking if implementation is not allowed
-    /// @param chainId The chain ID that is upgrading
-    /// @param newImplementation The address of the new implementation
-    function notifyChainUpgrade(uint256 chainId, address newImplementation) external {
-        if (appchainContracts[chainId] != msg.sender) revert OnlyChainCanNotifyUpgrade();
-
-        if (!isImplementationAllowed[newImplementation]) {
-            _banChainFromGasTracking(chainId);
-            emit ChainBannedFromGasTracking(chainId, newImplementation);
-        }
     }
 }

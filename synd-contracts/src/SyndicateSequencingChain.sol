@@ -9,7 +9,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 interface ISyndicateFactory {
     function isImplementationAllowed(address implementation) external view returns (bool);
-    function notifyChainUpgrade(uint256 chainId, address newImplementation) external;
 }
 
 uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
@@ -170,9 +169,6 @@ contract SyndicateSequencingChain is
         if (!isAllowed) {
             require($.allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
         }
-
-        // Notify factory about the upgrade
-        ISyndicateFactory($.factory).notifyChainUpgrade($.appchainId, _newImplementation);
     }
 
     function encodeTransaction(bytes calldata data) public pure returns (bytes memory) {

@@ -24,9 +24,7 @@ contract SyndicateFactoryStorageTest is Test {
     uint256 constant SYNDICATE_CHAIN_IMPL_SLOT = 3;
     uint256 constant ALLOWED_IMPLEMENTATIONS_SLOT = 4;
     uint256 constant IS_IMPLEMENTATION_ALLOWED_SLOT = 5;
-    uint256 constant GAS_TRACKING_BANLIST_SLOT = 6;
-    uint256 constant NUMBER_OF_CHAINS_BANNED_SLOT = 7;
-    uint256 constant SENDER_NONCES_SLOT = 8; // Our deterministic nonce variable
+    uint256 constant SENDER_NONCES_SLOT = 6; // Our deterministic nonce variable
 
     function setUp() public {
         admin = address(0x1);

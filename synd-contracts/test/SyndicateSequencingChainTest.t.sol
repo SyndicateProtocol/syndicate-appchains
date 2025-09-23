@@ -248,9 +248,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Perform the upgrade
         vm.prank(admin);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
-
-        // Chain should be banned from gas tracking
-        assertTrue(testFactory.isChainBannedFromGasTracking(chainId));
     }
 
     function testUpgradeWithDisallowedImplementationRevertsBan() public {

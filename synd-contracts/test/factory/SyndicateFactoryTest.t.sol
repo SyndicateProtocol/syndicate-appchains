@@ -448,73 +448,6 @@ contract SyndicateFactoryTest is Test {
         assertEq(actualId2, chainId2);
     }
 
-    function testGetContractsForAppchains() public {
-        // Create a few chains with non-sequential chain IDs
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        uint256 appchainId1 = 100;
-        uint256 appchainId2 = 200;
-        uint256 appchainId3 = 300;
-
-        vm.prank(admin);
-        (address chain1,) = factory.createSyndicateSequencingChainWithCustomId(appchainId1, admin, permissionModule);
-
-        vm.prank(admin);
-        (address chain2,) = factory.createSyndicateSequencingChainWithCustomId(appchainId2, admin, permissionModule);
-
-        vm.prank(admin);
-        (address chain3,) = factory.createSyndicateSequencingChainWithCustomId(appchainId3, admin, permissionModule);
-
-        // Test getContractsForGasTracking with specific chain IDs
-        uint256[] memory chainIDs = new uint256[](2);
-        chainIDs[0] = appchainId2; // 200
-        chainIDs[1] = appchainId1; // 100
-
-        address[] memory contracts = factory.getContractsForGasTracking(chainIDs);
-
-        // Verify that the correct contracts are returned for each chain ID
-        // This is the regression test for the bug where it was using the loop index instead of the chain ID
-        assertEq(contracts.length, 2);
-        assertEq(contracts[0], chain2); // Contract for chain ID 200
-        assertEq(contracts[1], chain1); // Contract for chain ID 100
-
-        // Test with a single chain ID
-        uint256[] memory singleChainID = new uint256[](1);
-        singleChainID[0] = appchainId3; // 300
-
-        address[] memory singleContract = factory.getContractsForGasTracking(singleChainID);
-
-        assertEq(singleContract.length, 1);
-        assertEq(singleContract[0], chain3); // Contract for chain ID 300
-    }
-
-    function testGetAppchainsAndContracts() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        uint256 appchainId1 = 1000;
-        uint256 appchainId2 = 2000;
-        uint256 appchainId3 = 3000;
-
-        vm.prank(admin);
-        (address chain1Addr,) = factory.createSyndicateSequencingChainWithCustomId(appchainId1, admin, permissionModule);
-        vm.prank(admin);
-        (address chain2Addr,) = factory.createSyndicateSequencingChainWithCustomId(appchainId2, admin, permissionModule);
-        vm.prank(admin);
-        (address chain3Addr,) = factory.createSyndicateSequencingChainWithCustomId(appchainId3, admin, permissionModule);
-
-        (uint256[] memory chainIDs, address[] memory contracts) = factory.getAppchainsAndContractsForGasTracking();
-        assertEq(chainIDs.length, 3);
-        assertEq(contracts.length, 3);
-        assertEq(contracts[0], chain1Addr);
-        assertEq(contracts[1], chain2Addr);
-        assertEq(contracts[2], chain3Addr);
-
-        // ensure the mapping is consistent
-        for (uint256 i = 0; i < chainIDs.length; i++) {
-            assertEq(contracts[i], factory.appchainContracts(chainIDs[i]));
-        }
-    }
-
     // Implementation Allowlist Tests
     function testAddAllowedImplementation() public {
         SyndicateSequencingChain mockImpl = new SyndicateSequencingChain();
@@ -560,84 +493,6 @@ contract SyndicateFactoryTest is Test {
         vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ImplementationAlreadyAllowed.selector);
         factory.addAllowedImplementation(address(mockImpl), false);
-    }
-
-    function testNotifyChainUpgradeWithAllowedImplementation() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        // Create a chain
-        vm.prank(admin);
-        (address chainAddr, uint256 chainId) =
-            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
-
-        // Add allowed implementation
-        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
-        vm.prank(admin);
-        factory.addAllowedImplementation(address(newImpl), false);
-
-        // Chain should be able to notify about upgrade with allowed implementation
-        vm.prank(chainAddr);
-        factory.notifyChainUpgrade(chainId, address(newImpl));
-
-        // Chain should not be banned
-        assertFalse(factory.isChainBannedFromGasTracking(chainId));
-    }
-
-    function testNotifyChainUpgradeWithDisallowedImplementation() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        // Create a chain
-        vm.prank(admin);
-        (address chainAddr, uint256 chainId) =
-            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
-
-        // Create implementation that is not allowed
-        SyndicateSequencingChain disallowedImpl = new SyndicateSequencingChain();
-
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateFactory.ChainBannedFromGasTracking(chainId, address(disallowedImpl));
-
-        // Chain notifies about upgrade with disallowed implementation
-        vm.prank(chainAddr);
-        factory.notifyChainUpgrade(chainId, address(disallowedImpl));
-
-        // Chain should be banned from gas tracking
-        assertTrue(factory.isChainBannedFromGasTracking(chainId));
-    }
-
-    function testNotifyChainUpgradeUnauthorizedReverts() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        // Create a chain
-        vm.prank(admin);
-        (, uint256 chainId) = factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
-
-        SyndicateSequencingChain someImpl = new SyndicateSequencingChain();
-
-        // Non-chain address cannot notify
-        vm.prank(admin);
-        vm.expectRevert(SyndicateFactory.OnlyChainCanNotifyUpgrade.selector);
-        factory.notifyChainUpgrade(chainId, address(someImpl));
-    }
-
-    function testBanChainFromGasTracking() public {
-        SyndicateSequencingChain notAllowedImpl = new SyndicateSequencingChain();
-
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateFactory.ChainBannedFromGasTracking(appchainId, address(notAllowedImpl));
-
-        vm.prank(admin);
-        factory.banChainFromGasTracking(appchainId, address(notAllowedImpl));
-
-        assertTrue(factory.isChainBannedFromGasTracking(appchainId));
-    }
-
-    function testBanChainFromGasTrackingNonAdminReverts() public {
-        SyndicateSequencingChain notAllowedImpl = new SyndicateSequencingChain();
-
-        vm.prank(nonAdmin);
-        vm.expectRevert(); // AccessControl revert
-        factory.banChainFromGasTracking(appchainId, address(notAllowedImpl));
     }
 
     function testGetAllowedImplementations() public {
@@ -718,11 +573,6 @@ contract SyndicateFactoryTest is Test {
         SyndicateSequencingChain chain = SyndicateSequencingChain(chainAddr);
 
         // Test 1: Upgrade to good (allowed) implementation should succeed
-        // First set allowGasTrackingBanOnUpgrade to false
-        vm.prank(admin);
-        chain.setAllowGasTrackingBanOnUpgrade(false);
-
-        // Now perform the upgrade (authorization happens internally)
         vm.prank(admin);
         chain.upgradeToAndCall(address(goodImpl), "");
 
@@ -730,24 +580,12 @@ contract SyndicateFactoryTest is Test {
         address currentImpl = address(uint160(uint256(vm.load(chainAddr, IMPLEMENTATION_SLOT))));
         assertEq(currentImpl, address(goodImpl));
 
-        // Chain should not be banned from gas tracking
-        assertFalse(factory.isChainBannedFromGasTracking(chainId));
+        // Gas tracking functionality removed from factory
 
-        // Test 2: Try to upgrade to bad (not allowed) implementation with allowGasTrackingBan = false
-        // allowGasTrackingBanOnUpgrade is still false from previous test
-        vm.prank(admin);
-        vm.expectRevert("Upgrade would result in gas tracking ban");
-        chain.upgradeToAndCall(address(badImpl), ""); // Should fail because allowGasTrackingBanOnUpgrade = false
-
-        // Test 3: Upgrade to bad implementation with allowGasTrackingBan = true should succeed but ban the chain
-        // First set allowGasTrackingBanOnUpgrade to true
+        // Test 2: Upgrade to bad implementation should succeed when allowGasTrackingBanOnUpgrade is true
         vm.prank(admin);
         chain.setAllowGasTrackingBanOnUpgrade(true);
 
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateFactory.ChainBannedFromGasTracking(chainId, address(badImpl));
-
-        // Perform the actual upgrade (should succeed now)
         vm.prank(admin);
         chain.upgradeToAndCall(address(badImpl), "");
 
@@ -755,31 +593,9 @@ contract SyndicateFactoryTest is Test {
         currentImpl = address(uint160(uint256(vm.load(chainAddr, IMPLEMENTATION_SLOT))));
         assertEq(currentImpl, address(badImpl));
 
-        // Chain should now be banned from gas tracking
-        assertTrue(factory.isChainBannedFromGasTracking(chainId));
+        // Gas tracking functionality removed from factory
 
-        // Test 4: Check that gas tracking methods exclude banned chains
-        uint256 totalBefore = factory.getTotalAppchainsForGasTracking();
-
-        // Create another chain that won't be banned
-        vm.prank(admin);
-        (address goodChainAddr, uint256 goodChainId) =
-            factory.createSyndicateSequencingChainWithCustomId(2002, admin, permissionModule);
-
-        uint256 totalAfter = factory.getTotalAppchainsForGasTracking();
-
-        // Only the good chain should be counted (bad chain is banned)
-        assertEq(totalAfter, totalBefore + 1);
-
-        // Test getContractsForGasTracking with banned chain
-        uint256[] memory testChainIds = new uint256[](2);
-        testChainIds[0] = chainId; // banned chain
-        testChainIds[1] = goodChainId; // good chain
-
-        address[] memory contracts = factory.getContractsForGasTracking(testChainIds);
-        assertEq(contracts.length, 2);
-        assertEq(contracts[0], address(0)); // banned chain returns zero address
-        assertEq(contracts[1], goodChainAddr); // good chain returns actual address
+        // Gas tracking test removed since functionality moved to GasAggregator
     }
 
     function testRemoveAllowedImplementation() public {
@@ -1242,86 +1058,6 @@ contract SyndicateFactoryTest is Test {
         assertEq(computedStub, actualStub);
     }
 
-    // ================== COMPREHENSIVE GAS TRACKING TESTS ==================
-
-    function testGasTrackingWithBannedChains() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        // Create 3 chains
-        uint256 chainId1 = 1001;
-        uint256 chainId2 = 1002;
-        uint256 chainId3 = 1003;
-
-        vm.prank(admin);
-        (address chain1,) = factory.createSyndicateSequencingChainWithCustomId(chainId1, admin, permissionModule);
-        vm.prank(admin);
-        factory.createSyndicateSequencingChainWithCustomId(chainId2, admin, permissionModule);
-        vm.prank(admin);
-        (address chain3,) = factory.createSyndicateSequencingChainWithCustomId(chainId3, admin, permissionModule);
-
-        // Initially all chains should be included
-        assertEq(factory.getTotalAppchainsForGasTracking(), 3);
-        assertEq(factory.numberOfChainsBannedFromGasTracking(), 0);
-
-        // Ban chain 2
-        vm.prank(admin);
-        factory.banChainFromGasTracking(chainId2, address(0x123));
-
-        // Now only 2 chains should be counted
-        assertEq(factory.getTotalAppchainsForGasTracking(), 2);
-        assertEq(factory.numberOfChainsBannedFromGasTracking(), 1);
-
-        // Test getAppchainsAndContractsForGasTracking
-        (uint256[] memory chainIds, address[] memory contracts) = factory.getAppchainsAndContractsForGasTracking();
-        assertEq(chainIds.length, 2);
-        assertEq(contracts.length, 2);
-
-        // Should contain chains 1 and 3, but not chain 2
-        bool foundChain1 = false;
-        bool foundChain3 = false;
-        bool foundChain2 = false;
-
-        for (uint256 i = 0; i < chainIds.length; i++) {
-            if (chainIds[i] == chainId1) foundChain1 = true;
-            if (chainIds[i] == chainId2) foundChain2 = true;
-            if (chainIds[i] == chainId3) foundChain3 = true;
-        }
-
-        assertTrue(foundChain1);
-        assertTrue(foundChain3);
-        assertFalse(foundChain2);
-
-        // Test getContractsForGasTracking with banned chain
-        uint256[] memory requestedChains = new uint256[](3);
-        requestedChains[0] = chainId1;
-        requestedChains[1] = chainId2; // banned
-        requestedChains[2] = chainId3;
-
-        address[] memory returnedContracts = factory.getContractsForGasTracking(requestedChains);
-        assertEq(returnedContracts.length, 3);
-        assertEq(returnedContracts[0], chain1); // chain1 should be returned
-        assertEq(returnedContracts[1], address(0)); // chain2 should return zero address (banned)
-        assertEq(returnedContracts[2], chain3); // chain3 should be returned
-    }
-
-    function testBanningAlreadyBannedChainDoesntDoubleCount() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        uint256 chainId = 2001;
-        vm.prank(admin);
-        factory.createSyndicateSequencingChainWithCustomId(chainId, admin, permissionModule);
-
-        // Ban the chain
-        vm.prank(admin);
-        factory.banChainFromGasTracking(chainId, address(0x123));
-        assertEq(factory.numberOfChainsBannedFromGasTracking(), 1);
-
-        // Ban it again - count should not increase
-        vm.prank(admin);
-        factory.banChainFromGasTracking(chainId, address(0x456));
-        assertEq(factory.numberOfChainsBannedFromGasTracking(), 1); // Still 1, not 2
-    }
-
     // ================== COMPREHENSIVE INTEGRATION TESTS ==================
 
     function testFullFactoryLifecycle() public {
@@ -1347,9 +1083,6 @@ contract SyndicateFactoryTest is Test {
         vm.prank(admin);
         (, uint256 customChainId2) = factory.createSyndicateSequencingChainWithCustomId(9999, admin, permissionModule);
         assertEq(customChainId2, 9999);
-
-        // Test 5: All chains should be tracked
-        assertEq(factory.getTotalAppchainsForGasTracking(), 4);
 
         // Test 6: Verify all chain IDs are different
         assertTrue(regularChainId != customChainId1);
