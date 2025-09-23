@@ -101,14 +101,6 @@ contract EmissionsCalculatorTest is Test {
         vm.prank(admin);
         vm.expectRevert(EmissionsCalculator.InvalidDecayFactor.selector);
         calculator.initializeEmissions(0); // Zero decay
-
-        vm.prank(admin);
-        vm.expectRevert(EmissionsCalculator.InvalidDecayFactor.selector);
-        calculator.initializeEmissions(SCALE); // Decay = 1.0
-
-        vm.prank(admin);
-        vm.expectRevert(EmissionsCalculator.InvalidDecayFactor.selector);
-        calculator.initializeEmissions(SCALE + 1); // Decay > 1.0
     }
 
     function test_RevertWhen_InitializeEmissions_AlreadyInitialized() public {

@@ -138,7 +138,7 @@ contract EmissionsCalculator is AccessControl {
      */
     function initializeEmissions(uint256 defaultDecayFactor) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (initialized) revert EmissionsCompleted();
-        if (defaultDecayFactor == 0 || defaultDecayFactor >= SCALE) revert InvalidDecayFactor();
+        if (defaultDecayFactor == 0) revert InvalidDecayFactor();
 
         initialized = true;
 
@@ -164,7 +164,7 @@ contract EmissionsCalculator is AccessControl {
     function setDecayFactor(uint256 epoch, uint256 decayFactor) external onlyRole(DECAY_MANAGER_ROLE) {
         if (epoch >= TOTAL_EPOCHS) revert InvalidEpoch();
         if (epoch < currentEpoch) revert CannotModifyPastEpoch();
-        if (decayFactor == 0 || decayFactor >= SCALE) revert InvalidDecayFactor();
+        if (decayFactor == 0) revert InvalidDecayFactor();
 
         decayFactors[epoch] = decayFactor;
         emit DecayFactorSet(epoch, decayFactor, msg.sender);
@@ -183,7 +183,7 @@ contract EmissionsCalculator is AccessControl {
             uint256 epoch = startEpoch + i;
             if (epoch >= TOTAL_EPOCHS) break;
             if (epoch < currentEpoch) continue;
-            if (decayFactorArray[i] == 0 || decayFactorArray[i] >= SCALE) continue;
+            if (decayFactorArray[i] == 0) continue;
 
             decayFactors[epoch] = decayFactorArray[i];
             emit DecayFactorSet(epoch, decayFactorArray[i], msg.sender);
@@ -286,23 +286,15 @@ contract EmissionsCalculator is AccessControl {
         uint256 rt = decayFactors[currentEpoch];
         uint256 pt = calculateCumulativeProduct(currentEpoch);
 
-        // Prevent division by zero and handle edge case
-        if (pt >= SCALE) {
-            // Treat as final epoch and sweep remaining supply
-            return remainingSupply;
-        } else if (SCALE - pt < 1000) {
-            // Near-zero denominator check
-            // Use minimum denominator to prevent precision issues
-            uint256 denominator = 1000;
-            uint256 numerator = remainingSupply * (SCALE - rt);
-            return numerator / denominator;
-        } else {
-            // E_t = R_t * (1 - r_t) / (1 - P_t)
-            // precision in fixed-point arithmetic
-            uint256 numerator = remainingSupply * (SCALE - rt);
-            uint256 denominator = SCALE - pt;
-            return numerator / denominator;
-        }
+        // Near-zero denominator check
+        // Use minimum denominator to prevent precision issues
+        uint256 ptDiff = pt > SCALE ? pt - SCALE : SCALE - pt;
+        uint256 denominator = ptDiff < 1000 ? 1000 : ptDiff;
+        uint256 numerator = rt > SCALE ? remainingSupply * (rt - SCALE) : remainingSupply * (SCALE - rt);
+
+        // E_t = R_t * (1 - r_t) / (1 - P_t)
+        // precision in fixed-point arithmetic
+        return numerator / denominator;
     }
 
     /**
