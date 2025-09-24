@@ -63,38 +63,92 @@ jobs:
       - name: Build and extract current layout
         run: |
           echo "🏗️ Building contracts and extracting current storage layout..."
-          make storage-layout-extract
+          echo "DEBUG: About to run make storage-layout-extract"
+          if make storage-layout-extract; then
+            echo "✅ SUCCESS: Current layout extracted successfully"
+            ls -la .storage-layouts/
+          else
+            echo "❌ FAILED: Current layout extraction failed"
+            ls -la .storage-layouts/ || echo "No .storage-layouts directory"
+            exit 1
+          fi
 
       - name: Setup baseline for comparison (if not push to main)
         if: github.event_name == 'pull_request'
         run: |
           echo "📋 Setting up baseline layout from main branch..."
+          echo "DEBUG: Current branch before checkout: $(git branch --show-current)"
+
           git fetch origin main:main
           git checkout main
+          echo "DEBUG: Switched to branch: $(git branch --show-current)"
 
           # Build main branch and extract baseline
+          echo "DEBUG: Installing forge dependencies on main..."
           forge install
-          make storage-layout-baseline
+
+          echo "DEBUG: Creating baseline on main branch..."
+          if make storage-layout-baseline; then
+            echo "✅ SUCCESS: Baseline created on main branch"
+            ls -la .storage-layouts/
+          else
+            echo "❌ FAILED: Baseline creation failed on main branch"
+            ls -la .storage-layouts/ || echo "No .storage-layouts directory"
+            exit 1
+          fi
 
           # Switch back to PR branch
           git checkout ${{ github.head_ref }}
+          echo "DEBUG: Switched back to branch: $(git branch --show-current)"
 
           # Rebuild current branch
+          echo "DEBUG: Reinstalling dependencies on PR branch..."
           forge install
-          make storage-layout-extract
+
+          echo "DEBUG: Re-extracting current layout..."
+          if make storage-layout-extract; then
+            echo "✅ SUCCESS: Current layout re-extracted"
+            ls -la .storage-layouts/
+          else
+            echo "❌ FAILED: Current layout re-extraction failed"
+            ls -la .storage-layouts/ || echo "No .storage-layouts directory"
+            exit 1
+          fi
 
       - name: Compare storage layouts
         if: github.event_name == 'pull_request'
         run: |
           echo "⚖️ Comparing storage layouts between main and current branch..."
+          echo "DEBUG: Checking for baseline file..."
+
           if [ ! -f .storage-layouts/main-layout.json ]; then
             echo "📋 No baseline found on main branch. Creating initial baseline..."
             echo "ℹ️ This PR will establish the storage layout baseline for future comparisons."
-            cp .storage-layouts/current-layout.json .storage-layouts/main-layout.json
-            echo "✅ Baseline established - future PRs will be validated against this."
+
+            if [ -f .storage-layouts/current-layout.json ]; then
+              cp .storage-layouts/current-layout.json .storage-layouts/main-layout.json
+              echo "✅ SUCCESS: Baseline established - future PRs will be validated against this."
+            else
+              echo "❌ FAILED: No current-layout.json to use as baseline!"
+              ls -la .storage-layouts/
+              exit 1
+            fi
           else
             echo "📊 Comparing against existing baseline..."
-            make storage-layout-compare
+            echo "DEBUG: Files available for comparison:"
+            ls -la .storage-layouts/
+
+            if make storage-layout-compare; then
+              echo "✅ SUCCESS: Storage layout comparison passed"
+            else
+              echo "❌ FAILED: Storage layout comparison failed"
+              echo "DEBUG: Showing baseline vs current differences..."
+              echo "=== BASELINE ==="
+              head -20 .storage-layouts/main-layout.json || echo "Cannot read main-layout.json"
+              echo "=== CURRENT ==="
+              head -20 .storage-layouts/current-layout.json || echo "Cannot read current-layout.json"
+              exit 1
+            fi
           fi
 
       - name: Upload storage layouts as artifacts
@@ -165,16 +219,28 @@ jobs:
         run: |
           echo "❌ Storage layout validation failed!"
           echo ""
-          echo "🔍 This could indicate:"
-          echo "  - Storage slot conflicts in upgradeable contracts"
-          echo "  - Inconsistent contract inheritance ordering"
-          echo "  - Breaking changes to existing storage layouts"
+          echo "🔍 DEBUG: Checking which step failed..."
+          echo "Current working directory: $(pwd)"
+          echo "Available files:"
+          ls -la .storage-layouts/ 2>/dev/null || echo "No .storage-layouts directory found"
           echo ""
-          echo "🛠️ To fix:"
-          echo "  1. Review the error output above"
-          echo "  2. Check for storage layout conflicts in your upgradeable contracts"
-          echo "  3. Ensure new storage variables are added at the end"
-          echo "  4. Consider using storage gaps for future upgrades"
+          echo "Git status:"
+          git status --porcelain || echo "Cannot check git status"
+          echo ""
+          echo "Last few commands in workflow log should show the exact failure."
+          echo ""
+          echo "🔍 Common failure reasons:"
+          echo "  1. Contract compilation failed (check forge build output above)"
+          echo "  2. Storage extraction failed (missing contracts or build artifacts)"
+          echo "  3. Forge inspect command failed (contract not found)"
+          echo "  4. File system issues (permissions, missing directories)"
+          echo "  5. Storage slot conflicts in upgradeable contracts"
+          echo ""
+          echo "🛠️ To debug:"
+          echo "  1. Look for ERROR messages in the logs above"
+          echo "  2. Check if contracts compile with 'forge build'"
+          echo "  3. Verify contract names in forge-extract.js match actual contracts"
+          echo "  4. Run 'make storage-layout-extract' locally to reproduce"
           echo ""
           echo "📖 Learn more: https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable"
           exit 1
