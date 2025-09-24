@@ -67,6 +67,8 @@ pub mod r#simulate_emissions;
 pub mod r#appchain_factory;
 pub mod r#deploy_gas_aggregator;
 pub mod r#staking_appchain;
+pub mod r#deploy_min_required_sequencing_chain;
+pub mod r#deploy_min_required_settlement_chain;
 pub mod r#deploy_syndicate_factory_direct;
 pub mod r#deploy_tee_module;
 pub mod r#dummy_key_manager;
