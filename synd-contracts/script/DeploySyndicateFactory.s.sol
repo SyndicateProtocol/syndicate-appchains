@@ -20,6 +20,7 @@ contract DeploySyndicateFactory is Script {
         // MUST use the same private key (resulting in the same deployer address) across all chains
         uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(privateKey);
+        vm.startBroadcast(privateKey);
 
         // Deploy implementation first
         SyndicateFactory implementation = new SyndicateFactory();
@@ -35,7 +36,6 @@ contract DeploySyndicateFactory is Script {
         console2.log("Expected SyndicateFactory proxy address:", expectedAddress);
 
         // Start broadcasting transactions
-        vm.startBroadcast(privateKey);
 
         console2.log("Implementation deployed to:", address(implementation));
 
