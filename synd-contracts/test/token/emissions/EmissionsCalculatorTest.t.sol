@@ -10,7 +10,7 @@ contract EmissionsCalculatorTest is Test {
     SyndicateToken public token;
 
     address public admin = address(0x1234);
-    address public decayManager = address(0x5678);
+    address public changeFactorManager = address(0x5678);
     address public treasury = address(0x9ABC);
     address public user = address(0x1111);
 
@@ -18,16 +18,16 @@ contract EmissionsCalculatorTest is Test {
     uint256 public constant EMISSIONS_CAP = 80_000_000 * 10 ** 18;
     uint256 public constant TOTAL_EPOCHS = 48;
 
-    event DecayFactorSet(uint256 indexed epoch, uint256 decayFactor, address indexed setter);
+    event ChangeFactorSet(uint256 indexed epoch, uint256 changeFactor, address indexed setter);
     event EmissionMinted(uint256 indexed epoch, uint256 amount, uint256 remainingSupply, address indexed to);
-    event EmissionsInitialized(uint256 defaultDecayFactor);
+    event EmissionsInitialized(uint256 defaultChangeFactor);
 
     function setUp() public {
         // Deploy token
         token = new SyndicateToken(admin, treasury);
 
         // Deploy calculator
-        calculator = new EmissionsCalculator(address(token), admin, decayManager);
+        calculator = new EmissionsCalculator(address(token), admin, changeFactorManager);
 
         // Grant emission minter role to calculator
         bytes32 emissionMinterRole = token.EMISSION_MINTER_ROLE();
@@ -56,15 +56,15 @@ contract EmissionsCalculatorTest is Test {
 
     function test_Constructor_RoleAssignment() public view {
         assertTrue(calculator.hasRole(calculator.DEFAULT_ADMIN_ROLE(), admin));
-        assertTrue(calculator.hasRole(calculator.DECAY_MANAGER_ROLE(), decayManager));
+        assertTrue(calculator.hasRole(calculator.CHANGE_FACTOR_MANAGER_ROLE(), changeFactorManager));
     }
 
     function test_RevertWhen_Constructor_ZeroAddresses() public {
         vm.expectRevert(EmissionsCalculator.ZeroAddress.selector);
-        new EmissionsCalculator(address(0), admin, decayManager);
+        new EmissionsCalculator(address(0), admin, changeFactorManager);
 
         vm.expectRevert(EmissionsCalculator.ZeroAddress.selector);
-        new EmissionsCalculator(address(token), address(0), decayManager);
+        new EmissionsCalculator(address(token), address(0), changeFactorManager);
 
         vm.expectRevert(EmissionsCalculator.ZeroAddress.selector);
         new EmissionsCalculator(address(token), admin, address(0));
@@ -75,19 +75,19 @@ contract EmissionsCalculatorTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_InitializeEmissions_Success() public {
-        uint256 defaultDecay = 0.95e18; // 95% decay factor
+        uint256 defaultChangeFactor = 0.95e18; // 95% change factor
 
         vm.expectEmit(false, false, false, true);
-        emit EmissionsInitialized(defaultDecay);
+        emit EmissionsInitialized(defaultChangeFactor);
 
         vm.prank(admin);
-        calculator.initializeEmissions(defaultDecay);
+        calculator.initializeEmissions(defaultChangeFactor);
 
         assertTrue(calculator.initialized());
 
-        // Check that all epochs have the default decay factor
+        // Check that all epochs have the default change factor
         for (uint256 i = 0; i < TOTAL_EPOCHS; i++) {
-            assertEq(calculator.getDecayFactor(i), defaultDecay);
+            assertEq(calculator.getChangeFactor(i), defaultChangeFactor);
         }
     }
 
@@ -97,18 +97,10 @@ contract EmissionsCalculatorTest is Test {
         calculator.initializeEmissions(0.95e18);
     }
 
-    function test_RevertWhen_InitializeEmissions_InvalidDecayFactor() public {
+    function test_RevertWhen_InitializeEmissions_InvalidChangeFactor() public {
         vm.prank(admin);
-        vm.expectRevert(EmissionsCalculator.InvalidDecayFactor.selector);
-        calculator.initializeEmissions(0); // Zero decay
-
-        vm.prank(admin);
-        vm.expectRevert(EmissionsCalculator.InvalidDecayFactor.selector);
-        calculator.initializeEmissions(SCALE); // Decay = 1.0
-
-        vm.prank(admin);
-        vm.expectRevert(EmissionsCalculator.InvalidDecayFactor.selector);
-        calculator.initializeEmissions(SCALE + 1); // Decay > 1.0
+        vm.expectRevert(EmissionsCalculator.InvalidChangeFactor.selector);
+        calculator.initializeEmissions(0); // Zero change factor
     }
 
     function test_RevertWhen_InitializeEmissions_AlreadyInitialized() public {
@@ -121,45 +113,45 @@ contract EmissionsCalculatorTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        DECAY FACTOR TESTS
+                        CHANGE FACTOR TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function test_SetDecayFactor_Success() public {
+    function test_SetChangeFactor_Success() public {
         // Initialize first
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
         uint256 epoch = 5;
-        uint256 newDecay = 0.9e18;
+        uint256 newChangeFactor = 0.9e18;
 
         vm.expectEmit(true, false, true, true);
-        emit DecayFactorSet(epoch, newDecay, decayManager);
+        emit ChangeFactorSet(epoch, newChangeFactor, changeFactorManager);
 
-        vm.prank(decayManager);
-        calculator.setDecayFactor(epoch, newDecay);
+        vm.prank(changeFactorManager);
+        calculator.setChangeFactor(epoch, newChangeFactor);
 
-        assertEq(calculator.getDecayFactor(epoch), newDecay);
+        assertEq(calculator.getChangeFactor(epoch), newChangeFactor);
     }
 
-    function test_RevertWhen_SetDecayFactor_NotManager() public {
+    function test_RevertWhen_SetChangeFactor_NotManager() public {
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
         vm.prank(user);
         vm.expectRevert();
-        calculator.setDecayFactor(5, 0.9e18);
+        calculator.setChangeFactor(5, 0.9e18);
     }
 
-    function test_RevertWhen_SetDecayFactor_InvalidEpoch() public {
+    function test_RevertWhen_SetChangeFactor_InvalidEpoch() public {
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
-        vm.prank(decayManager);
+        vm.prank(changeFactorManager);
         vm.expectRevert(EmissionsCalculator.InvalidEpoch.selector);
-        calculator.setDecayFactor(TOTAL_EPOCHS, 0.9e18);
+        calculator.setChangeFactor(TOTAL_EPOCHS, 0.9e18);
     }
 
-    function test_RevertWhen_SetDecayFactor_PastEpoch() public {
+    function test_RevertWhen_SetChangeFactor_PastEpoch() public {
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
@@ -170,26 +162,26 @@ contract EmissionsCalculatorTest is Test {
         }
 
         // Try to modify a past epoch
-        vm.prank(decayManager);
+        vm.prank(changeFactorManager);
         vm.expectRevert(EmissionsCalculator.CannotModifyPastEpoch.selector);
-        calculator.setDecayFactor(2, 0.9e18);
+        calculator.setChangeFactor(2, 0.9e18);
     }
 
-    function test_SetDecayFactors_Batch() public {
+    function test_SetChangeFactors_Batch() public {
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
-        uint256[] memory newDecays = new uint256[](3);
-        newDecays[0] = 0.9e18;
-        newDecays[1] = 0.85e18;
-        newDecays[2] = 0.8e18;
+        uint256[] memory newChangeFactors = new uint256[](3);
+        newChangeFactors[0] = 0.9e18;
+        newChangeFactors[1] = 0.85e18;
+        newChangeFactors[2] = 0.8e18;
 
-        vm.prank(decayManager);
-        calculator.setDecayFactors(5, newDecays);
+        vm.prank(changeFactorManager);
+        calculator.setChangeFactors(5, newChangeFactors);
 
-        assertEq(calculator.getDecayFactor(5), 0.9e18);
-        assertEq(calculator.getDecayFactor(6), 0.85e18);
-        assertEq(calculator.getDecayFactor(7), 0.8e18);
+        assertEq(calculator.getChangeFactor(5), 0.9e18);
+        assertEq(calculator.getChangeFactor(6), 0.85e18);
+        assertEq(calculator.getChangeFactor(7), 0.8e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -197,16 +189,16 @@ contract EmissionsCalculatorTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_CalculateAndMintEmission_FirstEpoch() public {
-        uint256 decayFactor = 0.95e18; // 95% decay
+        uint256 changeFactor = 0.95e18; // 95% change factor
         vm.prank(admin);
-        calculator.initializeEmissions(decayFactor);
+        calculator.initializeEmissions(changeFactor);
 
         uint256 remainingSupply = calculator.getRemainingSupply();
         assertEq(remainingSupply, EMISSIONS_CAP);
 
         // Calculate expected emission for first epoch
         uint256 pt = calculator.calculateCumulativeProduct(0);
-        uint256 expectedEmission = (remainingSupply * (SCALE - decayFactor)) / (SCALE - pt);
+        uint256 expectedEmission = (remainingSupply * (SCALE - changeFactor)) / (SCALE - pt);
 
         uint256 initialBalance = token.balanceOf(treasury);
 
@@ -292,7 +284,7 @@ contract EmissionsCalculatorTest is Test {
         // Test cumulative product calculation
         uint256 product = calculator.calculateCumulativeProduct(0);
 
-        // For all epochs with same decay factor 0.95:
+        // For all epochs with same change factor 0.95:
         // P_0 = 0.95^48
         uint256 expected = 0.95e18;
         for (uint256 i = 1; i < TOTAL_EPOCHS; i++) {
@@ -344,20 +336,20 @@ contract EmissionsCalculatorTest is Test {
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function test_Integration_VariableDecayFactors() public {
+    function test_Integration_VariableChangeFactors() public {
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
-        // Set different decay factors for different periods
-        uint256[] memory decays = new uint256[](12);
+        // Set different change factors for different periods
+        uint256[] memory changeFactorArray = new uint256[](12);
         for (uint256 i = 0; i < 12; i++) {
-            decays[i] = 0.9e18 - (i * 0.01e18); // Decreasing decay factors
+            changeFactorArray[i] = 0.9e18 - (i * 0.01e18); // Decreasing change factors
         }
 
-        vm.prank(decayManager);
-        calculator.setDecayFactors(10, decays);
+        vm.prank(changeFactorManager);
+        calculator.setChangeFactors(10, changeFactorArray);
 
-        // Mint first 10 epochs with original decay
+        // Mint first 10 epochs with original change factor
         uint256 totalMinted = 0;
         for (uint256 i = 0; i < 10; i++) {
             vm.prank(admin);
@@ -365,7 +357,7 @@ contract EmissionsCalculatorTest is Test {
             totalMinted += emission;
         }
 
-        // Mint next epochs with modified decay factors
+        // Mint next epochs with modified change factors
         for (uint256 i = 10; i < 22; i++) {
             vm.prank(admin);
             uint256 emission = calculator.calculateAndMintEmission(treasury, i);
@@ -378,7 +370,7 @@ contract EmissionsCalculatorTest is Test {
 
     function test_Integration_FullEmissionCycle() public {
         vm.prank(admin);
-        calculator.initializeEmissions(0.98e18); // High decay factor for testing
+        calculator.initializeEmissions(0.98e18); // High change factor for testing
 
         uint256 totalMinted = 0;
 
@@ -400,11 +392,11 @@ contract EmissionsCalculatorTest is Test {
                             FUZZ TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_DecayFactor_ValidRange(uint256 decayFactor) public {
-        decayFactor = bound(decayFactor, 1, SCALE - 1);
+    function testFuzz_ChangeFactor_ValidRange(uint256 changeFactor) public {
+        changeFactor = bound(changeFactor, 1, SCALE - 1);
 
         vm.prank(admin);
-        calculator.initializeEmissions(decayFactor);
+        calculator.initializeEmissions(changeFactor);
 
         vm.prank(admin);
         uint256 emission = calculator.calculateAndMintEmission(treasury, 0);
