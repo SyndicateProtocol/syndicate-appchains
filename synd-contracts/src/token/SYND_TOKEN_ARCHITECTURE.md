@@ -153,7 +153,7 @@ bytes32 public constant EMISSION_BUDGET_MANAGER_ROLE = keccak256("EMISSION_BUDGE
 **Key Features**:
 
 - 48 epochs of 30 days each (~4 years total emission period)
-- Decreasing emission amounts following a predetermined decay schedule
+- Decreasing emission amounts following a predetermined schedule
 - Automated L2 bridging via configurable bridge proxies
 - Comprehensive pause/resume functionality
 - Bridge failure handling with atomic operations
@@ -162,7 +162,6 @@ bytes32 public constant EMISSION_BUDGET_MANAGER_ROLE = keccak256("EMISSION_BUDGE
 
 - **Total Epochs**: 48 epochs × 30 days = ~4 years
 - **Total Emissions**: 80M tokens distributed across 8 periods of 6 epochs each
-- **Decay Pattern**: Each period emits decreasing amounts
 - **Bridge Integration**: All emissions automatically bridged to configured L2
 
 **Access Control Roles**:

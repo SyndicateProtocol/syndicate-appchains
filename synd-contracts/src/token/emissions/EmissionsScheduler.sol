@@ -16,11 +16,11 @@ interface IRelayer {
 
 /**
  * @title EmissionsScheduler
- * @notice Manages token emissions using the EmissionsCalculator with piece-wise geometric decay
+ * @notice Manages token emissions using the EmissionsCalculator with piece-wise geometric change factor
  * @dev This contract handles emission timing, bridging, and coordination with the EmissionsCalculator.
  *
  * Key Features:
- * - Integration with EmissionsCalculator for flexible decay factors
+ * - Integration with EmissionsCalculator for flexible change factors
  * - Automated bridging of funds through the relayer contract to the commons L3 chain
  * - Emissions must be minted in order, and only once per epoch
  * - Emissions can only be minted for past epochs and the current epoch that have not been minted yet
