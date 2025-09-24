@@ -158,7 +158,7 @@ contract SimulateEmissions is Script {
             if (remainingSupply == 0) break;
 
             // Get change factor for this epoch
-            uint256 changeFactor = calculator.getChangeFactor(i);
+            uint256 changeFactor = calculator.changeFactor();
 
             console.log("Epoch", i, "- Change factor:", changeFactor);
             console.log("  Remaining supply:", remainingSupply);

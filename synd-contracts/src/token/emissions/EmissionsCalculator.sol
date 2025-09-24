@@ -12,7 +12,7 @@ interface ISyndicateTokenMintable {
 /**
  * @title EmissionsCalculator
  * @notice Calculates and manages token emissions using piece-wise geometric change factor
- * @dev Implements a flexible emission system where change factors can be updated by governance
+ * @dev Implements a flexible emission system where a change factor can be updated by governance
  *      while maintaining the 80M cap and 48-epoch limit constraints.
  *
  * Formula:
@@ -23,7 +23,7 @@ interface ISyndicateTokenMintable {
  * Where:
  * - R_t = remaining supply = CAP - M (M = total minted so far)
  * - r_t = change factor for epoch t (0 < r, scaled by 1e18)
- * - P_t = cumulative product of change factors from epoch t to 47
+ * - P_t = cumulative product of change factor from epoch t to 47
  *
  * @author Syndicate Protocol
  */
@@ -54,7 +54,7 @@ contract EmissionsCalculator is AccessControl {
                                  ROLES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Role for managing change factors (typically governance)
+    /// @notice Role for managing change factor (typically governance)
     bytes32 public constant CHANGE_FACTOR_MANAGER_ROLE = keccak256("CHANGE_FACTOR_MANAGER_ROLE");
 
     /// @notice Role for triggering emissions
@@ -80,9 +80,8 @@ contract EmissionsCalculator is AccessControl {
     /// @notice The SyndicateToken contract for minting and supply queries
     ISyndicateTokenMintable public immutable syndicateToken;
 
-    /// @notice Change factor for each epoch (scaled by 1e18)
-    /// @dev r[epoch] where 0 < r, represented as r * 1e18
-    mapping(uint256 epochIndex => uint256 changeFactor) public changeFactors;
+    /// @notice Change factor (scaled by 1e18 and required to be 0 < r)
+    uint256 public changeFactor;
 
     /// @notice Current epoch index (0-47)
     uint256 public currentEpoch;
@@ -114,7 +113,7 @@ contract EmissionsCalculator is AccessControl {
      * @notice Initialize the emissions calculator
      * @param _syndicateToken Address of the SyndicateToken contract
      * @param defaultAdmin Address that will have default admin privileges
-     * @param changeFactorManager Address that can manage change factors
+     * @param changeFactorManager Address that can manage the change factor
      */
     constructor(address _syndicateToken, address defaultAdmin, address changeFactorManager) {
         if (_syndicateToken == address(0)) revert ZeroAddress();
@@ -142,11 +141,7 @@ contract EmissionsCalculator is AccessControl {
         if (defaultChangeFactor == 0) revert InvalidChangeFactor();
 
         initialized = true;
-
-        // Set default change factor for all epochs
-        for (uint256 i = 0; i < TOTAL_EPOCHS; i++) {
-            changeFactors[i] = defaultChangeFactor;
-        }
+        changeFactor = defaultChangeFactor;
 
         emit EmissionsInitialized(defaultChangeFactor);
     }
@@ -156,39 +151,15 @@ contract EmissionsCalculator is AccessControl {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Set change factor for a specific epoch
-     * @param epoch Epoch number (0-47)
-     * @param changeFactor New change factor (scaled by 1e18, must be 0 < r)
-     * @dev Only future epochs can be modified. This allows governance to adjust
-     *      the emission curve while maintaining the mathematical constraints.
+     * @notice Set change factor
+     * @param newChangeFactor New change factor (scaled by 1e18, must be 0 < r)
+     * @dev Sets the change factor for the next epoch
      */
-    function setChangeFactor(uint256 epoch, uint256 changeFactor) external onlyRole(CHANGE_FACTOR_MANAGER_ROLE) {
-        if (epoch >= TOTAL_EPOCHS) revert InvalidEpoch();
-        if (epoch < currentEpoch) revert CannotModifyPastEpoch();
+    function setChangeFactor(uint256 newChangeFactor) external onlyRole(CHANGE_FACTOR_MANAGER_ROLE) {
         if (changeFactor == 0) revert InvalidChangeFactor();
 
-        changeFactors[epoch] = changeFactor;
-        emit ChangeFactorSet(epoch, changeFactor, msg.sender);
-    }
-
-    /**
-     * @notice Set change factors for multiple epochs at once
-     * @param startEpoch Starting epoch number
-     * @param changeFactorArray Array of change factors
-     */
-    function setChangeFactors(uint256 startEpoch, uint256[] calldata changeFactorArray)
-        external
-        onlyRole(CHANGE_FACTOR_MANAGER_ROLE)
-    {
-        for (uint256 i = 0; i < changeFactorArray.length; i++) {
-            uint256 epoch = startEpoch + i;
-            if (epoch >= TOTAL_EPOCHS) break;
-            if (epoch < currentEpoch) continue;
-            if (changeFactorArray[i] == 0) continue;
-
-            changeFactors[epoch] = changeFactorArray[i];
-            emit ChangeFactorSet(epoch, changeFactorArray[i], msg.sender);
-        }
+        changeFactor = newChangeFactor;
+        emit ChangeFactorSet(currentEpoch, changeFactor, msg.sender);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -256,7 +227,7 @@ contract EmissionsCalculator is AccessControl {
     /**
      * @notice Calculate cumulative product P_t = r_t * r_(t+1) * ... * r_47
      * @param fromEpoch Starting epoch for the product calculation
-     * @return Cumulative product of change factors (scaled by 1e18)
+     * @return Cumulative product of change factor for remaining epochs (scaled by 1e18)
      */
     function calculateCumulativeProduct(uint256 fromEpoch) public view returns (uint256) {
         if (fromEpoch >= TOTAL_EPOCHS) return SCALE;
@@ -264,7 +235,7 @@ contract EmissionsCalculator is AccessControl {
         uint256 product = SCALE;
 
         for (uint256 i = fromEpoch; i < TOTAL_EPOCHS; i++) {
-            product = (product * changeFactors[i]) / SCALE;
+            product = (product * changeFactor) / SCALE;
         }
 
         return product;
@@ -285,11 +256,8 @@ contract EmissionsCalculator is AccessControl {
             return remainingSupply;
         }
 
-        // Get the change factor for current epoch
-        uint256 currentChangeFactor = changeFactors[currentEpoch];
-
         // Special case: when change factor equals SCALE (1.0), use linear distribution
-        if (currentChangeFactor == SCALE) {
+        if (changeFactor == SCALE) {
             return remainingSupply / epochsLeft;
         }
 
@@ -303,22 +271,11 @@ contract EmissionsCalculator is AccessControl {
         uint256 denominator = productDifference < 1000 ? 1000 : productDifference;
 
         // Calculate |1 - r_t| * remainingSupply
-        uint256 numerator = currentChangeFactor > SCALE
-            ? remainingSupply * (currentChangeFactor - SCALE)
-            : remainingSupply * (SCALE - currentChangeFactor);
+        uint256 numerator =
+            changeFactor > SCALE ? remainingSupply * (changeFactor - SCALE) : remainingSupply * (SCALE - changeFactor);
 
         // E_t = R_t * |1 - r_t| / |1 - P_t|
         return numerator / denominator;
-    }
-
-    /**
-     * @notice Get change factor for a specific epoch
-     * @param epoch Epoch number (0-47)
-     * @return Change factor for the epoch (scaled by 1e18)
-     */
-    function getChangeFactor(uint256 epoch) external view returns (uint256) {
-        if (epoch >= TOTAL_EPOCHS) revert InvalidEpoch();
-        return changeFactors[epoch];
     }
 
     /**
