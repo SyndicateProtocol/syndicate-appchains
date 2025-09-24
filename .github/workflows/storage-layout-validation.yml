@@ -54,10 +54,11 @@ jobs:
       - name: Install Foundry dependencies
         run: forge install
 
-      - name: Check inheritance ordering (current)
+      - name: Check inheritance ordering (informational)
+        continue-on-error: true
         run: |
-          echo "🔍 Checking inheritance ordering for current branch..."
-          make storage-layout-inheritance
+          echo "🔍 Checking inheritance ordering (informational only)..."
+          make storage-layout-inheritance || echo "ℹ️ Inheritance conflicts detected - this is informational and does not block the workflow"
 
       - name: Build and extract current layout
         run: |

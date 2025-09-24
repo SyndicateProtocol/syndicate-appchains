@@ -116,8 +116,9 @@ storage-layout-compare :; @echo "Comparing storage layouts..." && \
 storage-layout-inheritance :; @echo "Checking inheritance ordering..." && \
 	forge build --build-info && \
 	mkdir -p .storage-layouts && \
-	cp out/build-info/*.json .storage-layouts/current.json && \
-	npm run storage:inheritance .storage-layouts/current.json && \
+	cp out/build-info/*.json .storage-layouts/temp-build.json && \
+	npm run storage:inheritance .storage-layouts/temp-build.json && \
+	rm -f .storage-layouts/temp-build.json && \
 	echo "Inheritance ordering check completed successfully"
 
 # Full storage layout validation (extract + compare + inheritance)
