@@ -130,6 +130,15 @@ contract EmissionsCalculatorTest is Test {
         assertEq(calculator.changeFactor(), newChangeFactor);
     }
 
+    function test_SetChangeFactor_Zero() public {
+        vm.prank(admin);
+        calculator.initializeEmissions(0.95e18);
+
+        vm.prank(changeFactorManager);
+        vm.expectRevert(EmissionsCalculator.InvalidChangeFactor.selector);
+        calculator.setChangeFactor(0);
+    }
+
     /*//////////////////////////////////////////////////////////////
                     EMISSION CALCULATION TESTS
     //////////////////////////////////////////////////////////////*/

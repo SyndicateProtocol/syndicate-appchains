@@ -156,7 +156,7 @@ contract EmissionsCalculator is AccessControl {
      * @dev Sets the change factor for the next epoch
      */
     function setChangeFactor(uint256 newChangeFactor) external onlyRole(CHANGE_FACTOR_MANAGER_ROLE) {
-        if (changeFactor == 0) revert InvalidChangeFactor();
+        if (newChangeFactor == 0) revert InvalidChangeFactor();
 
         changeFactor = newChangeFactor;
         emit ChangeFactorSet(currentEpoch, changeFactor, msg.sender);

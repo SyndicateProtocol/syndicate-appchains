@@ -164,7 +164,7 @@ rule cannotMintBeforeInitialization(address to, uint256 expectedEpoch) {
 }
 
 /*
- * RULE 7: Change factors must be within valid bounds (0 < r < 1, scaled by 1e18)
+ * RULE 7: Change factors must be within valid bounds (0 < r, scaled by 1e18)
  */
 rule changeFactorBounds(uint256 changeFactor) {
     env e;
