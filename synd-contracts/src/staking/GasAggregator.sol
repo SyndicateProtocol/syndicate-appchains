@@ -18,7 +18,7 @@ interface AppchainFactory {
 
 /**
  * @title GasAggregator
- * @notice Aggregates gas usage data from appchains and pushes it to the staking appchain
+ * @notice Aggregates gas usage data from appchains
  * @dev This contract manages the collection and aggregation of gas usage data from multiple appchains.
  *      It supports both automatic aggregation (for small numbers of appchains) and off-chain aggregation
  *      (for larger numbers of appchains) with a challenge mechanism for data integrity.
