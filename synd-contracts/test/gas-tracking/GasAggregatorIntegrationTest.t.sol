@@ -722,4 +722,119 @@ contract GasAggregatorIntegrationTest is Test {
         bytes32 expectedFinalHash = keccak256(abi.encode(betterChains, finalTokens, finalEmissionsReceivers));
         assertEq(aggregatedHash, expectedFinalHash, "Should store the better submission data");
     }
+
+    function test_Integration_AggregateTokensUsed_MultipleInvalidChainsRemoval() public {
+        // Test automatic aggregation resilience with multiple invalid chains being removed
+        // This is similar to the mock test but uses real contracts and implementation validation
+
+        // Create 5 real sequencing chains with valid implementation first
+        vm.prank(admin);
+        (address chain1Address, uint256 chainId1) =
+            factory.createSyndicateSequencingChain(admin, IRequirementModule(address(permissionModule)));
+        vm.prank(admin);
+        (address chain2Address, uint256 chainId2) =
+            factory.createSyndicateSequencingChain(admin, IRequirementModule(address(permissionModule)));
+        vm.prank(admin);
+        (address chain3Address, uint256 chainId3) =
+            factory.createSyndicateSequencingChain(admin, IRequirementModule(address(permissionModule)));
+        vm.prank(admin);
+        (address chain4Address, uint256 chainId4) =
+            factory.createSyndicateSequencingChain(admin, IRequirementModule(address(permissionModule)));
+        vm.prank(admin);
+        (address chain5Address, uint256 chainId5) =
+            factory.createSyndicateSequencingChain(admin, IRequirementModule(address(permissionModule)));
+
+        // Set emissions receivers
+        vm.prank(admin);
+        SyndicateSequencingChain(chain1Address).setEmissionsReceiver(address(0x8001));
+        vm.prank(admin);
+        SyndicateSequencingChain(chain2Address).setEmissionsReceiver(address(0x8002));
+        vm.prank(admin);
+        SyndicateSequencingChain(chain3Address).setEmissionsReceiver(address(0x8003));
+        vm.prank(admin);
+        SyndicateSequencingChain(chain4Address).setEmissionsReceiver(address(0x8004));
+        vm.prank(admin);
+        SyndicateSequencingChain(chain5Address).setEmissionsReceiver(address(0x8005));
+
+        // Add all chains to aggregator (below threshold for automatic aggregation)
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId1);
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId2);
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId3);
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId4);
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId5);
+
+        // Generate gas usage for all chains
+        bytes memory txData = hex"8888888888";
+        vm.txGasPrice(35 gwei);
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chain1Address).processTransaction(txData);
+        vm.prank(admin);
+        SyndicateSequencingChain(chain2Address).processTransaction(txData);
+        vm.prank(admin);
+        SyndicateSequencingChain(chain3Address).processTransaction(txData);
+        vm.prank(admin);
+        SyndicateSequencingChain(chain4Address).processTransaction(txData);
+        vm.prank(admin);
+        SyndicateSequencingChain(chain5Address).processTransaction(txData);
+
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+
+        // Verify all chains are tracked
+        assertEq(gasAggregator.getTotalTrackedChains(), 5);
+
+        // Deploy a new implementation and make it the only allowed one
+        // This will invalidate chains 2, 4, and any others using the old implementation
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        // Add new implementation as allowed and make it default
+        vm.prank(admin);
+        factory.addAllowedImplementation(address(newImpl), true);
+
+        // Remove the old implementation (invalidating all existing chains)
+        vm.prank(admin);
+        factory.removeAllowedImplementation(address(sequencingChainImpl));
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // All chains should be removed since they use the now-invalid implementation
+        vm.expectEmit(true, true, false, false);
+        emit GasAggregator.ChainRemoved(chainId1);
+        vm.expectEmit(true, true, false, false);
+        emit GasAggregator.ChainRemoved(chainId2);
+        vm.expectEmit(true, true, false, false);
+        emit GasAggregator.ChainRemoved(chainId3);
+        vm.expectEmit(true, true, false, false);
+        emit GasAggregator.ChainRemoved(chainId4);
+        vm.expectEmit(true, true, false, false);
+        emit GasAggregator.ChainRemoved(chainId5);
+
+        // Aggregate should remove all invalid chains and continue successfully
+        gasAggregator.aggregateTokensUsed();
+
+        // All chains should be removed due to invalid implementation
+        assertEq(gasAggregator.getTotalTrackedChains(), 0);
+        assertFalse(gasAggregator.isChainTracked(chainId1));
+        assertFalse(gasAggregator.isChainTracked(chainId2));
+        assertFalse(gasAggregator.isChainTracked(chainId3));
+        assertFalse(gasAggregator.isChainTracked(chainId4));
+        assertFalse(gasAggregator.isChainTracked(chainId5));
+
+        // Epoch should still increment successfully
+        assertEq(gasAggregator.pendingEpoch(), currentEpoch + 1);
+
+        // The aggregated data should be empty (no valid chains)
+        bytes32 aggregatedHash = gasAggregator.aggregatedEpochDataHash(currentEpoch);
+        uint256[] memory emptyChainIDs = new uint256[](0);
+        uint256[] memory emptyTokens = new uint256[](0);
+        address[] memory emptyEmissionsReceivers = new address[](0);
+        bytes32 expectedEmptyHash = keccak256(abi.encode(emptyChainIDs, emptyTokens, emptyEmissionsReceivers));
+        assertEq(aggregatedHash, expectedEmptyHash, "Should aggregate empty arrays when all chains are invalid");
+    }
 }
