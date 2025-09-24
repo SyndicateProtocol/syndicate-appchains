@@ -8,7 +8,7 @@ import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {RequireCompositeModule} from "src/requirement-modules/RequireCompositeModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ERC1967Proxy} from "src/factory/SyndicateFactory.sol";
 
 contract SyndicateFactoryTest is Test {
     SyndicateFactory public factory;
