@@ -29,7 +29,7 @@ interface IArbInbox {
 /**
  * @title BlockHashRelayer
  * @notice Contract for relaying Ethereum and Base block hashes to the L3 staking appchain
- * @dev This contract bridges block hash data from L1 (Ethereum/Base) to L3 (staking appchain)
+ * @dev This contract bridges block hash data from Base(settlement chain) to L3 (staking appchain)
  *      using Arbitrum's retryable ticket mechanism. It's essential for cross-chain data verification.
  */
 contract BlockHashRelayer is AccessControl {
