@@ -45,11 +45,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
 
       - name: Install Node.js dependencies
-        run: npm install
+        run: |
+          echo "Installing Node.js dependencies..."
+          if npm ci --prefer-offline; then
+            echo "✅ npm ci succeeded"
+          else
+            echo "⚠️ npm ci failed, trying npm install..."
+            npm install
+          fi
+          echo "Verifying dependencies..."
+          ls -la node_modules/@openzeppelin/ || echo "OpenZeppelin not found"
 
       - name: Install Foundry dependencies
         run: forge install
