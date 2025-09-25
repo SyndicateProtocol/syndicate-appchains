@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: synd-contracts/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install Node.js dependencies
         run: npm install
@@ -63,13 +63,23 @@ jobs:
       - name: Build and extract current layout
         run: |
           echo "🏗️ Building contracts and extracting current storage layout..."
+          echo "DEBUG: Checking Node.js setup..."
+          node --version
+          npm --version
+          echo "DEBUG: Checking if npm dependencies are available..."
+          ls -la node_modules/@openzeppelin/ || echo "OpenZeppelin not found"
           echo "DEBUG: About to run make storage-layout-extract"
           if make storage-layout-extract; then
             echo "✅ SUCCESS: Current layout extracted successfully"
             ls -la .storage-layouts/
           else
             echo "❌ FAILED: Current layout extraction failed"
+            echo "ERROR: Makefile output above should show the failure reason"
             ls -la .storage-layouts/ || echo "No .storage-layouts directory"
+            echo "DEBUG: Checking if forge-extract.js exists and is executable..."
+            ls -la scripts/storage-checks/forge-extract.js
+            echo "DEBUG: Testing forge-extract.js directly..."
+            node scripts/storage-checks/forge-extract.js | head -10 || echo "forge-extract.js failed"
             exit 1
           fi
 
