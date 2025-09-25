@@ -6,7 +6,9 @@
 -include .env
 
 # deploy SyndicateFactory to Base Sepolia
-deploy-syndicate-factory :; forge script script/DeployContractsForSequencingChain.s.sol:DeploySyndicateFactory --rpc-url exo --account deployer --sender ${DEV_PUB_ADDRESS} --skip-simulation --legacy --broadcast -vv
+deploy-syndicate-factory :; forge script script/DeploySyndicateFactoryDeterministic.s.sol:DeploySyndicateFactoryDeterministic --rpc-url base_sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+
+preview-syndicate-factory :; forge script script/DeploySyndicateFactoryDeterministic.s.sol:PreviewSyndicateFactoryAddresses --rpc-url base_sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
 
 # deploy DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule to Syndicate Exo
 deploy-syndicate-sequencing-chain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencingChain.s.sol:DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule --rpc-url exo --account deployer --sender ${DEV_PUB_ADDRESS} --skip-simulation --legacy --broadcast -vv
