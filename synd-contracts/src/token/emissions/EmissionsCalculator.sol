@@ -225,16 +225,13 @@ contract EmissionsCalculator is AccessControl {
     }
 
     /**
-     * @notice Calculate cumulative product P_t = r_t * r_(t+1) * ... * r_47
-     * @param fromEpoch Starting epoch for the product calculation
+     * @notice Calculate cumulative product of remaining epochs P_t = r_t * r_(t+1) * ... * r_47
      * @return Cumulative product of change factor for remaining epochs (scaled by 1e18)
      */
-    function calculateCumulativeProduct(uint256 fromEpoch) public view returns (uint256) {
-        if (fromEpoch >= TOTAL_EPOCHS) return SCALE;
-
+    function calculateCumulativeProduct() public view returns (uint256) {
         uint256 product = SCALE;
 
-        for (uint256 i = fromEpoch; i < TOTAL_EPOCHS; i++) {
+        for (uint256 i = currentEpoch; i < TOTAL_EPOCHS; i++) {
             product = (product * changeFactor) / SCALE;
         }
 
@@ -262,7 +259,7 @@ contract EmissionsCalculator is AccessControl {
         }
 
         // Calculate the cumulative product P_t from current epoch to end
-        uint256 cumulativeProduct = calculateCumulativeProduct(currentEpoch);
+        uint256 cumulativeProduct = calculateCumulativeProduct();
 
         // Calculate |1 - P_t|
         uint256 productDifference = cumulativeProduct > SCALE ? cumulativeProduct - SCALE : SCALE - cumulativeProduct;

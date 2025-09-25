@@ -152,7 +152,7 @@ contract EmissionsCalculatorTest is Test {
         assertEq(remainingSupply, EMISSIONS_CAP);
 
         // Calculate expected emission for first epoch
-        uint256 pt = calculator.calculateCumulativeProduct(0);
+        uint256 pt = calculator.calculateCumulativeProduct();
         uint256 expectedEmission = (remainingSupply * (SCALE - changeFactor)) / (SCALE - pt);
 
         uint256 initialBalance = token.balanceOf(treasury);
@@ -237,7 +237,7 @@ contract EmissionsCalculatorTest is Test {
         calculator.initializeEmissions(0.95e18);
 
         // Test cumulative product calculation
-        uint256 product = calculator.calculateCumulativeProduct(0);
+        uint256 product = calculator.calculateCumulativeProduct();
 
         // For all epochs with same change factor 0.95:
         // P_0 = 0.95^48

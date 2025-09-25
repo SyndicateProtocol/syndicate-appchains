@@ -115,7 +115,7 @@ contract DemoChangeFactorUpdates is Script {
         console.log("Next emission preview:", preview);
 
         // Show cumulative product calculation
-        uint256 product = calculator.calculateCumulativeProduct(0);
+        uint256 product = calculator.calculateCumulativeProduct();
         console.log("Cumulative product P_0:", product);
 
         console.log("=== Example Change Factor Updates ===");
@@ -170,7 +170,7 @@ contract SimulateEmissions is Script {
                 break;
             } else {
                 // Calculate cumulative product from this epoch
-                uint256 cumulativeProduct = calculator.calculateCumulativeProduct(i);
+                uint256 cumulativeProduct = calculator.calculateCumulativeProduct();
                 uint256 estimatedEmission = (remainingSupply * (1e18 - changeFactor)) / (1e18 - cumulativeProduct);
 
                 console.log("  Estimated emission:", estimatedEmission);
