@@ -11,6 +11,10 @@ interface ISyndicateFactory {
     function isImplementationAllowed(address implementation) external view returns (bool);
 }
 
+interface IGasAggregator {
+    function notifyChainUpgrade(uint256 chainId, address newImplementation) external;
+}
+
 uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
 
 /// @custom:storage-location erc7201:syndicate.storage.SyndicateSequencingChain
@@ -45,9 +49,9 @@ struct SyndicateSequencingChainStorage {
 /// ┌─────────────────────────────────────────────────────────────────────────┐
 /// │ RESPONSIBILITY DISTRIBUTION:                                            │
 /// ├─────────────────────────────────────────────────────────────────────────┤
-/// │ SyndicateSequencingChain: Routes to permission modules                 │
+/// │ SyndicateSequencingChain: Routes to permission modules                  │
 /// │ PermissionModule (Dev): Implements authorization logic                  │
-/// │ Module Developer: MUST validate both msg.sender and tx.origin properly │
+/// │ Module Developer: MUST validate both msg.sender and tx.origin properly  │
 /// └─────────────────────────────────────────────────────────────────────────┘
 ///
 /// @dev Transaction Lifecycle:
@@ -111,6 +115,9 @@ contract SyndicateSequencingChain is
         return $.version;
     }
 
+    // TODO calculate this as a CONSTANT
+    IGasAggregator gasAggregator;
+
     /*//////////////////////////////////////////////////////////////
                             EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -124,6 +131,10 @@ contract SyndicateSequencingChain is
     /// @param oldReceiver The previous emissions receiver address
     /// @param newReceiver The new emissions receiver address
     event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
+
+    /// @notice Emitted when the gas aggregator notification failed
+    /// @param gasAggregator The address of the gas aggregator
+    event gasAggregatorNotificationFailed(address indexed gasAggregator);
 
     /*//////////////////////////////////////////////////////////////
                             FUNCTIONS
@@ -169,6 +180,16 @@ contract SyndicateSequencingChain is
         if (!isAllowed) {
             require($.allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
         }
+
+        try IGasAggregator(gasAggregator).notifyChainUpgrade(appchainId(), _newImplementation) {}
+        catch {
+            emit gasAggregatorNotificationFailed(address(gasAggregator));
+        }
+    }
+
+    // TODO remove this
+    function setGasAggregator(IGasAggregator _gasAggregator) external onlyOwner {
+        gasAggregator = _gasAggregator;
     }
 
     function encodeTransaction(bytes calldata data) public pure returns (bytes memory) {

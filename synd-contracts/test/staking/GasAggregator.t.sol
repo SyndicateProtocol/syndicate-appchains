@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {GasAggregator, GasCounter} from "../../src/staking/GasAggregator.sol";
+import {GasAggregator, ISequencingContract} from "../../src/staking/GasAggregator.sol";
 import {SyndicateFactory} from "../../src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
 import {AlwaysAllowedModule} from "../../src/sequencing-modules/AlwaysAllowedModule.sol";
@@ -267,9 +267,9 @@ contract GasAggregatorTest is Test {
 
         // Verify gas was tracked for current epoch
         uint256 currentEpoch = gasAggregator.pendingEpoch();
-        uint256 chain1Gas = GasCounter(chain1Address).getTokensForEpoch(currentEpoch);
-        uint256 chain2Gas = GasCounter(chain2Address).getTokensForEpoch(currentEpoch);
-        uint256 chain3Gas = GasCounter(chain3Address).getTokensForEpoch(currentEpoch);
+        uint256 chain1Gas = ISequencingContract(chain1Address).getTokensForEpoch(currentEpoch);
+        uint256 chain2Gas = ISequencingContract(chain2Address).getTokensForEpoch(currentEpoch);
+        uint256 chain3Gas = ISequencingContract(chain3Address).getTokensForEpoch(currentEpoch);
 
         // Gas usage should be greater than 0 for all chains
         assertTrue(chain1Gas > 0, "Chain 1 should have recorded gas usage");
@@ -355,9 +355,9 @@ contract GasAggregatorTest is Test {
 
         // Verify initial gas usage
         uint256 currentEpoch = gasAggregator.pendingEpoch();
-        uint256 chain1Gas = GasCounter(chain1Address).getTokensForEpoch(currentEpoch);
-        uint256 chain2Gas = GasCounter(chain2Address).getTokensForEpoch(currentEpoch);
-        uint256 chain3Gas = GasCounter(chain3Address).getTokensForEpoch(currentEpoch);
+        uint256 chain1Gas = ISequencingContract(chain1Address).getTokensForEpoch(currentEpoch);
+        uint256 chain2Gas = ISequencingContract(chain2Address).getTokensForEpoch(currentEpoch);
+        uint256 chain3Gas = ISequencingContract(chain3Address).getTokensForEpoch(currentEpoch);
 
         assertTrue(chain1Gas > 0);
         assertTrue(chain2Gas > 0);
@@ -461,9 +461,9 @@ contract GasAggregatorTest is Test {
         SyndicateSequencingChain(chain3Address).processTransaction(txData);
 
         uint256 currentEpoch = gasAggregator.pendingEpoch();
-        uint256 chain1Gas = GasCounter(chain1Address).getTokensForEpoch(currentEpoch);
-        uint256 chain2Gas = GasCounter(chain2Address).getTokensForEpoch(currentEpoch);
-        uint256 chain3Gas = GasCounter(chain3Address).getTokensForEpoch(currentEpoch);
+        uint256 chain1Gas = ISequencingContract(chain1Address).getTokensForEpoch(currentEpoch);
+        uint256 chain2Gas = ISequencingContract(chain2Address).getTokensForEpoch(currentEpoch);
+        uint256 chain3Gas = ISequencingContract(chain3Address).getTokensForEpoch(currentEpoch);
 
         // Add the alt implementation as the new default
         vm.prank(admin);
@@ -563,9 +563,9 @@ contract GasAggregatorTest is Test {
 
         // Get gas usage for current epoch
         uint256 currentEpoch = gasAggregator.pendingEpoch();
-        uint256 chain1Gas = GasCounter(chain1Address).getTokensForEpoch(currentEpoch);
-        uint256 chain2Gas = GasCounter(chain2Address).getTokensForEpoch(currentEpoch);
-        uint256 chain3Gas = GasCounter(chain3Address).getTokensForEpoch(currentEpoch);
+        uint256 chain1Gas = ISequencingContract(chain1Address).getTokensForEpoch(currentEpoch);
+        uint256 chain2Gas = ISequencingContract(chain2Address).getTokensForEpoch(currentEpoch);
+        uint256 chain3Gas = ISequencingContract(chain3Address).getTokensForEpoch(currentEpoch);
 
         assertTrue(chain1Gas > 0);
         assertTrue(chain2Gas > chain1Gas, "Chain 2 should have more gas than chain 1");
@@ -664,8 +664,8 @@ contract GasAggregatorTest is Test {
         SyndicateSequencingChain(chain2Address).processTransaction(txData);
 
         uint256 currentEpoch = gasAggregator.pendingEpoch();
-        uint256 chain1Gas = GasCounter(chain1Address).getTokensForEpoch(currentEpoch);
-        uint256 chain2Gas = GasCounter(chain2Address).getTokensForEpoch(currentEpoch);
+        uint256 chain1Gas = ISequencingContract(chain1Address).getTokensForEpoch(currentEpoch);
+        uint256 chain2Gas = ISequencingContract(chain2Address).getTokensForEpoch(currentEpoch);
 
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);

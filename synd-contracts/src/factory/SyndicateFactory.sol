@@ -9,47 +9,8 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
-/**
- * @dev same as  "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol", but with an external implementation() function
- * @dev This contract implements an upgradeable proxy. It is upgradeable because calls are delegated to an
- * implementation address that can be changed. This address is stored in storage in the location specified by
- * https://eips.ethereum.org/EIPS/eip-1967[ERC-1967], so that it doesn't conflict with the storage layout of the
- * implementation behind the proxy.
- */
-
-contract ERC1967Proxy is Proxy {
-    /**
-     * @dev Initializes the upgradeable proxy with an initial implementation specified by `implementation`.
-     *
-     * If `_data` is nonempty, it's used as data in a delegate call to `implementation`. This will typically be an
-     * encoded function call, and allows initializing the storage of the proxy like a Solidity constructor.
-     *
-     * Requirements:
-     *
-     * - If `data` is empty, `msg.value` must be zero.
-     */
-    constructor(address initialImplementation, bytes memory _data) payable {
-        ERC1967Utils.upgradeToAndCall(initialImplementation, _data);
-    }
-
-    /**
-     * @dev Returns the current implementation address.
-     *
-     * TIP: To get this value clients can read directly from the storage slot shown below (specified by ERC-1967) using
-     * the https://eth.wiki/json-rpc/API#eth_getstorageat[`eth_getStorageAt`] RPC call.
-     * `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc`
-     */
-    function _implementation() internal view virtual override returns (address) {
-        return ERC1967Utils.getImplementation();
-    }
-
-    /// @dev Returns the current implementation address.
-    function implementation() external view returns (address) {
-        return _implementation();
-    }
-}
 
 /// @title MinimalUUPSStub
 /// @notice Minimal UUPS implementation stub for deterministic proxy deployments
@@ -69,6 +30,10 @@ contract MinimalUUPSStub is UUPSUpgradeable {
     }
 }
 
+interface IGasAggregator {
+    function notifyNewImplementation(address newImplementation) external;
+}
+
 enum NamespaceState {
     Available,
     Used,
@@ -79,8 +44,44 @@ enum NamespaceState {
 /// @notice Factory contract for creating SyndicateSequencingChain contracts
 /// @dev Uses UUPS proxy pattern for upgradeability and CREATE2 pattern for deterministic deployments
 contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUpgradeable, UUPSUpgradeable {
-    /// @notice Emitted when a new SyndicateSequencingChain is created
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
 
+    /// @notice Mapping from appchain ID to the sequencing contract address
+    mapping(uint256 => address) public appchainContracts;
+    uint256[] public chainIDs;
+
+    /// @notice Stub implementation for consistent proxy deployment
+    address public stubImplementation;
+
+    /// @notice Current implementation address used for new deployments
+    address public syndicateChainImpl;
+
+    /// @notice Per-sender nonce tracking for deterministic chainID generation
+    mapping(address sender => uint256 nonce) public senderNonces;
+
+    /// @notice Fee required to create a sequencing chain (in native token)
+    uint256 public creationFee;
+
+    /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
+    string public version;
+
+    // TODO calculate this as a CONSTANT
+    IGasAggregator gasAggregator;
+
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error ZeroAddress();
+    error ChainIdAlreadyExists();
+    error FailedToUpgradeToLatestImplementation();
+
+    /*//////////////////////////////////////////////////////////////
+                             EVENTS 
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Emitted when a new SyndicateSequencingChain is created
     event SyndicateSequencingChainCreated(
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
     );
@@ -94,36 +95,12 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Emitted when a deterministic chainID is generated
     event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
 
-    error ZeroAddress();
-    error ChainIdAlreadyExists();
-    error ImplementationNotAllowed();
-    error ImplementationAlreadyAllowed();
-    error OnlyChainCanNotifyUpgrade();
-    error CannotRemoveDefaultImplementation();
-    error FailedToUpgradeToLatestImplementation();
+    /// @notice Emitted when a new implementation is added to allowed list
+    event gasAggregatorNotificationFailed(address indexed gasAggregator);
 
-    /// @notice Mapping from appchain ID to the sequencing contract address
-    mapping(uint256 => address) public appchainContracts;
-    uint256[] public chainIDs;
-
-    /// @notice Stub implementation for consistent proxy deployment
-    address public stubImplementation;
-
-    /// @notice Current implementation address used for new deployments
-    address public syndicateChainImpl;
-
-    /// @notice List of allowed implementation addresses for sequencing chains
-    address[] public allowedImplementations;
-    mapping(address => bool) public isImplementationAllowed;
-
-    /// @notice Per-sender nonce tracking for deterministic chainID generation
-    mapping(address sender => uint256 nonce) public senderNonces;
-
-    /// @notice Fee required to create a sequencing chain (in native token)
-    uint256 public creationFee;
-
-    /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
-    string public version;
+    /*//////////////////////////////////////////////////////////////
+                            INITIALIZER
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Disables initializers to prevent the implementation contract from being initialized
     constructor() {
@@ -151,21 +128,12 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         // Deploy the real implementation and make it the default
         syndicateChainImpl = address(new SyndicateSequencingChain());
 
-        // Add real implementation to allowed list
-        allowedImplementations.push(syndicateChainImpl);
-        isImplementationAllowed[syndicateChainImpl] = true;
         emit ImplementationAdded(syndicateChainImpl);
     }
 
-    /// @notice Authorizes upgrades to new implementations (admin only)
-    /// @param newImplementation The address of the new implementation
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
-
-    /// @notice Updates the contract version (admin only, typically called during upgrades)
-    /// @param newVersion The new version string (e.g., "1.1.0")
-    function updateVersion(string calldata newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        version = newVersion;
-    }
+    /*//////////////////////////////////////////////////////////////
+                            EXTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID to prevent squatting
     /// @param admin The admin address for the new chain
@@ -224,57 +192,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         return (sequencingChain, actualChainId);
     }
 
-    /// @notice Creates a new SyndicateSequencingChain with a custom chainID (admin only)
-    /// @param customChainId The custom chain ID to use
-    /// @param admin The admin address for the new chain
-    /// @param permissionModule The pre-deployed permission module
-    /// @return sequencingChain The deployed sequencing chain address
-    /// @return actualChainId The chain ID that was used (same as customChainId)
-    function createSyndicateSequencingChainWithCustomId(
-        uint256 customChainId,
-        address admin,
-        IRequirementModule permissionModule
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
-        if (admin == address(0) || address(permissionModule) == address(0)) {
-            revert ZeroAddress();
-        }
-        if (customChainId == 0) {
-            revert ZeroAddress(); // Reusing this error for zero chainID
-        }
-
-        // Validate chain ID is not already used
-        if (appchainContracts[customChainId] != address(0)) {
-            revert ChainIdAlreadyExists();
-        }
-
-        actualChainId = customChainId;
-
-        // Deploy the sequencing chain using consistent proxy bytecode
-        bytes memory consistentBytecode = getProxyBytecode();
-        sequencingChain = Create2.deploy(0, bytes32(actualChainId), consistentBytecode);
-
-        // Store the mapping of appchain ID to contract address
-        appchainContracts[actualChainId] = sequencingChain;
-        chainIDs.push(actualChainId);
-
-        // Upgrade the proxy to use the latest implementation (instead of the stub)
-        bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,uint256)", address(this), address(permissionModule), actualChainId
-        );
-        (bool upgradeSuccess,) = sequencingChain.call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
-        );
-        if (!upgradeSuccess) {
-            revert FailedToUpgradeToLatestImplementation();
-        }
-
-        // Transfer ownership to the intended admin
-        SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
-
-        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
-
-        return (sequencingChain, actualChainId);
-    }
+    /*//////////////////////////////////////////////////////////////
+                           VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Computes the address where a sequencing chain will be deployed
     /// @param chainId The chain ID to compute the address for
@@ -329,11 +249,70 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         }
     }
 
-    /// @notice Get the next nonce for a sender
-    /// @param sender The sender address
-    /// @return The next nonce for this sender
-    function getNextNonceForSender(address sender) external view returns (uint256) {
-        return senderNonces[sender];
+    /*//////////////////////////////////////////////////////////////
+                         ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Creates a new SyndicateSequencingChain with a custom chainID (admin only)
+    /// @param customChainId The custom chain ID to use
+    /// @param admin The admin address for the new chain
+    /// @param permissionModule The pre-deployed permission module
+    /// @return sequencingChain The deployed sequencing chain address
+    /// @return actualChainId The chain ID that was used (same as customChainId)
+    function createSyndicateSequencingChainWithCustomId(
+        uint256 customChainId,
+        address admin,
+        IRequirementModule permissionModule
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
+        if (admin == address(0) || address(permissionModule) == address(0)) {
+            revert ZeroAddress();
+        }
+        if (customChainId == 0) {
+            revert ZeroAddress(); // Reusing this error for zero chainID
+        }
+
+        // Validate chain ID is not already used
+        if (appchainContracts[customChainId] != address(0)) {
+            revert ChainIdAlreadyExists();
+        }
+
+        actualChainId = customChainId;
+
+        // Deploy the sequencing chain using consistent proxy bytecode
+        bytes memory consistentBytecode = getProxyBytecode();
+        sequencingChain = Create2.deploy(0, bytes32(actualChainId), consistentBytecode);
+
+        // Store the mapping of appchain ID to contract address
+        appchainContracts[actualChainId] = sequencingChain;
+        chainIDs.push(actualChainId);
+
+        // Upgrade the proxy to use the latest implementation (instead of the stub)
+        bytes memory initData = abi.encodeWithSignature(
+            "initialize(address,address,uint256)", address(this), address(permissionModule), actualChainId
+        );
+        (bool upgradeSuccess,) = sequencingChain.call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
+        );
+        if (!upgradeSuccess) {
+            revert FailedToUpgradeToLatestImplementation();
+        }
+
+        // Transfer ownership to the intended admin
+        SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
+
+        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
+
+        return (sequencingChain, actualChainId);
+    }
+
+    /// @notice Authorizes upgrades to new implementations (admin only)
+    /// @param newImplementation The address of the new implementation
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    /// @notice Updates the contract version (admin only, typically called during upgrades)
+    /// @param newVersion The new version string (e.g., "1.1.0")
+    function updateVersion(string calldata newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        version = newVersion;
     }
 
     /// @notice Pause the factory (admin only)
@@ -346,48 +325,21 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         _unpause();
     }
 
-    /// @notice Add a new allowed implementation (admin only)
-    /// @param implementation The implementation address to allow
-    /// @param makeDefault Whether to make this the default for new deployments
-    function addAllowedImplementation(address implementation, bool makeDefault) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (implementation == address(0)) revert ZeroAddress();
-        if (isImplementationAllowed[implementation]) revert ImplementationAlreadyAllowed();
+    // TODO remove this
+    function setGasAggregator(IGasAggregator _gasAggregator) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        gasAggregator = _gasAggregator;
+    }
 
-        allowedImplementations.push(implementation);
-        isImplementationAllowed[implementation] = true;
-
-        if (makeDefault) {
-            syndicateChainImpl = implementation;
+    /// @notice Set the implementation for new sequencing contract deployments (admin only)
+    /// @param newImplementation The implementation address to use as default
+    function setSyndicateSequencingChainImplementation(address newImplementation)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        syndicateChainImpl = newImplementation;
+        try gasAggregator.notifyNewImplementation(newImplementation) {}
+        catch {
+            emit gasAggregatorNotificationFailed(address(gasAggregator));
         }
-
-        emit ImplementationAdded(implementation);
-    }
-
-    /// @notice Remove an allowed implementation (admin only)
-    /// @param implementation The implementation address to remove
-    function removeAllowedImplementation(address implementation) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (!isImplementationAllowed[implementation]) revert ImplementationNotAllowed();
-        if (implementation == syndicateChainImpl) revert CannotRemoveDefaultImplementation();
-        for (uint256 i = 0; i < allowedImplementations.length; i++) {
-            if (allowedImplementations[i] == implementation) {
-                allowedImplementations[i] = allowedImplementations[allowedImplementations.length - 1];
-                allowedImplementations.pop();
-                break;
-            }
-        }
-        isImplementationAllowed[implementation] = false;
-    }
-
-    /// @notice Set the default implementation for new deployments (admin only)
-    /// @param implementation The implementation address to use as default
-    function setDefaultImplementation(address implementation) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (!isImplementationAllowed[implementation]) revert ImplementationNotAllowed();
-        syndicateChainImpl = implementation;
-    }
-
-    /// @notice Get all allowed implementation addresses
-    /// @return Array of allowed implementation addresses
-    function getAllowedImplementations() external view returns (address[] memory) {
-        return allowedImplementations;
     }
 }

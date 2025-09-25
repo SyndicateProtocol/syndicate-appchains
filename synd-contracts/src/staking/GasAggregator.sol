@@ -6,19 +6,16 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
-interface GasCounter {
+interface ISequencingContract {
     function getTokensForEpoch(uint256 epoch) external view returns (uint256);
     function getEmissionsReceiver() external view returns (address);
 }
 
-interface AppchainFactory {
+interface IAppchainFactory {
     function isImplementationAllowed(address implementation) external view returns (bool);
     function computeSequencingChainAddress(uint256 chainId) external view returns (address);
     function getProxyBytecode() external view returns (bytes memory);
-}
-
-interface ProxyImplementation {
-    function implementation() external view returns (address);
+    function syndicateChainImpl() external view returns (address);
 }
 
 /// @title GasAggregator
@@ -28,7 +25,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-    AppchainFactory public factory;
+    IAppchainFactory public factory;
 
     uint256 public maxAppchainsToQuery;
 
@@ -39,8 +36,13 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     bytes32 public proxyBytecodeHash;
 
     /// @notice Registry of chains that can be tracked for gas usage
-    uint256[] public trackedChainIds;
-    mapping(uint256 => bool) public isChainTracked;
+    uint256[] public appchains;
+    mapping(uint256 chainID => ISequencingContract sequencingContract) public appchainContracts;
+    mapping(uint256 chainID => bool tracked) public isChainTracked;
+    mapping(uint256 chainID => bool banned) public bannedAppchains;
+
+    /// @notice Mapping of allowed implementations
+    mapping(address implementation => bool allowed) public allowedImplementations;
 
     /// @notice used for the offchain aggregation mechanism.
     /// The challenge window is the time period after the first submission during which new submission can be made
@@ -58,7 +60,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     string public version;
 
     /*//////////////////////////////////////////////////////////////
-      ERRORS
+                              ERRORS
     //////////////////////////////////////////////////////////////*/
     error MustUseOffchainAggregation();
     error MustUseAutomaticAggregation();
@@ -72,9 +74,11 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     error InvalidDataHash();
     error ChainAlreadyTracked(uint256 chainId);
     error ChainNotTracked(uint256 chainId);
-    error InvalidImplementation(address implementation);
+    error ImplementationNotAllowed(address implementation);
     error InsufficientFee(uint256 required, uint256 provided);
     error ChainNotFound(uint256 chainId);
+    error ChainIsBanned(uint256 chainId);
+    error OnlyChainCanNotifyUpgrade();
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -83,6 +87,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     event ChainAdded(uint256 indexed chainId, address indexed chainContract, address indexed addedBy);
     event ChainRemoved(uint256 indexed chainId);
     event AddChainFeeUpdated(uint256 oldFee, uint256 newFee);
+    event ChainBanned(uint256 chainId, address newImplementation);
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -92,7 +97,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         _disableInitializers();
     }
 
-    function initialize(AppchainFactory _factory, address admin, uint256 _challengeWindow, uint256 _addChainFee)
+    function initialize(IAppchainFactory _factory, address admin, uint256 _challengeWindow, uint256 _addChainFee)
         external
         initializer
     {
@@ -112,6 +117,11 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
 
         // Cache the proxy bytecode hash for deterministic address computation
         proxyBytecodeHash = keccak256(_factory.getProxyBytecode());
+
+        address syndicateChainImpl = _factory.syndicateChainImpl();
+        if (syndicateChainImpl != address(0)) {
+            allowedImplementations[syndicateChainImpl] = true;
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -154,27 +164,16 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
             revert ChainNotFound(chainId);
         }
 
-        // Validate that the chain's implementation is allowed by the factory
-        _validateChainImplementation(chainContract);
+        if (bannedAppchains[chainId]) {
+            revert ChainIsBanned(chainId);
+        }
 
         // Add to registry
-        trackedChainIds.push(chainId);
+        appchains.push(chainId);
+        appchainContracts[chainId] = ISequencingContract(chainContract);
         isChainTracked[chainId] = true;
 
         emit ChainAdded(chainId, chainContract, msg.sender);
-    }
-
-    /// @notice Removes a chain from the gas tracking registry (admin only)
-    /// @param chainId The chain ID to remove
-    function removeChain(uint256 chainId) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (!isChainTracked[chainId]) {
-            revert ChainNotTracked(chainId);
-        }
-
-        // Remove from tracking
-        _removeChainFromTracking(chainId);
-
-        emit ChainRemoved(chainId);
     }
 
     /// @notice triggers automatic aggregation of the appchain gas usage data and pushes it to the staking appchain
@@ -183,70 +182,14 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         if (fallbackToOffchainAggregation()) {
             revert MustUseOffchainAggregation();
         }
-
-        // Collect data and track which chains are valid/invalid
-        uint256[] memory tempAppchains = new uint256[](trackedChainIds.length);
-        uint256[] memory tempTokens = new uint256[](trackedChainIds.length);
-        address[] memory tempEmissionsReceivers = new address[](trackedChainIds.length);
-        bool[] memory isValid = new bool[](trackedChainIds.length);
-        uint256[] memory toDelete = new uint256[](trackedChainIds.length);
-        uint256 deleteCount = 0;
-
-        // Process all chains
-        for (uint256 i = 0; i < trackedChainIds.length; i++) {
-            uint256 chainId = trackedChainIds[i];
-            address chainContract = computeSequencingChainAddress(chainId);
-
-            // Check if implementation is valid
-            if (_isChainImplementationValid(chainContract)) {
-                // Valid chain - collect data
-                tempAppchains[i] = chainId;
-                tempTokens[i] = GasCounter(chainContract).getTokensForEpoch(pendingEpoch);
-                tempEmissionsReceivers[i] = GasCounter(chainContract).getEmissionsReceiver();
-                isValid[i] = true;
-            } else {
-                // Invalid chain - mark for deletion
-                toDelete[deleteCount] = chainId;
-                deleteCount++;
-                isValid[i] = false;
-            }
+        uint256[] memory tokens = new uint256[](appchains.length);
+        address[] memory emissionsReceivers = new address[](appchains.length);
+        for (uint256 i = 0; i < appchains.length; i++) {
+            ISequencingContract seqContract = appchainContracts[appchains[i]];
+            tokens[i] = seqContract.getTokensForEpoch(pendingEpoch);
+            emissionsReceivers[i] = seqContract.getEmissionsReceiver();
         }
-
-        // Remove invalid chains after iteration is complete
-        for (uint256 i = 0; i < deleteCount; i++) {
-            uint256 chainId = toDelete[i];
-            _removeChainFromTracking(chainId);
-            emit ChainRemoved(chainId);
-        }
-
-        uint256[] memory validAppchains;
-        uint256[] memory tokens;
-        address[] memory emissionsReceivers;
-
-        if (deleteCount == 0) {
-            // No invalid chains, use temp arrays directly
-            validAppchains = tempAppchains;
-            tokens = tempTokens;
-            emissionsReceivers = tempEmissionsReceivers;
-        } else {
-            // Create final arrays with correct length and copy valid data
-            uint256 validCount = tempAppchains.length - deleteCount;
-            validAppchains = new uint256[](validCount);
-            tokens = new uint256[](validCount);
-            emissionsReceivers = new address[](validCount);
-
-            uint256 j = 0;
-            for (uint256 i = 0; i < isValid.length; i++) {
-                if (isValid[i]) {
-                    validAppchains[j] = tempAppchains[i];
-                    tokens[j] = tempTokens[i];
-                    emissionsReceivers[j] = tempEmissionsReceivers[i];
-                    j++;
-                }
-            }
-        }
-
-        aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(validAppchains, tokens, emissionsReceivers));
+        aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(appchains, tokens, emissionsReceivers));
         pendingEpoch++;
         pendingEpochFirstSubmissionTime = 0;
         pendingDataHash = bytes32(0);
@@ -265,27 +208,15 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
             revert WindowOver(pendingEpoch, challengeWindow);
         }
         uint256 total = 0;
-        address[] memory contracts = new address[](appchainIDs.length);
         uint256[] memory tokens = new uint256[](appchainIDs.length);
         address[] memory emissionsReceivers = new address[](appchainIDs.length);
-
         for (uint256 i = 0; i < appchainIDs.length; i++) {
             if (i > 0 && appchainIDs[i] <= appchainIDs[i - 1]) {
                 revert ChainIDsMustBeInAscendingOrder();
             }
-
-            // Ensure the chain is tracked in our registry
-            if (!isChainTracked[appchainIDs[i]]) {
-                revert ChainNotTracked(appchainIDs[i]);
-            }
-
-            address chainContract = factory.computeSequencingChainAddress(appchainIDs[i]);
-            // Validate implementation on each fetch
-            _validateChainImplementation(chainContract);
-
-            contracts[i] = chainContract;
-            tokens[i] = GasCounter(chainContract).getTokensForEpoch(pendingEpoch);
-            emissionsReceivers[i] = GasCounter(chainContract).getEmissionsReceiver();
+            ISequencingContract seqContract = appchainContracts[appchainIDs[i]];
+            tokens[i] = seqContract.getTokensForEpoch(pendingEpoch);
+            emissionsReceivers[i] = seqContract.getEmissionsReceiver();
             total += tokens[i];
         }
         if (total <= pendingTotalTokensUsed) {
@@ -311,47 +242,46 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         pendingTotalTokensUsed = 0;
     }
 
+    /// @notice Called by sequencing chains to notify about upgrades
+    /// @dev Automatically bans chain from gas tracking if implementation is not allowed
+    /// @param chainId The chain ID that is upgrading
+    /// @param newImplementation The address of the new implementation
+    function notifyChainUpgrade(uint256 chainId, address newImplementation) external {
+        if (address(appchainContracts[chainId]) != msg.sender) revert OnlyChainCanNotifyUpgrade();
+
+        if (!allowedImplementations[newImplementation]) {
+            _banAppchain(chainId);
+            emit ChainBanned(chainId, newImplementation);
+        }
+    }
+
+    function notifyNewImplementation(address newImplementation) external {
+        allowedImplementations[newImplementation] = true;
+    }
+
     /*//////////////////////////////////////////////////////////////
-                           VIEW FUNCTIONS
+                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Validates a chain's implementation against the factory's allowlist
-    /// @param chainContract The chain contract address to validate
-    function _validateChainImplementation(address chainContract) internal view {
-        try ProxyImplementation(chainContract).implementation() returns (address impl) {
-            if (!factory.isImplementationAllowed(impl)) {
-                revert InvalidImplementation(impl);
-            }
-        } catch {
-            // If we can't get the implementation, reject the chain
-            revert InvalidImplementation(address(0));
-        }
-    }
-
-    /// @notice Checks if a chain's implementation is valid without reverting
-    /// @param chainContract The chain contract address to validate
-    /// @return isValid True if the implementation is valid, false otherwise
-    function _isChainImplementationValid(address chainContract) internal view returns (bool isValid) {
-        try ProxyImplementation(chainContract).implementation() returns (address impl) {
-            return factory.isImplementationAllowed(impl);
-        } catch {
-            return false;
-        }
-    }
 
     /// @notice Internal function to remove a chain from tracking
     /// @param chainId The chain ID to remove
-    function _removeChainFromTracking(uint256 chainId) internal {
+    function _banAppchain(uint256 chainId) internal {
         // Remove from tracking arrays
-        for (uint256 i = 0; i < trackedChainIds.length; i++) {
-            if (trackedChainIds[i] == chainId) {
-                trackedChainIds[i] = trackedChainIds[trackedChainIds.length - 1];
-                trackedChainIds.pop();
+        for (uint256 i = 0; i < appchains.length; i++) {
+            if (appchains[i] == chainId) {
+                appchains[i] = appchains[appchains.length - 1];
+                appchains.pop();
                 break;
             }
         }
         delete isChainTracked[chainId];
+        delete appchainContracts[chainId];
+        bannedAppchains[chainId] = true;
     }
+
+    /*//////////////////////////////////////////////////////////////
+                           VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Computes the address where a sequencing chain will be deployed
     /// @param chainId The chain ID to compute the address for
@@ -361,17 +291,22 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     }
 
     function fallbackToOffchainAggregation() public view returns (bool) {
-        return trackedChainIds.length >= maxAppchainsToQuery;
+        return appchains.length >= maxAppchainsToQuery;
     }
 
     /// @notice Get the total number of tracked chains
     function getTotalTrackedChains() external view returns (uint256) {
-        return trackedChainIds.length;
+        return appchains.length;
     }
 
     /// @notice Get all tracked chain IDs
     function getTrackedChainIds() external view returns (uint256[] memory) {
-        return trackedChainIds;
+        return appchains;
+    }
+
+    /// @notice Get the contract's current balance
+    function getBalance() external view returns (uint256) {
+        return address(this).balance;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -390,10 +325,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         challengeWindow = newChallengeWindow;
     }
 
-    /// @notice Sets the appchain factory contract
-    /// @param newFactory The new factory contract address
-    function setFactory(AppchainFactory newFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        factory = newFactory;
+    function removeAllowedImplementation(address newImpl) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (!allowedImplementations[newImpl]) revert ImplementationNotAllowed(newImpl);
+        delete allowedImplementations[newImpl];
     }
 
     /// @notice Updates the contract version (admin only, typically called during upgrades)
@@ -423,10 +357,5 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
 
         (bool success,) = to.call{value: withdrawAmount}("");
         require(success, "Transfer failed");
-    }
-
-    /// @notice Get the contract's current balance
-    function getBalance() external view returns (uint256) {
-        return address(this).balance;
     }
 }
