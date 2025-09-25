@@ -6,7 +6,7 @@ interface RelayerMocks {
     event Deposit(address from, uint256 epochIndex, uint256 amount);
 
     function deposit(uint256 epochIndex) external payable;
-    function getCurrentEpoch() external view returns (uint256);
+    function getCurrentEpoch() external pure returns (uint256);
 }
 ```
 
@@ -37,7 +37,7 @@ interface RelayerMocks {
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "pure"
   },
   {
     "type": "event",
@@ -367,7 +367,7 @@ function deposit(uint256 epochIndex) external payable;
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getCurrentEpoch()` and selector `0xb97dd9e2`.
 ```solidity
-function getCurrentEpoch() external view returns (uint256);
+function getCurrentEpoch() external pure returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
