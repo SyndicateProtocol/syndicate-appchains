@@ -28,7 +28,7 @@ methods {
     // View calculation functions
     function getRemainingSupply() external returns (uint256) envfree;
     function getNextEmission() external returns (uint256) envfree;
-    function calculateCumulativeProduct(uint256) external returns (uint256) envfree;
+    function calculateCumulativeProduct() external returns (uint256) envfree;
     function isCompleted() external returns (bool) envfree;
     
     // Mock token functions
@@ -213,7 +213,7 @@ rule geometricChangeFormulaCorrectness(address to) {
     uint256 epoch = currentEpoch();
     uint256 remainingSupply = getRemainingSupply();
     uint256 changeFactor = changeFactor();
-    uint256 cumulativeProduct = calculateCumulativeProduct(epoch);
+    uint256 cumulativeProduct = calculateCumulativeProduct();
     
     require changeFactor > 0;
     require cumulativeProduct < SCALE(); // Avoid edge cases
@@ -238,19 +238,18 @@ rule geometricChangeFormulaCorrectness(address to) {
 /*
  * RULE 10: Cumulative product calculation correctness
  */
-rule cumulativeProductCorrectness(uint256 fromEpoch) {
-    require fromEpoch < TOTAL_EPOCHS();
+rule cumulativeProductCorrectness() {
     require initialized(); // Must be initialized
     
     // Assume change factors are properly bounded for meaningful test
     // This is a simplified test focusing on the basic bounds
-    uint256 product = calculateCumulativeProduct(fromEpoch);
+    uint256 product = calculateCumulativeProduct();
     
     // Basic bounds check - product should be reasonable
     assert product >= 0;
     
-    // If fromEpoch is at the end, product should equal SCALE
-    assert fromEpoch >= TOTAL_EPOCHS() => product == SCALE();
+    // If curentEpoch is at the end, product should equal SCALE
+    assert currentEpoch() >= TOTAL_EPOCHS() => product == SCALE();
 }
 
 /*
