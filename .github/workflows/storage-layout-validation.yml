@@ -96,6 +96,11 @@ jobs:
           echo "📋 Setting up baseline layout from main branch..."
           echo "DEBUG: Current branch before checkout: $(git branch --show-current)"
 
+          # Stash any local changes (like foundry.lock updates) before checkout
+          echo "DEBUG: Stashing any local changes..."
+          git add -A
+          git stash --include-untracked --quiet || echo "No changes to stash"
+
           git fetch origin main:main
           git checkout main
           echo "DEBUG: Switched to branch: $(git branch --show-current)"
@@ -117,6 +122,10 @@ jobs:
           # Switch back to PR branch
           git checkout ${{ github.head_ref }}
           echo "DEBUG: Switched back to branch: $(git branch --show-current)"
+
+          # Restore stashed changes if any
+          echo "DEBUG: Restoring stashed changes..."
+          git stash pop --quiet || echo "No stashed changes to restore"
 
           # Rebuild current branch
           echo "DEBUG: Reinstalling dependencies on PR branch..."
