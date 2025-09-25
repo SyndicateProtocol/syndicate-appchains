@@ -1,7 +1,0 @@
-[package]
-edition.workspace = true
-name              = "contract-bindings"
-
-[dependencies]
-alloy = { workspace = true, features = ["serde"] }
-serde = { workspace = true, features = ["derive"] }

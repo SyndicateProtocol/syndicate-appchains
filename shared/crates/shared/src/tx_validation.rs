@@ -1,0 +1,277 @@
+//! The `tx_validation` module contains functions for validating the content of an Ethereum
+//! transaction
+
+// Temporary inline definitions to avoid circular dependencies
+use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum RpcError {
+    #[error("invalid input: {0}")]
+    InvalidInput(InvalidInputError),
+    #[error("internal error: {0}")]
+    Internal(String),
+    #[error("decode error: {0}")]
+    Decode(String),
+    #[error("recovery error: {0}")]
+    Recovery(String),
+}
+
+#[derive(Debug, Error)]
+pub enum InvalidInputError {
+    #[error("missing chain ID")]
+    ChainIdMissing,
+    #[error("transaction too large: limit {0}, actual {1}")]
+    TransactionTooLarge(String, String),
+}
+
+// Error conversions
+impl From<alloy::rlp::Error> for RpcError {
+    fn from(e: alloy::rlp::Error) -> Self {
+        RpcError::Decode(e.to_string())
+    }
+}
+
+impl From<alloy::primitives::SignatureError> for RpcError {
+    fn from(e: alloy::primitives::SignatureError) -> Self {
+        RpcError::Recovery(e.to_string())
+    }
+}
+
+// Manual error handling for recovery errors
+
+use RpcError::InvalidInput;
+use InvalidInputError::{ChainIdMissing, TransactionTooLarge};
+use alloy::{
+    consensus::{transaction::SignerRecoverable, Transaction, TxEnvelope},
+    primitives::{Address, Bytes},
+    rlp::Decodable,
+};
+use byte_unit::Unit;
+use tracing::{debug, instrument};
+
+/// Convert a raw transaction from [`&Bytes`] to [`TxEnvelope`]
+pub fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
+    let mut slice: &[u8] = raw_tx.as_ref();
+    Ok(TxEnvelope::decode(&mut slice)?)
+}
+
+fn check_chain_id(tx: &TxEnvelope) -> Result<(), RpcError> {
+    if tx.chain_id().is_none() {
+        let error = InvalidInput(ChainIdMissing);
+        debug!(
+            error = %error,
+            tx_type = ?tx.tx_type(),
+            "Transaction validation failed: missing chain ID"
+        );
+        return Err(error);
+    }
+
+    Ok(())
+}
+
+/// Check the signature of a transaction
+pub fn check_signature(tx: &TxEnvelope) -> Result<Address, RpcError> {
+    let signer = tx.recover_signer().map_err(|e| {
+        debug!(
+            error = ?e,
+            tx_type = ?tx.tx_type(),
+            "Transaction validation failed: invalid signature"
+        );
+        RpcError::Recovery(format!("{:?}", e))
+    })?;
+    Ok(signer)
+}
+
+fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), RpcError> {
+    let limit_size = limit.as_u128() as usize;
+
+    let tx_size = raw_tx.len();
+    if tx_size > limit_size {
+        let actual = byte_unit::Byte::from_u64(tx_size as u64);
+
+        return Err(InvalidInput(TransactionTooLarge(format!("{limit:#}"), format!("{actual:#}"))));
+    }
+    Ok(())
+}
+
+/// Validate a transaction
+#[instrument(skip(raw_tx), err)]
+pub fn validate_transaction(raw_tx: &Bytes) -> Result<(TxEnvelope, Address), RpcError> {
+    debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
+    // Check tx size
+    let kb_128 = byte_unit::Byte::from_u128_with_unit(128, Unit::KB).ok_or_else(|| {
+        // This should be impossible
+        RpcError::Internal("failed to create default tx size".to_string())
+    })?;
+    check_tx_size(kb_128, raw_tx)?;
+
+    // Decoding:
+    let tx = decode_transaction(raw_tx)?;
+
+    // Validation Checks:
+    // Check chain ID
+    check_chain_id(&tx)?;
+
+    // Check signature
+    let signer = check_signature(&tx)?;
+
+    Ok((tx, signer))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json_rpc::InvalidInputError::UnableToRLPDecode;
+    use alloy::{
+        consensus::{Signed, TxLegacy},
+        primitives::{b256, Bytes, Signature},
+    };
+    use byte_unit::Byte;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_validate_transaction() {
+        let valid_tx = Bytes::from_str("0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772").unwrap();
+
+        let result = validate_transaction(&valid_tx);
+        // The validation should pass since this is a valid RLP-encoded transaction
+        assert!(result.is_ok());
+        let (tx, signer) = result.unwrap();
+        assert_eq!(
+            tx.tx_hash().to_string(),
+            "0xc429e5f128387d224ba8bed6885e86525e14bfdc2eb24b5e9c3351a1176fd81f"
+        );
+        assert_eq!(signer, tx.recover_signer().unwrap())
+    }
+    #[test]
+    fn test_decode_transaction() {
+        // Valid transaction
+        let valid_tx = Bytes::from_str("0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772").unwrap();
+        let result = decode_transaction(&valid_tx);
+        assert!(result.is_ok());
+
+        // Invalid transaction
+        let invalid_tx = Bytes::from_str("0x1234").unwrap();
+        let result = decode_transaction(&invalid_tx);
+        println!("result: {result:?}");
+        assert!(matches!(
+            result,
+            Err(InvalidInput(UnableToRLPDecode(alloy::rlp::Error::Custom("unexpected tx type"))))
+        ));
+    }
+
+    fn wrap_txn_legacy(tx: TxLegacy) -> TxEnvelope {
+        TxEnvelope::Legacy(Signed::new_unchecked(
+            tx,
+            Signature::test_signature(),
+            Default::default(),
+        ))
+    }
+
+    #[test]
+    fn test_check_chain_id() {
+        // Valid legacy transaction
+        let valid_tx = wrap_txn_legacy(TxLegacy { chain_id: Some(1), ..Default::default() });
+        assert!(check_chain_id(&valid_tx).is_ok());
+
+        // Legacy ransaction without chain ID should fail
+        let invalid_tx = wrap_txn_legacy(TxLegacy { chain_id: None, ..Default::default() });
+        assert!(matches!(check_chain_id(&invalid_tx), Err(InvalidInput(ChainIdMissing))));
+    }
+
+    #[test]
+    fn test_check_signature() {
+        // Valid transaction with valid signature
+        let valid_tx = wrap_txn_legacy(TxLegacy::default());
+        assert!(check_signature(&valid_tx).is_ok());
+        assert!(!check_signature(&valid_tx).unwrap().is_empty());
+
+        // Transaction with invalid signature should fail
+        let invalid_tx = TxEnvelope::Legacy(Signed::new_unchecked(
+            TxLegacy::default(),
+            Signature::from_scalars_and_parity(
+                b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
+                b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
+                true,
+            ),
+            Default::default(),
+        ));
+        assert!(check_signature(&invalid_tx).is_err());
+    }
+
+    #[test]
+    fn test_check_tx_size_within_limit() {
+        // Define a limit of 128 KB
+        let limit = Byte::from_u128_with_unit(128, Unit::KB).unwrap();
+
+        // Create a raw_tx with size within the limit (e.g., 64 KB)
+        let raw_tx = Bytes::from(vec![0u8; 64 * 1000]);
+
+        // Check that it passes without error
+        let result = check_tx_size(limit, &raw_tx);
+        assert!(result.is_ok(), "Expected the transaction to be within the size limit");
+    }
+
+    #[test]
+    fn test_check_tx_size_exceeds_limit() {
+        // Define a limit of 127 KB
+        let limit = Byte::from_u128_with_unit(127, Unit::KB).unwrap();
+
+        // Create a raw_tx with size exceeding the limit (e.g., 200 KB)
+        let raw_tx = Bytes::from(vec![0u8; 200 * 1000]);
+
+        // Check that it returns an error
+        let result = check_tx_size(limit, &raw_tx);
+        assert!(result.is_err(), "Expected the transaction to exceed the size limit");
+
+        // Verify the error message
+        if let Err(error) = result {
+            let error_message = error.to_string();
+            assert_eq!(
+                error_message, "invalid input: transaction too large: limit 127 KB - got 200 KB",
+                "Unexpected error message: {error_message}"
+            );
+        }
+    }
+
+    /// This is a quirk of the `byte-unit` library. When a [`Byte`] value is created that has an
+    /// exact binary representation in bits, the alternate formatter `:#` will choose bits (e.g.
+    /// `KiB`) over Bytes in order to be maximally explicit by using the IEC standard unit. In other
+    /// words, because `128 KB` == `125 KiB`, the formatter will output `125 KiB`. The internal
+    /// representation of `128000` remains unchanged.
+    #[test]
+    fn test_check_tx_size_exceeds_limit_formatter_quirk() {
+        // Define a limit of 128 KB
+        let limit = Byte::from_u128_with_unit(128, Unit::KB).unwrap();
+
+        // Create a raw_tx with size exceeding the limit (e.g., 200 KB)
+        let raw_tx = Bytes::from(vec![0u8; 200 * 1000]);
+
+        // Check that it returns an error
+        let result = check_tx_size(limit, &raw_tx);
+        assert!(result.is_err(), "Expected the transaction to exceed the size limit");
+
+        // Verify the error message
+        if let Err(error) = result {
+            let error_message = error.to_string();
+            assert_eq!(
+                error_message, "invalid input: transaction too large: limit 125 KiB - got 200 KB",
+                "Unexpected error message: {error_message}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_check_tx_size_at_limit() {
+        // Define a limit of 128 KB
+        let limit = Byte::from_u128_with_unit(128, Unit::KB).unwrap();
+
+        // Create a raw_tx with size exactly at the limit (128 KB)
+        let raw_tx = Bytes::from(vec![0u8; 128 * 1000]);
+
+        // Check that it passes without error
+        let result = check_tx_size(limit, &raw_tx);
+        assert!(result.is_ok(), "Expected the transaction size exactly at the limit to pass");
+    }
+}

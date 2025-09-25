@@ -15,6 +15,7 @@ brotli            = { workspace = true }
 byte-unit         = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 contract-bindings = { workspace = true }
+shared = { workspace = true }
 ctor              = { workspace = true }
 derivative        = { workspace = true }
 eyre              = { workspace = true }
@@ -22,7 +23,6 @@ humantime         = { workspace = true }
 prometheus-client = { workspace = true }
 redis             = { workspace = true, features = ["streams", "tokio-comp"] }
 rlp               = { workspace = true }
-shared            = { workspace = true }
 synd-maestro      = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true }

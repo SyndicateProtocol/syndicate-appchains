@@ -1,8 +1,8 @@
 [workspace]
 members = [
-  "shared",
-  "shared/contract-bindings",
-  "shared/test-utils",
+  "shared/crates/contract-bindings",
+  "shared/crates/test-utils",
+  "shared/crates/shared",
   "synd-batch-sequencer",
   "synd-chain-ingestor",
   "synd-maestro",
@@ -46,9 +46,16 @@ version      = "0.1.0"
 
 # workspace dependencies (members of the workspace)
 common                                    = { path = "synd-translator/crates/common" }
-contract-bindings                         = { path = "shared/contract-bindings" }
+contract-bindings                         = { path = "shared/crates/contract-bindings" }
+syndicate-contract-bindings               = { path = "shared/crates/contract-bindings" }
 metrics                                   = { path = "synd-translator/crates/metrics" }
-shared                                    = { path = "shared" }
+# Individual crates - temporarily disabled while fixing dependencies
+# syndicate-blockchain-types                = { path = "shared/crates/blockchain-types" }
+# syndicate-service-utils                   = { path = "shared/crates/service-utils" }
+# syndicate-tracing                         = { path = "shared/crates/tracing" }
+# syndicate-json-rpc                        = { path = "shared/crates/json-rpc" }
+# Temporary backward compatibility - will be removed after migration
+shared                                    = { path = "shared/crates/shared" }
 synd-block-builder                        = { path = "synd-translator/crates/synd-block-builder" }
 synd-chain-ingestor                       = { path = "synd-chain-ingestor" }
 synd-maestro                              = { path = "synd-maestro" }
@@ -59,7 +66,8 @@ synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-
 synd-tee-attestation-zk-proofs-submitter  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter" }
 synd-translator                           = { path = "synd-translator/bin/synd-translator" }
 test-framework                            = { path = "test-framework" }
-test-utils                                = { path = "shared/test-utils" }
+test-utils                                = { path = "shared/crates/test-utils" }
+syndicate-test-utils                      = { path = "shared/crates/test-utils" }
 
 # dependencies
 alloy                              = { version = "1.0.25", default-features = false }

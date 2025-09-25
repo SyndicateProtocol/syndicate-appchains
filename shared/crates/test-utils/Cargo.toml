@@ -4,19 +4,23 @@ edition.workspace      = true
 homepage.workspace     = true
 license.workspace      = true
 name                   = "test-utils"
+publish                = true
 repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
 alloy             = { workspace = true, features = ["node-bindings", "providers", "rpc-types-anvil"] }
-contract-bindings = { workspace = true }
+contract-bindings = { path = "../contract-bindings" }
+shared = { path = "../shared" }
 eyre              = { workspace = true }
 jsonrpsee         = { workspace = true }
 redis             = { workspace = true, features = ["tokio-comp"] }
 serde             = { workspace = true }
 serde_json        = { workspace = true }
-shared            = { workspace = true }
 synd-mchain       = { workspace = true }
 tokio             = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing           = { workspace = true }
+
+[lints]
+workspace = true
