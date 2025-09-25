@@ -35,6 +35,9 @@ contract ArbChainConfig is Initializable {
     string public DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
 
+    /// @notice Version of the ArbChainConfig contract (updatable during upgrades)
+    string public version;
+
     /**
      * @dev Constructor for the implementation contract
      * This is only used when deploying the implementation contract
@@ -91,6 +94,9 @@ contract ArbChainConfig is Initializable {
         SETTLEMENT_START_BLOCK = settlementStartBlock;
         SEQUENCING_CONTRACT_ADDRESS = sequencingContractAddress;
         SEQUENCING_START_BLOCK = sequencingStartBlock;
+
+        // Set initial version
+        version = "1.0.0";
 
         // Set mutable configuration parameters
         INITIAL_APPCHAIN_OWNER = initialAppchainOwner;
@@ -149,5 +155,13 @@ contract ArbChainConfig is Initializable {
         address oldOwner = owner;
         owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    /**
+     * @dev Updates the contract version (owner only, typically called during upgrades)
+     * @param newVersion The new version string (e.g., "1.1.0")
+     */
+    function updateVersion(string calldata newVersion) external onlyOwner {
+        version = newVersion;
     }
 }

@@ -262,4 +262,5 @@ contract SequencingModuleCheckerTest is Test {
         vm.expectRevert(abi.encodeWithSelector(DataTooLarge.selector, dataSize, 200000));
         manager.isAllowed(user1, user2, testData);
     }
+
 }

@@ -42,6 +42,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     /// @notice last epoch that was aggregated using the offchain mechanism (this data can be used for re-submissions)
     mapping(uint256 => bytes32) public aggregatedEpochDataHash;
 
+    /// @notice Version of the GasAggregator contract (updatable during upgrades)
+    string public version;
+
     /*//////////////////////////////////////////////////////////////
       ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -74,6 +77,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
 
         // consider all past epochs ignoed
         pendingEpoch = getCurrentEpoch();
+        version = "1.0.0";
         factory = _factory;
         challengeWindow = _challengeWindow;
     }
@@ -189,5 +193,11 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     /// @param newFactory The new factory contract address
     function setFactory(AppchainFactory newFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
         factory = newFactory;
+    }
+
+    /// @notice Updates the contract version (admin only, typically called during upgrades)
+    /// @param newVersion The new version string (e.g., "1.1.0")
+    function updateVersion(string calldata newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        version = newVersion;
     }
 }

@@ -24,6 +24,8 @@ struct SyndicateSequencingChainStorage {
     address factory;
     /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
     bool allowGasTrackingBanOnUpgrade;
+    /// @notice Version of the SyndicateSequencingChain contract (updatable during upgrades)
+    string version;
 }
 
 /// @title SyndicateSequencingChain
@@ -105,6 +107,11 @@ contract SyndicateSequencingChain is
         return $.allowGasTrackingBanOnUpgrade;
     }
 
+    function version() public view returns (string memory) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.version;
+    }
+
     /*//////////////////////////////////////////////////////////////
                             EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -150,6 +157,7 @@ contract SyndicateSequencingChain is
         $.appchainId = _appchainId;
         $.factory = msg.sender;
         $.allowGasTrackingBanOnUpgrade = false;
+        $.version = "1.0.0";
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
@@ -239,6 +247,14 @@ contract SyndicateSequencingChain is
         }
         super.transferOwnership(newOwner);
     }
+
+    /// @notice Updates the contract version (owner only, typically called during upgrades)
+    /// @param newVersion The new version string (e.g., "1.1.0")
+    function updateVersion(string calldata newVersion) external onlyOwner {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        $.version = newVersion;
+    }
+
     /*//////////////////////////////////////////////////////////////
                          GAS TRACKING ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/

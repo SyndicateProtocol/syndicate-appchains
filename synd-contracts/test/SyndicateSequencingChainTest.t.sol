@@ -585,4 +585,50 @@ contract SyndicateSequencingChainViewRequireAnyTest is SyndicateSequencingChainT
         assertEq(allChecks[0], address(mockRequireAny1));
         assertEq(allChecks[1], address(mockRequireAny2));
     }
+
+    // ================== VERSION TRACKING TESTS ==================
+
+    function testInitialVersionInSyndicateSequencingChain() public view {
+        assertEq(chain.version(), "1.0.0", "Initial version should be 1.0.0");
+    }
+
+    function testUpdateVersionInSyndicateSequencingChain() public {
+        vm.prank(admin);
+        chain.updateVersion("1.5.0");
+
+        assertEq(chain.version(), "1.5.0", "Version should be updated to 1.5.0");
+    }
+
+    function testUpdateVersionOnlyOwner() public {
+        address nonOwner = address(999);
+
+        vm.prank(nonOwner);
+        vm.expectRevert(); // Ownable error
+        chain.updateVersion("1.1.0");
+    }
+
+    function testVersionPersistsAfterOperations() public {
+        // Update version
+        vm.prank(admin);
+        chain.updateVersion("2.1.0");
+
+        // Perform chain operations
+        vm.prank(admin);
+        chain.setEmissionsReceiver(address(0x1234));
+
+        // Version should still be the same
+        assertEq(chain.version(), "2.1.0", "Version should persist after operations");
+    }
+
+    function testVersionUsesNamespacedStorage() public {
+        // Test that version is properly stored in namespaced storage
+        // and doesn't interfere with other storage variables
+        vm.prank(admin);
+        chain.updateVersion("3.2.1");
+
+        // Other storage should remain intact
+        assertEq(chain.appchainId(), 10042001, "AppchainId should remain intact");
+        assertEq(chain.factory(), address(factory), "Factory should remain intact");
+        assertEq(chain.version(), "3.2.1", "Version should be correctly stored");
+    }
 }

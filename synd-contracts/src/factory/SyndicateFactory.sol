@@ -40,6 +40,7 @@ enum NamespaceState {
 /// @dev Uses UUPS proxy pattern for upgradeability and CREATE2 pattern for deterministic deployments
 contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     /// @notice Emitted when a new SyndicateSequencingChain is created
+
     event SyndicateSequencingChainCreated(
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
     );
@@ -92,6 +93,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Fee required to create a sequencing chain (in native token)
     uint256 public creationFee;
 
+    /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
+    string public version;
+
     /// @notice Disables initializers to prevent the implementation contract from being initialized
     constructor() {
         _disableInitializers();
@@ -116,6 +120,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
+        // Set initial version
+        version = "1.0.0";
+
         // Deploy minimal stub implementation using CREATE2 for deterministic address
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
         stubImplementation = Create2.deploy(0, bytes32("SYNDICATE_STUB_V1"), stubBytecode);
@@ -132,6 +139,12 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Authorizes upgrades to new implementations (admin only)
     /// @param newImplementation The address of the new implementation
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    /// @notice Updates the contract version (admin only, typically called during upgrades)
+    /// @param newVersion The new version string (e.g., "1.1.0")
+    function updateVersion(string calldata newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        version = newVersion;
+    }
 
     /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID to prevent squatting
     /// @param admin The admin address for the new chain

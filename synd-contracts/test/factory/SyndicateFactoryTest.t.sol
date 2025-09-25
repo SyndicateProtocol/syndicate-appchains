@@ -1729,4 +1729,47 @@ contract SyndicateFactoryTest is Test {
         assertTrue(chainId1 > 0);
         assertTrue(chainId1 < 10 ** 18); // Within reasonable bounds
     }
+
+    // ================== VERSION TRACKING TESTS ==================
+
+    function testInitialVersion() public view {
+        assertEq(factory.version(), "1.0.0", "Initial version should be 1.0.0");
+    }
+
+    function testUpdateVersion() public {
+        vm.prank(admin);
+        factory.updateVersion("1.1.0");
+
+        assertEq(factory.version(), "1.1.0", "Version should be updated to 1.1.0");
+    }
+
+    function testUpdateVersionOnlyAdmin() public {
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        factory.updateVersion("1.1.0");
+    }
+
+    function testUpdateVersionWithDifferentFormats() public {
+        string[5] memory versions = ["1.1.0", "2.0.0-beta", "1.2.3", "3.0.0-alpha.1", "10.15.20"];
+
+        for (uint256 i = 0; i < versions.length; i++) {
+            vm.prank(admin);
+            factory.updateVersion(versions[i]);
+            assertEq(factory.version(), versions[i], "Version should match updated value");
+        }
+    }
+
+    function testVersionPersistsAfterOperations() public {
+        // Update version
+        vm.prank(admin);
+        factory.updateVersion("1.5.0");
+
+        // Perform other operations
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        vm.prank(admin);
+        factory.createSyndicateSequencingChainWithCustomId(12345, admin, permissionModule);
+
+        // Version should still be the same
+        assertEq(factory.version(), "1.5.0", "Version should persist after operations");
+    }
 }
