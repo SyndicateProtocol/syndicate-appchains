@@ -12,7 +12,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
-contract GasAggregatorIntegrationTest is Test {
+contract GasAggregatorTest is Test {
     GasAggregator public gasAggregator;
     SyndicateFactory public factory;
     SyndicateSequencingChain public sequencingChainImpl;
@@ -836,5 +836,63 @@ contract GasAggregatorIntegrationTest is Test {
         address[] memory emptyEmissionsReceivers = new address[](0);
         bytes32 expectedEmptyHash = keccak256(abi.encode(emptyChainIDs, emptyTokens, emptyEmissionsReceivers));
         assertEq(aggregatedHash, expectedEmptyHash, "Should aggregate empty arrays when all chains are invalid");
+    }
+
+    // ================== VERSION TRACKING TESTS ==================
+
+    function testInitialVersionInGasAggregator() public view {
+        assertEq(gasAggregator.version(), "1.0.0", "Initial version should be 1.0.0");
+    }
+
+    function testUpdateVersionInGasAggregator() public {
+        vm.prank(admin);
+        gasAggregator.updateVersion("1.3.0");
+
+        assertEq(gasAggregator.version(), "1.3.0", "Version should be updated to 1.3.0");
+    }
+
+    function testUpdateVersionOnlyAdmin() public {
+        address nonAdmin = address(999);
+
+        vm.prank(nonAdmin);
+        vm.expectRevert(); // AccessControl error
+        gasAggregator.updateVersion("1.1.0");
+    }
+
+    function testVersionPersistsAfterAggregatorOperations() public {
+        // Update version
+        vm.prank(admin);
+        gasAggregator.updateVersion("2.5.0");
+
+        // Perform aggregator operations
+        vm.prank(admin);
+        gasAggregator.setChallengeWindow(7200); // 2 hours
+
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(50);
+
+        // Version should still be the same
+        assertEq(gasAggregator.version(), "2.5.0", "Version should persist after aggregator operations");
+    }
+
+    function testVersionWithDifferentAdminRoles() public {
+        bytes32 defaultAdminRole = gasAggregator.DEFAULT_ADMIN_ROLE();
+
+        // Admin should be able to update version
+        assertTrue(gasAggregator.hasRole(defaultAdminRole, admin));
+
+        vm.prank(admin);
+        gasAggregator.updateVersion("3.0.0");
+        assertEq(gasAggregator.version(), "3.0.0", "Admin should be able to update version");
+
+        // Grant role to another address
+        address newAdmin = address(888);
+        vm.prank(admin);
+        gasAggregator.grantRole(defaultAdminRole, newAdmin);
+
+        // New admin should also be able to update version
+        vm.prank(newAdmin);
+        gasAggregator.updateVersion("3.1.0");
+        assertEq(gasAggregator.version(), "3.1.0", "New admin should be able to update version");
     }
 }
