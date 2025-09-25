@@ -22,9 +22,7 @@ contract SyndicateFactoryStorageTest is Test {
     uint256 constant CHAIN_IDS_SLOT = 1;
     uint256 constant STUB_IMPLEMENTATION_SLOT = 2;
     uint256 constant SYNDICATE_CHAIN_IMPL_SLOT = 3;
-    uint256 constant ALLOWED_IMPLEMENTATIONS_SLOT = 4;
-    uint256 constant IS_IMPLEMENTATION_ALLOWED_SLOT = 5;
-    uint256 constant SENDER_NONCES_SLOT = 6; // Our deterministic nonce variable
+    uint256 constant SENDER_NONCES_SLOT = 4; // Our deterministic nonce variable
 
     function setUp() public {
         admin = address(0x1);
@@ -45,14 +43,14 @@ contract SyndicateFactoryStorageTest is Test {
         address testSender = address(0x123);
 
         // Initially should be 0
-        assertEq(factory.getNextNonceForSender(testSender), 0);
+        assertEq(factory.senderNonces(testSender), 0);
 
         // Create a deterministic chain to increment the nonce
         vm.prank(testSender);
         factory.createSyndicateSequencingChain(admin, permissionModule);
 
         // Verify nonce was incremented
-        assertEq(factory.getNextNonceForSender(testSender), 1);
+        assertEq(factory.senderNonces(testSender), 1);
 
         // Verify the mapping storage location
         bytes32 senderNonceStorageLocation = keccak256(abi.encode(testSender, SENDER_NONCES_SLOT));
@@ -130,8 +128,8 @@ contract SyndicateFactoryStorageTest is Test {
         assertEq(factory.stubImplementation(), initialStubImpl);
 
         // Verify new functionality works correctly
-        assertEq(factory.getNextNonceForSender(sender1), 1);
-        assertEq(factory.getNextNonceForSender(sender2), 1);
+        assertEq(factory.senderNonces(sender1), 1);
+        assertEq(factory.senderNonces(sender2), 1);
     }
 
     /// @notice Fuzz test for storage integrity

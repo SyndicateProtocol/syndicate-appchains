@@ -327,6 +327,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     // TODO remove this
     function setGasAggregator(IGasAggregator _gasAggregator) external onlyRole(DEFAULT_ADMIN_ROLE) {
         gasAggregator = _gasAggregator;
+        gasAggregator.notifyNewImplementation(syndicateChainImpl);
     }
 
     /// @notice Set the implementation for new sequencing contract deployments (admin only)

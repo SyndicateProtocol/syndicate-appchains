@@ -33,7 +33,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
 
     /// @notice Factory contract for managing appchain contracts
     /// @dev Used to get appchain addresses and total count
-    IAppchainFactory public factory;
+    IAppchainFactory public factory; // TODO this could be a const too
 
     /// @notice Maximum number of appchains that can be queried automatically
     /// @dev When total appchains >= this value, off-chain aggregation is required

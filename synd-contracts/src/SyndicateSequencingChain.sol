@@ -70,9 +70,6 @@ contract SyndicateSequencingChain is
     GasCounter,
     UUPSUpgradeable
 {
-    error NoTxData();
-    error TransactionOrSenderNotAllowed();
-
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -114,6 +111,13 @@ contract SyndicateSequencingChain is
 
     // TODO calculate this as a CONSTANT
     IGasAggregator gasAggregator;
+    /*//////////////////////////////////////////////////////////////
+                            ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error NoTxData();
+    error TransactionOrSenderNotAllowed();
+    error UpgradeWouldResultInGasTrackingBan();
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS
@@ -172,10 +176,11 @@ contract SyndicateSequencingChain is
     /// @param _newImplementation The address of the new implementation contract.
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        bool isAllowed = IGasAggregator(gasAggregator).allowedImplementations(_newImplementation);
-
-        if (!isAllowed) {
-            require($.allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
+        if (!$.allowGasTrackingBanOnUpgrade) {
+            bool isAllowed = IGasAggregator(gasAggregator).allowedImplementations(_newImplementation);
+            if (!isAllowed) {
+                revert UpgradeWouldResultInGasTrackingBan();
+            }
         }
 
         try IGasAggregator(gasAggregator).notifyChainUpgrade(appchainId(), _newImplementation) {}

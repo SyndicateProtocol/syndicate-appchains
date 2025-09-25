@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
+import {SyndicateSequencingChain, IGasAggregator} from "../../src/SyndicateSequencingChain.sol";
 import {SyndicateSequencingChainTestingUpgradeability} from
     "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
 import {IPermissionModule} from "../../src/interfaces/IPermissionModule.sol";
@@ -12,6 +12,17 @@ import {IPermissionModule} from "../../src/interfaces/IPermissionModule.sol";
 /// @notice Mock factory contract for testing upgrades
 contract MockFactory {
     function isImplementationAllowed(address) external pure returns (bool) {
+        return true; // Allow all implementations for testing
+    }
+
+    function notifyChainUpgrade(uint256, address) external pure {
+        // No-op for testing
+    }
+}
+
+/// @notice Mock gas aggregator contract for testing upgrades
+contract MockGasAggregator {
+    function allowedImplementations(address) external pure returns (bool) {
         return true; // Allow all implementations for testing
     }
 
@@ -35,6 +46,7 @@ contract StorageUpgradeTest is Test {
     SyndicateSequencingChainTestingUpgradeability syndicateV2;
     ERC1967Proxy proxy;
     MockFactory factory;
+    MockGasAggregator gasAggregator;
 
     // Storage verification data
     struct OriginalStorageData {
@@ -51,8 +63,9 @@ contract StorageUpgradeTest is Test {
     event MaxTransactionsPerBatchUpdated(uint256 newMax);
 
     function setUp() public {
-        // Deploy mock factory
+        // Deploy mock factory and gas aggregator
         factory = new MockFactory();
+        gasAggregator = new MockGasAggregator();
 
         vm.startPrank(address(factory));
 
@@ -68,9 +81,11 @@ contract StorageUpgradeTest is Test {
 
         vm.stopPrank();
 
-        // Switch to admin to set emissions receiver
-        vm.prank(ADMIN);
+        // Switch to admin to set emissions receiver and gas aggregator
+        vm.startPrank(ADMIN);
         syndicateV1.setEmissionsReceiver(EMISSIONS_RECEIVER);
+        syndicateV1.setGasAggregator(IGasAggregator(address(gasAggregator)));
+        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////

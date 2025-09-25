@@ -2,9 +2,12 @@
 pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
-import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
+import {SyndicateFactory, IGasAggregator as IFactoryGasAggregator} from "src/factory/SyndicateFactory.sol";
 import {
-    SyndicateSequencingChain, L2MessageType_SignedTx, SequencingModuleChecker
+    SyndicateSequencingChain,
+    L2MessageType_SignedTx,
+    SequencingModuleChecker,
+    IGasAggregator
 } from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
@@ -76,12 +79,28 @@ contract SyndicateSequencingChainTestSetUp is Test {
 }
 
 contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
-    function isImplementationAllowed(address) external pure returns (bool) {
-        return true;
+    mapping(address => bool) public mockAllowedImplementations;
+    mapping(uint256 => bool) public mockBannedChains;
+
+    function isImplementationAllowed(address implementation) external view returns (bool) {
+        return mockAllowedImplementations[implementation];
     }
 
-    function notifyChainUpgrade(uint256, address) external {
-        // Mock implementation - no-op
+    function notifyChainUpgrade(uint256 chainID, address impl) external {
+        if (!mockAllowedImplementations[impl]) mockBannedChains[chainID] = true;
+    }
+
+    function allowedImplementations(address implementation) external view returns (bool) {
+        return mockAllowedImplementations[implementation];
+    }
+
+    function notifyNewImplementation(address implementation) external {
+        mockAllowedImplementations[implementation] = true;
+    }
+
+    // Helper function to manually set allowed implementations for testing
+    function setMockAllowedImplementation(address implementation, bool allowed) public {
+        mockAllowedImplementations[implementation] = allowed;
     }
 
     function testProcessRawTransaction() public {
@@ -185,6 +204,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
         SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
 
+        // Set up gas aggregator
+        vm.prank(admin);
+        SyndicateSequencingChain(chainProxy).setGasAggregator(IGasAggregator(address(this)));
+
         address badguy = makeAddr("badguy");
         vm.prank(badguy);
         vm.expectRevert();
@@ -196,6 +219,13 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
         SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
 
+        // Set up gas aggregator
+        vm.prank(admin);
+        SyndicateSequencingChain(chainProxy).setGasAggregator(IGasAggregator(address(this)));
+
+        // Allow the implementation
+        setMockAllowedImplementation(chainImpl, true);
+
         vm.prank(admin);
         UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
     }
@@ -203,7 +233,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     function testUpgradeWithAllowedImplementation() public {
         SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
 
-        // Deploy chain through factory to get proper factory setup
+        // Deploy chain through factory
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
         SyndicateFactory implementation2 = new SyndicateFactory();
         bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
@@ -211,11 +241,16 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
-        testFactory.addAllowedImplementation(address(newImpl), false);
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        // Set up gas aggregator and add implementation to allowlist
+        testFactory.setGasAggregator(IFactoryGasAggregator(address(this)));
+        SyndicateSequencingChain(chainAddr).setGasAggregator(IGasAggregator(address(this)));
         vm.stopPrank();
 
-        // Upgrade should succeed since implementation is allowed
+        // Allow the new implementation
+        setMockAllowedImplementation(address(newImpl), true);
+
+        // Upgrade should succeed since we mock the allowlist check
         // Set allowGasTrackingBanOnUpgrade to false (default is true)
         vm.prank(admin);
         SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
@@ -238,6 +273,8 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.startPrank(admin);
         (address chainAddr, uint256 chainId) =
             testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        // Set up gas aggregator on the chain
+        SyndicateSequencingChain(chainAddr).setGasAggregator(IGasAggregator(address(this)));
         vm.stopPrank();
 
         // Upgrade should succeed with allowGasTrackingBan=true even though implementation not allowed
@@ -262,7 +299,12 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.startPrank(admin);
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        // Set up gas aggregator on the chain
+        SyndicateSequencingChain(chainAddr).setGasAggregator(IGasAggregator(address(this)));
         vm.stopPrank();
+
+        // Make sure newImpl is NOT allowed
+        setMockAllowedImplementation(address(newImpl), false);
 
         // Upgrade should revert with allowGasTrackingBan=false
         // Set allowGasTrackingBanOnUpgrade to false
@@ -286,8 +328,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
-        testFactory.addAllowedImplementation(address(newImpl), false);
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        testFactory.setGasAggregator(IFactoryGasAggregator(address(this)));
+        SyndicateSequencingChain(chainAddr).setGasAggregator(IGasAggregator(address(this)));
         vm.stopPrank();
 
         address nonOwner = makeAddr("nonOwner");
@@ -314,9 +357,15 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         SyndicateSequencingChain impl1 = new SyndicateSequencingChain();
         SyndicateSequencingChain impl2 = new SyndicateSequencingChain();
 
-        // Allow only impl1
+        // Set up gas aggregator to mock implementation checking
         vm.prank(admin);
-        testFactory.addAllowedImplementation(address(impl1), false);
+        testFactory.setGasAggregator(IFactoryGasAggregator(address(this)));
+        // Also set the gas aggregator on the chain itself
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setGasAggregator(IGasAggregator(address(this)));
+
+        // Set up the mock: allow only impl1
+        setMockAllowedImplementation(address(impl1), true);
 
         // Verify impl1 upgrade works
         // Set allowGasTrackingBanOnUpgrade to false first
@@ -330,6 +379,18 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.prank(admin);
         vm.expectRevert("Upgrade would result in gas tracking ban");
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
+
+        // Verify that the chain is NOT blacklisted on the gas aggregator
+        assertFalse(mockBannedChains[123]);
+
+        // Set allowGasTrackingBanOnUpgrade to true
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(true);
+
+        // Verify impl2 upgrade succeds, but blacklists the chain on the gas aggregator
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
+        assertTrue(mockBannedChains[123]);
     }
 
     function testProcessTransactionsBulkAllAllowed() public {
