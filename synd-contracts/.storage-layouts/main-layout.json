@@ -2,7 +2,7 @@
   "SyndicateFactory": {
     "storage": [
       {
-        "astId": 8109,
+        "astId": 3385,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "appchainContracts",
         "offset": 0,
@@ -10,7 +10,7 @@
         "type": "t_mapping(t_uint256,t_address)"
       },
       {
-        "astId": 8112,
+        "astId": 3388,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "chainIDs",
         "offset": 0,
@@ -18,7 +18,7 @@
         "type": "t_array(t_uint256)dyn_storage"
       },
       {
-        "astId": 8115,
+        "astId": 3391,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "stubImplementation",
         "offset": 0,
@@ -26,7 +26,7 @@
         "type": "t_address"
       },
       {
-        "astId": 8118,
+        "astId": 3394,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "syndicateChainImpl",
         "offset": 0,
@@ -34,7 +34,7 @@
         "type": "t_address"
       },
       {
-        "astId": 8122,
+        "astId": 3398,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "allowedImplementations",
         "offset": 0,
@@ -42,7 +42,7 @@
         "type": "t_array(t_address)dyn_storage"
       },
       {
-        "astId": 8126,
+        "astId": 3402,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "isImplementationAllowed",
         "offset": 0,
@@ -50,7 +50,7 @@
         "type": "t_mapping(t_address,t_bool)"
       },
       {
-        "astId": 8131,
+        "astId": 3407,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "gasTrackingBanlist",
         "offset": 0,
@@ -58,7 +58,7 @@
         "type": "t_mapping(t_uint256,t_bool)"
       },
       {
-        "astId": 8133,
+        "astId": 3409,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "numberOfChainsBannedFromGasTracking",
         "offset": 0,
@@ -66,7 +66,7 @@
         "type": "t_uint256"
       },
       {
-        "astId": 8138,
+        "astId": 3414,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "senderNonces",
         "offset": 0,
@@ -74,12 +74,20 @@
         "type": "t_mapping(t_address,t_uint256)"
       },
       {
-        "astId": 8141,
+        "astId": 3417,
         "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
         "label": "creationFee",
         "offset": 0,
         "slot": "9",
         "type": "t_uint256"
+      },
+      {
+        "astId": 3420,
+        "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+        "label": "version",
+        "offset": 0,
+        "slot": "10",
+        "type": "t_string_storage"
       }
     ],
     "types": {
@@ -132,6 +140,11 @@
         "label": "mapping(uint256 => bool)",
         "numberOfBytes": "32",
         "value": "t_bool"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
       },
       "t_uint256": {
         "encoding": "inplace",
@@ -247,6 +260,14 @@
         "offset": 0,
         "slot": "11",
         "type": "t_string_storage"
+      },
+      {
+        "astId": 301,
+        "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+        "label": "version",
+        "offset": 0,
+        "slot": "12",
+        "type": "t_string_storage"
       }
     ],
     "types": {
@@ -270,17 +291,10 @@
     "contractPath": "src/ArbChainConfig.sol",
     "contractKind": "contract"
   },
-  "SequencingModuleChecker": {
-    "storage": [],
-    "types": {},
-    "layoutVersion": "1.2",
-    "contractPath": "src/SequencingModuleChecker.sol",
-    "contractKind": "contract"
-  },
   "GasAggregator": {
     "storage": [
       {
-        "astId": 941,
+        "astId": 942,
         "contract": "src/staking/GasAggregator.sol:GasAggregator",
         "label": "factory",
         "offset": 0,
@@ -288,7 +302,7 @@
         "type": "t_contract(AppchainFactory)931"
       },
       {
-        "astId": 943,
+        "astId": 945,
         "contract": "src/staking/GasAggregator.sol:GasAggregator",
         "label": "maxAppchainsToQuery",
         "offset": 0,
@@ -296,7 +310,7 @@
         "type": "t_uint256"
       },
       {
-        "astId": 946,
+        "astId": 948,
         "contract": "src/staking/GasAggregator.sol:GasAggregator",
         "label": "challengeWindow",
         "offset": 0,
@@ -304,7 +318,7 @@
         "type": "t_uint256"
       },
       {
-        "astId": 948,
+        "astId": 951,
         "contract": "src/staking/GasAggregator.sol:GasAggregator",
         "label": "pendingEpoch",
         "offset": 0,
@@ -312,7 +326,7 @@
         "type": "t_uint256"
       },
       {
-        "astId": 950,
+        "astId": 954,
         "contract": "src/staking/GasAggregator.sol:GasAggregator",
         "label": "pendingEpochFirstSubmissionTime",
         "offset": 0,
@@ -320,7 +334,7 @@
         "type": "t_uint256"
       },
       {
-        "astId": 952,
+        "astId": 957,
         "contract": "src/staking/GasAggregator.sol:GasAggregator",
         "label": "pendingDataHash",
         "offset": 0,
@@ -328,7 +342,7 @@
         "type": "t_bytes32"
       },
       {
-        "astId": 954,
+        "astId": 960,
         "contract": "src/staking/GasAggregator.sol:GasAggregator",
         "label": "pendingTotalTokensUsed",
         "offset": 0,
@@ -336,12 +350,20 @@
         "type": "t_uint256"
       },
       {
-        "astId": 959,
+        "astId": 965,
         "contract": "src/staking/GasAggregator.sol:GasAggregator",
         "label": "aggregatedEpochDataHash",
         "offset": 0,
         "slot": "7",
         "type": "t_mapping(t_uint256,t_bytes32)"
+      },
+      {
+        "astId": 968,
+        "contract": "src/staking/GasAggregator.sol:GasAggregator",
+        "label": "version",
+        "offset": 0,
+        "slot": "8",
+        "type": "t_string_storage"
       }
     ],
     "types": {
@@ -361,6 +383,11 @@
         "label": "mapping(uint256 => bytes32)",
         "numberOfBytes": "32",
         "value": "t_bytes32"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
       },
       "t_uint256": {
         "encoding": "inplace",

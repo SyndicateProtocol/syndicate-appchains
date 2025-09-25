@@ -7,12 +7,9 @@ import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-interface ISyndicateFactory {
-    function isImplementationAllowed(address implementation) external view returns (bool);
-}
-
 interface IGasAggregator {
     function notifyChainUpgrade(uint256 chainId, address newImplementation) external;
+    function allowedImplementations(address implementation) external view returns (bool);
 }
 
 uint8 constant L2MessageType_SignedTx = 4; // a regular signed transaction
@@ -175,7 +172,7 @@ contract SyndicateSequencingChain is
     /// @param _newImplementation The address of the new implementation contract.
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        bool isAllowed = ISyndicateFactory($.factory).isImplementationAllowed(_newImplementation);
+        bool isAllowed = IGasAggregator(gasAggregator).allowedImplementations(_newImplementation);
 
         if (!isAllowed) {
             require($.allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");

@@ -8,7 +8,7 @@ contract RelayerMocks {
         emit Deposit(msg.sender, epochIndex, msg.value);
     }
 
-    function getCurrentEpoch() external view returns (uint256) {
+    function getCurrentEpoch() external pure returns (uint256) {
         return 1;
     }
 }

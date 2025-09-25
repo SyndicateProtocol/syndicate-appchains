@@ -8,7 +8,6 @@ const upgradeableContracts = [
   'SyndicateFactory',
   'SyndicateSequencingChain',
   'ArbChainConfig',
-  'SequencingModuleChecker',
   'GasAggregator'
 ];
 

@@ -13,9 +13,9 @@ struct GasCounterStorage {
 
 /**
  * @title GasCounter
- * @notice Tracks gas consumption over 30-day epoch for reward calculation
- * @dev This contract provides gas tracking functionality that can be inherited by sequencing contracts
- * @author Syndicate Protocol
+ * @notice Tracks gas consumption over 30-day epochs for reward calculation
+ * @dev This contract provides gas tracking functionality that can be inherited by sequencing contracts.
+ *      It automatically tracks gas usage and converts it to token costs for reward distribution.
  */
 abstract contract GasCounter is EpochTracker {
     /*//////////////////////////////////////////////////////////////
@@ -53,6 +53,8 @@ abstract contract GasCounter is EpochTracker {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Modifier that tracks gas usage for a function call
+    /// @dev Automatically measures gas consumption and converts to token cost
+    ///      Gas tracking can be disabled by setting gasTrackingDisabled to true
     modifier trackGasUsage() {
         if (!gasTrackingEnabled()) {
             _;
@@ -72,8 +74,9 @@ abstract contract GasCounter is EpochTracker {
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Internal function to track gas usage
-    /// @param gasUsed Amount of gas consumed
+    /// @notice Internal function to track gas usage and accumulate costs
+    /// @dev Converts gas usage to token cost using current gas price and adds to epoch total
+    /// @param gasUsed Amount of gas consumed by the function call
     function _trackGas(uint256 gasUsed) internal {
         uint256 currentEpoch = getCurrentEpoch();
 
@@ -81,6 +84,7 @@ abstract contract GasCounter is EpochTracker {
         uint256 gasPrice = tx.gasprice;
 
         // WORKAROUND: estimate gas will give a wrong value when called with tx.gasprice 0
+        // Use minimum price of 1 wei to ensure calculation doesn't fail
         if (gasPrice == 0) {
             gasPrice = 1;
         }
