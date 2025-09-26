@@ -18,17 +18,17 @@ methods {
     function TOTAL_EPOCHS() external returns (uint256) envfree;
     function EMISSIONS_CAP() external returns (uint256) envfree;
     function SCALE() external returns (uint256) envfree;
-    function changeFactors(uint256) external returns (uint256) envfree;
+    function changeFactor() external returns (uint256) envfree;
     
     // State-changing functions  
     function initializeEmissions(uint256) external => NONDET;
     function calculateAndMintEmission(address, uint256) external returns (uint256) => NONDET;
-    function setChangeFactor(uint256, uint256) external => NONDET;
+    function setChangeFactor(uint256) external => NONDET;
     
     // View calculation functions
     function getRemainingSupply() external returns (uint256) envfree;
     function getNextEmission() external returns (uint256) envfree;
-    function calculateCumulativeProduct(uint256) external returns (uint256) envfree;
+    function calculateCumulativeProduct() external returns (uint256) envfree;
     function isCompleted() external returns (bool) envfree;
     
     // Mock token functions
@@ -164,13 +164,12 @@ rule cannotMintBeforeInitialization(address to, uint256 expectedEpoch) {
 }
 
 /*
- * RULE 7: Change factors must be within valid bounds (0 < r < 1, scaled by 1e18)
+ * RULE 7: Change factors must be within valid bounds (0 < r, scaled by 1e18)
  */
-rule changeFactorBounds(uint256 epoch, uint256 changeFactor) {
+rule changeFactorBounds(uint256 changeFactor) {
     env e;
-    require epoch < TOTAL_EPOCHS();
     
-    setChangeFactor@withrevert(e, epoch, changeFactor);
+    setChangeFactor@withrevert(e, changeFactor);
     bool success = !lastReverted;
     
     // Should succeed only for valid change factors
@@ -178,28 +177,14 @@ rule changeFactorBounds(uint256 epoch, uint256 changeFactor) {
     
     // Test invalid change factors separately
     env e2;
-    require epoch < TOTAL_EPOCHS();
     require changeFactor == 0;
-    setChangeFactor@withrevert(e2, epoch, changeFactor);
+    setChangeFactor@withrevert(e2, changeFactor);
     assert lastReverted;
 }
 
-/*
- * RULE 8: Cannot modify past epochs' change factors
- */
-rule cannotModifyPastChangeFactors(uint256 epoch, uint256 changeFactor) {
-    env e;
-    require epoch < currentEpoch();
-    require changeFactor > 0;
-    
-    setChangeFactor@withrevert(e, epoch, changeFactor);
-    
-    assert lastReverted, "Should not be able to modify past epochs";
-}
-
 
 /*
- * RULE 10: Remaining supply decreases monotonically (never increases)
+ * RULE 8: Remaining supply decreases monotonically (never increases)
  */
 rule remainingSupplyMonotonicallyDecreases(address to, uint256 expectedEpoch) {
     env e;
@@ -218,7 +203,7 @@ rule remainingSupplyMonotonicallyDecreases(address to, uint256 expectedEpoch) {
 }
 
 /*
- * RULE 11: Geometric change formula correctness for non-final epochs
+ * RULE 9: Geometric change formula correctness for non-final epochs
  */
 rule geometricChangeFormulaCorrectness(address to) {
     env e;
@@ -227,8 +212,8 @@ rule geometricChangeFormulaCorrectness(address to) {
     
     uint256 epoch = currentEpoch();
     uint256 remainingSupply = getRemainingSupply();
-    uint256 changeFactor = changeFactors(epoch);
-    uint256 cumulativeProduct = calculateCumulativeProduct(epoch);
+    uint256 changeFactor = changeFactor();
+    uint256 cumulativeProduct = calculateCumulativeProduct();
     
     require changeFactor > 0;
     require cumulativeProduct < SCALE(); // Avoid edge cases
@@ -251,25 +236,24 @@ rule geometricChangeFormulaCorrectness(address to) {
 }
 
 /*
- * RULE 12: Cumulative product calculation correctness
+ * RULE 10: Cumulative product calculation correctness
  */
-rule cumulativeProductCorrectness(uint256 fromEpoch) {
-    require fromEpoch < TOTAL_EPOCHS();
+rule cumulativeProductCorrectness() {
     require initialized(); // Must be initialized
     
     // Assume change factors are properly bounded for meaningful test
     // This is a simplified test focusing on the basic bounds
-    uint256 product = calculateCumulativeProduct(fromEpoch);
+    uint256 product = calculateCumulativeProduct();
     
     // Basic bounds check - product should be reasonable
     assert product >= 0;
     
-    // If fromEpoch is at the end, product should equal SCALE
-    assert fromEpoch >= TOTAL_EPOCHS() => product == SCALE();
+    // If curentEpoch is at the end, product should equal SCALE
+    assert currentEpoch() >= TOTAL_EPOCHS() => product == SCALE();
 }
 
 /*
- * RULE 13: Zero address cannot receive minted tokens
+ * RULE 11: Zero address cannot receive minted tokens
  */
 rule zeroAddressCannotReceiveTokens(uint256 expectedEpoch) {
     env e;
@@ -282,7 +266,7 @@ rule zeroAddressCannotReceiveTokens(uint256 expectedEpoch) {
 }
 
 /*
- * RULE 14: Epoch synchronization prevents race conditions
+ * RULE 12: Epoch synchronization prevents race conditions
  */
 rule epochSynchronizationPreventsRaces(address to, uint256 expectedEpoch) {
     env e;
@@ -296,7 +280,7 @@ rule epochSynchronizationPreventsRaces(address to, uint256 expectedEpoch) {
 }
 
 /*
- * RULE 15: State transitions are atomic
+ * RULE 13: State transitions are atomic
  */
 rule stateTransitionsAtomic(address to, uint256 expectedEpoch) {
     env e;

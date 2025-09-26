@@ -174,6 +174,68 @@ contract EmissionsForkTest is Test {
         return tokensPerEpoch[epoch];
     }
 
+    function expectedMintAmount_ChangeFactorMultiple(uint256 epoch) public pure returns (uint256) {
+        // Token amounts per epoch based on the provided data (in wei)
+        uint256[48] memory tokensPerEpoch = [
+            uint256(1666667), // Epoch 0
+            uint256(1666667), // Epoch 1
+            uint256(1666667), // Epoch 2
+            uint256(1666667), // Epoch 3
+            // CHANGE FACTOR: 1.015
+            uint256(1188761), // Epoch 4
+            uint256(1206592), // Epoch 5
+            uint256(1224691), // Epoch 6
+            uint256(1243061), // Epoch 7
+            uint256(1261707), // Epoch 8
+            uint256(1280633), // Epoch 9
+            uint256(1299843), // Epoch 10
+            uint256(1319340), // Epoch 11
+            uint256(1339130), // Epoch 12
+            uint256(1359217), // Epoch 13
+            uint256(1379606), // Epoch 14
+            uint256(1400300), // Epoch 15
+            uint256(1421304), // Epoch 16
+            uint256(1442624), // Epoch 17
+            uint256(1464263), // Epoch 18
+            uint256(1486227), // Epoch 19
+            uint256(1508520), // Epoch 20
+            // CHANGE FACTOR: 0.995
+            uint256(1995084), // Epoch 21
+            uint256(1985108), // Epoch 22
+            uint256(1975183), // Epoch 23
+            uint256(1965307), // Epoch 24
+            uint256(1955480), // Epoch 25
+            uint256(1945703), // Epoch 26
+            uint256(1935975), // Epoch 27
+            uint256(1926295), // Epoch 28
+            uint256(1916663), // Epoch 29
+            uint256(1907080), // Epoch 30
+            uint256(1897545), // Epoch 31
+            uint256(1888057), // Epoch 32
+            uint256(1878617), // Epoch 33
+            uint256(1869223), // Epoch 34
+            uint256(1859877), // Epoch 35
+            uint256(1850578), // Epoch 36
+            uint256(1841325), // Epoch 37
+            uint256(1832119), // Epoch 38
+            uint256(1822958), // Epoch 39
+            uint256(1813843), // Epoch 40
+            uint256(1804774), // Epoch 41
+            uint256(1795751), // Epoch 42
+            uint256(1786772), // Epoch 43
+            uint256(1777838), // Epoch 44
+            uint256(1768949), // Epoch 45
+            uint256(1760105), // Epoch 46
+            uint256(1751305) // Epoch 47
+        ];
+
+        if (epoch >= 48) {
+            return 0;
+        }
+
+        return tokensPerEpoch[epoch];
+    }
+
     function round(uint256 _weiAmount) public pure returns (uint256) {
         // Standard integer rounding: add half the divisor before dividing.
         return (_weiAmount + (1 ether / 2)) / 1 ether;
@@ -262,7 +324,7 @@ contract EmissionsForkTest is Test {
         emissionsScheduler.mintEmission();
     }
 
-    function test_emissions_ChangeFactorToScale() public {
+    function test_emissions_ChangeFactorFlat() public {
         // Initialize emissions calculator
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(1e18);
@@ -285,6 +347,56 @@ contract EmissionsForkTest is Test {
             emissionsScheduler.mintEmission();
             uint256 mintAmount = round(emissionsScheduler.totalEmissionsMinted() - totalMinted);
             uint256 expected = uint256(1666667);
+            if (mintAmount != expected) {
+                console2.log("Epoch %s: Expected %s, Actual %s", i, expected, mintAmount);
+                if (mintAmount > expected + acceptedDiff || mintAmount < expected - acceptedDiff) {
+                    revert("Mint amount is not within accepted diff");
+                }
+            }
+            totalMinted = emissionsScheduler.totalEmissionsMinted();
+        }
+
+        // Final checks
+        assertEq(emissionsScheduler.getCurrentEpoch(), startEpoch + 47);
+        assertEq(emissionsScheduler.totalEmissionsMinted(), totalMinted);
+        assertTrue(emissionsScheduler.emissionsEnded());
+
+        // Confirm we cant mint after all epochs are minted
+        vm.expectRevert(EmissionsScheduler.AllEmissionsCompleted.selector);
+        emissionsScheduler.mintEmission();
+    }
+
+    function test_emissions_ChangeFactorMultiple() public {
+        // Initialize emissions calculator
+        vm.prank(syndTokenAdmin);
+        emissionsCalculator.initializeEmissions(1e18);
+        vm.stopPrank();
+
+        uint256 totalMinted = emissionsScheduler.totalEmissionsMinted();
+
+        // Initial checks
+        assertEq(emissionsCalculator.currentEpoch(), 0);
+        assertEq(emissionsScheduler.getCurrentEpoch(), startEpoch - 1);
+        assertEq(totalMinted, 0);
+        assertFalse(emissionsScheduler.emissionsStarted());
+
+        // Confirm we cant mint yet
+        vm.expectRevert(EmissionsScheduler.NoEmissionsToMint.selector);
+        emissionsScheduler.mintEmission();
+
+        for (uint256 i = 0; i <= 47; i++) {
+            if (i == 4) {
+                vm.prank(syndTokenAdmin);
+                emissionsCalculator.setChangeFactor(1.015e18);
+            }
+            if (i == 21) {
+                vm.prank(syndTokenAdmin);
+                emissionsCalculator.setChangeFactor(0.995e18);
+            }
+            vm.warp(emissionsScheduler.getEpochStart(i + startEpoch));
+            emissionsScheduler.mintEmission();
+            uint256 mintAmount = round(emissionsScheduler.totalEmissionsMinted() - totalMinted);
+            uint256 expected = expectedMintAmount_ChangeFactorMultiple(i);
             if (mintAmount != expected) {
                 console2.log("Epoch %s: Expected %s, Actual %s", i, expected, mintAmount);
                 if (mintAmount > expected + acceptedDiff || mintAmount < expected - acceptedDiff) {
