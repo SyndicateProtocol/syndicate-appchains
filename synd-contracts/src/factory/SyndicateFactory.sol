@@ -135,12 +135,13 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID to prevent squatting
+    /// @param nonce The user-specified nonce for chainID generation
     /// @param admin The admin address for the new chain
     /// @param permissionModule The pre-deployed permission module
     /// @return sequencingChain The deployed sequencing chain address
     /// @return actualChainId The chain ID that was used
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChain(address admin, IRequirementModule permissionModule)
+    function createSyndicateSequencingChain(uint256 nonce, address admin, IRequirementModule permissionModule)
         external
         whenNotPaused
         returns (address sequencingChain, uint256 actualChainId)
@@ -149,20 +150,16 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
             revert ZeroAddress();
         }
 
-        // Use current nonce for this sender and increment it
-        uint256 actualNonce = senderNonces[msg.sender];
-        actualChainId = generateDeterministicChainId(msg.sender, actualNonce);
+        // Generate chainID using user-provided nonce
+        actualChainId = generateDeterministicChainId(msg.sender, nonce);
 
         // Validate chain ID is not already used
         if (appchainContracts[actualChainId] != address(0)) {
             revert ChainIdAlreadyExists();
         }
 
-        // Increment the sender's nonce for next use
-        senderNonces[msg.sender]++;
-
         // Emit deterministic chainID generation event
-        emit DeterministicChainIdGenerated(msg.sender, actualNonce, actualChainId);
+        emit DeterministicChainIdGenerated(msg.sender, nonce, actualChainId);
 
         // Deploy the sequencing chain using consistent proxy bytecode
         bytes memory consistentBytecode = getProxyBytecode();

@@ -96,6 +96,11 @@ jobs:
           echo "📋 Setting up baseline layout from main branch..."
           echo "DEBUG: Current branch before checkout: $(git branch --show-current)"
 
+          # Stash any local changes (like foundry.lock updates) before checkout
+          echo "DEBUG: Stashing any local changes..."
+          git add -A
+          git stash --include-untracked --quiet || echo "No changes to stash"
+
           git fetch origin main:main
           git checkout main
           echo "DEBUG: Switched to branch: $(git branch --show-current)"
@@ -105,7 +110,23 @@ jobs:
           forge install
 
           echo "DEBUG: Creating baseline on main branch..."
-          if make storage-layout-baseline; then
+          # Check if storage-layout-baseline target exists, otherwise create baseline manually
+          if make -n storage-layout-baseline >/dev/null 2>&1; then
+            echo "Using make target to create baseline..."
+            make storage-layout-baseline
+          elif [ -f "scripts/storage-checks/forge-extract.js" ]; then
+            echo "Make target not available but script exists, creating baseline manually..."
+            forge build
+            mkdir -p .storage-layouts
+            node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json
+          else
+            echo "⚠️ Storage layout scripts not available on main branch - this is expected for initial setup"
+            echo "Creating empty baseline file - the current branch will establish the baseline"
+            mkdir -p .storage-layouts
+            echo "{}" > .storage-layouts/main-layout.json
+          fi
+
+          if [ -f .storage-layouts/main-layout.json ]; then
             echo "✅ SUCCESS: Baseline created on main branch"
             ls -la .storage-layouts/
           else
@@ -114,9 +135,28 @@ jobs:
             exit 1
           fi
 
+          # Copy the baseline file to a safe location before checkout
+          echo "DEBUG: Backing up baseline file..."
+          cp .storage-layouts/main-layout.json /tmp/main-layout.json 2>/dev/null || echo "No baseline to backup"
+
+          # Clean any git changes made on main branch before switching back
+          echo "DEBUG: Cleaning git state before checkout..."
+          git add -A
+          git stash --include-untracked --quiet || echo "Nothing to stash on main branch"
+
           # Switch back to PR branch
+          echo "DEBUG: Switching back to PR branch..."
           git checkout ${{ github.head_ref }}
           echo "DEBUG: Switched back to branch: $(git branch --show-current)"
+
+          # Restore the baseline file
+          echo "DEBUG: Restoring baseline file..."
+          mkdir -p .storage-layouts
+          cp /tmp/main-layout.json .storage-layouts/main-layout.json 2>/dev/null || echo "No baseline to restore"
+
+          # Restore original stashed changes if any
+          echo "DEBUG: Restoring original stashed changes..."
+          git stash pop --quiet || echo "No original stashed changes to restore"
 
           # Rebuild current branch
           echo "DEBUG: Reinstalling dependencies on PR branch..."
@@ -138,8 +178,8 @@ jobs:
           echo "⚖️ Comparing storage layouts between main and current branch..."
           echo "DEBUG: Checking for baseline file..."
 
-          if [ ! -f .storage-layouts/main-layout.json ]; then
-            echo "📋 No baseline found on main branch. Creating initial baseline..."
+          if [ ! -f .storage-layouts/main-layout.json ] || [ "$(cat .storage-layouts/main-layout.json)" = "{}" ]; then
+            echo "📋 No baseline found on main branch (or empty baseline). Creating initial baseline..."
             echo "ℹ️ This PR will establish the storage layout baseline for future comparisons."
 
             if [ -f .storage-layouts/current-layout.json ]; then

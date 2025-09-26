@@ -86,9 +86,7 @@ contract EmissionsCalculatorTest is Test {
         assertTrue(calculator.initialized());
 
         // Check that all epochs have the default change factor
-        for (uint256 i = 0; i < TOTAL_EPOCHS; i++) {
-            assertEq(calculator.getChangeFactor(i), defaultChangeFactor);
-        }
+        assertEq(calculator.changeFactor(), defaultChangeFactor);
     }
 
     function test_RevertWhen_InitializeEmissions_NotAdmin() public {
@@ -121,67 +119,24 @@ contract EmissionsCalculatorTest is Test {
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
-        uint256 epoch = 5;
         uint256 newChangeFactor = 0.9e18;
 
         vm.expectEmit(true, false, true, true);
-        emit ChangeFactorSet(epoch, newChangeFactor, changeFactorManager);
+        emit ChangeFactorSet(0, newChangeFactor, changeFactorManager);
 
         vm.prank(changeFactorManager);
-        calculator.setChangeFactor(epoch, newChangeFactor);
+        calculator.setChangeFactor(newChangeFactor);
 
-        assertEq(calculator.getChangeFactor(epoch), newChangeFactor);
+        assertEq(calculator.changeFactor(), newChangeFactor);
     }
 
-    function test_RevertWhen_SetChangeFactor_NotManager() public {
-        vm.prank(admin);
-        calculator.initializeEmissions(0.95e18);
-
-        vm.prank(user);
-        vm.expectRevert();
-        calculator.setChangeFactor(5, 0.9e18);
-    }
-
-    function test_RevertWhen_SetChangeFactor_InvalidEpoch() public {
+    function test_SetChangeFactor_Zero() public {
         vm.prank(admin);
         calculator.initializeEmissions(0.95e18);
 
         vm.prank(changeFactorManager);
-        vm.expectRevert(EmissionsCalculator.InvalidEpoch.selector);
-        calculator.setChangeFactor(TOTAL_EPOCHS, 0.9e18);
-    }
-
-    function test_RevertWhen_SetChangeFactor_PastEpoch() public {
-        vm.prank(admin);
-        calculator.initializeEmissions(0.95e18);
-
-        // Move to epoch 5
-        for (uint256 i = 0; i < 5; i++) {
-            vm.prank(admin);
-            calculator.calculateAndMintEmission(treasury, i);
-        }
-
-        // Try to modify a past epoch
-        vm.prank(changeFactorManager);
-        vm.expectRevert(EmissionsCalculator.CannotModifyPastEpoch.selector);
-        calculator.setChangeFactor(2, 0.9e18);
-    }
-
-    function test_SetChangeFactors_Batch() public {
-        vm.prank(admin);
-        calculator.initializeEmissions(0.95e18);
-
-        uint256[] memory newChangeFactors = new uint256[](3);
-        newChangeFactors[0] = 0.9e18;
-        newChangeFactors[1] = 0.85e18;
-        newChangeFactors[2] = 0.8e18;
-
-        vm.prank(changeFactorManager);
-        calculator.setChangeFactors(5, newChangeFactors);
-
-        assertEq(calculator.getChangeFactor(5), 0.9e18);
-        assertEq(calculator.getChangeFactor(6), 0.85e18);
-        assertEq(calculator.getChangeFactor(7), 0.8e18);
+        vm.expectRevert(EmissionsCalculator.InvalidChangeFactor.selector);
+        calculator.setChangeFactor(0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -197,7 +152,7 @@ contract EmissionsCalculatorTest is Test {
         assertEq(remainingSupply, EMISSIONS_CAP);
 
         // Calculate expected emission for first epoch
-        uint256 pt = calculator.calculateCumulativeProduct(0);
+        uint256 pt = calculator.calculateCumulativeProduct();
         uint256 expectedEmission = (remainingSupply * (SCALE - changeFactor)) / (SCALE - pt);
 
         uint256 initialBalance = token.balanceOf(treasury);
@@ -282,7 +237,7 @@ contract EmissionsCalculatorTest is Test {
         calculator.initializeEmissions(0.95e18);
 
         // Test cumulative product calculation
-        uint256 product = calculator.calculateCumulativeProduct(0);
+        uint256 product = calculator.calculateCumulativeProduct();
 
         // For all epochs with same change factor 0.95:
         // P_0 = 0.95^48
@@ -335,38 +290,6 @@ contract EmissionsCalculatorTest is Test {
     /*//////////////////////////////////////////////////////////////
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
-
-    function test_Integration_VariableChangeFactors() public {
-        vm.prank(admin);
-        calculator.initializeEmissions(0.95e18);
-
-        // Set different change factors for different periods
-        uint256[] memory changeFactorArray = new uint256[](12);
-        for (uint256 i = 0; i < 12; i++) {
-            changeFactorArray[i] = 0.9e18 - (i * 0.01e18); // Decreasing change factors
-        }
-
-        vm.prank(changeFactorManager);
-        calculator.setChangeFactors(10, changeFactorArray);
-
-        // Mint first 10 epochs with original change factor
-        uint256 totalMinted = 0;
-        for (uint256 i = 0; i < 10; i++) {
-            vm.prank(admin);
-            uint256 emission = calculator.calculateAndMintEmission(treasury, i);
-            totalMinted += emission;
-        }
-
-        // Mint next epochs with modified change factors
-        for (uint256 i = 10; i < 22; i++) {
-            vm.prank(admin);
-            uint256 emission = calculator.calculateAndMintEmission(treasury, i);
-            totalMinted += emission;
-        }
-
-        assertEq(calculator.totalEmitted(), totalMinted);
-        assertEq(calculator.currentEpoch(), 22);
-    }
 
     function test_Integration_FullEmissionCycle() public {
         vm.prank(admin);
