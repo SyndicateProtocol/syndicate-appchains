@@ -120,10 +120,31 @@ jobs:
             mkdir -p .storage-layouts
             node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json
           else
-            echo "⚠️ Storage layout scripts not available on main branch - this is expected for initial setup"
-            echo "Creating empty baseline file - the current branch will establish the baseline"
+            echo "⚠️ Storage layout scripts not available on main branch"
+            echo "Building contracts and extracting storage layout directly..."
+            forge build
             mkdir -p .storage-layouts
-            echo "{}" > .storage-layouts/main-layout.json
+
+            # Extract storage layouts directly using forge inspect
+            echo "{" > .storage-layouts/main-layout.json
+            echo '  "contracts": {' >> .storage-layouts/main-layout.json
+
+            # Extract SyndicateFactory layout
+            echo '    "SyndicateFactory": {' >> .storage-layouts/main-layout.json
+            echo '      "storageLayout": ' >> .storage-layouts/main-layout.json
+            forge inspect SyndicateFactory storageLayout >> .storage-layouts/main-layout.json
+            echo '    },' >> .storage-layouts/main-layout.json
+
+            # Extract other key contracts
+            echo '    "SyndicateSequencingChain": {' >> .storage-layouts/main-layout.json
+            echo '      "storageLayout": ' >> .storage-layouts/main-layout.json
+            forge inspect SyndicateSequencingChain storageLayout >> .storage-layouts/main-layout.json
+            echo '    }' >> .storage-layouts/main-layout.json
+
+            echo '  }' >> .storage-layouts/main-layout.json
+            echo '}' >> .storage-layouts/main-layout.json
+
+            echo "✅ Baseline created from main branch contracts"
           fi
 
           if [ -f .storage-layouts/main-layout.json ]; then
@@ -178,8 +199,11 @@ jobs:
           echo "⚖️ Comparing storage layouts between main and current branch..."
           echo "DEBUG: Checking for baseline file..."
 
-          if [ ! -f .storage-layouts/main-layout.json ] || [ "$(cat .storage-layouts/main-layout.json)" = "{}" ]; then
-            echo "📋 No baseline found on main branch (or empty baseline). Creating initial baseline..."
+          # Check if we have a real baseline (not just empty {})
+          baseline_size=$(wc -c < .storage-layouts/main-layout.json 2>/dev/null || echo "0")
+
+          if [ ! -f .storage-layouts/main-layout.json ] || [ "$baseline_size" -lt 10 ]; then
+            echo "📋 No meaningful baseline found on main branch. Creating initial baseline..."
             echo "ℹ️ This PR will establish the storage layout baseline for future comparisons."
 
             if [ -f .storage-layouts/current-layout.json ]; then
@@ -231,45 +255,6 @@ jobs:
           echo ""
           echo "🛡️ Your upgradeable contracts are safe from storage collisions!"
 
-      - name: Comment PR with results
-        if: github.event_name == 'pull_request' && success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            let message = `## ✅ Storage Layout Validation Passed
-
-            🛡️ **All storage layout checks completed successfully!**
-
-            ### Checks Performed:
-            - ✅ Contract inheritance ordering validation
-            - ✅ Storage layout extraction and analysis`;
-
-            // Check if this established a new baseline
-            if (!fs.existsSync('.storage-layouts/main-layout.json') || fs.readFileSync('.storage-layouts/main-layout.json', 'utf8') === '{}') {
-              message += `
-            - ✅ **Initial baseline established** for future storage layout comparisons
-
-            ### What this means:
-            This PR establishes the **storage layout baseline** for your upgradeable contracts. Future PRs will be validated against this baseline to prevent storage collisions.`;
-            } else {
-              message += `
-            - ✅ Storage layout compatibility between \`main\` and current branch
-
-            ### What this means:
-            Your upgradeable contracts (like \`SyndicateFactory\`) are **safe from storage collisions** during upgrades. No existing storage slots will be corrupted or overwritten.`;
-            }
-
-            message += `
-
-            📊 Storage layout artifacts have been uploaded and can be reviewed in the workflow run.`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: message
-            })
 
       - name: Fail with helpful message
         if: failure()
