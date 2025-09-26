@@ -82,9 +82,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     address[] public allowedImplementations;
     mapping(address => bool) public isImplementationAllowed;
 
-    /// @notice TESTING: Intentional storage clash - this will break storage layout
-    uint256 public testStorageClashVariable;
-
     /// @notice Chains banned from gas tracking due to not allowed implementation
     mapping(uint256 => bool) public gasTrackingBanlist;
     uint256 public numberOfChainsBannedFromGasTracking;
