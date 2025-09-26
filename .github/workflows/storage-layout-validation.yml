@@ -135,13 +135,28 @@ jobs:
             exit 1
           fi
 
+          # Copy the baseline file to a safe location before checkout
+          echo "DEBUG: Backing up baseline file..."
+          cp .storage-layouts/main-layout.json /tmp/main-layout.json 2>/dev/null || echo "No baseline to backup"
+
+          # Clean any git changes made on main branch before switching back
+          echo "DEBUG: Cleaning git state before checkout..."
+          git add -A
+          git stash --include-untracked --quiet || echo "Nothing to stash on main branch"
+
           # Switch back to PR branch
+          echo "DEBUG: Switching back to PR branch..."
           git checkout ${{ github.head_ref }}
           echo "DEBUG: Switched back to branch: $(git branch --show-current)"
 
-          # Restore stashed changes if any
-          echo "DEBUG: Restoring stashed changes..."
-          git stash pop --quiet || echo "No stashed changes to restore"
+          # Restore the baseline file
+          echo "DEBUG: Restoring baseline file..."
+          mkdir -p .storage-layouts
+          cp /tmp/main-layout.json .storage-layouts/main-layout.json 2>/dev/null || echo "No baseline to restore"
+
+          # Restore original stashed changes if any
+          echo "DEBUG: Restoring original stashed changes..."
+          git stash pop --quiet || echo "No original stashed changes to restore"
 
           # Rebuild current branch
           echo "DEBUG: Reinstalling dependencies on PR branch..."
