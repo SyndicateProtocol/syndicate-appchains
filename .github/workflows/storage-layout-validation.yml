@@ -110,7 +110,18 @@ jobs:
           forge install
 
           echo "DEBUG: Creating baseline on main branch..."
-          if make storage-layout-baseline; then
+          # Check if storage-layout-baseline target exists, otherwise create baseline manually
+          if make -n storage-layout-baseline >/dev/null 2>&1; then
+            echo "Using make target to create baseline..."
+            make storage-layout-baseline
+          else
+            echo "Make target not available, creating baseline manually..."
+            forge build
+            mkdir -p .storage-layouts
+            node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json
+          fi
+
+          if [ -f .storage-layouts/main-layout.json ]; then
             echo "✅ SUCCESS: Baseline created on main branch"
             ls -la .storage-layouts/
           else
