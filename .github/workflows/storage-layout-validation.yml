@@ -120,10 +120,31 @@ jobs:
             mkdir -p .storage-layouts
             node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json
           else
-            echo "⚠️ Storage layout scripts not available on main branch - this is expected for initial setup"
-            echo "Creating empty baseline file - the current branch will establish the baseline"
+            echo "⚠️ Storage layout scripts not available on main branch"
+            echo "Building contracts and extracting storage layout directly..."
+            forge build
             mkdir -p .storage-layouts
-            echo "{}" > .storage-layouts/main-layout.json
+
+            # Extract storage layouts directly using forge inspect
+            echo "{" > .storage-layouts/main-layout.json
+            echo '  "contracts": {' >> .storage-layouts/main-layout.json
+
+            # Extract SyndicateFactory layout
+            echo '    "SyndicateFactory": {' >> .storage-layouts/main-layout.json
+            echo '      "storageLayout": ' >> .storage-layouts/main-layout.json
+            forge inspect SyndicateFactory storageLayout >> .storage-layouts/main-layout.json
+            echo '    },' >> .storage-layouts/main-layout.json
+
+            # Extract other key contracts
+            echo '    "SyndicateSequencingChain": {' >> .storage-layouts/main-layout.json
+            echo '      "storageLayout": ' >> .storage-layouts/main-layout.json
+            forge inspect SyndicateSequencingChain storageLayout >> .storage-layouts/main-layout.json
+            echo '    }' >> .storage-layouts/main-layout.json
+
+            echo '  }' >> .storage-layouts/main-layout.json
+            echo '}' >> .storage-layouts/main-layout.json
+
+            echo "✅ Baseline created from main branch contracts"
           fi
 
           if [ -f .storage-layouts/main-layout.json ]; then
@@ -178,8 +199,11 @@ jobs:
           echo "⚖️ Comparing storage layouts between main and current branch..."
           echo "DEBUG: Checking for baseline file..."
 
-          if [ ! -f .storage-layouts/main-layout.json ] || [ "$(cat .storage-layouts/main-layout.json)" = "{}" ]; then
-            echo "📋 No baseline found on main branch (or empty baseline). Creating initial baseline..."
+          # Check if we have a real baseline (not just empty {})
+          baseline_size=$(wc -c < .storage-layouts/main-layout.json 2>/dev/null || echo "0")
+
+          if [ ! -f .storage-layouts/main-layout.json ] || [ "$baseline_size" -lt 10 ]; then
+            echo "📋 No meaningful baseline found on main branch. Creating initial baseline..."
             echo "ℹ️ This PR will establish the storage layout baseline for future comparisons."
 
             if [ -f .storage-layouts/current-layout.json ]; then
