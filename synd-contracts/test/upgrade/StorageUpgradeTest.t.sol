@@ -325,34 +325,4 @@ contract StorageUpgradeTest is Test {
 
         vm.stopPrank();
     }
-
-    /*//////////////////////////////////////////////////////////////
-                        STORAGE LAYOUT INSPECTION
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Test to generate and compare storage layouts
-    /// @dev This test documents the storage layout differences between V1 and V2
-    function testStorageLayoutDocumentation() public {
-        // This test serves as documentation for storage layout changes
-        // V1 storage (slots 0-3):
-        // - Slot 0: appchainId (uint256)
-        // - Slot 1: emissionsReceiver (address)
-        // - Slot 2: factory (address)
-        // - Slot 3: allowGasTrackingBanOnUpgrade (bool) - packed with factory
-
-        // V2 additional traditional storage (slots 4-7):
-        // - Slot 4: maxGasPerTransaction (uint256)
-        // - Slot 5: replayProtectionEnabled (bool)
-        // - Slot 6: minTimeBetweenTxs (uint256)
-        // - Slot 7: lastTransactionTime mapping
-
-        // Namespaced storage (ERC-7201):
-        // - Location: 0x5c6d1774bdd69d8d16847c3c97b51ea7343257b8f5ace5da9e25ab3bafd7d500
-        // - Field 0: permissionRequirementModule (IPermissionModule)
-        // - Field 1: maxTransactionsPerBatch (uint256) - NEW in V2
-        // - Field 2: batchProcessingEnabled (bool) - NEW in V2
-        // - Field 3: lastPermissionUpdate (uint256) - NEW in V2
-
-        assertTrue(true, "Storage layout documentation test passed");
-    }
 }
