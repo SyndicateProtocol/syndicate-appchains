@@ -313,7 +313,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Attempt upgrade - should fail
         vm.prank(admin);
-        vm.expectRevert("Upgrade would result in gas tracking ban");
+        vm.expectRevert(SyndicateSequencingChain.UpgradeWouldResultInGasTrackingBan.selector);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
     }
 
@@ -377,7 +377,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         // Verify impl2 upgrade fails with allowGasTrackingBan=false
         vm.prank(admin);
-        vm.expectRevert("Upgrade would result in gas tracking ban");
+        vm.expectRevert(SyndicateSequencingChain.UpgradeWouldResultInGasTrackingBan.selector);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
 
         // Verify that the chain is NOT blacklisted on the gas aggregator
