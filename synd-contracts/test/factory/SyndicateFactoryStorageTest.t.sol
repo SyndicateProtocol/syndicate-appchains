@@ -42,25 +42,7 @@ contract SyndicateFactoryStorageTest is Test {
 
     /// @notice Test that validates the current storage layout matches expected slots
     function testStorageLayoutValidation() public {
-        // Test 1: Verify our senderNonces mapping is in the expected slot
-        // For mappings, the actual data is stored at keccak256(key . slot)
-        address testSender = address(0x123);
-
-        // Initially should be 0
-        assertEq(factory.getNextNonceForSender(testSender), 0);
-
-        // Create a deterministic chain to increment the nonce
-        vm.prank(testSender);
-        factory.createSyndicateSequencingChain(admin, permissionModule);
-
-        // Verify nonce was incremented
-        assertEq(factory.getNextNonceForSender(testSender), 1);
-
-        // Verify the mapping storage location
-        bytes32 senderNonceStorageLocation = keccak256(abi.encode(testSender, SENDER_NONCES_SLOT));
-        assertEq(vm.load(address(factory), senderNonceStorageLocation), bytes32(uint256(1)));
-
-        // Test 2: Verify stub implementation slot
+        // Test 1: Verify stub implementation slot
         assertTrue(
             address(uint160(uint256(vm.load(address(factory), bytes32(STUB_IMPLEMENTATION_SLOT))))) != address(0)
         );
@@ -103,7 +85,7 @@ contract SyndicateFactoryStorageTest is Test {
         // Create a deterministic chain (modifies storage)
         address testSender = address(0x456);
         vm.prank(testSender);
-        factory.createSyndicateSequencingChain(admin, permissionModule);
+        factory.createSyndicateSequencingChain(0, admin, permissionModule);
 
         // Verify storage snapshot values remain unchanged for core variables
         StorageSnapshot memory newSnapshot = _takeStorageSnapshot();
@@ -123,17 +105,13 @@ contract SyndicateFactoryStorageTest is Test {
 
         // Use the new deterministic functionality
         vm.prank(sender1);
-        factory.createSyndicateSequencingChain(admin, permissionModule);
+        factory.createSyndicateSequencingChain(0, admin, permissionModule);
 
         vm.prank(sender2);
-        factory.createSyndicateSequencingChain(admin, permissionModule);
+        factory.createSyndicateSequencingChain(0, admin, permissionModule);
 
         // Verify existing variables weren't affected
         assertEq(factory.stubImplementation(), initialStubImpl);
-
-        // Verify new functionality works correctly
-        assertEq(factory.getNextNonceForSender(sender1), 1);
-        assertEq(factory.getNextNonceForSender(sender2), 1);
     }
 
     /// @notice Fuzz test for storage integrity
@@ -148,7 +126,7 @@ contract SyndicateFactoryStorageTest is Test {
 
         // Process two senders with different deterministic chains
         vm.prank(sender1);
-        try factory.createSyndicateSequencingChain(admin, permissionModule) {
+        try factory.createSyndicateSequencingChain(0, admin, permissionModule) {
             // Success - verify chain was created
             assertTrue(true);
         } catch {
@@ -156,7 +134,7 @@ contract SyndicateFactoryStorageTest is Test {
         }
 
         vm.prank(sender2);
-        try factory.createSyndicateSequencingChain(admin, permissionModule) {
+        try factory.createSyndicateSequencingChain(0, admin, permissionModule) {
             // Success - verify chain was created
             assertTrue(true);
         } catch {

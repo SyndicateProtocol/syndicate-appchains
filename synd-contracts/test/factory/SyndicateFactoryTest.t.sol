@@ -965,21 +965,15 @@ contract SyndicateFactoryTest is Test {
         RequireAndModule permissionModule = new RequireAndModule(admin);
         address chainAdmin = address(0x789);
 
-        // Check initial nonce is 0
-        assertEq(factory.getNextNonceForSender(admin), 0);
-
-        // Create sequencing chain with auto-increment nonce (nonce = 0)
+        // Create sequencing chain with user-specified nonce (nonce = 0)
         vm.prank(admin);
 
         (address sequencingChain, uint256 chainId) =
-            factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+            factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
         // Verify the chain was deployed
         assertTrue(sequencingChain != address(0));
         assertTrue(chainId > 0);
-
-        // Verify nonce incremented
-        assertEq(factory.getNextNonceForSender(admin), 1);
 
         // Verify deterministic generation
         uint256 expectedChainId = factory.generateDeterministicChainId(admin, 0);
@@ -997,7 +991,7 @@ contract SyndicateFactoryTest is Test {
         vm.prank(admin);
 
         (address sequencingChain, uint256 chainId) =
-            factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+            factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
         // Verify the chain was deployed
         assertTrue(sequencingChain != address(0));
@@ -1013,11 +1007,11 @@ contract SyndicateFactoryTest is Test {
 
         // Create first chain deterministically (uses nonce 0)
         vm.prank(admin);
-        (, uint256 chainId1) = factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+        (, uint256 chainId1) = factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
         // Create second chain deterministically (uses nonce 1) - should succeed with different chain ID
         vm.prank(admin);
-        (, uint256 chainId2) = factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+        (, uint256 chainId2) = factory.createSyndicateSequencingChain(1, chainAdmin, permissionModule);
 
         // Chain IDs should be different
         assertTrue(chainId1 != chainId2);
@@ -1025,9 +1019,6 @@ contract SyndicateFactoryTest is Test {
         // Both should be marked as used
         assertTrue(factory.isChainIdUsed(chainId1));
         assertTrue(factory.isChainIdUsed(chainId2));
-
-        // Nonce should be incremented to 2
-        assertEq(factory.getNextNonceForSender(admin), 2);
     }
 
     function testCreateSequencingChainDeterministicDifferentSendersGetDifferentChainIds() public {
@@ -1038,17 +1029,13 @@ contract SyndicateFactoryTest is Test {
 
         // Both senders use nonce 0
         vm.prank(sender1);
-        (, uint256 chainId1) = factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+        (, uint256 chainId1) = factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
         vm.prank(sender2);
-        (, uint256 chainId2) = factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+        (, uint256 chainId2) = factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
-        // Chain IDs should be different
+        // Chain IDs should be different (because sender addresses are different)
         assertTrue(chainId1 != chainId2);
-
-        // Both nonces should be 1 now
-        assertEq(factory.getNextNonceForSender(sender1), 1);
-        assertEq(factory.getNextNonceForSender(sender2), 1);
     }
 
     function testCreateSequencingChainDeterministicWhenPausedReverts() public {
@@ -1062,21 +1049,21 @@ contract SyndicateFactoryTest is Test {
         // Try to create deterministic sequencing chain
         vm.prank(admin);
         vm.expectRevert(); // Pausable will revert
-        factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+        factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
     }
 
     function testCreateSequencingChainDeterministicRevertsOnZeroAdmin() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
 
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChain(address(0), permissionModule);
+        factory.createSyndicateSequencingChain(0, address(0), permissionModule);
     }
 
     function testCreateSequencingChainDeterministicRevertsOnZeroPermissionModule() public {
         address chainAdmin = address(0x789);
 
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChain(chainAdmin, IRequirementModule(address(0)));
+        factory.createSyndicateSequencingChain(0, chainAdmin, IRequirementModule(address(0)));
     }
 
     function testCreateSyndicateSequencingChainWithCustomIdAdminOnly() public {
@@ -1174,7 +1161,7 @@ contract SyndicateFactoryTest is Test {
         uint256 expectedChainId = factory.generateDeterministicChainId(sender, 0);
 
         vm.prank(sender);
-        (, uint256 actualChainId) = factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+        (, uint256 actualChainId) = factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
         // ChainID should match expected
         assertEq(actualChainId, expectedChainId);
@@ -1183,7 +1170,7 @@ contract SyndicateFactoryTest is Test {
         // This should generate a different chain ID (nonce 1) but should not revert
         uint256 expectedChainId2 = factory.generateDeterministicChainId(sender, 1);
         vm.prank(sender);
-        (, uint256 actualChainId2) = factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+        (, uint256 actualChainId2) = factory.createSyndicateSequencingChain(1, chainAdmin, permissionModule);
 
         assertEq(actualChainId2, expectedChainId2);
         assertTrue(actualChainId != actualChainId2);
@@ -1213,13 +1200,10 @@ contract SyndicateFactoryTest is Test {
 
         uint256[] memory chainIds = new uint256[](5);
 
-        // Deploy 5 sequential chains using auto-increment nonces
+        // Deploy 5 sequential chains using explicit nonces
         for (uint256 i = 0; i < 5; i++) {
             vm.prank(sender);
-            (, chainIds[i]) = factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
-
-            // Verify nonce incremented
-            assertEq(factory.getNextNonceForSender(sender), i + 1);
+            (, chainIds[i]) = factory.createSyndicateSequencingChain(i, chainAdmin, permissionModule);
         }
 
         // All chain IDs should be different
@@ -1276,7 +1260,7 @@ contract SyndicateFactoryTest is Test {
 
         // Create chain without fee (should work when fee is 0)
         (address sequencingChain, uint256 chainId) =
-            factory.createSyndicateSequencingChain(admin, IRequirementModule(address(permissionModule)));
+            factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(permissionModule)));
 
         assertTrue(sequencingChain != address(0));
         assertTrue(chainId > 0);
@@ -1292,7 +1276,7 @@ contract SyndicateFactoryTest is Test {
 
         // Create chain with correct fee
         (address sequencingChain, uint256 chainId) =
-            factory.createSyndicateSequencingChain{value: fee}(admin, IRequirementModule(address(permissionModule)));
+            factory.createSyndicateSequencingChain{value: fee}(0, admin, IRequirementModule(address(permissionModule)));
 
         assertTrue(sequencingChain != address(0));
         assertTrue(chainId > 0);
@@ -1311,7 +1295,7 @@ contract SyndicateFactoryTest is Test {
 
         // Try to create chain with insufficient fee
         vm.expectRevert(SyndicateFactory.InsufficientFee.selector);
-        factory.createSyndicateSequencingChain{value: fee - 1}(admin, IRequirementModule(address(permissionModule)));
+        factory.createSyndicateSequencingChain{value: fee - 1}(0, admin, IRequirementModule(address(permissionModule)));
     }
 
     function testCreateCustomIdWithFee() public {
@@ -1372,7 +1356,7 @@ contract SyndicateFactoryTest is Test {
 
         // Create chain with excess fee (should work)
         (address sequencingChain, uint256 chainId) = factory.createSyndicateSequencingChain{value: excessFee}(
-            admin, IRequirementModule(address(permissionModule))
+            0, admin, IRequirementModule(address(permissionModule))
         );
 
         assertTrue(sequencingChain != address(0));
@@ -1391,7 +1375,7 @@ contract SyndicateFactoryTest is Test {
         vm.prank(admin);
         factory.setCreationFee(fee);
 
-        factory.createSyndicateSequencingChain{value: fee}(admin, IRequirementModule(address(permissionModule)));
+        factory.createSyndicateSequencingChain{value: fee}(0, admin, IRequirementModule(address(permissionModule)));
 
         assertEq(address(factory).balance, fee);
         uint256 initialRecipientBalance = recipient.balance;
@@ -1432,7 +1416,7 @@ contract SyndicateFactoryTest is Test {
 
         // Create two chains
         vm.prank(admin);
-        factory.createSyndicateSequencingChain{value: fee}(admin, IRequirementModule(address(permissionModule1)));
+        factory.createSyndicateSequencingChain{value: fee}(0, admin, IRequirementModule(address(permissionModule1)));
 
         vm.prank(admin);
         factory.createSyndicateSequencingChainWithCustomId{value: fee}(
@@ -1458,7 +1442,9 @@ contract SyndicateFactoryTest is Test {
 
         // Create first chain with initial fee
         vm.prank(admin);
-        factory.createSyndicateSequencingChain{value: initialFee}(admin, IRequirementModule(address(permissionModule1)));
+        factory.createSyndicateSequencingChain{value: initialFee}(
+            0, admin, IRequirementModule(address(permissionModule1))
+        );
 
         // Change fee
         vm.expectEmit(true, true, true, true);
@@ -1575,7 +1561,7 @@ contract SyndicateFactoryTest is Test {
         assertEq(customChainId1, 6001);
 
         // Test 3: Deterministic chain creation
-        (, uint256 detChainId) = factory.createSyndicateSequencingChain(admin, permissionModule);
+        (, uint256 detChainId) = factory.createSyndicateSequencingChain(0, admin, permissionModule);
         assertTrue(detChainId > 0);
 
         // Test 4: Another custom chain creation
@@ -1605,7 +1591,7 @@ contract SyndicateFactoryTest is Test {
 
         // Try to create deterministic chain that might collide
         vm.prank(admin);
-        (, uint256 detId) = factory.createSyndicateSequencingChain(admin, permissionModule);
+        (, uint256 detId) = factory.createSyndicateSequencingChain(0, admin, permissionModule);
 
         // Try to create custom chain with same ID as regular - should fail
         vm.prank(admin);
@@ -1633,7 +1619,7 @@ contract SyndicateFactoryTest is Test {
         factory.createSyndicateSequencingChainWithCustomId(1001, address(0), permissionModule);
 
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChain(address(0), permissionModule);
+        factory.createSyndicateSequencingChain(0, address(0), permissionModule);
 
         vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
@@ -1645,7 +1631,7 @@ contract SyndicateFactoryTest is Test {
         factory.createSyndicateSequencingChainWithCustomId(1003, admin, IRequirementModule(address(0)));
 
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChain(admin, IRequirementModule(address(0)));
+        factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(0)));
 
         vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
@@ -1679,10 +1665,9 @@ contract SyndicateFactoryTest is Test {
 
         // Should handle normal nonce values (avoiding overflow issues)
         vm.prank(admin);
-        (, uint256 chainId) = factory.createSyndicateSequencingChain(chainAdmin, permissionModule);
+        (, uint256 chainId) = factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
         assertTrue(chainId > 0);
-        assertEq(factory.getNextNonceForSender(admin), 1);
 
         // Verify deterministic generation still works
         uint256 expectedId = factory.generateDeterministicChainId(admin, 0);

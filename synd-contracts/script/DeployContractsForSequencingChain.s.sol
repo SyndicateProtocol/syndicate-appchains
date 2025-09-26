@@ -37,9 +37,9 @@ contract DeploySyndicateFactory is Script {
         address module = requireAndModuleFactory.createRequireAndModule(admin, bytes32(appchainId));
         console.log("Deployed RequireAndModule", module);
 
-        // create SyndicateSequencingChain with the permission module
+        // create SyndicateSequencingChain with the permission module (using nonce 0)
         (address sequencingChain, uint256 chainId) =
-            syndicateFactory.createSyndicateSequencingChain(admin, IRequirementModule(module));
+            syndicateFactory.createSyndicateSequencingChain(0, admin, IRequirementModule(module));
 
         console.log("Deployed SyndicateSequencingChain", sequencingChain);
         console.log("Deployed RequireAndModule", address(module));

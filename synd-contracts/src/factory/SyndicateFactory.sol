@@ -86,9 +86,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     mapping(uint256 => bool) public gasTrackingBanlist;
     uint256 public numberOfChainsBannedFromGasTracking;
 
-    /// @notice Per-sender nonce tracking for deterministic chainID generation
-    mapping(address sender => uint256 nonce) public senderNonces;
-
     /// @notice Fee required to create a sequencing chain (in native token)
     uint256 public creationFee;
 
@@ -146,12 +143,13 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     }
 
     /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID to prevent squatting
+    /// @param nonce The user-specified nonce for chainID generation
     /// @param admin The admin address for the new chain
     /// @param permissionModule The pre-deployed permission module
     /// @return sequencingChain The deployed sequencing chain address
     /// @return actualChainId The chain ID that was used
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChain(address admin, IRequirementModule permissionModule)
+    function createSyndicateSequencingChain(uint256 nonce, address admin, IRequirementModule permissionModule)
         external
         payable
         whenNotPaused
@@ -162,20 +160,16 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
             revert ZeroAddress();
         }
 
-        // Use current nonce for this sender and increment it
-        uint256 actualNonce = senderNonces[msg.sender];
-        actualChainId = generateDeterministicChainId(msg.sender, actualNonce);
+        // Generate chainID using user-provided nonce
+        actualChainId = generateDeterministicChainId(msg.sender, nonce);
 
         // Validate chain ID is not already used
         if (appchainContracts[actualChainId] != address(0)) {
             revert ChainIdAlreadyExists();
         }
 
-        // Increment the sender's nonce for next use
-        senderNonces[msg.sender]++;
-
         // Emit deterministic chainID generation event
-        emit DeterministicChainIdGenerated(msg.sender, actualNonce, actualChainId);
+        emit DeterministicChainIdGenerated(msg.sender, nonce, actualChainId);
 
         // Deploy the sequencing chain using consistent proxy bytecode
         bytes memory consistentBytecode = getProxyBytecode();
@@ -314,13 +308,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         if (chainId == 0) {
             chainId = 1;
         }
-    }
-
-    /// @notice Get the next nonce for a sender
-    /// @param sender The sender address
-    /// @return The next nonce for this sender
-    function getNextNonceForSender(address sender) external view returns (uint256) {
-        return senderNonces[sender];
     }
 
     /// @notice returns the number of appchains not banned from gas tracking
