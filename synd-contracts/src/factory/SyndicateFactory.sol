@@ -160,7 +160,7 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @notice returns all appchains chainIDs and associated contracts
     /// @return _chainIDs
     /// @return _contracts
-    function getAppchainsAndContracts()
+    function getAppchainsAndContractsForGasTrackingReturn()
         external
         view
         returns (uint256[] memory _chainIDs, address[] memory _contracts)

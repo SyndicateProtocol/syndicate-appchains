@@ -1,5 +1,4 @@
 //! The `synd-stake-cli` is a service for running permissionless actions in the staking system.
-
 use clap::{Parser, Subcommand};
 use synd_stake_cli::{
     gas_agg::{gas_agg, GasAggArgs},

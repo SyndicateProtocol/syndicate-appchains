@@ -7689,6 +7689,7 @@ dependencies = [
  "alloy",
  "clap",
  "contract-bindings",
+ "reqwest",
  "shared",
  "tokio",
  "tracing",

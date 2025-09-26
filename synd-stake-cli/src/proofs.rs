@@ -14,7 +14,7 @@ use contract_bindings::synd::{
     block_hash_relayer::BlockHashRelayer,
     gas_aggregator::GasAggregator::{self, GasAggregatorInstance},
     gas_archive::GasArchive::{self, GasArchiveInstance},
-    syndicate_factory::SyndicateFactory::{self, getAppchainsAndContractsReturn},
+    syndicate_factory::SyndicateFactory::{self, getAppchainsAndContractsForGasTrackingReturn},
     syndicate_sequencing_chain::SyndicateSequencingChain,
 };
 use shared::{parse::parse_address, types::new_provider};
@@ -171,7 +171,7 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         .await
         .unwrap_or_else(|e| panic!("failed to get gas aggregator address: {e}"));
     let epoch_data_hash_storage_slot_index = gas_archive
-        .seqChainEthSendRootStorageSlot(U256::from(seq_chain_id))
+        .AGGREGATED_EPOCH_DATA_HASH_SLOT()
         .call()
         .await
         .unwrap_or_else(|e| panic!("failed to get epoch data hash storage slot index: {e}"));
@@ -276,6 +276,7 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
 
     let epoch_data_hash_storage_key: StorageKey =
         keccak256((epoch, epoch_data_hash_storage_slot_index).abi_encode());
+
     let epoch_data_hash_proof = seq_provider
         .get_proof(gas_aggregator_address, vec![epoch_data_hash_storage_key])
         .block_id(seq_block_hash.into())
@@ -372,12 +373,14 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
         .unwrap_or_else(|e| panic!("failed to get factory address: {e}"));
     let factory = SyndicateFactory::new(factory_address, gas_aggregator.provider().clone());
 
-    let getAppchainsAndContractsReturn { _chainIDs: mut appchains, _contracts: appchain_contracts } =
-        factory
-            .getAppchainsAndContracts()
-            .call()
-            .await
-            .unwrap_or_else(|e| panic!("failed to get appchains and contracts: {e}"));
+    let getAppchainsAndContractsForGasTrackingReturn {
+        _chainIDs: mut appchains,
+        _contracts: appchain_contracts,
+    } = factory
+        .getAppchainsAndContractsForGasTracking()
+        .call()
+        .await
+        .unwrap_or_else(|e| panic!("failed to get appchains and contracts: {e}"));
     let (mut tokens, mut emissions_receivers) = (vec![], vec![]);
 
     for contract in appchain_contracts {
