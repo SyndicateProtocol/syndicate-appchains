@@ -114,11 +114,16 @@ jobs:
           if make -n storage-layout-baseline >/dev/null 2>&1; then
             echo "Using make target to create baseline..."
             make storage-layout-baseline
-          else
-            echo "Make target not available, creating baseline manually..."
+          elif [ -f "scripts/storage-checks/forge-extract.js" ]; then
+            echo "Make target not available but script exists, creating baseline manually..."
             forge build
             mkdir -p .storage-layouts
             node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json
+          else
+            echo "⚠️ Storage layout scripts not available on main branch - this is expected for initial setup"
+            echo "Creating empty baseline file - the current branch will establish the baseline"
+            mkdir -p .storage-layouts
+            echo "{}" > .storage-layouts/main-layout.json
           fi
 
           if [ -f .storage-layouts/main-layout.json ]; then
@@ -158,8 +163,8 @@ jobs:
           echo "⚖️ Comparing storage layouts between main and current branch..."
           echo "DEBUG: Checking for baseline file..."
 
-          if [ ! -f .storage-layouts/main-layout.json ]; then
-            echo "📋 No baseline found on main branch. Creating initial baseline..."
+          if [ ! -f .storage-layouts/main-layout.json ] || [ "$(cat .storage-layouts/main-layout.json)" = "{}" ]; then
+            echo "📋 No baseline found on main branch (or empty baseline). Creating initial baseline..."
             echo "ℹ️ This PR will establish the storage layout baseline for future comparisons."
 
             if [ -f .storage-layouts/current-layout.json ]; then
