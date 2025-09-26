@@ -5,6 +5,7 @@ import {EpochTracker} from "./EpochTracker.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {SyndicateDeterministicAddresses} from "../SyndicateDeterministicAddresses.sol";
 
 interface ISequencingContract {
     function getTokensForEpoch(uint256 epoch) external view returns (uint256);
@@ -33,7 +34,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
 
     /// @notice Factory contract for managing appchain contracts
     /// @dev Used to get appchain addresses and total count
-    IAppchainFactory public factory; // TODO this could be a const too
+    IAppchainFactory public constant FACTORY = IAppchainFactory(SyndicateDeterministicAddresses.FACTORY);
 
     /// @notice Maximum number of appchains that can be queried automatically
     /// @dev When total appchains >= this value, off-chain aggregation is required
@@ -157,15 +158,10 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     /**
      * @notice Initialize the GasAggregator contract
      * @dev Sets up the contract with factory, admin, and challenge window configuration
-     * @param _factory The appchain factory contract address
      * @param admin The address to be granted admin privileges
      * @param _challengeWindow The challenge window duration for off-chain aggregation
      */
-    function initialize(IAppchainFactory _factory, address admin, uint256 _challengeWindow, uint256 _addChainFee)
-        external
-        initializer
-    {
-        if (address(_factory) == address(0)) revert ZeroAddress();
+    function initialize(address admin, uint256 _challengeWindow, uint256 _addChainFee) external initializer {
         if (admin == address(0)) revert ZeroAddress();
         if (_challengeWindow == 0) revert ZeroChallengeWindow();
 
@@ -175,14 +171,13 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         // consider all past epochs ignored
         pendingEpoch = getCurrentEpoch();
         version = "1.0.0";
-        factory = _factory;
         challengeWindow = _challengeWindow;
         addChainFee = _addChainFee;
 
         // Cache the proxy bytecode hash for deterministic address computation
-        proxyBytecodeHash = keccak256(_factory.getProxyBytecode());
+        proxyBytecodeHash = keccak256(FACTORY.getProxyBytecode());
 
-        address syndicateChainImpl = _factory.syndicateChainImpl();
+        address syndicateChainImpl = FACTORY.syndicateChainImpl();
         if (syndicateChainImpl != address(0)) {
             allowedImplementations[syndicateChainImpl] = true;
         }
@@ -374,8 +369,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     /// @notice Computes the address where a sequencing chain will be deployed
     /// @param chainId The chain ID to compute the address for
     /// @return The computed address
+    /// TODO: copied from SyndicateFactory.sol to avoid an external call. (should this be moved to a library?)
     function computeSequencingChainAddress(uint256 chainId) internal view returns (address) {
-        return Create2.computeAddress(bytes32(chainId), proxyBytecodeHash, address(factory));
+        return SyndicateDeterministicAddresses.computeSequencingChainAddress(chainId, proxyBytecodeHash);
     }
 
     /**
@@ -431,14 +427,6 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     function removeAllowedImplementation(address newImpl) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (!allowedImplementations[newImpl]) revert ImplementationNotAllowed(newImpl);
         delete allowedImplementations[newImpl];
-    }
-
-    /**
-     * @notice Set the appchain factory contract
-     * @param newFactory The new factory contract address
-     */
-    function setFactory(IAppchainFactory newFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        factory = newFactory;
     }
 
     /// @notice Updates the contract version (admin only, typically called during upgrades)

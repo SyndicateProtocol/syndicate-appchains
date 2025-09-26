@@ -10,6 +10,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
+import {SyndicateDeterministicAddresses} from "../SyndicateDeterministicAddresses.sol";
 
 /// @title MinimalUUPSStub
 /// @notice Minimal UUPS implementation stub for deterministic proxy deployments
@@ -66,8 +67,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
     string public version;
 
-    // TODO calculate this as a CONSTANT
-    IGasAggregator gasAggregator;
+    IGasAggregator public constant GAS_AGGREGATOR = IGasAggregator(SyndicateDeterministicAddresses.GAS_AGGREGATOR);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -95,7 +95,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
 
     /// @notice Emitted when a new implementation is added to allowed list
-    event gasAggregatorNotificationFailed(address indexed gasAggregator);
+    event gasAggregatorNotificationFailed();
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -203,7 +203,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @dev Always returns the same bytecode for predictable CREATE2 addresses
     /// @return The bytecode to be used for deployment
     function getProxyBytecode() public view returns (bytes memory) {
-        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(stubImplementation, ""));
+        return SyndicateDeterministicAddresses.getProxyBytecode(stubImplementation);
     }
 
     /// @notice Returns the creation bytecode for an ERC1967Proxy with the given implementation address.
@@ -321,12 +321,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         _unpause();
     }
 
-    // TODO remove this
-    function setGasAggregator(IGasAggregator _gasAggregator) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        gasAggregator = _gasAggregator;
-        gasAggregator.notifyNewImplementation(syndicateChainImpl);
-    }
-
     /// @notice Set the implementation for new sequencing contract deployments (admin only)
     /// @param newImplementation The implementation address to use as default
     function setSyndicateSequencingChainImplementation(address newImplementation)
@@ -334,9 +328,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         syndicateChainImpl = newImplementation;
-        try gasAggregator.notifyNewImplementation(newImplementation) {}
+        try GAS_AGGREGATOR.notifyNewImplementation(newImplementation) {}
         catch {
-            emit gasAggregatorNotificationFailed(address(gasAggregator));
+            emit gasAggregatorNotificationFailed();
         }
     }
 }

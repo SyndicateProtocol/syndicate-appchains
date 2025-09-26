@@ -8,6 +8,7 @@ import {SyndicateSequencingChain, IGasAggregator} from "../../src/SyndicateSeque
 import {SyndicateSequencingChainTestingUpgradeability} from
     "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
 import {IPermissionModule} from "../../src/interfaces/IPermissionModule.sol";
+import {SyndicateDeterministicAddresses} from "../../src/SyndicateDeterministicAddresses.sol";
 
 /// @notice Mock factory contract for testing upgrades
 contract MockFactory {
@@ -52,7 +53,6 @@ contract StorageUpgradeTest is Test {
     struct OriginalStorageData {
         uint256 appchainId;
         address emissionsReceiver;
-        address factory;
         bool allowGasTrackingBanOnUpgrade;
         address permissionModule;
         bool gasTrackingEnabled;
@@ -63,9 +63,13 @@ contract StorageUpgradeTest is Test {
     event MaxTransactionsPerBatchUpdated(uint256 newMax);
 
     function setUp() public {
-        // Deploy mock factory and gas aggregator
+        // Deploy mock factory and gas aggregator normally for testing
         factory = new MockFactory();
         gasAggregator = new MockGasAggregator();
+
+        // Deploy a mock gas aggregator at the hardcoded address for SyndicateSequencingChain to use
+        MockGasAggregator mockGasAgg = new MockGasAggregator();
+        vm.etch(SyndicateDeterministicAddresses.GAS_AGGREGATOR, address(mockGasAgg).code);
 
         vm.startPrank(address(factory));
 
@@ -81,10 +85,10 @@ contract StorageUpgradeTest is Test {
 
         vm.stopPrank();
 
-        // Switch to admin to set emissions receiver and gas aggregator
+        // Switch to admin to set emissions receiver
         vm.startPrank(ADMIN);
         syndicateV1.setEmissionsReceiver(EMISSIONS_RECEIVER);
-        syndicateV1.setGasAggregator(IGasAggregator(address(gasAggregator)));
+        // Gas aggregator is now hardcoded - no setup needed
         vm.stopPrank();
     }
 
@@ -100,7 +104,6 @@ contract StorageUpgradeTest is Test {
         OriginalStorageData memory originalData = OriginalStorageData({
             appchainId: syndicateV1.appchainId(),
             emissionsReceiver: syndicateV1.getEmissionsReceiver(),
-            factory: syndicateV1.factory(),
             allowGasTrackingBanOnUpgrade: syndicateV1.allowGasTrackingBanOnUpgrade(),
             permissionModule: address(syndicateV1.permissionRequirementModule()),
             gasTrackingEnabled: syndicateV1.gasTrackingEnabled()
@@ -120,7 +123,6 @@ contract StorageUpgradeTest is Test {
         assertEq(
             syndicateV2.getEmissionsReceiver(), originalData.emissionsReceiver, "emissionsReceiver should be preserved"
         );
-        assertEq(syndicateV2.factory(), originalData.factory, "factory should be preserved");
         assertEq(
             syndicateV2.allowGasTrackingBanOnUpgrade(),
             originalData.allowGasTrackingBanOnUpgrade,
@@ -315,7 +317,6 @@ contract StorageUpgradeTest is Test {
             syndicateV2.allowGasTrackingBanOnUpgrade(), "V1 storage should not be affected by V2 storage modifications"
         );
         assertEq(syndicateV2.appchainId(), TEST_APPCHAIN_ID, "V1 storage should remain intact");
-        assertEq(syndicateV2.factory(), address(factory), "V1 storage should remain intact");
 
         // Verify V2 storage is working correctly
         assertEq(syndicateV2.maxGasPerTransaction(), 999999, "V2 storage should work correctly");
