@@ -173,13 +173,13 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
 
         vm.expectRevert("App chain ID cannot be 0");
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 0);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 0, 0);
     }
 
     function testUpgradeBadguy() public {
         address chainImpl = address(new SyndicateSequencingChain());
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 1);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 1, 0);
 
         address badguy = makeAddr("badguy");
         vm.prank(badguy);
@@ -190,7 +190,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     function testUpgradeOwner() public {
         address chainImpl = address(new SyndicateSequencingChain());
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 1);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 1, 0);
 
         // Allow the implementation
         vm.prank(address(factory));

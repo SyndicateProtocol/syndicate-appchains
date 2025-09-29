@@ -74,7 +74,7 @@ contract StorageUpgradeTest is Test {
 
         // Deploy proxy pointing to V1
         bytes memory initData = abi.encodeCall(
-            SyndicateSequencingChain.initialize, (ADMIN, address(gasAggregator), PERMISSION_MODULE, TEST_APPCHAIN_ID)
+            SyndicateSequencingChain.initialize, (ADMIN, address(gasAggregator), PERMISSION_MODULE, TEST_APPCHAIN_ID, 0)
         );
 
         proxy = new ERC1967Proxy(address(syndicateV1), initData);

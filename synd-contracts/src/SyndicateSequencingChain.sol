@@ -150,11 +150,13 @@ contract SyndicateSequencingChain is
     /// @param admin The address to be set as the contract owner
     /// @param _permissionRequirementModule The address of the permission requirement module (e.g., RequireAndModule) or 0 to allow tranasctions
     /// @param _appchainId The unique identifier for the application chain this contract sequences for (must not be 0)
+    /// @param _gasTokensUsedForCurrentEpoch The amount of gas used for the current epoch (only used for legacy chain migrations)
     function initialize(
         address admin,
         address _gasAggregator,
         address _permissionRequirementModule,
-        uint256 _appchainId
+        uint256 _appchainId,
+        uint256 _gasTokensUsedForCurrentEpoch
     ) external initializer {
         if (admin == address(0)) revert ZeroAddress();
         if (_gasAggregator == address(0)) revert ZeroAddress();
@@ -168,6 +170,8 @@ contract SyndicateSequencingChain is
         $.allowGasTrackingBanOnUpgrade = false;
         $.version = "1.0.0";
         $.gasAggregator = IGasAggregator(_gasAggregator);
+
+        _getGasCounterStorage().tokensUsedPerEpoch[getCurrentEpoch()] = _gasTokensUsedForCurrentEpoch;
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
