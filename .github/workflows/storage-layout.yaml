@@ -18,6 +18,7 @@ on:
 
 env:
   FOUNDRY_PROFILE: default
+  FOUNDRY_DISABLE_NIGHTLY_WARNING: true
 
 jobs:
   storage-layout-validation:
@@ -41,28 +42,16 @@ jobs:
         with:
           version: nightly
 
-      - name: Install Foundry dependencies
-        run: forge install
-
       - name: Get baseline from main branch
         if: github.event_name == 'pull_request'
         run: |
           echo "🔄 Getting storage layout baseline from main branch..."
 
-          # Clean up any existing storage layouts and build artifacts that could conflict
-          rm -rf .storage-layouts foundry.lock out/ lib/
-
-          # Reset git to clean state and stash everything
-          git reset --hard HEAD || true
-          git clean -fd || true
-          git add . || true
-          git stash --include-untracked || echo "Nothing to stash"
-
-          # Switch to main branch
+          # Switch to main branch first before any forge operations
           git fetch origin main
           git checkout main
 
-          # Install dependencies and create baseline
+          # Install dependencies and create baseline on main branch
           forge install
           forge build
           mkdir -p .storage-layouts
@@ -79,21 +68,18 @@ jobs:
           # Switch back to PR branch
           git checkout ${{ github.head_ref }}
 
-          # Clean up potential conflicts from main branch
-          rm -rf foundry.lock out/ lib/ || true
-
-          # Reset and clean before restoring
-          git reset --hard HEAD || true
-          git clean -fd || true
-
-          # Restore stashed changes
-          git stash pop || echo "No stashed changes to restore"
+          # Install dependencies for current branch
+          forge install
 
           # Restore baselines
           mkdir -p .storage-layouts
           cp -r /tmp/baseline-layouts/* .storage-layouts/
 
           echo "✅ Baseline storage layouts retrieved"
+
+      - name: Install Foundry dependencies (for push events)
+        if: github.event_name == 'push'
+        run: forge install
 
       - name: Validate storage layouts
         run: |
