@@ -8,6 +8,7 @@ import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {RequireCompositeModule} from "src/requirement-modules/RequireCompositeModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
+import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {ERC1967Proxy} from "src/factory/SyndicateFactory.sol";
 
 contract SyndicateFactoryTest is Test {
@@ -925,5 +926,40 @@ contract SyndicateFactoryTest is Test {
 
         // Version should still be the same
         assertEq(factory.version(), "1.5.0", "Version should persist after operations");
+    }
+
+    // ================== GAS AGGREGATOR UPDATE TESTS ==================
+
+    function testUpdateGasAggregatorOnAppchain() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+
+        // Create an appchain first
+        vm.prank(admin);
+        (address sequencingChainAddress, uint256 chainId) =
+            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
+
+        // Verify initial gas aggregator is set
+        SyndicateSequencingChain sequencingChain = SyndicateSequencingChain(sequencingChainAddress);
+        address initialGasAggregator = address(sequencingChain.gasAggregator());
+        assertEq(initialGasAggregator, address(factory.gasAggregator()));
+
+        // Update gas aggregator on factory
+        address newGasAggregator = address(0x999);
+        vm.prank(admin);
+        factory.setGasAggregator(IGasAggregator(newGasAggregator));
+
+        // Update gas aggregator on the appchain (anyone can call this)
+        vm.prank(nonAdmin);
+        factory.updateGasAggregatorOnAppchain(chainId);
+
+        // Verify the appchain's gas aggregator was updated
+        assertEq(address(sequencingChain.gasAggregator()), newGasAggregator);
+    }
+
+    function testUpdateGasAggregatorOnAppchainChainIdNotFound() public {
+        uint256 nonExistentChainId = 99999;
+
+        vm.expectRevert(SyndicateFactory.ChainIdNotFound.selector);
+        factory.updateGasAggregatorOnAppchain(nonExistentChainId);
     }
 }

@@ -63,6 +63,7 @@ contract StorageUpgradeTest is Test {
     event MaxTransactionsPerBatchUpdated(uint256 newMax);
 
     function setUp() public {
+        vm.warp(1754089200 + 1 days); // after epoch start
         // Deploy mock factory and gas aggregator normally for testing
         factory = new MockFactory();
         gasAggregator = new MockGasAggregator();
@@ -74,7 +75,8 @@ contract StorageUpgradeTest is Test {
 
         // Deploy proxy pointing to V1
         bytes memory initData = abi.encodeCall(
-            SyndicateSequencingChain.initialize, (ADMIN, address(gasAggregator), PERMISSION_MODULE, TEST_APPCHAIN_ID, 0)
+            SyndicateSequencingChain.initialize,
+            (ADMIN, address(factory), address(gasAggregator), PERMISSION_MODULE, TEST_APPCHAIN_ID, 0)
         );
 
         proxy = new ERC1967Proxy(address(syndicateV1), initData);

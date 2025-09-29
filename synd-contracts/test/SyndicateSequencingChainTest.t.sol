@@ -173,13 +173,17 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
 
         vm.expectRevert("App chain ID cannot be 0");
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 0, 0);
+        SyndicateSequencingChain(chainProxy).initialize(
+            admin, address(factory), address(gasAggregator), address(permissionModule), 0, 0
+        );
     }
 
     function testUpgradeBadguy() public {
         address chainImpl = address(new SyndicateSequencingChain());
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 1, 0);
+        SyndicateSequencingChain(chainProxy).initialize(
+            admin, address(factory), address(gasAggregator), address(permissionModule), 1, 0
+        );
 
         address badguy = makeAddr("badguy");
         vm.prank(badguy);
@@ -190,7 +194,9 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     function testUpgradeOwner() public {
         address chainImpl = address(new SyndicateSequencingChain());
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(gasAggregator), address(permissionModule), 1, 0);
+        SyndicateSequencingChain(chainProxy).initialize(
+            admin, address(factory), address(gasAggregator), address(permissionModule), 1, 0
+        );
 
         // Allow the implementation
         vm.prank(address(factory));
@@ -637,5 +643,64 @@ contract SyndicateSequencingChainViewRequireAnyTest is SyndicateSequencingChainT
         // Other storage should remain intact
         assertEq(chain.appchainId(), 10042001, "AppchainId should remain intact");
         assertEq(chain.version(), "3.2.1", "Version should be correctly stored");
+    }
+
+    // ================== GAS AGGREGATOR ACCESS CONTROL TESTS ==================
+
+    function testSetGasAggregatorOnlyFactory() public {
+        address newGasAggregator = address(0x999);
+
+        // Only factory should be able to call setGasAggregator
+        vm.prank(address(factory));
+        chain.setGasAggregator(IGasAggregator(newGasAggregator));
+
+        // Verify the gas aggregator was updated
+        assertEq(address(chain.gasAggregator()), newGasAggregator);
+    }
+
+    function testSetGasAggregatorOnlyFactoryReverts() public {
+        address newGasAggregator = address(0x999);
+
+        // Admin should not be able to call setGasAggregator directly
+        vm.prank(admin);
+        vm.expectRevert(SyndicateSequencingChain.OnlyFactory.selector);
+        chain.setGasAggregator(IGasAggregator(newGasAggregator));
+
+        // Random address should not be able to call setGasAggregator
+        address randomCaller = address(0x123);
+        vm.prank(randomCaller);
+        vm.expectRevert(SyndicateSequencingChain.OnlyFactory.selector);
+        chain.setGasAggregator(IGasAggregator(newGasAggregator));
+
+        // Non-admin should not be able to call setGasAggregator
+        address nonAdmin = address(0x456);
+        vm.prank(nonAdmin);
+        vm.expectRevert(SyndicateSequencingChain.OnlyFactory.selector);
+        chain.setGasAggregator(IGasAggregator(newGasAggregator));
+    }
+
+    function testSetGasAggregatorUpdatesStorage() public {
+        address originalGasAggregator = address(chain.gasAggregator());
+        address newGasAggregator = address(0x777);
+
+        // Verify original gas aggregator
+        assertEq(originalGasAggregator, address(factory.gasAggregator()));
+
+        // Update gas aggregator via factory
+        vm.prank(address(factory));
+        chain.setGasAggregator(IGasAggregator(newGasAggregator));
+
+        // Verify storage was updated
+        assertEq(address(chain.gasAggregator()), newGasAggregator);
+        assertTrue(address(chain.gasAggregator()) != originalGasAggregator);
+    }
+
+    function testSetGasAggregatorWithZeroAddress() public {
+        // Factory should be able to set gas aggregator to zero address if needed
+        vm.prank(address(factory));
+        chain.setGasAggregator(IGasAggregator(address(0)));
+
+        // Verify storage was updated
+        assertEq(address(chain.gasAggregator()), address(0));
     }
 }

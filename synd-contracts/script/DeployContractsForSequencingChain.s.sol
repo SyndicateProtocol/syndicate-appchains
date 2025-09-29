@@ -67,7 +67,7 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
 
         // Deploy sequencer with permission module
         sequencingChain = new SyndicateSequencingChain();
-        sequencingChain.initialize(admin, gasAggregator, address(permissionModule), appchainId, 0);
+        sequencingChain.initialize(admin, address(0), gasAggregator, address(permissionModule), appchainId, 0);
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 
         // Deploy and add always allowed module
