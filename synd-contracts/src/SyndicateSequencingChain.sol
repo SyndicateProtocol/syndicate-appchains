@@ -176,7 +176,7 @@ contract SyndicateSequencingChain is
 
     /// @notice Emitted when the gas aggregator notification failed
     /// @param gasAggregator The address of the gas aggregator
-    event gasAggregatorNotificationFailed(address indexed gasAggregator);
+    event GasAggregatorNotificationFailed(address indexed gasAggregator);
 
     /*//////////////////////////////////////////////////////////////
                             FUNCTIONS

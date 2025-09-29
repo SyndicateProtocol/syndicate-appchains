@@ -131,7 +131,7 @@ contract SyndicateFactory is
 
     /// @notice Emitted when gas aggregator notification fails during implementation updates
     /// @dev This is a non-critical failure that doesn't prevent the operation from completing
-    event gasAggregatorNotificationFailed();
+    event GasAggregatorNotificationFailed();
 
     /// @notice Emitted when an appchain is migrated from a legacy implementation
     /// @param oldAppchainContract The address of the legacy appchain being migrated
