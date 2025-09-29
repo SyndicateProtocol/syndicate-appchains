@@ -68,15 +68,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     error FailedToUpgradeToLatestImplementation();
     error InsufficientFee();
 
-    /// @dev another test
-    address public testAddress;
-
     /// @notice Mapping from appchain ID to the sequencing contract address
     mapping(uint256 => address) public appchainContracts;
     uint256[] public chainIDs;
-
-    /// @dev testing storage clash detection on CI
-    uint256 public clashDetector;
 
     /// @notice Stub implementation for consistent proxy deployment
     address public stubImplementation;
