@@ -72,6 +72,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     mapping(uint256 => address) public appchainContracts;
     uint256[] public chainIDs;
 
+    /// @dev testing storage clash detection on CI
+    uint256 public clashDetector;
+
     /// @notice Stub implementation for consistent proxy deployment
     address public stubImplementation;
 
