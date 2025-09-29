@@ -11,6 +11,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
 import {GasAggregator} from "../staking/GasAggregator.sol";
+import {IGasAggregator} from "../interfaces/IGasAggregator.sol";
 
 /// @title MinimalUUPSStub
 /// @notice Minimal UUPS implementation stub for deterministic proxy deployments
@@ -28,10 +29,6 @@ contract MinimalUUPSStub is UUPSUpgradeable {
     fallback() external payable {
         revert("Stub: no logic implemented");
     }
-}
-
-interface IGasAggregator {
-    function notifyNewImplementation(address newImplementation) external;
 }
 
 enum NamespaceState {
@@ -128,7 +125,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
         // deploy a new gas aggregator with a deterministic address
         address gasAggregatorProxy = Create2.deploy(0, bytes32("SYNDICATE_GAS_AGGREGATOR"), getProxyBytecode());
-        bytes memory initData = abi.encodeWithSignature("initialize(address,address)", admin, address(this));
+        bytes memory initData =
+            abi.encodeWithSignature("initialize(address,address,address)", admin, address(this), syndicateChainImpl);
         (bool upgradeSuccess,) = gasAggregatorProxy.call(
             abi.encodeWithSignature("upgradeToAndCall(address,bytes)", new GasAggregator(), initData)
         );
@@ -179,7 +177,11 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
         // Upgrade the proxy to use the latest implementation (instead of the stub)
         bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,uint256)", address(this), address(permissionModule), actualChainId
+            "initialize(address,address,address,uint256)",
+            admin,
+            address(gasAggregator),
+            address(permissionModule),
+            actualChainId
         );
         (bool upgradeSuccess,) = sequencingChain.call(
             abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
@@ -187,9 +189,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         if (!upgradeSuccess) {
             revert FailedToUpgradeToLatestImplementation();
         }
-
-        // Transfer ownership to the intended admin
-        SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 
@@ -284,7 +283,11 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
         // Upgrade the proxy to use the latest implementation (instead of the stub)
         bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,uint256)", address(this), address(permissionModule), actualChainId
+            "initialize(address,address,address,uint256)",
+            admin,
+            address(gasAggregator),
+            address(permissionModule),
+            actualChainId
         );
         (bool upgradeSuccess,) = sequencingChain.call(
             abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
@@ -292,9 +295,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         if (!upgradeSuccess) {
             revert FailedToUpgradeToLatestImplementation();
         }
-
-        // Transfer ownership to the intended admin
-        SyndicateSequencingChain(sequencingChain).transferOwnership(admin);
 
         emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
 

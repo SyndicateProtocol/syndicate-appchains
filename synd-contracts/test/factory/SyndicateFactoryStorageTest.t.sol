@@ -25,6 +25,8 @@ contract SyndicateFactoryStorageTest is Test {
     uint256 constant SENDER_NONCES_SLOT = 4; // Our deterministic nonce variable
 
     function setUp() public {
+        vm.warp(1754089200 + 1 days); // after epoch start
+
         admin = address(0x1);
         // Deploy permission module
         permissionModule = new RequireAndModule(admin);

@@ -38,6 +38,8 @@ contract SyndicateFactoryWrapperTest is Test {
     );
 
     function setUp() public {
+        vm.warp(1754089200 + 1 days); // after epoch start
+
         admin = address(0x1);
         manager = address(0x2);
         user1 = address(0x3);

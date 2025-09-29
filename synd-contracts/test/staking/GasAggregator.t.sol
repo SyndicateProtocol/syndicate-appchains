@@ -4,10 +4,12 @@ pragma solidity 0.8.28;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {GasAggregator, IAppchainFactory} from "src/staking/GasAggregator.sol";
-import {SyndicateFactory, IGasAggregator} from "src/factory/SyndicateFactory.sol";
+import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
+import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
@@ -26,7 +28,7 @@ contract GasAggregatorIntegrationTest is Test {
 
     uint256 public constant EPOCH_DURATION = 30 days;
     uint256 public constant CHALLENGE_WINDOW = 24 hours;
-    uint256 public constant ADD_CHAIN_FEE = 0.1 ether;
+    uint256 public constant ADD_CHAIN_FEE = 5 ether;
 
     function setUp() public {
         // Set timestamp to after epoch 1' START_TIMESTAMP
@@ -35,15 +37,15 @@ contract GasAggregatorIntegrationTest is Test {
         permissionModule = new AlwaysAllowedModule();
 
         // deploy factory
-        SyndicateFactory factoryImpl = SyndicateFactory(deployCode("SyndicateFactory.sol"));
+        SyndicateFactory factoryImpl = new SyndicateFactory();
         bytes memory factoryInitData = abi.encodeCall(SyndicateFactory.initialize, (admin));
-        address factoryProxy = deployCode("ERC1967Proxy.sol", abi.encode(factoryImpl, factoryInitData));
-        factory = SyndicateFactory(factoryProxy);
+        ERC1967Proxy factoryProxy = new ERC1967Proxy(address(factoryImpl), factoryInitData);
+        factory = SyndicateFactory(address(factoryProxy));
 
         gasAggregator = GasAggregator(address(factory.gasAggregator()));
 
-        vm.deal(user, 10 ether);
-        vm.deal(admin, 10 ether);
+        vm.deal(user, 100 ether);
+        vm.deal(admin, 100 ether);
     }
 
     function test_Integration_AddChainWithRealFactory() public {
@@ -223,9 +225,9 @@ contract GasAggregatorIntegrationTest is Test {
 
         gasAggregator.aggregateTokensUsed();
 
-        // after 2 epochs, banned chain should be removed
+        // after 2 epochs, banned chain should still be banned
         assertEq(gasAggregator.getTotalTrackedChains(), 2);
-        assertFalse(gasAggregator.bannedAppchains(chainId2));
+        assertTrue(gasAggregator.bannedAppchains(chainId2));
     }
 
     function test_Integration_MixedValidInvalidChainAggregation() public {
