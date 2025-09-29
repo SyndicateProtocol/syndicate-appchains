@@ -151,6 +151,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @dev Prevents invalid contract addresses
     error ZeroAddress();
 
+    /// @notice Error thrown when an epoch start timestamp is zero
+    error ZeroEpoch();
+
     /// @notice Error thrown when data hash is invalid
     /// @dev Ensures data integrity
     error InvalidDataHash();
@@ -214,6 +217,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     {
         if (_admin == address(0)) revert ZeroAddress();
         if (_factory == address(0)) revert ZeroAddress();
+        if (_epochStart == 0) revert ZeroEpoch();
 
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
