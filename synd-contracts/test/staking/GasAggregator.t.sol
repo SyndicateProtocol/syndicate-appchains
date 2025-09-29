@@ -3,14 +3,13 @@ pragma solidity 0.8.28;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
-import {GasAggregator} from "../../src/staking/GasAggregator.sol";
-import {SyndicateFactory, IGasAggregator} from "../../src/factory/SyndicateFactory.sol";
-import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
-import {AlwaysAllowedModule} from "../../src/sequencing-modules/AlwaysAllowedModule.sol";
-import {IRequirementModule} from "../../src/interfaces/IRequirementModule.sol";
+import {GasAggregator, IAppchainFactory} from "src/staking/GasAggregator.sol";
+import {SyndicateFactory, IGasAggregator} from "src/factory/SyndicateFactory.sol";
+import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
+import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
+import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {SyndicateDeterministicAddresses} from "../../src/SyndicateDeterministicAddresses.sol";
 
 contract GasAggregatorIntegrationTest is Test {
     GasAggregator public gasAggregator;
@@ -35,66 +34,13 @@ contract GasAggregatorIntegrationTest is Test {
 
         permissionModule = new AlwaysAllowedModule();
 
-        // CRITICAL: Deploy factory at the hardcoded address using vm.etch
-        // The GasAggregator contract expects the factory to be at this specific address
-        SyndicateFactory factoryImpl = new SyndicateFactory();
+        // deploy factory
+        SyndicateFactory factoryImpl = SyndicateFactory(deployCode("SyndicateFactory.sol"));
         bytes memory factoryInitData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        address factoryProxy = deployCode("ERC1967Proxy.sol", abi.encode(factoryImpl, factoryInitData));
+        factory = SyndicateFactory(factoryProxy);
 
-        ProxyAdmin factoryProxyAdmin = new ProxyAdmin(admin);
-        TransparentUpgradeableProxy factoryProxy =
-            new TransparentUpgradeableProxy(address(factoryImpl), address(factoryProxyAdmin), factoryInitData);
-
-        vm.etch(SyndicateDeterministicAddresses.FACTORY, address(factoryProxy).code);
-
-        // Copy proxy storage to hardcoded address - specifically the implementation slot and other critical slots
-        bytes32 implementationSlot = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
-        bytes32 implValue = vm.load(address(factoryProxy), implementationSlot);
-        vm.store(SyndicateDeterministicAddresses.FACTORY, implementationSlot, implValue);
-
-        // Also copy other storage slots
-        for (uint256 i = 0; i < 100; i++) {
-            bytes32 slot = vm.load(address(factoryProxy), bytes32(i));
-            vm.store(SyndicateDeterministicAddresses.FACTORY, bytes32(i), slot);
-        }
-
-        factory = SyndicateFactory(SyndicateDeterministicAddresses.FACTORY);
-
-        // Now deploy GasAggregator as proxy
-        GasAggregator gasAggImpl = new GasAggregator();
-        bytes memory gasAggInitData = abi.encodeCall(GasAggregator.initialize, (admin, CHALLENGE_WINDOW, ADD_CHAIN_FEE));
-
-        ProxyAdmin gasProxyAdmin = new ProxyAdmin(admin);
-        TransparentUpgradeableProxy gasAggProxy =
-            new TransparentUpgradeableProxy(address(gasAggImpl), address(gasProxyAdmin), gasAggInitData);
-
-        // Set maxAppchainsToQuery on the original proxy before copying
-        vm.prank(admin);
-        GasAggregator(address(gasAggProxy)).setMaxAppchainsToQuery(10);
-
-        vm.etch(SyndicateDeterministicAddresses.GAS_AGGREGATOR, address(gasAggProxy).code);
-
-        // Copy proxy storage to hardcoded address - specifically the implementation slot and other critical slots
-        bytes32 gasImplSlot = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
-        bytes32 gasImplValue = vm.load(address(gasAggProxy), gasImplSlot);
-        vm.store(SyndicateDeterministicAddresses.GAS_AGGREGATOR, gasImplSlot, gasImplValue);
-
-        // Copy ALL storage slots to ensure access control and other state is preserved
-        for (uint256 i = 0; i < 200; i++) {
-            bytes32 slot = vm.load(address(gasAggProxy), bytes32(i));
-            vm.store(SyndicateDeterministicAddresses.GAS_AGGREGATOR, bytes32(i), slot);
-        }
-
-        gasAggregator = GasAggregator(SyndicateDeterministicAddresses.GAS_AGGREGATOR);
-
-        // Ensure admin has DEFAULT_ADMIN_ROLE at the new address
-        // Check if admin already has the role, if not, set it via storage manipulation
-        bytes32 adminRole = gasAggregator.DEFAULT_ADMIN_ROLE();
-        if (!gasAggregator.hasRole(adminRole, admin)) {
-            // Find and copy the role assignment from the original proxy
-            bytes32 origRoleSlot = keccak256(abi.encode(admin, keccak256(abi.encode(adminRole, uint256(0)))));
-            bytes32 roleValue = vm.load(address(gasAggProxy), origRoleSlot);
-            vm.store(SyndicateDeterministicAddresses.GAS_AGGREGATOR, origRoleSlot, roleValue);
-        }
+        gasAggregator = GasAggregator(address(factory.gasAggregator()));
 
         vm.deal(user, 10 ether);
         vm.deal(admin, 10 ether);

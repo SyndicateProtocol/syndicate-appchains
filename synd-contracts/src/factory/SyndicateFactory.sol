@@ -10,7 +10,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
-import {SyndicateDeterministicAddresses} from "../SyndicateDeterministicAddresses.sol";
+import {GasAggregator} from "../staking/GasAggregator.sol";
 
 /// @title MinimalUUPSStub
 /// @notice Minimal UUPS implementation stub for deterministic proxy deployments
@@ -58,16 +58,13 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Current implementation address used for new deployments
     address public syndicateChainImpl;
 
-    /// @notice Per-sender nonce tracking for deterministic chainID generation
-    mapping(address sender => uint256 nonce) public senderNonces;
-
     /// @notice Fee required to create a sequencing chain (in native token)
     uint256 public creationFee;
 
     /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
     string public version;
 
-    IGasAggregator public constant GAS_AGGREGATOR = IGasAggregator(SyndicateDeterministicAddresses.GAS_AGGREGATOR);
+    IGasAggregator public gasAggregator;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -76,6 +73,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     error ZeroAddress();
     error ChainIdAlreadyExists();
     error FailedToUpgradeToLatestImplementation();
+    error FailedToUpgradeGasAggregator();
 
     /*//////////////////////////////////////////////////////////////
                              EVENTS 
@@ -126,8 +124,18 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
         // Deploy the real implementation and make it the default
         syndicateChainImpl = address(new SyndicateSequencingChain());
-
         emit ImplementationAdded(syndicateChainImpl);
+
+        // deploy a new gas aggregator with a deterministic address
+        address gasAggregatorProxy = Create2.deploy(0, bytes32("SYNDICATE_GAS_AGGREGATOR"), getProxyBytecode());
+        bytes memory initData = abi.encodeWithSignature("initialize(address,address)", admin, address(this));
+        (bool upgradeSuccess,) = gasAggregatorProxy.call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", new GasAggregator(), initData)
+        );
+        if (!upgradeSuccess) {
+            revert FailedToUpgradeGasAggregator();
+        }
+        gasAggregator = IGasAggregator(gasAggregatorProxy);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -203,15 +211,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @dev Always returns the same bytecode for predictable CREATE2 addresses
     /// @return The bytecode to be used for deployment
     function getProxyBytecode() public view returns (bytes memory) {
-        return SyndicateDeterministicAddresses.getProxyBytecode(stubImplementation);
-    }
-
-    /// @notice Returns the creation bytecode for an ERC1967Proxy with the given implementation address.
-    /// @dev Used for deterministic deployment of proxy contracts via CREATE2.
-    /// @param impl The address of the implementation contract.
-    /// @return The bytecode to be used for deployment.
-    function getImplBytecode(address impl) public pure returns (bytes memory) {
-        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(impl, ""));
+        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(stubImplementation, ""));
     }
 
     /// @notice Computes the deterministic stub implementation address
@@ -328,9 +328,14 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         syndicateChainImpl = newImplementation;
-        try GAS_AGGREGATOR.notifyNewImplementation(newImplementation) {}
+        try gasAggregator.notifyNewImplementation(newImplementation) {}
         catch {
             emit gasAggregatorNotificationFailed();
         }
+    }
+
+    function setGasAggregator(IGasAggregator newGasAggregator) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (address(newGasAggregator) == address(0)) revert ZeroAddress();
+        gasAggregator = newGasAggregator;
     }
 }

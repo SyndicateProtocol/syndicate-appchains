@@ -29,6 +29,8 @@ contract SyndicateFactoryTest is Test {
     event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
 
     function setUp() public {
+        vm.warp(1754089200 + 1 days); // after epoch start
+
         admin = address(0x1);
         nonAdmin = address(0x3);
         // Deploy implementation and proxy
@@ -179,13 +181,6 @@ contract SyndicateFactoryTest is Test {
         bytes memory bytecode = factory.getProxyBytecode();
         bytes memory expectedBytecode =
             abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(factory.stubImplementation(), ""));
-        assertEq(bytecode, expectedBytecode);
-    }
-
-    function testGetImplBytecode() public {
-        address impl = address(new SyndicateSequencingChain());
-        bytes memory bytecode = factory.getImplBytecode(impl);
-        bytes memory expectedBytecode = abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(impl, ""));
         assertEq(bytecode, expectedBytecode);
     }
 

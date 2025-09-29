@@ -6,7 +6,6 @@ import {GasCounter} from "./staking/GasCounter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {SyndicateDeterministicAddresses} from "./SyndicateDeterministicAddresses.sol";
 
 interface IGasAggregator {
     function notifyChainUpgrade(uint256 chainId, address newImplementation) external;
@@ -23,6 +22,8 @@ struct SyndicateSequencingChainStorage {
     address emissionsReceiver;
     /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
     bool allowGasTrackingBanOnUpgrade;
+    /// @notice Gas aggregator contract
+    IGasAggregator gasAggregator;
     /// @notice Version of the SyndicateSequencingChain contract (updatable during upgrades)
     string version;
 }
@@ -98,12 +99,15 @@ contract SyndicateSequencingChain is
         return $.allowGasTrackingBanOnUpgrade;
     }
 
+    function gasAggregator() public view returns (IGasAggregator) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.gasAggregator;
+    }
+
     function version() public view returns (string memory) {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         return $.version;
     }
-
-    IGasAggregator public constant GAS_AGGREGATOR = IGasAggregator(SyndicateDeterministicAddresses.GAS_AGGREGATOR);
 
     /*//////////////////////////////////////////////////////////////
                             ERRORS
@@ -112,6 +116,7 @@ contract SyndicateSequencingChain is
     error NoTxData();
     error TransactionOrSenderNotAllowed();
     error UpgradeWouldResultInGasTrackingBan();
+    error ZeroAddress();
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS
@@ -128,7 +133,8 @@ contract SyndicateSequencingChain is
     event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
 
     /// @notice Emitted when the gas aggregator notification failed
-    event gasAggregatorNotificationFailed();
+    /// @param gasAggregator The address of the gas aggregator
+    event gasAggregatorNotificationFailed(address indexed gasAggregator);
 
     /*//////////////////////////////////////////////////////////////
                             FUNCTIONS
@@ -148,10 +154,14 @@ contract SyndicateSequencingChain is
     /// @param admin The address to be set as the contract owner
     /// @param _permissionRequirementModule The address of the permission requirement module (e.g., RequireAndModule) or 0 to allow tranasctions
     /// @param _appchainId The unique identifier for the application chain this contract sequences for (must not be 0)
-    function initialize(address admin, address _permissionRequirementModule, uint256 _appchainId)
-        external
-        initializer
-    {
+    function initialize(
+        address admin,
+        address _gasAggregator,
+        address _permissionRequirementModule,
+        uint256 _appchainId
+    ) external initializer {
+        if (admin == address(0)) revert ZeroAddress();
+        if (_gasAggregator == address(0)) revert ZeroAddress();
         require(_appchainId != 0, "App chain ID cannot be 0");
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
         __UUPSUpgradeable_init();
@@ -161,6 +171,7 @@ contract SyndicateSequencingChain is
         $.appchainId = _appchainId;
         $.allowGasTrackingBanOnUpgrade = false;
         $.version = "1.0.0";
+        $.gasAggregator = IGasAggregator(_gasAggregator);
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
@@ -168,16 +179,17 @@ contract SyndicateSequencingChain is
     /// @param _newImplementation The address of the new implementation contract.
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        IGasAggregator gasAggr = $.gasAggregator;
         if (!$.allowGasTrackingBanOnUpgrade) {
-            bool isAllowed = GAS_AGGREGATOR.allowedImplementations(_newImplementation);
+            bool isAllowed = gasAggr.allowedImplementations(_newImplementation);
             if (!isAllowed) {
                 revert UpgradeWouldResultInGasTrackingBan();
             }
         }
 
-        try GAS_AGGREGATOR.notifyChainUpgrade(appchainId(), _newImplementation) {}
+        try gasAggr.notifyChainUpgrade(appchainId(), _newImplementation) {}
         catch {
-            emit gasAggregatorNotificationFailed();
+            emit gasAggregatorNotificationFailed(address(gasAggr));
         }
     }
 
@@ -283,5 +295,13 @@ contract SyndicateSequencingChain is
     function setAllowGasTrackingBanOnUpgrade(bool _allowGasTrackingBanOnUpgrade) external onlyOwner {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
+    }
+
+    /// @notice Set the gas aggregator address
+    /// @dev Only callable by the contract owner
+    /// @param newGasAggregator The address of the new gas aggregator
+    function setGasAggregator(IGasAggregator newGasAggregator) external onlyOwner {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        $.gasAggregator = newGasAggregator;
     }
 }

@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 import {EpochTracker} from "./EpochTracker.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {SyndicateDeterministicAddresses} from "../SyndicateDeterministicAddresses.sol";
 
 interface ISequencingContract {
     function getTokensForEpoch(uint256 epoch) external view returns (uint256);
@@ -13,10 +13,7 @@ interface ISequencingContract {
 }
 
 interface IAppchainFactory {
-    function isImplementationAllowed(address implementation) external view returns (bool);
-    function computeSequencingChainAddress(uint256 chainId) external view returns (address);
     function getProxyBytecode() external view returns (bytes memory);
-    function syndicateChainImpl() external view returns (address);
 }
 
 /**
@@ -27,14 +24,14 @@ interface IAppchainFactory {
  *      (for larger numbers of appchains) with a challenge mechanism for data integrity.
  * @dev Inherits from EpochTracker for epoch management and AccessControlUpgradeable for admin functions
  */
-contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable {
+contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable, UUPSUpgradeable {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Factory contract for managing appchain contracts
     /// @dev Used to get appchain addresses and total count
-    IAppchainFactory public constant FACTORY = IAppchainFactory(SyndicateDeterministicAddresses.FACTORY);
+    IAppchainFactory public factory;
 
     /// @notice Maximum number of appchains that can be queried automatically
     /// @dev When total appchains >= this value, off-chain aggregation is required
@@ -44,7 +41,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     uint256 public addChainFee;
 
     /// @notice Cached proxy bytecode hash for deterministic address computation
-    bytes32 public proxyBytecodeHash;
+    bytes32 public sequencingChainProxyBytecodeHash;
 
     /// @notice Registry of chains that can be tracked for gas usage
     uint256[] public appchains;
@@ -79,6 +76,10 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     /// @notice Mapping from epoch to aggregated data hash
     /// @dev Stores the final hash for each completed epoch (can be used for re-submissions)
     mapping(uint256 => bytes32) public aggregatedEpochDataHash;
+
+    // TODO implement this
+    /// @notice Admin-controlled overrides for appchain contracts
+    mapping(uint256 => address) public appchainContractOverrides;
 
     /// @notice Version of the GasAggregator contract (updatable during upgrades)
     string public version;
@@ -133,6 +134,8 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     error ChainNotFound(uint256 chainId);
     error ChainIsBanned(uint256 chainId);
     error OnlyChainCanNotifyUpgrade();
+    error OnlyFactoryCanNotifyNewImplementation();
+    error NoSequencingChainProxyBytecodeHash();
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -159,11 +162,10 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
      * @notice Initialize the GasAggregator contract
      * @dev Sets up the contract with factory, admin, and challenge window configuration
      * @param admin The address to be granted admin privileges
-     * @param _challengeWindow The challenge window duration for off-chain aggregation
+     * @param _factory The address of the appchain factory
      */
-    function initialize(address admin, uint256 _challengeWindow, uint256 _addChainFee) external initializer {
+    function initialize(address admin, address _factory) external initializer {
         if (admin == address(0)) revert ZeroAddress();
-        if (_challengeWindow == 0) revert ZeroChallengeWindow();
 
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -171,16 +173,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         // consider all past epochs ignored
         pendingEpoch = getCurrentEpoch();
         version = "1.0.0";
-        challengeWindow = _challengeWindow;
-        addChainFee = _addChainFee;
-
-        // Cache the proxy bytecode hash for deterministic address computation
-        proxyBytecodeHash = keccak256(FACTORY.getProxyBytecode());
-
-        address syndicateChainImpl = FACTORY.syndicateChainImpl();
-        if (syndicateChainImpl != address(0)) {
-            allowedImplementations[syndicateChainImpl] = true;
-        }
+        challengeWindow = 24 hours;
+        addChainFee = 5 ether;
+        factory = IAppchainFactory(_factory);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -339,12 +334,20 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
     }
 
     function notifyNewImplementation(address newImplementation) external {
+        if (msg.sender != address(factory)) revert OnlyFactoryCanNotifyNewImplementation();
         allowedImplementations[newImplementation] = true;
     }
 
     /*//////////////////////////////////////////////////////////////
                          INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Computes the deterministic address for a sequencing chain proxy
+    /// @param chainId The chain ID for the sequencing chain
+    /// @return The computed address of the sequencing chain proxy
+    function computeSequencingChainAddress(uint256 chainId) internal returns (address) {
+        return Create2.computeAddress(bytes32(chainId), getSequencingChainProxyBytecodeHash(), address(factory));
+    }
 
     /// @notice Internal function to remove a chain from tracking
     /// @param chainId The chain ID to remove
@@ -362,17 +365,19 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         bannedAppchains[chainId] = true;
     }
 
+    function getSequencingChainProxyBytecodeHash() internal returns (bytes32) {
+        if (sequencingChainProxyBytecodeHash != bytes32(0)) return sequencingChainProxyBytecodeHash;
+        if (address(factory) != address(0)) {
+            // Cache the proxy bytecode hash for deterministic address computation
+            sequencingChainProxyBytecodeHash = keccak256(factory.getProxyBytecode());
+            return sequencingChainProxyBytecodeHash;
+        }
+        revert NoSequencingChainProxyBytecodeHash();
+    }
+
     /*//////////////////////////////////////////////////////////////
                            VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Computes the address where a sequencing chain will be deployed
-    /// @param chainId The chain ID to compute the address for
-    /// @return The computed address
-    /// TODO: copied from SyndicateFactory.sol to avoid an external call. (should this be moved to a library?)
-    function computeSequencingChainAddress(uint256 chainId) internal view returns (address) {
-        return SyndicateDeterministicAddresses.computeSequencingChainAddress(chainId, proxyBytecodeHash);
-    }
 
     /**
      * @notice Check if off-chain aggregation is required
@@ -421,6 +426,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
      * @custom:example If set to 3600, challenge window is 1 hour
      */
     function setChallengeWindow(uint256 newChallengeWindow) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (newChallengeWindow == 0) revert ZeroChallengeWindow();
         challengeWindow = newChallengeWindow;
     }
 
@@ -457,4 +463,20 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable 
         (bool success,) = to.call{value: withdrawAmount}("");
         require(success, "Transfer failed");
     }
+
+    function setFactory(address newFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        factory = IAppchainFactory(newFactory);
+        sequencingChainProxyBytecodeHash = keccak256(factory.getProxyBytecode());
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            UPGRADE AUTHORIZATION
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Authorizes contract upgrades
+     * @dev Only admin can authorize upgrades
+     * @param newImplementation Address of the new implementation
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }

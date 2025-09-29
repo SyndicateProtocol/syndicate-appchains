@@ -8,7 +8,6 @@ import {SyndicateSequencingChain, IGasAggregator} from "../../src/SyndicateSeque
 import {SyndicateSequencingChainTestingUpgradeability} from
     "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
 import {IPermissionModule} from "../../src/interfaces/IPermissionModule.sol";
-import {SyndicateDeterministicAddresses} from "../../src/SyndicateDeterministicAddresses.sol";
 
 /// @notice Mock factory contract for testing upgrades
 contract MockFactory {
@@ -40,6 +39,7 @@ contract StorageUpgradeTest is Test {
     uint256 constant TEST_APPCHAIN_ID = 12345;
     address constant EMISSIONS_RECEIVER = address(0x5678);
     address constant ADMIN = address(0x9999);
+    address constant GAS_AGGREGATOR = address(0x8888);
     address constant PERMISSION_MODULE = address(1); // Always allow module
 
     // Contract instances
@@ -69,7 +69,6 @@ contract StorageUpgradeTest is Test {
 
         // Deploy a mock gas aggregator at the hardcoded address for SyndicateSequencingChain to use
         MockGasAggregator mockGasAgg = new MockGasAggregator();
-        vm.etch(SyndicateDeterministicAddresses.GAS_AGGREGATOR, address(mockGasAgg).code);
 
         vm.startPrank(address(factory));
 
@@ -77,8 +76,9 @@ contract StorageUpgradeTest is Test {
         syndicateV1 = new SyndicateSequencingChain();
 
         // Deploy proxy pointing to V1
-        bytes memory initData =
-            abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE, TEST_APPCHAIN_ID));
+        bytes memory initData = abi.encodeCall(
+            SyndicateSequencingChain.initialize, (ADMIN, GAS_AGGREGATOR, PERMISSION_MODULE, TEST_APPCHAIN_ID)
+        );
 
         proxy = new ERC1967Proxy(address(syndicateV1), initData);
         syndicateV1 = SyndicateSequencingChain(address(proxy));
