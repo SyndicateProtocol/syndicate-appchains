@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {GasAggregator, AppchainFactory} from "../../src/staking/GasAggregator.sol";
+import {GasAggregator, IAppchainFactory} from "../../src/staking/GasAggregator.sol";
 import {EpochTracker} from "../../src/staking/EpochTracker.sol";
 import {SyndicateFactory} from "../../src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
@@ -34,7 +34,7 @@ contract MockGasCounter {
     }
 }
 
-contract MockAppchainFactory is AppchainFactory {
+contract MockAppchainFactory is IAppchainFactory {
     uint256 public totalAppchains;
     mapping(uint256 => address) public appchainContracts;
     uint256[] public appchainChainIDs;
@@ -66,6 +66,10 @@ contract MockAppchainFactory is AppchainFactory {
             contracts[i] = appchainContracts[appchainChainIDs[i]];
         }
         return (appchainChainIDs, contracts);
+    }
+
+    function getProxyBytecode() external view returns (bytes memory) {
+        return ""; // NOTE: stub just to satisfy interface
     }
 }
 
@@ -102,7 +106,8 @@ contract GasAggregatorTest is Test {
         vm.warp(implementation.START_TIMESTAMP());
 
         // 4. Prepare initialization data
-        bytes memory initData = abi.encodeWithSelector(GasAggregator.initialize.selector, mockFactory, admin, 24 hours);
+        bytes memory initData =
+            abi.encodeWithSelector(GasAggregator.initialize.selector, admin, mockFactory, address(0), 1);
 
         // 5. Deploy TransparentUpgradeableProxy
         TransparentUpgradeableProxy proxy =
@@ -172,14 +177,14 @@ contract GasAggregatorTest is Test {
     function test_SetFactory() public {
         MockAppchainFactory newFactory = new MockAppchainFactory();
         vm.prank(admin);
-        gasAggregator.setFactory(newFactory);
+        gasAggregator.setFactory(address(newFactory));
         assertEq(address(gasAggregator.factory()), address(newFactory));
     }
 
     function test_SetFactory_NonAdmin() public {
         vm.prank(user);
         vm.expectRevert();
-        gasAggregator.setFactory(mockFactory);
+        gasAggregator.setFactory(address(mockFactory));
     }
 
     function test_FallbackToOffchainAggregation() public {
