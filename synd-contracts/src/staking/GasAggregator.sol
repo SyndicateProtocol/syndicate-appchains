@@ -208,7 +208,10 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
      * @param _factory The address of the appchain factory contract
      * @param _allowedImplementation The address of the initial approved sequencing chain implementation
      */
-    function initialize(address _admin, address _factory, address _allowedImplementation) external initializer {
+    function initialize(address _admin, address _factory, address _allowedImplementation, uint256 _epochStart)
+        external
+        initializer
+    {
         if (_admin == address(0)) revert ZeroAddress();
         if (_factory == address(0)) revert ZeroAddress();
 
@@ -216,7 +219,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         // Start tracking from the current epoch (ignore all past epochs)
-        pendingEpoch = getCurrentEpoch();
+        pendingEpoch = _epochStart;
         version = "1.0.0";
         challengeWindow = 24 hours;
         addChainFee = 5 ether;
@@ -260,7 +263,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
             revert ChainAlreadyTracked(chainId);
         }
 
-        address chainContract = computeSequencingChainAddress(chainId);
+        address chainContract = getAppchainContractAddress(chainId);
 
         uint256 codeSize;
         assembly {
