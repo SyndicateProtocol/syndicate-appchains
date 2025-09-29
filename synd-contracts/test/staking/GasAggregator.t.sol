@@ -581,4 +581,238 @@ contract GasAggregatorIntegrationTest is Test {
         gasAggregator.updateVersion("3.1.0");
         assertEq(gasAggregator.version(), "3.1.0", "New admin should be able to update version");
     }
+
+    // ================== CONTRACT OVERRIDES TESTS ==================
+
+    function test_ContractOverrides_SetChainOverride() public {
+        uint256 chainId = 999;
+        address overrideContract = address(0x1234567890123456789012345678901234567890);
+
+        // Deploy a mock contract at the override address
+        vm.etch(overrideContract, hex"6080604052");
+
+        vm.prank(admin);
+        gasAggregator.setChainOverride(chainId, overrideContract);
+
+        assertEq(gasAggregator.appchainContractOverrides(chainId), overrideContract);
+    }
+
+    function test_ContractOverrides_SetChainOverrideOnlyAdmin() public {
+        uint256 chainId = 999;
+        address overrideContract = address(0x1234567890123456789012345678901234567890);
+        vm.etch(overrideContract, hex"6080604052");
+
+        vm.prank(user);
+        vm.expectRevert();
+        gasAggregator.setChainOverride(chainId, overrideContract);
+    }
+
+    function test_ContractOverrides_SetChainOverrideZeroCodeReverts() public {
+        uint256 chainId = 999;
+        address emptyContract = address(0x1234567890123456789012345678901234567890);
+
+        vm.prank(admin);
+        vm.expectRevert();
+        gasAggregator.setChainOverride(chainId, emptyContract);
+    }
+
+    function test_ContractOverrides_OverrideUsedInAggregation() public {
+        // Create a real sequencing chain first
+        vm.prank(admin);
+        (address realChainAddress, uint256 chainId) =
+            factory.createSyndicateSequencingChain(1, admin, IRequirementModule(address(permissionModule)));
+
+        // Set emissions receiver on real chain
+        vm.prank(admin);
+        SyndicateSequencingChain(realChainAddress).setEmissionsReceiver(address(0x7001));
+
+        // Generate some gas usage on the real chain
+        vm.prank(admin);
+        SyndicateSequencingChain(realChainAddress).processTransaction(hex"deadbeef");
+
+        // Deploy a mock contract that implements the ISequencingContract interface
+        MockSequencingContract mockContract = new MockSequencingContract();
+        mockContract.setTokensForEpoch(gasAggregator.pendingEpoch(), 500 ether);
+        mockContract.setEmissionsReceiver(address(0x8888));
+
+        // Set override to point to the mock contract instead of the real one
+        vm.prank(admin);
+        gasAggregator.setChainOverride(chainId, address(mockContract));
+
+        // Add the chain to tracking
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Aggregate tokens - this should use the override contract
+        gasAggregator.aggregateTokensUsed();
+
+        // Verify that the aggregation used data from the mock contract, not the real one
+        uint256 aggregatedEpoch = gasAggregator.pendingEpoch() - 1;
+        bytes32 aggregatedHash = gasAggregator.aggregatedEpochDataHash(aggregatedEpoch);
+
+        // The aggregated data should reflect the mock contract's values
+        uint256[] memory expectedChainIDs = new uint256[](1);
+        expectedChainIDs[0] = chainId;
+        uint256[] memory expectedTokens = new uint256[](1);
+        expectedTokens[0] = 500 ether; // From mock contract
+        address[] memory expectedEmissionsReceivers = new address[](1);
+        expectedEmissionsReceivers[0] = address(0x8888); // From mock contract
+
+        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens, expectedEmissionsReceivers));
+        assertEq(aggregatedHash, expectedHash, "Should use override contract data in aggregation");
+    }
+
+    function test_ContractOverrides_OverrideUsedInOffchainAggregation() public {
+        // Deploy a mock contract that implements the ISequencingContract interface
+        MockSequencingContract mockContract = new MockSequencingContract();
+        uint256 chainId = 777;
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+
+        mockContract.setTokensForEpoch(currentEpoch, 1000 ether);
+        mockContract.setEmissionsReceiver(address(0x9999));
+
+        // Set override to point to the mock contract
+        vm.prank(admin);
+        gasAggregator.setChainOverride(chainId, address(mockContract));
+
+        // Force offchain aggregation mode
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(0);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Submit offchain aggregation using the overridden chain
+        uint256[] memory chainIds = new uint256[](1);
+        chainIds[0] = chainId;
+
+        gasAggregator.submitOffchainTopChains(chainIds);
+
+        // Verify the mock contract data was used
+        assertTrue(gasAggregator.pendingTotalTokensUsed() == 1000 ether, "Should use override contract gas data");
+
+        // Wait for challenge window and seal
+        vm.warp(block.timestamp + CHALLENGE_WINDOW + 1);
+        gasAggregator.sealPendingEpoch();
+
+        // Verify aggregation completed using override data
+        bytes32 aggregatedHash = gasAggregator.aggregatedEpochDataHash(currentEpoch);
+
+        uint256[] memory expectedChainIDs = new uint256[](1);
+        expectedChainIDs[0] = chainId;
+        uint256[] memory expectedTokens = new uint256[](1);
+        expectedTokens[0] = 1000 ether;
+        address[] memory expectedEmissionsReceivers = new address[](1);
+        expectedEmissionsReceivers[0] = address(0x9999);
+
+        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens, expectedEmissionsReceivers));
+        assertEq(aggregatedHash, expectedHash, "Should use override contract data in offchain aggregation");
+    }
+
+    function test_ContractOverrides_MultipleOverrides() public {
+        uint256 chainId1 = 100;
+        uint256 chainId2 = 200;
+
+        MockSequencingContract mockContract1 = new MockSequencingContract();
+        MockSequencingContract mockContract2 = new MockSequencingContract();
+
+        uint256 currentEpoch = gasAggregator.pendingEpoch();
+        mockContract1.setTokensForEpoch(currentEpoch, 300 ether);
+        mockContract1.setEmissionsReceiver(address(0xaaa1));
+
+        mockContract2.setTokensForEpoch(currentEpoch, 700 ether);
+        mockContract2.setEmissionsReceiver(address(0xaaa2));
+
+        // Set overrides for both chains
+        vm.prank(admin);
+        gasAggregator.setChainOverride(chainId1, address(mockContract1));
+        vm.prank(admin);
+        gasAggregator.setChainOverride(chainId2, address(mockContract2));
+
+        // Verify overrides are set
+        assertEq(gasAggregator.appchainContractOverrides(chainId1), address(mockContract1));
+        assertEq(gasAggregator.appchainContractOverrides(chainId2), address(mockContract2));
+
+        // Force offchain aggregation mode
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(0);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Submit offchain aggregation with both overridden chains
+        uint256[] memory chainIds = new uint256[](2);
+        chainIds[0] = chainId1;
+        chainIds[1] = chainId2;
+
+        gasAggregator.submitOffchainTopChains(chainIds);
+
+        // Verify both override contracts' data was used
+        assertEq(gasAggregator.pendingTotalTokensUsed(), 1000 ether, "Should sum both override contracts' gas data");
+
+        // Wait for challenge window and seal
+        vm.warp(block.timestamp + CHALLENGE_WINDOW + 1);
+        gasAggregator.sealPendingEpoch();
+
+        // Verify aggregation completed using both overrides
+        bytes32 aggregatedHash = gasAggregator.aggregatedEpochDataHash(currentEpoch);
+
+        uint256[] memory expectedChainIDs = new uint256[](2);
+        expectedChainIDs[0] = chainId1;
+        expectedChainIDs[1] = chainId2;
+        uint256[] memory expectedTokens = new uint256[](2);
+        expectedTokens[0] = 300 ether;
+        expectedTokens[1] = 700 ether;
+        address[] memory expectedEmissionsReceivers = new address[](2);
+        expectedEmissionsReceivers[0] = address(0xaaa1);
+        expectedEmissionsReceivers[1] = address(0xaaa2);
+
+        bytes32 expectedHash = keccak256(abi.encode(expectedChainIDs, expectedTokens, expectedEmissionsReceivers));
+        assertEq(aggregatedHash, expectedHash, "Should use both override contracts' data");
+    }
+
+    function test_ContractOverrides_OverrideCanBeUpdated() public {
+        uint256 chainId = 888;
+
+        MockSequencingContract mockContract1 = new MockSequencingContract();
+        MockSequencingContract mockContract2 = new MockSequencingContract();
+
+        mockContract1.setTokensForEpoch(gasAggregator.pendingEpoch(), 100 ether);
+        mockContract2.setTokensForEpoch(gasAggregator.pendingEpoch(), 200 ether);
+
+        // Set initial override
+        vm.prank(admin);
+        gasAggregator.setChainOverride(chainId, address(mockContract1));
+        assertEq(gasAggregator.appchainContractOverrides(chainId), address(mockContract1));
+
+        // Update override to different contract
+        vm.prank(admin);
+        gasAggregator.setChainOverride(chainId, address(mockContract2));
+        assertEq(gasAggregator.appchainContractOverrides(chainId), address(mockContract2));
+    }
+}
+
+// Mock contract for testing overrides
+contract MockSequencingContract {
+    mapping(uint256 => uint256) public tokensForEpoch;
+    address public emissionsReceiver;
+
+    function setTokensForEpoch(uint256 epoch, uint256 tokens) external {
+        tokensForEpoch[epoch] = tokens;
+    }
+
+    function setEmissionsReceiver(address receiver) external {
+        emissionsReceiver = receiver;
+    }
+
+    function getTokensForEpoch(uint256 epoch) external view returns (uint256) {
+        return tokensForEpoch[epoch];
+    }
+
+    function getEmissionsReceiver() external view returns (address) {
+        return emissionsReceiver;
+    }
 }

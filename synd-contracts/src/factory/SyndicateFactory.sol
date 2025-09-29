@@ -55,9 +55,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Current implementation address used for new deployments
     address public syndicateChainImpl;
 
-    /// @notice Fee required to create a sequencing chain (in native token)
-    uint256 public creationFee;
-
     /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
     string public version;
 
@@ -337,5 +334,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     function setGasAggregator(IGasAggregator newGasAggregator) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (address(newGasAggregator) == address(0)) revert ZeroAddress();
         gasAggregator = newGasAggregator;
+    }
+
+    function migrateLegacyAppchain() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // TODO copy the current epoch gas data from the origin contract
     }
 }
