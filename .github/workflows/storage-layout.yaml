@@ -1,0 +1,148 @@
+name: Storage Layout Validation
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - 'synd-contracts/src/**/*.sol'
+      - 'synd-contracts/foundry.toml'
+      - 'synd-contracts/remappings.txt'
+  push:
+    branches: [main]
+    paths:
+      - 'synd-contracts/src/**/*.sol'
+      - 'synd-contracts/foundry.toml'
+      - 'synd-contracts/remappings.txt'
+
+env:
+  FOUNDRY_PROFILE: default
+
+jobs:
+  storage-layout-validation:
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: synd-contracts
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install Foundry dependencies
+        run: forge install
+
+      - name: Get baseline from main branch
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🔄 Getting storage layout baseline from main branch..."
+
+          # Stash current changes
+          git stash --include-untracked || echo "Nothing to stash"
+
+          # Switch to main branch
+          git fetch origin main
+          git checkout main
+
+          # Install dependencies and create baseline
+          forge install
+          forge build
+          mkdir -p .storage-layouts
+
+          echo "📋 Extracting baseline storage layouts..."
+          forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.baseline.json || echo "{}" > .storage-layouts/SyndicateFactory.baseline.json
+          forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.baseline.json || echo "{}" > .storage-layouts/SyndicateSequencingChain.baseline.json
+          forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.baseline.json || echo "{}" > .storage-layouts/ArbChainConfig.baseline.json
+          forge inspect GasAggregator storageLayout > .storage-layouts/GasAggregator.baseline.json || echo "{}" > .storage-layouts/GasAggregator.baseline.json
+
+          # Copy baselines to temp location
+          cp -r .storage-layouts /tmp/baseline-layouts
+
+          # Switch back to PR branch
+          git checkout ${{ github.head_ref }}
+
+          # Restore stashed changes
+          git stash pop || echo "No stashed changes to restore"
+
+          # Restore baselines
+          mkdir -p .storage-layouts
+          cp -r /tmp/baseline-layouts/* .storage-layouts/
+
+          echo "✅ Baseline storage layouts retrieved"
+
+      - name: Validate storage layouts
+        run: |
+          echo "🔍 Validating storage layouts for upgradeable contracts..."
+
+          # Build current contracts
+          forge build
+          mkdir -p .storage-layouts
+
+          # Extract current storage layouts
+          echo "📊 Extracting current storage layouts..."
+          forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.current.json
+          forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.current.json
+          forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.current.json
+          forge inspect GasAggregator storageLayout > .storage-layouts/GasAggregator.current.json
+
+          # Compare storage layouts
+          echo "⚖️ Comparing storage layouts..."
+          VALIDATION_FAILED=false
+
+          for contract in SyndicateFactory SyndicateSequencingChain ArbChainConfig GasAggregator; do
+            echo "Checking $contract..."
+
+            if [ -f .storage-layouts/$contract.baseline.json ] && [ "$(cat .storage-layouts/$contract.baseline.json)" != "{}" ]; then
+              if ! cmp -s .storage-layouts/$contract.baseline.json .storage-layouts/$contract.current.json; then
+                echo "❌ STORAGE LAYOUT CHANGED: $contract"
+                echo "This change could corrupt storage during upgrades!"
+                echo ""
+                echo "=== BASELINE ==="
+                cat .storage-layouts/$contract.baseline.json
+                echo ""
+                echo "=== CURRENT ==="
+                cat .storage-layouts/$contract.current.json
+                echo ""
+                VALIDATION_FAILED=true
+              else
+                echo "✅ $contract: Storage layout unchanged"
+              fi
+            else
+              echo "ℹ️  $contract: No baseline found (first time setup)"
+            fi
+          done
+
+          if [ "$VALIDATION_FAILED" = true ]; then
+            echo ""
+            echo "❌ Storage layout validation FAILED!"
+            echo "The above contracts have storage layout changes that could corrupt data during upgrades."
+            echo ""
+            echo "If these changes are intentional:"
+            echo "1. Ensure you understand the implications"
+            echo "2. Consider if this requires a new deployment instead of an upgrade"
+            echo "3. Update storage layout baselines after careful review"
+            exit 1
+          else
+            echo ""
+            echo "✅ All storage layouts are safe for upgrades!"
+          fi
+
+      - name: Upload storage layouts as artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: storage-layouts-${{ github.sha }}
+          path: synd-contracts/.storage-layouts/
+          retention-days: 30

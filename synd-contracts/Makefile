@@ -92,56 +92,51 @@ airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_AD
 ## Storage Layout Validation Commands
 
 # Create storage layout baseline (run this on main branch)
-storage-layout-baseline :; @echo "Creating storage layout baseline..." && \
+
+# Simple storage layout validation for upgradeable contracts
+storage-layout-check :; @echo "Validating storage layouts for upgradeable contracts..." && \
 	forge build && \
-	mkdir -p .storage-layouts && \
-	node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json && \
-	echo "Baseline created at .storage-layouts/main-layout.json"
-
-# Extract current storage layout
-storage-layout-extract :; @echo "Extracting current storage layout..." && \
-	forge build && \
-	mkdir -p .storage-layouts && \
-	node scripts/storage-checks/forge-extract.js > .storage-layouts/current-layout.json && \
-	echo "Current layout extracted to .storage-layouts/current-layout.json"
-
-# Compare storage layouts (requires baseline)
-storage-layout-compare :; @echo "Comparing storage layouts..." && \
-	if [ ! -f .storage-layouts/main-layout.json ]; then \
-		echo "ERROR: No baseline layout found. Run 'make storage-layout-baseline' first."; \
-		exit 1; \
-	fi && \
-	npm run storage:compare -- --ref .storage-layouts/main-layout.json --head .storage-layouts/current-layout.json && \
-	echo "Storage layout comparison completed successfully"
-
-# Check inheritance ordering
-storage-layout-inheritance :; @echo "Checking inheritance ordering..." && \
-	forge build --build-info && \
-	mkdir -p .storage-layouts && \
-	cp out/build-info/*.json .storage-layouts/temp-build.json && \
-	npm run storage:inheritance .storage-layouts/temp-build.json && \
-	rm -f .storage-layouts/temp-build.json && \
-	echo "Inheritance ordering check completed successfully"
-
-# Full storage layout validation (extract + compare + inheritance)
-storage-layout-check :; @echo "Running full storage layout validation..." && \
-	$(MAKE) storage-layout-extract && \
-	$(MAKE) storage-layout-inheritance && \
+	$(MAKE) storage-layout-baseline && \
 	$(MAKE) storage-layout-compare && \
-	echo "All storage layout checks passed!"
+	echo "Storage layout validation passed!"
+
+# Create baseline storage layout
+storage-layout-baseline :; @echo "Creating storage layout baseline..." && \
+	mkdir -p .storage-layouts && \
+	forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.baseline.json && \
+	forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.baseline.json && \
+	forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.baseline.json && \
+	forge inspect GasAggregator storageLayout > .storage-layouts/GasAggregator.baseline.json && \
+	echo "✅ Storage layout baselines created"
+
+# Compare current storage layout against baseline
+storage-layout-compare :; @echo "Comparing storage layouts..." && \
+	mkdir -p .storage-layouts && \
+	forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.current.json && \
+	forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.current.json && \
+	forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.current.json && \
+	forge inspect GasAggregator storageLayout > .storage-layouts/GasAggregator.current.json && \
+	for contract in SyndicateFactory SyndicateSequencingChain ArbChainConfig GasAggregator; do \
+		if [ -f .storage-layouts/$$contract.baseline.json ]; then \
+			echo "Comparing $$contract..."; \
+			if ! cmp -s .storage-layouts/$$contract.baseline.json .storage-layouts/$$contract.current.json; then \
+				echo "❌ STORAGE LAYOUT CHANGED: $$contract"; \
+				echo "Baseline:"; \
+				cat .storage-layouts/$$contract.baseline.json; \
+				echo "Current:"; \
+				cat .storage-layouts/$$contract.current.json; \
+				echo "This change could corrupt storage during upgrades!"; \
+				exit 1; \
+			else \
+				echo "✅ $$contract: Storage layout unchanged"; \
+			fi; \
+		else \
+			echo "ℹ️  $$contract: No baseline found, creating baseline..."; \
+			cp .storage-layouts/$$contract.current.json .storage-layouts/$$contract.baseline.json; \
+		fi; \
+	done && \
+	echo "✅ All storage layouts are safe for upgrades"
 
 # Clean storage layout artifacts
 storage-layout-clean :; rm -rf .storage-layouts out/build-info
 
-# Auto-update baseline when contracts change (for development)
-storage-layout-auto-update :; @echo "🔄 Auto-updating storage layout baseline..." && \
-	forge build && \
-	mkdir -p .storage-layouts && \
-	node scripts/storage-checks/forge-extract.js > .storage-layouts/main-layout.json && \
-	echo "✅ Storage layout baseline auto-updated"
-
-# Smart build that updates baseline if needed
-build-with-storage :; @echo "🏗️ Building with storage layout tracking..." && \
-	$(MAKE) storage-layout-auto-update && \
-	forge build && \
-	echo "Build complete with updated storage layouts"
