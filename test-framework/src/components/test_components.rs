@@ -277,8 +277,11 @@ impl TestComponents {
         let _ = sequencing_contract
             .initialize(
                 seq_provider.default_signer_address(),
+                address!("0x0000000000000000000000000000000000000001"), // factory
+                address!("0x0000000000000000000000000000000000000001"), // gas aggregator
                 always_allowed_module_address,
                 U256::from(options.appchain_chain_id),
+                U256::ZERO,
             )
             .send()
             .await?;

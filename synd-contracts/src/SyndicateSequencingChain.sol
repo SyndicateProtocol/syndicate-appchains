@@ -223,7 +223,9 @@ contract SyndicateSequencingChain is
         $.factory = _factory;
 
         // Set initial gas usage for migrations (0 for new chains)
-        _getGasCounterStorage().tokensUsedPerEpoch[getCurrentEpoch()] = _gasTokensUsedForCurrentEpoch;
+        if (_gasTokensUsedForCurrentEpoch > 0) {
+            _getGasCounterStorage().tokensUsedPerEpoch[getCurrentEpoch()] = _gasTokensUsedForCurrentEpoch;
+        }
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
