@@ -50,9 +50,11 @@ jobs:
           echo "🔄 Getting storage layout baseline from main branch..."
 
           # Clean up any existing storage layouts and build artifacts that could conflict
-          rm -rf .storage-layouts foundry.lock out/
+          rm -rf .storage-layouts foundry.lock out/ lib/
 
-          # Stash current changes including untracked files
+          # Reset git to clean state and stash everything
+          git reset --hard HEAD || true
+          git clean -fd || true
           git add . || true
           git stash --include-untracked || echo "Nothing to stash"
 
@@ -78,7 +80,11 @@ jobs:
           git checkout ${{ github.head_ref }}
 
           # Clean up potential conflicts from main branch
-          rm -rf foundry.lock out/ || true
+          rm -rf foundry.lock out/ lib/ || true
+
+          # Reset and clean before restoring
+          git reset --hard HEAD || true
+          git clean -fd || true
 
           # Restore stashed changes
           git stash pop || echo "No stashed changes to restore"
