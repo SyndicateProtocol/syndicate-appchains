@@ -210,6 +210,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
      */
     function initialize(address _admin, address _factory, address _allowedImplementation) external initializer {
         if (_admin == address(0)) revert ZeroAddress();
+        if (_factory == address(0)) revert ZeroAddress();
 
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
