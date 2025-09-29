@@ -27,7 +27,7 @@ interface IDeterministicDeploymentProxy {
 }
 
 // Hardcoded initial owner to prevent squatting (replace with actual owner address)
-address constant INITIAL_OWNER = address(0); // TODO: Replace with actual owner
+address constant INITIAL_OWNER = 0xb0Da5E0263862Fdf1E1aFd72f12D7C7b8B6Cd2B6; // Safe address
 
 // Arachnid's deterministic deployment proxy address (same on all chains)
 address constant DETERMINISTIC_DEPLOYMENT_PROXY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
