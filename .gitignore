@@ -78,14 +78,6 @@ synd-contracts/.claude/settings.local.json
 # contract bindings generated artifact
 synd-contracts/soljson-latest.js
 
-# Node.js dependencies and artifacts
-synd-contracts/node_modules/
-synd-contracts/package-lock.json
-
-# Storage layout validation artifacts (keep baselines, ignore temp files)
-synd-contracts/.storage-layouts/current*
-synd-contracts/.storage-layouts/main.json
-synd-contracts/.storage-layouts/temp*
 
 ./bin
 

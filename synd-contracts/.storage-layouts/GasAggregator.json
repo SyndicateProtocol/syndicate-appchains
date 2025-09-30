@@ -1,0 +1,105 @@
+{
+  "storage": [
+    {
+      "astId": 942,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "factory",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_contract(AppchainFactory)931"
+    },
+    {
+      "astId": 945,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "maxAppchainsToQuery",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 948,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "challengeWindow",
+      "offset": 0,
+      "slot": "2",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 951,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "pendingEpoch",
+      "offset": 0,
+      "slot": "3",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 954,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "pendingEpochFirstSubmissionTime",
+      "offset": 0,
+      "slot": "4",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 957,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "pendingDataHash",
+      "offset": 0,
+      "slot": "5",
+      "type": "t_bytes32"
+    },
+    {
+      "astId": 960,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "pendingTotalTokensUsed",
+      "offset": 0,
+      "slot": "6",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 965,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "aggregatedEpochDataHash",
+      "offset": 0,
+      "slot": "7",
+      "type": "t_mapping(t_uint256,t_bytes32)"
+    },
+    {
+      "astId": 968,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "version",
+      "offset": 0,
+      "slot": "8",
+      "type": "t_string_storage"
+    }
+  ],
+  "types": {
+    "t_bytes32": {
+      "encoding": "inplace",
+      "label": "bytes32",
+      "numberOfBytes": "32"
+    },
+    "t_contract(AppchainFactory)931": {
+      "encoding": "inplace",
+      "label": "contract AppchainFactory",
+      "numberOfBytes": "20"
+    },
+    "t_mapping(t_uint256,t_bytes32)": {
+      "encoding": "mapping",
+      "key": "t_uint256",
+      "label": "mapping(uint256 => bytes32)",
+      "numberOfBytes": "32",
+      "value": "t_bytes32"
+    },
+    "t_string_storage": {
+      "encoding": "bytes",
+      "label": "string",
+      "numberOfBytes": "32"
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": "32"
+    }
+  }
+}
