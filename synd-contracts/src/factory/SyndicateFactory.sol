@@ -74,13 +74,13 @@ contract SyndicateFactory is
     /// @dev This can be updated by admins to use newer versions of SyndicateSequencingChain
     address public syndicateChainImpl;
 
-    /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
-    /// @dev Semantic version string to track factory upgrades
-    string public version;
-
     /// @notice Gas aggregator contract for tracking appchain gas usage
     /// @dev Used to notify about new appchains and implementation changes
     IGasAggregator public gasAggregator;
+
+    /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
+    /// @dev Semantic version string to track factory upgrades
+    string public version;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
