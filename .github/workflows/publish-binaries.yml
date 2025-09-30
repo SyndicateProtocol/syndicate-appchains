@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag version (e.g., v1.2.3, v0.10.15-dev.1)'
+        description: Release tag version (e.g., v1.2.3, v0.10.15-dev.1)
         required: true
         type: string
 
@@ -17,6 +17,9 @@ jobs:
   build:
     name: Build artifacts
     runs-on: shared-medium-01
+    outputs:
+      eif-hash: ${{ steps.artifact-hashes.outputs.eif-hash }}
+      sp1-hash: ${{ steps.artifact-hashes.outputs.sp1-hash }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,29 +34,78 @@ jobs:
           cd synd-withdrawals/server
           docker build --output=. .
 
-      - name: Pull submodules
-        run: |
-          cd synd-withdrawals/synd-enclave && \
-          git submodule update --init --recursive
-
       - name: Build eif.bin file
         run: |
-          cd synd-withdrawals/synd-enclave
+          cd synd-withdrawals
           docker build --target eif-bin --output=out .
 
       - name: Build sp1-zk-proofs elf file
         run: |
           docker build -f synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/Dockerfile . --output ./sp1-build --platform linux/amd64
 
+      - name: Save eif.bin and sp1 program hashes for reproducibility verification
+        id: artifact-hashes
+        run: |
+          EIF_SHA512=$(sha512sum synd-withdrawals/out/eif.bin | awk '{print $1}')
+          SP1_SHA512=$(sha512sum sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program | awk '{print $1}')
+          echo "eif-hash=$EIF_SHA512" >> $GITHUB_OUTPUT
+          echo "sp1-hash=$SP1_SHA512" >> $GITHUB_OUTPUT
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: built-artifacts
           path: |
-            synd-withdrawals/synd-enclave/out/eif.bin
+            synd-withdrawals/out/eif.bin
             synd-withdrawals/server/app/server
             sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program
           retention-days: 1
+
+  verify-repro:
+    name: Verify reproducibility
+    runs-on: shared-medium-01
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build eif.bin file
+        run: |
+          cd synd-withdrawals
+          docker build --target eif-bin --output=out .
+
+      - name: Build sp1-zk-proofs elf file
+        run: |
+          docker build -f synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/Dockerfile . --output ./sp1-build --platform linux/amd64
+
+      - name: Verify that hashes of eif.bin files match
+        run: |
+          EIF_SHA512=$(sha512sum synd-withdrawals/out/eif.bin | awk '{print $1}')
+          if [[ "$EIF_SHA512" != "${{ needs.build.outputs.eif-hash }}" ]]; then
+            echo "Error: eif.bin hash doesn't match the one from the build job"
+            echo "Expected: ${{ needs.build.outputs.eif-hash }}"
+            echo "Got: $(cat eif.bin.sha512)"
+            exit 1
+          else
+            echo "eif.bin hash verification succeeded, hash: $(cat eif.bin.sha512)"
+          fi
+
+      - name: Verify that hashes of sp1 program files match
+        run: |
+          SP1_SHA512=$(sha512sum sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program | awk '{print $1}')
+          if [[ "$SP1_SHA512" != "${{ needs.build.outputs.sp1-hash }}" ]]; then
+            echo "Error: sp1 program hash doesn't match the one from the build job"
+            echo "Expected: ${{ needs.build.outputs.sp1-hash }}"
+            echo "Got: $(cat sp1-program.sha512)"
+            exit 1
+          else
+            echo "sp1 program hash verification succeeded, hash: $(cat sp1-program.sha512)"
+          fi
 
   publish-release:
     name: Attach binaries to GitHub release
@@ -71,7 +123,7 @@ jobs:
 
       - name: Rename artifacts with version
         run: |
-          mv synd-withdrawals/synd-enclave/out/eif.bin eif-${{ env.TAG_NAME }}.bin
+          mv synd-withdrawals/out/eif.bin eif-${{ env.TAG_NAME }}.bin
           mv synd-withdrawals/server/app/server server-${{ env.TAG_NAME }}.bin
           mv sp1-build/elf-output/synd-tee-attestation-zk-proofs-sp1-program sp1-zk-${{ env.TAG_NAME }}.elf
 

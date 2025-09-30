@@ -137,8 +137,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -177,11 +175,6 @@ jobs:
 
       - name: Install nextest
         uses: taiki-e/install-action@nextest
-
-      - name: Install withdrawals e2e tests dependencies
-        run: |
-          sudo apt-get install -y wabt
-          cargo install --force cbindgen
 
       - name: Run all tests with nextest (excluding e2e withdrawals)
         run: |

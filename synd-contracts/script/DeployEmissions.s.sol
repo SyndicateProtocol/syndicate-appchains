@@ -8,7 +8,7 @@ import {EmissionsScheduler} from "src/token/emissions/EmissionsScheduler.sol";
 
 /**
  * @title Deploy Emissions System
- * @notice Deploy the new piece-wise geometric decay emissions system
+ * @notice Deploy the emissions system
  */
 contract DeployEmissions is Script {
     function run() public {
@@ -35,7 +35,7 @@ contract DeployEmissions is Script {
         EmissionsCalculator calculator = new EmissionsCalculator(
             address(token),
             admin, // admin
-            admin // decay manager (same as admin for simplicity)
+            admin // change factor manager (same as admin for simplicity)
         );
         console.log("EmissionsCalculator deployed at:", address(calculator));
 
@@ -67,7 +67,7 @@ contract DeployEmissions is Script {
 
 /**
  * @title Initialize Emissions V2
- * @notice Initialize the emissions system with default decay factor
+ * @notice Initialize the emissions system with default change factor
  */
 contract InitializeEmissions is Script {
     function run() public {
@@ -78,11 +78,11 @@ contract InitializeEmissions is Script {
 
         EmissionsCalculator calculator = EmissionsCalculator(calculatorAddr);
 
-        // Initialize with a reasonable default decay factor (95%)
-        uint256 defaultDecay = 0.95e18;
-        console.log("Initializing emissions with default decay factor:", defaultDecay);
+        // Initialize with a reasonable default change factor (95%)
+        uint256 defaultChangeFactor = 0.95e18;
+        console.log("Initializing emissions with default change factor:", defaultChangeFactor);
 
-        calculator.initializeEmissions(defaultDecay);
+        calculator.initializeEmissions(defaultChangeFactor);
 
         console.log("Emissions initialized successfully");
         console.log("Total epochs:", calculator.TOTAL_EPOCHS());
@@ -93,10 +93,10 @@ contract InitializeEmissions is Script {
 }
 
 /**
- * @title Demo Decay Factor Updates
- * @notice Demonstrate how to update decay factors for different epochs
+ * @title Demo Change Factor Updates
+ * @notice Demonstrate how to update change factors for different epochs
  */
-contract DemoDecayUpdates is Script {
+contract DemoChangeFactorUpdates is Script {
     function run() public view {
         address calculatorAddr = vm.envAddress("CALCULATOR_ADDR");
         require(calculatorAddr != address(0), "CALCULATOR_ADDR not set");
@@ -115,16 +115,16 @@ contract DemoDecayUpdates is Script {
         console.log("Next emission preview:", preview);
 
         // Show cumulative product calculation
-        uint256 product = calculator.calculateCumulativeProduct(0);
+        uint256 product = calculator.calculateCumulativeProduct();
         console.log("Cumulative product P_0:", product);
 
-        console.log("=== Example Decay Factor Updates ===");
-        console.log("To set epoch 10 to 90% decay:");
-        console.log("calculator.setDecayFactor(10, 0.90e18)");
+        console.log("=== Example Change Factor Updates ===");
+        console.log("To set epoch 10 to 90% change factor:");
+        console.log("calculator.setChangeFactor(10, 0.90e18)");
 
-        console.log("To set epochs 20-25 with varying decay:");
-        console.log("uint256[] memory decays = [0.85e18, 0.80e18, 0.75e18, 0.70e18, 0.65e18, 0.60e18];");
-        console.log("calculator.setDecayFactors(20, decays);");
+        console.log("To set epochs 20-25 with varying factors:");
+        console.log("uint256[] memory changeFactors = [0.85e18, 0.80e18, 0.75e18, 0.70e18, 0.65e18, 0.60e18];");
+        console.log("calculator.setChangeFactors(20, changeFactors);");
     }
 }
 
@@ -157,10 +157,10 @@ contract SimulateEmissions is Script {
             uint256 remainingSupply = calculator.getRemainingSupply();
             if (remainingSupply == 0) break;
 
-            // Get decay factor for this epoch
-            uint256 decayFactor = calculator.getDecayFactor(i);
+            // Get change factor for this epoch
+            uint256 changeFactor = calculator.changeFactor();
 
-            console.log("Epoch", i, "- Decay factor:", decayFactor);
+            console.log("Epoch", i, "- Change factor:", changeFactor);
             console.log("  Remaining supply:", remainingSupply);
 
             if (i == 47) {
@@ -170,8 +170,8 @@ contract SimulateEmissions is Script {
                 break;
             } else {
                 // Calculate cumulative product from this epoch
-                uint256 cumulativeProduct = calculator.calculateCumulativeProduct(i);
-                uint256 estimatedEmission = (remainingSupply * (1e18 - decayFactor)) / (1e18 - cumulativeProduct);
+                uint256 cumulativeProduct = calculator.calculateCumulativeProduct();
+                uint256 estimatedEmission = (remainingSupply * (1e18 - changeFactor)) / (1e18 - cumulativeProduct);
 
                 console.log("  Estimated emission:", estimatedEmission);
                 totalSimulated += estimatedEmission;
