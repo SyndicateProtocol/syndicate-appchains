@@ -185,8 +185,9 @@ contract SyndicateFactory is
 
         // Deploy a new gas aggregator with a deterministic address
         address gasAggregatorProxy = Create2.deploy(0, bytes32("SYNDICATE_GAS_AGGREGATOR"), getProxyBytecode());
-        bytes memory initData =
-            abi.encodeWithSignature("initialize(address,address,address)", admin, address(this), syndicateChainImpl);
+        bytes memory initData = abi.encodeWithSignature(
+            "initialize(address,address,address,uint256)", admin, address(this), syndicateChainImpl, getCurrentEpoch()
+        );
         (bool upgradeSuccess,) = gasAggregatorProxy.call(
             abi.encodeWithSignature("upgradeToAndCall(address,bytes)", new GasAggregator(), initData)
         );
@@ -395,7 +396,7 @@ contract SyndicateFactory is
         syndicateChainImpl = newImplementation;
         try gasAggregator.notifyNewImplementation(newImplementation) {}
         catch {
-            emit gasAggregatorNotificationFailed();
+            emit GasAggregatorNotificationFailed();
         }
     }
 

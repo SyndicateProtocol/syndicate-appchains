@@ -246,7 +246,7 @@ contract SyndicateSequencingChain is
         // Notify gas aggregator about the upgrade
         try gasAggr.notifyChainUpgrade(appchainId(), _newImplementation) {}
         catch {
-            emit gasAggregatorNotificationFailed(address(gasAggr));
+            emit GasAggregatorNotificationFailed(address(gasAggr));
         }
     }
 
