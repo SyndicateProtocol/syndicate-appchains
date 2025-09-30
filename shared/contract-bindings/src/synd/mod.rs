@@ -131,7 +131,7 @@ pub mod r#errors;
 pub mod r#gas_aggregator;
 pub mod r#i_appchain_factory;
 pub mod r#i_sequencing_contract;
-pub mod r#gas_aggregator_integration_test;
+pub mod r#gas_aggregator_test;
 pub mod r#mock_sequencing_contract;
 pub mod r#gas_archive;
 pub mod r#gas_archive_test;

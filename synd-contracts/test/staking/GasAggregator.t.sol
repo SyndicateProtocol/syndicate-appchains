@@ -13,7 +13,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
-contract GasAggregatorIntegrationTest is Test {
+contract GasAggregatorTest is Test {
     GasAggregator public gasAggregator;
     SyndicateFactory public factory;
     SyndicateSequencingChain public sequencingChainImpl;
@@ -792,6 +792,314 @@ contract GasAggregatorIntegrationTest is Test {
         vm.prank(admin);
         gasAggregator.setChainOverride(chainId, address(mockContract2));
         assertEq(gasAggregator.appchainContractOverrides(chainId), address(mockContract2));
+    }
+
+    // ================== FEE MANAGEMENT TESTS ==================
+
+    function test_FeeManagement_WithdrawFees() public {
+        // Add a chain to accumulate fees
+        vm.prank(admin);
+        (address chainAddress, uint256 chainId) =
+            factory.createSyndicateSequencingChain(1, admin, IRequirementModule(address(permissionModule)));
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddress).setEmissionsReceiver(address(0x7001));
+
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId);
+
+        assertEq(gasAggregator.getBalance(), ADD_CHAIN_FEE);
+
+        address payable recipient = payable(address(0xdead));
+        uint256 recipientBalanceBefore = recipient.balance;
+
+        // Withdraw fees
+        vm.prank(admin);
+        gasAggregator.withdrawFees(recipient, ADD_CHAIN_FEE);
+
+        assertEq(gasAggregator.getBalance(), 0);
+        assertEq(recipient.balance, recipientBalanceBefore + ADD_CHAIN_FEE);
+    }
+
+    function test_FeeManagement_WithdrawAllFees() public {
+        // Add multiple chains
+        vm.prank(admin);
+        (address chain1Address, uint256 chainId1) =
+            factory.createSyndicateSequencingChain(1, admin, IRequirementModule(address(permissionModule)));
+        vm.prank(admin);
+        (address chain2Address, uint256 chainId2) =
+            factory.createSyndicateSequencingChain(2, admin, IRequirementModule(address(permissionModule)));
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chain1Address).setEmissionsReceiver(address(0x7001));
+        vm.prank(admin);
+        SyndicateSequencingChain(chain2Address).setEmissionsReceiver(address(0x7002));
+
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId1);
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId2);
+
+        assertEq(gasAggregator.getBalance(), ADD_CHAIN_FEE * 2);
+
+        address payable recipient = payable(address(0xbeef));
+        uint256 recipientBalanceBefore = recipient.balance;
+
+        // Withdraw all fees by passing 0
+        vm.prank(admin);
+        gasAggregator.withdrawFees(recipient, 0);
+
+        assertEq(gasAggregator.getBalance(), 0);
+        assertEq(recipient.balance, recipientBalanceBefore + ADD_CHAIN_FEE * 2);
+    }
+
+    function test_FeeManagement_WithdrawFeesOnlyAdmin() public {
+        vm.prank(user);
+        vm.expectRevert();
+        gasAggregator.withdrawFees(payable(address(0xbeef)), 1 ether);
+    }
+
+    function test_FeeManagement_WithdrawFeesZeroAddress() public {
+        vm.prank(admin);
+        vm.expectRevert();
+        gasAggregator.withdrawFees(payable(address(0)), 1 ether);
+    }
+
+    function test_FeeManagement_WithdrawFeesInsufficientBalance() public {
+        assertEq(gasAggregator.getBalance(), 0);
+
+        vm.prank(admin);
+        vm.expectRevert();
+        gasAggregator.withdrawFees(payable(address(0xbeef)), 1 ether);
+    }
+
+    function test_FeeManagement_SetAddChainFee() public {
+        uint256 newFee = 10 ether;
+
+        vm.prank(admin);
+        gasAggregator.setAddChainFee(newFee);
+
+        assertEq(gasAggregator.addChainFee(), newFee);
+    }
+
+    function test_FeeManagement_SetAddChainFeeOnlyAdmin() public {
+        vm.prank(user);
+        vm.expectRevert();
+        gasAggregator.setAddChainFee(10 ether);
+    }
+
+    function test_FeeManagement_GetBalance() public {
+        assertEq(gasAggregator.getBalance(), 0);
+
+        vm.prank(admin);
+        (address chainAddress, uint256 chainId) =
+            factory.createSyndicateSequencingChain(1, admin, IRequirementModule(address(permissionModule)));
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddress).setEmissionsReceiver(address(0x7001));
+
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId);
+
+        assertEq(gasAggregator.getBalance(), ADD_CHAIN_FEE);
+    }
+
+    // ================== FACTORY MANAGEMENT TESTS ==================
+
+    function test_FactoryManagement_SetFactory() public {
+        // Deploy a new factory
+        SyndicateFactory newFactoryImpl = new SyndicateFactory();
+        bytes memory factoryInitData = abi.encodeCall(SyndicateFactory.initialize, (admin));
+        ERC1967Proxy newFactoryProxy = new ERC1967Proxy(address(newFactoryImpl), factoryInitData);
+        SyndicateFactory newFactory = SyndicateFactory(address(newFactoryProxy));
+
+        address oldFactory = address(gasAggregator.factory());
+
+        vm.prank(admin);
+        gasAggregator.setFactory(address(newFactory));
+
+        assertEq(address(gasAggregator.factory()), address(newFactory));
+        assertTrue(address(gasAggregator.factory()) != oldFactory);
+    }
+
+    function test_FactoryManagement_SetFactoryOnlyAdmin() public {
+        vm.prank(user);
+        vm.expectRevert();
+        gasAggregator.setFactory(address(0x1234));
+    }
+
+    function test_FactoryManagement_NotifyNewImplementation() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        vm.prank(address(factory));
+        gasAggregator.notifyNewImplementation(address(newImpl));
+
+        assertTrue(gasAggregator.allowedImplementations(address(newImpl)));
+    }
+
+    function test_FactoryManagement_NotifyNewImplementationOnlyFactory() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+
+        vm.prank(user);
+        vm.expectRevert();
+        gasAggregator.notifyNewImplementation(address(newImpl));
+    }
+
+    // ================== EDGE CASE TESTS ==================
+
+    function test_EdgeCase_AggregateWithNoChains() public {
+        assertEq(gasAggregator.getTotalTrackedChains(), 0);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Should succeed but aggregate nothing
+        gasAggregator.aggregateTokensUsed();
+
+        assertTrue(gasAggregator.pendingEpoch() > 1);
+    }
+
+    function test_EdgeCase_OffchainAggregationWithEmptyArray() public {
+        // Force offchain mode
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(0);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        uint256[] memory emptyChainIds = new uint256[](0);
+
+        // Should revert due to total being 0
+        vm.expectRevert();
+        gasAggregator.submitOffchainTopChains(emptyChainIds);
+    }
+
+    function test_EdgeCase_OffchainAggregationDuplicateChainIds() public {
+        // Create a chain
+        vm.prank(admin);
+        (address chainAddress, uint256 chainId) =
+            factory.createSyndicateSequencingChain(1, admin, IRequirementModule(address(permissionModule)));
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddress).setEmissionsReceiver(address(0x7001));
+
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId);
+
+        // Force offchain mode
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(0);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Try to submit same chain twice (not in ascending order)
+        uint256[] memory duplicateChainIds = new uint256[](2);
+        duplicateChainIds[0] = chainId;
+        duplicateChainIds[1] = chainId;
+
+        vm.expectRevert();
+        gasAggregator.submitOffchainTopChains(duplicateChainIds);
+    }
+
+    function test_EdgeCase_OffchainAggregationNonAscendingOrder() public {
+        // Create chains
+        vm.prank(admin);
+        (address chain1Address, uint256 chainId1) =
+            factory.createSyndicateSequencingChain(1, admin, IRequirementModule(address(permissionModule)));
+        vm.prank(admin);
+        (address chain2Address, uint256 chainId2) =
+            factory.createSyndicateSequencingChain(2, admin, IRequirementModule(address(permissionModule)));
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chain1Address).setEmissionsReceiver(address(0x7001));
+        vm.prank(admin);
+        SyndicateSequencingChain(chain2Address).setEmissionsReceiver(address(0x7002));
+
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId1);
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId2);
+
+        // Force offchain mode
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(0);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Submit in descending order (should fail)
+        uint256[] memory chainIds = new uint256[](2);
+        chainIds[0] = chainId2;
+        chainIds[1] = chainId1;
+
+        vm.expectRevert();
+        gasAggregator.submitOffchainTopChains(chainIds);
+    }
+
+    function test_EdgeCase_ChallengeWindowZero() public {
+        vm.prank(admin);
+        vm.expectRevert();
+        gasAggregator.setChallengeWindow(0);
+    }
+
+    function test_EdgeCase_ChainAlreadyTracked() public {
+        vm.prank(admin);
+        (address chainAddress, uint256 chainId) =
+            factory.createSyndicateSequencingChain(1, admin, IRequirementModule(address(permissionModule)));
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddress).setEmissionsReceiver(address(0x7001));
+
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId);
+
+        // Try to add again
+        vm.prank(user);
+        vm.expectRevert();
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId);
+    }
+
+    function test_EdgeCase_AddBannedChain() public {
+        // Create chain
+        vm.prank(admin);
+        (address chainAddress, uint256 chainId) =
+            factory.createSyndicateSequencingChain(1, admin, IRequirementModule(address(permissionModule)));
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddress).setEmissionsReceiver(address(0x7001));
+
+        vm.prank(user);
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId);
+
+        // Ban the chain by upgrading to bad implementation
+        SyndicateSequencingChain badImpl = new SyndicateSequencingChain();
+
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddress).setAllowGasTrackingBanOnUpgrade(true);
+        vm.prank(admin);
+        SyndicateSequencingChain(chainAddress).upgradeToAndCall(address(badImpl), bytes(""));
+
+        assertTrue(gasAggregator.bannedAppchains(chainId));
+
+        // Try to add the banned chain again
+        vm.prank(user);
+        vm.expectRevert();
+        gasAggregator.addChain{value: ADD_CHAIN_FEE}(chainId);
+    }
+
+    function test_EdgeCase_NotifyChainUpgradeNonChainCaller() public {
+        vm.prank(user);
+        vm.expectRevert();
+        gasAggregator.notifyChainUpgrade(999, address(0x1234));
+    }
+
+    function test_EdgeCase_RemoveAllowedImplementationNotAllowed() public {
+        address fakeImpl = address(0x9999);
+
+        vm.prank(admin);
+        vm.expectRevert();
+        gasAggregator.removeAllowedImplementation(fakeImpl);
     }
 }
 
