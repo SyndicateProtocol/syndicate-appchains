@@ -75,6 +75,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Stub implementation for consistent proxy deployment
     address public stubImplementation;
 
+    /// @dev test layout CI. It should fail if the layout changes
+    uint256 private testLayout1;
+
     /// @notice Current implementation address used for new deployments
     address public syndicateChainImpl;
 
