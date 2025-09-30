@@ -35,9 +35,9 @@ pub struct UpdateBaseAndEthereumBlockHashesArgs {
     /// Address of the gas archive contract
     #[arg(long, value_parser=parse_address)]
     pub gas_archive_address: Address,
-    /// Sequencing chain RPC URL (will be used to wait for new block hashes)
-    #[arg(long)]
-    pub appchain_rpc_url: Option<String>,
+    /// Staking appchain RPC URL (will be used to wait for new block hashes)
+    #[arg(long, env = "STAKING_RPC_URL")]
+    pub staking_appchain_rpc_url: Option<String>,
 }
 
 /// Updates base and ethereum block hashes on the staking appchain
@@ -46,12 +46,12 @@ pub struct UpdateBaseAndEthereumBlockHashesArgs {
 /// to update the known block hashes from Ethereum and the settlement chain.
 pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumBlockHashesArgs) {
     let set_provider = new_provider(&args.base_rpc_url, &args.private_key).await;
-    let appchain_provider = match &args.appchain_rpc_url {
+    let staking_appchain_provider = match &args.staking_appchain_rpc_url {
         Some(appchain_rpc_url) => Some(new_provider(appchain_rpc_url, &args.private_key).await),
         None => None,
     };
-    let initial_appchain_block_number = match appchain_provider {
-        Some(ref appchain_provider) => appchain_provider
+    let initial_appchain_block_number = match staking_appchain_provider {
+        Some(ref p) => p
             .get_block_number()
             .await
             .unwrap_or_else(|e| panic!("failed to get appchain block number: {e}")),
@@ -74,7 +74,7 @@ pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumB
     info!("successfully updated base and ethereum block hashes");
     debug!("receipt: {receipt:?}");
 
-    if let Some(p) = appchain_provider {
+    if let Some(p) = staking_appchain_provider {
         let expected_set_block_number =
             receipt.block_number.unwrap_or_else(|| panic!("no block number in receipt")) - 1;
         let gas_archive = GasArchive::new(args.gas_archive_address, p);
@@ -117,8 +117,8 @@ pub struct SubmitGasProofsArgs {
     /// Ethereum RPC URL
     #[arg(long, env = "ETHEREUM_RPC_URL")]
     pub ethereum_rpc_url: String,
-    /// Staking aoppchain RPC URL
-    #[arg(long, env = "STAKING_APPCHAIN_RPC_URL")]
+    /// Staking appchain RPC URL (will be used to wait for new block hashes)
+    #[arg(long, env = "STAKING_RPC_URL")]
     pub staking_appchain_rpc_url: String,
     /// Private key for signing transactions
     #[arg(long, env = "PRIVATE_KEY")]
@@ -381,6 +381,8 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
             .unwrap_or_else(|e| panic!("failed to get appchains and contracts: {e}"));
     let (mut tokens, mut emissions_receivers) = (vec![], vec![]);
 
+    // TODO consider the appchains BAN LIST (gas aggregator contract)
+
     for contract in appchain_contracts {
         let appchain = SyndicateSequencingChain::new(contract, gas_aggregator.provider().clone());
         tokens.push(
@@ -400,8 +402,6 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
     }
 
     if offchain_aggregation {
-        // TODO SEQ-1385: need to make the allowed implementation check here (chain's seq contract
-        // impl must be supported by the factory)
         let chain_count = gas_aggregator
             .maxAppchainsToQuery()
             .call()
@@ -473,9 +473,7 @@ pub async fn aggregate_gas_data_top_n_chains(args: &AggregateGasDataArgs) {
             .await
             .unwrap_or_else(|e| panic!("failed to get receipt for aggregate tokens used: {e}"));
 
-        if !receipt.status() {
-            panic!("failed to aggregate tokens used. receipt: {receipt:?}");
-        }
+        assert!(receipt.status(), "failed to aggregate tokens used. receipt: {receipt:?}");
         info!("successfully aggregated tokens used");
         debug!("receipt: {receipt:?}");
         return;
