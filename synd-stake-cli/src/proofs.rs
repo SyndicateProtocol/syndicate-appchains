@@ -14,7 +14,7 @@ use contract_bindings::synd::{
     block_hash_relayer::BlockHashRelayer,
     gas_aggregator::GasAggregator::{self, GasAggregatorInstance},
     gas_archive::GasArchive::{self, GasArchiveInstance},
-    syndicate_factory::SyndicateFactory::{self, getAppchainsAndContractsForGasTrackingReturn},
+    syndicate_factory::SyndicateFactory::{self, getAppchainsAndContractsReturn},
     syndicate_sequencing_chain::SyndicateSequencingChain,
 };
 use shared::{parse::parse_address, types::new_provider};
@@ -373,14 +373,12 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
         .unwrap_or_else(|e| panic!("failed to get factory address: {e}"));
     let factory = SyndicateFactory::new(factory_address, gas_aggregator.provider().clone());
 
-    let getAppchainsAndContractsForGasTrackingReturn {
-        _chainIDs: mut appchains,
-        _contracts: appchain_contracts,
-    } = factory
-        .getAppchainsAndContractsForGasTracking()
-        .call()
-        .await
-        .unwrap_or_else(|e| panic!("failed to get appchains and contracts: {e}"));
+    let getAppchainsAndContractsReturn { _chainIDs: mut appchains, _contracts: appchain_contracts } =
+        factory
+            .getAppchainsAndContracts()
+            .call()
+            .await
+            .unwrap_or_else(|e| panic!("failed to get appchains and contracts: {e}"));
     let (mut tokens, mut emissions_receivers) = (vec![], vec![]);
 
     for contract in appchain_contracts {
@@ -436,7 +434,7 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
 
 /// Arguments for aggregating gas data and submitting epoch pre-image data
 #[derive(Args, Debug)]
-pub struct AggregateGasDataTopNChainsArgs {
+pub struct AggregateGasDataArgs {
     /// Sequencing chain RPC URL
     #[arg(long, env = "SEQ_CHAIN_RPC_URL")]
     pub seq_chain_rpc_url: String,
@@ -455,9 +453,34 @@ pub struct AggregateGasDataTopNChainsArgs {
 ///
 /// This function calls the `submitEpochPreImageData` function on the `GasArchive` contract
 /// with the aggregated gas usage data from multiple appchains for a specific epoch.
-pub async fn aggregate_gas_data_top_n_chains(args: &AggregateGasDataTopNChainsArgs) {
+pub async fn aggregate_gas_data_top_n_chains(args: &AggregateGasDataArgs) {
     let provider = new_provider(&args.seq_chain_rpc_url, &args.private_key).await;
     let gas_aggregator = GasAggregator::new(args.gas_aggregator_address, provider);
+
+    let use_offchain_aggregation = gas_aggregator
+        .fallbackToOffchainAggregation()
+        .call()
+        .await
+        .unwrap_or_else(|e| panic!("failed to get fallback to offchain aggregation: {e}"));
+
+    if !use_offchain_aggregation {
+        let receipt = gas_aggregator
+            .aggregateTokensUsed()
+            .send()
+            .await
+            .unwrap_or_else(|e| panic!("failed to aggregate tokens used: {e}"))
+            .get_receipt()
+            .await
+            .unwrap_or_else(|e| panic!("failed to get receipt for aggregate tokens used: {e}"));
+
+        if !receipt.status() {
+            panic!("failed to aggregate tokens used. receipt: {receipt:?}");
+        }
+        info!("successfully aggregated tokens used");
+        debug!("receipt: {receipt:?}");
+        return;
+    }
+
     let epoch = match args.epoch {
         Some(epoch) => U256::from(epoch),
         None => gas_aggregator
