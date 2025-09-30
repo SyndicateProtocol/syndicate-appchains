@@ -58,6 +58,7 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
         vm.startBroadcast();
 
         appchainId = 0; // TODO: Set the App chain ID
+        address gasAggregator = vm.envOr("GAS_AGGREGATOR_ADDR", address(0));
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
         // Deploy permission module first
@@ -66,7 +67,7 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
 
         // Deploy sequencer with permission module
         sequencingChain = new SyndicateSequencingChain();
-        sequencingChain.initialize(admin, address(permissionModule), appchainId);
+        sequencingChain.initialize(admin, address(0), gasAggregator, address(permissionModule), appchainId, 0);
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 
         // Deploy and add always allowed module

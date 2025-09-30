@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ISyndicateSequencingChain} from "src/interfaces/ISyndicateSequencingChain.sol";
+import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {GasCounter} from "src/staking/GasCounter.sol";
 import "./SequencingModuleCheckerTestingUpgradeability.sol";
 
@@ -13,10 +14,12 @@ struct SyndicateSequencingChainStorage {
     uint256 appchainId;
     /// @notice The address that receives emissions for this sequencing chain
     address emissionsReceiver;
-    /// @notice The factory contract that deployed this chain
-    address factory;
     /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
     bool allowGasTrackingBanOnUpgrade;
+    /// @notice Gas aggregator contract
+    IGasAggregator gasAggregator;
+    /// @notice Version of the SyndicateSequencingChain contract (updatable during upgrades)
+    string version;
 }
 
 /// @title SyndicateSequencingChainTestingUpgradeability
@@ -56,14 +59,19 @@ contract SyndicateSequencingChainTestingUpgradeability is
         return $.emissionsReceiver;
     }
 
-    function factory() public view returns (address) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.factory;
-    }
-
     function allowGasTrackingBanOnUpgrade() public view returns (bool) {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         return $.allowGasTrackingBanOnUpgrade;
+    }
+
+    function gasAggregator() public view returns (IGasAggregator) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.gasAggregator;
+    }
+
+    function version() public view returns (string memory) {
+        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
+        return $.version;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -97,10 +105,10 @@ contract SyndicateSequencingChainTestingUpgradeability is
 
     function initialize(
         address admin,
+        address _gasAggregator,
         address _permissionRequirementModule,
-        uint256 _appchainId,
-        address _factory,
-        address _emissionsReceiver
+        address _emissionsReceiver,
+        uint256 _appchainId
     ) external initializer {
         // Initialize parent contracts
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
@@ -109,8 +117,9 @@ contract SyndicateSequencingChainTestingUpgradeability is
         // Initialize namespaced storage variables
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.appchainId = _appchainId;
-        $.factory = _factory;
         $.emissionsReceiver = _emissionsReceiver;
+        $.gasAggregator = IGasAggregator(_gasAggregator);
+        $.version = "1.0.0";
 
         // Enable gas tracking
         _enableGasTracking();

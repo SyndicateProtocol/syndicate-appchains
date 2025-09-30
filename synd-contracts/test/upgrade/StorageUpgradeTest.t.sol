@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
+import {IGasAggregator} from "../../src/interfaces/IGasAggregator.sol";
 import {SyndicateSequencingChainTestingUpgradeability} from
     "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
 import {IPermissionModule} from "../../src/interfaces/IPermissionModule.sol";
@@ -12,6 +13,17 @@ import {IPermissionModule} from "../../src/interfaces/IPermissionModule.sol";
 /// @notice Mock factory contract for testing upgrades
 contract MockFactory {
     function isImplementationAllowed(address) external pure returns (bool) {
+        return true; // Allow all implementations for testing
+    }
+
+    function notifyChainUpgrade(uint256, address) external pure {
+        // No-op for testing
+    }
+}
+
+/// @notice Mock gas aggregator contract for testing upgrades
+contract MockGasAggregator {
+    function allowedImplementations(address) external pure returns (bool) {
         return true; // Allow all implementations for testing
     }
 
@@ -35,12 +47,12 @@ contract StorageUpgradeTest is Test {
     SyndicateSequencingChainTestingUpgradeability syndicateV2;
     ERC1967Proxy proxy;
     MockFactory factory;
+    MockGasAggregator gasAggregator;
 
     // Storage verification data
     struct OriginalStorageData {
         uint256 appchainId;
         address emissionsReceiver;
-        address factory;
         bool allowGasTrackingBanOnUpgrade;
         address permissionModule;
         bool gasTrackingEnabled;
@@ -51,8 +63,10 @@ contract StorageUpgradeTest is Test {
     event MaxTransactionsPerBatchUpdated(uint256 newMax);
 
     function setUp() public {
-        // Deploy mock factory
+        vm.warp(1754089200 + 1 days); // after epoch start
+        // Deploy mock factory and gas aggregator normally for testing
         factory = new MockFactory();
+        gasAggregator = new MockGasAggregator();
 
         vm.startPrank(address(factory));
 
@@ -60,8 +74,10 @@ contract StorageUpgradeTest is Test {
         syndicateV1 = new SyndicateSequencingChain();
 
         // Deploy proxy pointing to V1
-        bytes memory initData =
-            abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE, TEST_APPCHAIN_ID));
+        bytes memory initData = abi.encodeCall(
+            SyndicateSequencingChain.initialize,
+            (ADMIN, address(factory), address(gasAggregator), PERMISSION_MODULE, TEST_APPCHAIN_ID, 0)
+        );
 
         proxy = new ERC1967Proxy(address(syndicateV1), initData);
         syndicateV1 = SyndicateSequencingChain(address(proxy));
@@ -69,8 +85,10 @@ contract StorageUpgradeTest is Test {
         vm.stopPrank();
 
         // Switch to admin to set emissions receiver
-        vm.prank(ADMIN);
+        vm.startPrank(ADMIN);
         syndicateV1.setEmissionsReceiver(EMISSIONS_RECEIVER);
+        // Gas aggregator is now hardcoded - no setup needed
+        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -85,7 +103,6 @@ contract StorageUpgradeTest is Test {
         OriginalStorageData memory originalData = OriginalStorageData({
             appchainId: syndicateV1.appchainId(),
             emissionsReceiver: syndicateV1.getEmissionsReceiver(),
-            factory: syndicateV1.factory(),
             allowGasTrackingBanOnUpgrade: syndicateV1.allowGasTrackingBanOnUpgrade(),
             permissionModule: address(syndicateV1.permissionRequirementModule()),
             gasTrackingEnabled: syndicateV1.gasTrackingEnabled()
@@ -105,7 +122,6 @@ contract StorageUpgradeTest is Test {
         assertEq(
             syndicateV2.getEmissionsReceiver(), originalData.emissionsReceiver, "emissionsReceiver should be preserved"
         );
-        assertEq(syndicateV2.factory(), originalData.factory, "factory should be preserved");
         assertEq(
             syndicateV2.allowGasTrackingBanOnUpgrade(),
             originalData.allowGasTrackingBanOnUpgrade,
@@ -300,7 +316,6 @@ contract StorageUpgradeTest is Test {
             syndicateV2.allowGasTrackingBanOnUpgrade(), "V1 storage should not be affected by V2 storage modifications"
         );
         assertEq(syndicateV2.appchainId(), TEST_APPCHAIN_ID, "V1 storage should remain intact");
-        assertEq(syndicateV2.factory(), address(factory), "V1 storage should remain intact");
 
         // Verify V2 storage is working correctly
         assertEq(syndicateV2.maxGasPerTransaction(), 999999, "V2 storage should work correctly");
@@ -308,35 +323,5 @@ contract StorageUpgradeTest is Test {
         assertEq(syndicateV2.minTimeBetweenTxs(), 123, "V2 storage should work correctly");
 
         vm.stopPrank();
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        STORAGE LAYOUT INSPECTION
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Test to generate and compare storage layouts
-    /// @dev This test documents the storage layout differences between V1 and V2
-    function testStorageLayoutDocumentation() public {
-        // This test serves as documentation for storage layout changes
-        // V1 storage (slots 0-3):
-        // - Slot 0: appchainId (uint256)
-        // - Slot 1: emissionsReceiver (address)
-        // - Slot 2: factory (address)
-        // - Slot 3: allowGasTrackingBanOnUpgrade (bool) - packed with factory
-
-        // V2 additional traditional storage (slots 4-7):
-        // - Slot 4: maxGasPerTransaction (uint256)
-        // - Slot 5: replayProtectionEnabled (bool)
-        // - Slot 6: minTimeBetweenTxs (uint256)
-        // - Slot 7: lastTransactionTime mapping
-
-        // Namespaced storage (ERC-7201):
-        // - Location: 0x5c6d1774bdd69d8d16847c3c97b51ea7343257b8f5ace5da9e25ab3bafd7d500
-        // - Field 0: permissionRequirementModule (IPermissionModule)
-        // - Field 1: maxTransactionsPerBatch (uint256) - NEW in V2
-        // - Field 2: batchProcessingEnabled (bool) - NEW in V2
-        // - Field 3: lastPermissionUpdate (uint256) - NEW in V2
-
-        assertTrue(true, "Storage layout documentation test passed");
     }
 }

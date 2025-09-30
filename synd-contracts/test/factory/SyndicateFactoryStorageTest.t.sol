@@ -22,13 +22,11 @@ contract SyndicateFactoryStorageTest is Test {
     uint256 constant CHAIN_IDS_SLOT = 1;
     uint256 constant STUB_IMPLEMENTATION_SLOT = 2;
     uint256 constant SYNDICATE_CHAIN_IMPL_SLOT = 3;
-    uint256 constant ALLOWED_IMPLEMENTATIONS_SLOT = 4;
-    uint256 constant IS_IMPLEMENTATION_ALLOWED_SLOT = 5;
-    uint256 constant GAS_TRACKING_BANLIST_SLOT = 6;
-    uint256 constant NUMBER_OF_CHAINS_BANNED_SLOT = 7;
-    uint256 constant SENDER_NONCES_SLOT = 8; // Our deterministic nonce variable
+    uint256 constant SENDER_NONCES_SLOT = 4; // Our deterministic nonce variable
 
     function setUp() public {
+        vm.warp(1754089200 + 1 days); // after epoch start
+
         admin = address(0x1);
         // Deploy permission module
         permissionModule = new RequireAndModule(admin);
@@ -42,7 +40,6 @@ contract SyndicateFactoryStorageTest is Test {
 
     /// @notice Test that validates the current storage layout matches expected slots
     function testStorageLayoutValidation() public {
-        // Test 1: Verify stub implementation slot
         assertTrue(
             address(uint160(uint256(vm.load(address(factory), bytes32(STUB_IMPLEMENTATION_SLOT))))) != address(0)
         );

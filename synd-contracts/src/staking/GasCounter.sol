@@ -26,7 +26,7 @@ abstract contract GasCounter is EpochTracker {
     bytes32 public constant GAS_COUNTER_STORAGE_LOCATION =
         0x119494e47c2426a6072fc6072ec5c5d5ae865a3372fd102c643c18e978b14800;
 
-    function _getGasCounterStorage() private pure returns (GasCounterStorage storage $) {
+    function _getGasCounterStorage() internal pure returns (GasCounterStorage storage $) {
         assembly {
             $.slot := GAS_COUNTER_STORAGE_LOCATION
         }
