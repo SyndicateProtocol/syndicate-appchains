@@ -35,39 +35,6 @@ contract MockGasCounter {
 }
 
 contract MockAppchainFactory is IAppchainFactory {
-    uint256 public totalAppchains;
-    mapping(uint256 => address) public appchainContracts;
-    uint256[] public appchainChainIDs;
-
-    function setTotalAppchains(uint256 count) external {
-        totalAppchains = count;
-    }
-
-    function addAppchain(uint256 chainId, address contractAddr) external {
-        appchainContracts[chainId] = contractAddr;
-        appchainChainIDs.push(chainId);
-    }
-
-    function getTotalAppchains() external view returns (uint256) {
-        return totalAppchains;
-    }
-
-    function getContractsForAppchains(uint256[] memory chainIDs) external view returns (address[] memory) {
-        address[] memory contracts = new address[](chainIDs.length);
-        for (uint256 i = 0; i < chainIDs.length; i++) {
-            contracts[i] = appchainContracts[chainIDs[i]];
-        }
-        return contracts;
-    }
-
-    function getAppchainsAndContracts() external view returns (uint256[] memory, address[] memory) {
-        address[] memory contracts = new address[](appchainChainIDs.length);
-        for (uint256 i = 0; i < appchainChainIDs.length; i++) {
-            contracts[i] = appchainContracts[appchainChainIDs[i]];
-        }
-        return (appchainChainIDs, contracts);
-    }
-
     function getProxyBytecode() external view returns (bytes memory) {
         return ""; // NOTE: stub just to satisfy interface
     }
@@ -107,7 +74,7 @@ contract GasAggregatorTest is Test {
 
         // 4. Prepare initialization data
         bytes memory initData =
-            abi.encodeWithSelector(GasAggregator.initialize.selector, admin, mockFactory, address(0), 1);
+            abi.encodeWithSelector(GasAggregator.initialize.selector, admin, address(mockFactory), address(0), 1);
 
         // 5. Deploy TransparentUpgradeableProxy
         TransparentUpgradeableProxy proxy =
@@ -121,6 +88,30 @@ contract GasAggregatorTest is Test {
         gasAggregator.setMaxAppchainsToQuery(2);
         vm.prank(admin);
         gasAggregator.setChallengeWindow(CHALLENGE_WINDOW);
+    }
+
+    /// @notice Helper function to set up chain overrides and add chains to the aggregator
+    /// @param chainIds Array of chain IDs to set up (1=mockGasCounter1, 2=mockGasCounter2, 3=mockGasCounter3)
+    function setupChainsWithOverrides(uint256[] memory chainIds) internal {
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            uint256 chainId = chainIds[i];
+            address mockContract;
+
+            if (chainId == 1) {
+                mockContract = address(mockGasCounter1);
+            } else if (chainId == 2) {
+                mockContract = address(mockGasCounter2);
+            } else if (chainId == 3) {
+                mockContract = address(mockGasCounter3);
+            } else {
+                revert("Invalid chain ID");
+            }
+
+            vm.prank(admin);
+            gasAggregator.setChainOverride(chainId, mockContract);
+            vm.prank(admin);
+            gasAggregator.addChain{value: gasAggregator.addChainFee()}(chainId);
+        }
     }
 
     function test_Constructor() public view {
@@ -140,9 +131,10 @@ contract GasAggregatorTest is Test {
         // Prepare initialization data with zero admin address
         bytes memory initData = abi.encodeWithSelector(
             GasAggregator.initialize.selector,
-            mockFactory,
             address(0), // This should trigger ZeroAddress error
-            24 hours
+            address(mockFactory),
+            address(0),
+            1
         );
 
         // Expect the ZeroAddress error when deploying the proxy
@@ -188,24 +180,39 @@ contract GasAggregatorTest is Test {
     }
 
     function test_FallbackToOffchainAggregation() public {
-        // Below threshold
-        mockFactory.setTotalAppchains(1);
+        // Below threshold - no chains added yet
         assertFalse(gasAggregator.fallbackToOffchainAggregation());
 
-        // At threshold (should return true since contract uses >=)
-        mockFactory.setTotalAppchains(2);
+        // Add one chain - should still be below threshold (maxAppchainsToQuery is 2)
+        uint256[] memory chain1 = new uint256[](1);
+        chain1[0] = 1;
+        setupChainsWithOverrides(chain1);
+        assertFalse(gasAggregator.fallbackToOffchainAggregation());
+
+        // Add second chain - should be at threshold (should return true since contract uses >=)
+        uint256[] memory chain2 = new uint256[](1);
+        chain2[0] = 2;
+        setupChainsWithOverrides(chain2);
         assertTrue(gasAggregator.fallbackToOffchainAggregation());
 
-        // Above threshold
-        mockFactory.setTotalAppchains(3);
+        // Add third chain - should still be above threshold
+        uint256[] memory chain3 = new uint256[](1);
+        chain3[0] = 3;
+        setupChainsWithOverrides(chain3);
         assertTrue(gasAggregator.fallbackToOffchainAggregation());
     }
 
     function test_AggregateTokensUsed_Success() public {
         // Setup: below threshold for automatic aggregation
-        mockFactory.setTotalAppchains(1);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        // First increase maxAppchainsToQuery to stay below threshold
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(3);
+
+        // Set up chains 1 and 2
+        uint256[] memory chains = new uint256[](2);
+        chains[0] = 1;
+        chains[1] = 2;
+        setupChainsWithOverrides(chains);
 
         mockGasCounter1.setEmissionsReceiver(address(0x2001));
         mockGasCounter2.setEmissionsReceiver(address(0x2002));
@@ -225,8 +232,12 @@ contract GasAggregatorTest is Test {
     }
 
     function test_AggregateTokensUsed_AboveThreshold() public {
-        // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
+        // Setup: above threshold by adding enough chains
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
@@ -248,9 +259,11 @@ contract GasAggregatorTest is Test {
 
     function test_SubmitOffchainTopChains_Success() public {
         // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         mockGasCounter1.setEmissionsReceiver(address(0x1001));
         mockGasCounter2.setEmissionsReceiver(address(0x1002));
@@ -293,9 +306,11 @@ contract GasAggregatorTest is Test {
 
     function test_SubmitOffchainTopChains_ChainIDsNotAscending() public {
         // Setup
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set gas usage for pending epoch first
         uint256 currentEpoch = gasAggregator.pendingEpoch();
@@ -315,8 +330,11 @@ contract GasAggregatorTest is Test {
 
     function test_SubmitOffchainTopChains_NotHigherThanPending() public {
         // Setup
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set gas usage for pending epoch
         uint256 currentEpoch = gasAggregator.pendingEpoch();
@@ -338,8 +356,12 @@ contract GasAggregatorTest is Test {
     }
 
     function test_SubmitOffchainTopChains_EpochNotCompleted() public {
-        // Setup
-        mockFactory.setTotalAppchains(3);
+        // Setup - add chains to reach threshold
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         uint256[] memory chainIDs = new uint256[](1);
         chainIDs[0] = 1;
@@ -354,9 +376,11 @@ contract GasAggregatorTest is Test {
 
     function test_SealPendingEpoch_Success() public {
         // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set gas usage for current pending epoch
         uint256 currentEpoch = gasAggregator.pendingEpoch();
@@ -388,8 +412,11 @@ contract GasAggregatorTest is Test {
 
     function test_SealPendingEpoch_ChallengeWindowNotOver() public {
         // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set gas usage for current pending epoch
         uint256 currentEpoch = gasAggregator.pendingEpoch();
@@ -412,9 +439,11 @@ contract GasAggregatorTest is Test {
 
     function test_SealPendingEpoch_ValidData() public {
         // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set gas usage for current pending epoch
         uint256 currentEpoch = gasAggregator.pendingEpoch();
@@ -449,10 +478,11 @@ contract GasAggregatorTest is Test {
 
     function test_Integration_CompleteWorkflow() public {
         // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
-        mockFactory.addAppchain(3, address(mockGasCounter3));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set initial gas usage
         uint256 epoch1 = gasAggregator.pendingEpoch();
@@ -495,19 +525,30 @@ contract GasAggregatorTest is Test {
         // Test with maximum uint8 value
         vm.prank(admin);
         gasAggregator.setMaxAppchainsToQuery(255);
-        mockFactory.setTotalAppchains(255);
+
+        // Set up chain overrides for all chains we'll add
+        for (uint256 i = 1; i <= 256; i++) {
+            vm.prank(admin);
+            gasAggregator.setChainOverride(i, address(mockGasCounter1));
+        }
+
+        // Add chains to reach threshold
+        for (uint256 i = 1; i <= 255; i++) {
+            vm.prank(admin);
+            gasAggregator.addChain{value: gasAggregator.addChainFee()}(i);
+        }
 
         // At threshold (should return true since contract uses >=)
         assertTrue(gasAggregator.fallbackToOffchainAggregation());
 
-        mockFactory.setTotalAppchains(256);
+        // Add one more chain
+        vm.prank(admin);
+        gasAggregator.addChain{value: gasAggregator.addChainFee()}(256);
         assertTrue(gasAggregator.fallbackToOffchainAggregation());
     }
 
     function test_EdgeCase_EmptyAppchainList() public {
-        // Setup: no appchains
-        mockFactory.setTotalAppchains(0);
-
+        // Setup: no appchains added yet
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
@@ -520,9 +561,11 @@ contract GasAggregatorTest is Test {
 
     function test_ChallengeWindowMechanism() public {
         // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set gas usage for current pending epoch
         uint256 currentEpoch = gasAggregator.pendingEpoch();
@@ -571,9 +614,11 @@ contract GasAggregatorTest is Test {
 
     function test_ResubmissionOfHistoricalData() public {
         // Setup: above threshold for offchain aggregation
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set gas usage for epoch 1
         uint256 epoch1 = gasAggregator.pendingEpoch();
@@ -615,9 +660,15 @@ contract GasAggregatorTest is Test {
 
     function test_ResubmissionOfAutomaticAggregationData() public {
         // Setup: below threshold for automatic aggregation
-        mockFactory.setTotalAppchains(1);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        // First increase maxAppchainsToQuery to stay below threshold
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(3);
+
+        // Set up chains 1 and 2
+        uint256[] memory chains = new uint256[](2);
+        chains[0] = 1;
+        chains[1] = 2;
+        setupChainsWithOverrides(chains);
 
         mockGasCounter1.setEmissionsReceiver(address(0x3001));
         mockGasCounter2.setEmissionsReceiver(address(0x3002));
@@ -655,9 +706,11 @@ contract GasAggregatorTest is Test {
 
     function test_SubmitOffchainTopChains_CannotSubmitNextEpochUntilSealed() public {
         // Setup: above threshold for offchain aggregation
-        mockFactory.setTotalAppchains(3);
-        mockFactory.addAppchain(1, address(mockGasCounter1));
-        mockFactory.addAppchain(2, address(mockGasCounter2));
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Set gas usage for epoch 1
         uint256 epoch1 = gasAggregator.pendingEpoch();
@@ -701,7 +754,11 @@ contract GasAggregatorTest is Test {
 
     function test_SealPendingEpoch_NoSubmissionYet() public {
         // Setup: above threshold
-        mockFactory.setTotalAppchains(3);
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
 
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
