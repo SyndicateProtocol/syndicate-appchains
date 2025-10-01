@@ -100,7 +100,6 @@ pub mod r#gas_aggregator;
 pub mod r#i_appchain_factory;
 pub mod r#i_sequencing_contract;
 pub mod r#gas_archive;
-pub mod r#mock_gas_aggregator;
 pub mod r#gas_counter;
 pub mod r#mock_appchain_factory;
 pub mod r#mock_gas_counter;
