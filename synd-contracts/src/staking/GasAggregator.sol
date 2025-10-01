@@ -227,6 +227,11 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
         addChainFee = 5 ether;
         maxAppchainsToQuery = 100;
         factory = IAppchainFactory(_factory);
+
+        // Add the initial implementation to the allowed list
+        if (_allowedImplementation != address(0)) {
+            allowedImplementations[_allowedImplementation] = true;
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -26,6 +26,15 @@ contract EmissionsForkTest is Test {
         // Start fork
         vm.createSelectFork("https://0xrpc.io/eth");
 
+        // Warp to a time where getCurrentEpoch() returns startEpoch - 1
+        // START_TIMESTAMP = 1754089200 (from EpochTracker)
+        // For getCurrentEpoch() to return 2 (startEpoch - 1), we need:
+        // ((block.timestamp - START_TIMESTAMP) / 30 days) + 1 = 2
+        // So: block.timestamp = START_TIMESTAMP + 30 days
+        uint256 START_TIMESTAMP = 1754089200;
+        uint256 EPOCH_DURATION = 30 days;
+        vm.warp(START_TIMESTAMP + (startEpoch - 2) * EPOCH_DURATION);
+
         if (address(emissionsCalculator) == address(0) || address(emissionsScheduler) == address(0)) {
             console2.log("Emissions contracts not found, deploying ones to fork");
             MockRelayer relayer = new MockRelayer();
