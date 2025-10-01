@@ -21,30 +21,32 @@ methods {
 /*
  * Rule: Initialization rules
  */
-rule initializeOnce(address admin, address module, uint256 appchainId) {
+rule initializeOnce(address admin, address factory, address gasAggregator, address module, uint256 appchainId, uint256 gasTokensUsed) {
     env e;
     require admin != 0;
-    require module != 0;
+    require factory != 0;
+    require gasAggregator != 0;
     require appchainId != 0;
     require e.msg.sender != currentContract;
     // First initialization
-    initialize@withrevert(e, admin, module, appchainId);
+    initialize@withrevert(e, admin, factory, gasAggregator, module, appchainId, gasTokensUsed);
     bool firstInit = !lastReverted;
     // Try to initialize again
-    initialize@withrevert(e, admin, module, appchainId);
+    initialize@withrevert(e, admin, factory, gasAggregator, module, appchainId, gasTokensUsed);
     assert firstInit => lastReverted, "Contract initialized more than once";
 }
 
 /*
  * Rule: Initialization sets correct values
  */
-rule initializationCorrect(address admin, address module, uint256 appchainId) {
+rule initializationCorrect(address admin, address factory, address gasAggregator, address module, uint256 appchainId, uint256 gasTokensUsed) {
     env e;
     require admin != 0;
-    require module != 0;
+    require factory != 0;
+    require gasAggregator != 0;
     require appchainId != 0;
     require e.msg.sender != currentContract;
-    initialize(e, admin, module, appchainId);
+    initialize(e, admin, factory, gasAggregator, module, appchainId, gasTokensUsed);
     assert permissionRequirementModule() == module, "Permission module not set correctly";
     assert owner() == admin, "Admin not set correctly";
     assert appchainId() == appchainId, "AppchainId not set correctly";
@@ -54,17 +56,18 @@ rule initializationCorrect(address admin, address module, uint256 appchainId) {
 /*
  * Rule: AppchainId is set correctly after initialization
  */
-rule appchainIdSetAfterInit(address admin, address module, uint256 chainId) {
+rule appchainIdSetAfterInit(address admin, address factory, address gasAggregator, address module, uint256 chainId, uint256 gasTokensUsed) {
     env e;
     require admin != 0;
-    require module != 0;
+    require factory != 0;
+    require gasAggregator != 0;
     require chainId != 0;
     require e.msg.sender != currentContract;
     // Before initialization, appchainId should be 0
     require getInitializedVersion() == 0;
     require appchainId() == 0;
     // Initialize the contract
-    initialize(e, admin, module, chainId);
+    initialize(e, admin, factory, gasAggregator, module, chainId, gasTokensUsed);
     // After initialization, appchainId should be set to the provided value
     assert appchainId() == chainId, "AppchainId not set correctly after initialization";
     assert appchainId() != 0, "AppchainId should not be zero after initialization";
