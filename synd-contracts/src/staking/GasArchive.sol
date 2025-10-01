@@ -32,7 +32,7 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-    // @dev The `BlockHashRelayer` contract is deployed on the settlement chain and is responsible for sending the block hashes to the `GasArchive` contract. Anyone can call `sendBlockHashes` on the relayer to send the block hashes.
+    /// @dev The `BlockHashRelayer` contract is deployed on the settlement chain and is responsible for sending the block hashes to the `GasArchive` contract. Anyone can call `sendBlockHashes` on the relayer to send the block hashes.
     address public blockHashSender;
 
     /// @notice when using the settlement chain as the sequencing chain, the rollup hash proof is not required
@@ -51,9 +51,9 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
     /// @notice mapping of sequencing chain IDs to the address of the Outbox contract for that sequencing chain (where the confirmed rollup hash can be found)
     mapping(uint256 chainId => address outboxAddress) public seqChainOutbox;
     mapping(uint256 chainId => bool) public seqChainSettlesToBase;
-    // @notice block hashes for l1 and settlement chains
-    mapping(bytes32 => bool) public ethBlockHashes;
-    mapping(bytes32 => bool) public setBlockHashes;
+    /// @notice block hashes for l1 and settlement chains
+    mapping(bytes32 blockHash => bool isPresent) public ethBlockHashes;
+    mapping(bytes32 blockHash => bool isPresent) public setBlockHashes;
 
     /// @notice tracks which sequencing chains have submitted data for each epoch
     mapping(uint256 epoch => mapping(uint256 chainId => bool submitted)) public epochChainDataSubmitted;
@@ -150,15 +150,14 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
         emit KnownBlockHash(ethBlockHash, setBlockHash);
     }
 
-    /// @notice overload of confirmEpochDataHash for the settlement chain
-    function confirmEpochDataHash(
+    function confirmSettlementChainEpochDataHash(
         uint256 epoch,
-        bytes calldata seqBlockHeader,
-        bytes[] calldata seqAccountProof,
-        bytes[] calldata seqStorageProof
+        bytes calldata blockHeader,
+        bytes[] calldata accountProof,
+        bytes[] calldata storageProof
     ) external {
-        _confirmEpochDataHash(epoch, settlementChainID, seqBlockHeader, seqAccountProof, seqStorageProof);
-        require(setBlockHashes[keccak256(seqBlockHeader)], InvalidSeqBlockHeader());
+        _confirmEpochDataHash(epoch, settlementChainID, blockHeader, accountProof, storageProof);
+        require(setBlockHashes[keccak256(blockHeader)], InvalidSeqBlockHeader());
     }
 
     /// @notice Validates and stores the epochDataHash for a given sequencing chain / epoch using sequencing chain storage proofs
@@ -209,36 +208,36 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
 
     function _confirmEpochDataHash(
         uint256 epoch,
-        uint256 seqChainID,
-        bytes calldata seqBlockHeader,
-        bytes[] calldata seqAccountProof,
-        bytes[] calldata seqStorageProof
+        uint256 chainID,
+        bytes calldata blockHeader,
+        bytes[] calldata accountProof,
+        bytes[] calldata storageProof
     ) internal {
         // prevent resubmission for the same epoch and chain
-        require(epochVerifiedDataHash[epoch][seqChainID] == bytes32(0), AlreadySubmitted());
+        require(epochVerifiedDataHash[epoch][chainID] == bytes32(0), AlreadySubmitted());
 
         // just in case, make sure the epoch is not from the future
         _updateLatestEpoch();
         require(epoch < latestEpoch, EpochFromFuture());
 
         // submissions are only allowed for active sequencing chains
-        require(chainAdded[seqChainID] > 0 && chainAdded[seqChainID] <= epoch, InvalidSequencingChain());
+        require(chainAdded[chainID] > 0 && chainAdded[chainID] <= epoch, InvalidSequencingChain());
 
         // verify that the provided epoch data is valid according to the sequencing chain proof
         bytes32 verifiedEpochDataHash = _getSlotValueFromProof({
-            blockHeader: seqBlockHeader,
-            accountProof: seqAccountProof,
-            storageProof: seqStorageProof,
-            account: seqChainGasAggregatorAddresses[seqChainID],
+            blockHeader: blockHeader,
+            accountProof: accountProof,
+            storageProof: storageProof,
+            account: seqChainGasAggregatorAddresses[chainID],
             storageSlot: keccak256(abi.encode(epoch, AGGREGATED_EPOCH_DATA_HASH_SLOT))
         });
 
         require(verifiedEpochDataHash != bytes32(0), EmptyDataHash());
 
         // data submitted is valid, store it
-        emit EpochDataValidated(epoch, seqChainID, verifiedEpochDataHash);
+        emit EpochDataValidated(epoch, chainID, verifiedEpochDataHash);
 
-        epochVerifiedDataHash[epoch][seqChainID] = verifiedEpochDataHash;
+        epochVerifiedDataHash[epoch][chainID] = verifiedEpochDataHash;
     }
 
     /// @notice Receives the pre-image data for a verified epoch
@@ -421,8 +420,7 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
         addSequencingChain(chainID, aggregatorAddress, outboxAddress, false);
     }
 
-    /// @notice overload of addSequencingChain for the settlement chain
-    function addSequencingChain(address aggregatorAddress) external {
+    function addSettlementChainAsSequencingChain(address aggregatorAddress) external {
         addSequencingChain(settlementChainID, aggregatorAddress, address(0), false);
     }
 
