@@ -661,9 +661,10 @@ contract ArbitrumBridgeProxyTest is Test {
             // If the test call succeeds, reset and do the actual test
             vm.deal(address(bridgeProxy), 10 ether); // Reset bridge balance
 
-            uint256 withdrawAmount = 1 ether;
-            uint256 initialBridgeBalance = address(bridgeProxy).balance;
-            uint256 initialRecipientBalance = recipient_.balance;
+            // Reassign values after resetting bridge balance
+            withdrawAmount = 1 ether;
+            initialBridgeBalance = address(bridgeProxy).balance;
+            initialRecipientBalance = recipient_.balance;
 
             vm.prank(admin);
             bridgeProxy.withdrawEth(payable(recipient_), withdrawAmount);

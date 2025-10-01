@@ -446,58 +446,6 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     }
 
     /*//////////////////////////////////////////////////////////////
-                         INTERNAL FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Computes the deterministic address for a sequencing chain proxy
-    /// @dev Uses CREATE2 with the factory as deployer, chain ID as salt, and cached bytecode hash
-    /// @param chainId The chain ID for the sequencing chain
-    /// @return The computed address of the sequencing chain proxy
-    function computeSequencingChainAddress(uint256 chainId) internal returns (address) {
-        return Create2.computeAddress(bytes32(chainId), getSequencingChainProxyBytecodeHash(), address(factory));
-    }
-
-    /// @notice Internal function to ban a chain from gas tracking
-    /// @dev Removes the chain from all tracking data structures and marks it as banned.
-    ///      Banned chains cannot be re-added to prevent abuse.
-    /// @param chainId The chain ID to ban from gas tracking
-    function _banAppchain(uint256 chainId) internal {
-        for (uint256 i = 0; i < appchains.length; i++) {
-            if (appchains[i] == chainId) {
-                appchains[i] = appchains[appchains.length - 1];
-                appchains.pop();
-                break;
-            }
-        }
-        delete isChainTracked[chainId];
-        bannedAppchains[chainId] = true;
-    }
-
-    /// @notice Get the cached proxy bytecode hash, computing it if necessary
-    /// @dev Caches the bytecode hash for gas efficiency in repeated address computations
-    /// @return The keccak256 hash of the proxy bytecode used for CREATE2 deployments
-    function getSequencingChainProxyBytecodeHash() internal returns (bytes32) {
-        if (sequencingChainProxyBytecodeHash != bytes32(0)) return sequencingChainProxyBytecodeHash;
-        if (address(factory) != address(0)) {
-            sequencingChainProxyBytecodeHash = keccak256(factory.getProxyBytecode());
-            return sequencingChainProxyBytecodeHash;
-        }
-        revert NoSequencingChainProxyBytecodeHash();
-    }
-
-    /// @notice Get the contract address for a given chain ID
-    /// @dev Checks for admin overrides first, then falls back to deterministic address computation
-    /// @param chainId The chain ID to get the contract address for
-    /// @return The contract address for the specified chain ID
-    function getAppchainContractAddress(uint256 chainId) internal returns (address) {
-        address contractOverride = appchainContractOverrides[chainId];
-        if (contractOverride != address(0)) {
-            return contractOverride;
-        }
-        return computeSequencingChainAddress(chainId);
-    }
-
-    /*//////////////////////////////////////////////////////////////
                            VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -553,6 +501,13 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     function setChallengeWindow(uint256 newChallengeWindow) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (newChallengeWindow == 0) revert ZeroChallengeWindow();
         challengeWindow = newChallengeWindow;
+    }
+
+    /// @notice Remove an implementation from the allowed list (admin only)
+    /// @param implementation The implementation address to remove from the allowed list
+    function removeAllowedImplementation(address implementation) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (!allowedImplementations[implementation]) revert ImplementationNotAllowed(implementation);
+        delete allowedImplementations[implementation];
     }
 
     /// @notice Updates the contract version (admin only, typically called during upgrades)
