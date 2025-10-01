@@ -122,7 +122,7 @@ contract GasArchiveTest is Test {
         address settlementAggregator = makeAddr("settlementAggregator");
 
         vm.prank(admin);
-        gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, settlementAggregator, address(0));
+        gasArchive.addSettlementChainAsSequencingChain(settlementAggregator);
 
         assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), settlementAggregator);
         assertEq(gasArchive.seqChainOutbox(SETTLEMENT_CHAIN_ID), address(0));
@@ -169,7 +169,7 @@ contract GasArchiveTest is Test {
     function testRemoveSettlementChainAsSequencing() public {
         // First add settlement chain as sequencing
         vm.prank(admin);
-        gasArchive.addSequencingChain(SETTLEMENT_CHAIN_ID, address(1), address(0));
+        gasArchive.addSettlementChainAsSequencingChain(address(1));
 
         assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(1));
 
@@ -227,7 +227,7 @@ contract GasArchiveTest is Test {
         // Setup: add the sequencing chain
         vm.warp(1754089200 + (EPOCH - 1) * 30 days);
         vm.prank(admin);
-        gasArchive.addSequencingChain(1, address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0), address(1));
+        gasArchive.addSettlementChainAsSequencingChain(address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0));
         vm.warp(1754089200 + EPOCH * 30 days);
 
         uint256[] memory appchains = new uint256[](2);
@@ -278,11 +278,15 @@ contract GasArchiveTest is Test {
             EPOCH, SETTLEMENT_CHAIN_ID, bytes32(vm.parseJsonBytes(seqProofJson, ".storageProof[0].value"))
         );
 
-        gasArchive.confirmEpochDataHash(EPOCH, seqChainHeader, seqAccountProofArray, seqStorageProofArray);
+        gasArchive.confirmSettlementChainEpochDataHash(
+            EPOCH, seqChainHeader, seqAccountProofArray, seqStorageProofArray
+        );
 
         // Test resubmission prevention for confirmEpochDataHash
         vm.expectRevert(GasArchive.AlreadySubmitted.selector);
-        gasArchive.confirmEpochDataHash(EPOCH, seqChainHeader, seqAccountProofArray, seqStorageProofArray);
+        gasArchive.confirmSettlementChainEpochDataHash(
+            EPOCH, seqChainHeader, seqAccountProofArray, seqStorageProofArray
+        );
 
         // At this point, the epoch data hash is verified but epoch is not yet completed
         assertFalse(gasArchive.epochCompleted(EPOCH), "Epoch should not be completed yet");
