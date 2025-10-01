@@ -23,15 +23,8 @@ pragma solidity 0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {GasAggregator} from "src/staking/GasAggregator.sol";
-
-interface AppchainFactory {
-    function isImplementationAllowed(address implementation) external view returns (bool);
-    function computeSequencingChainAddress(uint256 chainId) external view returns (address);
-    function getProxyBytecode() external view returns (bytes memory);
-}
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {GasAggregator} from "../src/staking/GasAggregator.sol";
 
 contract DeployGasAggregator is Script {
     function run() public {
@@ -39,49 +32,35 @@ contract DeployGasAggregator is Script {
 
         // Read configuration from environment variables
         address factory = vm.envAddress("APPCHAIN_FACTORY_ADDRESS");
+        address allowedImplementation = vm.envAddress("ALLOWED_IMPLEMENTATION_ADDRESS");
         address admin = vm.envAddress("GAS_AGGREGATOR_ADMIN");
-        uint256 challengeWindow = vm.envUint("CHALLENGE_WINDOW"); // Time in seconds, e.g., 86400 for 24 hours
-        uint256 addChainFee = vm.envOr("ADD_CHAIN_FEE", uint256(0.1 ether)); // Default 0.1 ETH
+        uint256 epochStart = vm.envUint("EPOCH_START");
 
-        console2.log("Deploying GasAggregator with TransparentProxy pattern...");
+        console2.log("Deploying GasAggregator with UUPS proxy pattern...");
         console2.log("Factory address:", factory);
+        console2.log("Allowed implementation address:", allowedImplementation);
         console2.log("Admin address:", admin);
-        console2.log("Challenge window:", challengeWindow);
-        console2.log("Add chain fee:", addChainFee);
+        console2.log("Epoch start:", epochStart);
 
-        // 1. Deploy ProxyAdmin contract
-        ProxyAdmin proxyAdmin = new ProxyAdmin(admin);
-        console2.log("ProxyAdmin deployed to:", address(proxyAdmin));
-
-        // 2. Deploy GasAggregator implementation
+        // 1. Deploy GasAggregator implementation
         GasAggregator implementation = new GasAggregator();
         console2.log("GasAggregator implementation deployed to:", address(implementation));
 
-        // 3. Prepare initialization data
-        bytes memory initData = abi.encodeWithSelector(
-            GasAggregator.initialize.selector, AppchainFactory(factory), admin, challengeWindow, addChainFee
-        );
+        // 2. Prepare initialization data
+        bytes memory initData =
+            abi.encodeWithSelector(GasAggregator.initialize.selector, admin, factory, allowedImplementation, epochStart);
 
-        // 4. Deploy TransparentUpgradeableProxy
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), initData);
+        // 3. Deploy ERC1967Proxy (UUPS)
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         console2.log("GasAggregator proxy deployed to:", address(proxy));
 
-        // 5. Optionally set maxAppchainsToQuery if provided
-        uint256 maxAppchains = vm.envOr("MAX_APPCHAINS_TO_QUERY", uint256(0));
-        if (maxAppchains > 0) {
-            console2.log("Setting max appchains to query:", maxAppchains);
-            GasAggregator gasAggregator = GasAggregator(address(proxy));
-            gasAggregator.setMaxAppchainsToQuery(maxAppchains);
-        }
-
         console2.log("=== Deployment Summary ===");
-        console2.log("ProxyAdmin:", address(proxyAdmin));
         console2.log("Implementation:", address(implementation));
         console2.log("GasAggregator (Proxy):", address(proxy));
-        console2.log("Admin (ProxyAdmin owner and GasAggregator admin):", admin);
-        console2.log("Challenge Window:", challengeWindow, "seconds");
-        console2.log("Add Chain Fee:", addChainFee, "wei");
+        console2.log("Admin:", admin);
+        console2.log("Default challengeWindow: 24 hours");
+        console2.log("Default addChainFee: 5 ether");
+        console2.log("Default maxAppchainsToQuery: 100");
 
         vm.stopBroadcast();
     }
