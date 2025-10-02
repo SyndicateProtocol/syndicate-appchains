@@ -43,7 +43,7 @@ contract DeployStakingContracts is Script {
 
         // deployL3Contracts();
         // deployL2Contracts();
-        // deployL1Contracts();
+        deployL1Contracts();
 
         vm.stopBroadcast();
     }
@@ -67,8 +67,8 @@ contract DeployStakingContracts is Script {
         console2.log("EmissionsScheduler deployed to:", address(_emissionsScheduler));
 
         // L1Relayer deployed to: 0x96f93df52B769AD3E7f633E4fc68cb2Cc1E33686
-        // EmissionsCalculator deployed to: 0x83D41A09D8A01dDa13e380f74032D4f2afc3545D
-        // EmissionsScheduler deployed to: 0xff8eb6318A3960863004f18eDd36aD8C8C711b29
+        // EmissionsCalculator deployed to: 0x7CC604b2e117693fE214b8253504eC29BE9Ecf0a
+        // EmissionsScheduler deployed to: 0xcD3602332fA70191A0e1A1b49aC9873aD4D87E0e
 
         // Initialize emissions calculator
         _emissionsCalculator.initializeEmissions(changeFactor);
