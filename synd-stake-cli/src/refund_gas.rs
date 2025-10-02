@@ -10,6 +10,7 @@ use shared::{
     parse::{parse_address, parse_url},
     types::new_provider,
 };
+use tracing::{error, info};
 
 /// Arguments for the `refund-gas` command.
 ///
@@ -65,6 +66,7 @@ pub struct RefundGasArgs {
 ///
 /// This function may return an error if:
 /// - The transaction/simulation fails
+#[allow(clippy::cognitive_complexity)]
 pub async fn refund_gas(args: &RefundGasArgs) {
     // TODO (ENG-2111): Use shared provider function
     let provider = ProviderBuilder::new()
@@ -76,25 +78,22 @@ pub async fn refund_gas(args: &RefundGasArgs) {
         panic!("Failed to get balance for refunder address '{}': {}", args.refunder_address, e)
     }) == U256::from(0)
     {
-        println!("No excess gas to refund");
+        info!("No excess gas to refund");
         return;
     }
 
     if args.sim {
-        println!("Simulating refund gas...");
+        info!("Simulating refund gas...");
         match Refunder::new(args.refunder_address, provider).recover().call().await {
             Ok(_) => {
-                println!("Simulation succeeded")
+                info!("Simulation succeeded")
             }
             Err(e) => {
-                println!("Simulation failed");
-                println!("--------------------------------");
-                println!("{e}");
-                println!("--------------------------------");
+                error!("Simulation failed. Error: {}", e);
             }
         }
     } else {
-        println!("Refunding gas...");
+        info!("Refunding gas...");
         match Refunder::new(
             args.refunder_address,
             new_provider(args.rpc_url.as_str(), &args.private_key).await,
@@ -104,13 +103,10 @@ pub async fn refund_gas(args: &RefundGasArgs) {
         .await
         {
             Ok(tx) => {
-                println!("Refund succeeded: {}", tx.tx_hash());
+                info!("Refund succeeded: {}", tx.tx_hash());
             }
             Err(e) => {
-                println!("Error refunding gas");
-                println!("--------------------------------");
-                println!("{e}");
-                println!("--------------------------------");
+                error!("Error refunding gas. Error: {}", e);
             }
         }
     }
