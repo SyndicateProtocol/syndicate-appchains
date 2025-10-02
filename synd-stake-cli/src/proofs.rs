@@ -44,6 +44,7 @@ pub struct UpdateBaseAndEthereumBlockHashesArgs {
 ///
 /// This function calls the `sendBlockHashes` function on the `BlockHashRelayer` contract
 /// to update the known block hashes from Ethereum and the settlement chain.
+#[allow(clippy::cognitive_complexity)]
 pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumBlockHashesArgs) {
     let set_provider = new_provider(&args.base_rpc_url, &args.private_key).await;
     let appchain_provider = match &args.appchain_rpc_url {
