@@ -72,6 +72,7 @@ pub mod r#initialize_emissions;
 pub mod r#simulate_emissions;
 pub mod r#deploy_gas_aggregator;
 pub mod r#deploy_gas_archive;
+pub mod r#deploy_staking_contracts;
 pub mod r#deploy_syndicate_factory_direct;
 pub mod r#deploy_tee_module;
 pub mod r#dummy_key_manager;
