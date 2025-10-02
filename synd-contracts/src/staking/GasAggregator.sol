@@ -43,6 +43,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
                             FIXED STORAGE SLOTS
     //////////////////////////////////////////////////////////////*/
 
+    /// SLOT 0: aggregatedEpochDataHash
     /// @notice Storage slot is 0 for aggregatedEpochDataHash in GasAggregator (see `forge inspect GasAggregator storageLayout`)
     /// @dev Stores the final hash for each completed epoch.
     mapping(uint256 => bytes32) public aggregatedEpochDataHash;

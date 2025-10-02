@@ -8,7 +8,11 @@ use clap::Args;
 use contract_bindings::synd::{
     emissions_calculator::EmissionsCalculator, emissions_scheduler::EmissionsScheduler,
 };
-use shared::{parse::parse_address, types::new_provider};
+use shared::{
+    parse::{parse_address, parse_url},
+    types::new_provider,
+};
+use tracing::{error, info};
 
 /// Arguments for the `mint` command.
 ///
@@ -35,13 +39,13 @@ pub struct MintArgs {
     pub emissions_address: Address,
 
     /// The RPC URL to use for the transaction.
-    #[arg(short = 'r', long, env = "RPC_URL", default_value = "https://eth.drpc.org")]
+    #[arg(short = 'r', long, env = "RPC_URL", default_value = "https://eth.drpc.org", value_parser = parse_url)]
     pub rpc_url: String,
 }
 
 /// Mints emissions to the staking system.
 ///
-/// This function processes and submits the mint transaction for an epochs rewards.
+/// This function processes and submits the mint transaction for an epoch's rewards.
 /// Emissions are used to distribute rewards to stakers based on their stake and
 /// participation in the network.
 ///
@@ -63,9 +67,11 @@ pub struct MintArgs {
 ///
 /// This function may return an error if:
 /// - The transaction/simulation fails
+#[allow(clippy::cognitive_complexity)]
 pub async fn mint(args: &MintArgs) {
     if args.sim {
-        println!("Simulating mint...");
+        info!("Simulating mint...");
+        // TODO (ENG-2111): Use shared provider function
         let provider = ProviderBuilder::new()
             .connect(args.rpc_url.as_str())
             .await
@@ -74,7 +80,7 @@ pub async fn mint(args: &MintArgs) {
 
         match emissions_scheduler.mintEmission().call().await {
             Ok(_) => {
-                println!("Simulation succeeded!");
+                info!("Simulation succeeded!");
 
                 if let Ok(next_emission) = EmissionsCalculator::new(
                     emissions_scheduler.emissionsCalculator().call().await.unwrap_or_else(|e| {
@@ -86,7 +92,7 @@ pub async fn mint(args: &MintArgs) {
                 .call()
                 .await
                 {
-                    println!(
+                    info!(
                         "Transaction would mint: ${:.2} SYND",
                         format_ether(next_emission).parse::<f64>().unwrap_or_else(|e| {
                             panic!("Failed to parse emission amount as f64: {e} ")
@@ -95,14 +101,11 @@ pub async fn mint(args: &MintArgs) {
                 }
             }
             Err(e) => {
-                println!("Simulation failed");
-                println!("--------------------------------");
-                println!("{e}");
-                println!("--------------------------------");
+                error!("Simulation failed. Error: {}", e);
             }
         }
     } else {
-        println!("Minting emissions...");
+        info!("Minting emissions...");
         match EmissionsScheduler::new(
             args.emissions_address,
             new_provider(&args.rpc_url, &args.private_key).await,
@@ -112,13 +115,10 @@ pub async fn mint(args: &MintArgs) {
         .await
         {
             Ok(tx) => {
-                println!("Minting succeeded: {}", tx.tx_hash());
+                info!("Minting succeeded: {}", tx.tx_hash());
             }
             Err(e) => {
-                println!("Error minting");
-                println!("--------------------------------");
-                println!("{e}");
-                println!("--------------------------------");
+                error!("Error minting. Error: {}", e);
             }
         }
     }

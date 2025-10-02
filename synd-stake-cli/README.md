@@ -268,11 +268,12 @@ synd-stake-cli submit-gas-proofs \\
 
 ## Command Reference
 
-| Command                                 | Purpose                  | Chain                |
-| --------------------------------------- | ------------------------ | -------------------- |
-| `mint`                                  | Mint epoch emissions     | Ethereum             |
-| `refund-gas`                            | Refund excess gas        | Commons Chain        |
-| `gas-agg`                               | Aggregate gas data       | Sequencing Chain     |
-| `update-base-and-ethereum-block-hashes` | Update block hashes      | Base → Commons Chain |
-| `submit-gas-proofs`                     | Submit Merkle proofs     | Commons Chain        |
-| `aggregate-gas-data-top-n-chains`       | Submit top N chains data | Sequencing Chain     |
+| Command                                 | Purpose                               | Chain                |
+| --------------------------------------- | ------------------------------------- | -------------------- |
+| `mint`                                  | Mint epoch emissions                  | Ethereum             |
+| `refund-gas`                            | Refund excess gas                     | Commons Chain        |
+| `gas-agg`                               | Aggregate gas data                    | Sequencing Chain     |
+| `update-base-and-ethereum-block-hashes` | Update block hashes                   | Base → Commons Chain |
+| `submit-gas-proofs`                     | Submit Merkle proofs                  | Commons Chain        |
+| `aggregate-gas-data-top-n-chains`       | Submit top N chains data              | Sequencing Chain     |
+| `update_and_submit_proofs`              | Update block hashes and submit proofs | Base & Commons       |

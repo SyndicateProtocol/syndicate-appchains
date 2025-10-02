@@ -4,8 +4,9 @@ use synd_stake_cli::{
     gas_agg::{gas_agg, GasAggArgs},
     mint::{mint, MintArgs},
     proofs::{
-        aggregate_gas_data_top_n_chains, submit_gas_proofs, update_base_and_ethereum_block_hashes,
-        AggregateGasDataTopNChainsArgs, SubmitGasProofsArgs, UpdateBaseAndEthereumBlockHashesArgs,
+        aggregate_gas_data_top_n_chains, submit_gas_proofs, update_and_submit_proofs,
+        update_base_and_ethereum_block_hashes, AggregateGasDataTopNChainsArgs, SubmitGasProofsArgs,
+        UpdateAndSubmitProofsArgs, UpdateBaseAndEthereumBlockHashesArgs,
     },
     refund_gas::{refund_gas, RefundGasArgs},
 };
@@ -68,6 +69,13 @@ enum Commands {
     /// submit the gas data for the top N chains, if we are over the "offchain aggregation"
     /// threshold
     AggregateGasDataTopNChains(AggregateGasDataTopNChainsArgs),
+
+    /// Update base and ethereum block hashes, then submit gas proofs
+    ///
+    /// This command first runs `update_base_and_ethereum_block_hashes` to update the known block
+    /// hashes from Ethereum and the settlement chain, then runs `submit_gas_proofs` to submit
+    /// gas proofs to confirm epoch data hash on the `GasArchive` contract.
+    UpdateAndSubmitProofs(UpdateAndSubmitProofsArgs),
 }
 
 #[tokio::main]
@@ -90,5 +98,6 @@ async fn main() {
         }
         Commands::SubmitGasProofs(args) => submit_gas_proofs(args).await,
         Commands::AggregateGasDataTopNChains(args) => aggregate_gas_data_top_n_chains(args).await,
+        Commands::UpdateAndSubmitProofs(args) => update_and_submit_proofs(args).await,
     };
 }

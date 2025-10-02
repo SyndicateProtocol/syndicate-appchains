@@ -6,7 +6,10 @@ use alloy::{
 };
 use clap::Args;
 use contract_bindings::synd::refunder::Refunder;
-use shared::{parse::parse_address, types::new_provider};
+use shared::{
+    parse::{parse_address, parse_url},
+    types::new_provider,
+};
 
 /// Arguments for the `refund-gas` command.
 ///
@@ -34,7 +37,7 @@ pub struct RefundGasArgs {
     pub refunder_address: Address,
 
     /// The RPC URL to use for the transaction.
-    #[arg(short = 'r', long, env = "RPC_URL", default_value = "https://commons.rpc.syndicate.io")]
+    #[arg(short = 'r', long, env = "RPC_URL", default_value = "https://commons.rpc.syndicate.io", value_parser = parse_url)]
     pub rpc_url: String,
 }
 
@@ -63,6 +66,7 @@ pub struct RefundGasArgs {
 /// This function may return an error if:
 /// - The transaction/simulation fails
 pub async fn refund_gas(args: &RefundGasArgs) {
+    // TODO (ENG-2111): Use shared provider function
     let provider = ProviderBuilder::new()
         .connect(args.rpc_url.as_str())
         .await

@@ -17,15 +17,21 @@ use contract_bindings::synd::{
     syndicate_factory::SyndicateFactory::{self, getAppchainsAndContractsReturn},
     syndicate_sequencing_chain::SyndicateSequencingChain,
 };
-use shared::{parse::parse_address, types::new_provider};
+use shared::{
+    parse::{parse_address, parse_url},
+    types::new_provider,
+};
 use tracing::{debug, info};
 
 /// Arguments for updating base and ethereum block hashes
 #[derive(Args, Debug)]
 pub struct UpdateBaseAndEthereumBlockHashesArgs {
     /// Base chain RPC URL
-    #[arg(long, env = "BASE_RPC_URL")]
+    #[arg(long, env = "BASE_RPC_URL", value_parser = parse_url)]
     pub base_rpc_url: String,
+    /// Staking appchain RPC URL (will be used to wait for new block hashes)
+    #[arg(long, env = "STAKING_APPCHAIN_RPC_URL", value_parser = parse_url)]
+    pub staking_appchain_rpc_url: String,
     /// Private key for signing transactions
     #[arg(long, env = "PRIVATE_KEY")]
     pub private_key: String,
@@ -35,32 +41,25 @@ pub struct UpdateBaseAndEthereumBlockHashesArgs {
     /// Address of the gas archive contract
     #[arg(long, value_parser=parse_address)]
     pub gas_archive_address: Address,
-    /// Staking appchain RPC URL (will be used to wait for new block hashes)
-    #[arg(long)]
-    pub appchain_rpc_url: Option<String>,
 }
 
 /// Updates base and ethereum block hashes on the staking appchain
 ///
 /// This function calls the `sendBlockHashes` function on the `BlockHashRelayer` contract
 /// to update the known block hashes from Ethereum and the settlement chain.
+// TODO (ENG-2112): Refactor use of `unwrap_or_else`
 #[allow(clippy::cognitive_complexity)]
 pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumBlockHashesArgs) {
-    let set_provider = new_provider(&args.base_rpc_url, &args.private_key).await;
-    let appchain_provider = match &args.appchain_rpc_url {
-        Some(appchain_rpc_url) => Some(new_provider(appchain_rpc_url, &args.private_key).await),
-        None => None,
-    };
-    let initial_appchain_block_number = match appchain_provider {
-        Some(ref appchain_provider) => appchain_provider
-            .get_block_number()
-            .await
-            .unwrap_or_else(|e| panic!("failed to get appchain block number: {e}")),
-        None => 0,
-    };
+    let settlement_provider = new_provider(&args.base_rpc_url, &args.private_key).await;
+    let staking_appchain_provider =
+        new_provider(&args.staking_appchain_rpc_url, &args.private_key).await;
+    let initial_appchain_block_number = staking_appchain_provider
+        .get_block_number()
+        .await
+        .unwrap_or_else(|e| panic!("failed to get appchain block number: {e}"));
     let gas_limit = U256::from(100_000);
     let max_fee_per_gas = U256::from(100_000_000);
-    let receipt = BlockHashRelayer::new(args.relayer_address, &set_provider)
+    let receipt = BlockHashRelayer::new(args.relayer_address, &settlement_provider)
         .sendBlockHashes(args.gas_archive_address, gas_limit, max_fee_per_gas)
         .send()
         .await
@@ -77,23 +76,21 @@ pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumB
     info!("successfully updated base and ethereum block hashes");
     debug!("receipt: {receipt:?}");
 
-    if let Some(p) = appchain_provider {
-        let expected_set_block_number =
-            receipt.block_number.unwrap_or_else(|| panic!("no block number in receipt")) - 1;
-        let expected_set_block_hash = set_provider
-            .get_block_by_number(BlockNumberOrTag::Number(expected_set_block_number))
-            .await
-            .unwrap_or_else(|e| panic!("failed to get block by number: {e}"))
-            .unwrap_or_else(|| panic!("block not found for number: {expected_set_block_number}"))
-            .hash();
-        let gas_archive = GasArchive::new(args.gas_archive_address, p);
-        wait_for_block_hashes_updated(
-            gas_archive,
-            initial_appchain_block_number,
-            expected_set_block_hash,
-        )
-        .await;
-    }
+    let expected_set_block_number =
+        receipt.block_number.unwrap_or_else(|| panic!("no block number in receipt")) - 1;
+    let expected_set_block_hash = settlement_provider
+        .get_block_by_number(BlockNumberOrTag::Number(expected_set_block_number))
+        .await
+        .unwrap_or_else(|e| panic!("failed to get block by number: {e}"))
+        .unwrap_or_else(|| panic!("block not found for number: {expected_set_block_number}"))
+        .hash();
+    let gas_archive = GasArchive::new(args.gas_archive_address, staking_appchain_provider);
+    wait_for_block_hashes_updated(
+        gas_archive,
+        initial_appchain_block_number,
+        expected_set_block_hash,
+    )
+    .await;
 }
 
 async fn wait_for_block_hashes_updated<P: Provider>(
@@ -119,13 +116,13 @@ async fn wait_for_block_hashes_updated<P: Provider>(
 #[derive(Args, Debug)]
 pub struct SubmitGasProofsArgs {
     /// Sequencing chain RPC URL
-    #[arg(long, env = "SEQ_CHAIN_RPC_URL")]
+    #[arg(long, env = "SEQ_CHAIN_RPC_URL", value_parser = parse_url)]
     pub seq_chain_rpc_url: String,
     /// Ethereum RPC URL
-    #[arg(long, env = "ETHEREUM_RPC_URL")]
+    #[arg(long, env = "ETHEREUM_RPC_URL", value_parser = parse_url)]
     pub ethereum_rpc_url: String,
     /// Staking aoppchain RPC URL
-    #[arg(long, env = "STAKING_APPCHAIN_RPC_URL")]
+    #[arg(long, env = "STAKING_APPCHAIN_RPC_URL", value_parser = parse_url)]
     pub staking_appchain_rpc_url: String,
     /// Private key for signing transactions
     #[arg(long, env = "PRIVATE_KEY")]
@@ -447,14 +444,78 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
     (appchains, tokens, emissions_receivers)
 }
 
-// TODO: new command to run  update_base_and_ethereum_block_hashes  and submit_gas_proofs
-// sequentially
+/// Arguments for running both `update_base_and_ethereum_block_hashes` and `submit_gas_proofs`
+/// sequentially
+#[derive(Args, Debug)]
+pub struct UpdateAndSubmitProofsArgs {
+    /// Base chain RPC URL
+    #[arg(long, env = "BASE_RPC_URL", value_parser = parse_url)]
+    pub base_rpc_url: String,
+    /// Sequencing chain RPC URL
+    #[arg(long, env = "SEQ_CHAIN_RPC_URL", value_parser = parse_url)]
+    pub seq_chain_rpc_url: String,
+    /// Ethereum RPC URL
+    #[arg(long, env = "ETHEREUM_RPC_URL", value_parser = parse_url)]
+    pub ethereum_rpc_url: String,
+    /// Staking appchain RPC URL
+    #[arg(long, env = "STAKING_APPCHAIN_RPC_URL", value_parser = parse_url)]
+    pub staking_appchain_rpc_url: String,
+    /// Private key for signing transactions
+    #[arg(long, env = "PRIVATE_KEY")]
+    pub private_key: String,
+    /// Address of the block hash relayer contract
+    #[arg(long, value_parser=parse_address)]
+    pub relayer_address: Address,
+    /// Address of the gas archive contract
+    #[arg(long, value_parser=parse_address)]
+    pub gas_archive_address: Address,
+    /// Epoch number (will default to the latest finalized epoch if not provided)
+    #[arg(long)]
+    pub epoch: Option<u64>,
+}
+
+/// Updates base and ethereum block hashes, then submits gas proofs to confirm epoch data hash
+///
+/// This function first calls `update_base_and_ethereum_block_hashes` to update the known block
+/// hashes from Ethereum and the settlement chain, then calls `submit_gas_proofs` to submit gas
+/// proofs to confirm epoch data hash on the `GasArchive` contract.
+#[allow(clippy::cognitive_complexity)]
+pub async fn update_and_submit_proofs(args: &UpdateAndSubmitProofsArgs) {
+    info!("Starting update and submit proofs workflow");
+
+    // First, update base and ethereum block hashes
+    let update_args = UpdateBaseAndEthereumBlockHashesArgs {
+        base_rpc_url: args.base_rpc_url.clone(),
+        private_key: args.private_key.clone(),
+        relayer_address: args.relayer_address,
+        gas_archive_address: args.gas_archive_address,
+        staking_appchain_rpc_url: args.staking_appchain_rpc_url.clone(),
+    };
+
+    info!("Step 1: Updating base and ethereum block hashes");
+    update_base_and_ethereum_block_hashes(&update_args).await;
+
+    // Then, submit gas proofs
+    let submit_args = SubmitGasProofsArgs {
+        seq_chain_rpc_url: args.seq_chain_rpc_url.clone(),
+        ethereum_rpc_url: args.ethereum_rpc_url.clone(),
+        staking_appchain_rpc_url: args.staking_appchain_rpc_url.clone(),
+        private_key: args.private_key.clone(),
+        gas_archive_address: args.gas_archive_address,
+        epoch: args.epoch,
+    };
+
+    info!("Step 2: Submitting gas proofs");
+    submit_gas_proofs(&submit_args).await;
+
+    info!("Successfully completed update and submit proofs workflow");
+}
 
 /// Arguments for aggregating gas data and submitting epoch pre-image data
 #[derive(Args, Debug)]
 pub struct AggregateGasDataTopNChainsArgs {
     /// Sequencing chain RPC URL
-    #[arg(long, env = "SEQ_CHAIN_RPC_URL")]
+    #[arg(long, env = "SEQ_CHAIN_RPC_URL", value_parser = parse_url)]
     pub seq_chain_rpc_url: String,
     /// Private key for signing transactions
     #[arg(long, env = "PRIVATE_KEY")]
@@ -471,7 +532,7 @@ pub struct AggregateGasDataTopNChainsArgs {
 ///
 /// This function calls the `submitEpochPreImageData` function on the `GasArchive` contract
 /// with the aggregated gas usage data from multiple appchains for a specific epoch.
-// TODO: Merge with gas_agg and just know which function to call based on the
+// TODO (ENG-2110): Merge with gas_agg and just know which function to call based on the
 // fallbackToOffchainAggregation value
 pub async fn aggregate_gas_data_top_n_chains(args: &AggregateGasDataTopNChainsArgs) {
     let provider = new_provider(&args.seq_chain_rpc_url, &args.private_key).await;

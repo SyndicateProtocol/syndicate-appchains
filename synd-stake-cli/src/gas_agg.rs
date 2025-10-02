@@ -3,7 +3,11 @@
 use alloy::{primitives::Address, providers::ProviderBuilder};
 use clap::Args;
 use contract_bindings::synd::gas_aggregator::GasAggregator;
-use shared::{parse::parse_address, types::new_provider};
+use shared::{
+    parse::{parse_address, parse_url},
+    types::new_provider,
+};
+use tracing::{error, info};
 
 /// Arguments for the `gas-agg` command.
 ///
@@ -30,7 +34,7 @@ pub struct GasAggArgs {
     pub gas_aggregator_address: Address,
 
     /// The RPC URL to use for the transaction.
-    #[arg(short = 'r', long, env = "RPC_URL", default_value = "")]
+    #[arg(short = 'r', long, env = "RPC_URL", default_value = "", value_parser = parse_url)]
     pub rpc_url: String,
 }
 
@@ -57,7 +61,9 @@ pub struct GasAggArgs {
 ///
 /// This function may return an error if:
 /// - The transaction/simulation fails
+#[allow(clippy::cognitive_complexity)]
 pub async fn gas_agg(args: &GasAggArgs) {
+    // TODO (ENG-2111): Use shared provider function
     let provider = ProviderBuilder::new()
         .connect(args.rpc_url.as_str())
         .await
@@ -73,25 +79,22 @@ pub async fn gas_agg(args: &GasAggArgs) {
             panic!("Failed to call getCurrentEpoch on gas aggregator contract: {e} ")
         })
     {
-        println!("Epoch not over");
+        info!("Epoch not over");
         return;
     }
 
     if args.sim {
-        println!("Simulating gas aggregation...");
+        info!("Simulating gas aggregation...");
         match gas_aggregator.aggregateTokensUsed().call().await {
             Ok(_) => {
-                println!("Simulation succeeded")
+                info!("Simulation succeeded")
             }
             Err(e) => {
-                println!("Simulation failed");
-                println!("--------------------------------");
-                println!("{e}");
-                println!("--------------------------------");
+                error!("Simulation failed. Error: {}", e);
             }
         }
     } else {
-        println!("Aggregating gas...");
+        info!("Aggregating gas...");
         match GasAggregator::new(
             args.gas_aggregator_address,
             new_provider(args.rpc_url.as_str(), &args.private_key).await,
@@ -101,13 +104,10 @@ pub async fn gas_agg(args: &GasAggArgs) {
         .await
         {
             Ok(tx) => {
-                println!("Gas aggregation succeeded: {}", tx.tx_hash());
+                info!("Gas aggregation succeeded: {}", tx.tx_hash());
             }
             Err(e) => {
-                println!("Error aggregating gas");
-                println!("--------------------------------");
-                println!("{e}");
-                println!("--------------------------------");
+                error!("Error aggregating gas. Error: {}", e);
             }
         }
     }

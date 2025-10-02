@@ -7,13 +7,14 @@ import {SyndicateToken} from "src/token/SyndicateToken.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {console2} from "forge-std/console2.sol";
+import {EpochTracker} from "src/staking/EpochTracker.sol";
 
 contract MockRelayer {
     function relay(address destinationL3, uint256 epochIndex) external {}
 }
 
-contract EmissionsForkTest is Test {
-    uint256 public startEpoch = 3;
+contract EmissionsForkTest is Test, EpochTracker {
+    uint256 public startEpoch;
 
     uint256 public acceptedDiff = 10;
 
@@ -25,6 +26,8 @@ contract EmissionsForkTest is Test {
     function setUp() public {
         // Start fork
         vm.createSelectFork("https://0xrpc.io/eth");
+
+        startEpoch = getCurrentEpoch() + 1;
 
         if (address(emissionsCalculator) == address(0) || address(emissionsScheduler) == address(0)) {
             console2.log("Emissions contracts not found, deploying ones to fork");
@@ -242,8 +245,6 @@ contract EmissionsForkTest is Test {
     }
 
     function test_emissions_ChangeFactor101() public {
-        vm.skip(true);
-
         // Initialize emissions calculator
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(1.01e18);
@@ -285,8 +286,6 @@ contract EmissionsForkTest is Test {
     }
 
     function test_emissions_ChangeFactor098() public {
-        vm.skip(true);
-
         // Initialize emissions calculator
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(0.98e18);
@@ -329,8 +328,6 @@ contract EmissionsForkTest is Test {
     }
 
     function test_emissions_ChangeFactorFlat() public {
-        vm.skip(true);
-
         // Initialize emissions calculator
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(1e18);
@@ -373,8 +370,6 @@ contract EmissionsForkTest is Test {
     }
 
     function test_emissions_ChangeFactorMultiple() public {
-        vm.skip(true);
-
         // Initialize emissions calculator
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(1e18);
