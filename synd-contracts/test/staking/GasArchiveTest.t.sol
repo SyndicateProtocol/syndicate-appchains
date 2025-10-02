@@ -355,7 +355,7 @@ contract GasArchiveTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function testConstants() public view {
-        assertEq(gasArchive.AGGREGATED_EPOCH_DATA_HASH_SLOT(), 7);
+        assertEq(gasArchive.AGGREGATED_EPOCH_DATA_HASH_SLOT(), 0);
         assertEq(gasArchive.HEADER_STATE_ROOT_INDEX(), 3);
         assertEq(gasArchive.STORAGE_ROOT_ACCOUNT_FIELDS_INDEX(), 2);
     }

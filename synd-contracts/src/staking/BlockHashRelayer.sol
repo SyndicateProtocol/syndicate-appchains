@@ -52,9 +52,8 @@ contract BlockHashRelayer {
      * @notice Constructs the relayer contract
      * @param _arbInbox The Arbitrum Inbox contract for the staking appchain (on the settlement chain)
      * @param _syndToken The SYND token contract (on the settlement chain)
-     * @param admin The address to be granted admin privileges
      */
-    constructor(IArbInbox _arbInbox, IERC20 _syndToken, address admin) {
+    constructor(IArbInbox _arbInbox, IERC20 _syndToken) {
         arbInbox = _arbInbox;
         syndToken = _syndToken;
     }

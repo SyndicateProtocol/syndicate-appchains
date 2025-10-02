@@ -35,7 +35,7 @@ pub struct UpdateBaseAndEthereumBlockHashesArgs {
     /// Address of the gas archive contract
     #[arg(long, value_parser=parse_address)]
     pub gas_archive_address: Address,
-    /// Sequencing chain RPC URL (will be used to wait for new block hashes)
+    /// Staking appchain RPC URL (will be used to wait for new block hashes)
     #[arg(long)]
     pub appchain_rpc_url: Option<String>,
 }
@@ -59,7 +59,7 @@ pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumB
     };
     let gas_limit = U256::from(100_000);
     let max_fee_per_gas = U256::from(100_000_000);
-    let receipt = BlockHashRelayer::new(args.relayer_address, set_provider)
+    let receipt = BlockHashRelayer::new(args.relayer_address, &set_provider)
         .sendBlockHashes(args.gas_archive_address, gas_limit, max_fee_per_gas)
         .send()
         .await
@@ -77,8 +77,14 @@ pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumB
     debug!("receipt: {receipt:?}");
 
     if let Some(p) = appchain_provider {
-        let expected_set_block_hash =
-            receipt.block_hash.unwrap_or_else(|| panic!("no block hash in receipt"));
+        let expected_set_block_number =
+            receipt.block_number.unwrap_or_else(|| panic!("no block number in receipt")) - 1;
+        let expected_set_block_hash = set_provider
+            .get_block_by_number(BlockNumberOrTag::Number(expected_set_block_number))
+            .await
+            .unwrap_or_else(|e| panic!("failed to get block by number: {e}"))
+            .unwrap_or_else(|| panic!("block not found for number: {expected_set_block_number}"))
+            .hash();
         let gas_archive = GasArchive::new(args.gas_archive_address, p);
         wait_for_block_hashes_updated(
             gas_archive,
@@ -141,95 +147,18 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
     let eth_provider = new_provider(&args.ethereum_rpc_url, &args.private_key).await;
     let staking_provider = new_provider(&args.staking_appchain_rpc_url, &args.private_key).await;
 
-    let gas_archive = GasArchive::new(args.gas_archive_address, staking_provider);
-
-    // get the latest known ethereum block hash from the gas archive by querying KnownBlockHash
-    // events
-    let filter = gas_archive.KnownBlockHash_filter();
-    let logs =
-        filter.query().await.unwrap_or_else(|e| panic!("failed to get KnownBlockHash events: {e}"));
-
-    let eth_block_hash = if let Some((log, _)) = logs.last() {
-        log.ethBlockHash
-    } else {
-        panic!("no KnownBlockHash events found - no ethereum block hashes have been submitted to the gas archive");
-    };
-
-    // get the outbox contract address from the gas archive
     let seq_chain_id = seq_provider
         .get_chain_id()
         .await
         .unwrap_or_else(|e| panic!("failed to get sequencing chain ID: {e}"));
-    let outbox_contract_addr = gas_archive
-        .seqChainOutbox(U256::from(seq_chain_id))
-        .call()
-        .await
-        .unwrap_or_else(|e| panic!("failed to get outbox contract address: {e}"));
+    let gas_archive = GasArchive::new(args.gas_archive_address, staking_provider);
     let gas_aggregator_address = gas_archive
         .seqChainGasAggregatorAddresses(U256::from(seq_chain_id))
         .call()
         .await
         .unwrap_or_else(|e| panic!("failed to get gas aggregator address: {e}"));
-    let epoch_data_hash_storage_slot_index = gas_archive
-        .AGGREGATED_EPOCH_DATA_HASH_SLOT()
-        .call()
-        .await
-        .unwrap_or_else(|e| panic!("failed to get epoch data hash storage slot index: {e}"));
-
-    // submit proof for the sequencing chain Hash that was settled on ethereum
-    let eth_block = eth_provider
-        .get_block_by_hash(eth_block_hash)
-        .await
-        .unwrap_or_else(|e| panic!("failed to get ethereum block by hash: {e}"))
-        .unwrap_or_else(|| panic!("ethereum block not found for hash: {eth_block_hash}"));
-    let mut rlp_encoded_eth_block_header = vec![];
-    eth_block.header.encode(&mut rlp_encoded_eth_block_header);
-    let eth_block_number = eth_block.number();
-
-    info!("latest eth block hash known to the gas archive: {eth_block_hash}");
-
-    sol! {
-        event SendRootUpdated(bytes32 indexed outputRoot, bytes32 indexed l2BlockHash);
-    }
-
-    // search the 1000 previous blocks for the SendRootUpdated event
-    let filter = alloy::rpc::types::Filter::new()
-        .address(outbox_contract_addr)
-        .event_signature(SendRootUpdated::SIGNATURE_HASH)
-        .from_block(BlockNumberOrTag::Number(eth_block_number - 1000))
-        .to_block(BlockNumberOrTag::Number(eth_block_number));
-    let logs = eth_provider
-        .get_logs(&filter)
-        .await
-        .unwrap_or_else(|e| panic!("failed to get logs from ethereum provider: {e}"));
-    let last_log =
-        logs.last().unwrap_or_else(|| panic!("No events found that update the send root"));
-    let sendroot_event = SendRootUpdated::decode_log_data(last_log.data())
-        .unwrap_or_else(|e| panic!("failed to decode SendRootUpdated event: {e}"));
-
-    let send_root_storage_slot = gas_archive
-        .SEND_ROOT_STORAGE_SLOT()
-        .call()
-        .await
-        .unwrap_or_else(|e| panic!("failed to get send root storage slot: {e}"));
-    let storage_key: StorageKey =
-        keccak256((sendroot_event.outputRoot, send_root_storage_slot).abi_encode());
-
-    let seq_chain_block_hash_proof = eth_provider
-        .get_proof(outbox_contract_addr, vec![storage_key])
-        .block_id(eth_block_hash.into())
-        .await
-        .unwrap_or_else(|e| panic!("failed to get sequencing chain block hash proof: {e}"));
-
-    let seq_block_hash: FixedBytes<32> = seq_chain_block_hash_proof
-        .storage_proof
-        .first()
-        .unwrap_or_else(|| panic!("no storage proof found for sequencing chain block hash"))
-        .value
-        .into();
-    assert_eq!(seq_block_hash, sendroot_event.l2BlockHash); //sanity check
-
     let gas_aggregator = GasAggregator::new(gas_aggregator_address, seq_provider.clone());
+
     let epoch = match args.epoch {
         Some(epoch) => U256::from(epoch),
         None => gas_aggregator
@@ -240,75 +169,167 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
             .saturating_sub(U256::from(1)),
     };
 
-    info!("Submitting gas proofs for epoch {epoch}");
-
-    let seq_block = seq_provider
-        .get_block_by_hash(seq_block_hash)
-        .await
-        .unwrap_or_else(|e| panic!("failed to get sequencing block by hash: {e}"))
-        .unwrap_or_else(|| panic!("sequencing block not found for hash: {seq_block_hash}"));
-    let mut rlp_encoded_seq_block_header = vec![];
-    seq_block.header.encode(&mut rlp_encoded_seq_block_header);
-
-    let epoch_data_hash_storage_key: StorageKey =
-        keccak256((epoch, epoch_data_hash_storage_slot_index).abi_encode());
-
-    let epoch_data_hash_proof = seq_provider
-        .get_proof(gas_aggregator_address, vec![epoch_data_hash_storage_key])
-        .block_id(seq_block_hash.into())
-        .await
-        .unwrap_or_else(|e| panic!("failed to get epoch data hash proof: {e}"));
-
-    let epoch_data_hash = gas_aggregator
-        .aggregatedEpochDataHash(epoch)
+    let mut epoch_data_hash = gas_archive
+        .epochVerifiedDataHash(epoch, U256::from(seq_chain_id))
         .call()
         .await
-        .unwrap_or_else(|e| panic!("failed to get aggregated epoch data hash: {e}"));
-    assert_eq!(
-        epoch_data_hash,
-        Into::<FixedBytes<32>>::into(
-            epoch_data_hash_proof
-                .storage_proof
-                .first()
-                .unwrap_or_else(|| panic!("no storage proof found for epoch data hash"))
-                .value
-        )
-    ); // sanity check
+        .unwrap_or_else(|e| panic!("failed to get has chain submitted for epoch: {e}"));
 
-    let receipt = gas_archive
-        .confirmEpochDataHash_0(
-            epoch,
-            U256::from(seq_chain_id),
-            sendroot_event.outputRoot,
-            rlp_encoded_eth_block_header.into(),
-            seq_chain_block_hash_proof.account_proof.clone(),
-            seq_chain_block_hash_proof
-                .storage_proof
-                .first()
-                .unwrap_or_else(|| panic!("no storage proof found for sequencing chain block hash"))
-                .proof
-                .clone(),
-            rlp_encoded_seq_block_header.into(),
-            epoch_data_hash_proof.account_proof.clone(),
-            epoch_data_hash_proof
-                .storage_proof
-                .first()
-                .unwrap_or_else(|| panic!("no storage proof found for epoch data hash"))
-                .proof
-                .clone(),
-        )
-        .send()
-        .await
-        .unwrap_or_else(|e| panic!("confirming epoch data hash failed: {e}"))
-        .get_receipt()
-        .await
-        .unwrap_or_else(|e| panic!("getting receipt failed: {e}"));
+    let already_submited = epoch_data_hash != FixedBytes::ZERO;
 
-    assert!(receipt.status(), "failed to confirm epoch data hash. receipt: {receipt:?}");
+    if !already_submited {
+        info!("epoch data hash not yet submitted for epoch {epoch} on seq chain {seq_chain_id}. Submitting...");
+        // get the latest known ethereum block hash from the gas archive by querying KnownBlockHash
+        // events
+        let filter = gas_archive.KnownBlockHash_filter();
+        let logs = filter
+            .query()
+            .await
+            .unwrap_or_else(|e| panic!("failed to get KnownBlockHash events: {e}"));
 
-    info!("successfully confirmed epoch data hash");
-    debug!("receipt: {receipt:?}");
+        let eth_block_hash = if let Some((log, _)) = logs.last() {
+            log.ethBlockHash
+        } else {
+            panic!("no KnownBlockHash events found - no ethereum block hashes have been submitted to the gas archive");
+        };
 
+        // get the outbox contract address from the gas archive
+
+        let outbox_contract_addr = gas_archive
+            .seqChainOutbox(U256::from(seq_chain_id))
+            .call()
+            .await
+            .unwrap_or_else(|e| panic!("failed to get outbox contract address: {e}"));
+
+        let epoch_data_hash_storage_slot_index =
+            gas_archive.AGGREGATED_EPOCH_DATA_HASH_SLOT().call().await.unwrap_or_else(|e| {
+                panic!("failed to get epoch data hash storage slot index: {e}")
+            });
+
+        // submit proof for the sequencing chain Hash that was settled on ethereum
+        let eth_block = eth_provider
+            .get_block_by_hash(eth_block_hash)
+            .await
+            .unwrap_or_else(|e| panic!("failed to get ethereum block by hash: {e}"))
+            .unwrap_or_else(|| panic!("ethereum block not found for hash: {eth_block_hash}"));
+        let mut rlp_encoded_eth_block_header = vec![];
+        eth_block.header.encode(&mut rlp_encoded_eth_block_header);
+        let eth_block_number = eth_block.number();
+
+        info!("latest eth block hash known to the gas archive: {eth_block_hash}");
+
+        sol! {
+            event SendRootUpdated(bytes32 indexed outputRoot, bytes32 indexed l2BlockHash);
+        }
+
+        // search the 1000 previous blocks for the SendRootUpdated event
+        let filter = alloy::rpc::types::Filter::new()
+            .address(outbox_contract_addr)
+            .event_signature(SendRootUpdated::SIGNATURE_HASH)
+            .from_block(BlockNumberOrTag::Number(eth_block_number - 1000))
+            .to_block(BlockNumberOrTag::Number(eth_block_number));
+        let logs = eth_provider
+            .get_logs(&filter)
+            .await
+            .unwrap_or_else(|e| panic!("failed to get logs from ethereum provider: {e}"));
+        let last_log =
+            logs.last().unwrap_or_else(|| panic!("No events found that update the send root"));
+        let sendroot_event = SendRootUpdated::decode_log_data(last_log.data())
+            .unwrap_or_else(|e| panic!("failed to decode SendRootUpdated event: {e}"));
+
+        let send_root_storage_slot = gas_archive
+            .SEND_ROOT_STORAGE_SLOT()
+            .call()
+            .await
+            .unwrap_or_else(|e| panic!("failed to get send root storage slot: {e}"));
+        let storage_key: StorageKey =
+            keccak256((sendroot_event.outputRoot, send_root_storage_slot).abi_encode());
+
+        let seq_chain_block_hash_proof = eth_provider
+            .get_proof(outbox_contract_addr, vec![storage_key])
+            .block_id(eth_block_hash.into())
+            .await
+            .unwrap_or_else(|e| panic!("failed to get sequencing chain block hash proof: {e}"));
+
+        let seq_block_hash: FixedBytes<32> = seq_chain_block_hash_proof
+            .storage_proof
+            .first()
+            .unwrap_or_else(|| panic!("no storage proof found for sequencing chain block hash"))
+            .value
+            .into();
+        assert_eq!(seq_block_hash, sendroot_event.l2BlockHash); //sanity check
+
+        info!("Submitting gas proofs for epoch {epoch}");
+
+        let seq_block = seq_provider
+            .get_block_by_hash(seq_block_hash)
+            .await
+            .unwrap_or_else(|e| panic!("failed to get sequencing block by hash: {e}"))
+            .unwrap_or_else(|| panic!("sequencing block not found for hash: {seq_block_hash}"));
+        let mut rlp_encoded_seq_block_header = vec![];
+        seq_block.header.encode(&mut rlp_encoded_seq_block_header);
+
+        let epoch_data_hash_storage_key: StorageKey =
+            keccak256((epoch, epoch_data_hash_storage_slot_index).abi_encode());
+
+        let epoch_data_hash_proof = seq_provider
+            .get_proof(gas_aggregator_address, vec![epoch_data_hash_storage_key])
+            .block_id(seq_block_hash.into())
+            .await
+            .unwrap_or_else(|e| panic!("failed to get epoch data hash proof: {e}"));
+
+        epoch_data_hash = gas_aggregator
+            .aggregatedEpochDataHash(epoch)
+            .call()
+            .await
+            .unwrap_or_else(|e| panic!("failed to get aggregated epoch data hash: {e}"));
+        assert_eq!(
+            epoch_data_hash,
+            Into::<FixedBytes<32>>::into(
+                epoch_data_hash_proof
+                    .storage_proof
+                    .first()
+                    .unwrap_or_else(|| panic!("no storage proof found for epoch data hash"))
+                    .value
+            )
+        ); // sanity check
+
+        let receipt = gas_archive
+            .confirmEpochDataHash(
+                epoch,
+                U256::from(seq_chain_id),
+                sendroot_event.outputRoot,
+                rlp_encoded_eth_block_header.into(),
+                seq_chain_block_hash_proof.account_proof.clone(),
+                seq_chain_block_hash_proof
+                    .storage_proof
+                    .first()
+                    .unwrap_or_else(|| {
+                        panic!("no storage proof found for sequencing chain block hash")
+                    })
+                    .proof
+                    .clone(),
+                rlp_encoded_seq_block_header.into(),
+                epoch_data_hash_proof.account_proof.clone(),
+                epoch_data_hash_proof
+                    .storage_proof
+                    .first()
+                    .unwrap_or_else(|| panic!("no storage proof found for epoch data hash"))
+                    .proof
+                    .clone(),
+            )
+            .send()
+            .await
+            .unwrap_or_else(|e| panic!("confirming epoch data hash failed: {e}"))
+            .get_receipt()
+            .await
+            .unwrap_or_else(|e| panic!("getting receipt failed: {e}"));
+
+        assert!(receipt.status(), "failed to confirm epoch data hash. receipt: {receipt:?}");
+
+        info!("successfully confirmed epoch data hash");
+        debug!("receipt: {receipt:?}");
+    }
     info!(
         "Submitting epoch pre-image data for epoch {} on seq chain {}: {}",
         epoch, seq_chain_id, epoch_data_hash
@@ -317,9 +338,17 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
     let (appchains, tokens, emissions_receivers) =
         get_aggregated_chain_data(epoch, gas_aggregator.clone()).await;
 
+    info!("appchains: {appchains:?}");
+    info!("tokens: {tokens:?}");
+    info!("emissions_receivers: {emissions_receivers:?}");
+
+    let abi_encoded_data =
+        &(appchains.clone(), tokens.clone(), emissions_receivers.clone()).abi_encode()[32..];
+    info!("abi_encoded_data: {abi_encoded_data:?}");
+
     assert_eq!(
         epoch_data_hash,
-        keccak256((appchains.clone(), tokens.clone(), emissions_receivers.clone()).abi_encode()),
+        keccak256(abi_encoded_data),
         "epoch data hash doesn't match the data obtained"
     );
 
@@ -377,7 +406,7 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
         );
         emissions_receivers.push(
             appchain
-                .emissionsReceiver()
+                .getEmissionsReceiver()
                 .call()
                 .await
                 .unwrap_or_else(|e| panic!("failed to get emissions receiver: {e}")),
@@ -417,6 +446,9 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
     (appchains, tokens, emissions_receivers)
 }
 
+// TODO: new command to run  update_base_and_ethereum_block_hashes  and submit_gas_proofs
+// sequentially
+
 /// Arguments for aggregating gas data and submitting epoch pre-image data
 #[derive(Args, Debug)]
 pub struct AggregateGasDataTopNChainsArgs {
@@ -438,6 +470,8 @@ pub struct AggregateGasDataTopNChainsArgs {
 ///
 /// This function calls the `submitEpochPreImageData` function on the `GasArchive` contract
 /// with the aggregated gas usage data from multiple appchains for a specific epoch.
+// TODO: Merge with gas_agg and just know which function to call based on the
+// fallbackToOffchainAggregation value
 pub async fn aggregate_gas_data_top_n_chains(args: &AggregateGasDataTopNChainsArgs) {
     let provider = new_provider(&args.seq_chain_rpc_url, &args.private_key).await;
     let gas_aggregator = GasAggregator::new(args.gas_aggregator_address, provider);

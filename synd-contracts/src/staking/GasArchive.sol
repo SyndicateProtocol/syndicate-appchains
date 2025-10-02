@@ -20,8 +20,8 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
     /*//////////////////////////////////////////////////////////////
                             CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Storage slot of aggregatedEpochDataHash in GasAggregator (slot 7) (see `forge inspect GasAggregator storageLayout`)
-    uint256 public constant AGGREGATED_EPOCH_DATA_HASH_SLOT = 7;
+    /// @notice Storage slot of aggregatedEpochDataHash in GasAggregator (slot 0) (see `forge inspect GasAggregator storageLayout`)
+    uint256 public constant AGGREGATED_EPOCH_DATA_HASH_SLOT = 0;
     uint256 public constant HEADER_STATE_ROOT_INDEX = 3;
     uint256 public constant STORAGE_ROOT_ACCOUNT_FIELDS_INDEX = 2;
 
