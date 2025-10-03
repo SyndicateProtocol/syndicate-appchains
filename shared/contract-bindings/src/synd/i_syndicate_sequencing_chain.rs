@@ -6,7 +6,6 @@ interface ISyndicateSequencingChain {
     function appchainId() external view returns (uint256);
     function encodeTransaction(bytes memory data) external returns (bytes memory);
     function getEmissionsReceiver() external view returns (address);
-    function getReceiverAndTokens(uint256 epoch) external view returns (address, uint256);
     function processTransaction(bytes memory data) external;
     function processTransactionsBulk(bytes[] memory data) external;
 }
@@ -56,30 +55,6 @@ interface ISyndicateSequencingChain {
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getReceiverAndTokens",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -590,179 +565,6 @@ function getEmissionsReceiver() external view returns (address);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getReceiverAndTokens(uint256)` and selector `0x15787349`.
-```solidity
-function getReceiverAndTokens(uint256 epoch) external view returns (address, uint256);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getReceiverAndTokensCall {
-        #[allow(missing_docs)]
-        pub epoch: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getReceiverAndTokens(uint256)`](getReceiverAndTokensCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getReceiverAndTokensReturn {
-        #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
-        pub _1: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getReceiverAndTokensCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getReceiverAndTokensCall) -> Self {
-                    (value.epoch,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getReceiverAndTokensCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { epoch: tuple.0 }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::Address,
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getReceiverAndTokensReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getReceiverAndTokensReturn) -> Self {
-                    (value._0, value._1)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getReceiverAndTokensReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0, _1: tuple.1 }
-                }
-            }
-        }
-        impl getReceiverAndTokensReturn {
-            fn _tokenize(
-                &self,
-            ) -> <getReceiverAndTokensCall as alloy_sol_types::SolCall>::ReturnToken<
-                '_,
-            > {
-                (
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        &self._0,
-                    ),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self._1),
-                )
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getReceiverAndTokensCall {
-            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = getReceiverAndTokensReturn;
-            type ReturnTuple<'a> = (
-                alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getReceiverAndTokens(uint256)";
-            const SELECTOR: [u8; 4] = [21u8, 120u8, 115u8, 73u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.epoch),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                getReceiverAndTokensReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Into::into)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `processTransaction(bytes)` and selector `0x46e2cc09`.
 ```solidity
 function processTransaction(bytes memory data) external;
@@ -1072,8 +874,6 @@ function processTransactionsBulk(bytes[] memory data) external;
         #[allow(missing_docs)]
         getEmissionsReceiver(getEmissionsReceiverCall),
         #[allow(missing_docs)]
-        getReceiverAndTokens(getReceiverAndTokensCall),
-        #[allow(missing_docs)]
         processTransaction(processTransactionCall),
         #[allow(missing_docs)]
         processTransactionsBulk(processTransactionsBulkCall),
@@ -1087,7 +887,6 @@ function processTransactionsBulk(bytes[] memory data) external;
         ///
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
-            [21u8, 120u8, 115u8, 73u8],
             [70u8, 226u8, 204u8, 9u8],
             [122u8, 141u8, 65u8, 194u8],
             [133u8, 7u8, 73u8, 37u8],
@@ -1099,7 +898,7 @@ function processTransactionsBulk(bytes[] memory data) external;
     impl alloy_sol_types::SolInterface for ISyndicateSequencingChainCalls {
         const NAME: &'static str = "ISyndicateSequencingChainCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 6usize;
+        const COUNT: usize = 5usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -1111,9 +910,6 @@ function processTransactionsBulk(bytes[] memory data) external;
                 }
                 Self::getEmissionsReceiver(_) => {
                     <getEmissionsReceiverCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getReceiverAndTokens(_) => {
-                    <getReceiverAndTokensCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::processTransaction(_) => {
                     <processTransactionCall as alloy_sol_types::SolCall>::SELECTOR
@@ -1140,17 +936,6 @@ function processTransactionsBulk(bytes[] memory data) external;
             static DECODE_SHIMS: &[fn(
                 &[u8],
             ) -> alloy_sol_types::Result<ISyndicateSequencingChainCalls>] = &[
-                {
-                    fn getReceiverAndTokens(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<ISyndicateSequencingChainCalls> {
-                        <getReceiverAndTokensCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(ISyndicateSequencingChainCalls::getReceiverAndTokens)
-                    }
-                    getReceiverAndTokens
-                },
                 {
                     fn processTransaction(
                         data: &[u8],
@@ -1226,17 +1011,6 @@ function processTransactionsBulk(bytes[] memory data) external;
             static DECODE_VALIDATE_SHIMS: &[fn(
                 &[u8],
             ) -> alloy_sol_types::Result<ISyndicateSequencingChainCalls>] = &[
-                {
-                    fn getReceiverAndTokens(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<ISyndicateSequencingChainCalls> {
-                        <getReceiverAndTokensCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(ISyndicateSequencingChainCalls::getReceiverAndTokens)
-                    }
-                    getReceiverAndTokens
-                },
                 {
                     fn processTransaction(
                         data: &[u8],
@@ -1319,11 +1093,6 @@ function processTransactionsBulk(bytes[] memory data) external;
                         inner,
                     )
                 }
-                Self::getReceiverAndTokens(inner) => {
-                    <getReceiverAndTokensCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
                 Self::processTransaction(inner) => {
                     <processTransactionCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -1353,12 +1122,6 @@ function processTransactionsBulk(bytes[] memory data) external;
                 }
                 Self::getEmissionsReceiver(inner) => {
                     <getEmissionsReceiverCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getReceiverAndTokens(inner) => {
-                    <getReceiverAndTokensCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -1560,13 +1323,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<&P, getEmissionsReceiverCall, N> {
             self.call_builder(&getEmissionsReceiverCall)
-        }
-        ///Creates a new call builder for the [`getReceiverAndTokens`] function.
-        pub fn getReceiverAndTokens(
-            &self,
-            epoch: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, getReceiverAndTokensCall, N> {
-            self.call_builder(&getReceiverAndTokensCall { epoch })
         }
         ///Creates a new call builder for the [`processTransaction`] function.
         pub fn processTransaction(

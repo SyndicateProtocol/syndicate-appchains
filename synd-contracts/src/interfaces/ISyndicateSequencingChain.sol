@@ -4,11 +4,6 @@ pragma solidity 0.8.28;
 /// @title ISyndicateSequencingChain
 /// @notice Interface for the SyndicateSequencingChain contract
 interface ISyndicateSequencingChain {
-    /// @notice this function is currently unused
-    function getReceiverAndTokens(uint256 epoch) external view returns (address, uint256);
-
-    /// @notice this function will be replaced by getReceiverAndTokensUsed() in the future
-    /// to reduce gas costs
     function getEmissionsReceiver() external view returns (address);
 
     /// @notice The ID of the App chain that this contract is sequencing transactions for

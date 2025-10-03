@@ -4,7 +4,6 @@
 //! Do not manually edit these files.
 //! These files may be overwritten by the codegen system at any time.
 pub mod r#access_control;
-pub mod r#access_control_enumerable;
 pub mod r#access_controlled_erc20;
 pub mod r#add_batch_transactions_to_syndicate_sequencing_chain_contract;
 pub mod r#address;
@@ -104,7 +103,6 @@ pub mod r#mock_gas_counter;
 pub mod r#global_state_lib;
 pub mod r#groth16_verifier;
 pub mod r#i_access_control;
-pub mod r#i_access_control_enumerable;
 pub mod r#i_assertion_poster;
 pub mod r#i_attestation_doc_verifier;
 pub mod r#i_beacon;

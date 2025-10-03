@@ -59,8 +59,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
     uint256 public immutable appchainId;
 
     /// @notice The address that receives emissions for this sequencing chain
-    /// The emissions receiver is the owner() when this is unset
-    address internal emissionsReceiver;
+    address public emissionsReceiver;
 
     /// @notice Constructs the SyndicateSequencingChain contract.
     /// @param _appchainId The ID of the App chain that this contract is sequencing transactions for.
@@ -123,15 +122,9 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         }
     }
 
-    /// @notice this function is currently unused
-    function getReceiverAndTokens(uint256 epoch) external view returns (address, uint256) {
-        return (emissionsReceiver == address(0) ? owner() : emissionsReceiver, tokensUsedPerEpoch[epoch]);
-    }
-
     /// @notice Get the effective emissions receiver address
     /// @dev Returns emissionsReceiver if set, otherwise returns the contract owner
     /// @return The address that should receive emissions
-    /// @notice this legacy function will be removed soon and replaced with getReceiverAndTokens()
     function getEmissionsReceiver() external view returns (address) {
         return emissionsReceiver == address(0) ? owner() : emissionsReceiver;
     }

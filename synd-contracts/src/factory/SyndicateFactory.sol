@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
 import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -18,7 +18,7 @@ enum NamespaceState {
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts with centralized gas tracking
 /// @dev Uses CREATE2 pattern for deterministic deployments - users deploy permission modules separately
-contract SyndicateFactory is AccessControlEnumerable, Pausable {
+contract SyndicateFactory is AccessControl, Pausable {
     /// @notice Emitted when a new SyndicateSequencingChain is created
     event SyndicateSequencingChainCreated(
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
