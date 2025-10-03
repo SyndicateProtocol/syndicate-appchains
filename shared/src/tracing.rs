@@ -106,7 +106,7 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
         .add_directive("opentelemetry_sdk=off".parse()?);
 
     let disable_json = std::env::var("RUST_LOG_DISABLE_JSON").is_ok();
-    let disable_telemetry = std::env::var("RUST_LOG_DISABLE_TELEMETRY").is_ok();
+    let enable_telemetry = std::env::var("RUST_LOG_ENABLE_TELEMETRY").is_ok();
 
     let fmt_layer = tracing_subscriber::fmt::layer()
         // include codepath origin of log
@@ -115,11 +115,11 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
 
     let tracing_subscriber = tracing_subscriber::registry().with(env_filter);
 
-    match (disable_telemetry, disable_json) {
-        (true, true) => tracing_subscriber.with(fmt_layer).try_init(),
-        (true, false) => tracing_subscriber.with(fmt_layer.json()).try_init(),
-        (false, true) => tracing_subscriber.with(OpenTelemetryLayer::new(tracer)).try_init(),
-        (false, false) => tracing_subscriber
+    match (enable_telemetry, disable_json) {
+        (false, true) => tracing_subscriber.with(fmt_layer).try_init(),
+        (false, false) => tracing_subscriber.with(fmt_layer.json()).try_init(),
+        (true, true) => tracing_subscriber.with(OpenTelemetryLayer::new(tracer)).try_init(),
+        (true, false) => tracing_subscriber
             .with(fmt_layer.json())
             .with(OpenTelemetryLayer::new(tracer))
             .try_init(),
