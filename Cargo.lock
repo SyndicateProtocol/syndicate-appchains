@@ -7628,6 +7628,7 @@ dependencies = [
  "rand 0.9.2",
  "redis",
  "reqwest",
+ "serde",
  "serde_json",
  "shared",
  "test-utils",
