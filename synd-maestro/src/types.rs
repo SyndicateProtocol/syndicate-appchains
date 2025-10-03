@@ -164,7 +164,6 @@ mod tests {
         let signer = PrivateKeySigner::random();
         let wallet = EthereumWallet::from(signer);
 
-        // For contract creation, explicitly don't set a 'to' address
         let tx = TransactionRequest::default()
             .with_value(U256::ZERO)
             .with_to(Address::ZERO)
