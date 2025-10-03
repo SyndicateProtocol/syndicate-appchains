@@ -101,7 +101,9 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
         .with_default_directive(filter::LevelFilter::INFO.into())
         .from_env()?
         // disable spammy and unconnected jsonrpsee_server `connection` spans
-        .add_directive("jsonrpsee_server=off".parse()?);
+        .add_directive("jsonrpsee_server=off".parse()?)
+        // disable internal opentelemetry spans that don't adhere to RUST_LOG directives
+        .add_directive("opentelemetry_sdk=off".parse()?);
 
     let disable_json = std::env::var("RUST_LOG_DISABLE_JSON").is_ok();
     let disable_telemetry = std::env::var("RUST_LOG_DISABLE_TELEMETRY").is_ok();
