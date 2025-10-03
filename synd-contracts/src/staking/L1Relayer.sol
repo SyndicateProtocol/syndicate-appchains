@@ -2,17 +2,17 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 interface IOPBridge {
     function depositERC20To(
-        IERC20 _l1Token,
+        address _l1Token,
         address _l2Token,
         address _to,
         uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) external;
-    function messenger() external view returns (IOPMessageRelayer);
 }
 
 interface IOPMessageRelayer {
@@ -36,22 +36,22 @@ interface IL2Relayer {
  * - Cross-chain message relaying to L2
  * - Integration with L2Relayer for complete cross-chain operations
  */
-contract L1Relayer {
-    /// @notice Minimum gas limit for Optimism operations
-    uint32 public immutable minGasLimit;
+contract L1Relayer is AccessControl {
+    /// @notice Minimum gas limit for Optimism operations (default: 200000)
+    uint32 public minGasLimit;
 
     ////////////////////////////
     // Contracts Deployed on L1
     ////////////////////////////
 
     /// @notice The Optimism Bridge contract for token bridging operations
-    IOPBridge public immutable opBridge;
+    address public immutable opBridge;
 
     /// @notice The Optimism Message Relayer contract for cross-chain messaging
-    IOPMessageRelayer public immutable opMessageRelayer;
+    address public immutable opMessageRelayer;
 
     /// @notice The L1 token address that can be bridged to L2
-    IERC20 public immutable l1Token;
+    address public immutable l1Token;
 
     ////////////////////////////
     // Contracts Deployed on L2
@@ -70,25 +70,43 @@ contract L1Relayer {
 
     /**
      * @notice Initializes the L1Relayer contract
-     * @param _opBridge The address of the Optimism Standard Bridge contract
-     * @param _l2Token The address of the L2 token
+     * @param _opBridge The address of the Optimism Bridge contract
+     * @param _opMessageRelayer The address of the Optimism Message Relayer contract
+     * @param _l1Token The address of the L1 ERC20 token to be relayed
+     * @param _l2Token The address of the corresponding L2 token
      * @param _l2Relayer The address of the L2Relayer contract on L2
-     * @param _minGasLimit The gas limit for relayed transactions
+     * @param _defaultAdmin The address of the default admin
      * @dev Sets the deployer as admin and configures default gas settings
      *      Approves the bridge contract to spend L1 tokens on behalf of this contract
      */
-    constructor(address _opBridge, address _l1Token, address _l2Token, address _l2Relayer, uint32 _minGasLimit) {
-        opBridge = IOPBridge(_opBridge);
-        opMessageRelayer = opBridge.messenger();
-        l1Token = IERC20(_l1Token);
+    constructor(
+        address _opBridge,
+        address _opMessageRelayer,
+        address _l1Token,
+        address _l2Token,
+        address _l2Relayer,
+        address _defaultAdmin
+    ) {
+        _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
+        minGasLimit = 200000;
+
+        opBridge = _opBridge;
+        opMessageRelayer = _opMessageRelayer;
+        l1Token = _l1Token;
         l2Token = _l2Token;
         l2Relayer = _l2Relayer;
-        minGasLimit = _minGasLimit;
-        if (minGasLimit == 0) {
-            minGasLimit = 200_000;
-        }
 
-        l1Token.approve(_opBridge, type(uint256).max);
+        IERC20(l1Token).approve(opBridge, type(uint256).max);
+    }
+
+    /**
+     * @notice Updates the minimum gas limit for Optimism operations
+     * @param _minGasLimit The new minimum gas limit for bridge and message operations
+     * @dev Only callable by admin
+     * @dev This setting affects the cost and reliability of cross-chain operations
+     */
+    function setMinGasLimit(uint32 _minGasLimit) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        minGasLimit = _minGasLimit;
     }
 
     /**
@@ -102,7 +120,7 @@ contract L1Relayer {
      * @dev The L2Relayer contract must implement the relay function to handle the message
      */
     function relay(address destination, uint256 epochIndex) external {
-        uint256 amount = l1Token.balanceOf(address(this));
+        uint256 amount = IERC20(l1Token).balanceOf(address(this));
         if (amount == 0) revert InsufficientBalance();
 
         _deposit(amount);
@@ -116,7 +134,7 @@ contract L1Relayer {
      * @dev Tokens are sent to the L2Relayer contract on L2
      */
     function _deposit(uint256 amount) internal {
-        opBridge.depositERC20To(l1Token, l2Token, l2Relayer, amount, minGasLimit, bytes(""));
+        IOPBridge(opBridge).depositERC20To(l1Token, l2Token, l2Relayer, amount, minGasLimit, bytes(""));
     }
 
     /**
@@ -128,8 +146,8 @@ contract L1Relayer {
      * @dev Uses the configured minimum gas limit for the message execution
      */
     function _relay(address destination, uint256 epochIndex) internal {
-        opMessageRelayer.sendMessage(
-            l2Relayer, abi.encodeCall(IL2Relayer.relay, (destination, epochIndex)), minGasLimit
+        IOPMessageRelayer(opMessageRelayer).sendMessage(
+            l2Relayer, abi.encodeWithSelector(IL2Relayer.relay.selector, destination, epochIndex), minGasLimit
         );
     }
 }

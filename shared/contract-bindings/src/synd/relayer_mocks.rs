@@ -6,6 +6,7 @@ interface RelayerMocks {
     event Deposit(address from, uint256 epochIndex, uint256 amount);
 
     function deposit(uint256 epochIndex) external payable;
+    function getCurrentEpoch() external view returns (uint256);
 }
 ```
 
@@ -24,6 +25,19 @@ interface RelayerMocks {
     ],
     "outputs": [],
     "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "getCurrentEpoch",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "event",
@@ -65,22 +79,22 @@ pub mod RelayerMocks {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608080604052346013576088908160188239f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c63b6b55f25146023575f80fd5b60207ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011260845760607f90890809c654f11d6e72a28fa60149770a0d11ec6c92319d6ceb2bb0a4ea1a15913381526004356020820152346040820152a1005b5f80fd
+    ///0x6080806040523460135760cb908160188239f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c908163b6b55f2514606a575063b97dd9e214602f575f80fd5b346066575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112606657602060405160018152f35b5f80fd5b60207ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011260665760607f90890809c654f11d6e72a28fa60149770a0d11ec6c92319d6ceb2bb0a4ea1a15913381526004356020820152346040820152a100
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x13W`\x88\x90\x81`\x18\x829\xF3[_\x80\xFD\xFE`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Cc\xB6\xB5_%\x14`#W_\x80\xFD[` \x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC6\x01\x12`\x84W``\x7F\x90\x89\x08\t\xC6T\xF1\x1Dnr\xA2\x8F\xA6\x01Iw\n\r\x11\xECl\x921\x9Dl\xEB+\xB0\xA4\xEA\x1A\x15\x913\x81R`\x045` \x82\x01R4`@\x82\x01R\xA1\0[_\x80\xFD",
+        b"`\x80\x80`@R4`\x13W`\xCB\x90\x81`\x18\x829\xF3[_\x80\xFD\xFE`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1C\x90\x81c\xB6\xB5_%\x14`jWPc\xB9}\xD9\xE2\x14`/W_\x80\xFD[4`fW_\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC6\x01\x12`fW` `@Q`\x01\x81R\xF3[_\x80\xFD[` \x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC6\x01\x12`fW``\x7F\x90\x89\x08\t\xC6T\xF1\x1Dnr\xA2\x8F\xA6\x01Iw\n\r\x11\xECl\x921\x9Dl\xEB+\xB0\xA4\xEA\x1A\x15\x913\x81R`\x045` \x82\x01R4`@\x82\x01R\xA1\0",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60808060405260043610156011575f80fd5b5f3560e01c63b6b55f25146023575f80fd5b60207ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011260845760607f90890809c654f11d6e72a28fa60149770a0d11ec6c92319d6ceb2bb0a4ea1a15913381526004356020820152346040820152a1005b5f80fd
+    ///0x60808060405260043610156011575f80fd5b5f3560e01c908163b6b55f2514606a575063b97dd9e214602f575f80fd5b346066575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112606657602060405160018152f35b5f80fd5b60207ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011260665760607f90890809c654f11d6e72a28fa60149770a0d11ec6c92319d6ceb2bb0a4ea1a15913381526004356020820152346040820152a100
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Cc\xB6\xB5_%\x14`#W_\x80\xFD[` \x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC6\x01\x12`\x84W``\x7F\x90\x89\x08\t\xC6T\xF1\x1Dnr\xA2\x8F\xA6\x01Iw\n\r\x11\xECl\x921\x9Dl\xEB+\xB0\xA4\xEA\x1A\x15\x913\x81R`\x045` \x82\x01R4`@\x82\x01R\xA1\0[_\x80\xFD",
+        b"`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1C\x90\x81c\xB6\xB5_%\x14`jWPc\xB9}\xD9\xE2\x14`/W_\x80\xFD[4`fW_\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC6\x01\x12`fW` `@Q`\x01\x81R\xF3[_\x80\xFD[` \x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFC6\x01\x12`fW``\x7F\x90\x89\x08\t\xC6T\xF1\x1Dnr\xA2\x8F\xA6\x01Iw\n\r\x11\xECl\x921\x9Dl\xEB+\xB0\xA4\xEA\x1A\x15\x913\x81R`\x045` \x82\x01R4`@\x82\x01R\xA1\0",
     );
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
@@ -349,12 +363,161 @@ function deposit(uint256 epochIndex) external payable;
             }
         }
     };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `getCurrentEpoch()` and selector `0xb97dd9e2`.
+```solidity
+function getCurrentEpoch() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getCurrentEpochCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`getCurrentEpoch()`](getCurrentEpochCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getCurrentEpochReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getCurrentEpochCall> for UnderlyingRustTuple<'_> {
+                fn from(value: getCurrentEpochCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getCurrentEpochCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getCurrentEpochReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getCurrentEpochReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getCurrentEpochReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for getCurrentEpochCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "getCurrentEpoch()";
+            const SELECTOR: [u8; 4] = [185u8, 125u8, 217u8, 226u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: getCurrentEpochReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: getCurrentEpochReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
     ///Container for all the [`RelayerMocks`](self) function calls.
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum RelayerMocksCalls {
         #[allow(missing_docs)]
         deposit(depositCall),
+        #[allow(missing_docs)]
+        getCurrentEpoch(getCurrentEpochCall),
     }
     #[automatically_derived]
     impl RelayerMocksCalls {
@@ -364,17 +527,23 @@ function deposit(uint256 epochIndex) external payable;
         /// No guarantees are made about the order of the selectors.
         ///
         /// Prefer using `SolInterface` methods instead.
-        pub const SELECTORS: &'static [[u8; 4usize]] = &[[182u8, 181u8, 95u8, 37u8]];
+        pub const SELECTORS: &'static [[u8; 4usize]] = &[
+            [182u8, 181u8, 95u8, 37u8],
+            [185u8, 125u8, 217u8, 226u8],
+        ];
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for RelayerMocksCalls {
         const NAME: &'static str = "RelayerMocksCalls";
-        const MIN_DATA_LENGTH: usize = 32usize;
-        const COUNT: usize = 1usize;
+        const MIN_DATA_LENGTH: usize = 0usize;
+        const COUNT: usize = 2usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
                 Self::deposit(_) => <depositCall as alloy_sol_types::SolCall>::SELECTOR,
+                Self::getCurrentEpoch(_) => {
+                    <getCurrentEpochCall as alloy_sol_types::SolCall>::SELECTOR
+                }
             }
         }
         #[inline]
@@ -402,6 +571,17 @@ function deposit(uint256 epochIndex) external payable;
                             .map(RelayerMocksCalls::deposit)
                     }
                     deposit
+                },
+                {
+                    fn getCurrentEpoch(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RelayerMocksCalls> {
+                        <getCurrentEpochCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RelayerMocksCalls::getCurrentEpoch)
+                    }
+                    getCurrentEpoch
                 },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
@@ -434,6 +614,17 @@ function deposit(uint256 epochIndex) external payable;
                     }
                     deposit
                 },
+                {
+                    fn getCurrentEpoch(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RelayerMocksCalls> {
+                        <getCurrentEpochCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RelayerMocksCalls::getCurrentEpoch)
+                    }
+                    getCurrentEpoch
+                },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
                 return Err(
@@ -451,6 +642,11 @@ function deposit(uint256 epochIndex) external payable;
                 Self::deposit(inner) => {
                     <depositCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
+                Self::getCurrentEpoch(inner) => {
+                    <getCurrentEpochCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
             }
         }
         #[inline]
@@ -458,6 +654,12 @@ function deposit(uint256 epochIndex) external payable;
             match self {
                 Self::deposit(inner) => {
                     <depositCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
+                }
+                Self::getCurrentEpoch(inner) => {
+                    <getCurrentEpochCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
                 }
             }
         }
@@ -694,6 +896,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             epochIndex: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, depositCall, N> {
             self.call_builder(&depositCall { epochIndex })
+        }
+        ///Creates a new call builder for the [`getCurrentEpoch`] function.
+        pub fn getCurrentEpoch(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, getCurrentEpochCall, N> {
+            self.call_builder(&getCurrentEpochCall)
         }
     }
     /// Event filters.

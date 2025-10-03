@@ -200,7 +200,6 @@ pub mod r#rlp_reader;
 pub mod r#reentrancy_guard;
 pub mod r#refunder;
 pub mod r#relayer_mocks;
-pub mod r#dummy_bridge;
 pub mod r#dummy_token;
 pub mod r#require_and_module;
 pub mod r#mock_is_allowed_false;

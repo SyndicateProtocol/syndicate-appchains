@@ -12,6 +12,7 @@ import {Refunder} from "../src/staking/Refunder.sol";
 contract RelayTester is Script {
     // DEPLOYED ON SEPOLIA
     address public opBridge = address(0xfd0Bf71F60660E2f608ed56e1659C450eB113120);
+    address public opMessageRelayer = address(0xC34855F4De64F1840e5686e64278da901e261f20);
     address public l1Token = address(0x55f6e82a8BF5736d46837246DcBEAf7e61b3c27C);
 
     // DEPLOYED ON BASE SEPOLIA
@@ -37,7 +38,7 @@ contract RelayTester is Script {
     function deployL1Relayer() public {
         assert(block.chainid == 11155111);
 
-        L1Relayer _l1Relayer = new L1Relayer(opBridge, l1Token, l2Token, l2Relayer, 200_000);
+        L1Relayer _l1Relayer = new L1Relayer(opBridge, opMessageRelayer, l1Token, l2Token, l2Relayer, msg.sender);
 
         console2.log("L1Relayer deployed to:", address(_l1Relayer));
     }
@@ -45,7 +46,7 @@ contract RelayTester is Script {
     function deployL2Relayer() public {
         assert(block.chainid == 84532);
 
-        L2Relayer _l2Relayer = new L2Relayer(arbBridge, l2Token, refunder);
+        L2Relayer _l2Relayer = new L2Relayer(arbBridge, l2Token, refunder, msg.sender);
 
         console2.log("L2Relayer deployed to:", address(_l2Relayer));
     }
@@ -54,7 +55,7 @@ contract RelayTester is Script {
         assert(block.chainid == 510002);
 
         RelayerMocks _relayerMocks = new RelayerMocks();
-        Refunder _refunder = new Refunder(address(_relayerMocks));
+        Refunder _refunder = new Refunder(address(_relayerMocks), address(_relayerMocks), msg.sender);
 
         console2.log("RelayerMocks deployed to:", address(_relayerMocks));
         console2.log("Refunder deployed to:", address(_refunder));

@@ -2,8 +2,8 @@
 pragma solidity 0.8.28;
 
 import {IPool} from "./interfaces/IPool.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {EpochTracker} from "./EpochTracker.sol";
+import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title Refunder
@@ -12,27 +12,34 @@ import {EpochTracker} from "./EpochTracker.sol";
  *      or gets refunded from the bridge. It automatically deposits recovered funds to the current epoch.
  * @dev Inherits from AccessControl for admin functionality
  */
-contract Refunder is Ownable, EpochTracker {
+contract Refunder is AccessControl {
     /// @notice The address of the pool contract where recovered funds are deposited
     /// @dev Admin can change this address to redirect recovered funds to different pools
     address public pool;
 
+    /// @notice The address of the syndicate staking contract used to get current epoch
+    /// @dev Immutable reference to ensure consistent epoch detection
+    ISyndStaking public immutable syndStaking;
+
     /**
      * @notice Constructs the Refunder contract
      * @param _pool The address of the pool contract for deposits
+     * @param _syndStaking The address of the syndicate staking contract
+     * @param _defaultAdmin The address to be granted the DEFAULT_ADMIN_ROLE
      */
-    constructor(address _pool) Ownable(msg.sender) {
-        require(_pool != address(0), "pool cannot be zero");
+    constructor(address _pool, address _syndStaking, address _defaultAdmin) {
         pool = _pool;
+        syndStaking = ISyndStaking(_syndStaking);
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
     }
 
     /**
      * @notice Sets the address of the pool contract for future recoveries
      * @param _pool The new address of the pool contract
-     * @dev Only callable by the owner
+     * @dev Only callable by an account with the DEFAULT_ADMIN_ROLE
      */
-    function setRecoverPool(address _pool) external onlyOwner {
-        require(_pool != address(0), "pool cannot be zero");
+    function setRecoverPool(address _pool) external onlyRole(DEFAULT_ADMIN_ROLE) {
         pool = _pool;
     }
 
@@ -48,7 +55,8 @@ contract Refunder is Ownable, EpochTracker {
      */
     function recover() external {
         uint256 amount = address(this).balance;
+        uint256 currentEpoch = syndStaking.getCurrentEpoch();
 
-        IPool(pool).deposit{value: amount}(getCurrentEpoch());
+        IPool(pool).deposit{value: amount}(currentEpoch);
     }
 }
