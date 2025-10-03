@@ -11,11 +11,19 @@ contract MockSyndicateSequencingChain is ISyndicateSequencingChain {
     bytes[] public lastProcessedBulkData;
     bool public shouldRevert;
 
+    function getReceiverAndTokens(uint256 epoch) external pure returns (address, uint256) {
+        revert("unimplemented");
+    }
+
+    function getEmissionsReceiver() external pure returns (address) {
+        revert("unimplemented");
+    }
+
     function encodeTransaction(bytes calldata data) external returns (bytes memory) {
         revert("unimplemented");
     }
 
-    function appchainId() external view returns (uint256) {
+    function appchainId() external pure returns (uint256) {
         revert("unimplemented");
     }
 

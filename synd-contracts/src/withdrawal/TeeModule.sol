@@ -5,6 +5,7 @@ import {IAssertionPoster} from "./IAssertionPoster.sol";
 import {ITeeKeyManager} from "./ITeeKeyManager.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {IBridge} from "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
@@ -79,7 +80,10 @@ event AssertionPosterTransferred(address dest);
 /**
  * @title TeeModule Contract
  */
-contract TeeModule is Ownable(msg.sender) {
+contract TeeModule is AccessControlEnumerable {
+    // Roles
+    bytes32 public constant SLOW_ROLE = keccak256("SLOW_ROLE");
+
     // Immutable state variables
     IAssertionPoster public immutable poster;
     IBridge public immutable bridge;
@@ -94,8 +98,9 @@ contract TeeModule is Ownable(msg.sender) {
     //#olympix-ignore-uninitialized-state-variable
     uint256 public teeHackCount;
     //#olympix-ignore-uninitialized-state-variable
-    uint64 public challengeWindowEnd;
+    uint64 public challengeWindowStart;
     uint64 public challengeWindowDuration;
+    uint64 public slowDuration;
 
     receive() external payable {}
 
@@ -123,13 +128,19 @@ contract TeeModule is Ownable(msg.sender) {
         address l1BlockOrBridge_,
         bool isL1Chain_,
         uint64 challengeWindowDuration_, //#olympix-ignore-no-parameter-validation-in-constructor
+        uint64 slowDuration_,
         ITeeKeyManager teeKeyManager_
     ) {
-        require(challengeWindowDuration_ < 7 * 24 * 3600, "challenge window must be less than a week");
+        require(
+            slowDuration_ > challengeWindowDuration_, "slow duration must be greater than challenge window duration"
+        );
         challengeWindowDuration = challengeWindowDuration_;
+        slowDuration = slowDuration_;
         l1BlockOrBridge = l1BlockOrBridge_;
         isL1Chain = isL1Chain_;
         teeTrustedInput.configHash = configHash_;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         if (isL1Chain) {
             require(
@@ -182,7 +193,8 @@ contract TeeModule is Ownable(msg.sender) {
         require(pendingAssertions.length == 1, "cannot close challenge window - wrong number of assertions");
 
         require(
-            (isL1Chain ? uint64(block.timestamp) : IL1Block(l1BlockOrBridge).timestamp()) > challengeWindowEnd,
+            (isL1Chain ? uint64(block.timestamp) : IL1Block(l1BlockOrBridge).timestamp())
+                > challengeWindowStart + challengeWindowDuration,
             "cannot close challenge window - insufficient time has passed"
         );
 
@@ -214,6 +226,10 @@ contract TeeModule is Ownable(msg.sender) {
         emit TeeInput(teeTrustedInput);
     }
 
+    function challengeWindowEnd() external view returns (uint64) {
+        return challengeWindowStart + challengeWindowDuration;
+    }
+
     function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature, address rewardAddr)
         public
     {
@@ -224,7 +240,7 @@ contract TeeModule is Ownable(msg.sender) {
         require(!isL1Chain || assertion.l1BatchAcc == teeTrustedInput.l1EndHash, "unexpected l1 end batch acc");
         pendingAssertions.push(assertion);
         if (pendingAssertions.length == 1) {
-            challengeWindowEnd = uint64(block.timestamp) + challengeWindowDuration;
+            challengeWindowStart = uint64(block.timestamp);
             return;
         }
         require(pendingAssertions.length == 2, "TeeModule: Too many pending assertions");
@@ -241,21 +257,24 @@ contract TeeModule is Ownable(msg.sender) {
         require(success, "payment failed");
     }
 
-    function resolveChallenge(PendingAssertion calldata assertion, bytes calldata signature) external onlyOwner {
+    function resolveChallenge(PendingAssertion calldata assertion, bytes calldata signature)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         require(pendingAssertions.length > 1, "challenge does not exist");
         delete pendingAssertions;
         submitAssertion(assertion, signature, address(0));
-        challengeWindowEnd = 0;
+        challengeWindowStart = 0;
         closeChallengeWindow();
         emit ChallengeResolved(assertion);
     }
 
-    function transferAssertionPosterOwner(address newOwner) external onlyOwner {
+    function transferAssertionPosterOwner(address newOwner) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit AssertionPosterTransferred(newOwner);
         Ownable(address(poster)).transferOwnership(newOwner);
     }
 
-    function transferFunds(address dest) external onlyOwner {
+    function transferFunds(address dest) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(dest != address(0), "destination address is zero");
         emit FundsTransferred(dest);
 
@@ -264,15 +283,25 @@ contract TeeModule is Ownable(msg.sender) {
         require(success, "payment failed");
     }
 
-    function updateKeyManager(ITeeKeyManager newTeeKeyManager) external onlyOwner {
+    function updateKeyManager(ITeeKeyManager newTeeKeyManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(address(newTeeKeyManager).code.length > 0, "teeKeyManager address does not have any code");
         emit KeyManagerUpdate(newTeeKeyManager, teeKeyManager);
         teeKeyManager = newTeeKeyManager;
     }
 
-    function updateChallengeWindowDuration(uint64 challengeWindowDuration_) external onlyOwner {
-        require(challengeWindowDuration_ < 7 * 24 * 3600, "challenge window must be less than a week");
+    function updateChallengeWindowDuration(uint64 challengeWindowDuration_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit ChallengeWindowDurationUpdate(challengeWindowDuration_, challengeWindowDuration);
         challengeWindowDuration = challengeWindowDuration_;
+    }
+
+    function setSlowDuration(uint64 slowDuration_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(slowDuration_ > challengeWindowDuration, "slow duration must be greater than challenge window duration");
+        slowDuration = slowDuration_;
+    }
+
+    function enterSlowMode() external onlyRole(SLOW_ROLE) {
+        require(slowDuration > challengeWindowDuration, "already in slow mode");
+        emit ChallengeWindowDurationUpdate(slowDuration, challengeWindowDuration);
+        challengeWindowDuration = slowDuration;
     }
 }

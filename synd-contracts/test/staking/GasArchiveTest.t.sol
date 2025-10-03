@@ -7,12 +7,12 @@ import {RLPReader} from "../../src/staking/lib/RLPReader.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract GasUsageArchiveTestHelper is GasArchive {
-    constructor(address _blockHashSender, uint256 _settlementChainID, address admin)
-        GasArchive(_blockHashSender, _settlementChainID, admin)
+    constructor(address _blockHashSender, uint256 _settlementChainID)
+        GasArchive(_blockHashSender, _settlementChainID)
     {}
 
     function setEpochDataHashForTesting(uint256 epoch, uint256 seqChainId, bytes32 hash) external {
-        _updateLatestEpoch();
+        updateLatestEpoch();
         require(epoch < latestEpoch, "cannot set future epoch data hash");
         epochVerifiedDataHash[epoch][seqChainId] = hash;
     }
@@ -54,12 +54,12 @@ contract GasArchiveTest is Test {
         user = makeAddr("user");
 
         // Deploy GasArchive
-        gasArchive = new GasUsageArchiveTestHelper(blockHashSender, SETTLEMENT_CHAIN_ID, admin);
+        vm.prank(admin);
+        gasArchive = new GasUsageArchiveTestHelper(blockHashSender, SETTLEMENT_CHAIN_ID);
 
         // Set up sequencing chain
-        vm.startPrank(admin);
-        gasArchive.addSequencingChain(SEQ_CHAIN_ID, address(2), address(1));
-        vm.stopPrank();
+        vm.prank(admin);
+        gasArchive.addSequencingChain(SEQ_CHAIN_ID, address(2), address(1), false);
 
         // Wait until end of epoch
         vm.warp(1754089200 + EPOCH * 30 days);
@@ -72,16 +72,12 @@ contract GasArchiveTest is Test {
     function testConstructor() public {
         // Test zero blockHashSender
         vm.expectRevert(GasArchive.ZeroAddress.selector);
-        new GasArchive(address(0), SETTLEMENT_CHAIN_ID, admin);
-
-        // Test zero admin
-        vm.expectRevert(GasArchive.ZeroAddress.selector);
-        new GasArchive(blockHashSender, SETTLEMENT_CHAIN_ID, address(0));
+        new GasArchive(address(0), SETTLEMENT_CHAIN_ID);
 
         // Test successful deployment (already tested in setUp, but let's verify)
         assertEq(gasArchive.blockHashSender(), blockHashSender);
         assertEq(gasArchive.settlementChainID(), SETTLEMENT_CHAIN_ID);
-        assertTrue(gasArchive.hasRole(gasArchive.DEFAULT_ADMIN_ROLE(), admin));
+        assertEq(gasArchive.owner(), admin);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -112,9 +108,9 @@ contract GasArchiveTest is Test {
         address newBridge = makeAddr("newBridge");
 
         vm.prank(admin);
-        gasArchive.addSequencingChain(newChainId, newAggregator, newBridge);
+        gasArchive.addSequencingChain(newChainId, newAggregator, newBridge, false);
 
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(newChainId), newAggregator);
+        assertEq(gasArchive.seqChainGasAggregator(newChainId), newAggregator);
         assertEq(gasArchive.seqChainOutbox(newChainId), newBridge);
     }
 
@@ -124,45 +120,45 @@ contract GasArchiveTest is Test {
         vm.prank(admin);
         gasArchive.addSettlementChainAsSequencingChain(settlementAggregator);
 
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), settlementAggregator);
+        assertEq(gasArchive.seqChainGasAggregator(SETTLEMENT_CHAIN_ID), settlementAggregator);
         assertEq(gasArchive.seqChainOutbox(SETTLEMENT_CHAIN_ID), address(0));
     }
 
     function testAddSequencingChainAlreadyExists() public {
         vm.prank(admin);
         vm.expectRevert(GasArchive.SequencingChainAlreadyExists.selector);
-        gasArchive.addSequencingChain(SEQ_CHAIN_ID, address(1), address(1));
+        gasArchive.addSequencingChain(SEQ_CHAIN_ID, address(1), address(1), false);
     }
 
     function testAddSequencingChainZeroAggregator() public {
         vm.prank(admin);
         vm.expectRevert(GasArchive.ZeroAddress.selector);
-        gasArchive.addSequencingChain(999, address(0), address(1));
+        gasArchive.addSequencingChain(999, address(0), address(1), false);
     }
 
     function testAddSequencingChainZeroBridge() public {
         vm.prank(admin);
         vm.expectRevert(GasArchive.ZeroAddress.selector);
-        gasArchive.addSequencingChain(999, address(1), address(0));
+        gasArchive.addSequencingChain(999, address(1), address(0), false);
     }
 
     function testAddSequencingChainUnauthorized() public {
         vm.prank(user);
         vm.expectRevert();
-        gasArchive.addSequencingChain(999, address(1), address(1));
+        gasArchive.addSequencingChain(999, address(1), address(1), false);
     }
 
     function testRemoveSequencingChain() public {
         // First add a new chain to remove
         uint256 newChainId = 789;
         vm.prank(admin);
-        gasArchive.addSequencingChain(newChainId, address(1), address(1));
+        gasArchive.addSequencingChain(newChainId, address(1), address(1), false);
 
         // Remove it
         vm.prank(admin);
         gasArchive.removeSequencingChain(newChainId);
 
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(newChainId), address(0));
+        assertEq(gasArchive.seqChainGasAggregator(newChainId), address(0));
         assertEq(gasArchive.seqChainOutbox(newChainId), address(0));
     }
 
@@ -171,14 +167,14 @@ contract GasArchiveTest is Test {
         vm.prank(admin);
         gasArchive.addSettlementChainAsSequencingChain(address(1));
 
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(1));
+        assertEq(gasArchive.seqChainGasAggregator(SETTLEMENT_CHAIN_ID), address(1));
 
         // Remove it
         vm.prank(admin);
         gasArchive.removeSequencingChain(SETTLEMENT_CHAIN_ID);
 
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(0));
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(0));
+        assertEq(gasArchive.seqChainGasAggregator(SETTLEMENT_CHAIN_ID), address(0));
+        assertEq(gasArchive.seqChainGasAggregator(SETTLEMENT_CHAIN_ID), address(0));
     }
 
     function testRemoveSequencingChainNotFound() public {
@@ -191,25 +187,6 @@ contract GasArchiveTest is Test {
         vm.prank(user);
         vm.expectRevert();
         gasArchive.removeSequencingChain(SEQ_CHAIN_ID);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                    BLOCK HASH SENDER MANAGEMENT
-    //////////////////////////////////////////////////////////////*/
-
-    function testSetBlockHashSender() public {
-        address newSender = makeAddr("newSender");
-
-        vm.prank(admin);
-        gasArchive.setBlockHashSender(newSender);
-
-        assertEq(gasArchive.blockHashSender(), newSender);
-    }
-
-    function testSetBlockHashSenderUnauthorized() public {
-        vm.prank(user);
-        vm.expectRevert();
-        gasArchive.setBlockHashSender(user);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -363,11 +340,11 @@ contract GasArchiveTest is Test {
     function testInitialState() public view {
         assertEq(gasArchive.blockHashSender(), blockHashSender);
         assertEq(gasArchive.settlementChainID(), SETTLEMENT_CHAIN_ID);
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SETTLEMENT_CHAIN_ID), address(0));
+        assertEq(gasArchive.seqChainGasAggregator(SETTLEMENT_CHAIN_ID), address(0));
     }
 
     function testSeqChainConfiguration() public view {
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(2));
+        assertEq(gasArchive.seqChainGasAggregator(SEQ_CHAIN_ID), address(2));
         assertEq(gasArchive.seqChainOutbox(SEQ_CHAIN_ID), address(1));
     }
 
@@ -504,7 +481,7 @@ contract GasArchiveTest is Test {
         vm.warp(1754089200 + (EPOCH - 1) * 30 days);
         // Add another sequencing chain
         vm.prank(admin);
-        gasArchive.addSequencingChain(chain2, address(1), address(1));
+        gasArchive.addSequencingChain(chain2, address(1), address(1), false);
         // Warp to end of epoch
         vm.warp(1754089200 + EPOCH * 30 days);
 
@@ -547,24 +524,24 @@ contract GasArchiveTest is Test {
 
         // Add multiple chains
         vm.startPrank(admin);
-        gasArchive.addSequencingChain(chainId2, address(1), address(1));
-        gasArchive.addSequencingChain(chainId3, address(1), address(1));
+        gasArchive.addSequencingChain(chainId2, address(1), address(1), false);
+        gasArchive.addSequencingChain(chainId3, address(1), address(1), false);
         vm.stopPrank();
 
         // Verify they're all configured
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(2));
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(chainId2), address(1));
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(chainId3), address(1));
+        assertEq(gasArchive.seqChainGasAggregator(SEQ_CHAIN_ID), address(2));
+        assertEq(gasArchive.seqChainGasAggregator(chainId2), address(1));
+        assertEq(gasArchive.seqChainGasAggregator(chainId3), address(1));
 
         // Remove middle chain
         vm.prank(admin);
         gasArchive.removeSequencingChain(chainId2);
 
         // Verify removal
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(chainId2), address(0));
+        assertEq(gasArchive.seqChainGasAggregator(chainId2), address(0));
         // Others should still exist
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(SEQ_CHAIN_ID), address(2));
-        assertEq(gasArchive.seqChainGasAggregatorAddresses(chainId3), address(1));
+        assertEq(gasArchive.seqChainGasAggregator(SEQ_CHAIN_ID), address(2));
+        assertEq(gasArchive.seqChainGasAggregator(chainId3), address(1));
     }
 
     function testAccessControl() public {
@@ -572,13 +549,10 @@ contract GasArchiveTest is Test {
         vm.startPrank(user);
 
         vm.expectRevert();
-        gasArchive.addSequencingChain(999, address(1), address(1));
+        gasArchive.addSequencingChain(999, address(1), address(1), false);
 
         vm.expectRevert();
         gasArchive.removeSequencingChain(SEQ_CHAIN_ID);
-
-        vm.expectRevert();
-        gasArchive.setBlockHashSender(user);
 
         vm.stopPrank();
 

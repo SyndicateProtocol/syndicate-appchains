@@ -3,23 +3,12 @@ pragma solidity 0.8.28;
 
 import {EpochTracker} from "./EpochTracker.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-
-/// @title ISequencingContract
-/// @notice Interface for sequencing chain contracts to query gas usage data
-/// @dev Used by the gas aggregator to collect gas usage information from appchains
-interface ISequencingContract {
-    /// @notice Get the total gas tokens used by this sequencing chain for a specific epoch
-    /// @param epoch The epoch number to query gas usage for
-    /// @return The amount of gas tokens used in the specified epoch
-    function getTokensForEpoch(uint256 epoch) external view returns (uint256);
-
-    /// @notice Get the address that should receive emissions for this sequencing chain
-    /// @return The address configured to receive emissions from this chain
-    function getEmissionsReceiver() external view returns (address);
-}
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {ISyndicateSequencingChain} from "../interfaces/ISyndicateSequencingChain.sol";
+import {GasCounter} from "./GasCounter.sol";
 
 /// @title IAppchainFactory
 /// @notice Interface for the appchain factory to get deployment information
@@ -36,9 +25,19 @@ interface IAppchainFactory {
  * @dev This contract manages the collection and aggregation of gas usage data from multiple appchains.
  *      It supports both automatic aggregation (for small numbers of appchains) and off-chain aggregation
  *      (for larger numbers of appchains) with a challenge mechanism for data integrity.
- * @dev Inherits from EpochTracker for epoch management and AccessControlUpgradeable for admin functions
+ * @dev Inherits from EpochTracker for epoch management and OwnableUpgradeable for admin functions
  */
-contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable, UUPSUpgradeable {
+contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSUpgradeable {
+    using EnumerableSet for EnumerableSet.UintSet;
+
+    /*//////////////////////////////////////////////////////////////
+                            CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Version of the GasAggregator contract (updatable during upgrades)
+    /// @dev Semantic version string to track contract upgrades and compatibility
+    string public constant version = "1.0.0";
+
     /*//////////////////////////////////////////////////////////////
                             FIXED STORAGE SLOTS
     //////////////////////////////////////////////////////////////*/
@@ -70,11 +69,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     bytes32 public sequencingChainProxyBytecodeHash;
 
     /// @notice Registry of chains that are currently tracked for gas usage
-    /// @dev Array enables enumeration of all tracked chains for automatic aggregation
-    uint256[] public appchains;
-
-    /// @notice Mapping to quickly check if a chain ID is currently being tracked
-    mapping(uint256 chainID => bool tracked) public isChainTracked;
+    EnumerableSet.UintSet internal appchains;
 
     /// @notice Mapping of chains that have been banned from gas tracking
     /// @dev Chains are banned when they upgrade to non-approved implementations
@@ -110,10 +105,6 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @dev Allows admins to specify custom contract addresses for specific chain IDs.
     ///      Useful for legacy migrations or special cases where deterministic addresses don't apply.
     mapping(uint256 => address) public appchainContractOverrides;
-
-    /// @notice Version of the GasAggregator contract (updatable during upgrades)
-    /// @dev Semantic version string to track contract upgrades and compatibility
-    string public version;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -158,6 +149,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @notice Error thrown when an epoch start timestamp is zero
     error ZeroEpoch();
 
+    /// @notice Error thrown when chain id is zero
+    error ZeroChainId();
+
     /// @notice Error thrown when data hash is invalid
     /// @dev Ensures data integrity
     error InvalidDataHash();
@@ -195,6 +189,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @param newImplementation The non-approved implementation that triggered the ban
     event ChainBanned(uint256 chainId, address newImplementation);
 
+    /// @notice Emitted when an admin unbans a banned chain
+    event ChainUnbanned(uint256 chainId);
+
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
     //////////////////////////////////////////////////////////////*/
@@ -222,16 +219,19 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
         if (_admin == address(0)) revert ZeroAddress();
         if (_epochStart == 0) revert ZeroEpoch();
 
-        __AccessControl_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        __Ownable_init(_admin);
 
         // Start tracking from the current epoch (ignore all past epochs)
         pendingEpoch = _epochStart;
-        version = "1.0.0";
         challengeWindow = 24 hours;
         addChainFee = 5 ether;
         maxAppchainsToQuery = 100;
         factory = IAppchainFactory(_factory);
+
+        // Add the initial implementation to the allowed list
+        if (_allowedImplementation != address(0)) {
+            allowedImplementations[_allowedImplementation] = true;
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -258,34 +258,19 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @notice Adds a chain to the gas tracking registry
     /// @dev Anyone can call this function by paying the required fee. The chain must exist at the
     ///      deterministic address and not be banned. Successfully added chains will participate
-    ///      in gas aggregation and emissions distribution.
+    ///      in gas aggregation and emissions distribution. The owner does not pay any fees.
     /// @param chainId The chain ID to add to the tracking registry
     function addChain(uint256 chainId) external payable {
-        if (msg.value < addChainFee) {
-            revert InsufficientFee(addChainFee, msg.value);
+        if (msg.sender != owner()) {
+            require(msg.value == addChainFee, InsufficientFee(addChainFee, msg.value));
+        } else {
+            require(msg.value == 0, InsufficientFee(0, msg.value));
         }
-
-        if (isChainTracked[chainId]) {
-            revert ChainAlreadyTracked(chainId);
-        }
-
+        require(chainId > 0, ZeroChainId());
+        require(appchains.add(chainId), ChainAlreadyTracked(chainId));
         address chainContract = getAppchainContractAddress(chainId);
-
-        uint256 codeSize;
-        assembly {
-            codeSize := extcodesize(chainContract)
-        }
-        if (codeSize == 0) {
-            revert ChainNotFound(chainId);
-        }
-
-        if (bannedAppchains[chainId]) {
-            revert ChainIsBanned(chainId);
-        }
-
-        appchains.push(chainId);
-        isChainTracked[chainId] = true;
-
+        require(chainContract.code.length > 0, ChainNotFound(chainId));
+        require(!bannedAppchains[chainId], ChainIsBanned(chainId));
         emit ChainAdded(chainId, chainContract, msg.sender);
     }
 
@@ -301,14 +286,16 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
         if (fallbackToOffchainAggregation()) {
             revert MustUseOffchainAggregation();
         }
-        uint256[] memory tokens = new uint256[](appchains.length);
-        address[] memory emissionsReceivers = new address[](appchains.length);
-        for (uint256 i = 0; i < appchains.length; i++) {
-            ISequencingContract seqContract = ISequencingContract(getAppchainContractAddress(appchains[i]));
-            tokens[i] = seqContract.getTokensForEpoch(pendingEpoch);
-            emissionsReceivers[i] = seqContract.getEmissionsReceiver();
+        uint256[] memory values = getTrackedChainIds();
+        uint256[] memory tokens = new uint256[](values.length);
+        address[] memory emissionsReceivers = new address[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            address seqContract = getAppchainContractAddress(values[i]);
+            // TODO: use getReceiverAndTokens() instead of the individual functions
+            tokens[i] = GasCounter(seqContract).tokensUsedPerEpoch(pendingEpoch);
+            emissionsReceivers[i] = ISyndicateSequencingChain(seqContract).getEmissionsReceiver();
         }
-        aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(appchains, tokens, emissionsReceivers));
+        aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(values, tokens, emissionsReceivers));
         pendingEpoch++;
         pendingEpochFirstSubmissionTime = 0;
         pendingDataHash = bytes32(0);
@@ -328,6 +315,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
         if (!fallbackToOffchainAggregation()) {
             revert MustUseAutomaticAggregation();
         }
+        // TODO: this should wait for a l1 message to arrive to prevent censorship
         if (pendingEpochFirstSubmissionTime != 0 && block.timestamp > pendingEpochFirstSubmissionTime + challengeWindow)
         {
             revert WindowOver(pendingEpoch, challengeWindow);
@@ -335,13 +323,17 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
         uint256 total = 0;
         uint256[] memory tokens = new uint256[](appchainIDs.length);
         address[] memory emissionsReceivers = new address[](appchainIDs.length);
+        uint256 appchainID = 0;
         for (uint256 i = 0; i < appchainIDs.length; i++) {
-            if (i > 0 && appchainIDs[i] <= appchainIDs[i - 1]) {
+            if (appchainIDs[i] <= appchainID) {
                 revert ChainIDsMustBeInAscendingOrder();
             }
-            ISequencingContract seqContract = ISequencingContract(getAppchainContractAddress(appchainIDs[i]));
-            tokens[i] = seqContract.getTokensForEpoch(pendingEpoch);
-            emissionsReceivers[i] = seqContract.getEmissionsReceiver();
+            appchainID = appchainIDs[i];
+            require(appchains.contains(appchainID), ChainNotTracked(appchainID));
+            address seqContract = getAppchainContractAddress(appchainID);
+            // TODO: use getReceiverAndTokens() instead of the individual functions
+            tokens[i] = GasCounter(seqContract).tokensUsedPerEpoch(pendingEpoch);
+            emissionsReceivers[i] = ISyndicateSequencingChain(seqContract).getEmissionsReceiver();
             total += tokens[i];
         }
         if (total <= pendingTotalTokensUsed) {
@@ -374,6 +366,30 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
         pendingTotalTokensUsed = 0;
     }
 
+    /// @notice Called by sequencing chains to notify about upgrades
+    /// @dev Automatically bans chain from gas tracking if implementation is not allowed
+    /// @param chainId The chain ID that is upgrading
+    /// @param newImplementation The address of the new implementation being upgraded to
+    function notifyChainUpgrade(uint256 chainId, address newImplementation) external {
+        if (getAppchainContractAddress(chainId) != msg.sender) {
+            revert OnlyChainCanNotifyUpgrade();
+        }
+
+        if (!allowedImplementations[newImplementation]) {
+            _banAppchain(chainId);
+            emit ChainBanned(chainId, newImplementation);
+        }
+    }
+
+    /// @notice Called by the factory to notify about new approved implementations
+    /// @dev Only the factory can approve new implementations. This allows chains to upgrade
+    ///      to new versions without being banned from gas tracking.
+    /// @param newImplementation The address of the newly approved implementation
+    function notifyNewImplementation(address newImplementation) external {
+        if (msg.sender != address(factory)) revert OnlyFactoryCanNotifyNewImplementation();
+        allowedImplementations[newImplementation] = true;
+    }
+
     /*//////////////////////////////////////////////////////////////
                          INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -391,14 +407,9 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     ///      Banned chains cannot be re-added to prevent abuse.
     /// @param chainId The chain ID to ban from gas tracking
     function _banAppchain(uint256 chainId) internal {
-        for (uint256 i = 0; i < appchains.length; i++) {
-            if (appchains[i] == chainId) {
-                appchains[i] = appchains[appchains.length - 1];
-                appchains.pop();
-                break;
-            }
+        if (appchains.remove(chainId)) {
+            emit ChainRemoved(chainId);
         }
-        delete isChainTracked[chainId];
         bannedAppchains[chainId] = true;
     }
 
@@ -418,7 +429,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @dev Checks for admin overrides first, then falls back to deterministic address computation
     /// @param chainId The chain ID to get the contract address for
     /// @return The contract address for the specified chain ID
-    function getAppchainContractAddress(uint256 chainId) internal returns (address) {
+    function getAppchainContractAddress(uint256 chainId) public returns (address) {
         address contractOverride = appchainContractOverrides[chainId];
         if (contractOverride != address(0)) {
             return contractOverride;
@@ -438,19 +449,21 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
      * @custom:example If 5 appchains exist and maxAppchainsToQuery is 10, returns false
      */
     function fallbackToOffchainAggregation() public view returns (bool) {
-        return appchains.length >= maxAppchainsToQuery;
+        return appchains.length() >= maxAppchainsToQuery;
     }
 
     /// @notice Get the total number of chains currently being tracked for gas usage
     /// @return The number of chains in the tracking registry
     function getTotalTrackedChains() external view returns (uint256) {
-        return appchains.length;
+        return appchains.length();
     }
 
     /// @notice Get all chain IDs currently being tracked for gas usage
-    /// @return Array of all tracked chain IDs
-    function getTrackedChainIds() external view returns (uint256[] memory) {
-        return appchains;
+    function getTrackedChainIds() public view returns (uint256[] memory chainIDs) {
+        bytes32[] memory ids = appchains._inner._values;
+        assembly {
+            chainIDs := ids
+        }
     }
 
     /// @notice Get the contract's current ETH balance from collected fees
@@ -469,7 +482,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
      * @param newMax The new maximum number of appchains for automatic aggregation
      * @custom:example If set to 10, automatic aggregation works for ≤10 appchains
      */
-    function setMaxAppchainsToQuery(uint256 newMax) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMaxAppchainsToQuery(uint256 newMax) external onlyOwner {
         maxAppchainsToQuery = newMax;
     }
 
@@ -479,20 +492,38 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
      * @param newChallengeWindow The new challenge window duration in seconds
      * @custom:example If set to 3600, challenge window is 1 hour
      */
-    function setChallengeWindow(uint256 newChallengeWindow) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setChallengeWindow(uint256 newChallengeWindow) external onlyOwner {
         if (newChallengeWindow == 0) revert ZeroChallengeWindow();
         challengeWindow = newChallengeWindow;
     }
 
-    /// @notice Updates the contract version (admin only, typically called during upgrades)
-    /// @param newVersion The new version string (e.g., "1.1.0")
-    function updateVersion(string calldata newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        version = newVersion;
+    /// @notice Remove an implementation from the allowed list (admin only)
+    /// @param implementation The implementation address to remove from the allowed list
+    function removeAllowedImplementation(address implementation) external onlyOwner {
+        if (!allowedImplementations[implementation]) revert ImplementationNotAllowed(implementation);
+        allowedImplementations[implementation] = false;
+    }
+
+    function removeAppchain(uint256 chainId) external onlyOwner {
+        require(appchains.remove(chainId), "appchain is not tracked");
+        emit ChainRemoved(chainId);
+    }
+
+    function banAppchain(uint256 chainId) external onlyOwner {
+        require(!bannedAppchains[chainId], "appchain is banned");
+        _banAppchain(chainId);
+        emit ChainBanned(chainId, address(0));
+    }
+
+    function unbanAppchain(uint256 chainId) external onlyOwner {
+        require(bannedAppchains[chainId], "appchain not banned");
+        bannedAppchains[chainId] = false;
+        emit ChainUnbanned(chainId);
     }
 
     /// @notice Set the fee required to add a chain to the registry
     /// @param newFee The new fee amount
-    function setAddChainFee(uint256 newFee) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setAddChainFee(uint256 newFee) external onlyOwner {
         uint256 oldFee = addChainFee;
         addChainFee = newFee;
         emit AddChainFeeUpdated(oldFee, newFee);
@@ -503,7 +534,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     ///      Can withdraw a specific amount or the entire balance.
     /// @param to Address to send the funds to (cannot be zero address)
     /// @param amount Amount to withdraw in wei (0 to withdraw all available funds)
-    function withdrawFees(address payable to, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function withdrawFees(address payable to, uint256 amount) external onlyOwner {
         if (to == address(0)) revert ZeroAddress();
 
         uint256 withdrawAmount = amount == 0 ? address(this).balance : amount;
@@ -518,7 +549,7 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @notice Set a new factory contract address (admin only)
     /// @dev Updates the factory and recalculates the proxy bytecode hash for address computations.
     /// @param newFactory The address of the new factory contract
-    function setFactory(address newFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setFactory(address newFactory) external onlyOwner {
         factory = IAppchainFactory(newFactory);
         sequencingChainProxyBytecodeHash = keccak256(factory.getProxyBytecode());
     }
@@ -526,19 +557,15 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @notice Authorize contract upgrades (admin only)
     /// @dev Required by UUPSUpgradeable. Only admins can upgrade this contract.
     /// @param newImplementation The address of the new implementation (unused but required by interface)
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /// @notice Set a custom contract address override for a specific chain ID (admin only)
     /// @dev Allows admins to specify non-deterministic addresses for specific chains.
     ///      Useful for legacy chains until they are migrated to the new architecture.
     /// @param chainId The chain ID to set an override for
     /// @param contractOverride The contract address to use instead of the deterministic address
-    function setChainOverride(uint256 chainId, address contractOverride) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 codeSize;
-        assembly {
-            codeSize := extcodesize(contractOverride)
-        }
-        if (codeSize == 0) {
+    function setChainOverride(uint256 chainId, address contractOverride) external onlyOwner {
+        if (contractOverride.code.length == 0) {
             revert ChainNotFound(chainId);
         }
 

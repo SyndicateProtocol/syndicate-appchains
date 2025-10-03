@@ -4,13 +4,13 @@ pragma solidity 0.8.28;
 import {SyndicateFactory} from "./SyndicateFactory.sol";
 import {RequireAndModuleFactory, RequireOrModuleFactory} from "./PermissionModuleFactories.sol";
 import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /// @title SyndicateFactoryWrapper
 /// @notice Wrapper factory that deploys both permission modules and sequencing chains together
 /// @dev Combines functionality from individual factories for a complete deployment experience
-contract SyndicateFactoryWrapper is AccessControl, Pausable {
+contract SyndicateFactoryWrapper is AccessControlEnumerable, Pausable {
     /// @notice Emitted when a complete syndicate deployment is created
     event CompleteSyndicateDeployed(
         uint256 indexed chainId,

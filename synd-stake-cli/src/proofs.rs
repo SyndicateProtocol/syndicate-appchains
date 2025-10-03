@@ -151,7 +151,7 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         .unwrap_or_else(|e| panic!("failed to get sequencing chain ID: {e}"));
     let gas_archive = GasArchive::new(args.gas_archive_address, staking_provider);
     let gas_aggregator_address = gas_archive
-        .seqChainGasAggregatorAddresses(U256::from(seq_chain_id))
+        .seqChainGasAggregator(U256::from(seq_chain_id))
         .call()
         .await
         .unwrap_or_else(|e| panic!("failed to get gas aggregator address: {e}"));
@@ -397,7 +397,7 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
         let appchain = SyndicateSequencingChain::new(contract, gas_aggregator.provider().clone());
         tokens.push(
             appchain
-                .getTokensForEpoch(epoch)
+                .tokensUsedPerEpoch(epoch)
                 .call()
                 .await
                 .unwrap_or_else(|e| panic!("failed to get tokens for epoch {epoch}: {e}")),

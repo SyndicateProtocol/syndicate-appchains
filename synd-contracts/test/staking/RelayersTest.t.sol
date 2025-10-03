@@ -14,6 +14,12 @@ contract DummyToken is ERC20 {
     constructor() ERC20("DummyToken", "DT") {}
 }
 
+contract DummyBridge {
+    function messenger() external view returns (address) {
+        return address(0);
+    }
+}
+
 contract RelayersTest is Test {
     L1Relayer public l1Relayer;
     L2Relayer public l2Relayer;
@@ -29,34 +35,20 @@ contract RelayersTest is Test {
 
     function setUp() public {
         admin = makeAddr("admin");
-        opBridge = makeAddr("opBridge");
-        opMessageRelayer = makeAddr("opMessageRelayer");
+        opBridge = address(new DummyBridge());
         arbBridge = makeAddr("arbBridge");
 
         dummyToken = new DummyToken();
 
         relayerMocks = new RelayerMocks();
-        refunder = new Refunder(address(relayerMocks), address(relayerMocks), admin);
-        l2Relayer = new L2Relayer(arbBridge, address(dummyToken), address(refunder), admin);
-        l1Relayer = new L1Relayer(
-            opBridge, opMessageRelayer, address(dummyToken), address(dummyToken), address(l2Relayer), admin
-        );
+        vm.prank(admin);
+        refunder = new Refunder(address(relayerMocks));
+        vm.prank(admin);
+        l2Relayer = new L2Relayer(arbBridge, address(dummyToken), address(refunder));
+        l1Relayer = new L1Relayer(opBridge, address(dummyToken), address(dummyToken), address(l2Relayer), 200_000);
     }
 
     function test_admin_L2Relayer() public {
-        // Try as non-admin
-        address nonAdmin = makeAddr("nonAdmin");
-        vm.prank(nonAdmin);
-        vm.expectRevert(); // AccessControl: account ... is missing role ...
-        l1Relayer.setMinGasLimit(0);
-
-        // As admin
-        vm.prank(admin);
-        l1Relayer.setMinGasLimit(20000);
-        assertEq(l1Relayer.minGasLimit(), 20000);
-    }
-
-    function test_admin_L1Relayer() public {
         // Try as non-admin
         address nonAdmin = makeAddr("nonAdmin");
         vm.prank(nonAdmin);
@@ -83,6 +75,7 @@ contract RelayersTest is Test {
 
         address anyone = makeAddr("anyone");
         vm.prank(anyone);
+        vm.warp(refunder.getEpochStart(1));
         refunder.recover();
 
         assertEq(address(relayerMocks).balance, 100 ether);

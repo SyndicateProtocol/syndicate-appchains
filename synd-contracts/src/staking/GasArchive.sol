@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MerklePatriciaProofVerifier} from "./lib/MerklePatriciaProofVerifier.sol";
 import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {RLPReader} from "./lib/RLPReader.sol";
@@ -12,7 +12,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 /// @title GasArchive
 /// @notice Lives on the staking appchain and trustlessly validates and stores gas usage data from multiple sequencing chains using storage proofs
 /// @dev This contract supports arbitrum-based sequencing chains only (with the exception of the settlement chain, which can be any chain)
-contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
+contract GasArchive is Ownable(msg.sender), IGasDataProvider, EpochTracker {
     using EnumerableSet for EnumerableSet.UintSet;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for bytes;
@@ -29,14 +29,18 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
     uint256 public constant SEND_ROOT_STORAGE_SLOT = 3;
 
     /*//////////////////////////////////////////////////////////////
-                            STATE VARIABLES
+                            IMMUTABLE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
     /// @dev The `BlockHashRelayer` contract is deployed on the settlement chain and is responsible for sending the block hashes to the `GasArchive` contract. Anyone can call `sendBlockHashes` on the relayer to send the block hashes.
-    address public blockHashSender;
+    address public immutable blockHashSender;
 
     /// @notice when using the settlement chain as the sequencing chain, the rollup hash proof is not required
     uint256 public immutable settlementChainID;
+
+    /*//////////////////////////////////////////////////////////////
+                            STORAGE VARIABLES
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice the latest epoch that the contract is aware of
     uint256 public latestEpoch;
@@ -44,10 +48,10 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
     /// @notice the sequencing chain count for the latest epoch
     uint256 public seqChainCount;
 
-    mapping(uint256 chainId => uint256 epoch) chainAdded;
+    mapping(uint256 chainId => uint256 epoch) public chainAdded;
 
     /// @notice mapping of sequencing chain IDs to the address of the gas aggregator contract
-    mapping(uint256 chainId => address aggregatorAddress) public seqChainGasAggregatorAddresses;
+    mapping(uint256 chainId => address aggregatorAddress) public seqChainGasAggregator;
     /// @notice mapping of sequencing chain IDs to the address of the Outbox contract for that sequencing chain (where the confirmed rollup hash can be found)
     mapping(uint256 chainId => address outboxAddress) public seqChainOutbox;
     mapping(uint256 chainId => bool) public seqChainSettlesToBase;
@@ -115,14 +119,12 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address _blockHashSender, uint256 _settlementChainID, address admin) {
+    constructor(address _blockHashSender, uint256 _settlementChainID) {
         require(_blockHashSender != address(0), ZeroAddress());
         require(_settlementChainID != 0, ZeroChainId());
-        require(admin != address(0), ZeroAddress());
         blockHashSender = _blockHashSender;
         settlementChainID = _settlementChainID;
         latestEpoch = getCurrentEpoch();
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -217,7 +219,7 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
         require(epochVerifiedDataHash[epoch][chainID] == bytes32(0), AlreadySubmitted());
 
         // just in case, make sure the epoch is not from the future
-        _updateLatestEpoch();
+        updateLatestEpoch();
         require(epoch < latestEpoch, EpochFromFuture());
 
         // submissions are only allowed for active sequencing chains
@@ -228,7 +230,7 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
             blockHeader: blockHeader,
             accountProof: accountProof,
             storageProof: storageProof,
-            account: seqChainGasAggregatorAddresses[chainID],
+            account: seqChainGasAggregator[chainID],
             storageSlot: keccak256(abi.encode(epoch, AGGREGATED_EPOCH_DATA_HASH_SLOT))
         });
 
@@ -289,7 +291,7 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
         }
     }
 
-    function _updateLatestEpoch() internal {
+    function updateLatestEpoch() public {
         uint256 currentEpoch = getCurrentEpoch();
         while (latestEpoch < currentEpoch) {
             epochRemainingChains[latestEpoch] = seqChainCount;
@@ -366,11 +368,11 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
         external
         view
         onlyArchivedEpoch(epochIndex)
-        returns (uint256[] memory _chainIDs)
+        returns (uint256[] memory chainIDs)
     {
         bytes32[] memory ids = epochAppchainIDs[epochIndex]._inner._values;
         assembly {
-            _chainIDs := ids
+            chainIDs := ids
         }
     }
 
@@ -397,16 +399,16 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
     /// @param outboxAddress Address of the sequencing chain outbox contract on Ethereum (not needed for settlement chain)
     function addSequencingChain(uint256 chainID, address aggregatorAddress, address outboxAddress, bool settlesToBase)
         public
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyOwner
     {
         require(aggregatorAddress != address(0), ZeroAddress());
         require(chainID != 0, ZeroChainId());
         require(chainAdded[chainID] == 0, SequencingChainAlreadyExists());
 
-        _updateLatestEpoch();
+        updateLatestEpoch();
         seqChainCount++;
         chainAdded[chainID] = latestEpoch;
-        seqChainGasAggregatorAddresses[chainID] = aggregatorAddress;
+        seqChainGasAggregator[chainID] = aggregatorAddress;
 
         if (chainID != settlementChainID) {
             require(outboxAddress != address(0), ZeroAddress());
@@ -415,9 +417,31 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
         }
     }
 
-    /// @notice overload of addSequencingChain for sequencing chains that settle to ethereum
-    function addSequencingChain(uint256 chainID, address aggregatorAddress, address outboxAddress) external {
-        addSequencingChain(chainID, aggregatorAddress, outboxAddress, false);
+    function adjustSequencingChainStartEpoch(uint256 chainID, uint256 epoch) external onlyOwner {
+        updateLatestEpoch();
+        require(epoch <= latestEpoch, EpochFromFuture());
+        uint256 oldEpoch = chainAdded[chainID];
+        require(oldEpoch > 0, SequencingChainDoesNotExist());
+        require(epoch != oldEpoch, "start epoch is already set");
+        chainAdded[chainID] = epoch;
+        if (oldEpoch < epoch) {
+            for (uint256 i = oldEpoch; i < epoch; i++) {
+                // do not allow double submissions for a chainID
+                if (!epochChainDataSubmitted[i][chainID]) {
+                    // clear the verified data hash in case it is set
+                    epochVerifiedDataHash[i][chainID] = bytes32(0);
+                    _decrementEpochRemainingChains(i);
+                }
+            }
+        } else {
+            for (uint256 i = epoch; i < oldEpoch; i++) {
+                // do not reopen closed epoch submissions
+                // epochRemainingChains will revert on underflow
+                if (!epochChainDataSubmitted[i][chainID] && epochRemainingChains[i] > 0) {
+                    epochRemainingChains[i]++;
+                }
+            }
+        }
     }
 
     function addSettlementChainAsSequencingChain(address aggregatorAddress) external {
@@ -426,8 +450,8 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
 
     /// @notice Removes an existing sequencing chain immediately
     /// @dev Only admin can remove sequencing chains
-    function removeSequencingChain(uint256 chainID) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(chainAdded[chainID] != 0, SequencingChainDoesNotExist());
+    function removeSequencingChain(uint256 chainID) external onlyOwner {
+        require(chainAdded[chainID] > 0, SequencingChainDoesNotExist());
         for (uint256 epoch = chainAdded[chainID]; epoch < latestEpoch; epoch++) {
             // do not remove epoch data for already submitted chains
             if (!epochChainDataSubmitted[epoch][chainID]) {
@@ -438,17 +462,10 @@ contract GasArchive is AccessControl, IGasDataProvider, EpochTracker {
         }
         seqChainCount--;
         chainAdded[chainID] = 0;
-        seqChainGasAggregatorAddresses[chainID] = address(0);
+        seqChainGasAggregator[chainID] = address(0);
         if (chainID != settlementChainID) {
             seqChainOutbox[chainID] = address(0);
             seqChainSettlesToBase[chainID] = false;
         }
-    }
-
-    /// @notice Updates the authorized block hash sender address
-    /// @dev Only admin can change the block hash sender
-    /// @param newBlockHashSender The new address authorized to send block hashes
-    function setBlockHashSender(address newBlockHashSender) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        blockHashSender = newBlockHashSender;
     }
 }

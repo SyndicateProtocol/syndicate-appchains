@@ -11,7 +11,6 @@ interface GasCounter {
     function getCurrentEpoch() external view returns (uint256);
     function getEpochEnd(uint256 epochIndex) external pure returns (uint256);
     function getEpochStart(uint256 epochIndex) external pure returns (uint256);
-    function getTokensForEpoch(uint256 epochIndex) external view returns (uint256);
     function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 tokensUsed);
 }
 ```
@@ -108,25 +107,6 @@ interface GasCounter {
       }
     ],
     "stateMutability": "pure"
-  },
-  {
-    "type": "function",
-    "name": "getTokensForEpoch",
-    "inputs": [
-      {
-        "name": "epochIndex",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1155,164 +1135,6 @@ function getEpochStart(uint256 epochIndex) external pure returns (uint256);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `getTokensForEpoch(uint256)` and selector `0xe0396166`.
-```solidity
-function getTokensForEpoch(uint256 epochIndex) external view returns (uint256);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getTokensForEpochCall {
-        #[allow(missing_docs)]
-        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getTokensForEpoch(uint256)`](getTokensForEpochCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct getTokensForEpochReturn {
-        #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getTokensForEpochCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getTokensForEpochCall) -> Self {
-                    (value.epochIndex,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getTokensForEpochCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { epochIndex: tuple.0 }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<getTokensForEpochReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: getTokensForEpochReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getTokensForEpochReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for getTokensForEpochCall {
-            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::primitives::aliases::U256;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "getTokensForEpoch(uint256)";
-            const SELECTOR: [u8; 4] = [224u8, 57u8, 97u8, 102u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: getTokensForEpochReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: getTokensForEpochReturn = r.into();
-                        r._0
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `tokensUsedPerEpoch(uint256)` and selector `0x0c672363`.
 ```solidity
 function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 tokensUsed);
@@ -1486,8 +1308,6 @@ function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 t
         #[allow(missing_docs)]
         getEpochStart(getEpochStartCall),
         #[allow(missing_docs)]
-        getTokensForEpoch(getTokensForEpochCall),
-        #[allow(missing_docs)]
         tokensUsedPerEpoch(tokensUsedPerEpochCall),
     }
     #[automatically_derived]
@@ -1505,7 +1325,6 @@ function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 t
             [167u8, 11u8, 159u8, 12u8],
             [185u8, 125u8, 217u8, 226u8],
             [213u8, 23u8, 109u8, 35u8],
-            [224u8, 57u8, 97u8, 102u8],
             [249u8, 219u8, 112u8, 146u8],
         ];
     }
@@ -1513,7 +1332,7 @@ function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 t
     impl alloy_sol_types::SolInterface for GasCounterCalls {
         const NAME: &'static str = "GasCounterCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 8usize;
+        const COUNT: usize = 7usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -1534,9 +1353,6 @@ function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 t
                 }
                 Self::getEpochStart(_) => {
                     <getEpochStartCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::getTokensForEpoch(_) => {
-                    <getTokensForEpochCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::tokensUsedPerEpoch(_) => {
                     <tokensUsedPerEpochCall as alloy_sol_types::SolCall>::SELECTOR
@@ -1625,17 +1441,6 @@ function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 t
                             .map(GasCounterCalls::getEpochEnd)
                     }
                     getEpochEnd
-                },
-                {
-                    fn getTokensForEpoch(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<GasCounterCalls> {
-                        <getTokensForEpochCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(GasCounterCalls::getTokensForEpoch)
-                    }
-                    getTokensForEpoch
                 },
                 {
                     fn gasTrackingDisabled(
@@ -1735,17 +1540,6 @@ function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 t
                     getEpochEnd
                 },
                 {
-                    fn getTokensForEpoch(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<GasCounterCalls> {
-                        <getTokensForEpochCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(GasCounterCalls::getTokensForEpoch)
-                    }
-                    getTokensForEpoch
-                },
-                {
                     fn gasTrackingDisabled(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<GasCounterCalls> {
@@ -1800,11 +1594,6 @@ function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 t
                         inner,
                     )
                 }
-                Self::getTokensForEpoch(inner) => {
-                    <getTokensForEpochCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
                 Self::tokensUsedPerEpoch(inner) => {
                     <tokensUsedPerEpochCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -1847,12 +1636,6 @@ function tokensUsedPerEpoch(uint256 epochIndex) external view returns (uint256 t
                 }
                 Self::getEpochStart(inner) => {
                     <getEpochStartCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::getTokensForEpoch(inner) => {
-                    <getTokensForEpochCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -2184,17 +1967,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             epochIndex: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, getEpochStartCall, N> {
             self.call_builder(&getEpochStartCall { epochIndex })
-        }
-        ///Creates a new call builder for the [`getTokensForEpoch`] function.
-        pub fn getTokensForEpoch(
-            &self,
-            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, getTokensForEpochCall, N> {
-            self.call_builder(
-                &getTokensForEpochCall {
-                    epochIndex,
-                },
-            )
         }
         ///Creates a new call builder for the [`tokensUsedPerEpoch`] function.
         pub fn tokensUsedPerEpoch(

@@ -52,8 +52,6 @@ abstract contract GasCounter is EpochTracker {
     /// @dev Converts gas usage to token cost using current gas price and adds to epoch total
     /// @param gasUsed Amount of gas consumed by the function call
     function _trackGas(uint256 gasUsed) internal {
-        uint256 currentEpoch = getCurrentEpoch();
-
         // Calculate gas cost using current transaction gas price
         uint256 gasPrice = tx.gasprice;
 
@@ -66,20 +64,7 @@ abstract contract GasCounter is EpochTracker {
         // Add gas cost to current epoch total
         // Using unchecked for gas efficiency since gasUsed * gasPrice cannot realistically overflow
         unchecked {
-            tokensUsedPerEpoch[currentEpoch] += gasUsed * gasPrice;
+            tokensUsedPerEpoch[getCurrentEpoch()] += gasUsed * gasPrice;
         }
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                           VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Get the total tokens used in gas fees for a given epoch
-    /// @dev Returns the accumulated gas costs for the specified epoch
-    /// @param epochIndex The epoch index to query
-    /// @return The total tokens used in gas fees for the specified epoch
-    /// @custom:example If epoch 1 had 1000 gas units at 20 gwei, returns 20000 wei
-    function getTokensForEpoch(uint256 epochIndex) external view returns (uint256) {
-        return tokensUsedPerEpoch[epochIndex];
     }
 }

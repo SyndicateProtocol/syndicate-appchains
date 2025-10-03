@@ -35,7 +35,7 @@ contract MockGasCounter {
 }
 
 contract MockAppchainFactory is IAppchainFactory {
-    function getProxyBytecode() external view returns (bytes memory) {
+    function getProxyBytecode() external pure returns (bytes memory) {
         return ""; // NOTE: stub just to satisfy interface
     }
 }
@@ -116,7 +116,7 @@ contract GasAggregatorTest is Test {
 
     function test_Constructor() public view {
         assertEq(address(gasAggregator.factory()), address(mockFactory));
-        assertTrue(gasAggregator.hasRole(gasAggregator.DEFAULT_ADMIN_ROLE(), admin));
+        assertEq(gasAggregator.owner(), admin);
 
         // Should start with current epoch
         uint256 currentEpoch = gasAggregator.getCurrentEpoch();

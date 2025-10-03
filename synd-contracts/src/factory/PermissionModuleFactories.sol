@@ -5,12 +5,12 @@ import {RequireAndModule} from "../requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "../requirement-modules/RequireOrModule.sol";
 import {RequireCompositeModule} from "../requirement-modules/RequireCompositeModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /// @title RequireAndModuleFactory
 /// @notice Factory for deploying RequireAndModule contracts using CREATE2 pattern
-contract RequireAndModuleFactory is AccessControl, Pausable {
+contract RequireAndModuleFactory is AccessControlEnumerable, Pausable {
     /// @notice Emitted when a new RequireAndModule is created
     event RequireAndModuleCreated(address indexed module, address indexed admin);
 
@@ -61,7 +61,7 @@ contract RequireAndModuleFactory is AccessControl, Pausable {
 
 /// @title RequireOrModuleFactory
 /// @notice Factory for deploying RequireOrModule contracts using CREATE2 pattern
-contract RequireOrModuleFactory is AccessControl, Pausable {
+contract RequireOrModuleFactory is AccessControlEnumerable, Pausable {
     /// @notice Emitted when a new RequireOrModule is created
     event RequireOrModuleCreated(address indexed module, address indexed admin);
 
@@ -112,7 +112,7 @@ contract RequireOrModuleFactory is AccessControl, Pausable {
 
 /// @title RequireCompositeModuleFactory
 /// @notice Factory for deploying RequireCompositeModule contracts using CREATE2 pattern
-contract RequireCompositeModuleFactory is AccessControl, Pausable {
+contract RequireCompositeModuleFactory is AccessControlEnumerable, Pausable {
     /// @notice Emitted when a new RequireCompositeModule is created
     event RequireCompositeModuleCreated(address indexed module, address indexed admin);
 

@@ -20,7 +20,6 @@ contract DeployGasArchive is Script {
         // Read configuration from environment variables
         address blockHashSender = vm.envAddress("BLOCK_HASH_SENDER");
         uint256 settlementChainID = vm.envUint("SETTLEMENT_CHAIN_ID");
-        address admin = vm.envAddress("GAS_ARCHIVE_ADMIN");
 
         address blockHashSenderAliased = applyArbRollupAlias(blockHashSender);
 
@@ -28,15 +27,13 @@ contract DeployGasArchive is Script {
         console2.log("Block hash sender:", blockHashSender);
         console2.log("Block hash sender (ArbRollup alias):", blockHashSenderAliased);
         console2.log("Settlement chain ID:", settlementChainID);
-        console2.log("Admin address:", admin);
 
         // Deploy GasArchive contract directly
-        GasArchive gasArchive = new GasArchive(blockHashSenderAliased, settlementChainID, admin);
+        GasArchive gasArchive = new GasArchive(blockHashSenderAliased, settlementChainID);
         console2.log("GasArchive deployed to:", address(gasArchive));
 
         console2.log("=== Deployment Summary ===");
         console2.log("GasArchive:", address(gasArchive));
-        console2.log("Admin:", admin);
 
         vm.stopBroadcast();
     }
