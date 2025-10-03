@@ -147,19 +147,20 @@ impl MaestroService {
                 let tx = decode_transaction(&Bytes::from(raw_tx)).unwrap();
                 #[allow(clippy::unwrap_used)]
                 let signer = check_signature(&tx).unwrap();
+                let chain_id = tx.chain_id().unwrap_or_default();
 
                 match provider.get_transaction_count(signer).await {
                     Ok(nonce) => {
                         if nonce <= tx.nonce() {
-                            warn!(%tx_hash, "Valid transaction is not finalized, resubmitting");
+                            warn!(%tx_hash, %chain_id, "Valid transaction is not finalized, resubmitting");
                             metrics.increment_resubmitted_transactions(1);
                             return CheckFinalizationResult::ReSubmit;
                         }
-                        warn!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
+                        warn!(%tx_hash, %chain_id, "Transaction is not finalized, but nonce is not valid anymore, done");
                         CheckFinalizationResult::Done
                     }
                     Err(err) => {
-                        error!(%tx_hash, %err, "Failed to query RPC for nonce during finalization check");
+                        error!(%tx_hash, %chain_id, %err, "Failed to query RPC for nonce during finalization check");
                         CheckFinalizationResult::Done
                     }
                 }
