@@ -62,7 +62,6 @@ contract DeployTeeModule is Script {
         bytes32 seqBlockHash = vm.envBytes32("SEQ_BLOCK_HASH"); // Sequencing chain block hash that corresponds to the appchain block hash
         bytes32 l1BatchAcc = vm.envBytes32("L1_BATCH_ACC"); // The sequencing chain start batch accumulator which corresponds to the SEQ_BLOCK_HASH
         uint64 challengeWindowDuration = uint64(vm.envUint("CHALLENGE_WINDOW_DURATION"));
-        uint64 slowDuration = uint64(vm.envUint("SLOW_DURATION"));
         TeeModule teeModule = new TeeModule(
             poster,
             bridge,
@@ -73,7 +72,6 @@ contract DeployTeeModule is Script {
             L1_BLOCK,
             false,
             challengeWindowDuration,
-            slowDuration,
             keyManager
         );
         console2.log("TeeModule deployed to:", address(teeModule));
