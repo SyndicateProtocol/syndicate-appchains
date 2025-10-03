@@ -7,7 +7,7 @@ use alloy::{
 };
 use serde::{Deserialize, Serialize};
 
-/// Structured representation of a TxEnvelope for logging
+/// Structured representation of a `TxEnvelope` for logging
 #[derive(Debug, Serialize, Deserialize)]
 struct TxEnvelopeLog {
     hash: String,
@@ -39,10 +39,7 @@ pub fn fmt_tx_envelope_for_logging(tx: &TxEnvelope, signer: &Address) -> String 
         .to_string(),
         chain_id: tx.chain_id().unwrap_or_default(),
         nonce: tx.nonce(),
-        to: match tx.to() {
-            Some(to) => format!("0x{}", hex::encode(to)),
-            None => "none".to_string(),
-        },
+        to: tx.to().map_or_else(|| "none".to_string(), |to| format!("0x{}", hex::encode(to))),
         gas_limit: tx.gas_limit(),
         max_fee_per_gas: tx.max_fee_per_gas(),
         max_priority_fee_per_gas: tx.max_priority_fee_per_gas().unwrap_or_default(),

@@ -266,7 +266,7 @@ impl MaestroService {
         let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, signer_wallet).await;
         let _guard = chain_wallet_lock.lock().await;
         trace!(chain_id, %signer_wallet, "got lock");
-        debug!(tx_summary = %fmt_tx_envelope_for_logging(&tx, &signer_wallet), "Transaction summary");
+        debug!(tx_summary = %fmt_tx_envelope_for_logging(tx, &signer_wallet), "Transaction summary");
 
         let expected_nonce =
             self.get_expected_nonce_and_validate(signer_wallet, chain_id, tx_nonce).await?;
