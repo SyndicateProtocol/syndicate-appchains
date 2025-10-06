@@ -185,7 +185,7 @@ impl SequencingTransactionParser {
                 if data.len() > MAX_L2_MESSAGE_SIZE {
                     return Err(SequencingParserError::InvalidTxData(
                         "dropping tx greater than the max l2 message size".to_string(),
-                    ))
+                    ));
                 }
                 // TODO(SEQ-1370): compute tx hash for unsigned txs
                 Ok(vec![(data.clone(), Default::default())])

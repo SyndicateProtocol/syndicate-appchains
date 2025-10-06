@@ -33,6 +33,7 @@ humantime         = { workspace = true }
 jsonrpsee         = { workspace = true, features = ["full"] }
 prometheus-client = { workspace = true }
 redis             = { workspace = true, features = ["connection-manager", "streams", "tokio-comp"] }
+serde             = { workspace = true }
 serde_json        = { workspace = true }
 shared            = { workspace = true }
 test-utils        = { workspace = true }

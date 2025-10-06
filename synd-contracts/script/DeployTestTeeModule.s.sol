@@ -23,6 +23,7 @@ contract DeployTestTeeModule is Script {
         bytes32 l1BatchAcc = vm.envBytes32("L1_BATCH_ACC");
         address teePublicKey = vm.envAddress("TEE_PUBLIC_KEY");
         uint64 challengeWindowDuration = uint64(vm.envUint("CHALLENGE_WINDOW_DURATION"));
+        uint64 slowDuration = uint64(vm.envUint("SLOW_DURATION"));
 
         DummyKeyManager keyManager = new DummyKeyManager();
         keyManager.addKey(teePublicKey);
@@ -37,6 +38,7 @@ contract DeployTestTeeModule is Script {
             L1_BLOCK,
             false,
             challengeWindowDuration,
+            slowDuration,
             keyManager
         );
 

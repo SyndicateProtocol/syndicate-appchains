@@ -7651,6 +7651,7 @@ dependencies = [
  "rand 0.9.2",
  "redis",
  "reqwest",
+ "serde",
  "serde_json",
  "shared",
  "test-utils",
@@ -7701,6 +7702,19 @@ dependencies = [
  "synd-chain-ingestor",
  "synd-mchain",
  "thiserror 2.0.16",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "synd-stake-cli"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "clap",
+ "contract-bindings",
+ "reqwest",
+ "shared",
  "tokio",
  "tracing",
 ]
