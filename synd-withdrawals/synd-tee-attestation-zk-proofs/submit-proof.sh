@@ -22,7 +22,7 @@ cd ~/syndicate-appchains/synd-withdrawals/synd-tee-attestation-zk-proofs/proof-s
 V5_0_0_SP1_VERIFIER_GROTH16_ADDRESS="0xYOUR_SP1_VERIFIER_ADDRESS"
 
 # Destination where AttestationDocVerifier and TeeKeyManager will be deployed
-TARGET_RPC_URL="wss://base-sepolia.g.alchemy.com/v2/qZP155RkIA6rfHFaYT6Gm"
+TARGET_RPC_URL="URL_OF_TARGET_RPC"
 
 # This wallet must be funded on TARGET_RPC_URL
 PRIVATE_KEY="0xYOUR_PRIVATE_KEY"

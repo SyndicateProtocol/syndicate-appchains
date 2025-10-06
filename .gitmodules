@@ -35,3 +35,10 @@
 [submodule "synd-contracts/lib/openzeppelin-contracts-upgradeable"]
 	path = synd-contracts/lib/openzeppelin-contracts-upgradeable
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
+[submodule "synd-contracts/lib/prb-math"]
+	path = synd-contracts/lib/prb-math
+	url = https://github.com/PaulRBerg/prb-math
+[submodule "lib/prb-math"]
+	branch = release-v4
+    path = "lib/prb-math"
+    url = "https://github.com/PaulRBerg/prb-math"

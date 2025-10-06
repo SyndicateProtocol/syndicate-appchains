@@ -2,32 +2,43 @@
 pragma solidity 0.8.28;
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IPool} from "./IPool.sol";
+import {IPool} from "./interfaces/IPool.sol";
 
 /**
  * @title Splitter
  * @notice Contract for splitting pool rewards between base, performance, and appchain pools
- * @dev This contract manages the distribution of rewards to different pools: base 30%, performance 30%, and appchain 40%.
+ * @dev This contract manages the distribution of rewards to different pools with a fixed allocation:
+ *      - Base Pool: 30% (remaining after performance and appchain splits)
+ *      - Performance Pool: 30% (user performance rewards)
+ *      - Appchain Pool: 40% (appchain-specific rewards)
  */
 contract Splitter {
-    /// @notice Percentage of the reward for the performance pool
+    /// @notice Percentage of the reward allocated to the performance pool (30%)
+    /// @dev This determines how much of incoming rewards go to user performance rewards
     uint256 public constant PERFORMANCE_POOL_SPLIT = 30; // 30%
 
-    /// @notice Percentage of the reward for the appchain pool
+    /// @notice Percentage of the reward allocated to the appchain pool (40%)
+    /// @dev This determines how much of incoming rewards go to appchain-specific rewards
     uint256 public constant APPCHAIN_POOL_SPLIT = 40; // 40%
 
-    // Remaining percentage of the reward goes to the base pool: 30%
+    /// @notice Percentage of the reward allocated to the base pool (30%)
+    /// @dev This is calculated as remainder: 100% - 30% - 40% = 30%
+    ///      This ensures no dust is lost and all rewards are distributed
 
-    /// @notice Total percentage of the reward
+    /// @notice Total percentage denominator for calculations (100%)
+    /// @dev Used for percentage calculations to ensure precision
     uint256 public constant PERCENTAGE_DENOMINATOR = 100; // 100%
 
     /// @notice Address of the base pool contract
+    /// @dev Receives 30% of all incoming rewards (base staking rewards)
     address public basePool;
 
     /// @notice Address of the performance pool contract
+    /// @dev Receives 30% of all incoming rewards (user performance rewards)
     address public performancePool;
 
     /// @notice Address of the appchain pool contract
+    /// @dev Receives 40% of all incoming rewards (appchain-specific rewards)
     address public appchainPool;
 
     /// @notice Emitted when rewards are split and deposited to the pools
@@ -67,11 +78,13 @@ contract Splitter {
 
     /**
      * @notice Splits incoming ETH rewards between the three pools based on configured percentages
+     * @dev This function automatically distributes incoming ETH to the three pools:
+     *      - Performance Pool: 30% of total
+     *      - Appchain Pool: 40% of total
+     *      - Base Pool: Remaining amount (30% + any dust)
      * @param epochIndex The epoch index for the reward distribution
-     * @dev This function:
-     *      - Calculates amounts for each pool based on their split percentages
-     *      - Prevents dust by assigning remaining amount to base pool
-     *      - Must be called with ETH value (msg.value > 0)
+     * @custom:example If 1000 ETH is sent, Performance gets 300, Appchain gets 400, Base gets 300
+     * @custom:example If 1001 ETH is sent, Performance gets 300, Appchain gets 400, Base gets 301 (dust goes to base)
      */
     function deposit(uint256 epochIndex) external payable {
         if (msg.value == 0) {

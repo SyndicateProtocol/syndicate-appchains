@@ -11,18 +11,19 @@ interface ISyndicateTokenMintable {
 
 /**
  * @title EmissionsCalculator
- * @notice Calculates and manages token emissions using piece-wise geometric decay
- * @dev Implements a flexible emission system where decay factors can be updated by governance
+ * @notice Calculates and manages token emissions using piece-wise geometric change factor
+ * @dev Implements a flexible emission system where a change factor can be updated by governance
  *      while maintaining the 80M cap and 48-epoch limit constraints.
  *
  * Formula:
- * - For epoch t < 47: E_t = R_t * (1 - r_t) / (1 - P_t)
+ * - For epoch t < 47: E_t = R_t * |1 - r_t| / |1 - P_t|
  * - For epoch 47: E_t = R_t (sweep remainder)
+ * - SPECIAL CASE: When r_t = 1e18: E_t = R_t / (48 - t)
  *
  * Where:
  * - R_t = remaining supply = CAP - M (M = total minted so far)
- * - r_t = decay factor for epoch t (0 < r < 1, scaled by 1e18)
- * - P_t = cumulative product of decay factors from epoch t to 47
+ * - r_t = change factor for epoch t (0 < r, scaled by 1e18)
+ * - P_t = cumulative product of change factor from epoch t to 47
  *
  * @author Syndicate Protocol
  */
@@ -40,10 +41,10 @@ contract EmissionsCalculator is AccessControl {
     /// @notice Thrown when all emissions are completed
     error EmissionsCompleted();
 
-    /// @notice Thrown when decay factor is invalid (0 or >= 1e18)
-    error InvalidDecayFactor();
+    /// @notice Thrown when change factor is invalid (0)
+    error InvalidChangeFactor();
 
-    /// @notice Thrown when trying to set decay for past epochs
+    /// @notice Thrown when trying to set change factor for past epochs
     error CannotModifyPastEpoch();
 
     /// @notice Thrown when the expected epoch doesn't match current epoch
@@ -53,8 +54,8 @@ contract EmissionsCalculator is AccessControl {
                                  ROLES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Role for managing decay factors (typically governance)
-    bytes32 public constant DECAY_MANAGER_ROLE = keccak256("DECAY_MANAGER_ROLE");
+    /// @notice Role for managing change factor (typically governance)
+    bytes32 public constant CHANGE_FACTOR_MANAGER_ROLE = keccak256("CHANGE_FACTOR_MANAGER_ROLE");
 
     /// @notice Role for triggering emissions
     bytes32 public constant EMISSIONS_ROLE = keccak256("EMISSIONS_ROLE");
@@ -69,7 +70,7 @@ contract EmissionsCalculator is AccessControl {
     /// @notice Total emissions cap: 80 million tokens
     uint256 public constant EMISSIONS_CAP = 80_000_000 * 10 ** 18;
 
-    /// @notice Scaling factor for decay calculations (1e18)
+    /// @notice Scaling factor for change factor calculations (1e18)
     uint256 public constant SCALE = 1e18;
 
     /*//////////////////////////////////////////////////////////////
@@ -79,9 +80,8 @@ contract EmissionsCalculator is AccessControl {
     /// @notice The SyndicateToken contract for minting and supply queries
     ISyndicateTokenMintable public immutable syndicateToken;
 
-    /// @notice Decay factor for each epoch (scaled by 1e18)
-    /// @dev r[epoch] where 0 < r < 1, represented as r * 1e18
-    mapping(uint256 epochIndex => uint256 decayFactor) public decayFactors;
+    /// @notice Change factor (scaled by 1e18 and required to be 0 < r)
+    uint256 public changeFactor;
 
     /// @notice Current epoch index (0-47)
     uint256 public currentEpoch;
@@ -96,14 +96,14 @@ contract EmissionsCalculator is AccessControl {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emitted when decay factor is updated
-    event DecayFactorSet(uint256 indexed epoch, uint256 decayFactor, address indexed setter);
+    /// @notice Emitted when change factor is updated
+    event ChangeFactorSet(uint256 indexed epoch, uint256 changeFactor, address indexed setter);
 
     /// @notice Emitted when emissions are calculated and minted
     event EmissionMinted(uint256 indexed epoch, uint256 amount, uint256 remainingSupply, address indexed to);
 
     /// @notice Emitted when emissions are initialized
-    event EmissionsInitialized(uint256 defaultDecayFactor);
+    event EmissionsInitialized(uint256 defaultChangeFactor);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -113,19 +113,18 @@ contract EmissionsCalculator is AccessControl {
      * @notice Initialize the emissions calculator
      * @param _syndicateToken Address of the SyndicateToken contract
      * @param defaultAdmin Address that will have default admin privileges
-     * @param decayManager Address that can manage decay factors
+     * @param changeFactorManager Address that can manage the change factor
      */
-    constructor(address _syndicateToken, address defaultAdmin, address decayManager) {
+    constructor(address _syndicateToken, address defaultAdmin, address changeFactorManager) {
         if (_syndicateToken == address(0)) revert ZeroAddress();
         if (defaultAdmin == address(0)) revert ZeroAddress();
-        if (decayManager == address(0)) revert ZeroAddress();
+        if (changeFactorManager == address(0)) revert ZeroAddress();
 
         syndicateToken = ISyndicateTokenMintable(_syndicateToken);
 
         // Grant roles
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-        _grantRole(DECAY_MANAGER_ROLE, decayManager);
-        _grantRole(EMISSIONS_ROLE, defaultAdmin);
+        _grantRole(CHANGE_FACTOR_MANAGER_ROLE, changeFactorManager);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -133,62 +132,34 @@ contract EmissionsCalculator is AccessControl {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Initialize emissions with default decay factor
-     * @param defaultDecayFactor Default decay factor for all epochs (scaled by 1e18)
-     * @dev Can only be called once. Sets all epochs to the same initial decay factor.
+     * @notice Initialize emissions with default change factor
+     * @param defaultChangeFactor Default change factor for all epochs (scaled by 1e18)
+     * @dev Can only be called once. Sets all epochs to the same initial change factor.
      */
-    function initializeEmissions(uint256 defaultDecayFactor) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function initializeEmissions(uint256 defaultChangeFactor) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (initialized) revert EmissionsCompleted();
-        if (defaultDecayFactor == 0 || defaultDecayFactor >= SCALE) revert InvalidDecayFactor();
+        if (defaultChangeFactor == 0) revert InvalidChangeFactor();
 
         initialized = true;
+        changeFactor = defaultChangeFactor;
 
-        // Set default decay factor for all epochs
-        for (uint256 i = 0; i < TOTAL_EPOCHS; i++) {
-            decayFactors[i] = defaultDecayFactor;
-        }
-
-        emit EmissionsInitialized(defaultDecayFactor);
+        emit EmissionsInitialized(defaultChangeFactor);
     }
 
     /*//////////////////////////////////////////////////////////////
-                            DECAY MANAGEMENT
+                            CHANGE FACTOR MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Set decay factor for a specific epoch
-     * @param epoch Epoch number (0-47)
-     * @param decayFactor New decay factor (scaled by 1e18, must be 0 < r < 1e18)
-     * @dev Only future epochs can be modified. This allows governance to adjust
-     *      the emission curve while maintaining the mathematical constraints.
+     * @notice Set change factor
+     * @param newChangeFactor New change factor (scaled by 1e18, must be 0 < r)
+     * @dev Sets the change factor for the next epoch
      */
-    function setDecayFactor(uint256 epoch, uint256 decayFactor) external onlyRole(DECAY_MANAGER_ROLE) {
-        if (epoch >= TOTAL_EPOCHS) revert InvalidEpoch();
-        if (epoch < currentEpoch) revert CannotModifyPastEpoch();
-        if (decayFactor == 0 || decayFactor >= SCALE) revert InvalidDecayFactor();
+    function setChangeFactor(uint256 newChangeFactor) external onlyRole(CHANGE_FACTOR_MANAGER_ROLE) {
+        if (newChangeFactor == 0) revert InvalidChangeFactor();
 
-        decayFactors[epoch] = decayFactor;
-        emit DecayFactorSet(epoch, decayFactor, msg.sender);
-    }
-
-    /**
-     * @notice Set decay factors for multiple epochs at once
-     * @param startEpoch Starting epoch number
-     * @param decayFactorArray Array of decay factors
-     */
-    function setDecayFactors(uint256 startEpoch, uint256[] calldata decayFactorArray)
-        external
-        onlyRole(DECAY_MANAGER_ROLE)
-    {
-        for (uint256 i = 0; i < decayFactorArray.length; i++) {
-            uint256 epoch = startEpoch + i;
-            if (epoch >= TOTAL_EPOCHS) break;
-            if (epoch < currentEpoch) continue;
-            if (decayFactorArray[i] == 0 || decayFactorArray[i] >= SCALE) continue;
-
-            decayFactors[epoch] = decayFactorArray[i];
-            emit DecayFactorSet(epoch, decayFactorArray[i], msg.sender);
-        }
+        changeFactor = newChangeFactor;
+        emit ChangeFactorSet(currentEpoch, changeFactor, msg.sender);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -199,9 +170,10 @@ contract EmissionsCalculator is AccessControl {
      * @notice Calculate and mint emissions for current epoch
      * @param to Address to mint tokens to
      * @param expectedEpoch The epoch number that the caller expects to mint for
-     * @dev Implements the piece-wise geometric decay formula:
-     *      E_t = R_t * (1 - r_t) / (1 - P_t) for t < 47
+     * @dev Implements the piece-wise geometric change factor formula:
+     *      E_t = R_t * |1 - r_t| / |1 - P_t| for t < 47
      *      E_t = R_t for t = 47 (final epoch sweeps remainder)
+     *      E_t = R_t / (48 - t) for r_t = 1e18
      *      Requires expectedEpoch to match currentEpoch for synchronization
      */
     function calculateAndMintEmission(address to, uint256 expectedEpoch)
@@ -253,17 +225,14 @@ contract EmissionsCalculator is AccessControl {
     }
 
     /**
-     * @notice Calculate cumulative product P_t = r_t * r_(t+1) * ... * r_47
-     * @param fromEpoch Starting epoch for the product calculation
-     * @return Cumulative product of decay factors (scaled by 1e18)
+     * @notice Calculate cumulative product of remaining epochs P_t = r_t * r_(t+1) * ... * r_47
+     * @return Cumulative product of change factor for remaining epochs (scaled by 1e18)
      */
-    function calculateCumulativeProduct(uint256 fromEpoch) public view returns (uint256) {
-        if (fromEpoch >= TOTAL_EPOCHS) return SCALE;
-
+    function calculateCumulativeProduct() public view returns (uint256) {
         uint256 product = SCALE;
 
-        for (uint256 i = fromEpoch; i < TOTAL_EPOCHS; i++) {
-            product = (product * decayFactors[i]) / SCALE;
+        for (uint256 i = currentEpoch; i < TOTAL_EPOCHS; i++) {
+            product = (product * changeFactor) / SCALE;
         }
 
         return product;
@@ -275,45 +244,35 @@ contract EmissionsCalculator is AccessControl {
      */
     function getNextEmission() public view returns (uint256) {
         if (!initialized || currentEpoch >= TOTAL_EPOCHS) return 0;
+        uint256 epochsLeft = TOTAL_EPOCHS - currentEpoch;
 
         uint256 remainingSupply = getRemainingSupply();
 
-        if (currentEpoch == TOTAL_EPOCHS - 1) {
-            // Final epoch: sweep all remaining tokens
+        // Final epoch (47): sweep all remaining tokens
+        if (epochsLeft == 1) {
             return remainingSupply;
         }
 
-        // Calculate emission for current epoch
-        uint256 rt = decayFactors[currentEpoch];
-        uint256 pt = calculateCumulativeProduct(currentEpoch);
-
-        // Prevent division by zero and handle edge case
-        if (pt >= SCALE) {
-            // Treat as final epoch and sweep remaining supply
-            return remainingSupply;
-        } else if (SCALE - pt < 1000) {
-            // Near-zero denominator check
-            // Use minimum denominator to prevent precision issues
-            uint256 denominator = 1000;
-            uint256 numerator = remainingSupply * (SCALE - rt);
-            return numerator / denominator;
-        } else {
-            // E_t = R_t * (1 - r_t) / (1 - P_t)
-            // precision in fixed-point arithmetic
-            uint256 numerator = remainingSupply * (SCALE - rt);
-            uint256 denominator = SCALE - pt;
-            return numerator / denominator;
+        // Special case: when change factor equals SCALE (1.0), use linear distribution
+        if (changeFactor == SCALE) {
+            return remainingSupply / epochsLeft;
         }
-    }
 
-    /**
-     * @notice Get decay factor for a specific epoch
-     * @param epoch Epoch number (0-47)
-     * @return Decay factor for the epoch (scaled by 1e18)
-     */
-    function getDecayFactor(uint256 epoch) external view returns (uint256) {
-        if (epoch >= TOTAL_EPOCHS) revert InvalidEpoch();
-        return decayFactors[epoch];
+        // Calculate the cumulative product P_t from current epoch to end
+        uint256 cumulativeProduct = calculateCumulativeProduct();
+
+        // Calculate |1 - P_t|
+        uint256 productDifference = cumulativeProduct > SCALE ? cumulativeProduct - SCALE : SCALE - cumulativeProduct;
+
+        // Use minimum denominator to avoid precision issues with near-zero values
+        uint256 denominator = productDifference < 1000 ? 1000 : productDifference;
+
+        // Calculate |1 - r_t| * remainingSupply
+        uint256 numerator =
+            changeFactor > SCALE ? remainingSupply * (changeFactor - SCALE) : remainingSupply * (SCALE - changeFactor);
+
+        // E_t = R_t * |1 - r_t| / |1 - P_t|
+        return numerator / denominator;
     }
 
     /**

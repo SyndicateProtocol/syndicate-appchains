@@ -20,17 +20,17 @@
     "enclaves-sdk-bootstrap": {
       "flake": false,
       "locked": {
-        "lastModified": 1721807759,
-        "narHash": "sha256-jcdxssY3m/YAMIZSscZtnbPeAdFT5on2evD58YNwyxE=",
+        "lastModified": 1740392949,
+        "narHash": "sha256-DmNnH6lqweRz1u8nza6FvgJFvDGPactpHruyq0SYkp8=",
         "owner": "aws",
         "repo": "aws-nitro-enclaves-sdk-bootstrap",
-        "rev": "7614f19963e4e956493b3260fda4d62834bb281c",
+        "rev": "f718dea60a9d9bb8b8682fd852ad793912f3c5db",
         "type": "github"
       },
       "original": {
         "owner": "aws",
         "repo": "aws-nitro-enclaves-sdk-bootstrap",
-        "rev": "7614f19963e4e956493b3260fda4d62834bb281c",
+        "rev": "f718dea60a9d9bb8b8682fd852ad793912f3c5db",
         "type": "github"
       }
     },
@@ -39,50 +39,33 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1751413152,
-        "narHash": "sha256-Tyw1RjYEsp5scoigs1384gIg6e0GoBVjms4aXFfRssQ=",
+        "lastModified": 1756770412,
+        "narHash": "sha256-+uWLQZccFHwqpGqr2Yt5VsW/PbeJVTn9Dk6SHWhNRPw=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "77826244401ea9de6e3bac47c2db46005e1f30b5",
+        "rev": "4524271976b625a4a605beefd893f270620fd751",
         "type": "github"
       },
       "original": {
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "type": "github"
-      }
-    },
-    "flake-utils": {
-      "inputs": {
-        "systems": "systems"
-      },
-      "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
         "type": "github"
       }
     },
     "nitro": {
       "flake": false,
       "locked": {
-        "lastModified": 1756246380,
-        "narHash": "sha256-9fbaBu/G9KiKk3kOr1EZmTGlwYL93tcEmyOz34dz0bw=",
+        "lastModified": 1751937809,
+        "narHash": "sha256-MKspZoDyO7xUMSjldVbzhucHM1ED/5yfR7A5WKjpdm0=",
         "ref": "refs/heads/eigenda-v3.6.4",
-        "rev": "bc953dbfa2d4a2780d92c1bc9666b109aa3053a3",
-        "revCount": 18595,
+        "rev": "2625cbb20485326af9f8c05bce6b025b42ba59b6",
+        "revCount": 18593,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/SyndicateProtocol/nitro.git"
       },
       "original": {
+        "rev": "2625cbb20485326af9f8c05bce6b025b42ba59b6",
         "submodules": true,
         "type": "git",
         "url": "https://github.com/SyndicateProtocol/nitro.git"
@@ -90,11 +73,11 @@
     },
     "nix-filter": {
       "locked": {
-        "lastModified": 1731533336,
-        "narHash": "sha256-oRam5PS1vcrr5UPgALW0eo1m/5/pls27Z/pabHNy2Ms=",
+        "lastModified": 1757882181,
+        "narHash": "sha256-+cCxYIh2UNalTz364p+QYmWHs0P+6wDhiWR4jDIKQIU=",
         "owner": "numtide",
         "repo": "nix-filter",
-        "rev": "f7653272fd234696ae94229839a99b73c9ab7de0",
+        "rev": "59c44d1909c72441144b93cf0f054be7fe764de5",
         "type": "github"
       },
       "original": {
@@ -121,11 +104,11 @@
     },
     "nixpkgs-2505": {
       "locked": {
-        "lastModified": 1752866191,
-        "narHash": "sha256-NV4S2Lf2hYmZQ3Qf4t/YyyBaJNuxLPyjzvDma0zPp/M=",
+        "lastModified": 1758070117,
+        "narHash": "sha256-uLwwHFCZnT1c3N3biVe/0hCkag2GSrf9+M56+Okf+WY=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "f01fe91b0108a7aff99c99f2e9abbc45db0adc2a",
+        "rev": "e9b7f2ff62b35f711568b1f0866243c7c302028d",
         "type": "github"
       },
       "original": {
@@ -137,11 +120,11 @@
     },
     "nixpkgs-lib": {
       "locked": {
-        "lastModified": 1751159883,
-        "narHash": "sha256-urW/Ylk9FIfvXfliA1ywh75yszAbiTEVgpPeinFyVZo=",
+        "lastModified": 1754788789,
+        "narHash": "sha256-x2rJ+Ovzq0sCMpgfgGaaqgBSwY+LST+WbZ6TytnT9Rk=",
         "owner": "nix-community",
         "repo": "nixpkgs.lib",
-        "rev": "14a40a1d7fb9afa4739275ac642ed7301a9ba1ab",
+        "rev": "a73b9c743612e4244d865a2fdee11865283c04e6",
         "type": "github"
       },
       "original": {
@@ -159,60 +142,36 @@
         "nix-filter": "nix-filter",
         "nixpkgs": "nixpkgs",
         "nixpkgs-2505": "nixpkgs-2505",
-        "solc": "solc",
-        "systems": "systems_2"
+        "solc-0-8-17": "solc-0-8-17",
+        "solc-0-8-24": "solc-0-8-24",
+        "systems": "systems"
       }
     },
-    "solc": {
-      "inputs": {
-        "flake-utils": "flake-utils",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "solc-macos-amd64-list-json": "solc-macos-amd64-list-json"
-      },
-      "locked": {
-        "lastModified": 1748780655,
-        "narHash": "sha256-mradCdMvjXwKd7kVFACB/d1CP2LLCyEgUu4vJCSzNLU=",
-        "owner": "hellwolf",
-        "repo": "solc.nix",
-        "rev": "3b6f3223ace5a7bc400b01a434d86bb1cb2593fb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hellwolf",
-        "repo": "solc.nix",
-        "type": "github"
-      }
-    },
-    "solc-macos-amd64-list-json": {
+    "solc-0-8-17": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-AvITkfpNYgCypXuLJyqco0li+unVw39BAfdOZvd/SPE=",
+        "narHash": "sha256-gCpOI8pqvXGXPF6inXd9s5ssK4h2cUkYCttkwY5EdBk=",
         "type": "file",
-        "url": "https://github.com/ethereum/solc-bin/raw/26fc3fd/macosx-amd64/list.json"
+        "url": "https://binaries.soliditylang.org/emscripten-wasm32/solc-emscripten-wasm32-v0.8.17+commit.8df45f5f.js"
       },
       "original": {
         "type": "file",
-        "url": "https://github.com/ethereum/solc-bin/raw/26fc3fd/macosx-amd64/list.json"
+        "url": "https://binaries.soliditylang.org/emscripten-wasm32/solc-emscripten-wasm32-v0.8.17+commit.8df45f5f.js"
+      }
+    },
+    "solc-0-8-24": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-6M27phOeZU1o1egpvleX+yQOBLVfOu2/4SNwU5FpCLc=",
+        "type": "file",
+        "url": "https://binaries.soliditylang.org/emscripten-wasm32/solc-emscripten-wasm32-v0.8.24+commit.e11b9ed9.js"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://binaries.soliditylang.org/emscripten-wasm32/solc-emscripten-wasm32-v0.8.24+commit.e11b9ed9.js"
       }
     },
     "systems": {
-      "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
-        "owner": "nix-systems",
-        "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-systems",
-        "repo": "default",
-        "type": "github"
-      }
-    },
-    "systems_2": {
       "locked": {
         "lastModified": 1689347949,
         "narHash": "sha256-12tWmuL2zgBgZkdoB6qXZsgJEH9LR3oUgpaQq2RbI80=",

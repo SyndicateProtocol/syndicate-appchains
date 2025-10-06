@@ -26,10 +26,10 @@ func main() {
 	now := time.Now()
 
 	// config flags - optional. urls
-	eigenUrl := flag.String("eigenda-url", "https://risa-testnet-eigenda-mirror.rollups.alchemy.com", "eigenda proxy url")
-	l1Url := flag.String("l1-url", "https://eth-sepolia.g.alchemy.com/v2/xZF7o-Vl3z94HOqwaQtrZP06swu4_E15", "l1 rpc url")
-	setUrl := flag.String("set-url", "https://base-sepolia.g.alchemy.com/v2/FFOCYExawZ3K46YRNHqaUEo3pbqS5F1F", "settlement rpc url")
-	seqUrl := flag.String("seq-url", "https://risa-testnet.us-central1.gcp.testnet.syndicate.io", "")
+	eigenUrl := flag.String("eigenda-url", "", "eigenda proxy url")
+	l1Url := flag.String("l1-url", "", "l1 rpc url")
+	setUrl := flag.String("set-url", "", "settlement rpc url")
+	seqUrl := flag.String("seq-url", "", "")
 	//"http://localhost:8545", "sequencing chain rpc url") // "https://risa-testnet.us-central1.gcp.testnet.syndicate.io", "sequencing chain rpc url")
 	enclaveUrl := flag.String("enclave-url", "http://localhost:1234", "enclave rpc url")
 	appUrl := flag.String("app-url", "https://rpc.testnet.manchego.syndicate.io", "appchain rpc url")

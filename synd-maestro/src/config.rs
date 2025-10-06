@@ -170,7 +170,17 @@ impl Config {
                 }
                 Err(e) => {
                     error!(%chain_id, %e, "Failed to create MultiRpcProvider for chain");
-                    // Continue with other chains rather than failing completely
+                    match e {
+                        shared::multi_rpc_provider::MultiRpcError::NoWorkingProviders(_) => {
+                            error!(%chain_id, "No working providers found for chain - all RPC endpoints failed");
+                            std::process::exit(1);
+                        }
+                        shared::multi_rpc_provider::MultiRpcError::NoProvidersConfigured => {
+                            error!(%chain_id, "No providers configured for chain");
+                            std::process::exit(1);
+                        }
+                        _ => {}
+                    }
                 }
             }
         }

@@ -7,7 +7,7 @@ import {IAssertionPoster} from "../../src/withdrawal/IAssertionPoster.sol";
 import {ITeeKeyManager} from "../../src/withdrawal/ITeeKeyManager.sol";
 import {IBridge} from "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
 import {IOwnable} from "@arbitrum/nitro-contracts/src/bridge/IOwnable.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 // Mock contracts for testing
 contract MockAssertionPoster is IAssertionPoster {
@@ -202,6 +202,7 @@ contract TeeModuleTest is Test {
     bytes32 private constant SEQ_START_BLOCK_HASH = bytes32(uint256(3));
     bytes32 private constant L1_START_BATCH_ACC = bytes32(uint256(4));
     uint64 private constant CHALLENGE_WINDOW_DURATION = 3600; // 1 hour
+    uint64 private SLOW_DURATION = 36000; // 10 hours
 
     event TeeConfigHash(bytes32 configHash);
     event TeeHacked(uint256);
@@ -225,6 +226,7 @@ contract TeeModuleTest is Test {
             address(mockL1Block),
             false, // isL1Chain = false
             CHALLENGE_WINDOW_DURATION,
+            SLOW_DURATION,
             ITeeKeyManager(address(mockTeeKeyManager))
         );
 
@@ -240,7 +242,6 @@ contract TeeModuleTest is Test {
         assertEq(address(teeModule.bridge()), address(mockBridge));
         assertEq(address(teeModule.teeKeyManager()), address(mockTeeKeyManager));
         assertEq(teeModule.challengeWindowDuration(), CHALLENGE_WINDOW_DURATION);
-        assertGt(teeModule.challengeWindowEnd(), 0);
     }
 
     function testConstructorL1Chain() public {
@@ -264,6 +265,7 @@ contract TeeModuleTest is Test {
             address(l1Bridge),
             true, // isL1Chain = true
             CHALLENGE_WINDOW_DURATION,
+            SLOW_DURATION,
             ITeeKeyManager(address(mockTeeKeyManager))
         );
 
@@ -282,6 +284,7 @@ contract TeeModuleTest is Test {
             address(0x4200000000000000000000000000000000000015),
             true, // isL1Chain = true
             CHALLENGE_WINDOW_DURATION,
+            SLOW_DURATION,
             ITeeKeyManager(address(mockTeeKeyManager))
         );
     }
@@ -301,6 +304,7 @@ contract TeeModuleTest is Test {
             address(mockL1Block),
             false,
             CHALLENGE_WINDOW_DURATION,
+            SLOW_DURATION,
             ITeeKeyManager(address(mockTeeKeyManager))
         );
     }
@@ -483,7 +487,7 @@ contract TeeModuleTest is Test {
     }
 
     function testRevert_CloseChallengeWindowTooEarly() public {
-        vm.expectRevert("cannot close challenge window - insufficient time has passed");
+        vm.expectRevert("cannot close challenge window - wrong number of assertions");
         teeModule.closeChallengeWindow();
     }
 
@@ -513,7 +517,7 @@ contract TeeModuleTest is Test {
         vm.warp(block.timestamp + CHALLENGE_WINDOW_DURATION + 1);
         mockL1Block.setTimestamp(uint64(block.timestamp + 1));
 
-        vm.expectRevert("cannot close challenge window - too many assertions");
+        vm.expectRevert("cannot close challenge window - wrong number of assertions");
         teeModule.closeChallengeWindow();
     }
 
@@ -526,7 +530,9 @@ contract TeeModuleTest is Test {
         });
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user1, bytes32(0))
+        );
         teeModule.resolveChallenge(assertion, hex"");
     }
 
@@ -729,6 +735,22 @@ contract TeeModuleTest is Test {
         // This should fail due to payment rejection
         vm.expectRevert("payment failed");
         teeModule.submitAssertion(assertion2, signature2, address(rejecter));
+    }
+
+    function testSlowMode() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, address(7), teeModule.SLOW_ROLE()
+            )
+        );
+        vm.prank(address(7));
+        teeModule.enterSlowMode();
+        teeModule.grantRole(teeModule.SLOW_ROLE(), address(7));
+        vm.prank(address(7));
+        teeModule.enterSlowMode();
+        vm.expectRevert("already in slow mode");
+        vm.prank(address(7));
+        teeModule.enterSlowMode();
     }
 
     // Helper function to create a PendingAssertion with the given values

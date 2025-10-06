@@ -357,7 +357,7 @@ impl IndexedBlockData {
     /// (timestamp, block hash) pairs
     fn new(data: Bytes) -> Self {
         let length = data.len() as u64;
-        assert!(length % ITEM_SIZE == 0);
+        assert!(length.is_multiple_of(ITEM_SIZE));
         assert!(length > 0);
         let count = length / ITEM_SIZE - 1;
         Self { data, count }

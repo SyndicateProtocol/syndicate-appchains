@@ -7,4 +7,5 @@ pub mod layers;
 pub mod maestro;
 pub mod metrics;
 pub mod server;
+pub mod types;
 pub mod valkey;

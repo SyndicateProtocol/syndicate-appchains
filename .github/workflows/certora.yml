@@ -13,7 +13,7 @@ name: Certora
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
   # Only run on PRs that touch synd-contracts .sol and .spec files to avoid unnecessary CI runs
   pull_request:
     paths:

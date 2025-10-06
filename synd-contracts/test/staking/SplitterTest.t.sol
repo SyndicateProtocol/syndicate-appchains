@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Splitter} from "src/staking/Splitter.sol";
-import {IPool} from "src/staking/IPool.sol";
+import {IPool} from "src/staking/interfaces/IPool.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 

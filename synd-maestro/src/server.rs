@@ -174,8 +174,8 @@ fn validate_chain_id(
         (None, Some(txn_id)) => Ok(txn_id),
         (Some(req_id), Some(txn_id)) if req_id == txn_id => Ok(txn_id),
         (req_id, txn_id) => Err(InvalidInput(ChainIdMismatched(
-            req_id.map_or("none".to_string(), |id| id.to_string()),
-            txn_id.map_or("none".to_string(), |id| id.to_string()),
+            req_id.map_or_else(|| "none".to_string(), |id| id.to_string()),
+            txn_id.map_or_else(|| "none".to_string(), |id| id.to_string()),
         ))),
     }
 }

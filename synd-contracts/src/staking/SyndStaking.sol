@@ -6,7 +6,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IPool} from "./IPool.sol";
+import {IUserPool} from "./interfaces/IPool.sol";
 
 /**
  * @title SyndStaking
@@ -107,6 +107,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
     struct ClaimRequest {
         uint256 epochIndex;
         address poolAddress;
+        uint256 appchainId;
     }
 
     /*
@@ -307,7 +308,6 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
      */
     function stageStakeTransfer(uint256 fromAppchainId, uint256 toAppchainId, uint256 amount)
         external
-        payable
         nonReentrant
         whenNotPaused
     {
@@ -330,6 +330,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
         }
         if (appchainFinalizedEpochCount[fromAppchainId] < epochIndex) {
             finalizeAppchainEpochs(fromAppchainId);
+        }
+        if (appchainFinalizedEpochCount[toAppchainId] < epochIndex) {
+            finalizeAppchainEpochs(toAppchainId);
         }
         if (userAppchainFinalizedEpochCount[msg.sender][fromAppchainId] < epochIndex) {
             finalizeUserAppchainEpochs(msg.sender, fromAppchainId);
@@ -510,7 +513,7 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
 
     /**
      * @notice Claim rewards from multiple pools for the caller
-     * @dev This function calls the claimFor function on each pool contract
+     * @dev This function calls the claimFor function on each pool contract that supports it (BasePool and PerformancePool)
      * @param claims Array of ClaimRequest structs containing claim details
      */
     function claimAllRewards(ClaimRequest[] calldata claims, address destination) external nonReentrant {
@@ -519,7 +522,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
         }
 
         for (uint256 i = 0; i < claims.length; i++) {
-            IPool(claims[i].poolAddress).claimFor(claims[i].epochIndex, msg.sender, destination);
+            IUserPool(claims[i].poolAddress).claimFor(
+                claims[i].epochIndex, msg.sender, destination, claims[i].appchainId
+            );
         }
     }
 
@@ -655,8 +660,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
 
     /**
      * @notice Withdraws funds for multiple epochs in a single transaction.
-     * @dev Iterates through the provided epoch indices, finalizes user epochs, and transfers the total amount to the specified destination.
-     *      Reverts if any epoch is not ready for withdrawal or if there is no withdrawal amount for an epoch.
+     * @dev Iterates through the provided epoch indices, finalizes user epochs,
+     * and transfers the total amount to the specified destination.
+     * Reverts if any epoch is not ready for withdrawal or if there is no withdrawal amount for an epoch.
      * @param epochIndices The array of epoch indices to withdraw from.
      * @param destination The address to receive the withdrawn funds.
      */

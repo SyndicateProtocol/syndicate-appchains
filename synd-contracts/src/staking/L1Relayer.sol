@@ -19,6 +19,10 @@ interface IOPMessageRelayer {
     function sendMessage(address _target, bytes memory _message, uint32 _minGasLimit) external;
 }
 
+interface IL2Relayer {
+    function relay(address destination, uint256 epochIndex) external;
+}
+
 /**
  * @title L1Relayer
  * @notice Contract for relaying operations from L1 to L2 chains using Optimism Bridge
@@ -143,7 +147,7 @@ contract L1Relayer is AccessControl {
      */
     function _relay(address destination, uint256 epochIndex) internal {
         IOPMessageRelayer(opMessageRelayer).sendMessage(
-            l2Relayer, abi.encodeWithSelector(this.relay.selector, destination, epochIndex), minGasLimit
+            l2Relayer, abi.encodeWithSelector(IL2Relayer.relay.selector, destination, epochIndex), minGasLimit
         );
     }
 }

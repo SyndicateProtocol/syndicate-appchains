@@ -6,7 +6,7 @@ name: "Olympix Integrated Security"
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
   pull_request:
     paths:
       - "synd-contracts/src/**/*.sol"

@@ -36,7 +36,7 @@ methods {
     function claimAllRewards(SyndStaking.ClaimRequest[], address) external => HAVOC_ECF;
     
     // External interface calls that cause havoc - assume they don't modify staking state
-    function _.claimFor(uint256, address, address) external => NONDET;
+    function _.claimFor(uint256, address, address, uint256) external => NONDET;
 }
 
 /*

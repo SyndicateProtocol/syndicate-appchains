@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {IPool} from "./IPool.sol";
-import {ISyndStaking} from "./ISyndStaking.sol";
+import {IPool} from "./interfaces/IPool.sol";
+import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title Refunder
  * @notice A utility contract that recovers SYND balance and deposits it into a pool for the current epoch
  * @dev This contract is designed to be a simple recovery mechanism for any SYND that is leftover
- *      or gets refunded from the bridge. It uses the current epoch from the syndicate staking contract
- *      for the deposit to the pool
+ *      or gets refunded from the bridge. It automatically deposits recovered funds to the current epoch.
+ * @dev Inherits from AccessControl for admin functionality
  */
 contract Refunder is AccessControl {
     /// @notice The address of the pool contract where recovered funds are deposited
+    /// @dev Admin can change this address to redirect recovered funds to different pools
     address public pool;
 
     /// @notice The address of the syndicate staking contract used to get current epoch
+    /// @dev Immutable reference to ensure consistent epoch detection
     ISyndStaking public immutable syndStaking;
 
     /**
@@ -47,7 +49,9 @@ contract Refunder is AccessControl {
      *      - Gets the current contract balance
      *      - Queries the current epoch from the syndicate staking contract
      *      - Deposits the entire balance into the pool for the current epoch
-     * @dev This function can be called by anyone, making it a public recovery mechanism
+     * @dev This function can be called by anyone, making it a public recovery mechanism.
+     *      This allows for decentralized recovery of funds without requiring admin intervention.
+     * @custom:example If contract has 1000 SYND and current epoch is 5, deposits 1000 SYND to epoch 5
      */
     function recover() external {
         uint256 amount = address(this).balance;
