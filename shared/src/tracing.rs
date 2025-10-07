@@ -158,17 +158,17 @@ pub fn current_traceparent() -> Option<String> {
 
 /// Extract the tracing context from the request headers
 /// and set it as the parent context for the current span.
-pub fn extract_tracing_context(extensions: &Extensions) -> Option<()> {
+pub fn extract_tracing_context(extensions: &Extensions) -> Result<(), Error> {
     let fallback_map = HashMap::<String, String>::new();
     let headers = extensions.get::<HashMap<_, _>>().unwrap_or(&fallback_map);
-    let traceparent = headers.get("traceparent")?;
+    let traceparent = headers.get("traceparent").ok_or(Error::MissingTraceparent)?;
     let mut carrier = HashMap::new();
     // TODO(SEQ-973): '-03' sent by universal-relay is incompatible with Rust TraceContextPropagator
     carrier.insert("traceparent".to_string(), traceparent.replace("-03", "-01"));
     let parent_context =
         otel_global::get_text_map_propagator(|propagator| propagator.extract(&carrier));
-    Span::current().set_parent(parent_context).expect("failed to set parent context");
-    Some(())
+    Span::current().set_parent(parent_context).map_err(|err| Error::SetParent { message: format!("{}", err) })?;
+    Ok(())
 }
 
 /// A guard that ensures the OpenTelemetry SDK is sending spans/metrics
@@ -203,4 +203,10 @@ pub enum Error {
     /// error building the span exporter
     #[error("unable to build span exporter: {0}")]
     SpanExporter(#[from] ExporterBuildError),
+    /// missing traceparent header
+    #[error("missing traceparent header")]
+    MissingTraceparent,
+    /// failed to set parent context
+    #[error("failed to set parent context: {message}")]
+    SetParent { message: String },
 }
