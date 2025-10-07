@@ -33,17 +33,11 @@ pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
 pub type ShutdownFn =
     Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = Result<(), eyre::Error>> + Send>> + Send>;
 
-    #[instrument]
-    fn demo_fn() {
-        info!("Demo function called");
-    }
-
 /// Run the maestro server
 pub async fn run(
     config: Config,
     metrics: MaestroMetrics,
 ) -> eyre::Result<(SocketAddr, ShutdownFn)> {
-    demo_fn();
     info!("Starting Maestro server:run");
 
     let optional_headers =

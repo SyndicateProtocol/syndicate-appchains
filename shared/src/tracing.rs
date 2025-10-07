@@ -167,7 +167,9 @@ pub fn extract_tracing_context(extensions: &Extensions) -> Result<(), Error> {
     carrier.insert("traceparent".to_string(), traceparent.replace("-03", "-01"));
     let parent_context =
         otel_global::get_text_map_propagator(|propagator| propagator.extract(&carrier));
-    Span::current().set_parent(parent_context).map_err(|err| Error::SetParent { message: format!("{}", err) })?;
+    Span::current()
+        .set_parent(parent_context)
+        .map_err(|err| Error::SetParent { message: format!("{}", err) })?;
     Ok(())
 }
 
