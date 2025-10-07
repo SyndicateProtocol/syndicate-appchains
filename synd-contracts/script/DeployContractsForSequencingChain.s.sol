@@ -9,6 +9,9 @@ import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.so
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {RequireAndModuleFactory} from "src/factory/PermissionModuleFactories.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
+import {GasAggregator} from "src/staking/GasAggregator.sol";
+import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
+import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -31,6 +34,25 @@ contract DeploySyndicateFactory is Script {
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         syndicateFactory = SyndicateFactory(address(proxy));
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
+
+        // Deploy and set GasAggregator
+        GasAggregator gasAggImpl = new GasAggregator();
+        MinimalUUPSStub stub = new MinimalUUPSStub();
+        ERC1967Proxy gasAggProxy = new ERC1967Proxy(address(stub), "");
+        bytes memory gasAggInitData = abi.encodeWithSignature(
+            "initialize(address,address,address,uint256)",
+            admin,
+            address(syndicateFactory),
+            syndicateFactory.syndicateChainImpl(),
+            1
+        );
+        (bool success,) = address(gasAggProxy).call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
+        );
+        require(success, "GasAgg init failed");
+        syndicateFactory.setGasAggregator(IGasAggregator(address(gasAggProxy)));
+        console.log("Deployed GasAggregator", address(gasAggProxy));
+
         requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
 

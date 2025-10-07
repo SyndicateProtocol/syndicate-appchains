@@ -140,3 +140,76 @@ storage-layout-compare :; @echo "Comparing storage layouts..." && \
 # Clean storage layout artifacts
 storage-layout-clean :; rm -rf .storage-layouts out/build-info
 
+## 🚀 Deployment & Upgrade Commands
+## See docs/upgrade/README.md for detailed guide
+
+# Deploy SyndicateFactory (deterministic deployment)
+# Also auto-deploys: GasAggregator, SyndicateSequencingChain implementation
+deploy-factory :; forge script script/DeploySyndicateFactoryDeterministic.s.sol:DeploySyndicateFactoryDeterministic \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+# Preview SyndicateFactory deployment addresses (same across all chains)
+preview-factory :; forge script script/DeploySyndicateFactoryDeterministic.s.sol:PreviewSyndicateFactoryAddresses \
+	--rpc-url ${RPC_URL} \
+	-vv
+
+# Deploy ArbConfigManager (optional - only for Arbitrum settlement)
+# Required env: OWNER_ADDRESS
+deploy-arb-config :; forge script script/DeployArbConfigManager.s.sol:DeployArbConfigManager \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+## 🔗 Create Sequencing Chains
+
+# Create a new sequencing chain via factory
+# Required env: FACTORY_ADDRESS, NONCE, ADMIN_ADDRESS
+# Optional env: PERMISSION_MODULE (deploys AlwaysAllowedModule if not set)
+# Example: NONCE=1 make create-sequencing-chain
+# Note: Chain ID is computed from nonce by the factory
+create-sequencing-chain :; forge script script/upgrade/CreateSequencingChain.s.sol \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+## ⚠️  Upgrade Commands - ALWAYS run 'make storage-layout-check' first!
+
+# Upgrade SyndicateFactory to new implementation
+# Required env: FACTORY_ADDRESS, ADMIN_ADDRESS
+upgrade-factory :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
+	forge script script/upgrade/UpgradeContracts.s.sol:UpgradeSyndicateFactory \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+# Upgrade GasAggregator to new implementation
+# Required env: GAS_AGGREGATOR_ADDRESS, ADMIN_ADDRESS
+upgrade-gas-aggregator :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
+	forge script script/upgrade/UpgradeContracts.s.sol:UpgradeGasAggregator \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+# Upgrade SyndicateSequencingChain to new implementation
+# Sets new default in factory and notifies GasAggregator
+# Required env: CHAIN_ADDRESS, FACTORY_ADDRESS
+upgrade-sequencing-chain :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
+	forge script script/upgrade/UpgradeSequencingChain.s.sol \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
