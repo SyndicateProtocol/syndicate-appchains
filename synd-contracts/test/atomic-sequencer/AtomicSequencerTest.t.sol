@@ -8,6 +8,9 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
+import {GasAggregator} from "src/staking/GasAggregator.sol";
+import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 
 contract MockIsAllowed is IPermissionModule {
     bool allowed;
@@ -54,6 +57,21 @@ contract AtomicSequencerTest is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         SyndicateFactory factory = SyndicateFactory(address(proxy));
+
+        // Deploy and set GasAggregator
+        GasAggregator gasAggImpl = new GasAggregator();
+        MinimalUUPSStub stub = new MinimalUUPSStub();
+        ERC1967Proxy gasAggProxy = new ERC1967Proxy(address(stub), "");
+        bytes memory gasAggInitData = abi.encodeWithSignature(
+            "initialize(address,address,address,uint256)", admin, address(factory), factory.syndicateChainImpl(), 1
+        );
+        (bool success,) = address(gasAggProxy).call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
+        );
+        require(success, "GasAgg init failed");
+
+        factory.setGasAggregator(IGasAggregator(address(gasAggProxy)));
+
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
         return SyndicateSequencingChain(chainAddress);

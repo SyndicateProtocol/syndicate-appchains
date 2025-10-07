@@ -4,11 +4,14 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {SyndicateFactoryWrapper} from "src/factory/SyndicateFactoryWrapper.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
+import {GasAggregator} from "src/staking/GasAggregator.sol";
+import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {RequireAndModuleFactory, RequireOrModuleFactory} from "src/factory/PermissionModuleFactories.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
 
 contract SyndicateFactoryWrapperTest is Test {
     SyndicateFactoryWrapper public wrapper;
@@ -46,12 +49,32 @@ contract SyndicateFactoryWrapperTest is Test {
         user2 = address(0x4);
         nonManager = address(0x5);
 
-        // Deploy individual factories
-        // Deploy implementation and proxy
+        // Deploy factory implementation and proxy
         SyndicateFactory implementation = new SyndicateFactory();
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         syndicateFactory = SyndicateFactory(address(proxy));
+
+        // Deploy and set GasAggregator
+        GasAggregator gasAggImpl = new GasAggregator();
+        MinimalUUPSStub stub = new MinimalUUPSStub();
+        ERC1967Proxy gasAggProxy = new ERC1967Proxy(address(stub), "");
+        bytes memory gasAggInitData = abi.encodeWithSignature(
+            "initialize(address,address,address,uint256)",
+            admin,
+            address(syndicateFactory),
+            syndicateFactory.syndicateChainImpl(),
+            1
+        );
+        (bool success,) = address(gasAggProxy).call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
+        );
+        require(success, "GasAgg init failed");
+
+        vm.prank(admin);
+        syndicateFactory.setGasAggregator(IGasAggregator(address(gasAggProxy)));
+
+        // Deploy module factories
         andFactory = new RequireAndModuleFactory(admin);
         orFactory = new RequireOrModuleFactory(admin);
 

@@ -3,13 +3,15 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
+import {GasAggregator} from "src/staking/GasAggregator.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {RequireCompositeModule} from "src/requirement-modules/RequireCompositeModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
-import {ERC1967Proxy} from "src/factory/SyndicateFactory.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
 
 contract SyndicateFactoryTest is Test {
     SyndicateFactory public factory;
@@ -34,11 +36,31 @@ contract SyndicateFactoryTest is Test {
 
         admin = address(0x1);
         nonAdmin = address(0x3);
-        // Deploy implementation and proxy
+
+        // Deploy factory implementation and proxy
         SyndicateFactory implementation = new SyndicateFactory();
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
+
+        // Deploy and set GasAggregator
+        GasAggregator gasAggImpl = new GasAggregator();
+        MinimalUUPSStub stub = new MinimalUUPSStub();
+        ERC1967Proxy gasAggProxy = new ERC1967Proxy(address(stub), "");
+        bytes memory gasAggInitData = abi.encodeWithSignature(
+            "initialize(address,address,address,uint256)",
+            admin,
+            address(factory),
+            factory.syndicateChainImpl(),
+            1
+        );
+        (bool success,) = address(gasAggProxy).call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
+        );
+        require(success, "GasAgg init failed");
+
+        vm.prank(admin);
+        factory.setGasAggregator(IGasAggregator(address(gasAggProxy)));
     }
 
     function testCreateSequencingChainWithRequireAndModule() public {
@@ -888,24 +910,29 @@ contract SyndicateFactoryTest is Test {
     // ================== VERSION TRACKING TESTS ==================
 
     function testInitialVersion() public view {
-        assertEq(factory.version(), "1.0.0", "Initial version should be 1.0.0");
+        assertEq(factory.version(), 1, "Initial version should be 1");
     }
 
     function testUpdateVersion() public {
         vm.prank(admin);
-        factory.updateVersion("1.1.0");
+        factory.updateVersion(11);
 
-        assertEq(factory.version(), "1.1.0", "Version should be updated to 1.1.0");
+        assertEq(factory.version(), 11, "Version should be updated to 11");
     }
 
     function testUpdateVersionOnlyAdmin() public {
         vm.prank(nonAdmin);
         vm.expectRevert();
-        factory.updateVersion("1.1.0");
+        factory.updateVersion(11);
     }
 
     function testUpdateVersionWithDifferentFormats() public {
-        string[5] memory versions = ["1.1.0", "2.0.0-beta", "1.2.3", "3.0.0-alpha.1", "10.15.20"];
+        uint256[] memory versions = new uint256[](5);
+        versions[0] = 11;
+        versions[1] = 22;
+        versions[2] = 23;
+        versions[3] = 31;
+        versions[4] = 102520;
 
         for (uint256 i = 0; i < versions.length; i++) {
             vm.prank(admin);
@@ -917,7 +944,7 @@ contract SyndicateFactoryTest is Test {
     function testVersionPersistsAfterOperations() public {
         // Update version
         vm.prank(admin);
-        factory.updateVersion("1.5.0");
+        factory.updateVersion(15);
 
         // Perform other operations
         RequireAndModule permissionModule = new RequireAndModule(admin);
@@ -925,7 +952,7 @@ contract SyndicateFactoryTest is Test {
         factory.createSyndicateSequencingChainWithCustomId(12345, admin, permissionModule);
 
         // Version should still be the same
-        assertEq(factory.version(), "1.5.0", "Version should persist after operations");
+        assertEq(factory.version(), 15, "Version should persist after operations");
     }
 
     // ================== GAS AGGREGATOR UPDATE TESTS ==================
