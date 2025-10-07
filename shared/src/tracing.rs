@@ -156,12 +156,14 @@ pub fn current_traceparent() -> Option<String> {
     carrier.get("traceparent").cloned()
 }
 
-/// Extract the tracing context from the request headers
+/// Extract the tracing context (if available) from the request headers
 /// and set it as the parent context for the current span.
-pub fn extract_tracing_context(extensions: &Extensions) -> Result<(), Error> {
+pub fn extract_tracing_context(extensions: &Extensions) -> Result<bool, Error> {
     let fallback_map = HashMap::<String, String>::new();
     let headers = extensions.get::<HashMap<_, _>>().unwrap_or(&fallback_map);
-    let traceparent = headers.get("traceparent").ok_or(Error::MissingTraceparent)?;
+    let Some(traceparent) = headers.get("traceparent") else {
+        return Ok(false);
+    };
     let mut carrier = HashMap::new();
     // TODO(SEQ-973): '-03' sent by universal-relay is incompatible with Rust TraceContextPropagator
     carrier.insert("traceparent".to_string(), traceparent.replace("-03", "-01"));
@@ -170,7 +172,7 @@ pub fn extract_tracing_context(extensions: &Extensions) -> Result<(), Error> {
     Span::current()
         .set_parent(parent_context)
         .map_err(|err| Error::SetParent { message: format!("{}", err) })?;
-    Ok(())
+    Ok(true)
 }
 
 /// A guard that ensures the OpenTelemetry SDK is sending spans/metrics
