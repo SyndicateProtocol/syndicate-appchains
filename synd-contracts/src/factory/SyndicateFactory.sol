@@ -6,43 +6,12 @@ import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
-import {GasAggregator} from "../staking/GasAggregator.sol";
 import {IGasAggregator} from "../interfaces/IGasAggregator.sol";
 import {EpochTracker} from "../staking/EpochTracker.sol";
-
-/// @title MinimalUUPSStub
-/// @notice Minimal UUPS implementation stub for deterministic proxy deployments
-/// @dev This contract will NEVER change to ensure deterministic CREATE2 addresses across all deployments.
-///      It serves as a temporary implementation that is immediately upgraded after proxy deployment.
-///      The stub has no functionality except for UUPS upgrade capability and security measures.
-contract MinimalUUPSStub is UUPSUpgradeable {
-    /// @notice this is only used to get a reliably deterministic address, the proxy will immediately be upgraded
-    function _authorizeUpgrade(address) internal view override {}
-
-    /// @notice Receive function that reverts - this stub should not receive ETH
-    receive() external payable {
-        revert("Stub: ETH not accepted");
-    }
-
-    /// @notice Fallback that reverts - this stub has no logic
-    fallback() external payable {
-        revert("Stub: no logic implemented");
-    }
-}
-
-/// @title ILegacyAppchain
-/// @notice Interface for legacy appchain contracts that need to be migrated
-/// @dev Used to extract gas usage data from old appchain implementations during migration
-interface ILegacyAppchain {
-    /// @notice Get the total gas tokens used for a specific epoch
-    /// @param epoch The epoch number to query
-    /// @return The amount of gas tokens used in the specified epoch
-    function getTokensForEpoch(uint256 epoch) external view returns (uint256);
-}
+import {MinimalUUPSStub} from "./MinimalUUPSStub.sol";
+import {ILegacyAppchain} from "../interfaces/ILegacyAppchain.sol";
 
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts
@@ -60,11 +29,7 @@ contract SyndicateFactory is
 
     /// @notice Mapping from appchain ID to the sequencing contract address
     /// @dev Used to track all deployed appchains and prevent duplicates
-    mapping(uint256 => address) public appchainContracts;
-
-    /// @notice Array of all deployed chain IDs for enumeration
-    /// @dev Provides a way to iterate through all deployed appchains
-    uint256[] public chainIDs;
+    mapping(uint256 appchainId => address sequencingContractAddress) public appchainContracts;
 
     /// @notice Stub implementation for consistent proxy deployment
     /// @dev This address is computed deterministically and never changes to ensure consistent CREATE2 addresses
@@ -78,9 +43,9 @@ contract SyndicateFactory is
     /// @dev Used to notify about new appchains and implementation changes
     IGasAggregator public gasAggregator;
 
-    /// @notice Version of the SyndicateFactory contract (updatable during upgrades)
-    /// @dev Semantic version string to track factory upgrades
-    string public version;
+    /// @notice Version of the SyndicateFactory contract
+    /// @dev Used to track the current version of the factory contract
+    uint256 public version;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -95,17 +60,17 @@ contract SyndicateFactory is
     /// @notice Thrown when the proxy upgrade to the latest implementation fails
     error FailedToUpgradeToLatestImplementation();
 
-    /// @notice Thrown when the gas aggregator proxy upgrade fails during initialization
-    error FailedToUpgradeGasAggregator();
-
     /// @notice Thrown when the provided legacy appchain address is invalid (no code deployed)
     error InvalidAppchainAddress();
 
     /// @notice Thrown when the provided chain ID is not found in the appchains mapping
     error ChainIdNotFound();
 
+    /// @notice Thrown when the gas aggregator is not set but required for certain operations
+    error GasAggregatorNotSet();
+
     /*//////////////////////////////////////////////////////////////
-                             EVENTS 
+                             EVENTS
     //////////////////////////////////////////////////////////////*/
     /// @notice Emitted when a new SyndicateSequencingChain is created
     /// @param appchainId The unique identifier for the appchain
@@ -157,11 +122,12 @@ contract SyndicateFactory is
     }
 
     /// @notice Initializes the upgradeable factory
+    /// @dev MUST setup gasAggregator separately after initialization
     /// @dev This function can only be called once and sets up the entire factory infrastructure including:
     ///      - Role-based access control with the provided admin
     ///      - Deterministic stub implementation deployment
     ///      - Real SyndicateSequencingChain implementation deployment
-    ///      - Gas aggregator proxy deployment and initialization
+    ///      - Initial version setting
     /// @param admin The admin address that will have DEFAULT_ADMIN_ROLE and full control over the factory
     function initialize(address admin) external initializer {
         if (admin == address(0)) revert ZeroAddress();
@@ -173,7 +139,7 @@ contract SyndicateFactory is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         // Set initial version
-        version = "1.0.0";
+        version = 1;
 
         // Deploy minimal stub implementation using CREATE2 for deterministic address
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
@@ -182,19 +148,6 @@ contract SyndicateFactory is
         // Deploy the real implementation and make it the default for new appchains
         syndicateChainImpl = address(new SyndicateSequencingChain());
         emit ImplementationAdded(syndicateChainImpl);
-
-        // Deploy a new gas aggregator with a deterministic address
-        address gasAggregatorProxy = Create2.deploy(0, bytes32("SYNDICATE_GAS_AGGREGATOR"), getProxyBytecode());
-        bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)", admin, address(this), syndicateChainImpl, getCurrentEpoch()
-        );
-        (bool upgradeSuccess,) = gasAggregatorProxy.call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", new GasAggregator(), initData)
-        );
-        if (!upgradeSuccess) {
-            revert FailedToUpgradeGasAggregator();
-        }
-        gasAggregator = IGasAggregator(gasAggregatorProxy);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -272,7 +225,7 @@ contract SyndicateFactory is
         // Use keccak256 hash of sender + nonce, then take modulo to keep within reasonable range
         // This prevents chainID squatting across different sequencing chains
         bytes32 hash = keccak256(abi.encodePacked(sender, nonce));
-        // Use modulo to keep chainIDs in a reasonable range (avoid extremely large numbers)
+        // Use modulo to keep chainId in a reasonable range (avoid extremely large numbers)
         chainId = uint256(hash) % (10 ** 18); // Max 18 digits
         // Ensure chainID is never 0 as this is used as a null value indicator
         if (chainId == 0) {
@@ -311,7 +264,6 @@ contract SyndicateFactory is
 
         // Store the mapping of appchain ID to contract address
         appchainContracts[chainId] = sequencingChain;
-        chainIDs.push(chainId);
 
         // Upgrade the proxy to use the latest implementation (instead of the stub)
         bytes memory initData = abi.encodeWithSignature(
@@ -357,6 +309,10 @@ contract SyndicateFactory is
             revert ZeroAddress(); // Reusing this error for zero chainID
         }
 
+        if (gasAggregator == IGasAggregator(address(0))) {
+            revert GasAggregatorNotSet(); // Gas aggregator must be set before creating chains
+        }
+
         // Validate chain ID is not already used
         if (appchainContracts[customChainId] != address(0)) {
             revert ChainIdAlreadyExists();
@@ -370,8 +326,8 @@ contract SyndicateFactory is
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /// @notice Updates the contract version (admin only, typically called during upgrades)
-    /// @param newVersion The new version string (e.g., "1.1.0")
-    function updateVersion(string calldata newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    /// @param newVersion The new version number (e.g., 1)
+    function updateVersion(uint256 newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
         version = newVersion;
     }
 
