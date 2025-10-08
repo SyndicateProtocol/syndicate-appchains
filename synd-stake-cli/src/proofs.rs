@@ -401,12 +401,12 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
                 panic!("failed to get appchain contract override for {chain_id}: {e}")
             });
 
-        let contract_addr = if override_addr != Address::ZERO {
-            override_addr
-        } else {
+        let contract_addr = if override_addr == Address::ZERO {
             factory.computeSequencingChainAddress(chain_id).call().await.unwrap_or_else(|e| {
                 panic!("failed to compute sequencing chain address for {chain_id}: {e}")
             })
+        } else {
+            override_addr
         };
 
         let appchain =
