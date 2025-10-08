@@ -115,7 +115,8 @@ contract DeploySyndicateFactoryDeterministic is Script {
         // Deploy GasAggregator implementation deterministically
         bytes memory gasAggImplementationBytecode = type(GasAggregator).creationCode;
         bytes32 gasAggImplementationSalt = keccak256(abi.encodePacked(DEPLOYMENT_SALT, "gasagg_implementation"));
-        address gasAggImplementationAddress = _deployDeterministic(gasAggImplementationBytecode, gasAggImplementationSalt);
+        address gasAggImplementationAddress =
+            _deployDeterministic(gasAggImplementationBytecode, gasAggImplementationSalt);
         console2.log("GasAggregator implementation deployed to:", gasAggImplementationAddress);
 
         // Deploy MinimalUUPSStub deterministically
@@ -125,29 +126,19 @@ contract DeploySyndicateFactoryDeterministic is Script {
         console2.log("MinimalUUPSStub deployed to:", stubAddress);
 
         // Deploy proxy with stub (empty initialization)
-        bytes memory gasAggProxyBytecode = abi.encodePacked(
-            type(ERC1967Proxy).creationCode,
-            abi.encode(stubAddress, "")
-        );
+        bytes memory gasAggProxyBytecode =
+            abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(stubAddress, ""));
         bytes32 gasAggProxySalt = keccak256(abi.encodePacked(DEPLOYMENT_SALT, "gasagg_proxy"));
         address gasAggProxyAddress = _deployDeterministic(gasAggProxyBytecode, gasAggProxySalt);
         console2.log("GasAggregator proxy deployed to:", gasAggProxyAddress);
 
         // Upgrade proxy to GasAggregator implementation and initialize
         bytes memory gasAggInitData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)",
-            INITIAL_OWNER,
-            proxyAddress,
-            factory.syndicateChainImpl(),
-            1
+            "initialize(address,address,address,uint256)", INITIAL_OWNER, proxyAddress, factory.syndicateChainImpl(), 1
         );
 
         (bool success, bytes memory returnData) = gasAggProxyAddress.call(
-            abi.encodeWithSignature(
-                "upgradeToAndCall(address,bytes)",
-                gasAggImplementationAddress,
-                gasAggInitData
-            )
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", gasAggImplementationAddress, gasAggInitData)
         );
 
         if (!success) {
@@ -256,10 +247,8 @@ contract PreviewSyndicateFactoryAddresses is Script {
         console2.log("MinimalUUPSStub will deploy to:", stubAddress);
 
         // GasAggregator proxy
-        bytes memory gasAggProxyBytecode = abi.encodePacked(
-            type(ERC1967Proxy).creationCode,
-            abi.encode(stubAddress, "")
-        );
+        bytes memory gasAggProxyBytecode =
+            abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(stubAddress, ""));
         bytes32 gasAggProxySalt = keccak256(abi.encodePacked(DEPLOYMENT_SALT, "gasagg_proxy"));
         address gasAggProxyAddress = _computeDeterministicAddress(keccak256(gasAggProxyBytecode), gasAggProxySalt);
         console2.log("GasAggregator proxy will deploy to:", gasAggProxyAddress);

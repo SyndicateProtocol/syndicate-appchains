@@ -57,11 +57,8 @@ contract CreateSequencingChain is Script {
         vm.startBroadcast();
         // Create the sequencing chain
         SyndicateFactory factory = SyndicateFactory(factoryAddress);
-        (address chainAddress, uint256 chainId) = factory.createSyndicateSequencingChain(
-            nonce,
-            admin,
-            IRequirementModule(permissionModule)
-        );
+        (address chainAddress, uint256 chainId) =
+            factory.createSyndicateSequencingChain(nonce, admin, IRequirementModule(permissionModule));
         vm.stopBroadcast();
 
         console2.log("=== Sequencing Chain Created ===");

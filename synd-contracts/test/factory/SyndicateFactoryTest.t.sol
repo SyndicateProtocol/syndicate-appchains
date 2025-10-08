@@ -48,11 +48,7 @@ contract SyndicateFactoryTest is Test {
         MinimalUUPSStub stub = new MinimalUUPSStub();
         ERC1967Proxy gasAggProxy = new ERC1967Proxy(address(stub), "");
         bytes memory gasAggInitData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)",
-            admin,
-            address(factory),
-            factory.syndicateChainImpl(),
-            1
+            "initialize(address,address,address,uint256)", admin, address(factory), factory.syndicateChainImpl(), 1
         );
         (bool success,) = address(gasAggProxy).call(
             abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
