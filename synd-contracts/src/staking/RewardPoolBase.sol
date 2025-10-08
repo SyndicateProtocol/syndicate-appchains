@@ -6,6 +6,8 @@ import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {EpochTracker} from "./EpochTracker.sol";
+import {IPool} from "src/staking/interfaces/IPool.sol";
 
 /**
  * @title RewardPoolBase
@@ -30,7 +32,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * - "claimed" accounting (tracking already claimed amounts)
  * - Pool-specific reward distribution logic
  */
-abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
+abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPool {
     /// @notice Weight multiplier for gas fee contribution (40% by default)
     /// @dev Higher values give more weight to gas fee performance in reward calculation
     UD60x18 public feeMultiplier = ud(0.4e18);
@@ -99,15 +101,15 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
         gasDataProvider = IGasDataProvider(_gas);
     }
 
-    /**
-     * @notice Internal function to deposit rewards for an epoch
-     * @dev Anyone can fund any epoch. Rewards are additive.
-     * @param epochIndex The epoch index to deposit rewards for
-     */
-    function _deposit(uint256 epochIndex) internal {
-        uint256 amount = msg.value;
-        epochTotal[epochIndex] += amount;
-        emit EpochDeposit(epochIndex, amount);
+    receive() external payable {
+        deposit(getCurrentEpoch());
+    }
+
+    // legacy function to satisfy the IPool interface
+    // depositing to past or future epochs is not recommended
+    function deposit(uint256 epoch) public payable {
+        epochTotal[epoch] += msg.value;
+        emit EpochDeposit(epoch, msg.value);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -121,7 +123,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
      */
     function _preChecks(uint256 epochIndex) internal view {
         // must be a past epoch with funding
-        if (epochTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
+        if (epochTotal[epochIndex] == 0 || getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
     }
@@ -176,13 +178,12 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
         UD60x18 cached = epochTotalDiminishingFactor[epochIndex];
         if (!cached.isZero()) return cached;
 
-        uint256[] memory ids = gasDataProvider.getActiveAppchainIds(epochIndex);
+        uint256[] memory ids = gasDataProvider.getAppchainIds(epochIndex);
         UD60x18 sum = convert(0);
-        for (uint256 i = 0; i < ids.length;) {
+        for (uint256 i = 0; i < ids.length; i++) {
+            // LBL: we should add a way to compute the sum over multiple function calls to avoid running out of gas
+            // the number of appchains can be arbitrarily large in general
             sum = sum.add(_getAppchainDiminishingFactor(epochIndex, ids[i], totalStake, totalGasFees));
-            unchecked {
-                ++i;
-            }
         }
         epochTotalDiminishingFactor[epochIndex] = sum;
         return sum;

@@ -25,12 +25,5 @@ interface IGasDataProvider {
      * @param epochIndex The epoch index to query
      * @return _chainIDs Array of appchain IDs that were active in the specified epoch
      */
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory _chainIDs);
-
-    /**
-     * @notice Get the rewards receiver address for a specific appchain
-     * @param appchainId The ID of the appchain
-     * @return The address that should receive rewards for the specified appchain
-     */
-    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address);
+    function getAppchainIds(uint256 epochIndex) external view returns (uint256[] memory _chainIDs);
 }
