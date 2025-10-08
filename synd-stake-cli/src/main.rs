@@ -4,9 +4,8 @@ use synd_stake_cli::{
     gas_agg::{gas_agg, GasAggArgs},
     mint::{mint, MintArgs},
     proofs::{
-        aggregate_gas_data_top_n_chains, submit_gas_proofs, update_and_submit_proofs,
-        update_base_and_ethereum_block_hashes, AggregateGasDataTopNChainsArgs, SubmitGasProofsArgs,
-        UpdateAndSubmitProofsArgs, UpdateBaseAndEthereumBlockHashesArgs,
+        submit_gas_proofs, update_and_submit_proofs, update_base_and_ethereum_block_hashes,
+        SubmitGasProofsArgs, UpdateAndSubmitProofsArgs, UpdateBaseAndEthereumBlockHashesArgs,
     },
     refund_gas::{refund_gas, RefundGasArgs},
 };
@@ -66,10 +65,6 @@ enum Commands {
     /// (twice 1 proof for block hash, another for the gasAggregation data)
     SubmitGasProofs(SubmitGasProofsArgs),
 
-    /// submit the gas data for the top N chains, if we are over the "offchain aggregation"
-    /// threshold
-    AggregateGasDataTopNChains(AggregateGasDataTopNChainsArgs),
-
     /// Update base and ethereum block hashes, then submit gas proofs
     ///
     /// This command first runs `update_base_and_ethereum_block_hashes` to update the known block
@@ -97,7 +92,6 @@ async fn main() {
             update_base_and_ethereum_block_hashes(args).await
         }
         Commands::SubmitGasProofs(args) => submit_gas_proofs(args).await,
-        Commands::AggregateGasDataTopNChains(args) => aggregate_gas_data_top_n_chains(args).await,
         Commands::UpdateAndSubmitProofs(args) => update_and_submit_proofs(args).await,
     };
 }

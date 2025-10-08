@@ -1,6 +1,9 @@
 //! The `gas-agg` module contains the functions for aggregating gas usage from appchains.
 
-use alloy::{primitives::Address, providers::ProviderBuilder, types::Uint256Array};
+use alloy::{
+    primitives::{Address, U256},
+    providers::ProviderBuilder,
+};
 use clap::Args;
 use contract_bindings::synd::gas_aggregator::GasAggregator;
 use shared::{
@@ -87,8 +90,7 @@ pub async fn gas_agg(args: &GasAggArgs) {
     if args.sim {
         info!("Simulating gas aggregation...");
         // TODO: Fix CLI to match updated contract
-        match gas_aggregator.aggregateTokens(Uint256Array::new(), Uint256Array::new()).call().await
-        {
+        match gas_aggregator.aggregateTokens(Vec::<U256>::new(), Vec::<U256>::new()).call().await {
             Ok(_) => {
                 info!("Simulation succeeded")
             }
@@ -103,7 +105,7 @@ pub async fn gas_agg(args: &GasAggArgs) {
             args.gas_aggregator_address,
             new_provider(args.rpc_url.as_str(), &args.private_key).await,
         )
-        .aggregateTokens(Uint256Array::new(), Uint256Array::new())
+        .aggregateTokens(Vec::<U256>::new(), Vec::<U256>::new())
         .send()
         .await
         {
