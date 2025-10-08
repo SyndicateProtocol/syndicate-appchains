@@ -72,7 +72,7 @@ impl BatcherMetrics {
 
         registry.register(
             "wallet_balance",
-            "Current wallet balance in ETH",
+            "Current wallet balance in ETH units",
             metrics.wallet_balance.clone(),
         );
 
