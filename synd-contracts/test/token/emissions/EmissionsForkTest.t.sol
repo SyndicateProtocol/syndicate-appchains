@@ -23,6 +23,10 @@ contract EmissionsForkTest is Test, EpochTracker {
     EmissionsCalculator public emissionsCalculator = EmissionsCalculator(0x0000000000000000000000000000000000000000);
     EmissionsScheduler public emissionsScheduler = EmissionsScheduler(0x0000000000000000000000000000000000000000);
 
+    // Actual deployments:
+    // EmissionsCalculator public emissionsCalculator = EmissionsCalculator(0x7CC604b2e117693fE214b8253504eC29BE9Ecf0a);
+    // EmissionsScheduler public emissionsScheduler = EmissionsScheduler(0xcD3602332fA70191A0e1A1b49aC9873aD4D87E0e);
+
     function setUp() public {
         // Start fork
         vm.createSelectFork("https://0xrpc.io/eth");
@@ -42,18 +46,18 @@ contract EmissionsForkTest is Test, EpochTracker {
                 syndTokenAdmin
             );
 
-            // Grant emission minter role to calculator
-            bytes32 emissionMinterRole = syndToken.EMISSION_MINTER_ROLE();
-            vm.prank(syndTokenAdmin);
-            syndToken.grantRole(emissionMinterRole, address(emissionsCalculator));
-            vm.stopPrank();
-
             // Grant emissions role to scheduler
             bytes32 emissionsRole = emissionsCalculator.EMISSIONS_ROLE();
             vm.prank(syndTokenAdmin);
             emissionsCalculator.grantRole(emissionsRole, address(emissionsScheduler));
             vm.stopPrank();
         }
+
+        // Grant emission minter role to calculator
+        bytes32 emissionMinterRole = syndToken.EMISSION_MINTER_ROLE();
+        vm.prank(syndTokenAdmin);
+        syndToken.grantRole(emissionMinterRole, address(emissionsCalculator));
+        vm.stopPrank();
     }
 
     function expectedMintAmount_ChangeFactor101(uint256 epoch) public pure returns (uint256) {
@@ -328,12 +332,10 @@ contract EmissionsForkTest is Test, EpochTracker {
     }
 
     function test_emissions_ChangeFactorFlat() public {
-        // Initialize emissions calculator
+        uint256 totalMinted = emissionsScheduler.totalEmissionsMinted();
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(1e18);
         vm.stopPrank();
-
-        uint256 totalMinted = emissionsScheduler.totalEmissionsMinted();
 
         // Initial checks
         assertEq(emissionsCalculator.currentEpoch(), 0);
@@ -345,8 +347,10 @@ contract EmissionsForkTest is Test, EpochTracker {
         vm.expectRevert(EmissionsScheduler.NoEmissionsToMint.selector);
         emissionsScheduler.mintEmission();
 
+        uint256 blockNumber = block.number;
         for (uint256 i = 0; i <= 47; i++) {
             vm.warp(emissionsScheduler.getEpochStart(i + startEpoch));
+            vm.roll(blockNumber + i);
             emissionsScheduler.mintEmission();
             uint256 mintAmount = round(emissionsScheduler.totalEmissionsMinted() - totalMinted);
             uint256 expected = uint256(1666667);
@@ -357,6 +361,7 @@ contract EmissionsForkTest is Test, EpochTracker {
                 }
             }
             totalMinted = emissionsScheduler.totalEmissionsMinted();
+            console2.log("Next block number", block.number);
         }
 
         // Final checks
