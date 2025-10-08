@@ -4,6 +4,7 @@
 //! Do not manually edit these files.
 //! These files may be overwritten by the codegen system at any time.
 pub mod r#access_control;
+pub mod r#access_control_enumerable;
 pub mod r#access_control_upgradeable;
 pub mod r#access_controlled_erc20;
 pub mod r#add_batch_transactions_to_syndicate_sequencing_chain_contract;
@@ -100,6 +101,7 @@ pub mod r#deploy_gas_aggregator;
 pub mod r#deploy_gas_archive;
 pub mod r#deploy_syndicate_factory_deterministic;
 pub mod r#preview_syndicate_factory_addresses;
+pub mod r#deploy_staking_contracts;
 pub mod r#deploy_tee_module;
 pub mod r#deploy_test_tee_module;
 pub mod r#dummy_key_manager;
@@ -142,6 +144,7 @@ pub mod r#mock_gas_counter;
 pub mod r#global_state_lib;
 pub mod r#groth16_verifier;
 pub mod r#i_access_control;
+pub mod r#i_access_control_enumerable;
 pub mod r#i_assertion_poster;
 pub mod r#i_attestation_doc_verifier;
 pub mod r#i_beacon;

@@ -13,6 +13,7 @@ use crate::{
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
     metrics::MaestroMetrics,
+    types::fmt_tx_envelope_for_logging,
     valkey::{
         keys::wallet_nonce::{chain_wallet_nonce_key, ChainWalletNonceKey},
         models::{
@@ -147,19 +148,21 @@ impl MaestroService {
                 let tx = decode_transaction(&Bytes::from(raw_tx)).unwrap();
                 #[allow(clippy::unwrap_used)]
                 let signer = check_signature(&tx).unwrap();
+                let chain_id = tx.chain_id().unwrap_or_default();
+                let tx_str = fmt_tx_envelope_for_logging(&tx, &signer);
 
                 match provider.get_transaction_count(signer).await {
                     Ok(nonce) => {
                         if nonce <= tx.nonce() {
-                            warn!(%tx_hash, "Valid transaction is not finalized, resubmitting");
+                            warn!(%tx_hash, %chain_id, tx=tx_str, "Valid transaction is not finalized, resubmitting");
                             metrics.increment_resubmitted_transactions(1);
                             return CheckFinalizationResult::ReSubmit;
                         }
-                        warn!(%tx_hash, "Transaction is not finalized, but nonce is not valid anymore, done");
+                        warn!(%tx_hash, %chain_id, tx=tx_str, "Transaction is not finalized, but nonce is not valid anymore, done");
                         CheckFinalizationResult::Done
                     }
                     Err(err) => {
-                        error!(%tx_hash, %err, "Failed to query RPC for nonce during finalization check");
+                        error!(%tx_hash, %chain_id, tx=tx_str, %err, "Failed to query RPC for nonce during finalization check");
                         CheckFinalizationResult::Done
                     }
                 }
@@ -249,42 +252,45 @@ impl MaestroService {
         fields(
             otel.kind = ?SpanKind::Producer,
             tx_hash = format!("0x{}", hex::encode(keccak256(raw_tx.as_ref()))),
-            chain_id, wallet = %wallet, tx_nonce
+            chain_id, signer_wallet = %signer_wallet, tx_nonce
         )
     )]
     pub async fn handle_transaction(
         self: &Arc<Self>,
         raw_tx: Bytes,
         tx: &TxEnvelope,
-        wallet: Address,
+        signer_wallet: Address,
         chain_id: ChainId,
         tx_nonce: u64,
     ) -> Result<(), MaestroRpcError> {
-        let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
+        let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, signer_wallet).await;
         let _guard = chain_wallet_lock.lock().await;
-        trace!(chain_id, %wallet, "got lock");
+        trace!(chain_id, %signer_wallet, "got lock");
+        debug!(tx_summary = %fmt_tx_envelope_for_logging(tx, &signer_wallet), "Transaction summary");
 
         let expected_nonce =
-            self.get_expected_nonce_and_validate(wallet, chain_id, tx_nonce).await?;
+            self.get_expected_nonce_and_validate(signer_wallet, chain_id, tx_nonce).await?;
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
                 if !self.config.skip_balance_check {
                     // TODO(SEQ-964): Remove lines below once we have tracing
                     let tx_hash_str = format!("0x{}", hex::encode(tx.hash()));
-                    trace!(%tx_hash_str, %tx_nonce, sender_wallet=%wallet, %chain_id, "Checking sender wallet balance");
+                    trace!(%tx_hash_str, %tx_nonce, sender_wallet=%signer_wallet, %chain_id, "Checking sender wallet balance");
                     let sender_balance_eth = format!(
                         "{} ETH units",
-                        format_ether(self.check_sender_wallet_balance(tx, chain_id, wallet).await?)
+                        format_ether(
+                            self.check_sender_wallet_balance(tx, chain_id, signer_wallet).await?
+                        )
                     );
-                    trace!(%tx_hash_str, %tx_nonce, sender_wallet=%wallet, %sender_balance_eth, %chain_id, "Sender wallet balance is sufficient");
+                    trace!(%tx_hash_str, %tx_nonce, sender_wallet=%signer_wallet, %sender_balance_eth, %chain_id, "Sender wallet balance is sufficient");
                 }
 
                 // 1. update the cache with nonce + 1. Quit if this fails
-                let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
+                let new_nonce = self.increment_wallet_nonce(chain_id, signer_wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
-                        debug!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
+                        debug!(%e, %chain_id, %signer_wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
                         JsonRpcError(TransactionRejected(rejection))
                     }
                     )?;
@@ -298,7 +304,11 @@ impl MaestroService {
                 let _handle = tokio::spawn(
                     async move {
                         service_clone
-                            .check_for_and_enqueue_waiting_transactions(chain_id, wallet, new_nonce)
+                            .check_for_and_enqueue_waiting_transactions(
+                                chain_id,
+                                signer_wallet,
+                                new_nonce,
+                            )
                             .await
                     }
                     .in_current_span(),
@@ -311,8 +321,14 @@ impl MaestroService {
             }
             Ordering::Greater => {
                 debug!(tx_hash = format!("0x{}", hex::encode(tx.hash())), %chain_id, "Caching waiting transaction");
-                self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx, tx.hash())
-                    .await?;
+                self.cache_waiting_transaction(
+                    chain_id,
+                    signer_wallet,
+                    tx_nonce,
+                    raw_tx,
+                    tx.hash(),
+                )
+                .await?;
                 self.metrics.increment_waiting_transactions(1);
             }
         }
@@ -404,7 +420,7 @@ impl MaestroService {
                 debug!(%e, %wallet_address, %chain_id, %cached_wallet_nonce, %tx_nonce, max_nonce_buffer = ?self.config.max_nonce_buffer,
                             "Nonce buffer exceeded, rejecting transaction");
             })?;
-            return Ok(cached_wallet_nonce)
+            return Ok(cached_wallet_nonce);
         }
 
         trace!(%wallet_address, %chain_id, "No cached nonce found, fetching from RPC");
@@ -901,7 +917,7 @@ const fn check_tx_nonce_within_buffer(
 ) -> Result<(), MaestroRpcError> {
     if let Some(nonce_gap) = tx_nonce.checked_sub(cached_wallet_nonce) {
         if nonce_gap > max_nonce_buffer {
-            return Err(JsonRpcError(TransactionRejected(NonceBufferExceeded)))
+            return Err(JsonRpcError(TransactionRejected(NonceBufferExceeded)));
         }
     }
     Ok(())

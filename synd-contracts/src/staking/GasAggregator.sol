@@ -40,6 +40,15 @@ interface IAppchainFactory {
  */
 contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable, UUPSUpgradeable {
     /*//////////////////////////////////////////////////////////////
+                            FIXED STORAGE SLOTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// SLOT 0: aggregatedEpochDataHash
+    /// @notice Storage slot is 0 for aggregatedEpochDataHash in GasAggregator (see `forge inspect GasAggregator storageLayout`)
+    /// @dev Stores the final hash for each completed epoch.
+    mapping(uint256 => bytes32) public aggregatedEpochDataHash;
+
+    /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
@@ -96,10 +105,6 @@ contract GasAggregator is Initializable, EpochTracker, AccessControlUpgradeable,
     /// @notice Total tokens used in the pending epoch
     /// @dev Used to ensure new submissions have higher total than previous ones
     uint256 public pendingTotalTokensUsed;
-
-    /// @notice Mapping from epoch to finalized aggregated data hash
-    /// @dev Stores the final hash for each completed epoch.
-    mapping(uint256 => bytes32) public aggregatedEpochDataHash;
 
     /// @notice Admin-controlled overrides for appchain contract addresses
     /// @dev Allows admins to specify custom contract addresses for specific chain IDs.

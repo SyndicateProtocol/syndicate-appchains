@@ -7,13 +7,14 @@ import {SyndicateToken} from "src/token/SyndicateToken.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {console2} from "forge-std/console2.sol";
+import {EpochTracker} from "src/staking/EpochTracker.sol";
 
 contract MockRelayer {
     function relay(address destinationL3, uint256 epochIndex) external {}
 }
 
-contract EmissionsForkTest is Test {
-    uint256 public startEpoch = 3;
+contract EmissionsForkTest is Test, EpochTracker {
+    uint256 public startEpoch;
 
     uint256 public acceptedDiff = 10;
 
@@ -22,18 +23,15 @@ contract EmissionsForkTest is Test {
     EmissionsCalculator public emissionsCalculator = EmissionsCalculator(0x0000000000000000000000000000000000000000);
     EmissionsScheduler public emissionsScheduler = EmissionsScheduler(0x0000000000000000000000000000000000000000);
 
+    // Actual deployments:
+    // EmissionsCalculator public emissionsCalculator = EmissionsCalculator(0x7CC604b2e117693fE214b8253504eC29BE9Ecf0a);
+    // EmissionsScheduler public emissionsScheduler = EmissionsScheduler(0xcD3602332fA70191A0e1A1b49aC9873aD4D87E0e);
+
     function setUp() public {
         // Start fork
         vm.createSelectFork("https://0xrpc.io/eth");
 
-        // Warp to a time where getCurrentEpoch() returns startEpoch - 1
-        // START_TIMESTAMP = 1754089200 (from EpochTracker)
-        // For getCurrentEpoch() to return 2 (startEpoch - 1), we need:
-        // ((block.timestamp - START_TIMESTAMP) / 30 days) + 1 = 2
-        // So: block.timestamp = START_TIMESTAMP + 30 days
-        uint256 START_TIMESTAMP = 1754089200;
-        uint256 EPOCH_DURATION = 30 days;
-        vm.warp(START_TIMESTAMP + (startEpoch - 2) * EPOCH_DURATION);
+        startEpoch = getCurrentEpoch() + 1;
 
         if (address(emissionsCalculator) == address(0) || address(emissionsScheduler) == address(0)) {
             console2.log("Emissions contracts not found, deploying ones to fork");
@@ -48,18 +46,18 @@ contract EmissionsForkTest is Test {
                 syndTokenAdmin
             );
 
-            // Grant emission minter role to calculator
-            bytes32 emissionMinterRole = syndToken.EMISSION_MINTER_ROLE();
-            vm.prank(syndTokenAdmin);
-            syndToken.grantRole(emissionMinterRole, address(emissionsCalculator));
-            vm.stopPrank();
-
             // Grant emissions role to scheduler
             bytes32 emissionsRole = emissionsCalculator.EMISSIONS_ROLE();
             vm.prank(syndTokenAdmin);
             emissionsCalculator.grantRole(emissionsRole, address(emissionsScheduler));
             vm.stopPrank();
         }
+
+        // Grant emission minter role to calculator
+        bytes32 emissionMinterRole = syndToken.EMISSION_MINTER_ROLE();
+        vm.prank(syndTokenAdmin);
+        syndToken.grantRole(emissionMinterRole, address(emissionsCalculator));
+        vm.stopPrank();
     }
 
     function expectedMintAmount_ChangeFactor101(uint256 epoch) public pure returns (uint256) {
@@ -332,12 +330,10 @@ contract EmissionsForkTest is Test {
     }
 
     function test_emissions_ChangeFactorFlat() public {
-        // Initialize emissions calculator
+        uint256 totalMinted = emissionsScheduler.totalEmissionsMinted();
         vm.prank(syndTokenAdmin);
         emissionsCalculator.initializeEmissions(1e18);
         vm.stopPrank();
-
-        uint256 totalMinted = emissionsScheduler.totalEmissionsMinted();
 
         // Initial checks
         assertEq(emissionsCalculator.currentEpoch(), 0);
@@ -349,8 +345,10 @@ contract EmissionsForkTest is Test {
         vm.expectRevert(EmissionsScheduler.NoEmissionsToMint.selector);
         emissionsScheduler.mintEmission();
 
+        uint256 blockNumber = block.number;
         for (uint256 i = 0; i <= 47; i++) {
             vm.warp(emissionsScheduler.getEpochStart(i + startEpoch));
+            vm.roll(blockNumber + i);
             emissionsScheduler.mintEmission();
             uint256 mintAmount = round(emissionsScheduler.totalEmissionsMinted() - totalMinted);
             uint256 expected = uint256(1631944);
@@ -361,6 +359,7 @@ contract EmissionsForkTest is Test {
                 }
             }
             totalMinted = emissionsScheduler.totalEmissionsMinted();
+            console2.log("Next block number", block.number);
         }
 
         // Final checks

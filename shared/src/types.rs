@@ -10,14 +10,17 @@ use alloy::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
         },
-        Identity, RootProvider,
+        Identity, ProviderBuilder, RootProvider,
     },
     rpc::types::Block,
+    signers::local::PrivateKeySigner,
 };
 use async_trait::async_trait;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt::{Display, Formatter};
-
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr as _,
+};
 #[allow(missing_docs)]
 pub trait GetBlockRef {
     fn block_ref(&self) -> &BlockRef;
@@ -264,3 +267,15 @@ pub type FilledProvider = FillProvider<
     >,
     RootProvider,
 >;
+
+/// creates a new provider for with a wallet using the given private key
+pub async fn new_provider(rpc_url: &str, private_key: &str) -> FilledProvider {
+    ProviderBuilder::new()
+        .wallet(EthereumWallet::from(
+            PrivateKeySigner::from_str(private_key)
+                .unwrap_or_else(|e| panic!("invalid private key: {e}")),
+        ))
+        .connect(rpc_url)
+        .await
+        .unwrap_or_else(|e| panic!("unable to create provider: {e}"))
+}

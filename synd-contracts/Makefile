@@ -213,3 +213,5 @@ upgrade-sequencing-chain :; @echo "⚠️  Run 'make storage-layout-check' first
 	--broadcast \
 	-vv
 
+# Deploy emissions contracts
+deploy-emissions :; forge script script/DeployStakingContracts.s.sol:DeployStakingContracts --private-key ${PRIVATE_KEY} --rpc-url eth --broadcast -vvv
