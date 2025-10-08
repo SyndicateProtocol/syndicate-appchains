@@ -1,7 +1,7 @@
 {
   "storage": [
     {
-      "astId": 3475,
+      "astId": 3468,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "appchainContracts",
       "offset": 0,
@@ -9,44 +9,36 @@
       "type": "t_mapping(t_uint256,t_address)"
     },
     {
-      "astId": 3479,
-      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
-      "label": "chainIDs",
-      "offset": 0,
-      "slot": "1",
-      "type": "t_array(t_uint256)dyn_storage"
-    },
-    {
-      "astId": 3482,
+      "astId": 3471,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "stubImplementation",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_address"
+    },
+    {
+      "astId": 3474,
+      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+      "label": "syndicateChainImpl",
       "offset": 0,
       "slot": "2",
       "type": "t_address"
     },
     {
-      "astId": 3485,
-      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
-      "label": "syndicateChainImpl",
-      "offset": 0,
-      "slot": "3",
-      "type": "t_address"
-    },
-    {
-      "astId": 3489,
+      "astId": 3478,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "gasAggregator",
       "offset": 0,
-      "slot": "4",
-      "type": "t_contract(IGasAggregator)4339"
+      "slot": "3",
+      "type": "t_contract(IGasAggregator)4279"
     },
     {
-      "astId": 3492,
+      "astId": 3481,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "version",
       "offset": 0,
-      "slot": "5",
-      "type": "t_string_storage"
+      "slot": "4",
+      "type": "t_uint256"
     }
   ],
   "types": {
@@ -55,13 +47,7 @@
       "label": "address",
       "numberOfBytes": "20"
     },
-    "t_array(t_uint256)dyn_storage": {
-      "encoding": "dynamic_array",
-      "label": "uint256[]",
-      "numberOfBytes": "32",
-      "base": "t_uint256"
-    },
-    "t_contract(IGasAggregator)4339": {
+    "t_contract(IGasAggregator)4279": {
       "encoding": "inplace",
       "label": "contract IGasAggregator",
       "numberOfBytes": "20"
@@ -72,11 +58,6 @@
       "label": "mapping(uint256 => address)",
       "numberOfBytes": "32",
       "value": "t_address"
-    },
-    "t_string_storage": {
-      "encoding": "bytes",
-      "label": "string",
-      "numberOfBytes": "32"
     },
     "t_uint256": {
       "encoding": "inplace",

@@ -1,119 +1,119 @@
 {
   "storage": [
     {
-      "astId": 4535,
+      "astId": 1958,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "aggregatedEpochDataHash",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_mapping(t_uint256,t_bytes32)"
+    },
+    {
+      "astId": 1962,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "factory",
       "offset": 0,
-      "slot": "0",
-      "type": "t_contract(IAppchainFactory)4522"
+      "slot": "1",
+      "type": "t_contract(IAppchainFactory)1944"
     },
     {
-      "astId": 4538,
+      "astId": 1965,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "maxAppchainsToQuery",
-      "offset": 0,
-      "slot": "1",
-      "type": "t_uint256"
-    },
-    {
-      "astId": 4541,
-      "contract": "src/staking/GasAggregator.sol:GasAggregator",
-      "label": "addChainFee",
       "offset": 0,
       "slot": "2",
       "type": "t_uint256"
     },
     {
-      "astId": 4544,
+      "astId": 1968,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "addChainFee",
+      "offset": 0,
+      "slot": "3",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 1971,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "sequencingChainProxyBytecodeHash",
       "offset": 0,
-      "slot": "3",
+      "slot": "4",
       "type": "t_bytes32"
     },
     {
-      "astId": 4548,
+      "astId": 1975,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "appchains",
       "offset": 0,
-      "slot": "4",
+      "slot": "5",
       "type": "t_array(t_uint256)dyn_storage"
     },
     {
-      "astId": 4553,
+      "astId": 1980,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "isChainTracked",
-      "offset": 0,
-      "slot": "5",
-      "type": "t_mapping(t_uint256,t_bool)"
-    },
-    {
-      "astId": 4558,
-      "contract": "src/staking/GasAggregator.sol:GasAggregator",
-      "label": "bannedAppchains",
       "offset": 0,
       "slot": "6",
       "type": "t_mapping(t_uint256,t_bool)"
     },
     {
-      "astId": 4563,
+      "astId": 1985,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "bannedAppchains",
+      "offset": 0,
+      "slot": "7",
+      "type": "t_mapping(t_uint256,t_bool)"
+    },
+    {
+      "astId": 1990,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "allowedImplementations",
       "offset": 0,
-      "slot": "7",
+      "slot": "8",
       "type": "t_mapping(t_address,t_bool)"
     },
     {
-      "astId": 4566,
+      "astId": 1993,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "challengeWindow",
-      "offset": 0,
-      "slot": "8",
-      "type": "t_uint256"
-    },
-    {
-      "astId": 4569,
-      "contract": "src/staking/GasAggregator.sol:GasAggregator",
-      "label": "pendingEpoch",
       "offset": 0,
       "slot": "9",
       "type": "t_uint256"
     },
     {
-      "astId": 4572,
+      "astId": 1996,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
-      "label": "pendingEpochFirstSubmissionTime",
+      "label": "pendingEpoch",
       "offset": 0,
       "slot": "10",
       "type": "t_uint256"
     },
     {
-      "astId": 4575,
+      "astId": 1999,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
-      "label": "pendingDataHash",
+      "label": "pendingEpochFirstSubmissionTime",
       "offset": 0,
       "slot": "11",
-      "type": "t_bytes32"
-    },
-    {
-      "astId": 4578,
-      "contract": "src/staking/GasAggregator.sol:GasAggregator",
-      "label": "pendingTotalTokensUsed",
-      "offset": 0,
-      "slot": "12",
       "type": "t_uint256"
     },
     {
-      "astId": 4583,
+      "astId": 2002,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
-      "label": "aggregatedEpochDataHash",
+      "label": "pendingDataHash",
       "offset": 0,
-      "slot": "13",
-      "type": "t_mapping(t_uint256,t_bytes32)"
+      "slot": "12",
+      "type": "t_bytes32"
     },
     {
-      "astId": 4588,
+      "astId": 2005,
+      "contract": "src/staking/GasAggregator.sol:GasAggregator",
+      "label": "pendingTotalTokensUsed",
+      "offset": 0,
+      "slot": "13",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 2010,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "appchainContractOverrides",
       "offset": 0,
@@ -121,7 +121,7 @@
       "type": "t_mapping(t_uint256,t_address)"
     },
     {
-      "astId": 4591,
+      "astId": 2013,
       "contract": "src/staking/GasAggregator.sol:GasAggregator",
       "label": "version",
       "offset": 0,
@@ -151,7 +151,7 @@
       "label": "bytes32",
       "numberOfBytes": "32"
     },
-    "t_contract(IAppchainFactory)4522": {
+    "t_contract(IAppchainFactory)1944": {
       "encoding": "inplace",
       "label": "contract IAppchainFactory",
       "numberOfBytes": "20"
