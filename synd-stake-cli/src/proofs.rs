@@ -14,7 +14,7 @@ use contract_bindings::synd::{
     block_hash_relayer::BlockHashRelayer,
     gas_aggregator::GasAggregator::{self, GasAggregatorInstance},
     gas_archive::GasArchive::{self, GasArchiveInstance},
-    syndicate_factory::SyndicateFactory::{self, getAppchainsAndContractsReturn},
+    syndicate_factory::SyndicateFactory::{self},
     syndicate_sequencing_chain::SyndicateSequencingChain,
 };
 use shared::{
@@ -385,16 +385,32 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
         .unwrap_or_else(|e| panic!("failed to get factory address: {e}"));
     let factory = SyndicateFactory::new(factory_address, gas_aggregator.provider().clone());
 
-    let getAppchainsAndContractsReturn { _chainIDs: mut appchains, _contracts: appchain_contracts } =
-        factory
-            .getAppchainsAndContracts()
-            .call()
-            .await
-            .unwrap_or_else(|e| panic!("failed to get appchains and contracts: {e}"));
-    let (mut tokens, mut emissions_receivers) = (vec![], vec![]);
+    let mut appchains: Vec<U256> = gas_aggregator
+        .getTrackedChainIds()
+        .call()
+        .await
+        .unwrap_or_else(|e| panic!("failed to get tracked chain IDs: {e}"));
 
-    for contract in appchain_contracts {
-        let appchain = SyndicateSequencingChain::new(contract, gas_aggregator.provider().clone());
+    let mut tokens: Vec<U256> = Vec::with_capacity(appchains.len());
+    let mut emissions_receivers: Vec<Address> = Vec::with_capacity(appchains.len());
+
+    for chain_id in appchains.iter().copied() {
+        // Prefer any explicit override set in the aggregator; otherwise use factory computation
+        let override_addr =
+            gas_aggregator.appchainContractOverrides(chain_id).call().await.unwrap_or_else(|e| {
+                panic!("failed to get appchain contract override for {chain_id}: {e}")
+            });
+
+        let contract_addr = if override_addr != Address::ZERO {
+            override_addr
+        } else {
+            factory.computeSequencingChainAddress(chain_id).call().await.unwrap_or_else(|e| {
+                panic!("failed to compute sequencing chain address for {chain_id}: {e}")
+            })
+        };
+
+        let appchain =
+            SyndicateSequencingChain::new(contract_addr, gas_aggregator.provider().clone());
         tokens.push(
             appchain
                 .getTokensForEpoch(epoch)
@@ -420,26 +436,31 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
             .await
             .unwrap_or_else(|e| panic!("failed to get max appchains to query: {e}"));
 
-        // Create indexed tuples to sort together
+        // Create indexed tuples to sort together: (chain_id, tokens, receiver)
         let mut sorted: Vec<(U256, U256, Address)> = (0..appchains.len())
             .map(|i| (appchains[i], tokens[i], emissions_receivers[i]))
             .collect();
 
         // Sort by tokens used (highest first)
-        sorted.sort_by(|a, b| b.2.cmp(&a.2));
+        sorted.sort_by(|a, b| b.1.cmp(&a.1));
 
-        // Select only the top {chain_count} chains
-        sorted.truncate(chain_count.to());
+        // Select only the top {chain_count} chains without converting U256 -> usize directly
+        let mut selected: Vec<(U256, U256, Address)> = Vec::new();
+        for (i, item) in sorted.into_iter().enumerate() {
+            if U256::from(i as u64) < chain_count {
+                selected.push(item);
+            } else {
+                break;
+            }
+        }
 
         // Order the remaining chains by chainID (lowest first)
-        sorted.sort_by(|a, b| a.1.cmp(&b.1));
+        selected.sort_by(|a, b| a.0.cmp(&b.0));
 
-        // Reconstruct the sorted arrays
-        for (i, (appchain, token, receiver)) in sorted.iter().enumerate() {
-            appchains[i] = *appchain;
-            tokens[i] = *token;
-            emissions_receivers[i] = *receiver;
-        }
+        // Reconstruct the arrays to the selected length
+        appchains = selected.iter().map(|(id, _, _)| *id).collect();
+        tokens = selected.iter().map(|(_, t, _)| *t).collect();
+        emissions_receivers = selected.iter().map(|(_, _, r)| *r).collect();
     }
     (appchains, tokens, emissions_receivers)
 }
