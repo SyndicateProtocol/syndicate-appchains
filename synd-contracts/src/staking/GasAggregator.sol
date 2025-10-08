@@ -1,22 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {EpochTracker} from "./EpochTracker.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ISyndicateSequencingChain} from "../interfaces/ISyndicateSequencingChain.sol";
 import {GasCounter} from "./GasCounter.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-/// @title IAppchainFactory
-/// @notice Interface for the appchain factory to get deployment information
-/// @dev Used to compute deterministic addresses for sequencing chain contracts
-interface IAppchainFactory {
-    /// @notice Get the consistent proxy bytecode used for sequencing chain deployments
-    /// @return The bytecode used to deploy sequencing chain proxies
-    function getProxyBytecode() external view returns (bytes memory);
+interface ISyndicateProxy {
+    // This function exists in both the new proxy and legacy implementation contract
+    function tokensUsedPerEpoch(uint256 epoch) external view returns (uint256);
 }
 
 /**
@@ -25,9 +19,9 @@ interface IAppchainFactory {
  * @dev This contract manages the collection and aggregation of gas usage data from multiple appchains.
  *      It supports both automatic aggregation (for small numbers of appchains) and off-chain aggregation
  *      (for larger numbers of appchains) with a challenge mechanism for data integrity.
- * @dev Inherits from EpochTracker for epoch management and OwnableUpgradeable for admin functions
+ * @dev Inherits from Ownable for admin functions
  */
-contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSUpgradeable {
+contract GasAggregator is Ownable(msg.sender), Pausable {
     using EnumerableSet for EnumerableSet.UintSet;
 
     /*//////////////////////////////////////////////////////////////
@@ -51,103 +45,48 @@ contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSU
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Factory contract for managing appchain contracts
-    /// @dev Used to get appchain addresses, proxy bytecode, and handle implementation updates
-    IAppchainFactory public factory;
+    /// @notice Factory contract address to determine create2 addresses
+    address public factory;
 
-    /// @notice Maximum number of appchains that can be queried automatically on-chain
-    /// @dev When total appchains >= this value, off-chain aggregation with challenge mechanism is required.
-    ///      This prevents gas limit issues when querying too many contracts.
+    /// @notice Proxy bytecode hash to determine the create2 addresses
+    bytes32 public syndicateProxyBytecodeHash;
+
+    /// @notice Maximum number of appchains to submit gas data for.
+    /// This is also the max chunk size.
     uint256 public maxAppchainsToQuery;
 
     /// @notice Fee required to add a chain to the gas tracking registry
     /// @dev Exists as a spam-preventing measure. Paid in SYND.
     uint256 public addChainFee;
 
-    /// @notice Cached proxy bytecode hash for deterministic address computation
-    /// @dev Computed once and cached for efficiency when calculating sequencing chain addresses
-    bytes32 public sequencingChainProxyBytecodeHash;
-
     /// @notice Registry of chains that are currently tracked for gas usage
     EnumerableSet.UintSet internal appchains;
 
-    /// @notice Mapping of chains that have been banned from gas tracking
-    /// @dev Chains are banned when they upgrade to non-approved implementations
-    mapping(uint256 chainID => bool banned) public bannedAppchains;
-
-    /// @notice Mapping of sequencing chain implementations approved for gas tracking
-    /// @dev Only chains running approved implementations can participate in gas aggregation
-    mapping(address implementation => bool allowed) public allowedImplementations;
-
-    /// @notice Challenge window duration for off-chain aggregation submissions
-    /// @dev Time period after first submission during which new submissions can be made.
-    ///      After this window expires, the data must be sealed before the next epoch aggregation can start.
-    ///      Default is 24 hours to allow for global participation.
-    uint256 public challengeWindow;
-
     /// @notice Current epoch being processed for aggregation
     /// @dev Tracks which epoch is pending aggregation
-    uint256 public pendingEpoch;
+    uint256 public epoch;
 
     /// @notice Timestamp of the first submission for the current pending epoch
     /// @dev Used to calculate challenge window expiration
-    uint256 public pendingEpochFirstSubmissionTime;
+    uint256 public firstSubmissionTime;
 
     /// @notice Hash of the pending data for the current epoch
-    /// @dev Stores the hash of (appchainIDs, tokens, emissionsReceivers) for verification
-    bytes32 public pendingDataHash;
+    /// @dev Stores the hash of (appchainIDs, tokens) for verification
+    bytes32 public dataHash;
 
-    /// @notice Total tokens used in the pending epoch
-    /// @dev Used to ensure new submissions have higher total than previous ones
-    uint256 public pendingTotalTokensUsed;
+    // Current appchain start index in case the list of appchains is too big
+    uint256 public chunk;
 
-    /// @notice Admin-controlled overrides for appchain contract addresses
-    /// @dev Allows admins to specify custom contract addresses for specific chain IDs.
-    ///      Useful for legacy migrations or special cases where deterministic addresses don't apply.
-    mapping(uint256 => address) public appchainContractOverrides;
+    /// @notice appchain contract addresses mapping
+    mapping(uint256 chainId => address) public appchainContract;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Error thrown when automatic aggregation is attempted but off-chain aggregation is required
-    /// @dev Triggered when total appchains >= maxAppchainsToQuery
-    error MustUseOffchainAggregation();
-
-    /// @notice Error thrown when off-chain aggregation is attempted but automatic aggregation should be used
-    /// @dev Triggered when total appchains < maxAppchainsToQuery
-    error MustUseAutomaticAggregation();
-
-    /// @notice Error thrown when new submission total is not higher than pending total
-    /// @dev Ensures submissions improve upon previous ones
-    error NotHigherThanPendingTotal(uint256 submitted, uint256 pending);
-
-    /// @notice Error thrown when attempting to aggregate an epoch that hasn't ended
-    /// @dev Prevents aggregation of current or future epochs
-    error EpochNotOver(uint256 epoch, uint256 currentEpoch);
-
-    /// @notice Error thrown when attempting to seal before challenge window expires
-    /// @dev Ensures challenge window has elapsed before sealing
-    error WindowNotOver(uint256 currentEpoch, uint256 challengeWindow);
-
-    /// @notice Error thrown when attempting to submit after challenge window has expired
-    /// @dev Prevents submissions after the challenge period
-    error WindowOver(uint256 currentEpoch, uint256 challengeWindow);
-
-    /// @notice Error thrown when appchain IDs are not submitted in ascending order
-    /// @dev Ensures consistent ordering for data integrity
-    error ChainIDsMustBeInAscendingOrder();
-
-    /// @notice Error thrown when challenge window is set to zero
-    /// @dev Prevents invalid configuration
-    error ZeroChallengeWindow();
-
     /// @notice Error thrown when a zero address is provided
     /// @dev Prevents invalid contract addresses
     error ZeroAddress();
-
-    /// @notice Error thrown when an epoch start timestamp is zero
-    error ZeroEpoch();
 
     /// @notice Error thrown when chain id is zero
     error ZeroChainId();
@@ -160,10 +99,9 @@ contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSU
     error ImplementationNotAllowed(address implementation);
     error InsufficientFee(uint256 required, uint256 provided);
     error ChainNotFound(uint256 chainId);
-    error ChainIsBanned(uint256 chainId);
     error OnlyChainCanNotifyUpgrade();
-    error OnlyFactoryCanNotifyNewImplementation();
-    error NoSequencingChainProxyBytecodeHash();
+    error FactoryAlreadySet();
+    error NoChainsAdded();
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -173,82 +111,36 @@ contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSU
     /// @param chainId The chain ID that was added
     /// @param chainContract The contract address of the sequencing chain
     /// @param addedBy The address that paid the fee to add this chain
-    event ChainAdded(uint256 indexed chainId, address indexed chainContract, address indexed addedBy);
+    event ChainAdded(uint256 indexed epoch, uint256 indexed chainId, address chainContract, address indexed addedBy);
 
     /// @notice Emitted when a chain is removed from the gas tracking registry
     /// @param chainId The chain ID that was removed
-    event ChainRemoved(uint256 indexed chainId);
+    event ChainRemoved(uint256 indexed epoch, uint256 indexed chainId);
 
     /// @notice Emitted when the fee for adding chains is updated
     /// @param oldFee The previous fee amount
     /// @param newFee The new fee amount
     event AddChainFeeUpdated(uint256 oldFee, uint256 newFee);
 
-    /// @notice Emitted when a chain is banned due to upgrading to a non-approved implementation
-    /// @param chainId The chain ID that was banned
-    /// @param newImplementation The non-approved implementation that triggered the ban
-    event ChainBanned(uint256 chainId, address newImplementation);
+    event AggregatedTokens(uint256 indexed epoch, uint256[] chainIds, uint256[] tokens);
 
-    /// @notice Emitted when an admin unbans a banned chain
-    event ChainUnbanned(uint256 chainId);
+    event UpdateMaxAppchainsToQuery(uint256 indexed epoch, uint256 maxAppchainsToQuery);
 
     /*//////////////////////////////////////////////////////////////
-                            INITIALIZER
+                            CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Constructor that disables initializers
-     * @dev Prevents direct initialization of implementation contract
-     */
-    constructor() {
-        _disableInitializers();
-    }
-
-    /**
-     * @notice Initialize the GasAggregator contract
-     * @dev Sets up the contract with factory, admin, challenge window, and initial configuration.
-     *      This function can only be called once during proxy deployment.
-     * @param _admin The address to be granted admin privileges (receives DEFAULT_ADMIN_ROLE)
-     * @param _factory The address of the appchain factory contract
-     * @param _allowedImplementation The address of the initial approved sequencing chain implementation
-     */
-    function initialize(address _admin, address _factory, address _allowedImplementation, uint256 _epochStart)
-        external
-        initializer
-    {
-        if (_admin == address(0)) revert ZeroAddress();
-        if (_epochStart == 0) revert ZeroEpoch();
-
-        __Ownable_init(_admin);
-
-        // Start tracking from the current epoch (ignore all past epochs)
-        pendingEpoch = _epochStart;
-        challengeWindow = 24 hours;
-        addChainFee = 5 ether;
-        maxAppchainsToQuery = 100;
-        factory = IAppchainFactory(_factory);
-
-        // Add the initial implementation to the allowed list
-        if (_allowedImplementation != address(0)) {
-            allowedImplementations[_allowedImplementation] = true;
+    constructor(uint256 _epoch, uint256 _addChainFee, uint256 _maxAppchainsToQuery) {
+        require(_epoch != 0);
+        epoch = _epoch;
+        addChainFee = _addChainFee;
+        if (addChainFee == 0) {
+            addChainFee = 5 ether;
         }
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            MODIFIERS 
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Modifier that ensures the epoch has completed before allowing aggregation
-     * @dev Prevents aggregation of current or future epochs
-     * @param epoch The epoch index to check
-     */
-    modifier onlyCompletedEpoch(uint256 epoch) {
-        uint256 currentEpoch = getCurrentEpoch();
-        if (currentEpoch <= epoch) {
-            revert EpochNotOver(epoch, currentEpoch);
+        maxAppchainsToQuery = _maxAppchainsToQuery;
+        if (maxAppchainsToQuery == 0) {
+            maxAppchainsToQuery = 100;
         }
-        _;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -260,7 +152,7 @@ contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSU
     ///      deterministic address and not be banned. Successfully added chains will participate
     ///      in gas aggregation and emissions distribution. The owner does not pay any fees.
     /// @param chainId The chain ID to add to the tracking registry
-    function addChain(uint256 chainId) external payable {
+    function addChain(uint256 chainId) external payable whenNotPaused {
         if (msg.sender != owner()) {
             require(msg.value == addChainFee, InsufficientFee(addChainFee, msg.value));
         } else {
@@ -268,213 +160,127 @@ contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSU
         }
         require(chainId > 0, ZeroChainId());
         require(appchains.add(chainId), ChainAlreadyTracked(chainId));
-        address chainContract = getAppchainContractAddress(chainId);
+        address chainContract = Create2.computeAddress(bytes32(chainId), syndicateProxyBytecodeHash, factory);
         require(chainContract.code.length > 0, ChainNotFound(chainId));
-        require(!bannedAppchains[chainId], ChainIsBanned(chainId));
-        emit ChainAdded(chainId, chainContract, msg.sender);
+        appchainContract[chainId] = chainContract;
+        emit ChainAdded(epoch, chainId, chainContract, msg.sender);
     }
 
     /**
      * @notice Triggers automatic aggregation of appchain gas usage data
-     * @dev Only usable when total appchains < maxAppchainsToQuery.
-     *      Queries all appchains directly and aggregates their gas usage data.
-     *      After aggregation, moves to the next epoch.
-     * @custom:example If 5 appchains exist and maxAppchainsToQuery is 10, this function will work
-     * @custom:example If 15 appchains exist and maxAppchainsToQuery is 10, this function will revert
+     * @dev May need to be called multiple times if the number of appchains is large
+     * Pause contract while aggregating. Unpause when finished.
      */
-    function aggregateTokensUsed() external onlyCompletedEpoch(pendingEpoch) {
-        if (fallbackToOffchainAggregation()) {
-            revert MustUseOffchainAggregation();
+    function aggregateTokens(uint256[] calldata prevChainIds, uint256[] calldata prevTokens) external {
+        if (chunk == 0) {
+            _pause();
+        } else {
+            _requirePaused();
+            require(dataHash == keccak256(abi.encode(prevChainIds, prevTokens)), InvalidDataHash());
         }
-        uint256[] memory values = getTrackedChainIds();
-        uint256[] memory tokens = new uint256[](values.length);
-        address[] memory emissionsReceivers = new address[](values.length);
-        for (uint256 i = 0; i < values.length; i++) {
-            address seqContract = getAppchainContractAddress(values[i]);
-            // TODO: use getReceiverAndTokens() instead of the individual functions
-            tokens[i] = GasCounter(seqContract).tokensUsedPerEpoch(pendingEpoch);
-            emissionsReceivers[i] = ISyndicateSequencingChain(seqContract).getEmissionsReceiver();
-        }
-        aggregatedEpochDataHash[pendingEpoch] = keccak256(abi.encode(values, tokens, emissionsReceivers));
-        pendingEpoch++;
-        pendingEpochFirstSubmissionTime = 0;
-        pendingDataHash = bytes32(0);
-        pendingTotalTokensUsed = 0;
+
+        uint256[] memory chainIds;
+        uint256[] memory tokens;
+        (chunk, chainIds, tokens) = simulateAggregateTokens(chunk, prevChainIds, prevTokens);
+
+        dataHash = keccak256(abi.encode(chainIds, tokens));
+        if (chunk != 0) return;
+
+        aggregatedEpochDataHash[epoch] = dataHash;
+        dataHash = 0;
+        emit AggregatedTokens(epoch, chainIds, tokens);
+        epoch++;
+        _unpause();
     }
 
-    /**
-     * @notice Submit top appchains aggregated off-chain
-     * @dev Used when total appchains >= maxAppchainsToQuery.
-     *      Allows submission of top-performing appchains with challenge mechanism.
-     *      AppchainIDs must be submitted in ascending order for data integrity.
-     * @param appchainIDs The chainIDs of the top appchains for the current epoch
-     * @custom:example Submit [1, 5, 10] for top 3 appchains (must be in ascending order)
-     * @custom:example If challenge window is 1 hour, submissions are only allowed for 1 hour after first submission
-     */
-    function submitOffchainTopChains(uint256[] calldata appchainIDs) external onlyCompletedEpoch(pendingEpoch) {
-        if (!fallbackToOffchainAggregation()) {
-            revert MustUseAutomaticAggregation();
+    function simulateAggregateTokens(uint256 chunk, uint256[] calldata prevChainIds, uint256[] calldata prevTokens)
+        public
+        view
+        returns (uint256 nextChunk, uint256[] memory chainIds, uint256[] memory tokens)
+    {
+        uint256 count = appchains.length() - chunk;
+        require(count > 0, NoChainsAdded());
+        if (maxAppchainsToQuery < count) {
+            count = maxAppchainsToQuery;
+            nextChunk = chunk + count;
         }
-        // TODO: this should wait for a l1 message to arrive to prevent censorship
-        if (pendingEpochFirstSubmissionTime != 0 && block.timestamp > pendingEpochFirstSubmissionTime + challengeWindow)
-        {
-            revert WindowOver(pendingEpoch, challengeWindow);
+        chainIds = new uint256[](count);
+        tokens = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            chainIds[i] = appchains.at(chunk + i);
+            tokens[i] = ISyndicateProxy(appchainContract[chainIds[i]]).tokensUsedPerEpoch(epoch);
         }
-        uint256 total = 0;
-        uint256[] memory tokens = new uint256[](appchainIDs.length);
-        address[] memory emissionsReceivers = new address[](appchainIDs.length);
-        uint256 appchainID = 0;
-        for (uint256 i = 0; i < appchainIDs.length; i++) {
-            if (appchainIDs[i] <= appchainID) {
-                revert ChainIDsMustBeInAscendingOrder();
+
+        if (chunk == 0) {
+            require(prevChainIds.length == 0, InvalidDataHash());
+            require(prevTokens.length == 0, InvalidDataHash());
+            // don't bother sorting if there is only one chunk
+            if (nextChunk > 0) {
+                _quickSort(chainIds, tokens);
             }
-            appchainID = appchainIDs[i];
-            require(appchains.contains(appchainID), ChainNotTracked(appchainID));
-            address seqContract = getAppchainContractAddress(appchainID);
-            // TODO: use getReceiverAndTokens() instead of the individual functions
-            tokens[i] = GasCounter(seqContract).tokensUsedPerEpoch(pendingEpoch);
-            emissionsReceivers[i] = ISyndicateSequencingChain(seqContract).getEmissionsReceiver();
-            total += tokens[i];
-        }
-        if (total <= pendingTotalTokensUsed) {
-            revert NotHigherThanPendingTotal(total, pendingTotalTokensUsed);
-        }
-        if (pendingEpochFirstSubmissionTime == 0) {
-            pendingEpochFirstSubmissionTime = block.timestamp;
-        }
-        pendingDataHash = keccak256(abi.encode(appchainIDs, tokens, emissionsReceivers));
-        pendingTotalTokensUsed = total;
-    }
-
-    /**
-     * @notice Seal the pending epoch after challenge window expires
-     * @dev Finalizes the off-chain aggregation by sealing the pending data.
-     *      Can only be called after the challenge window has expired.
-     *      Resets all pending state variables for the next epoch.
-     * @custom:example If challenge window is 1 hour, can only seal after 1 hour from first submission
-     */
-    function sealPendingEpoch() external onlyCompletedEpoch(pendingEpoch) {
-        if (
-            pendingEpochFirstSubmissionTime == 0 || block.timestamp <= pendingEpochFirstSubmissionTime + challengeWindow
-        ) {
-            revert WindowNotOver(pendingEpoch, challengeWindow);
-        }
-        aggregatedEpochDataHash[pendingEpoch] = pendingDataHash;
-        pendingEpoch++;
-        pendingEpochFirstSubmissionTime = 0;
-        pendingDataHash = bytes32(0);
-        pendingTotalTokensUsed = 0;
-    }
-
-    /// @notice Called by sequencing chains to notify about upgrades
-    /// @dev Automatically bans chain from gas tracking if implementation is not allowed
-    /// @param chainId The chain ID that is upgrading
-    /// @param newImplementation The address of the new implementation being upgraded to
-    function notifyChainUpgrade(uint256 chainId, address newImplementation) external {
-        if (getAppchainContractAddress(chainId) != msg.sender) {
-            revert OnlyChainCanNotifyUpgrade();
+            // the first chunk does not need to be merged
+            return (nextChunk, chainIds, tokens);
         }
 
-        if (!allowedImplementations[newImplementation]) {
-            _banAppchain(chainId);
-            emit ChainBanned(chainId, newImplementation);
+        _quickSort(chainIds, tokens);
+        uint256[] memory newChainIds = new uint256[](maxAppchainsToQuery);
+        uint256[] memory newTokens = new uint256[](maxAppchainsToQuery);
+
+        // merge sort the sorted data
+        uint256 prevIndex = 0;
+        uint256 index = 0;
+        for (uint256 i = 0; i < maxAppchainsToQuery; i++) {
+            if (index == count || prevTokens[prevIndex] >= tokens[index]) {
+                newTokens[i] = prevTokens[prevIndex];
+                newChainIds[i] = prevChainIds[prevIndex];
+                prevIndex++;
+            } else {
+                newTokens[i] = tokens[index];
+                newChainIds[i] = chainIds[index];
+                index++;
+            }
         }
-    }
 
-    /// @notice Called by the factory to notify about new approved implementations
-    /// @dev Only the factory can approve new implementations. This allows chains to upgrade
-    ///      to new versions without being banned from gas tracking.
-    /// @param newImplementation The address of the newly approved implementation
-    function notifyNewImplementation(address newImplementation) external {
-        if (msg.sender != address(factory)) revert OnlyFactoryCanNotifyNewImplementation();
-        allowedImplementations[newImplementation] = true;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                         INTERNAL FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Computes the deterministic address for a sequencing chain proxy
-    /// @dev Uses CREATE2 with the factory as deployer, chain ID as salt, and cached bytecode hash
-    /// @param chainId The chain ID for the sequencing chain
-    /// @return The computed address of the sequencing chain proxy
-    function computeSequencingChainAddress(uint256 chainId) internal returns (address) {
-        return Create2.computeAddress(bytes32(chainId), getSequencingChainProxyBytecodeHash(), address(factory));
-    }
-
-    /// @notice Internal function to ban a chain from gas tracking
-    /// @dev Removes the chain from all tracking data structures and marks it as banned.
-    ///      Banned chains cannot be re-added to prevent abuse.
-    /// @param chainId The chain ID to ban from gas tracking
-    function _banAppchain(uint256 chainId) internal {
-        if (appchains.remove(chainId)) {
-            emit ChainRemoved(chainId);
-        }
-        bannedAppchains[chainId] = true;
-    }
-
-    /// @notice Get the cached proxy bytecode hash, computing it if necessary
-    /// @dev Caches the bytecode hash for gas efficiency in repeated address computations
-    /// @return The keccak256 hash of the proxy bytecode used for CREATE2 deployments
-    function getSequencingChainProxyBytecodeHash() internal returns (bytes32) {
-        if (sequencingChainProxyBytecodeHash != bytes32(0)) return sequencingChainProxyBytecodeHash;
-        if (address(factory) != address(0)) {
-            sequencingChainProxyBytecodeHash = keccak256(factory.getProxyBytecode());
-            return sequencingChainProxyBytecodeHash;
-        }
-        revert NoSequencingChainProxyBytecodeHash();
-    }
-
-    /// @notice Get the contract address for a given chain ID
-    /// @dev Checks for admin overrides first, then falls back to deterministic address computation
-    /// @param chainId The chain ID to get the contract address for
-    /// @return The contract address for the specified chain ID
-    function getAppchainContractAddress(uint256 chainId) public returns (address) {
-        address contractOverride = appchainContractOverrides[chainId];
-        if (contractOverride != address(0)) {
-            return contractOverride;
-        }
-        return computeSequencingChainAddress(chainId);
+        return (nextChunk, newChainIds, newTokens);
     }
 
     /*//////////////////////////////////////////////////////////////
                            VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Check if off-chain aggregation is required
-     * @dev Returns true when total appchains >= maxAppchainsToQuery
-     * @return True if off-chain aggregation is required, false for automatic aggregation
-     * @custom:example If 15 appchains exist and maxAppchainsToQuery is 10, returns true
-     * @custom:example If 5 appchains exist and maxAppchainsToQuery is 10, returns false
-     */
-    function fallbackToOffchainAggregation() public view returns (bool) {
-        return appchains.length() >= maxAppchainsToQuery;
-    }
-
     /// @notice Get the total number of chains currently being tracked for gas usage
     /// @return The number of chains in the tracking registry
-    function getTotalTrackedChains() external view returns (uint256) {
+    function getTrackedChainCount() external view returns (uint256) {
         return appchains.length();
     }
 
     /// @notice Get all chain IDs currently being tracked for gas usage
-    function getTrackedChainIds() public view returns (uint256[] memory chainIDs) {
+    function getTrackedChainIds() external view returns (uint256[] memory chainIDs) {
         bytes32[] memory ids = appchains._inner._values;
         assembly {
             chainIDs := ids
         }
     }
 
-    /// @notice Get the contract's current ETH balance from collected fees
-    /// @return The contract's ETH balance in wei
-    function getBalance() external view returns (uint256) {
-        return address(this).balance;
+    /// @notice Get a chain ID currently being tracked for gas usage
+    function getTrackedChainId(uint256 index) external view returns (uint256) {
+        return appchains.at(index);
     }
 
     /*//////////////////////////////////////////////////////////////
                          ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Adds a chain to the gas tracking registry with a chainContract override.
+    /// This legacy function is deactivated once the factory is set.
+    function addLegacyChain(uint256 chainId, address chainContract) external onlyOwner whenNotPaused {
+        require(factory == address(0), FactoryAlreadySet());
+        require(chainId > 0, ZeroChainId());
+        require(appchains.add(chainId), ChainAlreadyTracked(chainId));
+        require(chainContract.code.length > 0, ChainNotFound(chainId));
+        appchainContract[chainId] = chainContract;
+        emit ChainAdded(epoch, chainId, chainContract, msg.sender);
+    }
 
     /**
      * @notice Set the maximum number of appchains that can be queried automatically
@@ -482,43 +288,16 @@ contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSU
      * @param newMax The new maximum number of appchains for automatic aggregation
      * @custom:example If set to 10, automatic aggregation works for ≤10 appchains
      */
-    function setMaxAppchainsToQuery(uint256 newMax) external onlyOwner {
+    function setMaxAppchainsToQuery(uint256 newMax) external onlyOwner whenNotPaused {
         maxAppchainsToQuery = newMax;
+        emit UpdateMaxAppchainsToQuery(epoch, maxAppchainsToQuery);
     }
 
-    /**
-     * @notice Set the challenge window duration for off-chain aggregation
-     * @dev Time period after first submission during which new submissions can be made
-     * @param newChallengeWindow The new challenge window duration in seconds
-     * @custom:example If set to 3600, challenge window is 1 hour
-     */
-    function setChallengeWindow(uint256 newChallengeWindow) external onlyOwner {
-        if (newChallengeWindow == 0) revert ZeroChallengeWindow();
-        challengeWindow = newChallengeWindow;
-    }
-
-    /// @notice Remove an implementation from the allowed list (admin only)
-    /// @param implementation The implementation address to remove from the allowed list
-    function removeAllowedImplementation(address implementation) external onlyOwner {
-        if (!allowedImplementations[implementation]) revert ImplementationNotAllowed(implementation);
-        allowedImplementations[implementation] = false;
-    }
-
-    function removeAppchain(uint256 chainId) external onlyOwner {
-        require(appchains.remove(chainId), "appchain is not tracked");
-        emit ChainRemoved(chainId);
-    }
-
-    function banAppchain(uint256 chainId) external onlyOwner {
-        require(!bannedAppchains[chainId], "appchain is banned");
-        _banAppchain(chainId);
-        emit ChainBanned(chainId, address(0));
-    }
-
-    function unbanAppchain(uint256 chainId) external onlyOwner {
-        require(bannedAppchains[chainId], "appchain not banned");
-        bannedAppchains[chainId] = false;
-        emit ChainUnbanned(chainId);
+    function removeAppchains(uint256[] calldata chainIds) external onlyOwner whenNotPaused {
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            require(appchains.remove(chainIds[i]), "appchain is not tracked");
+            emit ChainRemoved(epoch, chainIds[i]);
+        }
     }
 
     /// @notice Set the fee required to add a chain to the registry
@@ -546,29 +325,121 @@ contract GasAggregator is Initializable, EpochTracker, OwnableUpgradeable, UUPSU
         require(success, "Transfer failed");
     }
 
-    /// @notice Set a new factory contract address (admin only)
+    /// @notice Set the factory contract address (admin only)
     /// @dev Updates the factory and recalculates the proxy bytecode hash for address computations.
     /// @param newFactory The address of the new factory contract
-    function setFactory(address newFactory) external onlyOwner {
-        factory = IAppchainFactory(newFactory);
-        sequencingChainProxyBytecodeHash = keccak256(factory.getProxyBytecode());
+    /// @param bytecodeHash The bytecode hash of the proxy that the factory deploys
+    function setFactory(address newFactory, bytes32 bytecodeHash) external onlyOwner {
+        require(factory == address(0), FactoryAlreadySet());
+        require(newFactory != address(0), ZeroAddress());
+        require(bytecodeHash != 0, InvalidDataHash());
+        factory = newFactory;
+        syndicateProxyBytecodeHash = bytecodeHash;
     }
 
-    /// @notice Authorize contract upgrades (admin only)
-    /// @dev Required by UUPSUpgradeable. Only admins can upgrade this contract.
-    /// @param newImplementation The address of the new implementation (unused but required by interface)
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    /**
+     * @notice Pause the contract
+     * @dev Only callable by the contract owner. Disables the contract.
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
 
-    /// @notice Set a custom contract address override for a specific chain ID (admin only)
-    /// @dev Allows admins to specify non-deterministic addresses for specific chains.
-    ///      Useful for legacy chains until they are migrated to the new architecture.
-    /// @param chainId The chain ID to set an override for
-    /// @param contractOverride The contract address to use instead of the deterministic address
-    function setChainOverride(uint256 chainId, address contractOverride) external onlyOwner {
-        if (contractOverride.code.length == 0) {
-            revert ChainNotFound(chainId);
+    /**
+     * @notice Unpause the contract
+     * @dev Only callable by the contract owner. Enables the contract.
+     */
+    function unpause() external onlyOwner {
+        // clear pending aggregation when unpausing
+        chunk = 0;
+        dataHash = 0;
+        _unpause();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    // sort key, value arrays by values from high to low
+    function _quickSort(uint256[] memory keys, uint256[] memory values) internal pure {
+        unchecked {
+            _quickSort(_begin(values), _end(values), _begin(keys) - _begin(values));
         }
+    }
 
-        appchainContractOverrides[chainId] = contractOverride;
+    /**
+     * Fork of the openzeppelin array _quickSort function that also swaps an offset array
+     * @dev Performs a quick sort of a segment of memory. The segment sorted starts at `begin` (inclusive), and stops
+     * at end (exclusive). Sorting follows the `comp` comparator.
+     *
+     * Invariant: `begin <= end`. This is the case when initially called by {sort} and is preserved in subcalls.
+     *
+     * IMPORTANT: Memory locations between `begin` and `end` are not validated/zeroed. This function should
+     * be used only if the limits are within a memory array.
+     */
+    function _quickSort(uint256 begin, uint256 end, uint256 offset) internal pure {
+        unchecked {
+            if (end - begin < 0x40) return;
+
+            // Use first element as pivot
+            uint256 pivot = _mload(begin);
+            // Position where the pivot should be at the end of the loop
+            uint256 pos = begin;
+
+            for (uint256 it = begin + 0x20; it < end; it += 0x20) {
+                if (_mload(it) > pivot) {
+                    // If the value stored at the iterator's position comes before the pivot, we increment the
+                    // position of the pivot and move the value there.
+                    pos += 0x20;
+                    _swap(pos, it);
+                    _swap(pos + offset, it + offset);
+                }
+            }
+
+            _swap(begin, pos); // Swap pivot into place
+            _swap(begin + offset, pos + offset);
+            _quickSort(begin, pos, offset); // Sort the left side of the pivot
+            _quickSort(pos + 0x20, end, offset); // Sort the right side of the pivot
+        }
+    }
+
+    /**
+     * @dev Pointer to the memory location of the first element of `array`.
+     */
+    function _begin(uint256[] memory array) internal pure returns (uint256 ptr) {
+        assembly ("memory-safe") {
+            ptr := add(array, 0x20)
+        }
+    }
+
+    /**
+     * @dev Pointer to the memory location of the first memory word (32bytes) after `array`. This is the memory word
+     * that comes just after the last element of the array.
+     */
+    function _end(uint256[] memory array) internal pure returns (uint256 ptr) {
+        unchecked {
+            return _begin(array) + array.length * 0x20;
+        }
+    }
+
+    /**
+     * @dev Load memory word (as a uint256) at location `ptr`.
+     */
+    function _mload(uint256 ptr) internal pure returns (uint256 value) {
+        assembly {
+            value := mload(ptr)
+        }
+    }
+
+    /**
+     * @dev Swaps the elements memory location `ptr1` and `ptr2`.
+     */
+    function _swap(uint256 ptr1, uint256 ptr2) internal pure {
+        assembly {
+            let value1 := mload(ptr1)
+            let value2 := mload(ptr2)
+            mstore(ptr1, value2)
+            mstore(ptr2, value1)
+        }
     }
 }

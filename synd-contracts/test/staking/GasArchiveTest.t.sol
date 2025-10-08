@@ -5,15 +5,15 @@ import {GasArchive} from "../../src/staking/GasArchive.sol";
 import {MerklePatriciaProofVerifier} from "../../src/staking/lib/MerklePatriciaProofVerifier.sol";
 import {RLPReader} from "../../src/staking/lib/RLPReader.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract GasUsageArchiveTestHelper is GasArchive {
+contract GasArchiveTestHelper is GasArchive {
     constructor(address _blockHashSender, uint256 _settlementChainID)
         GasArchive(_blockHashSender, _settlementChainID)
     {}
 
-    function setEpochDataHashForTesting(uint256 epoch, uint256 seqChainId, bytes32 hash) external {
-        updateLatestEpoch();
-        require(epoch < latestEpoch, "cannot set future epoch data hash");
+    function setEpochDataHashForTesting(uint256 newEpoch, uint256 seqChainId, bytes32 hash) external {
+        require(newEpoch <= epoch, "cannot set future epoch data hash");
         epochVerifiedDataHash[epoch][seqChainId] = hash;
     }
 }
@@ -23,7 +23,7 @@ contract GasArchiveTest is Test {
     using RLPReader for bytes;
 
     address public gasArchiveImpl;
-    GasUsageArchiveTestHelper public gasArchive;
+    GasArchiveTestHelper public gasArchive;
 
     address public admin;
     address public blockHashSender;
@@ -53,9 +53,19 @@ contract GasArchiveTest is Test {
         blockHashSender = makeAddr("blockHashSender");
         user = makeAddr("user");
 
-        // Deploy GasArchive
+        // Deploy GasArchive implementation
+        gasArchiveImpl = address(new GasArchiveTestHelper(blockHashSender, SETTLEMENT_CHAIN_ID));
+
+        // Prepare initialization data
+        bytes memory initData = abi.encodeCall(GasArchive.initialize, (EPOCH));
+
+        // Deploy GasArchive proxy
         vm.prank(admin);
-        gasArchive = new GasUsageArchiveTestHelper(blockHashSender, SETTLEMENT_CHAIN_ID);
+        gasArchive = GasArchiveTestHelper(address(new ERC1967Proxy(gasArchiveImpl, initData)));
+
+        assertEq(gasArchive.blockHashSender(), blockHashSender);
+        assertEq(gasArchive.settlementChainID(), SETTLEMENT_CHAIN_ID);
+        assertEq(gasArchive.owner(), admin);
 
         // Set up sequencing chain
         vm.prank(admin);
@@ -63,21 +73,6 @@ contract GasArchiveTest is Test {
 
         // Wait until end of epoch
         vm.warp(1754089200 + EPOCH * 30 days);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        CONSTRUCTOR TESTS
-    //////////////////////////////////////////////////////////////*/
-
-    function testConstructor() public {
-        // Test zero blockHashSender
-        vm.expectRevert(GasArchive.ZeroAddress.selector);
-        new GasArchive(address(0), SETTLEMENT_CHAIN_ID);
-
-        // Test successful deployment (already tested in setUp, but let's verify)
-        assertEq(gasArchive.blockHashSender(), blockHashSender);
-        assertEq(gasArchive.settlementChainID(), SETTLEMENT_CHAIN_ID);
-        assertEq(gasArchive.owner(), admin);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -215,10 +210,6 @@ contract GasArchiveTest is Test {
         tokens[0] = 100;
         tokens[1] = 200;
 
-        address[] memory emissionsReceivers = new address[](2);
-        emissionsReceivers[0] = address(0x123);
-        emissionsReceivers[1] = address(0x456);
-
         bytes[] memory mockAccountProof = new bytes[](1);
         mockAccountProof[0] = abi.encode("account_proof");
         bytes[] memory mockStorageProof = new bytes[](1);
@@ -255,27 +246,23 @@ contract GasArchiveTest is Test {
             EPOCH, SETTLEMENT_CHAIN_ID, bytes32(vm.parseJsonBytes(seqProofJson, ".storageProof[0].value"))
         );
 
-        gasArchive.confirmSettlementChainEpochDataHash(
-            EPOCH, seqChainHeader, seqAccountProofArray, seqStorageProofArray
-        );
+        gasArchive.confirmSettlementChainEpochDataHash(seqChainHeader, seqAccountProofArray, seqStorageProofArray);
 
         // Test resubmission prevention for confirmEpochDataHash
         vm.expectRevert(GasArchive.AlreadySubmitted.selector);
-        gasArchive.confirmSettlementChainEpochDataHash(
-            EPOCH, seqChainHeader, seqAccountProofArray, seqStorageProofArray
-        );
+        gasArchive.confirmSettlementChainEpochDataHash(seqChainHeader, seqAccountProofArray, seqStorageProofArray);
 
         // At this point, the epoch data hash is verified but epoch is not yet completed
-        assertFalse(gasArchive.epochCompleted(EPOCH), "Epoch should not be completed yet");
+        assertFalse(gasArchive.epoch() > EPOCH, "Epoch should not be completed yet");
 
-        gasArchive.submitEpochPreImageData(EPOCH, SETTLEMENT_CHAIN_ID, appchains, tokens, emissionsReceivers);
+        gasArchive.submitEpochPreImageData(SETTLEMENT_CHAIN_ID, appchains, tokens);
 
         // Test resubmission prevention for submitEpochPreImageData
         vm.expectRevert(GasArchive.AlreadySubmitted.selector);
-        gasArchive.submitEpochPreImageData(EPOCH, SETTLEMENT_CHAIN_ID, appchains, tokens, emissionsReceivers);
+        gasArchive.submitEpochPreImageData(SETTLEMENT_CHAIN_ID, appchains, tokens);
 
         // Epoch is not complete yet
-        assertFalse(gasArchive.epochCompleted(EPOCH));
+        assertFalse(gasArchive.epoch() > EPOCH);
 
         // Remove the original sequencing chain
         vm.prank(admin);
@@ -284,7 +271,7 @@ contract GasArchiveTest is Test {
         gasArchive.removeSequencingChain(SEQ_CHAIN_ID);
 
         // Now the epoch should be completed
-        assertTrue(gasArchive.epochCompleted(EPOCH), "Epoch should be marked as completed");
+        assertTrue(gasArchive.epoch() > EPOCH, "Epoch should be marked as completed");
 
         // Check total gas fees
         assertEq(gasArchive.getTotalGasFees(EPOCH), 300, "Total gas fees should be 100 + 200 = 300");
@@ -294,22 +281,10 @@ contract GasArchiveTest is Test {
         assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_2), 200, "Appchain 456 should have 200 tokens");
 
         // Check active appchain IDs
-        uint256[] memory activeAppchains = gasArchive.getActiveAppchainIds(EPOCH);
+        uint256[] memory activeAppchains = gasArchive.getAppchainIds(EPOCH);
         assertEq(activeAppchains.length, 2, "Should have 2 active appchains");
         assertEq(activeAppchains[0], APPCHAIN_ID_1, "First appchain should be 123");
         assertEq(activeAppchains[1], APPCHAIN_ID_2, "Second appchain should be 456");
-
-        // Check emissions receivers
-        assertEq(
-            gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1),
-            address(0x123),
-            "Appchain 123 receiver should be 0x123"
-        );
-        assertEq(
-            gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_2),
-            address(0x456),
-            "Appchain 456 receiver should be 0x456"
-        );
     }
 
     function testSubmitEpochPreImageDataWithoutVerifiedHash() public {
@@ -319,12 +294,9 @@ contract GasArchiveTest is Test {
         uint256[] memory tokens = new uint256[](1);
         tokens[0] = 100;
 
-        address[] memory emissionsReceivers = new address[](1);
-        emissionsReceivers[0] = makeAddr("receiver1");
-
         // Should revert if no verified hash exists
         vm.expectRevert(GasArchive.InvalidData.selector);
-        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, appchains, tokens, emissionsReceivers);
+        gasArchive.submitEpochPreImageData(SEQ_CHAIN_ID, appchains, tokens);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -348,11 +320,14 @@ contract GasArchiveTest is Test {
         assertEq(gasArchive.seqChainOutbox(SEQ_CHAIN_ID), address(1));
     }
 
-    function testEpochDataInitiallyEmpty() public view {
-        assertFalse(gasArchive.epochCompleted(EPOCH));
-        assertEq(gasArchive.epochTotalTokensUsed(EPOCH), 0);
-        assertEq(gasArchive.epochAppchainTokensUsed(EPOCH, APPCHAIN_ID_1), 0);
-        assertEq(gasArchive.epochAppchainEmissionsReceiver(EPOCH, APPCHAIN_ID_1), address(0));
+    function testEpochDataInitiallyEmpty() public {
+        assertFalse(gasArchive.epoch() > EPOCH);
+        assertEq(gasArchive.totalGasFees(EPOCH), 0);
+        assertEq(gasArchive.appchainGasFees(EPOCH, APPCHAIN_ID_1), 0);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
+        gasArchive.getTotalGasFees(EPOCH);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
+        gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -371,13 +346,7 @@ contract GasArchiveTest is Test {
 
     function testGetActiveAppchainIdsNotArchivedEpoch() public {
         vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
-        gasArchive.getActiveAppchainIds(EPOCH);
-    }
-
-    function testGetAppchainRewardsReceiverNotArchivedEpoch() public view {
-        // getAppchainRewardsReceiver doesn't require archived epoch since it uses appchainLatestEpoch
-        // It will return address(0) for non-existent appchains
-        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1), address(0));
+        gasArchive.getAppchainIds(EPOCH);
     }
 
     function testViewFunctionsWithArchivedData() public {
@@ -390,15 +359,9 @@ contract GasArchiveTest is Test {
         gasUsageAmounts[0] = 1000;
         gasUsageAmounts[1] = 2000;
 
-        address[] memory rewardsReceivers = new address[](2);
-        rewardsReceivers[0] = makeAddr("receiver1");
-        rewardsReceivers[1] = makeAddr("receiver2");
-
         // Set archived data using helper contract
-        gasArchive.setEpochDataHashForTesting(
-            EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts, rewardsReceivers))
-        );
-        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, appchainIds, gasUsageAmounts, rewardsReceivers);
+        gasArchive.setEpochDataHashForTesting(EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.submitEpochPreImageData(SEQ_CHAIN_ID, appchainIds, gasUsageAmounts);
 
         // Test getAppchainGasFees
         assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_1), 1000);
@@ -408,14 +371,10 @@ contract GasArchiveTest is Test {
         assertEq(gasArchive.getTotalGasFees(EPOCH), 3000);
 
         // Test getActiveAppchainIds
-        uint256[] memory activeAppchains = gasArchive.getActiveAppchainIds(EPOCH);
+        uint256[] memory activeAppchains = gasArchive.getAppchainIds(EPOCH);
         assertEq(activeAppchains.length, 2);
         assertEq(activeAppchains[0], APPCHAIN_ID_1);
         assertEq(activeAppchains[1], APPCHAIN_ID_2);
-
-        // Test getAppchainRewardsReceiver
-        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1), rewardsReceivers[0]);
-        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_2), rewardsReceivers[1]);
     }
 
     function testGetAppchainGasFeesZeroForNonExistentAppchain() public {
@@ -426,42 +385,14 @@ contract GasArchiveTest is Test {
         uint256[] memory gasUsageAmounts = new uint256[](1);
         gasUsageAmounts[0] = 1500;
 
-        address[] memory rewardsReceivers = new address[](1);
-        rewardsReceivers[0] = makeAddr("receiver1");
-
-        gasArchive.setEpochDataHashForTesting(
-            EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts, rewardsReceivers))
-        );
-        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, appchainIds, gasUsageAmounts, rewardsReceivers);
+        gasArchive.setEpochDataHashForTesting(EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.submitEpochPreImageData(SEQ_CHAIN_ID, appchainIds, gasUsageAmounts);
 
         // Test existing appchain
         assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_1), 1500);
 
         // Test non-existent appchain returns 0
         assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_2), 0);
-    }
-
-    function testGetAppchainRewardsReceiverZeroForNonExistentAppchain() public {
-        // Create test data with only one appchain
-        uint256[] memory appchainIds = new uint256[](1);
-        appchainIds[0] = APPCHAIN_ID_1;
-
-        uint256[] memory gasUsageAmounts = new uint256[](1);
-        gasUsageAmounts[0] = 1500;
-
-        address[] memory rewardsReceivers = new address[](1);
-        rewardsReceivers[0] = makeAddr("receiver1");
-
-        gasArchive.setEpochDataHashForTesting(
-            EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts, rewardsReceivers))
-        );
-        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, appchainIds, gasUsageAmounts, rewardsReceivers);
-
-        // Test existing appchain
-        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1), rewardsReceivers[0]);
-
-        // Test non-existent appchain returns zero address
-        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_2), address(0));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -471,7 +402,7 @@ contract GasArchiveTest is Test {
     function testGetNewViewFunctions() public view {
         uint256 epoch = 200;
 
-        assertFalse(gasArchive.hasChainSubmittedForEpoch(epoch, SEQ_CHAIN_ID));
+        assertFalse(gasArchive.epochChainDataSubmitted(epoch, SEQ_CHAIN_ID));
     }
 
     function testViewFunctionsRevertForIncompleteEpoch() public {
@@ -487,13 +418,10 @@ contract GasArchiveTest is Test {
 
         uint256[] memory appchainIds = new uint256[](0);
         uint256[] memory gasUsageAmounts = new uint256[](0);
-        address[] memory rewardsReceivers = new address[](0);
 
         // Manually set up partial epoch data (one chain submitted, one hasn't)
-        gasArchive.setEpochDataHashForTesting(
-            EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts, rewardsReceivers))
-        );
-        gasArchive.submitEpochPreImageData(EPOCH, SEQ_CHAIN_ID, appchainIds, gasUsageAmounts, rewardsReceivers);
+        gasArchive.setEpochDataHashForTesting(EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.submitEpochPreImageData(SEQ_CHAIN_ID, appchainIds, gasUsageAmounts);
 
         // IGasDataProvider view functions should revert
         vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
@@ -503,15 +431,10 @@ contract GasArchiveTest is Test {
         gasArchive.getTotalGasFees(EPOCH);
 
         vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
-        gasArchive.getActiveAppchainIds(EPOCH);
+        gasArchive.getAppchainIds(EPOCH);
 
-        // getAppchainRewardsReceiver doesn't require archived epoch since it uses appchainLatestEpoch
-        // It will return address(0) for non-existent appchains
-        assertEq(gasArchive.getAppchainRewardsReceiver(APPCHAIN_ID_1), address(0));
-
-        // But our new utility functions should work
-        assertTrue(gasArchive.hasChainSubmittedForEpoch(EPOCH, SEQ_CHAIN_ID));
-        assertFalse(gasArchive.hasChainSubmittedForEpoch(EPOCH, chain2));
+        assertTrue(gasArchive.epochChainDataSubmitted(EPOCH, SEQ_CHAIN_ID));
+        assertFalse(gasArchive.epochChainDataSubmitted(EPOCH, chain2));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -556,7 +479,7 @@ contract GasArchiveTest is Test {
 
         vm.stopPrank();
 
-        // Test that blockHashSender can only set block hashes
+        // Test that only blockHashSender can set block hashes
         vm.prank(user);
         vm.expectRevert(GasArchive.NotBlockHashSender.selector);
         gasArchive.sendBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);

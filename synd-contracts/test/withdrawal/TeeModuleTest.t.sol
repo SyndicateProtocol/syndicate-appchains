@@ -224,7 +224,7 @@ contract TeeModuleTest is Test {
             SEQ_START_BLOCK_HASH,
             L1_START_BATCH_ACC,
             address(mockL1Block),
-            false, // isL1Chain = false
+            IBridge(address(0)), // isL1Chain = false
             CHALLENGE_WINDOW_DURATION,
             SLOW_DURATION,
             ITeeKeyManager(address(mockTeeKeyManager))
@@ -262,31 +262,14 @@ contract TeeModuleTest is Test {
             APP_START_BLOCK_HASH,
             SEQ_START_BLOCK_HASH,
             L1_START_BATCH_ACC,
-            address(l1Bridge),
-            true, // isL1Chain = true
+            address(0),
+            IBridge(l1Bridge), // isL1Chain = true
             CHALLENGE_WINDOW_DURATION,
             SLOW_DURATION,
             ITeeKeyManager(address(mockTeeKeyManager))
         );
 
         assertTrue(l1TeeModule.isL1Chain());
-    }
-
-    function testRevert_ConstructorInvalidL1Bridge() public {
-        vm.expectRevert("unexpected seq bridge address");
-        new TeeModule(
-            IAssertionPoster(address(mockPoster)),
-            IBridge(address(mockBridge)),
-            CONFIG_HASH,
-            APP_START_BLOCK_HASH,
-            SEQ_START_BLOCK_HASH,
-            L1_START_BATCH_ACC,
-            address(0x4200000000000000000000000000000000000015),
-            true, // isL1Chain = true
-            CHALLENGE_WINDOW_DURATION,
-            SLOW_DURATION,
-            ITeeKeyManager(address(mockTeeKeyManager))
-        );
     }
 
     function testRevert_ConstructorInvalidBridge() public {
@@ -302,7 +285,7 @@ contract TeeModuleTest is Test {
             SEQ_START_BLOCK_HASH,
             L1_START_BATCH_ACC,
             address(mockL1Block),
-            false,
+            IBridge(address(0)),
             CHALLENGE_WINDOW_DURATION,
             SLOW_DURATION,
             ITeeKeyManager(address(mockTeeKeyManager))

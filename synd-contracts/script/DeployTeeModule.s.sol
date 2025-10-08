@@ -71,7 +71,7 @@ contract DeployTeeModule is Script {
             seqBlockHash,
             l1BatchAcc,
             L1_BLOCK,
-            false,
+            IBridge(address(0)),
             challengeWindowDuration,
             slowDuration,
             keyManager

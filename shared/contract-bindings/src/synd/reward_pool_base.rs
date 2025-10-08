@@ -11,15 +11,24 @@ interface RewardPoolBase {
     error OwnableUnauthorizedAccount(address account);
     error ReentrancyGuardReentrantCall();
     error ZeroAddress();
+    error ZeroEpochIndex();
 
     event ClaimSuccess(uint256 indexed epochIndex, uint256 indexed appchainId, address indexed destination, uint256 amount);
     event EpochDeposit(uint256 indexed epochIndex, uint256 amount);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
+    receive() external payable;
+
+    function EPOCH_DURATION() external view returns (uint256);
+    function START_TIMESTAMP() external view returns (uint256);
     function decayFactor() external view returns (UD60x18);
+    function deposit(uint256 epoch) external payable;
     function epochTotal(uint256 epochIndex) external view returns (uint256 epochTotal);
     function feeMultiplier() external view returns (UD60x18);
     function gasDataProvider() external view returns (address);
+    function getCurrentEpoch() external view returns (uint256);
+    function getEpochEnd(uint256 epochIndex) external pure returns (uint256);
+    function getEpochStart(uint256 epochIndex) external pure returns (uint256);
     function owner() external view returns (address);
     function renounceOwnership() external;
     function setDecayFactor(uint256 _decay) external;
@@ -35,6 +44,36 @@ interface RewardPoolBase {
 ```json
 [
   {
+    "type": "receive",
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "EPOCH_DURATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "START_TIMESTAMP",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "function",
     "name": "decayFactor",
     "inputs": [],
@@ -46,6 +85,19 @@ interface RewardPoolBase {
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "deposit",
+    "inputs": [
+      {
+        "name": "epoch",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
   },
   {
     "type": "function",
@@ -91,6 +143,57 @@ interface RewardPoolBase {
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getCurrentEpoch",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getEpochEnd",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "getEpochStart",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -299,6 +402,11 @@ interface RewardPoolBase {
   {
     "type": "error",
     "name": "ZeroAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroEpochIndex",
     "inputs": []
   }
 ]
@@ -936,6 +1044,79 @@ error ZeroAddress();
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `ZeroEpochIndex()` and selector `0xd69368d4`.
+```solidity
+error ZeroEpochIndex();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct ZeroEpochIndex;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<ZeroEpochIndex> for UnderlyingRustTuple<'_> {
+            fn from(value: ZeroEpochIndex) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for ZeroEpochIndex {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for ZeroEpochIndex {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "ZeroEpochIndex()";
+            const SELECTOR: [u8; 4] = [214u8, 147u8, 104u8, 212u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `ClaimSuccess(uint256,uint256,address,uint256)` and selector `0xb328b15dced4f924d7f76fdc78583b2fdc5aa2f541a5f2b9cbda1008350c5a09`.
 ```solidity
 event ClaimSuccess(uint256 indexed epochIndex, uint256 indexed appchainId, address indexed destination, uint256 amount);
@@ -1307,6 +1488,300 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `EPOCH_DURATION()` and selector `0xa70b9f0c`.
+```solidity
+function EPOCH_DURATION() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct EPOCH_DURATIONCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`EPOCH_DURATION()`](EPOCH_DURATIONCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct EPOCH_DURATIONReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<EPOCH_DURATIONCall> for UnderlyingRustTuple<'_> {
+                fn from(value: EPOCH_DURATIONCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for EPOCH_DURATIONCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<EPOCH_DURATIONReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: EPOCH_DURATIONReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for EPOCH_DURATIONReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for EPOCH_DURATIONCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "EPOCH_DURATION()";
+            const SELECTOR: [u8; 4] = [167u8, 11u8, 159u8, 12u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: EPOCH_DURATIONReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: EPOCH_DURATIONReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `START_TIMESTAMP()` and selector `0x781cd99d`.
+```solidity
+function START_TIMESTAMP() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct START_TIMESTAMPCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`START_TIMESTAMP()`](START_TIMESTAMPCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct START_TIMESTAMPReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<START_TIMESTAMPCall> for UnderlyingRustTuple<'_> {
+                fn from(value: START_TIMESTAMPCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for START_TIMESTAMPCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<START_TIMESTAMPReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: START_TIMESTAMPReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for START_TIMESTAMPReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for START_TIMESTAMPCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "START_TIMESTAMP()";
+            const SELECTOR: [u8; 4] = [120u8, 28u8, 217u8, 157u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: START_TIMESTAMPReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: START_TIMESTAMPReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `decayFactor()` and selector `0x20fb3016`.
 ```solidity
 function decayFactor() external view returns (UD60x18);
@@ -1443,6 +1918,150 @@ function decayFactor() external view returns (UD60x18);
                         let r: decayFactorReturn = r.into();
                         r._0
                     })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `deposit(uint256)` and selector `0xb6b55f25`.
+```solidity
+function deposit(uint256 epoch) external payable;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct depositCall {
+        #[allow(missing_docs)]
+        pub epoch: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    ///Container type for the return parameters of the [`deposit(uint256)`](depositCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct depositReturn {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<depositCall> for UnderlyingRustTuple<'_> {
+                fn from(value: depositCall) -> Self {
+                    (value.epoch,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for depositCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { epoch: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<depositReturn> for UnderlyingRustTuple<'_> {
+                fn from(value: depositReturn) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for depositReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl depositReturn {
+            fn _tokenize(
+                &self,
+            ) -> <depositCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for depositCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = depositReturn;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "deposit(uint256)";
+            const SELECTOR: [u8; 4] = [182u8, 181u8, 95u8, 37u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epoch),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                depositReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
             }
         }
     };
@@ -1881,6 +2500,461 @@ function gasDataProvider() external view returns (address);
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
                         let r: gasDataProviderReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `getCurrentEpoch()` and selector `0xb97dd9e2`.
+```solidity
+function getCurrentEpoch() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getCurrentEpochCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`getCurrentEpoch()`](getCurrentEpochCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getCurrentEpochReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getCurrentEpochCall> for UnderlyingRustTuple<'_> {
+                fn from(value: getCurrentEpochCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getCurrentEpochCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getCurrentEpochReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getCurrentEpochReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getCurrentEpochReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for getCurrentEpochCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "getCurrentEpoch()";
+            const SELECTOR: [u8; 4] = [185u8, 125u8, 217u8, 226u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: getCurrentEpochReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: getCurrentEpochReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `getEpochEnd(uint256)` and selector `0xd5176d23`.
+```solidity
+function getEpochEnd(uint256 epochIndex) external pure returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getEpochEndCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`getEpochEnd(uint256)`](getEpochEndCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getEpochEndReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getEpochEndCall> for UnderlyingRustTuple<'_> {
+                fn from(value: getEpochEndCall) -> Self {
+                    (value.epochIndex,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getEpochEndCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { epochIndex: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getEpochEndReturn> for UnderlyingRustTuple<'_> {
+                fn from(value: getEpochEndReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getEpochEndReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for getEpochEndCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "getEpochEnd(uint256)";
+            const SELECTOR: [u8; 4] = [213u8, 23u8, 109u8, 35u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: getEpochEndReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: getEpochEndReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `getEpochStart(uint256)` and selector `0x0175e23b`.
+```solidity
+function getEpochStart(uint256 epochIndex) external pure returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getEpochStartCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`getEpochStart(uint256)`](getEpochStartCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getEpochStartReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getEpochStartCall> for UnderlyingRustTuple<'_> {
+                fn from(value: getEpochStartCall) -> Self {
+                    (value.epochIndex,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getEpochStartCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { epochIndex: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getEpochStartReturn> for UnderlyingRustTuple<'_> {
+                fn from(value: getEpochStartReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getEpochStartReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for getEpochStartCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "getEpochStart(uint256)";
+            const SELECTOR: [u8; 4] = [1u8, 117u8, 226u8, 59u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: getEpochStartReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: getEpochStartReturn = r.into();
                         r._0
                     })
             }
@@ -3049,13 +4123,25 @@ function transferOwnership(address newOwner) external;
     #[derive()]
     pub enum RewardPoolBaseCalls {
         #[allow(missing_docs)]
+        EPOCH_DURATION(EPOCH_DURATIONCall),
+        #[allow(missing_docs)]
+        START_TIMESTAMP(START_TIMESTAMPCall),
+        #[allow(missing_docs)]
         decayFactor(decayFactorCall),
+        #[allow(missing_docs)]
+        deposit(depositCall),
         #[allow(missing_docs)]
         epochTotal(epochTotalCall),
         #[allow(missing_docs)]
         feeMultiplier(feeMultiplierCall),
         #[allow(missing_docs)]
         gasDataProvider(gasDataProviderCall),
+        #[allow(missing_docs)]
+        getCurrentEpoch(getCurrentEpochCall),
+        #[allow(missing_docs)]
+        getEpochEnd(getEpochEndCall),
+        #[allow(missing_docs)]
+        getEpochStart(getEpochStartCall),
         #[allow(missing_docs)]
         owner(ownerCall),
         #[allow(missing_docs)]
@@ -3082,15 +4168,21 @@ function transferOwnership(address newOwner) external;
         ///
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
+            [1u8, 117u8, 226u8, 59u8],
             [26u8, 142u8, 114u8, 107u8],
             [30u8, 14u8, 132u8, 137u8],
             [30u8, 106u8, 49u8, 29u8],
             [32u8, 251u8, 48u8, 22u8],
             [91u8, 53u8, 208u8, 87u8],
             [113u8, 80u8, 24u8, 166u8],
+            [120u8, 28u8, 217u8, 157u8],
             [141u8, 165u8, 203u8, 91u8],
             [161u8, 29u8, 155u8, 235u8],
+            [167u8, 11u8, 159u8, 12u8],
+            [182u8, 181u8, 95u8, 37u8],
             [184u8, 201u8, 5u8, 157u8],
+            [185u8, 125u8, 217u8, 226u8],
+            [213u8, 23u8, 109u8, 35u8],
             [229u8, 167u8, 14u8, 247u8],
             [238u8, 153u8, 32u8, 92u8],
             [242u8, 253u8, 227u8, 139u8],
@@ -3100,13 +4192,20 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for RewardPoolBaseCalls {
         const NAME: &'static str = "RewardPoolBaseCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 12usize;
+        const COUNT: usize = 18usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
+                Self::EPOCH_DURATION(_) => {
+                    <EPOCH_DURATIONCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::START_TIMESTAMP(_) => {
+                    <START_TIMESTAMPCall as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::decayFactor(_) => {
                     <decayFactorCall as alloy_sol_types::SolCall>::SELECTOR
                 }
+                Self::deposit(_) => <depositCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::epochTotal(_) => {
                     <epochTotalCall as alloy_sol_types::SolCall>::SELECTOR
                 }
@@ -3115,6 +4214,15 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::gasDataProvider(_) => {
                     <gasDataProviderCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::getCurrentEpoch(_) => {
+                    <getCurrentEpochCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::getEpochEnd(_) => {
+                    <getEpochEndCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::getEpochStart(_) => {
+                    <getEpochStartCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::owner(_) => <ownerCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::renounceOwnership(_) => {
@@ -3157,6 +4265,17 @@ function transferOwnership(address newOwner) external;
             static DECODE_SHIMS: &[fn(
                 &[u8],
             ) -> alloy_sol_types::Result<RewardPoolBaseCalls>] = &[
+                {
+                    fn getEpochStart(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <getEpochStartCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::getEpochStart)
+                    }
+                    getEpochStart
+                },
                 {
                     fn setStakeMultiplier(
                         data: &[u8],
@@ -3224,6 +4343,17 @@ function transferOwnership(address newOwner) external;
                     renounceOwnership
                 },
                 {
+                    fn START_TIMESTAMP(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <START_TIMESTAMPCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::START_TIMESTAMP)
+                    }
+                    START_TIMESTAMP
+                },
+                {
                     fn owner(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -3244,6 +4374,26 @@ function transferOwnership(address newOwner) external;
                     gasDataProvider
                 },
                 {
+                    fn EPOCH_DURATION(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <EPOCH_DURATIONCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::EPOCH_DURATION)
+                    }
+                    EPOCH_DURATION
+                },
+                {
+                    fn deposit(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <depositCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                            .map(RewardPoolBaseCalls::deposit)
+                    }
+                    deposit
+                },
+                {
                     fn setDecayFactor(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -3253,6 +4403,28 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseCalls::setDecayFactor)
                     }
                     setDecayFactor
+                },
+                {
+                    fn getCurrentEpoch(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <getCurrentEpochCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::getCurrentEpoch)
+                    }
+                    getCurrentEpoch
+                },
+                {
+                    fn getEpochEnd(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <getEpochEndCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::getEpochEnd)
+                    }
+                    getEpochEnd
                 },
                 {
                     fn feeMultiplier(
@@ -3307,6 +4479,17 @@ function transferOwnership(address newOwner) external;
             static DECODE_VALIDATE_SHIMS: &[fn(
                 &[u8],
             ) -> alloy_sol_types::Result<RewardPoolBaseCalls>] = &[
+                {
+                    fn getEpochStart(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <getEpochStartCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::getEpochStart)
+                    }
+                    getEpochStart
+                },
                 {
                     fn setStakeMultiplier(
                         data: &[u8],
@@ -3374,6 +4557,17 @@ function transferOwnership(address newOwner) external;
                     renounceOwnership
                 },
                 {
+                    fn START_TIMESTAMP(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <START_TIMESTAMPCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::START_TIMESTAMP)
+                    }
+                    START_TIMESTAMP
+                },
+                {
                     fn owner(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -3396,6 +4590,28 @@ function transferOwnership(address newOwner) external;
                     gasDataProvider
                 },
                 {
+                    fn EPOCH_DURATION(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <EPOCH_DURATIONCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::EPOCH_DURATION)
+                    }
+                    EPOCH_DURATION
+                },
+                {
+                    fn deposit(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <depositCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::deposit)
+                    }
+                    deposit
+                },
+                {
                     fn setDecayFactor(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -3405,6 +4621,28 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseCalls::setDecayFactor)
                     }
                     setDecayFactor
+                },
+                {
+                    fn getCurrentEpoch(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <getCurrentEpochCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::getCurrentEpoch)
+                    }
+                    getCurrentEpoch
+                },
+                {
+                    fn getEpochEnd(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <getEpochEndCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::getEpochEnd)
+                    }
+                    getEpochEnd
                 },
                 {
                     fn feeMultiplier(
@@ -3453,10 +4691,23 @@ function transferOwnership(address newOwner) external;
         #[inline]
         fn abi_encoded_size(&self) -> usize {
             match self {
+                Self::EPOCH_DURATION(inner) => {
+                    <EPOCH_DURATIONCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::START_TIMESTAMP(inner) => {
+                    <START_TIMESTAMPCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::decayFactor(inner) => {
                     <decayFactorCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
+                }
+                Self::deposit(inner) => {
+                    <depositCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
                 Self::epochTotal(inner) => {
                     <epochTotalCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
@@ -3468,6 +4719,21 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::gasDataProvider(inner) => {
                     <gasDataProviderCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::getCurrentEpoch(inner) => {
+                    <getCurrentEpochCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::getEpochEnd(inner) => {
+                    <getEpochEndCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::getEpochStart(inner) => {
+                    <getEpochStartCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -3514,11 +4780,26 @@ function transferOwnership(address newOwner) external;
         #[inline]
         fn abi_encode_raw(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
             match self {
+                Self::EPOCH_DURATION(inner) => {
+                    <EPOCH_DURATIONCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::START_TIMESTAMP(inner) => {
+                    <START_TIMESTAMPCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::decayFactor(inner) => {
                     <decayFactorCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
+                }
+                Self::deposit(inner) => {
+                    <depositCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
                 Self::epochTotal(inner) => {
                     <epochTotalCall as alloy_sol_types::SolCall>::abi_encode_raw(
@@ -3534,6 +4815,24 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::gasDataProvider(inner) => {
                     <gasDataProviderCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::getCurrentEpoch(inner) => {
+                    <getCurrentEpochCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::getEpochEnd(inner) => {
+                    <getEpochEndCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::getEpochStart(inner) => {
+                    <getEpochStartCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -3602,6 +4901,8 @@ function transferOwnership(address newOwner) external;
         ReentrancyGuardReentrantCall(ReentrancyGuardReentrantCall),
         #[allow(missing_docs)]
         ZeroAddress(ZeroAddress),
+        #[allow(missing_docs)]
+        ZeroEpochIndex(ZeroEpochIndex),
     }
     #[automatically_derived]
     impl RewardPoolBaseErrors {
@@ -3617,6 +4918,7 @@ function transferOwnership(address newOwner) external;
             [60u8, 33u8, 249u8, 15u8],
             [62u8, 229u8, 174u8, 181u8],
             [172u8, 107u8, 5u8, 245u8],
+            [214u8, 147u8, 104u8, 212u8],
             [217u8, 46u8, 35u8, 61u8],
         ];
     }
@@ -3624,7 +4926,7 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for RewardPoolBaseErrors {
         const NAME: &'static str = "RewardPoolBaseErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 6usize;
+        const COUNT: usize = 7usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -3645,6 +4947,9 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::ZeroAddress(_) => {
                     <ZeroAddress as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::ZeroEpochIndex(_) => {
+                    <ZeroEpochIndex as alloy_sol_types::SolError>::SELECTOR
                 }
             }
         }
@@ -3719,6 +5024,17 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseErrors::InvalidDestination)
                     }
                     InvalidDestination
+                },
+                {
+                    fn ZeroEpochIndex(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <ZeroEpochIndex as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::ZeroEpochIndex)
+                    }
+                    ZeroEpochIndex
                 },
                 {
                     fn ZeroAddress(
@@ -3805,6 +5121,17 @@ function transferOwnership(address newOwner) external;
                     InvalidDestination
                 },
                 {
+                    fn ZeroEpochIndex(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <ZeroEpochIndex as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::ZeroEpochIndex)
+                    }
+                    ZeroEpochIndex
+                },
+                {
                     fn ZeroAddress(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
@@ -3857,6 +5184,11 @@ function transferOwnership(address newOwner) external;
                 Self::ZeroAddress(inner) => {
                     <ZeroAddress as alloy_sol_types::SolError>::abi_encoded_size(inner)
                 }
+                Self::ZeroEpochIndex(inner) => {
+                    <ZeroEpochIndex as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
             }
         }
         #[inline]
@@ -3894,6 +5226,12 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::ZeroAddress(inner) => {
                     <ZeroAddress as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::ZeroEpochIndex(inner) => {
+                    <ZeroEpochIndex as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -4172,11 +5510,30 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
+        ///Creates a new call builder for the [`EPOCH_DURATION`] function.
+        pub fn EPOCH_DURATION(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, EPOCH_DURATIONCall, N> {
+            self.call_builder(&EPOCH_DURATIONCall)
+        }
+        ///Creates a new call builder for the [`START_TIMESTAMP`] function.
+        pub fn START_TIMESTAMP(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, START_TIMESTAMPCall, N> {
+            self.call_builder(&START_TIMESTAMPCall)
+        }
         ///Creates a new call builder for the [`decayFactor`] function.
         pub fn decayFactor(
             &self,
         ) -> alloy_contract::SolCallBuilder<&P, decayFactorCall, N> {
             self.call_builder(&decayFactorCall)
+        }
+        ///Creates a new call builder for the [`deposit`] function.
+        pub fn deposit(
+            &self,
+            epoch: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, depositCall, N> {
+            self.call_builder(&depositCall { epoch })
         }
         ///Creates a new call builder for the [`epochTotal`] function.
         pub fn epochTotal(
@@ -4196,6 +5553,26 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<&P, gasDataProviderCall, N> {
             self.call_builder(&gasDataProviderCall)
+        }
+        ///Creates a new call builder for the [`getCurrentEpoch`] function.
+        pub fn getCurrentEpoch(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, getCurrentEpochCall, N> {
+            self.call_builder(&getCurrentEpochCall)
+        }
+        ///Creates a new call builder for the [`getEpochEnd`] function.
+        pub fn getEpochEnd(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, getEpochEndCall, N> {
+            self.call_builder(&getEpochEndCall { epochIndex })
+        }
+        ///Creates a new call builder for the [`getEpochStart`] function.
+        pub fn getEpochStart(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, getEpochStartCall, N> {
+            self.call_builder(&getEpochStartCall { epochIndex })
         }
         ///Creates a new call builder for the [`owner`] function.
         pub fn owner(&self) -> alloy_contract::SolCallBuilder<&P, ownerCall, N> {
