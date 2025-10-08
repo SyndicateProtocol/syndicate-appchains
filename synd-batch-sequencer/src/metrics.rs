@@ -209,6 +209,6 @@ mod tests {
         let metrics = BatcherMetrics::new(&mut registry);
 
         metrics.record_wallet_balance(2.456789); // 2.456789 ETH
-        assert_eq!(metrics.wallet_balance.get(), 2.456789); // 2.456789 ETH
+        assert_eq!(metrics.wallet_balance.get(), 2.456789); // 2.456789 ETH units
     }
 }
