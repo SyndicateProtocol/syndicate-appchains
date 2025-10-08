@@ -382,8 +382,9 @@ impl Batcher {
             let wallet_address = provider.signer_address();
 
             match provider.get_balance(wallet_address).await {
-                Ok(balance) => {
-                    metrics.record_wallet_balance(balance.to());
+                Ok(balance_wei) => {
+                    let balance_eth = balance_wei.to::<u128>() as f64 / 1_000_000_000_000_000_000.0;
+                    metrics.record_wallet_balance(balance_eth);
                 }
                 Err(e) => {
                     error!("Failed to get wallet balance: {:?}", e);
