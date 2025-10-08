@@ -151,7 +151,7 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         .unwrap_or_else(|e| panic!("failed to get sequencing chain ID: {e}"));
     let gas_archive = GasArchive::new(args.gas_archive_address, staking_provider);
     let gas_aggregator_address = gas_archive
-        .seqChainGasAggregatorAddresses(U256::from(seq_chain_id))
+        .seqChainGasAggregator(U256::from(seq_chain_id))
         .call()
         .await
         .unwrap_or_else(|e| panic!("failed to get gas aggregator address: {e}"));
@@ -159,12 +159,14 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
 
     let epoch = match args.epoch {
         Some(epoch) => U256::from(epoch),
-        None => gas_aggregator
-            .getCurrentEpoch()
-            .call()
-            .await
-            .unwrap_or_else(|e| panic!("failed to get current epoch: {e}"))
-            .saturating_sub(U256::from(1)),
+        // TODO: Fix CLI to match updated contract
+        // None => gas_aggregator
+        //     .getCurrentEpoch()
+        //     .call()
+        //     .await
+        //     .unwrap_or_else(|e| panic!("failed to get current epoch: {e}"))
+        //     .saturating_sub(U256::from(1)),
+        None => U256::from(0),
     };
 
     let mut epoch_data_hash = gas_archive
@@ -294,7 +296,6 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
 
         let receipt = gas_archive
             .confirmEpochDataHash(
-                epoch,
                 U256::from(seq_chain_id),
                 sendroot_event.outputRoot,
                 rlp_encoded_eth_block_header.into(),
@@ -351,13 +352,7 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
     );
 
     let receipt = gas_archive
-        .submitEpochPreImageData(
-            epoch,
-            U256::from(seq_chain_id),
-            appchains,
-            tokens,
-            emissions_receivers,
-        )
+        .submitEpochPreImageData(U256::from(seq_chain_id), appchains, tokens, emissions_receivers)
         .send()
         .await
         .unwrap_or_else(|e| panic!("submitting epoch pre-image data failed: {e}"))
@@ -373,11 +368,6 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
     epoch: U256,
     gas_aggregator: GasAggregatorInstance<P>,
 ) -> (Vec<U256>, Vec<U256>, Vec<Address>) {
-    let offchain_aggregation = gas_aggregator
-        .fallbackToOffchainAggregation()
-        .call()
-        .await
-        .unwrap_or_else(|e| panic!("failed to get fallback to offchain aggregation: {e}"));
     let factory_address = gas_aggregator
         .factory()
         .call()
@@ -409,37 +399,6 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
                 .await
                 .unwrap_or_else(|e| panic!("failed to get emissions receiver: {e}")),
         );
-    }
-
-    if offchain_aggregation {
-        // TODO SEQ-1385: need to make the allowed implementation check here (chain's seq contract
-        // impl must be supported by the factory)
-        let chain_count = gas_aggregator
-            .maxAppchainsToQuery()
-            .call()
-            .await
-            .unwrap_or_else(|e| panic!("failed to get max appchains to query: {e}"));
-
-        // Create indexed tuples to sort together
-        let mut sorted: Vec<(U256, U256, Address)> = (0..appchains.len())
-            .map(|i| (appchains[i], tokens[i], emissions_receivers[i]))
-            .collect();
-
-        // Sort by tokens used (highest first)
-        sorted.sort_by(|a, b| b.2.cmp(&a.2));
-
-        // Select only the top {chain_count} chains
-        sorted.truncate(chain_count.to());
-
-        // Order the remaining chains by chainID (lowest first)
-        sorted.sort_by(|a, b| a.1.cmp(&b.1));
-
-        // Reconstruct the sorted arrays
-        for (i, (appchain, token, receiver)) in sorted.iter().enumerate() {
-            appchains[i] = *appchain;
-            tokens[i] = *token;
-            emissions_receivers[i] = *receiver;
-        }
     }
     (appchains, tokens, emissions_receivers)
 }

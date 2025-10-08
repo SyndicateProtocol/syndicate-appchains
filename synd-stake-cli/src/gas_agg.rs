@@ -1,5 +1,6 @@
 //! The `gas-agg` module contains the functions for aggregating gas usage from appchains.
 
+use alloy::types::Uint256Array;
 use alloy::{primitives::Address, providers::ProviderBuilder};
 use clap::Args;
 use contract_bindings::synd::gas_aggregator::GasAggregator;
@@ -70,22 +71,25 @@ pub async fn gas_agg(args: &GasAggArgs) {
         .unwrap_or_else(|e| panic!("Failed to connect to RPC URL '{}': {}", args.rpc_url, e));
 
     let gas_aggregator = GasAggregator::new(args.gas_aggregator_address, provider);
-    if gas_aggregator
-        .pendingEpoch()
-        .call()
-        .await
-        .unwrap_or_else(|e| panic!("Failed to call pendingEpoch on gas aggregator contract: {e} ")) ==
-        gas_aggregator.getCurrentEpoch().call().await.unwrap_or_else(|e| {
-            panic!("Failed to call getCurrentEpoch on gas aggregator contract: {e} ")
-        })
-    {
-        info!("Epoch not over");
-        return;
-    }
+    // TODO: Fix CLI to match updated contract
+    // if gas_aggregator
+    //     .pendingEpoch()
+    //     .call()
+    //     .await
+    //     .unwrap_or_else(|e| panic!("Failed to call pendingEpoch on gas aggregator contract: {e} ")) ==
+    //     gas_aggregator.getCurrentEpoch().call().await.unwrap_or_else(|e| {
+    //         panic!("Failed to call getCurrentEpoch on gas aggregator contract: {e} ")
+    //     })
+    // {
+    //     info!("Epoch not over");
+    //     return;
+    // }
 
     if args.sim {
         info!("Simulating gas aggregation...");
-        match gas_aggregator.aggregateTokensUsed().call().await {
+        // TODO: Fix CLI to match updated contract
+        match gas_aggregator.aggregateTokens(Uint256Array::new(), Uint256Array::new()).call().await
+        {
             Ok(_) => {
                 info!("Simulation succeeded")
             }
@@ -95,11 +99,12 @@ pub async fn gas_agg(args: &GasAggArgs) {
         }
     } else {
         info!("Aggregating gas...");
+        // TODO: Fix CLI to match updated contract
         match GasAggregator::new(
             args.gas_aggregator_address,
             new_provider(args.rpc_url.as_str(), &args.private_key).await,
         )
-        .aggregateTokensUsed()
+        .aggregateTokens(Uint256Array::new(), Uint256Array::new())
         .send()
         .await
         {
