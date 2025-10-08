@@ -1,7 +1,6 @@
 //! The `gas-agg` module contains the functions for aggregating gas usage from appchains.
 
-use alloy::types::Uint256Array;
-use alloy::{primitives::Address, providers::ProviderBuilder};
+use alloy::{primitives::Address, providers::ProviderBuilder, types::Uint256Array};
 use clap::Args;
 use contract_bindings::synd::gas_aggregator::GasAggregator;
 use shared::{
@@ -76,8 +75,8 @@ pub async fn gas_agg(args: &GasAggArgs) {
     //     .pendingEpoch()
     //     .call()
     //     .await
-    //     .unwrap_or_else(|e| panic!("Failed to call pendingEpoch on gas aggregator contract: {e} ")) ==
-    //     gas_aggregator.getCurrentEpoch().call().await.unwrap_or_else(|e| {
+    //     .unwrap_or_else(|e| panic!("Failed to call pendingEpoch on gas aggregator contract: {e}
+    // ")) ==     gas_aggregator.getCurrentEpoch().call().await.unwrap_or_else(|e| {
     //         panic!("Failed to call getCurrentEpoch on gas aggregator contract: {e} ")
     //     })
     // {
