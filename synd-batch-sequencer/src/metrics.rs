@@ -1,6 +1,7 @@
 #![allow(missing_docs)]
 
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
+use std::sync::atomic::AtomicU64;
 use std::time::Duration;
 use synd_maestro::valkey::valkey_metrics::ValkeyMetrics;
 
@@ -16,7 +17,7 @@ pub struct BatcherMetrics {
     pub batch_submission_latency_ms: Gauge,
     pub total_txs_processed: Gauge,
     pub outstanding_txs: Gauge,
-    pub wallet_balance: Gauge,
+    pub wallet_balance: Gauge<f64, AtomicU64>,
     /// Cache metrics for Valkey cache operations (stream reads, etc.)
     pub valkey: ValkeyMetrics,
 }
@@ -31,7 +32,7 @@ impl BatcherMetrics {
             batch_submission_latency_ms: Gauge::default(),
             total_txs_processed: Gauge::default(),
             outstanding_txs: Gauge::default(),
-            wallet_balance: Gauge::default(),
+            wallet_balance: Gauge::<f64, AtomicU64>::default(),
             valkey: ValkeyMetrics::new(registry),
         };
 
@@ -72,7 +73,7 @@ impl BatcherMetrics {
 
         registry.register(
             "wallet_balance",
-            "Current wallet balance in wei",
+            "Current wallet balance in ETH",
             metrics.wallet_balance.clone(),
         );
 
@@ -118,8 +119,8 @@ impl BatcherMetrics {
         self.total_txs_processed.inc_by(count as i64);
     }
 
-    pub fn record_wallet_balance(&self, balance: u128) {
-        self.wallet_balance.set(balance as i64);
+    pub fn record_wallet_balance(&self, balance_eth: f64) {
+        self.wallet_balance.set(balance_eth);
     }
 
     pub fn record_outstanding_txs(&self, count: usize) {
@@ -208,7 +209,7 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
-        metrics.record_wallet_balance(1000000000000000000);
-        assert_eq!(metrics.wallet_balance.get(), 1000000000000000000);
+        metrics.record_wallet_balance(2.456789); // 2.456789 ETH
+        assert_eq!(metrics.wallet_balance.get(), 2.456789); // 2.456789 ETH
     }
 }

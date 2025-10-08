@@ -276,14 +276,18 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			p.Metrics.LastAssertedSeqchainBlockNumber.Set(float64(seqchainHeader.Number.Uint64()))
 			p.Metrics.LastAssertedSeqchainBlockTimestamp.Set(float64(seqchainHeader.Time))
 
-			balance, err := p.SettlementClient.BalanceAt(ctx, keyAddress, nil)
+			balanceWei, err := p.SettlementClient.BalanceAt(ctx, keyAddress, nil)
 			if err != nil {
 				msg, wrappedErr := logger.WrapErrorWithMsg(fmt.
 					Sprintf("Failed to get key's wallet balance on settlement chain, skipping metrics update, address: %v", keyAddress.Hex()), err)
 				log.Error().Stack().Err(wrappedErr).Msg(msg)
 				continue
 			}
-			p.Metrics.WalletBalance.Set(float64(balance.Uint64()))
+
+			balanceEth := new(big.Float).SetInt(balanceWei)
+			balanceEth.Quo(balanceEth, big.NewFloat(1e18))
+			balanceEthFloat, _ := balanceEth.Float64()
+			p.Metrics.WalletBalance.Set(balanceEthFloat)
 		}
 	}
 }
