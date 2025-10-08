@@ -1,8 +1,7 @@
 #![allow(missing_docs)]
 
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
-use std::sync::atomic::AtomicU64;
-use std::time::Duration;
+use std::{sync::atomic::AtomicU64, time::Duration};
 use synd_maestro::valkey::valkey_metrics::ValkeyMetrics;
 
 #[allow(missing_docs)]
