@@ -90,7 +90,6 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
 
     error ZeroChainId();
     error ZeroAddress();
-    error InvalidProof();
     error AccountDoesNotExistInProof();
     error EmptySlot();
     error InvalidData();
@@ -102,11 +101,8 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     error SequencingChainAlreadyExists();
     error SequencingChainDoesNotExist();
     error NotArchivedEpoch();
-    error ZeroLengthArray();
-    error EpochAlreadyCompleted();
     error AlreadySubmitted();
     error EmptyDataHash();
-    error OldSettlementChainBlockNumber();
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER

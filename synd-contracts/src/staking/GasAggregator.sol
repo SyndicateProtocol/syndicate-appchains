@@ -30,7 +30,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
 
     /// @notice Version of the GasAggregator contract (updatable during upgrades)
     /// @dev Semantic version string to track contract upgrades and compatibility
-    string public constant version = "1.0.0";
+    string public constant VERSION = "1.0.0";
 
     /*//////////////////////////////////////////////////////////////
                             FIXED STORAGE SLOTS
@@ -60,22 +60,18 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
     uint256 public addChainFee;
 
     /// @notice Registry of chains that are currently tracked for gas usage
-    EnumerableSet.UintSet internal appchains;
+    EnumerableSet.UintSet internal _appchains;
 
     /// @notice Current epoch being processed for aggregation
     /// @dev Tracks which epoch is pending aggregation
-    uint256 public epoch;
-
-    /// @notice Timestamp of the first submission for the current pending epoch
-    /// @dev Used to calculate challenge window expiration
-    uint256 public firstSubmissionTime;
+    uint256 public currentEpoch;
 
     /// @notice Hash of the pending data for the current epoch
     /// @dev Stores the hash of (appchainIDs, tokens) for verification
-    bytes32 public dataHash;
+    bytes32 public pendingDataHash;
 
     // Current appchain start index in case the list of appchains is too big
-    uint256 public chunk;
+    uint256 public currentAggregateIndex;
 
     /// @notice appchain contract addresses mapping
     mapping(uint256 chainId => address) public appchainContract;
@@ -95,11 +91,8 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
     /// @dev Ensures data integrity
     error InvalidDataHash();
     error ChainAlreadyTracked(uint256 chainId);
-    error ChainNotTracked(uint256 chainId);
-    error ImplementationNotAllowed(address implementation);
-    error InsufficientFee(uint256 required, uint256 provided);
+    error InvalidFee(uint256 required, uint256 provided);
     error ChainNotFound(uint256 chainId);
-    error OnlyChainCanNotifyUpgrade();
     error FactoryAlreadySet();
     error NoChainsAdded();
 
@@ -122,17 +115,36 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
     /// @param newFee The new fee amount
     event AddChainFeeUpdated(uint256 oldFee, uint256 newFee);
 
+    /// @notice Emitted when the aggregation is pending
+    /// @param epoch The epoch that is pending
+    /// @param remainingChains The number of chains remaining to be aggregated
+    event AggregationPending(uint256 indexed epoch, uint256 remainingChains);
+
+    /// @notice Emitted when the aggregation is complete
+    /// @param epoch The epoch that is complete
+    /// @param chainIds The chain IDs that were aggregated
+    /// @param tokens The tokens that were aggregated
     event AggregatedTokens(uint256 indexed epoch, uint256[] chainIds, uint256[] tokens);
 
+    /// @notice Emitted when the maximum number of appchains to query is updated
+    /// @param epoch The epoch that the update is for
+    /// @param maxAppchainsToQuery The new maximum number of appchains to query
     event UpdateMaxAppchainsToQuery(uint256 indexed epoch, uint256 maxAppchainsToQuery);
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Constructor for the GasAggregator contract
+    /// @dev The epoch is the first epoch to start from
+    /// @dev The addChainFee is the fee to add a chain (setting it to 0 will default to 5 ether)
+    /// @dev The maxAppchainsToQuery is the maximum number of appchains to query (setting it to 0 will default to 100)
+    /// @param _epoch The epoch to start from
+    /// @param _addChainFee The fee to add a chain
+    /// @param _maxAppchainsToQuery The maximum number of appchains to query
     constructor(uint256 _epoch, uint256 _addChainFee, uint256 _maxAppchainsToQuery) {
         require(_epoch != 0);
-        epoch = _epoch;
+        currentEpoch = _epoch;
         addChainFee = _addChainFee;
         if (addChainFee == 0) {
             addChainFee = 5 ether;
@@ -154,16 +166,16 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
     /// @param chainId The chain ID to add to the tracking registry
     function addChain(uint256 chainId) external payable whenNotPaused {
         if (msg.sender != owner()) {
-            require(msg.value == addChainFee, InsufficientFee(addChainFee, msg.value));
+            require(msg.value == addChainFee, InvalidFee(addChainFee, msg.value));
         } else {
-            require(msg.value == 0, InsufficientFee(0, msg.value));
+            require(msg.value == 0, InvalidFee(0, msg.value));
         }
         require(chainId > 0, ZeroChainId());
-        require(appchains.add(chainId), ChainAlreadyTracked(chainId));
+        require(_appchains.add(chainId), ChainAlreadyTracked(chainId));
         address chainContract = Create2.computeAddress(bytes32(chainId), syndicateProxyBytecodeHash, factory);
         require(chainContract.code.length > 0, ChainNotFound(chainId));
         appchainContract[chainId] = chainContract;
-        emit ChainAdded(epoch, chainId, chainContract, msg.sender);
+        emit ChainAdded(currentEpoch, chainId, chainContract, msg.sender);
     }
 
     /**
@@ -172,54 +184,62 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
      * Pause contract while aggregating. Unpause when finished.
      */
     function aggregateTokens(uint256[] calldata prevChainIds, uint256[] calldata prevTokens) external {
-        if (chunk == 0) {
+        if (currentAggregateIndex == 0) {
+            // If this is the first time we are aggregating, pause the contract till we are done
             _pause();
         } else {
             _requirePaused();
-            require(dataHash == keccak256(abi.encode(prevChainIds, prevTokens)), InvalidDataHash());
+            require(pendingDataHash == keccak256(abi.encode(prevChainIds, prevTokens)), InvalidDataHash());
         }
 
         uint256[] memory chainIds;
         uint256[] memory tokens;
-        (chunk, chainIds, tokens) = simulateAggregateTokens(chunk, prevChainIds, prevTokens);
+        // Simulate the next chunk of data and update the current aggregate index
+        (currentAggregateIndex, chainIds, tokens) =
+            simulateAggregateTokens(currentAggregateIndex, prevChainIds, prevTokens);
 
-        dataHash = keccak256(abi.encode(chainIds, tokens));
-        if (chunk != 0) return;
+        pendingDataHash = keccak256(abi.encode(chainIds, tokens));
+        // If we are not done aggregating, return
+        if (currentAggregateIndex != 0) {
+            emit AggregationPending(currentEpoch, _appchains.length() - currentAggregateIndex);
+            return;
+        }
 
-        aggregatedEpochDataHash[epoch] = dataHash;
-        dataHash = 0;
-        emit AggregatedTokens(epoch, chainIds, tokens);
-        epoch++;
+        aggregatedEpochDataHash[currentEpoch] = pendingDataHash;
+        pendingDataHash = 0;
+        emit AggregatedTokens(currentEpoch, chainIds, tokens);
+        currentEpoch++;
         _unpause();
     }
 
-    function simulateAggregateTokens(uint256 chunk, uint256[] calldata prevChainIds, uint256[] calldata prevTokens)
-        public
-        view
-        returns (uint256 nextChunk, uint256[] memory chainIds, uint256[] memory tokens)
-    {
-        uint256 count = appchains.length() - chunk;
+    function simulateAggregateTokens(
+        uint256 aggregateIndex,
+        uint256[] calldata prevChainIds,
+        uint256[] calldata prevTokens
+    ) public view returns (uint256 nextAggregateIndex, uint256[] memory chainIds, uint256[] memory tokens) {
+        uint256 count = _appchains.length() - aggregateIndex;
         require(count > 0, NoChainsAdded());
         if (maxAppchainsToQuery < count) {
             count = maxAppchainsToQuery;
-            nextChunk = chunk + count;
+            nextAggregateIndex = aggregateIndex + count;
         }
         chainIds = new uint256[](count);
         tokens = new uint256[](count);
         for (uint256 i = 0; i < count; i++) {
-            chainIds[i] = appchains.at(chunk + i);
-            tokens[i] = ISyndicateProxy(appchainContract[chainIds[i]]).tokensUsedPerEpoch(epoch);
+            chainIds[i] = _appchains.at(aggregateIndex + i);
+            tokens[i] = ISyndicateProxy(appchainContract[chainIds[i]]).tokensUsedPerEpoch(currentEpoch);
         }
 
-        if (chunk == 0) {
+        // If we are aggregating the first chunk, we can skip the merge sort
+        if (aggregateIndex == 0) {
             require(prevChainIds.length == 0, InvalidDataHash());
             require(prevTokens.length == 0, InvalidDataHash());
             // don't bother sorting if there is only one chunk
-            if (nextChunk > 0) {
+            if (nextAggregateIndex > 0) {
                 _quickSort(chainIds, tokens);
             }
             // the first chunk does not need to be merged
-            return (nextChunk, chainIds, tokens);
+            return (nextAggregateIndex, chainIds, tokens);
         }
 
         _quickSort(chainIds, tokens);
@@ -241,7 +261,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
             }
         }
 
-        return (nextChunk, newChainIds, newTokens);
+        return (nextAggregateIndex, newChainIds, newTokens);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -251,12 +271,12 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
     /// @notice Get the total number of chains currently being tracked for gas usage
     /// @return The number of chains in the tracking registry
     function getTrackedChainCount() external view returns (uint256) {
-        return appchains.length();
+        return _appchains.length();
     }
 
     /// @notice Get all chain IDs currently being tracked for gas usage
     function getTrackedChainIds() external view returns (uint256[] memory chainIDs) {
-        bytes32[] memory ids = appchains._inner._values;
+        bytes32[] memory ids = _appchains._inner._values;
         assembly {
             chainIDs := ids
         }
@@ -264,7 +284,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
 
     /// @notice Get a chain ID currently being tracked for gas usage
     function getTrackedChainId(uint256 index) external view returns (uint256) {
-        return appchains.at(index);
+        return _appchains.at(index);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -276,10 +296,10 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
     function addLegacyChain(uint256 chainId, address chainContract) external onlyOwner whenNotPaused {
         require(factory == address(0), FactoryAlreadySet());
         require(chainId > 0, ZeroChainId());
-        require(appchains.add(chainId), ChainAlreadyTracked(chainId));
+        require(_appchains.add(chainId), ChainAlreadyTracked(chainId));
         require(chainContract.code.length > 0, ChainNotFound(chainId));
         appchainContract[chainId] = chainContract;
-        emit ChainAdded(epoch, chainId, chainContract, msg.sender);
+        emit ChainAdded(currentEpoch, chainId, chainContract, msg.sender);
     }
 
     /**
@@ -290,13 +310,13 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
      */
     function setMaxAppchainsToQuery(uint256 newMax) external onlyOwner whenNotPaused {
         maxAppchainsToQuery = newMax;
-        emit UpdateMaxAppchainsToQuery(epoch, maxAppchainsToQuery);
+        emit UpdateMaxAppchainsToQuery(currentEpoch, maxAppchainsToQuery);
     }
 
     function removeAppchains(uint256[] calldata chainIds) external onlyOwner whenNotPaused {
         for (uint256 i = 0; i < chainIds.length; i++) {
-            require(appchains.remove(chainIds[i]), "appchain is not tracked");
-            emit ChainRemoved(epoch, chainIds[i]);
+            require(_appchains.remove(chainIds[i]), "appchain is not tracked");
+            emit ChainRemoved(currentEpoch, chainIds[i]);
         }
     }
 
@@ -318,7 +338,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
 
         uint256 withdrawAmount = amount == 0 ? address(this).balance : amount;
         if (withdrawAmount > address(this).balance) {
-            revert InsufficientFee(withdrawAmount, address(this).balance);
+            revert InvalidFee(withdrawAmount, address(this).balance);
         }
 
         (bool success,) = to.call{value: withdrawAmount}("");
@@ -351,8 +371,8 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
      */
     function unpause() external onlyOwner {
         // clear pending aggregation when unpausing
-        chunk = 0;
-        dataHash = 0;
+        currentAggregateIndex = 0;
+        pendingDataHash = 0;
         _unpause();
     }
 

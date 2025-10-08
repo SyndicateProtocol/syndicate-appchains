@@ -59,7 +59,7 @@ contract GasAggregatorTest is Test {
         // Deploy GasAggregator contract
         vm.prank(admin);
         gasAggregator = new GasAggregator(1, 0, 2);
-        assertEq(gasAggregator.epoch(), 1);
+        assertEq(gasAggregator.currentEpoch(), 1);
     }
 
     /// @notice Helper function to set up chain overrides and add chains to the aggregator
@@ -139,7 +139,7 @@ contract GasAggregatorTest is Test {
         assertEq(gasAggregator.aggregatedEpochDataHash(epoch), keccak256(abi.encode(chains, gasUsage)));
 
         // Should increment epoch
-        assertEq(gasAggregator.epoch(), epoch + 1);
+        assertEq(gasAggregator.currentEpoch(), epoch + 1);
     }
 
     function test_AggregateTokensUsed_Top1() public {
@@ -171,6 +171,8 @@ contract GasAggregatorTest is Test {
         // Aggregate
         uint256[] memory prevChainIds;
         uint256[] memory prevGas;
+        vm.expectEmit(true, true, true, true);
+        emit GasAggregator.AggregationPending(epoch, 2);
         gasAggregator.aggregateTokens(prevChainIds, prevGas);
 
         // Simulate aggregation
@@ -183,6 +185,8 @@ contract GasAggregatorTest is Test {
         assertEq(prevGas[0], 100);
 
         // Aggregate
+        vm.expectEmit(true, true, true, true);
+        emit GasAggregator.AggregationPending(epoch, 1);
         gasAggregator.aggregateTokens(prevChainIds, prevGas);
 
         // Simulate aggregation
@@ -198,10 +202,10 @@ contract GasAggregatorTest is Test {
         uint256[] memory topGas = new uint256[](1);
         topChains[0] = 2;
         topGas[0] = 101;
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(true, true, true, true);
         emit GasAggregator.AggregatedTokens(epoch, topChains, topGas);
         gasAggregator.aggregateTokens(prevChainIds, prevGas);
-        assertEq(gasAggregator.epoch(), epoch + 1);
+        assertEq(gasAggregator.currentEpoch(), epoch + 1);
         assertEq(gasAggregator.aggregatedEpochDataHash(epoch), keccak256(abi.encode(topChains, topGas)));
 
         // Simulate aggregation
@@ -211,6 +215,72 @@ contract GasAggregatorTest is Test {
         assertEq(prevChainIds[0], 2);
         assertEq(prevGas.length, 1);
         assertEq(prevGas[0], 101);
+    }
+
+    function test_UnpauseDuringAggregation() public {
+        // Set maxAppchainsToQuery to 1
+        vm.prank(admin);
+        gasAggregator.setMaxAppchainsToQuery(1);
+
+        // Set up chains 1 and 2
+        uint256[] memory chains = new uint256[](2);
+        chains[0] = 1;
+        chains[1] = 2;
+        setupChainsWithOverrides(chains);
+
+        uint256[] memory gasUsage = new uint256[](2);
+        gasUsage[0] = 100;
+        gasUsage[1] = 101;
+
+        // Set gas usage for current epoch
+        uint256 epoch = 1;
+        mockGasCounter1.setTokensForEpoch(epoch, gasUsage[0]);
+        mockGasCounter2.setTokensForEpoch(epoch, gasUsage[1]);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        // Aggregate
+        uint256[] memory prevChainIds;
+        uint256[] memory prevGas;
+        vm.expectEmit(true, true, true, true);
+        emit GasAggregator.AggregationPending(epoch, 1);
+        gasAggregator.aggregateTokens(prevChainIds, prevGas);
+
+        // Confirm contract is paused
+        assertEq(gasAggregator.paused(), true);
+
+        // Unpause
+        vm.prank(admin);
+        gasAggregator.unpause();
+        assertEq(gasAggregator.paused(), false);
+        assertEq(gasAggregator.pendingDataHash(), 0);
+        assertEq(gasAggregator.currentAggregateIndex(), 0);
+
+        // Retry aggregation
+        vm.expectEmit(true, true, true, true);
+        emit GasAggregator.AggregationPending(epoch, 1);
+        gasAggregator.aggregateTokens(prevChainIds, prevGas);
+
+        // Simulate aggregation
+        uint256 chunk;
+        (chunk, prevChainIds, prevGas) = gasAggregator.simulateAggregateTokens(0, new uint256[](0), new uint256[](0));
+        assertEq(chunk, 1);
+        assertEq(prevChainIds.length, 1);
+        assertEq(prevChainIds[0], 1);
+        assertEq(prevGas.length, 1);
+        assertEq(prevGas[0], 100);
+
+        // Finish aggregation
+        uint256[] memory topChains = new uint256[](1);
+        uint256[] memory topGas = new uint256[](1);
+        topChains[0] = 2;
+        topGas[0] = 101;
+        vm.expectEmit(true, true, true, true);
+        emit GasAggregator.AggregatedTokens(epoch, topChains, topGas);
+        gasAggregator.aggregateTokens(prevChainIds, prevGas);
+        assertEq(gasAggregator.currentEpoch(), epoch + 1);
+        assertEq(gasAggregator.aggregatedEpochDataHash(epoch), keccak256(abi.encode(topChains, topGas)));
     }
 
     function test_EdgeCase_EmptyAppchainList() public {
