@@ -365,20 +365,18 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             // Allocate memory for result array
             chainIDs := mload(0x40)
             let resultPtr := add(chainIDs, 0x20)
-            
+
             // Store array length
             mstore(chainIDs, actualSize)
-            
+
             // Calculate source pointer (skip array length + startIndex * 32)
             let sourcePtr := add(add(ids, 0x20), mul(startIndex, 0x20))
-            
+
             // Copy data efficiently in 32-byte chunks
             let copySize := mul(actualSize, 0x20)
             let i := 0
-            for {} lt(i, copySize) { i := add(i, 0x20) } {
-                mstore(add(resultPtr, i), mload(add(sourcePtr, i)))
-            }
-            
+            for {} lt(i, copySize) { i := add(i, 0x20) } { mstore(add(resultPtr, i), mload(add(sourcePtr, i))) }
+
             // Update free memory pointer
             mstore(0x40, add(resultPtr, copySize))
         }
