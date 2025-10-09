@@ -176,10 +176,6 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
      * @return The sum of all appchain diminishing factors
      */
     function _getAllAppchainsDiminishingFactor(uint256 epochIndex) internal returns (UD60x18) {
-        if (preComputeIndex[epochIndex] == PRE_COMPUTE_COMPLETE) {
-            return epochTotalDiminishingFactor[epochIndex];
-        }
-
         if (!preComputeDiminishingFactors(epochIndex, 0)) {
             return convert(0);
         }
