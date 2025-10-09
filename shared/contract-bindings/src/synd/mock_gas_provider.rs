@@ -6,6 +6,7 @@ interface MockGasProvider {
     function fee(uint256, uint256) external view returns (uint256);
     function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
     function getAppchainIds(uint256 epochIndex) external view returns (uint256[] memory);
+    function getAppchainIds(uint256 epochIndex, uint256 startIndex, uint256 pageSize) external view returns (uint256[] memory);
     function getTotalGasFees(uint256 epochIndex) external view returns (uint256);
     function setFee(uint256 epoch, uint256 appchainId, uint256 amount) external;
     function setFees(uint256 epoch, uint256[] memory appchainIds, uint256[] memory amounts) external;
@@ -70,6 +71,35 @@ interface MockGasProvider {
     "inputs": [
       {
         "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAppchainIds",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "startIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "pageSize",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -182,22 +212,22 @@ pub mod MockGasProvider {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460155761059b908161001a8239f35b5f80fdfe6080806040526004361015610012575f80fd5b5f3560e01c9081631b338710146103d057508063285f24461461009657806336d68daf146102685780635b65b9ab1461016b57806360630122146100c5578063939f5ea4146100965763ce537c9f14610069575f80fd5b34610092576020600319360112610092576004355f525f602052602060405f2054604051908152f35b5f80fd5b34610092576100a4366103f5565b905f52600160205260405f20905f52602052602060405f2054604051908152f35b34610092576020600319360112610092576004355f52600260205260405f20604051806020835491828152019081935f5260205f20905f5b818110610155575050508161011391038261040b565b604051918291602083019060208452518091526040830191905f5b81811061013c575050500390f35b825184528594506020938401939092019160010161012e565b82548452602090930192600192830192016100fd565b346100925760606003193601126100925760043560243590604435905f91815f52600260205260405f20845f948254955b868110610238575b506101e294955015610228575b50505f838152600160209081526040808320968352958152858220805490849055858352908290529490205461058e565b9182039182116101fb575f525f60205260405f20555f80f35b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b61023191610537565b84846101b1565b826102438286610522565b90549060031b1c146102575760010161019c565b50506101e2939450600185946101a4565b346100925760606003193601126100925760043560243567ffffffffffffffff81116100925761029c903690600401610479565b60443567ffffffffffffffff8111610092576102bc903690600401610479565b91815183510361037257805f52600260205260405f208054905f815581610354575b50505f925f935b83518510156103445761033c6001916102fe87876104e1565b519061033761030d89876104e1565b5192875f528560205260405f20815f526020528360405f2055875f52600260205260405f20610537565b61058e565b9401936102e5565b825f525f60205260405f20555f80f35b5f5260205f20908101905b818110156102de575f815560010161035f565b60646040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152600f60248201527f6c656e677468206d69736d6174636800000000000000000000000000000000006044820152fd5b34610092576020600319360112610092576020906004355f525f825260405f20548152f35b6003196040910112610092576004359060243590565b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff82111761044c57604052565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b9080601f830112156100925781359167ffffffffffffffff831161044c578260051b90604051936104ad602084018661040b565b845260208085019282010192831161009257602001905b8282106104d15750505090565b81358152602091820191016104c4565b80518210156104f55760209160051b010190565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b80548210156104f5575f5260205f2001905f90565b80546801000000000000000081101561044c5761055991600182018155610522565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff829392549160031b92831b921b1916179055565b919082018092116101fb5756
+    ///0x608080604052346015576106ff908161001a8239f35b5f80fdfe6080806040526004361015610012575f80fd5b5f3560e01c9081631b3387101461038557508063285f2446146100a157806336d68daf1461021d5780635b65b9ab1461015e57806360630122146100fa57806376a6f8ff146100d0578063939f5ea4146100a15763ce537c9f14610074575f80fd5b3461009d57602060031936011261009d576004355f525f602052602060405f2054604051908152f35b5f80fd5b3461009d576100af366103aa565b905f52600160205260405f20905f52602052602060405f2054604051908152f35b3461009d576100f66100ea6100e4366104a3565b916105ea565b604051918291826104bd565b0390f35b3461009d57602060031936011261009d576004355f52600260205260405f206040519081602082549182815201915f5260205f20905f5b818110610148576100f6856100ea818703826103c0565b8254845260209093019260019283019201610131565b3461009d5761016c366104a3565b905f91835f52600260205260405f205f8154905b8181106101f0575b5050906101cb91836101d095156101e0575b50505f85815260016020908152604080832095835294815284822080549084905587835290829052939020546105a3565b6105dd565b905f525f60205260405f20555f80f35b6101e99161054c565b858361019a565b846101fb8285610537565b90549060031b1c1461020f57600101610180565b506001945081905083610188565b3461009d57606060031936011261009d5760043560243567ffffffffffffffff811161009d57610251903690600401610446565b60443567ffffffffffffffff811161009d57610271903690600401610446565b91815183510361032757805f52600260205260405f208054905f815581610309575b50505f925f935b83518510156102f9576102f16001916102b387876104f6565b51906102ec6102c289876104f6565b5192875f528560205260405f20815f526020528360405f2055875f52600260205260405f2061054c565b6105a3565b94019361029a565b825f525f60205260405f20555f80f35b5f5260205f20908101905b81811015610293575f8155600101610314565b60646040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152600f60248201527f6c656e677468206d69736d6174636800000000000000000000000000000000006044820152fd5b3461009d57602060031936011261009d576020906004355f525f825260405f20548152f35b600319604091011261009d576004359060243590565b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff82111761040157604052565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b67ffffffffffffffff81116104015760051b60200190565b9080601f8301121561009d57813561045d8161042e565b9261046b60405194856103c0565b81845260208085019260051b82010192831161009d57602001905b8282106104935750505090565b8135815260209182019101610486565b600319606091011261009d57600435906024359060443590565b60206040818301928281528451809452019201905f5b8181106104e05750505090565b82518452602093840193909201916001016104d3565b805182101561050a5760209160051b010190565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b805482101561050a575f5260205f2001905f90565b8054680100000000000000008110156104015761056e91600182018155610537565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff829392549160031b92831b921b1916179055565b919082018092116105b057565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b919082039182116105b057565b91825f52600260205260405f20548210156106e4578161060a82826105a3565b911580156106cd575b6106b7575b610621916105dd565b9061062b8261042e565b9261063960405194856103c0565b8284527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe06106668461042e565b013660208601375f5b83811061067d575050505090565b600190825f52600260205261069f60405f2061069983876105a3565b90610537565b90549060031b1c6106b082886104f6565b520161066f565b50505f8281526002602052604090205481610618565b5050825f5260026020528160405f20548211610613565b5050506040516106f56020826103c0565b5f81525f3681379056
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x15Wa\x05\x9B\x90\x81a\0\x1A\x829\xF3[_\x80\xFD\xFE`\x80\x80`@R`\x046\x10\x15a\0\x12W_\x80\xFD[_5`\xE0\x1C\x90\x81c\x1B3\x87\x10\x14a\x03\xD0WP\x80c(_$F\x14a\0\x96W\x80c6\xD6\x8D\xAF\x14a\x02hW\x80c[e\xB9\xAB\x14a\x01kW\x80c`c\x01\"\x14a\0\xC5W\x80c\x93\x9F^\xA4\x14a\0\x96Wc\xCES|\x9F\x14a\0iW_\x80\xFD[4a\0\x92W` `\x03\x196\x01\x12a\0\x92W`\x045_R_` R` `@_ T`@Q\x90\x81R\xF3[_\x80\xFD[4a\0\x92Wa\0\xA46a\x03\xF5V[\x90_R`\x01` R`@_ \x90_R` R` `@_ T`@Q\x90\x81R\xF3[4a\0\x92W` `\x03\x196\x01\x12a\0\x92W`\x045_R`\x02` R`@_ `@Q\x80` \x83T\x91\x82\x81R\x01\x90\x81\x93_R` _ \x90_[\x81\x81\x10a\x01UWPPP\x81a\x01\x13\x91\x03\x82a\x04\x0BV[`@Q\x91\x82\x91` \x83\x01\x90` \x84RQ\x80\x91R`@\x83\x01\x91\x90_[\x81\x81\x10a\x01<WPPP\x03\x90\xF3[\x82Q\x84R\x85\x94P` \x93\x84\x01\x93\x90\x92\x01\x91`\x01\x01a\x01.V[\x82T\x84R` \x90\x93\x01\x92`\x01\x92\x83\x01\x92\x01a\0\xFDV[4a\0\x92W```\x03\x196\x01\x12a\0\x92W`\x045`$5\x90`D5\x90_\x91\x81_R`\x02` R`@_ \x84_\x94\x82T\x95[\x86\x81\x10a\x028W[Pa\x01\xE2\x94\x95P\x15a\x02(W[PP_\x83\x81R`\x01` \x90\x81R`@\x80\x83 \x96\x83R\x95\x81R\x85\x82 \x80T\x90\x84\x90U\x85\x83R\x90\x82\x90R\x94\x90 Ta\x05\x8EV[\x91\x82\x03\x91\x82\x11a\x01\xFBW_R_` R`@_ U_\x80\xF3[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[a\x021\x91a\x057V[\x84\x84a\x01\xB1V[\x82a\x02C\x82\x86a\x05\"V[\x90T\x90`\x03\x1B\x1C\x14a\x02WW`\x01\x01a\x01\x9CV[PPa\x01\xE2\x93\x94P`\x01\x85\x94a\x01\xA4V[4a\0\x92W```\x03\x196\x01\x12a\0\x92W`\x045`$5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x92Wa\x02\x9C\x906\x90`\x04\x01a\x04yV[`D5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x92Wa\x02\xBC\x906\x90`\x04\x01a\x04yV[\x91\x81Q\x83Q\x03a\x03rW\x80_R`\x02` R`@_ \x80T\x90_\x81U\x81a\x03TW[PP_\x92_\x93[\x83Q\x85\x10\x15a\x03DWa\x03<`\x01\x91a\x02\xFE\x87\x87a\x04\xE1V[Q\x90a\x037a\x03\r\x89\x87a\x04\xE1V[Q\x92\x87_R\x85` R`@_ \x81_R` R\x83`@_ U\x87_R`\x02` R`@_ a\x057V[a\x05\x8EV[\x94\x01\x93a\x02\xE5V[\x82_R_` R`@_ U_\x80\xF3[_R` _ \x90\x81\x01\x90[\x81\x81\x10\x15a\x02\xDEW_\x81U`\x01\x01a\x03_V[`d`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`\x0F`$\x82\x01R\x7Flength mismatch\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`D\x82\x01R\xFD[4a\0\x92W` `\x03\x196\x01\x12a\0\x92W` \x90`\x045_R_\x82R`@_ T\x81R\xF3[`\x03\x19`@\x91\x01\x12a\0\x92W`\x045\x90`$5\x90V[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x04LW`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[\x90\x80`\x1F\x83\x01\x12\x15a\0\x92W\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x04LW\x82`\x05\x1B\x90`@Q\x93a\x04\xAD` \x84\x01\x86a\x04\x0BV[\x84R` \x80\x85\x01\x92\x82\x01\x01\x92\x83\x11a\0\x92W` \x01\x90[\x82\x82\x10a\x04\xD1WPPP\x90V[\x815\x81R` \x91\x82\x01\x91\x01a\x04\xC4V[\x80Q\x82\x10\x15a\x04\xF5W` \x91`\x05\x1B\x01\x01\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x80T\x82\x10\x15a\x04\xF5W_R` _ \x01\x90_\x90V[\x80Th\x01\0\0\0\0\0\0\0\0\x81\x10\x15a\x04LWa\x05Y\x91`\x01\x82\x01\x81Ua\x05\"V[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x93\x92T\x91`\x03\x1B\x92\x83\x1B\x92\x1B\x19\x16\x17\x90UV[\x91\x90\x82\x01\x80\x92\x11a\x01\xFBWV",
+        b"`\x80\x80`@R4`\x15Wa\x06\xFF\x90\x81a\0\x1A\x829\xF3[_\x80\xFD\xFE`\x80\x80`@R`\x046\x10\x15a\0\x12W_\x80\xFD[_5`\xE0\x1C\x90\x81c\x1B3\x87\x10\x14a\x03\x85WP\x80c(_$F\x14a\0\xA1W\x80c6\xD6\x8D\xAF\x14a\x02\x1DW\x80c[e\xB9\xAB\x14a\x01^W\x80c`c\x01\"\x14a\0\xFAW\x80cv\xA6\xF8\xFF\x14a\0\xD0W\x80c\x93\x9F^\xA4\x14a\0\xA1Wc\xCES|\x9F\x14a\0tW_\x80\xFD[4a\0\x9DW` `\x03\x196\x01\x12a\0\x9DW`\x045_R_` R` `@_ T`@Q\x90\x81R\xF3[_\x80\xFD[4a\0\x9DWa\0\xAF6a\x03\xAAV[\x90_R`\x01` R`@_ \x90_R` R` `@_ T`@Q\x90\x81R\xF3[4a\0\x9DWa\0\xF6a\0\xEAa\0\xE46a\x04\xA3V[\x91a\x05\xEAV[`@Q\x91\x82\x91\x82a\x04\xBDV[\x03\x90\xF3[4a\0\x9DW` `\x03\x196\x01\x12a\0\x9DW`\x045_R`\x02` R`@_ `@Q\x90\x81` \x82T\x91\x82\x81R\x01\x91_R` _ \x90_[\x81\x81\x10a\x01HWa\0\xF6\x85a\0\xEA\x81\x87\x03\x82a\x03\xC0V[\x82T\x84R` \x90\x93\x01\x92`\x01\x92\x83\x01\x92\x01a\x011V[4a\0\x9DWa\x01l6a\x04\xA3V[\x90_\x91\x83_R`\x02` R`@_ _\x81T\x90[\x81\x81\x10a\x01\xF0W[PP\x90a\x01\xCB\x91\x83a\x01\xD0\x95\x15a\x01\xE0W[PP_\x85\x81R`\x01` \x90\x81R`@\x80\x83 \x95\x83R\x94\x81R\x84\x82 \x80T\x90\x84\x90U\x87\x83R\x90\x82\x90R\x93\x90 Ta\x05\xA3V[a\x05\xDDV[\x90_R_` R`@_ U_\x80\xF3[a\x01\xE9\x91a\x05LV[\x85\x83a\x01\x9AV[\x84a\x01\xFB\x82\x85a\x057V[\x90T\x90`\x03\x1B\x1C\x14a\x02\x0FW`\x01\x01a\x01\x80V[P`\x01\x94P\x81\x90P\x83a\x01\x88V[4a\0\x9DW```\x03\x196\x01\x12a\0\x9DW`\x045`$5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x9DWa\x02Q\x906\x90`\x04\x01a\x04FV[`D5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x9DWa\x02q\x906\x90`\x04\x01a\x04FV[\x91\x81Q\x83Q\x03a\x03'W\x80_R`\x02` R`@_ \x80T\x90_\x81U\x81a\x03\tW[PP_\x92_\x93[\x83Q\x85\x10\x15a\x02\xF9Wa\x02\xF1`\x01\x91a\x02\xB3\x87\x87a\x04\xF6V[Q\x90a\x02\xECa\x02\xC2\x89\x87a\x04\xF6V[Q\x92\x87_R\x85` R`@_ \x81_R` R\x83`@_ U\x87_R`\x02` R`@_ a\x05LV[a\x05\xA3V[\x94\x01\x93a\x02\x9AV[\x82_R_` R`@_ U_\x80\xF3[_R` _ \x90\x81\x01\x90[\x81\x81\x10\x15a\x02\x93W_\x81U`\x01\x01a\x03\x14V[`d`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`\x0F`$\x82\x01R\x7Flength mismatch\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`D\x82\x01R\xFD[4a\0\x9DW` `\x03\x196\x01\x12a\0\x9DW` \x90`\x045_R_\x82R`@_ T\x81R\xF3[`\x03\x19`@\x91\x01\x12a\0\x9DW`\x045\x90`$5\x90V[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x04\x01W`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x04\x01W`\x05\x1B` \x01\x90V[\x90\x80`\x1F\x83\x01\x12\x15a\0\x9DW\x815a\x04]\x81a\x04.V[\x92a\x04k`@Q\x94\x85a\x03\xC0V[\x81\x84R` \x80\x85\x01\x92`\x05\x1B\x82\x01\x01\x92\x83\x11a\0\x9DW` \x01\x90[\x82\x82\x10a\x04\x93WPPP\x90V[\x815\x81R` \x91\x82\x01\x91\x01a\x04\x86V[`\x03\x19``\x91\x01\x12a\0\x9DW`\x045\x90`$5\x90`D5\x90V[` `@\x81\x83\x01\x92\x82\x81R\x84Q\x80\x94R\x01\x92\x01\x90_[\x81\x81\x10a\x04\xE0WPPP\x90V[\x82Q\x84R` \x93\x84\x01\x93\x90\x92\x01\x91`\x01\x01a\x04\xD3V[\x80Q\x82\x10\x15a\x05\nW` \x91`\x05\x1B\x01\x01\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x80T\x82\x10\x15a\x05\nW_R` _ \x01\x90_\x90V[\x80Th\x01\0\0\0\0\0\0\0\0\x81\x10\x15a\x04\x01Wa\x05n\x91`\x01\x82\x01\x81Ua\x057V[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x93\x92T\x91`\x03\x1B\x92\x83\x1B\x92\x1B\x19\x16\x17\x90UV[\x91\x90\x82\x01\x80\x92\x11a\x05\xB0WV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[\x91\x90\x82\x03\x91\x82\x11a\x05\xB0WV[\x91\x82_R`\x02` R`@_ T\x82\x10\x15a\x06\xE4W\x81a\x06\n\x82\x82a\x05\xA3V[\x91\x15\x80\x15a\x06\xCDW[a\x06\xB7W[a\x06!\x91a\x05\xDDV[\x90a\x06+\x82a\x04.V[\x92a\x069`@Q\x94\x85a\x03\xC0V[\x82\x84R\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0a\x06f\x84a\x04.V[\x016` \x86\x017_[\x83\x81\x10a\x06}WPPPP\x90V[`\x01\x90\x82_R`\x02` Ra\x06\x9F`@_ a\x06\x99\x83\x87a\x05\xA3V[\x90a\x057V[\x90T\x90`\x03\x1B\x1Ca\x06\xB0\x82\x88a\x04\xF6V[R\x01a\x06oV[PP_\x82\x81R`\x02` R`@\x90 T\x81a\x06\x18V[PP\x82_R`\x02` R\x81`@_ T\x82\x11a\x06\x13V[PPP`@Qa\x06\xF5` \x82a\x03\xC0V[_\x81R_6\x817\x90V",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x6080806040526004361015610012575f80fd5b5f3560e01c9081631b338710146103d057508063285f24461461009657806336d68daf146102685780635b65b9ab1461016b57806360630122146100c5578063939f5ea4146100965763ce537c9f14610069575f80fd5b34610092576020600319360112610092576004355f525f602052602060405f2054604051908152f35b5f80fd5b34610092576100a4366103f5565b905f52600160205260405f20905f52602052602060405f2054604051908152f35b34610092576020600319360112610092576004355f52600260205260405f20604051806020835491828152019081935f5260205f20905f5b818110610155575050508161011391038261040b565b604051918291602083019060208452518091526040830191905f5b81811061013c575050500390f35b825184528594506020938401939092019160010161012e565b82548452602090930192600192830192016100fd565b346100925760606003193601126100925760043560243590604435905f91815f52600260205260405f20845f948254955b868110610238575b506101e294955015610228575b50505f838152600160209081526040808320968352958152858220805490849055858352908290529490205461058e565b9182039182116101fb575f525f60205260405f20555f80f35b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b61023191610537565b84846101b1565b826102438286610522565b90549060031b1c146102575760010161019c565b50506101e2939450600185946101a4565b346100925760606003193601126100925760043560243567ffffffffffffffff81116100925761029c903690600401610479565b60443567ffffffffffffffff8111610092576102bc903690600401610479565b91815183510361037257805f52600260205260405f208054905f815581610354575b50505f925f935b83518510156103445761033c6001916102fe87876104e1565b519061033761030d89876104e1565b5192875f528560205260405f20815f526020528360405f2055875f52600260205260405f20610537565b61058e565b9401936102e5565b825f525f60205260405f20555f80f35b5f5260205f20908101905b818110156102de575f815560010161035f565b60646040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152600f60248201527f6c656e677468206d69736d6174636800000000000000000000000000000000006044820152fd5b34610092576020600319360112610092576020906004355f525f825260405f20548152f35b6003196040910112610092576004359060243590565b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff82111761044c57604052565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b9080601f830112156100925781359167ffffffffffffffff831161044c578260051b90604051936104ad602084018661040b565b845260208085019282010192831161009257602001905b8282106104d15750505090565b81358152602091820191016104c4565b80518210156104f55760209160051b010190565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b80548210156104f5575f5260205f2001905f90565b80546801000000000000000081101561044c5761055991600182018155610522565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff829392549160031b92831b921b1916179055565b919082018092116101fb5756
+    ///0x6080806040526004361015610012575f80fd5b5f3560e01c9081631b3387101461038557508063285f2446146100a157806336d68daf1461021d5780635b65b9ab1461015e57806360630122146100fa57806376a6f8ff146100d0578063939f5ea4146100a15763ce537c9f14610074575f80fd5b3461009d57602060031936011261009d576004355f525f602052602060405f2054604051908152f35b5f80fd5b3461009d576100af366103aa565b905f52600160205260405f20905f52602052602060405f2054604051908152f35b3461009d576100f66100ea6100e4366104a3565b916105ea565b604051918291826104bd565b0390f35b3461009d57602060031936011261009d576004355f52600260205260405f206040519081602082549182815201915f5260205f20905f5b818110610148576100f6856100ea818703826103c0565b8254845260209093019260019283019201610131565b3461009d5761016c366104a3565b905f91835f52600260205260405f205f8154905b8181106101f0575b5050906101cb91836101d095156101e0575b50505f85815260016020908152604080832095835294815284822080549084905587835290829052939020546105a3565b6105dd565b905f525f60205260405f20555f80f35b6101e99161054c565b858361019a565b846101fb8285610537565b90549060031b1c1461020f57600101610180565b506001945081905083610188565b3461009d57606060031936011261009d5760043560243567ffffffffffffffff811161009d57610251903690600401610446565b60443567ffffffffffffffff811161009d57610271903690600401610446565b91815183510361032757805f52600260205260405f208054905f815581610309575b50505f925f935b83518510156102f9576102f16001916102b387876104f6565b51906102ec6102c289876104f6565b5192875f528560205260405f20815f526020528360405f2055875f52600260205260405f2061054c565b6105a3565b94019361029a565b825f525f60205260405f20555f80f35b5f5260205f20908101905b81811015610293575f8155600101610314565b60646040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152600f60248201527f6c656e677468206d69736d6174636800000000000000000000000000000000006044820152fd5b3461009d57602060031936011261009d576020906004355f525f825260405f20548152f35b600319604091011261009d576004359060243590565b90601f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0910116810190811067ffffffffffffffff82111761040157604052565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b67ffffffffffffffff81116104015760051b60200190565b9080601f8301121561009d57813561045d8161042e565b9261046b60405194856103c0565b81845260208085019260051b82010192831161009d57602001905b8282106104935750505090565b8135815260209182019101610486565b600319606091011261009d57600435906024359060443590565b60206040818301928281528451809452019201905f5b8181106104e05750505090565b82518452602093840193909201916001016104d3565b805182101561050a5760209160051b010190565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b805482101561050a575f5260205f2001905f90565b8054680100000000000000008110156104015761056e91600182018155610537565b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff829392549160031b92831b921b1916179055565b919082018092116105b057565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b919082039182116105b057565b91825f52600260205260405f20548210156106e4578161060a82826105a3565b911580156106cd575b6106b7575b610621916105dd565b9061062b8261042e565b9261063960405194856103c0565b8284527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe06106668461042e565b013660208601375f5b83811061067d575050505090565b600190825f52600260205261069f60405f2061069983876105a3565b90610537565b90549060031b1c6106b082886104f6565b520161066f565b50505f8281526002602052604090205481610618565b5050825f5260026020528160405f20548211610613565b5050506040516106f56020826103c0565b5f81525f3681379056
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R`\x046\x10\x15a\0\x12W_\x80\xFD[_5`\xE0\x1C\x90\x81c\x1B3\x87\x10\x14a\x03\xD0WP\x80c(_$F\x14a\0\x96W\x80c6\xD6\x8D\xAF\x14a\x02hW\x80c[e\xB9\xAB\x14a\x01kW\x80c`c\x01\"\x14a\0\xC5W\x80c\x93\x9F^\xA4\x14a\0\x96Wc\xCES|\x9F\x14a\0iW_\x80\xFD[4a\0\x92W` `\x03\x196\x01\x12a\0\x92W`\x045_R_` R` `@_ T`@Q\x90\x81R\xF3[_\x80\xFD[4a\0\x92Wa\0\xA46a\x03\xF5V[\x90_R`\x01` R`@_ \x90_R` R` `@_ T`@Q\x90\x81R\xF3[4a\0\x92W` `\x03\x196\x01\x12a\0\x92W`\x045_R`\x02` R`@_ `@Q\x80` \x83T\x91\x82\x81R\x01\x90\x81\x93_R` _ \x90_[\x81\x81\x10a\x01UWPPP\x81a\x01\x13\x91\x03\x82a\x04\x0BV[`@Q\x91\x82\x91` \x83\x01\x90` \x84RQ\x80\x91R`@\x83\x01\x91\x90_[\x81\x81\x10a\x01<WPPP\x03\x90\xF3[\x82Q\x84R\x85\x94P` \x93\x84\x01\x93\x90\x92\x01\x91`\x01\x01a\x01.V[\x82T\x84R` \x90\x93\x01\x92`\x01\x92\x83\x01\x92\x01a\0\xFDV[4a\0\x92W```\x03\x196\x01\x12a\0\x92W`\x045`$5\x90`D5\x90_\x91\x81_R`\x02` R`@_ \x84_\x94\x82T\x95[\x86\x81\x10a\x028W[Pa\x01\xE2\x94\x95P\x15a\x02(W[PP_\x83\x81R`\x01` \x90\x81R`@\x80\x83 \x96\x83R\x95\x81R\x85\x82 \x80T\x90\x84\x90U\x85\x83R\x90\x82\x90R\x94\x90 Ta\x05\x8EV[\x91\x82\x03\x91\x82\x11a\x01\xFBW_R_` R`@_ U_\x80\xF3[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[a\x021\x91a\x057V[\x84\x84a\x01\xB1V[\x82a\x02C\x82\x86a\x05\"V[\x90T\x90`\x03\x1B\x1C\x14a\x02WW`\x01\x01a\x01\x9CV[PPa\x01\xE2\x93\x94P`\x01\x85\x94a\x01\xA4V[4a\0\x92W```\x03\x196\x01\x12a\0\x92W`\x045`$5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x92Wa\x02\x9C\x906\x90`\x04\x01a\x04yV[`D5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x92Wa\x02\xBC\x906\x90`\x04\x01a\x04yV[\x91\x81Q\x83Q\x03a\x03rW\x80_R`\x02` R`@_ \x80T\x90_\x81U\x81a\x03TW[PP_\x92_\x93[\x83Q\x85\x10\x15a\x03DWa\x03<`\x01\x91a\x02\xFE\x87\x87a\x04\xE1V[Q\x90a\x037a\x03\r\x89\x87a\x04\xE1V[Q\x92\x87_R\x85` R`@_ \x81_R` R\x83`@_ U\x87_R`\x02` R`@_ a\x057V[a\x05\x8EV[\x94\x01\x93a\x02\xE5V[\x82_R_` R`@_ U_\x80\xF3[_R` _ \x90\x81\x01\x90[\x81\x81\x10\x15a\x02\xDEW_\x81U`\x01\x01a\x03_V[`d`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`\x0F`$\x82\x01R\x7Flength mismatch\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`D\x82\x01R\xFD[4a\0\x92W` `\x03\x196\x01\x12a\0\x92W` \x90`\x045_R_\x82R`@_ T\x81R\xF3[`\x03\x19`@\x91\x01\x12a\0\x92W`\x045\x90`$5\x90V[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x04LW`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[\x90\x80`\x1F\x83\x01\x12\x15a\0\x92W\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x04LW\x82`\x05\x1B\x90`@Q\x93a\x04\xAD` \x84\x01\x86a\x04\x0BV[\x84R` \x80\x85\x01\x92\x82\x01\x01\x92\x83\x11a\0\x92W` \x01\x90[\x82\x82\x10a\x04\xD1WPPP\x90V[\x815\x81R` \x91\x82\x01\x91\x01a\x04\xC4V[\x80Q\x82\x10\x15a\x04\xF5W` \x91`\x05\x1B\x01\x01\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x80T\x82\x10\x15a\x04\xF5W_R` _ \x01\x90_\x90V[\x80Th\x01\0\0\0\0\0\0\0\0\x81\x10\x15a\x04LWa\x05Y\x91`\x01\x82\x01\x81Ua\x05\"V[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x93\x92T\x91`\x03\x1B\x92\x83\x1B\x92\x1B\x19\x16\x17\x90UV[\x91\x90\x82\x01\x80\x92\x11a\x01\xFBWV",
+        b"`\x80\x80`@R`\x046\x10\x15a\0\x12W_\x80\xFD[_5`\xE0\x1C\x90\x81c\x1B3\x87\x10\x14a\x03\x85WP\x80c(_$F\x14a\0\xA1W\x80c6\xD6\x8D\xAF\x14a\x02\x1DW\x80c[e\xB9\xAB\x14a\x01^W\x80c`c\x01\"\x14a\0\xFAW\x80cv\xA6\xF8\xFF\x14a\0\xD0W\x80c\x93\x9F^\xA4\x14a\0\xA1Wc\xCES|\x9F\x14a\0tW_\x80\xFD[4a\0\x9DW` `\x03\x196\x01\x12a\0\x9DW`\x045_R_` R` `@_ T`@Q\x90\x81R\xF3[_\x80\xFD[4a\0\x9DWa\0\xAF6a\x03\xAAV[\x90_R`\x01` R`@_ \x90_R` R` `@_ T`@Q\x90\x81R\xF3[4a\0\x9DWa\0\xF6a\0\xEAa\0\xE46a\x04\xA3V[\x91a\x05\xEAV[`@Q\x91\x82\x91\x82a\x04\xBDV[\x03\x90\xF3[4a\0\x9DW` `\x03\x196\x01\x12a\0\x9DW`\x045_R`\x02` R`@_ `@Q\x90\x81` \x82T\x91\x82\x81R\x01\x91_R` _ \x90_[\x81\x81\x10a\x01HWa\0\xF6\x85a\0\xEA\x81\x87\x03\x82a\x03\xC0V[\x82T\x84R` \x90\x93\x01\x92`\x01\x92\x83\x01\x92\x01a\x011V[4a\0\x9DWa\x01l6a\x04\xA3V[\x90_\x91\x83_R`\x02` R`@_ _\x81T\x90[\x81\x81\x10a\x01\xF0W[PP\x90a\x01\xCB\x91\x83a\x01\xD0\x95\x15a\x01\xE0W[PP_\x85\x81R`\x01` \x90\x81R`@\x80\x83 \x95\x83R\x94\x81R\x84\x82 \x80T\x90\x84\x90U\x87\x83R\x90\x82\x90R\x93\x90 Ta\x05\xA3V[a\x05\xDDV[\x90_R_` R`@_ U_\x80\xF3[a\x01\xE9\x91a\x05LV[\x85\x83a\x01\x9AV[\x84a\x01\xFB\x82\x85a\x057V[\x90T\x90`\x03\x1B\x1C\x14a\x02\x0FW`\x01\x01a\x01\x80V[P`\x01\x94P\x81\x90P\x83a\x01\x88V[4a\0\x9DW```\x03\x196\x01\x12a\0\x9DW`\x045`$5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x9DWa\x02Q\x906\x90`\x04\x01a\x04FV[`D5g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\x9DWa\x02q\x906\x90`\x04\x01a\x04FV[\x91\x81Q\x83Q\x03a\x03'W\x80_R`\x02` R`@_ \x80T\x90_\x81U\x81a\x03\tW[PP_\x92_\x93[\x83Q\x85\x10\x15a\x02\xF9Wa\x02\xF1`\x01\x91a\x02\xB3\x87\x87a\x04\xF6V[Q\x90a\x02\xECa\x02\xC2\x89\x87a\x04\xF6V[Q\x92\x87_R\x85` R`@_ \x81_R` R\x83`@_ U\x87_R`\x02` R`@_ a\x05LV[a\x05\xA3V[\x94\x01\x93a\x02\x9AV[\x82_R_` R`@_ U_\x80\xF3[_R` _ \x90\x81\x01\x90[\x81\x81\x10\x15a\x02\x93W_\x81U`\x01\x01a\x03\x14V[`d`@Q\x7F\x08\xC3y\xA0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x81R` `\x04\x82\x01R`\x0F`$\x82\x01R\x7Flength mismatch\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0`D\x82\x01R\xFD[4a\0\x9DW` `\x03\x196\x01\x12a\0\x9DW` \x90`\x045_R_\x82R`@_ T\x81R\xF3[`\x03\x19`@\x91\x01\x12a\0\x9DW`\x045\x90`$5\x90V[\x90`\x1F\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0\x91\x01\x16\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x04\x01W`@RV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`A`\x04R`$_\xFD[g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x04\x01W`\x05\x1B` \x01\x90V[\x90\x80`\x1F\x83\x01\x12\x15a\0\x9DW\x815a\x04]\x81a\x04.V[\x92a\x04k`@Q\x94\x85a\x03\xC0V[\x81\x84R` \x80\x85\x01\x92`\x05\x1B\x82\x01\x01\x92\x83\x11a\0\x9DW` \x01\x90[\x82\x82\x10a\x04\x93WPPP\x90V[\x815\x81R` \x91\x82\x01\x91\x01a\x04\x86V[`\x03\x19``\x91\x01\x12a\0\x9DW`\x045\x90`$5\x90`D5\x90V[` `@\x81\x83\x01\x92\x82\x81R\x84Q\x80\x94R\x01\x92\x01\x90_[\x81\x81\x10a\x04\xE0WPPP\x90V[\x82Q\x84R` \x93\x84\x01\x93\x90\x92\x01\x91`\x01\x01a\x04\xD3V[\x80Q\x82\x10\x15a\x05\nW` \x91`\x05\x1B\x01\x01\x90V[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`2`\x04R`$_\xFD[\x80T\x82\x10\x15a\x05\nW_R` _ \x01\x90_\x90V[\x80Th\x01\0\0\0\0\0\0\0\0\x81\x10\x15a\x04\x01Wa\x05n\x91`\x01\x82\x01\x81Ua\x057V[\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x93\x92T\x91`\x03\x1B\x92\x83\x1B\x92\x1B\x19\x16\x17\x90UV[\x91\x90\x82\x01\x80\x92\x11a\x05\xB0WV[\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R`\x11`\x04R`$_\xFD[\x91\x90\x82\x03\x91\x82\x11a\x05\xB0WV[\x91\x82_R`\x02` R`@_ T\x82\x10\x15a\x06\xE4W\x81a\x06\n\x82\x82a\x05\xA3V[\x91\x15\x80\x15a\x06\xCDW[a\x06\xB7W[a\x06!\x91a\x05\xDDV[\x90a\x06+\x82a\x04.V[\x92a\x069`@Q\x94\x85a\x03\xC0V[\x82\x84R\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xE0a\x06f\x84a\x04.V[\x016` \x86\x017_[\x83\x81\x10a\x06}WPPPP\x90V[`\x01\x90\x82_R`\x02` Ra\x06\x9F`@_ a\x06\x99\x83\x87a\x05\xA3V[\x90a\x057V[\x90T\x90`\x03\x1B\x1Ca\x06\xB0\x82\x88a\x04\xF6V[R\x01a\x06oV[PP_\x82\x81R`\x02` R`@\x90 T\x81a\x06\x18V[PP\x82_R`\x02` R\x81`@_ T\x82\x11a\x06\x13V[PPP`@Qa\x06\xF5` \x82a\x03\xC0V[_\x81R_6\x817\x90V",
     );
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
@@ -546,16 +576,16 @@ function getAppchainIds(uint256 epochIndex) external view returns (uint256[] mem
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct getAppchainIdsCall {
+    pub struct getAppchainIds_0Call {
         #[allow(missing_docs)]
         pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`getAppchainIds(uint256)`](getAppchainIdsCall) function.
+    ///Container type for the return parameters of the [`getAppchainIds(uint256)`](getAppchainIds_0Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct getAppchainIdsReturn {
+    pub struct getAppchainIds_0Return {
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
@@ -589,14 +619,16 @@ function getAppchainIds(uint256 epochIndex) external view returns (uint256[] mem
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<getAppchainIdsCall> for UnderlyingRustTuple<'_> {
-                fn from(value: getAppchainIdsCall) -> Self {
+            impl ::core::convert::From<getAppchainIds_0Call>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getAppchainIds_0Call) -> Self {
                     (value.epochIndex,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for getAppchainIdsCall {
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getAppchainIds_0Call {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { epochIndex: tuple.0 }
                 }
@@ -626,23 +658,23 @@ function getAppchainIds(uint256 epochIndex) external view returns (uint256[] mem
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<getAppchainIdsReturn>
+            impl ::core::convert::From<getAppchainIds_0Return>
             for UnderlyingRustTuple<'_> {
-                fn from(value: getAppchainIdsReturn) -> Self {
+                fn from(value: getAppchainIds_0Return) -> Self {
                     (value._0,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for getAppchainIdsReturn {
+            for getAppchainIds_0Return {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { _0: tuple.0 }
                 }
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for getAppchainIdsCall {
+        impl alloy_sol_types::SolCall for getAppchainIds_0Call {
             type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type Token<'a> = <Self::Parameters<
                 'a,
@@ -686,7 +718,7 @@ function getAppchainIds(uint256 epochIndex) external view returns (uint256[] mem
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
                     .map(|r| {
-                        let r: getAppchainIdsReturn = r.into();
+                        let r: getAppchainIds_0Return = r.into();
                         r._0
                     })
             }
@@ -698,7 +730,199 @@ function getAppchainIds(uint256 epochIndex) external view returns (uint256[] mem
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
-                        let r: getAppchainIdsReturn = r.into();
+                        let r: getAppchainIds_0Return = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `getAppchainIds(uint256,uint256,uint256)` and selector `0x76a6f8ff`.
+```solidity
+function getAppchainIds(uint256 epochIndex, uint256 startIndex, uint256 pageSize) external view returns (uint256[] memory);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getAppchainIds_1Call {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub startIndex: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub pageSize: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`getAppchainIds(uint256,uint256,uint256)`](getAppchainIds_1Call) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getAppchainIds_1Return {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::Vec<
+            alloy::sol_types::private::primitives::aliases::U256,
+        >,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getAppchainIds_1Call>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getAppchainIds_1Call) -> Self {
+                    (value.epochIndex, value.startIndex, value.pageSize)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getAppchainIds_1Call {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        epochIndex: tuple.0,
+                        startIndex: tuple.1,
+                        pageSize: tuple.2,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::Vec<
+                    alloy::sol_types::private::primitives::aliases::U256,
+                >,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getAppchainIds_1Return>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getAppchainIds_1Return) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getAppchainIds_1Return {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for getAppchainIds_1Call {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::Vec<
+                alloy::sol_types::private::primitives::aliases::U256,
+            >;
+            type ReturnTuple<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+            );
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "getAppchainIds(uint256,uint256,uint256)";
+            const SELECTOR: [u8; 4] = [118u8, 166u8, 248u8, 255u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.startIndex),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.pageSize),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Uint<256>,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: getAppchainIds_1Return = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: getAppchainIds_1Return = r.into();
                         r._0
                     })
             }
@@ -1364,7 +1588,9 @@ function totals(uint256) external view returns (uint256);
         #[allow(missing_docs)]
         getAppchainGasFees(getAppchainGasFeesCall),
         #[allow(missing_docs)]
-        getAppchainIds(getAppchainIdsCall),
+        getAppchainIds_0(getAppchainIds_0Call),
+        #[allow(missing_docs)]
+        getAppchainIds_1(getAppchainIds_1Call),
         #[allow(missing_docs)]
         getTotalGasFees(getTotalGasFeesCall),
         #[allow(missing_docs)]
@@ -1388,6 +1614,7 @@ function totals(uint256) external view returns (uint256);
             [54u8, 214u8, 141u8, 175u8],
             [91u8, 101u8, 185u8, 171u8],
             [96u8, 99u8, 1u8, 34u8],
+            [118u8, 166u8, 248u8, 255u8],
             [147u8, 159u8, 94u8, 164u8],
             [206u8, 83u8, 124u8, 159u8],
         ];
@@ -1396,7 +1623,7 @@ function totals(uint256) external view returns (uint256);
     impl alloy_sol_types::SolInterface for MockGasProviderCalls {
         const NAME: &'static str = "MockGasProviderCalls";
         const MIN_DATA_LENGTH: usize = 32usize;
-        const COUNT: usize = 7usize;
+        const COUNT: usize = 8usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -1404,8 +1631,11 @@ function totals(uint256) external view returns (uint256);
                 Self::getAppchainGasFees(_) => {
                     <getAppchainGasFeesCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::getAppchainIds(_) => {
-                    <getAppchainIdsCall as alloy_sol_types::SolCall>::SELECTOR
+                Self::getAppchainIds_0(_) => {
+                    <getAppchainIds_0Call as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::getAppchainIds_1(_) => {
+                    <getAppchainIds_1Call as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::getTotalGasFees(_) => {
                     <getTotalGasFeesCall as alloy_sol_types::SolCall>::SELECTOR
@@ -1471,15 +1701,26 @@ function totals(uint256) external view returns (uint256);
                     setFee
                 },
                 {
-                    fn getAppchainIds(
+                    fn getAppchainIds_0(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockGasProviderCalls> {
-                        <getAppchainIdsCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <getAppchainIds_0Call as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
                             )
-                            .map(MockGasProviderCalls::getAppchainIds)
+                            .map(MockGasProviderCalls::getAppchainIds_0)
                     }
-                    getAppchainIds
+                    getAppchainIds_0
+                },
+                {
+                    fn getAppchainIds_1(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<MockGasProviderCalls> {
+                        <getAppchainIds_1Call as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(MockGasProviderCalls::getAppchainIds_1)
+                    }
+                    getAppchainIds_1
                 },
                 {
                     fn fee(
@@ -1566,15 +1807,26 @@ function totals(uint256) external view returns (uint256);
                     setFee
                 },
                 {
-                    fn getAppchainIds(
+                    fn getAppchainIds_0(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<MockGasProviderCalls> {
-                        <getAppchainIdsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <getAppchainIds_0Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
                             )
-                            .map(MockGasProviderCalls::getAppchainIds)
+                            .map(MockGasProviderCalls::getAppchainIds_0)
                     }
-                    getAppchainIds
+                    getAppchainIds_0
+                },
+                {
+                    fn getAppchainIds_1(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<MockGasProviderCalls> {
+                        <getAppchainIds_1Call as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(MockGasProviderCalls::getAppchainIds_1)
+                    }
+                    getAppchainIds_1
                 },
                 {
                     fn fee(
@@ -1620,8 +1872,13 @@ function totals(uint256) external view returns (uint256);
                         inner,
                     )
                 }
-                Self::getAppchainIds(inner) => {
-                    <getAppchainIdsCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                Self::getAppchainIds_0(inner) => {
+                    <getAppchainIds_0Call as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::getAppchainIds_1(inner) => {
+                    <getAppchainIds_1Call as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -1653,8 +1910,14 @@ function totals(uint256) external view returns (uint256);
                         out,
                     )
                 }
-                Self::getAppchainIds(inner) => {
-                    <getAppchainIdsCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::getAppchainIds_0(inner) => {
+                    <getAppchainIds_0Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::getAppchainIds_1(inner) => {
+                    <getAppchainIds_1Call as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -1857,12 +2120,27 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
-        ///Creates a new call builder for the [`getAppchainIds`] function.
-        pub fn getAppchainIds(
+        ///Creates a new call builder for the [`getAppchainIds_0`] function.
+        pub fn getAppchainIds_0(
             &self,
             epochIndex: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, getAppchainIdsCall, N> {
-            self.call_builder(&getAppchainIdsCall { epochIndex })
+        ) -> alloy_contract::SolCallBuilder<&P, getAppchainIds_0Call, N> {
+            self.call_builder(&getAppchainIds_0Call { epochIndex })
+        }
+        ///Creates a new call builder for the [`getAppchainIds_1`] function.
+        pub fn getAppchainIds_1(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+            startIndex: alloy::sol_types::private::primitives::aliases::U256,
+            pageSize: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, getAppchainIds_1Call, N> {
+            self.call_builder(
+                &getAppchainIds_1Call {
+                    epochIndex,
+                    startIndex,
+                    pageSize,
+                },
+            )
         }
         ///Creates a new call builder for the [`getTotalGasFees`] function.
         pub fn getTotalGasFees(

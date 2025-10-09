@@ -57,4 +57,30 @@ contract MockGasProvider is IGasDataProvider {
     function getAppchainIds(uint256 epochIndex) external view returns (uint256[] memory) {
         return idsByEpoch[epochIndex];
     }
+
+    function getAppchainIds(uint256 epochIndex, uint256 startIndex, uint256 pageSize)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        if (startIndex >= idsByEpoch[epochIndex].length) {
+            return new uint256[](0);
+        }
+
+        uint256 endIndex = startIndex + pageSize;
+        if (pageSize == 0 || endIndex > idsByEpoch[epochIndex].length) {
+            endIndex = idsByEpoch[epochIndex].length;
+        }
+        uint256 actualSize = endIndex - startIndex;
+
+        // Create the result array with the correct size
+        uint256[] memory result = new uint256[](actualSize);
+
+        // Copy the relevant slice from the full array
+        for (uint256 i = 0; i < actualSize; i++) {
+            result[i] = idsByEpoch[epochIndex][startIndex + i];
+        }
+
+        return result;
+    }
 }

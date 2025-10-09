@@ -9,6 +9,10 @@ interface RewardPoolBase {
     error InvalidDestination();
     error OwnableInvalidOwner(address owner);
     error OwnableUnauthorizedAccount(address account);
+    error PRBMath_MulDiv18_Overflow(uint256 x, uint256 y);
+    error PRBMath_MulDiv_Overflow(uint256 x, uint256 y, uint256 denominator);
+    error PRBMath_UD60x18_Convert_Overflow(uint256 x);
+    error PRBMath_UD60x18_Log_InputTooSmall(UD60x18 x);
     error ReentrancyGuardReentrantCall();
     error ZeroAddress();
     error ZeroEpochIndex();
@@ -20,6 +24,7 @@ interface RewardPoolBase {
     receive() external payable;
 
     function EPOCH_DURATION() external view returns (uint256);
+    function PRE_COMPUTE_COMPLETE() external view returns (uint256);
     function START_TIMESTAMP() external view returns (uint256);
     function decayFactor() external view returns (UD60x18);
     function deposit(uint256 epoch) external payable;
@@ -30,6 +35,8 @@ interface RewardPoolBase {
     function getEpochEnd(uint256 epochIndex) external pure returns (uint256);
     function getEpochStart(uint256 epochIndex) external pure returns (uint256);
     function owner() external view returns (address);
+    function preComputeDiminishingFactors(uint256 epochIndex, uint256 _batchSize) external returns (bool isComplete);
+    function preComputeIndex(uint256 epochIndex) external view returns (uint256 preComputeIndex);
     function renounceOwnership() external;
     function setDecayFactor(uint256 _decay) external;
     function setFeeMultiplier(uint256 _fee) external;
@@ -50,6 +57,19 @@ interface RewardPoolBase {
   {
     "type": "function",
     "name": "EPOCH_DURATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PRE_COMPUTE_COMPLETE",
     "inputs": [],
     "outputs": [
       {
@@ -204,6 +224,49 @@ interface RewardPoolBase {
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "preComputeDiminishingFactors",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_batchSize",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "isComplete",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "preComputeIndex",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "preComputeIndex",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -391,6 +454,65 @@ interface RewardPoolBase {
         "name": "account",
         "type": "address",
         "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_MulDiv18_Overflow",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "y",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_MulDiv_Overflow",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "y",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "denominator",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_UD60x18_Convert_Overflow",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_UD60x18_Log_InputTooSmall",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "uint256",
+        "internalType": "UD60x18"
       }
     ]
   },
@@ -884,6 +1006,365 @@ error OwnableUnauthorizedAccount(address account);
                         &self.account,
                     ),
                 )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `PRBMath_MulDiv18_Overflow(uint256,uint256)` and selector `0x5173648d`.
+```solidity
+error PRBMath_MulDiv18_Overflow(uint256 x, uint256 y);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct PRBMath_MulDiv18_Overflow {
+        #[allow(missing_docs)]
+        pub x: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub y: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = (
+            alloy::sol_types::sol_data::Uint<256>,
+            alloy::sol_types::sol_data::Uint<256>,
+        );
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (
+            alloy::sol_types::private::primitives::aliases::U256,
+            alloy::sol_types::private::primitives::aliases::U256,
+        );
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<PRBMath_MulDiv18_Overflow>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: PRBMath_MulDiv18_Overflow) -> Self {
+                (value.x, value.y)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for PRBMath_MulDiv18_Overflow {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { x: tuple.0, y: tuple.1 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for PRBMath_MulDiv18_Overflow {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "PRBMath_MulDiv18_Overflow(uint256,uint256)";
+            const SELECTOR: [u8; 4] = [81u8, 115u8, 100u8, 141u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.x),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.y),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `PRBMath_MulDiv_Overflow(uint256,uint256,uint256)` and selector `0x63a05778`.
+```solidity
+error PRBMath_MulDiv_Overflow(uint256 x, uint256 y, uint256 denominator);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct PRBMath_MulDiv_Overflow {
+        #[allow(missing_docs)]
+        pub x: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub y: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub denominator: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = (
+            alloy::sol_types::sol_data::Uint<256>,
+            alloy::sol_types::sol_data::Uint<256>,
+            alloy::sol_types::sol_data::Uint<256>,
+        );
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (
+            alloy::sol_types::private::primitives::aliases::U256,
+            alloy::sol_types::private::primitives::aliases::U256,
+            alloy::sol_types::private::primitives::aliases::U256,
+        );
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<PRBMath_MulDiv_Overflow> for UnderlyingRustTuple<'_> {
+            fn from(value: PRBMath_MulDiv_Overflow) -> Self {
+                (value.x, value.y, value.denominator)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for PRBMath_MulDiv_Overflow {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self {
+                    x: tuple.0,
+                    y: tuple.1,
+                    denominator: tuple.2,
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for PRBMath_MulDiv_Overflow {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "PRBMath_MulDiv_Overflow(uint256,uint256,uint256)";
+            const SELECTOR: [u8; 4] = [99u8, 160u8, 87u8, 120u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.x),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.y),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.denominator),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `PRBMath_UD60x18_Convert_Overflow(uint256)` and selector `0x1cd951a7`.
+```solidity
+error PRBMath_UD60x18_Convert_Overflow(uint256 x);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct PRBMath_UD60x18_Convert_Overflow {
+        #[allow(missing_docs)]
+        pub x: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (
+            alloy::sol_types::private::primitives::aliases::U256,
+        );
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<PRBMath_UD60x18_Convert_Overflow>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: PRBMath_UD60x18_Convert_Overflow) -> Self {
+                (value.x,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for PRBMath_UD60x18_Convert_Overflow {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { x: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for PRBMath_UD60x18_Convert_Overflow {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "PRBMath_UD60x18_Convert_Overflow(uint256)";
+            const SELECTOR: [u8; 4] = [28u8, 217u8, 81u8, 167u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.x),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `PRBMath_UD60x18_Log_InputTooSmall(uint256)` and selector `0x36d32ef0`.
+```solidity
+error PRBMath_UD60x18_Log_InputTooSmall(UD60x18 x);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct PRBMath_UD60x18_Log_InputTooSmall {
+        #[allow(missing_docs)]
+        pub x: <UD60x18 as alloy::sol_types::SolType>::RustType,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = (UD60x18,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (
+            <UD60x18 as alloy::sol_types::SolType>::RustType,
+        );
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<PRBMath_UD60x18_Log_InputTooSmall>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: PRBMath_UD60x18_Log_InputTooSmall) -> Self {
+                (value.x,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for PRBMath_UD60x18_Log_InputTooSmall {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { x: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for PRBMath_UD60x18_Log_InputTooSmall {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "PRBMath_UD60x18_Log_InputTooSmall(uint256)";
+            const SELECTOR: [u8; 4] = [54u8, 211u8, 46u8, 240u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (<UD60x18 as alloy_sol_types::SolType>::tokenize(&self.x),)
             }
             #[inline]
             fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
@@ -1628,6 +2109,155 @@ function EPOCH_DURATION() external view returns (uint256);
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
                         let r: EPOCH_DURATIONReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `PRE_COMPUTE_COMPLETE()` and selector `0x515603e7`.
+```solidity
+function PRE_COMPUTE_COMPLETE() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct PRE_COMPUTE_COMPLETECall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`PRE_COMPUTE_COMPLETE()`](PRE_COMPUTE_COMPLETECall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct PRE_COMPUTE_COMPLETEReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<PRE_COMPUTE_COMPLETECall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: PRE_COMPUTE_COMPLETECall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for PRE_COMPUTE_COMPLETECall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<PRE_COMPUTE_COMPLETEReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: PRE_COMPUTE_COMPLETEReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for PRE_COMPUTE_COMPLETEReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for PRE_COMPUTE_COMPLETECall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "PRE_COMPUTE_COMPLETE()";
+            const SELECTOR: [u8; 4] = [81u8, 86u8, 3u8, 231u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: PRE_COMPUTE_COMPLETEReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: PRE_COMPUTE_COMPLETEReturn = r.into();
                         r._0
                     })
             }
@@ -3105,6 +3735,333 @@ function owner() external view returns (address);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `preComputeDiminishingFactors(uint256,uint256)` and selector `0x226263f4`.
+```solidity
+function preComputeDiminishingFactors(uint256 epochIndex, uint256 _batchSize) external returns (bool isComplete);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct preComputeDiminishingFactorsCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub _batchSize: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`preComputeDiminishingFactors(uint256,uint256)`](preComputeDiminishingFactorsCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct preComputeDiminishingFactorsReturn {
+        #[allow(missing_docs)]
+        pub isComplete: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<preComputeDiminishingFactorsCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: preComputeDiminishingFactorsCall) -> Self {
+                    (value.epochIndex, value._batchSize)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for preComputeDiminishingFactorsCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        epochIndex: tuple.0,
+                        _batchSize: tuple.1,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (bool,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<preComputeDiminishingFactorsReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: preComputeDiminishingFactorsReturn) -> Self {
+                    (value.isComplete,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for preComputeDiminishingFactorsReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { isComplete: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for preComputeDiminishingFactorsCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = bool;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "preComputeDiminishingFactors(uint256,uint256)";
+            const SELECTOR: [u8; 4] = [34u8, 98u8, 99u8, 244u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self._batchSize),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: preComputeDiminishingFactorsReturn = r.into();
+                        r.isComplete
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: preComputeDiminishingFactorsReturn = r.into();
+                        r.isComplete
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `preComputeIndex(uint256)` and selector `0xe8f91e49`.
+```solidity
+function preComputeIndex(uint256 epochIndex) external view returns (uint256 preComputeIndex);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct preComputeIndexCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`preComputeIndex(uint256)`](preComputeIndexCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct preComputeIndexReturn {
+        #[allow(missing_docs)]
+        pub preComputeIndex: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<preComputeIndexCall> for UnderlyingRustTuple<'_> {
+                fn from(value: preComputeIndexCall) -> Self {
+                    (value.epochIndex,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for preComputeIndexCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { epochIndex: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<preComputeIndexReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: preComputeIndexReturn) -> Self {
+                    (value.preComputeIndex,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for preComputeIndexReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { preComputeIndex: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for preComputeIndexCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "preComputeIndex(uint256)";
+            const SELECTOR: [u8; 4] = [232u8, 249u8, 30u8, 73u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: preComputeIndexReturn = r.into();
+                        r.preComputeIndex
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: preComputeIndexReturn = r.into();
+                        r.preComputeIndex
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `renounceOwnership()` and selector `0x715018a6`.
 ```solidity
 function renounceOwnership() external;
@@ -4125,6 +5082,8 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         EPOCH_DURATION(EPOCH_DURATIONCall),
         #[allow(missing_docs)]
+        PRE_COMPUTE_COMPLETE(PRE_COMPUTE_COMPLETECall),
+        #[allow(missing_docs)]
         START_TIMESTAMP(START_TIMESTAMPCall),
         #[allow(missing_docs)]
         decayFactor(decayFactorCall),
@@ -4144,6 +5103,10 @@ function transferOwnership(address newOwner) external;
         getEpochStart(getEpochStartCall),
         #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
+        preComputeDiminishingFactors(preComputeDiminishingFactorsCall),
+        #[allow(missing_docs)]
+        preComputeIndex(preComputeIndexCall),
         #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
         #[allow(missing_docs)]
@@ -4173,6 +5136,8 @@ function transferOwnership(address newOwner) external;
             [30u8, 14u8, 132u8, 137u8],
             [30u8, 106u8, 49u8, 29u8],
             [32u8, 251u8, 48u8, 22u8],
+            [34u8, 98u8, 99u8, 244u8],
+            [81u8, 86u8, 3u8, 231u8],
             [91u8, 53u8, 208u8, 87u8],
             [113u8, 80u8, 24u8, 166u8],
             [120u8, 28u8, 217u8, 157u8],
@@ -4184,6 +5149,7 @@ function transferOwnership(address newOwner) external;
             [185u8, 125u8, 217u8, 226u8],
             [213u8, 23u8, 109u8, 35u8],
             [229u8, 167u8, 14u8, 247u8],
+            [232u8, 249u8, 30u8, 73u8],
             [238u8, 153u8, 32u8, 92u8],
             [242u8, 253u8, 227u8, 139u8],
         ];
@@ -4192,12 +5158,15 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for RewardPoolBaseCalls {
         const NAME: &'static str = "RewardPoolBaseCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 18usize;
+        const COUNT: usize = 21usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
                 Self::EPOCH_DURATION(_) => {
                     <EPOCH_DURATIONCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::PRE_COMPUTE_COMPLETE(_) => {
+                    <PRE_COMPUTE_COMPLETECall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::START_TIMESTAMP(_) => {
                     <START_TIMESTAMPCall as alloy_sol_types::SolCall>::SELECTOR
@@ -4225,6 +5194,12 @@ function transferOwnership(address newOwner) external;
                     <getEpochStartCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::owner(_) => <ownerCall as alloy_sol_types::SolCall>::SELECTOR,
+                Self::preComputeDiminishingFactors(_) => {
+                    <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::preComputeIndex(_) => {
+                    <preComputeIndexCall as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::renounceOwnership(_) => {
                     <renounceOwnershipCall as alloy_sol_types::SolCall>::SELECTOR
                 }
@@ -4319,6 +5294,28 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseCalls::decayFactor)
                     }
                     decayFactor
+                },
+                {
+                    fn preComputeDiminishingFactors(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::preComputeDiminishingFactors)
+                    }
+                    preComputeDiminishingFactors
+                },
+                {
+                    fn PRE_COMPUTE_COMPLETE(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <PRE_COMPUTE_COMPLETECall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::PRE_COMPUTE_COMPLETE)
+                    }
+                    PRE_COMPUTE_COMPLETE
                 },
                 {
                     fn stakeMultiplier(
@@ -4438,6 +5435,17 @@ function transferOwnership(address newOwner) external;
                     feeMultiplier
                 },
                 {
+                    fn preComputeIndex(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <preComputeIndexCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::preComputeIndex)
+                    }
+                    preComputeIndex
+                },
+                {
                     fn stakingContract(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -4533,6 +5541,28 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseCalls::decayFactor)
                     }
                     decayFactor
+                },
+                {
+                    fn preComputeDiminishingFactors(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::preComputeDiminishingFactors)
+                    }
+                    preComputeDiminishingFactors
+                },
+                {
+                    fn PRE_COMPUTE_COMPLETE(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <PRE_COMPUTE_COMPLETECall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::PRE_COMPUTE_COMPLETE)
+                    }
+                    PRE_COMPUTE_COMPLETE
                 },
                 {
                     fn stakeMultiplier(
@@ -4656,6 +5686,17 @@ function transferOwnership(address newOwner) external;
                     feeMultiplier
                 },
                 {
+                    fn preComputeIndex(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <preComputeIndexCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::preComputeIndex)
+                    }
+                    preComputeIndex
+                },
+                {
                     fn stakingContract(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -4693,6 +5734,11 @@ function transferOwnership(address newOwner) external;
             match self {
                 Self::EPOCH_DURATION(inner) => {
                     <EPOCH_DURATIONCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::PRE_COMPUTE_COMPLETE(inner) => {
+                    <PRE_COMPUTE_COMPLETECall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -4740,6 +5786,16 @@ function transferOwnership(address newOwner) external;
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
+                Self::preComputeDiminishingFactors(inner) => {
+                    <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::preComputeIndex(inner) => {
+                    <preComputeIndexCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::renounceOwnership(inner) => {
                     <renounceOwnershipCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -4782,6 +5838,12 @@ function transferOwnership(address newOwner) external;
             match self {
                 Self::EPOCH_DURATION(inner) => {
                     <EPOCH_DURATIONCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::PRE_COMPUTE_COMPLETE(inner) => {
+                    <PRE_COMPUTE_COMPLETECall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -4839,6 +5901,18 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
+                }
+                Self::preComputeDiminishingFactors(inner) => {
+                    <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::preComputeIndex(inner) => {
+                    <preComputeIndexCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
                 }
                 Self::renounceOwnership(inner) => {
                     <renounceOwnershipCall as alloy_sol_types::SolCall>::abi_encode_raw(
@@ -4898,6 +5972,14 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
         #[allow(missing_docs)]
+        PRBMath_MulDiv18_Overflow(PRBMath_MulDiv18_Overflow),
+        #[allow(missing_docs)]
+        PRBMath_MulDiv_Overflow(PRBMath_MulDiv_Overflow),
+        #[allow(missing_docs)]
+        PRBMath_UD60x18_Convert_Overflow(PRBMath_UD60x18_Convert_Overflow),
+        #[allow(missing_docs)]
+        PRBMath_UD60x18_Log_InputTooSmall(PRBMath_UD60x18_Log_InputTooSmall),
+        #[allow(missing_docs)]
         ReentrancyGuardReentrantCall(ReentrancyGuardReentrantCall),
         #[allow(missing_docs)]
         ZeroAddress(ZeroAddress),
@@ -4914,9 +5996,13 @@ function transferOwnership(address newOwner) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [17u8, 140u8, 218u8, 167u8],
+            [28u8, 217u8, 81u8, 167u8],
             [30u8, 79u8, 189u8, 247u8],
+            [54u8, 211u8, 46u8, 240u8],
             [60u8, 33u8, 249u8, 15u8],
             [62u8, 229u8, 174u8, 181u8],
+            [81u8, 115u8, 100u8, 141u8],
+            [99u8, 160u8, 87u8, 120u8],
             [172u8, 107u8, 5u8, 245u8],
             [214u8, 147u8, 104u8, 212u8],
             [217u8, 46u8, 35u8, 61u8],
@@ -4926,7 +6012,7 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for RewardPoolBaseErrors {
         const NAME: &'static str = "RewardPoolBaseErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 7usize;
+        const COUNT: usize = 11usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -4941,6 +6027,18 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::OwnableUnauthorizedAccount(_) => {
                     <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::PRBMath_MulDiv18_Overflow(_) => {
+                    <PRBMath_MulDiv18_Overflow as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::PRBMath_MulDiv_Overflow(_) => {
+                    <PRBMath_MulDiv_Overflow as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::PRBMath_UD60x18_Convert_Overflow(_) => {
+                    <PRBMath_UD60x18_Convert_Overflow as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::PRBMath_UD60x18_Log_InputTooSmall(_) => {
+                    <PRBMath_UD60x18_Log_InputTooSmall as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::ReentrancyGuardReentrantCall(_) => {
                     <ReentrancyGuardReentrantCall as alloy_sol_types::SolError>::SELECTOR
@@ -4982,6 +6080,17 @@ function transferOwnership(address newOwner) external;
                     OwnableUnauthorizedAccount
                 },
                 {
+                    fn PRBMath_UD60x18_Convert_Overflow(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <PRBMath_UD60x18_Convert_Overflow as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::PRBMath_UD60x18_Convert_Overflow)
+                    }
+                    PRBMath_UD60x18_Convert_Overflow
+                },
+                {
                     fn OwnableInvalidOwner(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
@@ -4991,6 +6100,17 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseErrors::OwnableInvalidOwner)
                     }
                     OwnableInvalidOwner
+                },
+                {
+                    fn PRBMath_UD60x18_Log_InputTooSmall(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <PRBMath_UD60x18_Log_InputTooSmall as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::PRBMath_UD60x18_Log_InputTooSmall)
+                    }
+                    PRBMath_UD60x18_Log_InputTooSmall
                 },
                 {
                     fn ClaimNotAvailable(
@@ -5013,6 +6133,28 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseErrors::ReentrancyGuardReentrantCall)
                     }
                     ReentrancyGuardReentrantCall
+                },
+                {
+                    fn PRBMath_MulDiv18_Overflow(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <PRBMath_MulDiv18_Overflow as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::PRBMath_MulDiv18_Overflow)
+                    }
+                    PRBMath_MulDiv18_Overflow
+                },
+                {
+                    fn PRBMath_MulDiv_Overflow(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <PRBMath_MulDiv_Overflow as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::PRBMath_MulDiv_Overflow)
+                    }
+                    PRBMath_MulDiv_Overflow
                 },
                 {
                     fn InvalidDestination(
@@ -5077,6 +6219,17 @@ function transferOwnership(address newOwner) external;
                     OwnableUnauthorizedAccount
                 },
                 {
+                    fn PRBMath_UD60x18_Convert_Overflow(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <PRBMath_UD60x18_Convert_Overflow as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::PRBMath_UD60x18_Convert_Overflow)
+                    }
+                    PRBMath_UD60x18_Convert_Overflow
+                },
+                {
                     fn OwnableInvalidOwner(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
@@ -5086,6 +6239,17 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseErrors::OwnableInvalidOwner)
                     }
                     OwnableInvalidOwner
+                },
+                {
+                    fn PRBMath_UD60x18_Log_InputTooSmall(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <PRBMath_UD60x18_Log_InputTooSmall as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::PRBMath_UD60x18_Log_InputTooSmall)
+                    }
+                    PRBMath_UD60x18_Log_InputTooSmall
                 },
                 {
                     fn ClaimNotAvailable(
@@ -5108,6 +6272,28 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseErrors::ReentrancyGuardReentrantCall)
                     }
                     ReentrancyGuardReentrantCall
+                },
+                {
+                    fn PRBMath_MulDiv18_Overflow(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <PRBMath_MulDiv18_Overflow as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::PRBMath_MulDiv18_Overflow)
+                    }
+                    PRBMath_MulDiv18_Overflow
+                },
+                {
+                    fn PRBMath_MulDiv_Overflow(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <PRBMath_MulDiv_Overflow as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::PRBMath_MulDiv_Overflow)
+                    }
+                    PRBMath_MulDiv_Overflow
                 },
                 {
                     fn InvalidDestination(
@@ -5176,6 +6362,26 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
+                Self::PRBMath_MulDiv18_Overflow(inner) => {
+                    <PRBMath_MulDiv18_Overflow as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::PRBMath_MulDiv_Overflow(inner) => {
+                    <PRBMath_MulDiv_Overflow as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::PRBMath_UD60x18_Convert_Overflow(inner) => {
+                    <PRBMath_UD60x18_Convert_Overflow as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::PRBMath_UD60x18_Log_InputTooSmall(inner) => {
+                    <PRBMath_UD60x18_Log_InputTooSmall as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::ReentrancyGuardReentrantCall(inner) => {
                     <ReentrancyGuardReentrantCall as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -5214,6 +6420,30 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::OwnableUnauthorizedAccount(inner) => {
                     <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::PRBMath_MulDiv18_Overflow(inner) => {
+                    <PRBMath_MulDiv18_Overflow as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::PRBMath_MulDiv_Overflow(inner) => {
+                    <PRBMath_MulDiv_Overflow as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::PRBMath_UD60x18_Convert_Overflow(inner) => {
+                    <PRBMath_UD60x18_Convert_Overflow as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::PRBMath_UD60x18_Log_InputTooSmall(inner) => {
+                    <PRBMath_UD60x18_Log_InputTooSmall as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -5516,6 +6746,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, EPOCH_DURATIONCall, N> {
             self.call_builder(&EPOCH_DURATIONCall)
         }
+        ///Creates a new call builder for the [`PRE_COMPUTE_COMPLETE`] function.
+        pub fn PRE_COMPUTE_COMPLETE(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, PRE_COMPUTE_COMPLETECall, N> {
+            self.call_builder(&PRE_COMPUTE_COMPLETECall)
+        }
         ///Creates a new call builder for the [`START_TIMESTAMP`] function.
         pub fn START_TIMESTAMP(
             &self,
@@ -5577,6 +6813,26 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`owner`] function.
         pub fn owner(&self) -> alloy_contract::SolCallBuilder<&P, ownerCall, N> {
             self.call_builder(&ownerCall)
+        }
+        ///Creates a new call builder for the [`preComputeDiminishingFactors`] function.
+        pub fn preComputeDiminishingFactors(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+            _batchSize: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, preComputeDiminishingFactorsCall, N> {
+            self.call_builder(
+                &preComputeDiminishingFactorsCall {
+                    epochIndex,
+                    _batchSize,
+                },
+            )
+        }
+        ///Creates a new call builder for the [`preComputeIndex`] function.
+        pub fn preComputeIndex(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, preComputeIndexCall, N> {
+            self.call_builder(&preComputeIndexCall { epochIndex })
         }
         ///Creates a new call builder for the [`renounceOwnership`] function.
         pub fn renounceOwnership(

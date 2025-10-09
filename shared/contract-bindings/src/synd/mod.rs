@@ -210,6 +210,7 @@ pub mod r#require_or_module;
 pub mod r#mock_permission_allowed_false;
 pub mod r#mock_permission_allowed_true;
 pub mod r#reward_pool_base;
+pub mod r#mock_reward_pool_base;
 pub mod r#rollup;
 pub mod r#sp1_verifier_gateway;
 pub mod r#sp1_verifier;

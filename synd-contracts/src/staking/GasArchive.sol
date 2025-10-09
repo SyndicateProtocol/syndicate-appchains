@@ -330,6 +330,60 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         }
     }
 
+    function getAppchainIds(uint256 epochIndex, uint256 startIndex, uint256 pageSize)
+        external
+        view
+        returns (uint256[] memory chainIDs)
+    {
+        require(epochIndex < epoch, NotArchivedEpoch());
+        bytes32[] memory ids = appchainIDs[epochIndex]._inner._values;
+        uint256 idsLength = ids.length;
+
+        // Handle edge cases
+        if (startIndex >= idsLength) {
+            return new uint256[](0);
+        }
+
+        // Calculate actual size efficiently
+        uint256 actualSize;
+        unchecked {
+            uint256 remaining = idsLength - startIndex;
+            actualSize = pageSize == 0 || pageSize > remaining ? remaining : pageSize;
+        }
+
+        // Use assembly for zero-copy optimization when possible
+        if (startIndex == 0 && actualSize == idsLength) {
+            // Return entire array with zero-copy assembly trick
+            assembly {
+                chainIDs := ids
+            }
+            return chainIDs;
+        }
+
+        // For partial arrays, use assembly for efficient copying
+        assembly {
+            // Allocate memory for result array
+            chainIDs := mload(0x40)
+            let resultPtr := add(chainIDs, 0x20)
+            
+            // Store array length
+            mstore(chainIDs, actualSize)
+            
+            // Calculate source pointer (skip array length + startIndex * 32)
+            let sourcePtr := add(add(ids, 0x20), mul(startIndex, 0x20))
+            
+            // Copy data efficiently in 32-byte chunks
+            let copySize := mul(actualSize, 0x20)
+            let i := 0
+            for {} lt(i, copySize) { i := add(i, 0x20) } {
+                mstore(add(resultPtr, i), mload(add(sourcePtr, i)))
+            }
+            
+            // Update free memory pointer
+            mstore(0x40, add(resultPtr, copySize))
+        }
+    }
+
     function sequencingChainCount() external view returns (uint256) {
         return seqChains.length();
     }
