@@ -8,16 +8,10 @@ import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {PerformancePool} from "src/staking/PerformancePool.sol";
 import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
-
-/// @notice Interface the pool expects for gas accounting
-interface IGasProvider {
-    function getTotalGasFees(uint256 epochIndex) external view returns (uint256);
-    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory);
-}
+import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 
 /// @notice Mock gas provider: programmable per-epoch fees + active IDs
-contract MockGasProvider is IGasProvider {
+contract MockGasProvider is IGasDataProvider {
     // epoch => total fees
     mapping(uint256 => uint256) public totals;
     // epoch => appchainId => fees
@@ -67,12 +61,38 @@ contract MockGasProvider is IGasProvider {
         return fee[epochIndex][appchainId];
     }
 
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory out) {
+    function getAppchainIds(uint256 epochIndex) external view returns (uint256[] memory out) {
         uint256[] storage ids = idsByEpoch[epochIndex];
         out = new uint256[](ids.length);
         for (uint256 i = 0; i < ids.length; i++) {
             out[i] = ids[i];
         }
+    }
+
+    function getAppchainIds(uint256 epochIndex, uint256 startIndex, uint256 pageSize)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        if (startIndex >= idsByEpoch[epochIndex].length) {
+            return new uint256[](0);
+        }
+
+        uint256 endIndex = startIndex + pageSize;
+        if (pageSize == 0 || endIndex > idsByEpoch[epochIndex].length) {
+            endIndex = idsByEpoch[epochIndex].length;
+        }
+        uint256 actualSize = endIndex - startIndex;
+
+        // Create the result array with the correct size
+        uint256[] memory result = new uint256[](actualSize);
+
+        // Copy the relevant slice from the full array
+        for (uint256 i = 0; i < actualSize; i++) {
+            result[i] = idsByEpoch[epochIndex][startIndex + i];
+        }
+
+        return result;
     }
 }
 

@@ -9,83 +9,7 @@ import {AppchainPool} from "src/staking/AppchainPool.sol";
 import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
 import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
-
-/// @notice Mock gas provider: programmable per-epoch fees + active IDs + reward receivers
-contract MockGasProvider is IGasDataProvider {
-    // epoch => total fees
-    mapping(uint256 => uint256) public totals;
-    // epoch => appchainId => fees
-    mapping(uint256 => mapping(uint256 => uint256)) public fee;
-    // epoch => list of appchainIds (we keep exactly what tests set)
-    mapping(uint256 => uint256[]) private idsByEpoch;
-    // appchainId => rewards receiver (latest epoch)
-    mapping(uint256 => address) public receiver;
-
-    function setFees(uint256 epoch, uint256[] memory appchainIds, uint256[] memory amounts) external {
-        require(appchainIds.length == amounts.length, "length mismatch");
-
-        // reset ids list
-        delete idsByEpoch[epoch];
-
-        uint256 t;
-        for (uint256 i = 0; i < appchainIds.length; i++) {
-            uint256 id = appchainIds[i];
-            uint256 amt = amounts[i];
-            fee[epoch][id] = amt;
-            idsByEpoch[epoch].push(id);
-            t += amt;
-        }
-        totals[epoch] = t;
-    }
-
-    function setFee(uint256 epoch, uint256 appchainId, uint256 amount) external {
-        // if appchainId not in ids list, push it
-        bool present = false;
-        uint256[] storage ids = idsByEpoch[epoch];
-        for (uint256 i = 0; i < ids.length; i++) {
-            if (ids[i] == appchainId) {
-                present = true;
-                break;
-            }
-        }
-        if (!present) ids.push(appchainId);
-
-        uint256 prev = fee[epoch][appchainId];
-        fee[epoch][appchainId] = amount;
-        totals[epoch] = totals[epoch] + amount - prev;
-    }
-
-    function setReceiver(uint256 appchainId, address to) external {
-        receiver[appchainId] = to;
-    }
-
-    function setReceivers(uint256[] memory appchainIds, address[] memory dests) external {
-        require(appchainIds.length == dests.length, "length mismatch");
-        for (uint256 i = 0; i < appchainIds.length; i++) {
-            receiver[appchainIds[i]] = dests[i];
-        }
-    }
-
-    function getTotalGasFees(uint256 epochIndex) external view returns (uint256) {
-        return totals[epochIndex];
-    }
-
-    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256) {
-        return fee[epochIndex][appchainId];
-    }
-
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory out) {
-        uint256[] storage ids = idsByEpoch[epochIndex];
-        out = new uint256[](ids.length);
-        for (uint256 i = 0; i < ids.length; i++) {
-            out[i] = ids[i];
-        }
-    }
-
-    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address) {
-        return receiver[appchainId];
-    }
-}
+import {MockGasProvider} from "./MockGasProvider.t.sol";
 
 contract AppchainPoolTest is Test {
     SyndStaking public staking;
@@ -166,16 +90,12 @@ contract AppchainPoolTest is Test {
         gasProvider.setFees(epoch, idsLocal, feesLocal);
     }
 
-    function setDefaultReceivers(uint256 epoch) internal {
-        uint256[] memory idsLocal = new uint256[](3);
-        address[] memory dests = new address[](3);
-        idsLocal[0] = appchainId1;
-        dests[0] = appchainDest1;
-        idsLocal[1] = appchainId2;
-        dests[1] = appchainDest2;
-        idsLocal[2] = appchainId3;
-        dests[2] = appchainDest3;
-        gasProvider.setReceivers(idsLocal, dests);
+    function setDefaultReceivers() internal {
+        vm.startPrank(appchainPool.owner());
+        appchainPool.setAppchainEmissionsReceiver(appchainId1, appchainDest1);
+        appchainPool.setAppchainEmissionsReceiver(appchainId2, appchainDest2);
+        appchainPool.setAppchainEmissionsReceiver(appchainId3, appchainDest3);
+        vm.stopPrank();
     }
 
     /// Returns a finalized epoch index (< current). Warps if needed.
@@ -202,7 +122,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 0, 0); // only chain1 has fees
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         appchainPool.deposit{value: 100 ether}(epoch);
 
@@ -228,7 +148,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 0); // chains 1 & 2 active
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         appchainPool.deposit{value: 100 ether}(epoch);
 
@@ -258,7 +178,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 1); // symmetric gas activity
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         appchainPool.deposit{value: 90 ether}(epoch);
 
@@ -291,7 +211,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 1);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         appchainPool.deposit{value: 90 ether}(epoch);
 
@@ -313,7 +233,7 @@ contract AppchainPoolTest is Test {
         setupStake(100 ether, 100 ether, 100 ether);
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 1);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         appchainPool.deposit{value: 90 ether}(epoch);
 
@@ -352,7 +272,7 @@ contract AppchainPoolTest is Test {
         uint256 depositEpoch = _settledEpoch();
 
         setGasShares(depositEpoch, 1, 0, 0);
-        setDefaultReceivers(depositEpoch);
+        setDefaultReceivers();
         appchainPool.deposit{value: 100 ether}(depositEpoch);
 
         uint256 currentEpoch = staking.getCurrentEpoch();
@@ -368,7 +288,7 @@ contract AppchainPoolTest is Test {
         uint256 depositEpoch = _settledEpoch();
 
         setGasShares(depositEpoch, 1, 0, 0);
-        setDefaultReceivers(depositEpoch);
+        setDefaultReceivers();
         appchainPool.deposit{value: 100 ether}(depositEpoch);
 
         uint256 currentEpoch = staking.getCurrentEpoch();
@@ -385,7 +305,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 0, 0, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
         appchainPool.deposit{value: 100 ether}(epoch);
 
         assertEq(appchainPool.getClaimableAmount(epoch, appchainId1), 0);
@@ -406,7 +326,7 @@ contract AppchainPoolTest is Test {
 
         // Match fee shares to the same ratio so dominance uses same shares
         setGasShares(epoch, 60, 30, 10);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         uint256 pool = 1_030_904; // raw integer to mirror the doc
         appchainPool.deposit{value: pool}(epoch);
@@ -435,7 +355,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Fund pool
         appchainPool.deposit{value: 100 ether}(epoch);
@@ -478,7 +398,8 @@ contract AppchainPoolTest is Test {
 
         // Intentionally DO NOT set receiver for appchainId1
         // (but set one for id2 just to show the epoch has some config)
-        gasProvider.setReceiver(appchainId2, appchainDest2);
+        vm.prank(appchainPool.owner());
+        appchainPool.setAppchainEmissionsReceiver(appchainId2, appchainDest2);
 
         appchainPool.deposit{value: 100 ether}(epoch);
 
@@ -501,7 +422,7 @@ contract AppchainPoolTest is Test {
         // no stakes
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 10, 0, 0); // non-zero gas fees but zero total stake
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         appchainPool.deposit{value: 100 ether}(epoch);
 
@@ -524,7 +445,9 @@ contract AppchainPoolTest is Test {
         // Epoch 1
         uint256 e1 = _settledEpoch();
         setGasShares(e1, 1, 0, 0);
-        gasProvider.setReceiver(appchainId1, appchainDest1);
+        vm.prank(appchainPool.owner());
+        appchainPool.setAppchainEmissionsReceiver(appchainId1, appchainDest1);
+
         appchainPool.deposit{value: 40 ether}(e1);
 
         // Move to after epoch end + vesting duration
@@ -550,7 +473,8 @@ contract AppchainPoolTest is Test {
         uint256 e2 = _settledEpoch();
         require(e2 != e1, "need a different epoch after warp");
         setGasShares(e2, 1, 0, 0);
-        gasProvider.setReceiver(appchainId1, appchainDest2); // <— different receiver
+        vm.prank(appchainPool.owner());
+        appchainPool.setAppchainEmissionsReceiver(appchainId1, appchainDest2); // <— different receiver
         appchainPool.deposit{value: 60 ether}(e2);
 
         uint256 dest2Before = appchainDest2.balance;
@@ -575,7 +499,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 1);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // First deposit & first claim by appchain 1
         appchainPool.deposit{value: 90 ether}(epoch);
@@ -611,7 +535,8 @@ contract AppchainPoolTest is Test {
 
         // Configure data & deposit into currentEpoch (math fine, but reads should revert per gating)
         setGasShares(currentEpoch, 1, 0, 0);
-        gasProvider.setReceiver(appchainId1, appchainDest1);
+        vm.prank(appchainPool.owner());
+        appchainPool.setAppchainEmissionsReceiver(appchainId1, appchainDest1);
         appchainPool.deposit{value: 10 ether}(currentEpoch);
 
         // Expect revert on getClaimableAmount for current
@@ -629,7 +554,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 0); // chains 1 & 2 active
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Initial deposit
         appchainPool.deposit{value: 100 ether}(epoch);
@@ -681,7 +606,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Initial deposit
         appchainPool.deposit{value: 100 ether}(epoch);
@@ -712,7 +637,9 @@ contract AppchainPoolTest is Test {
 
         // Calculations should still be valid with new multiplier
         uint256 newAppchain1 = appchainPool.getClaimableAmount(epoch, appchainId1);
+        assertEq(initialAppchain1, newAppchain1);
         uint256 newAppchain2 = appchainPool.getClaimableAmount(epoch, appchainId2);
+        assertEq(initialAppchain2, newAppchain2);
 
         // Test that the setter function actually works by checking the values changed
         // Note: The actual change in claimable amounts depends on the specific calculation logic
@@ -773,7 +700,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Multiple deposits
         appchainPool.deposit{value: 50 ether}(epoch);
@@ -824,7 +751,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         appchainPool.deposit{value: 100 ether}(epoch);
 
@@ -862,7 +789,7 @@ contract AppchainPoolTest is Test {
 
         // Set up gas shares and receivers for new epoch
         setGasShares(newEpoch, 1, 1, 0);
-        setDefaultReceivers(newEpoch);
+        setDefaultReceivers();
 
         // Deposit funds for new epoch
         appchainPool.deposit{value: 100 ether}(newEpoch);
@@ -891,7 +818,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Very small deposit
         appchainPool.deposit{value: 1 wei}(epoch);
@@ -921,7 +848,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 60, 30, 10); // Match stake ratio
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Large deposit
         appchainPool.deposit{value: 1000 ether}(epoch);
@@ -982,7 +909,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Deposit funds
         appchainPool.deposit{value: 100 ether}(epoch);
@@ -1026,7 +953,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Deposit funds
         appchainPool.deposit{value: 100 ether}(epoch);
@@ -1075,7 +1002,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Deposit funds
         appchainPool.deposit{value: 100 ether}(epoch);
@@ -1107,7 +1034,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 60, 30, 10); // Match stake ratio
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Deposit funds
         appchainPool.deposit{value: 1000 ether}(epoch);
@@ -1145,7 +1072,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         // Deposit funds
         appchainPool.deposit{value: 100 ether}(epoch);
@@ -1179,7 +1106,7 @@ contract AppchainPoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 0, 0);
-        setDefaultReceivers(epoch);
+        setDefaultReceivers();
 
         appchainPool.deposit{value: 100 ether}(epoch);
 

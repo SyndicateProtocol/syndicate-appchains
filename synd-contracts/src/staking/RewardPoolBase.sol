@@ -6,6 +6,8 @@ import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {EpochTracker} from "./EpochTracker.sol";
+import {IPool} from "src/staking/interfaces/IPool.sol";
 
 /**
  * @title RewardPoolBase
@@ -30,7 +32,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * - "claimed" accounting (tracking already claimed amounts)
  * - Pool-specific reward distribution logic
  */
-abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
+abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPool {
     /// @notice Weight multiplier for gas fee contribution (40% by default)
     /// @dev Higher values give more weight to gas fee performance in reward calculation
     UD60x18 public feeMultiplier = ud(0.4e18);
@@ -60,6 +62,14 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
     /// @notice Cache for per-epoch sum of diminishing factors across all appchains
     /// @dev Stores total diminishing factor sum for each epoch
     mapping(uint256 epochIndex => UD60x18 epochTotalDiminishingFactor) internal epochTotalDiminishingFactor;
+
+    /// @notice Index to keep track of the pre-computed appchains
+    /// @dev Stores an internal index for ability to pre-compute the diminishing factors for an epoch in batches
+    mapping(uint256 epochIndex => uint256 preComputeIndex) public preComputeIndex;
+
+    /// @notice Constant to indicate that the pre-compute is complete
+    /// @dev Used to indicate that the pre-compute is complete for an epoch
+    uint256 public constant PRE_COMPUTE_COMPLETE = type(uint256).max;
 
     /// @notice Event emitted when rewards are deposited for an epoch
     /// @param epochIndex The epoch index for which rewards were deposited
@@ -99,15 +109,15 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
         gasDataProvider = IGasDataProvider(_gas);
     }
 
-    /**
-     * @notice Internal function to deposit rewards for an epoch
-     * @dev Anyone can fund any epoch. Rewards are additive.
-     * @param epochIndex The epoch index to deposit rewards for
-     */
-    function _deposit(uint256 epochIndex) internal {
-        uint256 amount = msg.value;
-        epochTotal[epochIndex] += amount;
-        emit EpochDeposit(epochIndex, amount);
+    receive() external payable {
+        deposit(getCurrentEpoch());
+    }
+
+    // legacy function to satisfy the IPool interface
+    // depositing to past or future epochs is not recommended
+    function deposit(uint256 epoch) public payable {
+        epochTotal[epoch] += msg.value;
+        emit EpochDeposit(epoch, msg.value);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -121,7 +131,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
      */
     function _preChecks(uint256 epochIndex) internal view {
         // must be a past epoch with funding
-        if (epochTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
+        if (epochTotal[epochIndex] == 0 || getCurrentEpoch() <= epochIndex) {
             revert ClaimNotAvailable();
         }
     }
@@ -144,9 +154,6 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
         UD60x18 totalStake,
         UD60x18 totalGasFees
     ) internal returns (UD60x18) {
-        UD60x18 cached = diminishingFactor[epochIndex][appchainId];
-        if (!cached.isZero()) return cached;
-
         UD60x18 appchainStake = convert(stakingContract.getAppchainStake(epochIndex, appchainId));
         UD60x18 appchainGasFees = convert(gasDataProvider.getAppchainGasFees(epochIndex, appchainId));
 
@@ -163,29 +170,58 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
 
     /**
      * @notice Calculate the sum of diminishing factors for all appchains in an epoch
-     * @dev Iterates through all active appchains and sums their diminishing factors
+     * @dev Returns the sum of all appchain diminishing factors for an epoch
+     *      If the computation is not complete, it will try to compute the remaining appchains
      * @param epochIndex The epoch index to calculate for
-     * @param totalStake Total stake across all appchains
-     * @param totalGasFees Total gas fees across all appchains
      * @return The sum of all appchain diminishing factors
      */
-    function _getAllAppchainsDiminishingFactor(uint256 epochIndex, UD60x18 totalStake, UD60x18 totalGasFees)
-        internal
-        returns (UD60x18)
-    {
-        UD60x18 cached = epochTotalDiminishingFactor[epochIndex];
-        if (!cached.isZero()) return cached;
-
-        uint256[] memory ids = gasDataProvider.getActiveAppchainIds(epochIndex);
-        UD60x18 sum = convert(0);
-        for (uint256 i = 0; i < ids.length;) {
-            sum = sum.add(_getAppchainDiminishingFactor(epochIndex, ids[i], totalStake, totalGasFees));
-            unchecked {
-                ++i;
-            }
+    function _getAllAppchainsDiminishingFactor(uint256 epochIndex) internal returns (UD60x18) {
+        if (!preComputeDiminishingFactors(epochIndex, 0)) {
+            return convert(0);
         }
-        epochTotalDiminishingFactor[epochIndex] = sum;
-        return sum;
+
+        return epochTotalDiminishingFactor[epochIndex];
+    }
+
+    /**
+     * @notice Pre-compute the diminishing factors for an epoch
+     * @dev Pre-compute the diminishing factors for an epoch
+     * @param epochIndex The epoch index to compute for
+     * @param _batchSize The batch size to compute for (0 to compute all)
+     * @return isComplete Whether the computation is complete
+     */
+    function preComputeDiminishingFactors(uint256 epochIndex, uint256 _batchSize) public returns (bool isComplete) {
+        if (preComputeIndex[epochIndex] == PRE_COMPUTE_COMPLETE) {
+            return true;
+        }
+
+        UD60x18 totalStake = convert(stakingContract.getTotalStake(epochIndex));
+        if (totalStake.isZero()) return false;
+
+        UD60x18 totalGasFees = convert(gasDataProvider.getTotalGasFees(epochIndex));
+        if (totalGasFees.isZero()) return false;
+
+        // If batch size is not 0, get an extra appchain to check if the pre-compute is complete
+        uint256 batchSize = _batchSize == 0 ? _batchSize : _batchSize + 1;
+        uint256[] memory ids = gasDataProvider.getAppchainIds(epochIndex, preComputeIndex[epochIndex], batchSize);
+        uint256 length = ids.length;
+        // If we got the full batch, we need to subtract 1 from the end index to not count the extra appchain
+        uint256 endIndex = length == batchSize ? length - 1 : length;
+
+        for (uint256 i = 0; i < endIndex; i++) {
+            epochTotalDiminishingFactor[epochIndex] = epochTotalDiminishingFactor[epochIndex].add(
+                _getAppchainDiminishingFactor(epochIndex, ids[i], totalStake, totalGasFees)
+            );
+        }
+
+        // If _batchSize is 0 or we are at the end of the appchains, set the pre-compute index to complete
+        if (_batchSize == 0 || endIndex == length) {
+            preComputeIndex[epochIndex] = PRE_COMPUTE_COMPLETE;
+            return true;
+        } else {
+            preComputeIndex[epochIndex] += endIndex;
+            return false;
+        }
     }
 
     /**
@@ -202,17 +238,11 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
 
         UD60x18 poolAmount = convert(epochTotal[epochIndex]);
 
-        UD60x18 totalStake = convert(stakingContract.getTotalStake(epochIndex));
-        if (totalStake.isZero()) return 0;
-
-        UD60x18 totalGasFees = convert(gasDataProvider.getTotalGasFees(epochIndex));
-        if (totalGasFees.isZero()) return 0;
-
-        UD60x18 df = _getAppchainDiminishingFactor(epochIndex, appchainId, totalStake, totalGasFees);
-        if (df.isZero()) return 0;
-
-        UD60x18 dfSum = _getAllAppchainsDiminishingFactor(epochIndex, totalStake, totalGasFees);
+        UD60x18 dfSum = _getAllAppchainsDiminishingFactor(epochIndex);
         if (dfSum.isZero()) return 0;
+
+        UD60x18 df = diminishingFactor[epochIndex][appchainId];
+        if (df.isZero()) return 0;
 
         return convert(poolAmount.mul(df).div(dfSum));
     }

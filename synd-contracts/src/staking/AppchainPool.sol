@@ -27,7 +27,7 @@ import {UD60x18, convert} from "@prb/math/src/UD60x18.sol";
  *
  * @dev Inherits from RewardPoolBase for shared reward calculation logic
  */
-contract AppchainPool is IPool, RewardPoolBase {
+contract AppchainPool is RewardPoolBase {
     /// @notice The duration of the vesting period in seconds (1 year)
     /// @dev All rewards are subject to this vesting schedule
     uint256 public constant VESTING_DURATION = 365 days;
@@ -36,9 +36,17 @@ contract AppchainPool is IPool, RewardPoolBase {
     /// @dev Tracks claimed amounts to prevent double-claiming
     mapping(uint256 epochIndex => mapping(uint256 appchainId => uint256 claimed)) public claimed;
 
+    mapping(uint256 appchainId => address receiver) public appchainEmissionsReceiver;
+
+    address public forwarder;
+
     /// @notice Error thrown when the caller is not the configured rewards receiver for the appchain
-    /// @dev Only the address returned by getAppchainRewardsReceiver() can claim for an appchain
+    /// @dev Only the address returned by appchainRewardsReceiver() can claim for an appchain
     error InvalidClaimer();
+    error NotFromForwarder();
+    error ForwarderAlreadySet();
+
+    event RewardsReceiverUpdate(uint256 indexed chainID, address receiver);
 
     /**
      * @notice Constructor to initialize the AppchainPool
@@ -48,13 +56,16 @@ contract AppchainPool is IPool, RewardPoolBase {
      */
     constructor(address admin, address staking, address gas) RewardPoolBase(admin, staking, gas) {}
 
-    /**
-     * @notice Deposit rewards for a specific epoch
-     * @dev Anyone can deposit rewards for any epoch. Rewards are additive.
-     * @param epochIndex The epoch index to deposit rewards for
-     */
-    function deposit(uint256 epochIndex) external payable override nonReentrant {
-        _deposit(epochIndex);
+    function setAppchainEmissionsReceiver(uint256 chainID, address receiver) external {
+        require(msg.sender == forwarder || (forwarder == address(0) && msg.sender == owner()), NotFromForwarder());
+        appchainEmissionsReceiver[chainID] = receiver;
+        emit RewardsReceiverUpdate(chainID, receiver);
+    }
+
+    function setForwarder(address _forwarder) external onlyOwner {
+        require(forwarder == address(0), ForwarderAlreadySet());
+        require(_forwarder != address(0), ZeroAddress());
+        forwarder = _forwarder;
     }
 
     /**
@@ -70,12 +81,9 @@ contract AppchainPool is IPool, RewardPoolBase {
         _preChecks(epochIndex);
 
         // Only the configured receiver can claim
-        if (msg.sender != IGasDataProvider(address(gasDataProvider)).getAppchainRewardsReceiver(appchainId)) {
-            revert InvalidClaimer();
-        }
-        if (destination == address(0)) {
-            revert InvalidDestination();
-        }
+        require(msg.sender == appchainEmissionsReceiver[appchainId], InvalidClaimer());
+
+        require(destination != address(0), InvalidDestination());
 
         uint256 amount = getClaimableAmount(epochIndex, appchainId);
         if (amount == 0) revert ClaimNotAvailable();

@@ -42,7 +42,8 @@ abstract contract EpochTracker {
     }
 
     /**
-     * @notice Get the end timestamp of a specific epoch
+     * @notice Get the end timestamp of a specific epoch.
+     * Note that this timestamp is exclusive and falls inside the next epoch.
      * @param epochIndex The epoch index to get the end time for
      * @return The timestamp when the specified epoch ends
      */
