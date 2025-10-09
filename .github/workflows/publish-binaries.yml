@@ -89,7 +89,7 @@ jobs:
           if [[ "$EIF_SHA512" != "${{ needs.build.outputs.eif-hash }}" ]]; then
             echo "Error: eif.bin hash doesn't match the one from the build job"
             echo "Expected: ${{ needs.build.outputs.eif-hash }}"
-            echo "Got: $(cat eif.bin.sha512)"
+            echo "Got: $EIF_SHA512"
             exit 1
           else
             echo "eif.bin hash verification succeeded, hash: $(cat eif.bin.sha512)"
@@ -101,7 +101,7 @@ jobs:
           if [[ "$SP1_SHA512" != "${{ needs.build.outputs.sp1-hash }}" ]]; then
             echo "Error: sp1 program hash doesn't match the one from the build job"
             echo "Expected: ${{ needs.build.outputs.sp1-hash }}"
-            echo "Got: $(cat sp1-program.sha512)"
+            echo "Got: $SP1_SHA512"
             exit 1
           else
             echo "sp1 program hash verification succeeded, hash: $(cat sp1-program.sha512)"
