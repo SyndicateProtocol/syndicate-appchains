@@ -60,6 +60,8 @@ contract GasAggregatorTest is Test {
         vm.prank(admin);
         gasAggregator = new GasAggregator(1, 0, 2);
         assertEq(gasAggregator.currentEpoch(), 1);
+
+        vm.warp(gasAggregator.getEpochStart(1));
     }
 
     /// @notice Helper function to set up chain overrides and add chains to the aggregator
@@ -284,8 +286,20 @@ contract GasAggregatorTest is Test {
     }
 
     function test_EdgeCase_EmptyAppchainList() public {
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
         // Should fail
         vm.expectRevert(GasAggregator.NoChainsAdded.selector);
+        gasAggregator.aggregateTokens(new uint256[](0), new uint256[](0));
+    }
+
+    function test_EdgeCase_EpochNotOver() public {
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION - 1);
+
+        // Should fail
+        vm.expectRevert(GasAggregator.EpochNotOver.selector);
         gasAggregator.aggregateTokens(new uint256[](0), new uint256[](0));
     }
 

@@ -7,6 +7,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {ISyndicateSequencingChain} from "../interfaces/ISyndicateSequencingChain.sol";
 import {GasCounter} from "./GasCounter.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {EpochTracker} from "./EpochTracker.sol";
 
 interface ISyndicateProxy {
     // This function exists in both the new proxy and legacy implementation contract
@@ -21,7 +22,7 @@ interface ISyndicateProxy {
  *      (for larger numbers of appchains) with a challenge mechanism for data integrity.
  * @dev Inherits from Ownable for admin functions
  */
-contract GasAggregator is Ownable(msg.sender), Pausable {
+contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
     using EnumerableSet for EnumerableSet.UintSet;
 
     /*//////////////////////////////////////////////////////////////
@@ -95,6 +96,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
     error ChainNotFound(uint256 chainId);
     error FactoryAlreadySet();
     error NoChainsAdded();
+    error EpochNotOver();
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -184,6 +186,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable {
      * Pause contract while aggregating. Unpause when finished.
      */
     function aggregateTokens(uint256[] calldata prevChainIds, uint256[] calldata prevTokens) external {
+        require(getCurrentEpoch() > currentEpoch, EpochNotOver());
         if (currentAggregateIndex == 0) {
             // If this is the first time we are aggregating, pause the contract till we are done
             _pause();
