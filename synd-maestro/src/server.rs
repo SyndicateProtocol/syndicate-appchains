@@ -24,7 +24,7 @@ use shared::{
 use std::{collections::HashMap, future::Future, net::SocketAddr, pin::Pin, sync::Arc};
 use tokio::time::Instant;
 use tower::ServiceBuilder;
-use tracing::{error, info, instrument};
+use tracing::{error, info, instrument, warn};
 
 /// Request header for `eth_sendRawTransaction` calls that holds the intended `chain_id`
 pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
@@ -126,7 +126,8 @@ pub async fn send_raw_transaction_handler(
     service_arc_arc: Arc<Arc<MaestroService>>,
     extensions: Extensions,
 ) -> RpcResult<String> {
-    extract_tracing_context(&extensions).map_err(|e| RpcError::Internal(e.to_string()))?;
+    let _ = extract_tracing_context(&extensions)
+        .inspect_err(|e| warn!(%e, "error extracting tracing context, OTel traces won't work"));
 
     let service = service_arc_arc.as_ref();
     let req_start = Instant::now();

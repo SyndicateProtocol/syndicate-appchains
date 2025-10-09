@@ -205,9 +205,6 @@ pub enum Error {
     /// error building the span exporter
     #[error("unable to build span exporter: {0}")]
     SpanExporter(#[from] ExporterBuildError),
-    /// missing traceparent header
-    #[error("missing traceparent header")]
-    MissingTraceparent,
     /// failed to set parent context
     #[error("failed to set parent context: {message}")]
     SetParent { message: String },
