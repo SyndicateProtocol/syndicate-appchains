@@ -34,9 +34,13 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     //////////////////////////////////////////////////////////////*/
 
     /// @dev The `BlockHashRelayer` contract is deployed on the settlement chain and is responsible for sending the block hashes to the `GasArchive` contract. Anyone can call `sendBlockHashes` on the relayer to send the block hashes.
+    /// @dev IMPORTANT: Immutable variables are set in the constructor and become part of the implementation contract's bytecode.
+    ///      When the proxy delegates calls to the implementation, these immutable values are read from the implementation's bytecode.
+    ///      This is why we can use both a constructor (for immutables) and initialize() (for storage variables) in UUPS upgradeable contracts.
     address public immutable blockHashSender;
 
     /// @notice when using the settlement chain as the sequencing chain, the rollup hash proof is not required
+    /// @dev Immutable variable - set in constructor, stored in bytecode, accessible through proxy via delegatecall
     uint256 public immutable settlementChainID;
 
     /*//////////////////////////////////////////////////////////////
@@ -109,8 +113,21 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Constructor that disables initializers
-     * @dev Prevents direct initialization of implementation contract
+     * @notice Constructor that sets immutable variables and disables initializers
+     * @dev IMPORTANT PATTERN: UUPS upgradeable contracts can have BOTH constructor and initialize():
+     *      - Constructor: Sets IMMUTABLE variables that become part of the bytecode. These values are
+     *                     compiled into the implementation contract and are accessible through the proxy
+     *                     via delegatecall because they're in the bytecode, not storage.
+     *      - Initialize: Sets STORAGE variables that must only be set once via the proxy, not the implementation.
+     *
+     *      Why this works:
+     *      1. Immutables are replaced with their actual values in the bytecode at compile time
+     *      2. When the proxy delegatecalls to the implementation, it executes the implementation's bytecode
+     *      3. Therefore, the immutable values from the implementation are used during proxy execution
+     *      4. Storage variables, however, must be initialized through the proxy to affect proxy storage
+     *
+     * @param _blockHashSender Address authorized to send block hashes (immutable - part of bytecode)
+     * @param _settlementChainID Chain ID of the settlement chain (immutable - part of bytecode)
      */
     constructor(address _blockHashSender, uint256 _settlementChainID) {
         require(_blockHashSender != address(0), ZeroAddress());
@@ -120,6 +137,11 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializer function to set storage variables through the proxy
+     * @dev This sets storage variables in the proxy's storage context. Must be called during proxy deployment.
+     * @param _epoch Initial epoch number (stored in proxy storage)
+     */
     function initialize(uint256 _epoch) external initializer {
         epoch = _epoch;
         __Ownable_init(msg.sender);

@@ -484,4 +484,142 @@ contract GasArchiveTest is Test {
         vm.expectRevert(GasArchive.NotBlockHashSender.selector);
         gasArchive.sendBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                    UUPS PROXY IMMUTABLE VARIABLES TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev CONTEXT: Why GasArchive has both constructor AND initialize()
+    ///
+    /// This test suite validates an important pattern for UUPS upgradeable contracts:
+    /// Using BOTH a constructor (for immutables) and initialize() (for storage variables).
+    ///
+    /// KEY CONCEPTS:
+    /// 1. Immutable variables are NOT stored in contract storage - they're compiled directly
+    ///    into the contract's bytecode at deployment time.
+    ///
+    /// 2. When a proxy delegates to an implementation:
+    ///    - Storage operations (SLOAD/SSTORE) affect the PROXY's storage
+    ///    - Code execution (including immutable value reads) uses the IMPLEMENTATION's bytecode
+    ///
+    /// 3. Therefore:
+    ///    - Constructor sets immutables → becomes part of implementation bytecode
+    ///    - Initialize sets storage variables → affects proxy storage when called through proxy
+    ///
+    /// PATTERN BENEFITS:
+    /// - Immutables are gas-efficient (no SLOAD, values inlined in bytecode)
+    /// - Values that shouldn't change between upgrades can be immutable
+    /// - Storage variables remain upgradeable and isolated to proxy
+    ///
+    /// These tests prove that when any address calls the proxy:
+    /// → Proxy delegatecalls to implementation
+    /// → Implementation's bytecode executes (including immutable values)
+    /// → Immutables are readable and work correctly in business logic
+
+    /// @notice Tests that immutable variables set in the implementation constructor are readable through the proxy
+    /// @dev This validates that immutables in UUPS pattern work as expected - they're part of the implementation bytecode
+    function testProxyCanReadImmutableVariables() public view {
+        // Call through the proxy to read immutable variables
+        address retrievedBlockHashSender = gasArchive.blockHashSender();
+        uint256 retrievedSettlementChainID = gasArchive.settlementChainID();
+
+        // Verify the proxy returns the correct immutable values
+        assertEq(retrievedBlockHashSender, blockHashSender, "blockHashSender should be readable through proxy");
+        assertEq(retrievedSettlementChainID, SETTLEMENT_CHAIN_ID, "settlementChainID should be readable through proxy");
+    }
+
+    /// @notice Tests that immutable variables are consistent between proxy and implementation
+    /// @dev Verifies that reading from proxy and implementation returns the same values
+    function testImmutableVariablesConsistentBetweenProxyAndImplementation() public view {
+        // Read from proxy
+        address proxyBlockHashSender = gasArchive.blockHashSender();
+        uint256 proxySettlementChainID = gasArchive.settlementChainID();
+
+        // Read directly from implementation
+        GasArchiveTestHelper impl = GasArchiveTestHelper(gasArchiveImpl);
+        address implBlockHashSender = impl.blockHashSender();
+        uint256 implSettlementChainID = impl.settlementChainID();
+
+        // Both should return the same values since immutables are in the bytecode
+        assertEq(
+            proxyBlockHashSender,
+            implBlockHashSender,
+            "blockHashSender should be the same when read from proxy or implementation"
+        );
+        assertEq(
+            proxySettlementChainID,
+            implSettlementChainID,
+            "settlementChainID should be the same when read from proxy or implementation"
+        );
+    }
+
+    /// @notice Tests that immutable variables work correctly in business logic through proxy
+    /// @dev Verifies that immutables are used correctly in delegatecall context
+    function testImmutableVariablesUsedInBusinessLogic() public {
+        // Test that blockHashSender immutable is used correctly in access control
+        vm.prank(blockHashSender);
+        gasArchive.sendBlockHashes(TEST_ETH_BLOCK_HASH, TEST_SETTLEMENT_BLOCK_HASH);
+
+        assertTrue(gasArchive.ethBlockHashes(TEST_ETH_BLOCK_HASH), "Block hash should be set");
+
+        // Test that wrong sender is rejected (verifies immutable is checked correctly)
+        vm.prank(user);
+        vm.expectRevert(GasArchive.NotBlockHashSender.selector);
+        gasArchive.sendBlockHashes(keccak256("another_hash"), keccak256("another_hash"));
+    }
+
+    /// @notice Tests that a fresh proxy deployment with different immutable values works correctly
+    /// @dev This proves that each deployment can have unique immutable values
+    function testMultipleProxyDeploymentsWithDifferentImmutables() public {
+        // Deploy a new implementation with different immutable values
+        address newBlockHashSender = makeAddr("newBlockHashSender");
+        uint256 newSettlementChainID = 42161; // Arbitrum One
+
+        address newImpl = address(new GasArchiveTestHelper(newBlockHashSender, newSettlementChainID));
+
+        // Deploy a new proxy pointing to the new implementation
+        bytes memory initData = abi.encodeCall(GasArchive.initialize, (1));
+        GasArchiveTestHelper newProxy = GasArchiveTestHelper(address(new ERC1967Proxy(newImpl, initData)));
+
+        // Verify the new proxy has the new immutable values
+        assertEq(newProxy.blockHashSender(), newBlockHashSender, "New proxy should have new blockHashSender");
+        assertEq(newProxy.settlementChainID(), newSettlementChainID, "New proxy should have new settlementChainID");
+
+        // Verify original proxy still has original values
+        assertEq(gasArchive.blockHashSender(), blockHashSender, "Original proxy should retain original blockHashSender");
+        assertEq(
+            gasArchive.settlementChainID(),
+            SETTLEMENT_CHAIN_ID,
+            "Original proxy should retain original settlementChainID"
+        );
+
+        // Verify they're different
+        assertTrue(
+            newProxy.blockHashSender() != gasArchive.blockHashSender(),
+            "Different proxies should have different blockHashSender"
+        );
+        assertTrue(
+            newProxy.settlementChainID() != gasArchive.settlementChainID(),
+            "Different proxies should have different settlementChainID"
+        );
+    }
+
+    /// @notice Tests that any address can call the proxy and read immutable variables
+    /// @dev Proves immutables are publicly accessible through delegatecall
+    function testAnyAddressCanReadImmutablesThroughProxy() public {
+        // Test with multiple different addresses
+        address[] memory callers = new address[](3);
+        callers[0] = admin;
+        callers[1] = user;
+        callers[2] = makeAddr("randomAddress");
+
+        for (uint256 i = 0; i < callers.length; i++) {
+            vm.prank(callers[i]);
+            address retrievedSender = gasArchive.blockHashSender();
+            uint256 retrievedChainID = gasArchive.settlementChainID();
+
+            assertEq(retrievedSender, blockHashSender, "Any caller should read correct blockHashSender");
+            assertEq(retrievedChainID, SETTLEMENT_CHAIN_ID, "Any caller should read correct settlementChainID");
+        }
+    }
 }
