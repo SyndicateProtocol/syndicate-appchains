@@ -157,17 +157,14 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         .unwrap_or_else(|e| panic!("failed to get gas aggregator address: {e}"));
     let gas_aggregator = GasAggregator::new(gas_aggregator_address, seq_provider.clone());
 
-    // TODO: Fix CLI to match updated contract
-    #[allow(clippy::option_if_let_else)]
     let epoch = match args.epoch {
         Some(epoch) => U256::from(epoch),
-        // TODO: Fix CLI to match updated contract
-        // None => gas_aggregator
-        //     .getCurrentEpoch()
-        //     .call()
-        //     .await
-        //     .unwrap_or_else(|e| panic!("failed to get current epoch: {e}"))
-        //     .saturating_sub(U256::from(1)),
+        None => gas_aggregator
+            .getCurrentEpoch()
+            .call()
+            .await
+            .unwrap_or_else(|e| panic!("failed to get current epoch: {e}"))
+            .saturating_sub(U256::from(1)),
         None => U256::from(0),
     };
 
