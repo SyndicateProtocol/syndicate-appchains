@@ -24,9 +24,11 @@ The following contracts are included in this audit:
 | **EpochTracker.sol** | `src/staking/` | Abstract contract for epoch calculations |
 | **GasAggregator.sol** | `src/staking/` | Aggregates gas usage from appchains |
 | **GasArchive.sol** | `src/staking/` | Validates and stores gas data with proofs |
+| **BlockHashRelayer.sol** | `src/staking/` | Relays block hashes from settlement to staking chain |
 | **RewardPoolBase.sol** | `src/staking/` | Base contract for reward calculations |
 | **AppchainPool.sol** | `src/staking/` | Distributes rewards with 1-year vesting |
 | **PerformancePool.sol** | `src/staking/` | Distributes performance-based rewards |
+| **Splitter.sol** | `src/staking/` | Splits rewards between pools (30/30/40) |
 
 ---
 
@@ -330,7 +332,72 @@ uint256 public constant SEND_ROOT_STORAGE_SLOT = 3;
 
 ---
 
-### 4. IGasDataProvider (Interface)
+### 4. BlockHashRelayer
+
+**Location**: `src/staking/BlockHashRelayer.sol`
+**Deployed On**: Settlement chain (e.g., Base)
+
+**Purpose**: Relay Ethereum L1 and settlement chain block hashes to GasArchive on the staking chain using Arbitrum retryable tickets.
+
+#### Immutable Variables:
+
+```solidity
+// Arbitrum Inbox contract for creating retryable tickets
+IArbInbox public immutable arbInbox;
+
+// SYND token for paying cross-chain gas
+IERC20 public immutable syndToken;
+```
+
+#### Constants:
+
+```solidity
+// L1Block precompile address on Base/Optimism stack
+address public constant L1_BLOCK_ADDRESS = 0x4200000000000000000000000000000000000015;
+```
+
+#### Key Function:
+
+##### `sendBlockHashes(address gasArchive, uint256 gasLimit, uint256 maxFeePerGas)`
+
+**Flow**:
+1. User calls function with SYND tokens approved
+2. Collects `gasLimit × maxFeePerGas` SYND from caller
+3. Gets Ethereum L1 block hash from L1Block precompile: `IL1Block(L1_BLOCK_ADDRESS).hash()`
+4. Gets settlement chain (Base) block hash: `blockhash(block.number - 1)`
+5. Creates Arbitrum retryable ticket to call `GasArchive.sendBlockHashes()` on L3
+
+**Why This Is Needed**:
+- GasArchive needs trusted block hashes to validate Merkle Patricia proofs
+- Block hashes can't be read cross-chain directly
+- This relayer bridges the required block hash data from settlement chain → staking chain
+- Uses Arbitrum's retryable ticket mechanism for reliable cross-chain delivery
+
+**Security Features**:
+- **User-paid**: Anyone can relay (permissionless), but must pay SYND for gas
+- **No validation needed**: Block hashes are self-validating (can't be forged)
+- **Recent blocks**: Uses `block.number - 1` to ensure hash is available
+- **Custom gas token**: Designed for Arbitrum L3s using SYND as native token
+
+**Integration**:
+```solidity
+// User approves SYND tokens
+syndToken.approve(relayer, gasLimit * maxFeePerGas);
+
+// Anyone can call to relay current block hashes
+BlockHashRelayer(settlementChain).sendBlockHashes(
+    gasArchiveAddress,  // L3 GasArchive address
+    100000,            // gasLimit
+    0.1 gwei           // maxFeePerGas
+);
+
+// This triggers retryable ticket that calls:
+// GasArchive(L3).sendBlockHashes(ethL1Hash, settlementHash)
+```
+
+---
+
+### 5. IGasDataProvider (Interface)
 
 **Location**: `src/staking/interfaces/IGasDataProvider.sol`
 
@@ -357,7 +424,7 @@ function getAppchainIds(uint256 epochIndex, uint256 startIndex, uint256 pageSize
 
 ---
 
-### 5. RewardPoolBase (Abstract Contract)
+### 6. RewardPoolBase (Abstract Contract)
 
 **Location**: `src/staking/RewardPoolBase.sol`
 
@@ -398,7 +465,7 @@ function preComputeDiminishingFactors(uint256 epochIndex, uint256 startIndex, ui
 
 ---
 
-### 6. AppchainPool
+### 7. AppchainPool
 
 **Location**: `src/staking/AppchainPool.sol`
 **Inherits**: `RewardPoolBase`
@@ -449,7 +516,7 @@ function claimFor(uint256 epochIndex, address user, address destination, uint256
 
 ---
 
-### 7. PerformancePool
+### 8. PerformancePool
 
 **Location**: `src/staking/PerformancePool.sol`
 **Inherits**: `RewardPoolBase`
@@ -474,6 +541,89 @@ function claimFor(uint256 epochIndex, address user, address destination, uint256
 
 ---
 
+### 9. Splitter
+
+**Location**: `src/staking/Splitter.sol`
+**Deployed On**: Staking chain (Commons/L3)
+
+**Purpose**: Distribute incoming rewards to three pools according to fixed percentage allocations.
+
+#### Constants:
+
+```solidity
+uint256 public constant PERFORMANCE_POOL_SPLIT = 30;  // 30%
+uint256 public constant APPCHAIN_POOL_SPLIT = 40;     // 40%
+// Base pool gets remainder: 30% (100% - 30% - 40%)
+uint256 public constant PERCENTAGE_DENOMINATOR = 100; // 100%
+```
+
+#### State Variables:
+
+```solidity
+// Pool addresses (immutable after construction)
+address public basePool;
+address public performancePool;
+address public appchainPool;
+```
+
+#### Key Function:
+
+##### `deposit(uint256 epochIndex) external payable`
+
+**Flow**:
+1. Receives ETH/SYND tokens (payable)
+2. Calculates splits:
+   - Performance Pool: `total × 30 / 100`
+   - Appchain Pool: `total × 40 / 100`
+   - Base Pool: `total - performance - appchain` (gets remainder + dust)
+3. Calls `IPool.deposit{value}(epochIndex)` on each pool
+4. Emits `Split` event with amounts
+
+**Split Allocation**:
+```
+Total Rewards: 100%
+├── Performance Pool: 30% (user performance rewards)
+├── Appchain Pool: 40% (appchain-specific rewards)
+└── Base Pool: 30% (base staking rewards + dust)
+```
+
+**Why Base Pool Gets Remainder**:
+- Prevents rounding dust from being lost
+- Ensures all incoming value is distributed
+- Base pool is the "catch-all" for any fractional amounts
+
+**Example Distributions**:
+```solidity
+// Example 1: 1000 ETH
+deposit(epochIndex) with 1000 ETH:
+- Performance: 300 ETH (1000 × 30/100)
+- Appchain:    400 ETH (1000 × 40/100)
+- Base:        300 ETH (1000 - 300 - 400)
+
+// Example 2: 1001 ETH (with dust)
+deposit(epochIndex) with 1001 ETH:
+- Performance: 300 ETH (1001 × 30/100 = 300.3, rounds down)
+- Appchain:    400 ETH (1001 × 40/100 = 400.4, rounds down)
+- Base:        301 ETH (1001 - 300 - 400, gets the 1 ETH dust)
+```
+
+**Integration with Reward System**:
+```solidity
+// Emissions/rewards come in from L1/L2 bridge
+// → Splitter.deposit(epochIndex) receives rewards
+// → Automatically distributes to 3 pools
+// → Each pool can then distribute to stakers/appchains
+```
+
+**Security Features**:
+- **No value loss**: All incoming value is distributed (base pool gets remainder)
+- **Fixed percentages**: Allocation ratios are immutable constants
+- **Immutable pools**: Pool addresses set in constructor, cannot be changed
+- **Zero value protection**: Reverts if no value sent
+- **Address validation**: Constructor validates all pool addresses are non-zero
+
+---
+
 ## Security Considerations
 
 ### Access Control
@@ -492,6 +642,16 @@ function claimFor(uint256 epochIndex, address user, address destination, uint256
 - **Owner**: Can set receivers (AppchainPool), deposit rewards
 - **Receivers/Users**: Can claim their rewards
 - **Forwarder**: Can claim on behalf of users (if set)
+
+#### BlockHashRelayer:
+- **Anyone**: Can call `sendBlockHashes()` (permissionless)
+- **User**: Must have SYND token allowance for gas payment
+- **No admin**: Fully permissionless operation
+
+#### Splitter:
+- **Anyone**: Can call `deposit()` to distribute rewards
+- **No admin**: No privileged roles after deployment
+- **Immutable**: Pool addresses cannot be changed after construction
 
 ### Cryptographic Security
 
@@ -525,6 +685,7 @@ function claimFor(uint256 epochIndex, address user, address destination, uint256
 - **Fixed-point arithmetic**: Uses PRBMath library (UD60x18) for precise calculations
 - **Logarithmic rewards**: Prevents overflow and ensures fair distribution
 - **Division by zero protection**: Handles edge cases (zero total gas)
+- **Rounding dust handling**: Splitter assigns remainder to base pool (no value lost)
 
 ### Upgradeability
 
@@ -536,41 +697,6 @@ function claimFor(uint256 epochIndex, address user, address destination, uint256
 
 ---
 
-## Known Issues & Recent Fixes
-
-### ✅ Fixed Issues
-
-#### 1. Inverted Logic in GasArchive._confirmEpochDataHash (FIXED - October 10, 2025)
-
-**Location**: `src/staking/GasArchive.sol:229`
-**Severity**: HIGH
-**Status**: ✅ **FIXED**
-
-**Description**: The function had inverted logic that prevented valid sequencing chains from submitting epoch data.
-
-**Original Code (INCORRECT)**:
-```solidity
-// submissions are only allowed for active sequencing chains
-require(!seqChains.contains(chainID), InvalidSequencingChain());
-```
-
-**Fixed Code**:
-```solidity
-// submissions are only allowed for active sequencing chains
-require(seqChains.contains(chainID), InvalidSequencingChain());
-```
-
-**Root Cause**: The `!` negation operator was incorrectly applied, inverting the validation logic.
-
-**Impact**: This bug would have prevented any valid sequencing chain from confirming its epoch data hash, completely blocking the gas validation flow.
-
-**Verification**: All test cases pass after fix. The contract now correctly validates that the chain ID is in the active sequencing chains set.
-
-### Current Status
-
-No known critical issues. All contracts have been reviewed and tested. The system is ready for audit.
-
----
 
 ## Integration Example
 
@@ -590,16 +716,25 @@ GasAggregator(seqChain).aggregateTokensUsed(
 );
 // Stores: aggregatedEpochDataHash[epochIndex] = hash(data)
 
-// 4. BlockHashRelayer sends block hashes to GasArchive
-BlockHashRelayer(settlementChain).relayBlockHashes();
-// Triggers: GasArchive.sendBlockHashes(ethHash, setHash)
+// 4. User relays block hashes (anyone can do this)
+// First, approve SYND for gas payment
+syndToken.approve(blockHashRelayer, gasAmount);
+
+// Then relay block hashes from settlement chain to L3
+BlockHashRelayer(settlementChain).sendBlockHashes(
+    gasArchiveAddress,
+    gasLimit,
+    maxFeePerGas
+);
+// Creates retryable ticket that calls:
+// GasArchive(L3).sendBlockHashes(ethL1Hash, settlementHash)
 
 // 5. Generate Merkle Patricia proofs off-chain
 //    - Proof of Arbitrum Outbox (if applicable)
 //    - Proof of GasAggregator storage
 
 // 6. Submit proofs to GasArchive
-GasArchive.confirmEpochDataHash(
+GasArchive(stakingChain).confirmEpochDataHash(
     seqChainID,
     sendRoot,
     ethBlockHeader,
@@ -612,7 +747,7 @@ GasArchive.confirmEpochDataHash(
 // Verifies and stores: epochVerifiedDataHash[epoch][chainID]
 
 // 7. Submit pre-image data
-GasArchive.submitEpochPreImageData(
+GasArchive(stakingChain).submitEpochPreImageData(
     seqChainID,
     [appchain1, appchain2],
     [1000 ether, 2000 ether]
@@ -620,8 +755,17 @@ GasArchive.submitEpochPreImageData(
 // Validates hash matches, stores validated data
 // Advances epoch when all chains submit
 
-// 8. Rewards are now claimable
+// 8. Epoch rewards arrive from emissions system
+Splitter(stakingChain).deposit{value: 80000 ether}(epochIndex);
+// Automatically splits:
+// - Performance Pool: 24000 ether (30%)
+// - Appchain Pool:    32000 ether (40%)
+// - Base Pool:        24000 ether (30%)
+
+// 9. Rewards are now claimable from each pool
 AppchainPool.claim(epochIndex, appchainId, destination);
+PerformancePool.claim(epochIndex, appchainId, destination);
+// BasePool claims handled by SyndStaking contract
 ```
 
 ---
