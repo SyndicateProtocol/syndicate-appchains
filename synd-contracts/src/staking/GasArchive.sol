@@ -226,7 +226,7 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         require(epochVerifiedDataHash[epoch][chainID] == bytes32(0), AlreadySubmitted());
 
         // submissions are only allowed for active sequencing chains
-        require(!seqChains.contains(chainID), InvalidSequencingChain());
+        require(seqChains.contains(chainID), InvalidSequencingChain());
 
         // verify that the provided epoch data is valid according to the sequencing chain proof
         bytes32 verifiedEpochDataHash = _getSlotValueFromProof({
