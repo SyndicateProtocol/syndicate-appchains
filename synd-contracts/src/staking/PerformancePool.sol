@@ -32,6 +32,17 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     constructor(address admin, address staking, address gas) RewardPoolBase(admin, staking, gas) {}
 
     /**
+     * @notice Modifier that restricts function access to the SyndStaking contract only
+     * @dev Used for claimFor() function to ensure only authorized contract can claim on behalf of users
+     */
+    modifier onlyStakingContract() {
+        if (msg.sender != address(stakingContract)) {
+            revert UnauthorizedCaller();
+        }
+        _;
+    }
+
+    /**
      * @notice Claim rewards for a specific user on a specific appchain in a specific epoch
      * @dev Users can claim their proportional share of rewards based on their stake on the appchain.
      *      Rewards are calculated as: (user stake / total appchain stake) * appchain total rewards
@@ -56,8 +67,8 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     function claimFor(uint256 epochIndex, address user, address destination, uint256 appchainId)
         external
         nonReentrant
+        onlyStakingContract
     {
-        require(msg.sender == address(stakingContract), UnauthorizedCaller());
         _claim(epochIndex, user, destination, appchainId);
     }
 
@@ -70,7 +81,6 @@ contract PerformancePool is IUserPool, RewardPoolBase {
      * @param appchainId The appchain ID to claim rewards for
      */
     function _claim(uint256 epochIndex, address user, address destination, uint256 appchainId) internal {
-        _preChecks(epochIndex);
         if (destination == address(0)) {
             revert InvalidDestination();
         }
@@ -98,8 +108,8 @@ contract PerformancePool is IUserPool, RewardPoolBase {
      * @custom:example If user has 10% of appchain stake and appchain earned 1000 tokens, user can claim 100 tokens
      * @custom:example If user already claimed 50 tokens, returns 50 (remaining claimable amount)
      */
-    function getClaimableAmount(uint256 epochIndex, address user, uint256 appchainId) public returns (uint256) {
-        uint256 appchainTotal = _computeAppchainTotalReward(epochIndex, appchainId);
+    function getClaimableAmount(uint256 epochIndex, address user, uint256 appchainId) public view returns (uint256) {
+        uint256 appchainTotal = getAppchainTotalReward(epochIndex, appchainId);
         if (appchainTotal == 0) return 0;
 
         uint256 userStaked = ISyndStaking(address(stakingContract)).getUserStakeShare(epochIndex, user);

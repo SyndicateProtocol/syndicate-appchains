@@ -8,98 +8,10 @@ import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
-
-/// @notice Mock gas provider: programmable per-epoch fees + active IDs
-contract MockGasProvider is IGasDataProvider {
-    // epoch => total fees
-    mapping(uint256 => uint256) public totals;
-    // epoch => appchainId => fees
-    mapping(uint256 => mapping(uint256 => uint256)) public fee;
-    // epoch => list of appchainIds (we keep exactly what tests set)
-    mapping(uint256 => uint256[]) private idsByEpoch;
-
-    function setFees(uint256 epoch, uint256[] memory appchainIds, uint256[] memory amounts) external {
-        require(appchainIds.length == amounts.length, "length mismatch");
-
-        // reset ids list
-        delete idsByEpoch[epoch];
-
-        uint256 t;
-        for (uint256 i = 0; i < appchainIds.length; i++) {
-            uint256 id = appchainIds[i];
-            uint256 amt = amounts[i];
-            fee[epoch][id] = amt;
-            idsByEpoch[epoch].push(id);
-            t += amt;
-        }
-        totals[epoch] = t;
-    }
-
-    function setFee(uint256 epoch, uint256 appchainId, uint256 amount) external {
-        // if appchainId not in ids list, push it
-        bool present = false;
-        uint256[] storage ids = idsByEpoch[epoch];
-        for (uint256 i = 0; i < ids.length; i++) {
-            if (ids[i] == appchainId) {
-                present = true;
-                break;
-            }
-        }
-        if (!present) ids.push(appchainId);
-
-        uint256 prev = fee[epoch][appchainId];
-        fee[epoch][appchainId] = amount;
-        totals[epoch] = totals[epoch] + amount - prev;
-    }
-
-    function getTotalGasFees(uint256 epochIndex) external view returns (uint256) {
-        return totals[epochIndex];
-    }
-
-    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256) {
-        return fee[epochIndex][appchainId];
-    }
-
-    function getAppchainIds(uint256 epochIndex) external view returns (uint256[] memory out) {
-        uint256[] storage ids = idsByEpoch[epochIndex];
-        out = new uint256[](ids.length);
-        for (uint256 i = 0; i < ids.length; i++) {
-            out[i] = ids[i];
-        }
-    }
-
-    function getAppchainIds(uint256 epochIndex, uint256 startIndex, uint256 pageSize)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        if (startIndex >= idsByEpoch[epochIndex].length) {
-            return new uint256[](0);
-        }
-
-        uint256 endIndex = startIndex + pageSize;
-        if (pageSize == 0 || endIndex > idsByEpoch[epochIndex].length) {
-            endIndex = idsByEpoch[epochIndex].length;
-        }
-        uint256 actualSize = endIndex - startIndex;
-
-        uint256[] memory result = new uint256[](actualSize);
-
-        // Copy the relevant slice from the full array
-        for (uint256 i = 0; i < actualSize; i++) {
-            result[i] = idsByEpoch[epochIndex][startIndex + i];
-        }
-
-        return result;
-    }
-}
+import {MockGasProvider} from "./MockGasProvider.t.sol";
 
 contract MockRewardPoolBase is RewardPoolBase {
     constructor(address _defaultAdmin, address _staking, address _gas) RewardPoolBase(_defaultAdmin, _staking, _gas) {}
-
-    function getAppchainTotalReward(uint256 epochIndex, uint256 appchainId) external returns (uint256) {
-        return _computeAppchainTotalReward(epochIndex, appchainId);
-    }
 }
 
 contract RewardPoolBaseTest is Test {
@@ -202,20 +114,21 @@ contract RewardPoolBaseTest is Test {
         setGasShares(epoch, 60 ether, 50 ether, 40 ether);
 
         rewardPoolBase.deposit{value: 100 ether}(epoch);
+        assertTrue(rewardPoolBase.computeDiminishingFactors(epoch, 0));
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId2), 33578634284580271148);
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
     }
 
-    function test_preComputeDiminishingFactors() public {
+    function test_computeDiminishingFactors() public {
         setupStake(30 ether, 20 ether, 10 ether);
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 60 ether, 50 ether, 40 ether);
 
-        assertFalse(rewardPoolBase.preComputeDiminishingFactors(epoch, 1));
-        assertFalse(rewardPoolBase.preComputeDiminishingFactors(epoch, 1));
-        assertTrue(rewardPoolBase.preComputeDiminishingFactors(epoch, 1));
+        assertFalse(rewardPoolBase.computeDiminishingFactors(epoch, 1));
+        assertFalse(rewardPoolBase.computeDiminishingFactors(epoch, 1));
+        assertTrue(rewardPoolBase.computeDiminishingFactors(epoch, 1));
 
         rewardPoolBase.deposit{value: 100 ether}(epoch);
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
@@ -223,27 +136,32 @@ contract RewardPoolBaseTest is Test {
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
     }
 
-    function test_preComputePartial() public {
+    // getting rewards should revert until diminishing factor computations are complete
+    function test_computePartial() public {
         setupStake(30 ether, 20 ether, 10 ether);
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 60 ether, 50 ether, 40 ether);
 
-        assertFalse(rewardPoolBase.preComputeDiminishingFactors(epoch, 1));
+        assertFalse(rewardPoolBase.computeDiminishingFactors(epoch, 1));
 
         rewardPoolBase.deposit{value: 100 ether}(epoch);
-        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
-        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId2), 33578634284580271148);
-        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
+
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        rewardPoolBase.getAppchainTotalReward(epoch, appchainId1);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        rewardPoolBase.getAppchainTotalReward(epoch, appchainId2);
+        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        rewardPoolBase.getAppchainTotalReward(epoch, appchainId3);
     }
 
-    function test_preComputeLargeBatch() public {
+    function test_computeLargeBatch() public {
         setupStake(30 ether, 20 ether, 10 ether);
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 60 ether, 50 ether, 40 ether);
 
-        assertTrue(rewardPoolBase.preComputeDiminishingFactors(epoch, 100));
+        assertTrue(rewardPoolBase.computeDiminishingFactors(epoch, 100));
 
         rewardPoolBase.deposit{value: 100 ether}(epoch);
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
