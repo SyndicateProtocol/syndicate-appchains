@@ -536,41 +536,6 @@ function claimFor(uint256 epochIndex, address user, address destination, uint256
 
 ---
 
-## Known Issues & Recent Fixes
-
-### ✅ Fixed Issues
-
-#### 1. Inverted Logic in GasArchive._confirmEpochDataHash (FIXED - October 10, 2025)
-
-**Location**: `src/staking/GasArchive.sol:229`
-**Severity**: HIGH
-**Status**: ✅ **FIXED**
-
-**Description**: The function had inverted logic that prevented valid sequencing chains from submitting epoch data.
-
-**Original Code (INCORRECT)**:
-```solidity
-// submissions are only allowed for active sequencing chains
-require(!seqChains.contains(chainID), InvalidSequencingChain());
-```
-
-**Fixed Code**:
-```solidity
-// submissions are only allowed for active sequencing chains
-require(seqChains.contains(chainID), InvalidSequencingChain());
-```
-
-**Root Cause**: The `!` negation operator was incorrectly applied, inverting the validation logic.
-
-**Impact**: This bug would have prevented any valid sequencing chain from confirming its epoch data hash, completely blocking the gas validation flow.
-
-**Verification**: All test cases pass after fix. The contract now correctly validates that the chain ID is in the active sequencing chains set.
-
-### Current Status
-
-No known critical issues. All contracts have been reviewed and tested. The system is ready for audit.
-
----
 
 ## Integration Example
 
