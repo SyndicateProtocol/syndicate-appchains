@@ -26,17 +26,21 @@ interface RewardPoolBase {
     function EPOCH_DURATION() external view returns (uint256);
     function PRE_COMPUTE_COMPLETE() external view returns (uint256);
     function START_TIMESTAMP() external view returns (uint256);
+    function computeDiminishingFactors(uint256 epochIndex, uint256 count) external returns (bool);
     function decayFactor() external view returns (UD60x18);
     function deposit(uint256 epoch) external payable;
+    function diminishingFactor(uint256 epochIndex, uint256 appchainId) external view returns (UD60x18 diminishingFactor);
     function epochTotal(uint256 epochIndex) external view returns (uint256 epochTotal);
+    function epochTotalDiminishingFactor(uint256 epochIndex) external view returns (UD60x18 epochTotalDiminishingFactor);
     function feeMultiplier() external view returns (UD60x18);
     function gasDataProvider() external view returns (address);
+    function getAppchainTotalReward(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
     function getCurrentEpoch() external view returns (uint256);
     function getEpochEnd(uint256 epochIndex) external pure returns (uint256);
     function getEpochStart(uint256 epochIndex) external pure returns (uint256);
     function owner() external view returns (address);
-    function preComputeDiminishingFactors(uint256 epochIndex, uint256 _batchSize) external returns (bool isComplete);
     function preComputeIndex(uint256 epochIndex) external view returns (uint256 preComputeIndex);
+    function remainingAppchainsPlusOne(uint256 epochIndex) external view returns (uint256);
     function renounceOwnership() external;
     function setDecayFactor(uint256 _decay) external;
     function setFeeMultiplier(uint256 _fee) external;
@@ -95,6 +99,30 @@ interface RewardPoolBase {
   },
   {
     "type": "function",
+    "name": "computeDiminishingFactors",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "count",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "decayFactor",
     "inputs": [],
     "outputs": [
@@ -121,6 +149,30 @@ interface RewardPoolBase {
   },
   {
     "type": "function",
+    "name": "diminishingFactor",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "appchainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "diminishingFactor",
+        "type": "uint256",
+        "internalType": "UD60x18"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "epochTotal",
     "inputs": [
       {
@@ -134,6 +186,25 @@ interface RewardPoolBase {
         "name": "epochTotal",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "epochTotalDiminishingFactor",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "epochTotalDiminishingFactor",
+        "type": "uint256",
+        "internalType": "UD60x18"
       }
     ],
     "stateMutability": "view"
@@ -160,6 +231,30 @@ interface RewardPoolBase {
         "name": "",
         "type": "address",
         "internalType": "contract IGasDataProvider"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAppchainTotalReward",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "appchainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -230,30 +325,6 @@ interface RewardPoolBase {
   },
   {
     "type": "function",
-    "name": "preComputeDiminishingFactors",
-    "inputs": [
-      {
-        "name": "epochIndex",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_batchSize",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "isComplete",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "preComputeIndex",
     "inputs": [
       {
@@ -265,6 +336,25 @@ interface RewardPoolBase {
     "outputs": [
       {
         "name": "preComputeIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "remainingAppchainsPlusOne",
+    "inputs": [
+      {
+        "name": "epochIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -2412,6 +2502,177 @@ function START_TIMESTAMP() external view returns (uint256);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `computeDiminishingFactors(uint256,uint256)` and selector `0x117b280e`.
+```solidity
+function computeDiminishingFactors(uint256 epochIndex, uint256 count) external returns (bool);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct computeDiminishingFactorsCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub count: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`computeDiminishingFactors(uint256,uint256)`](computeDiminishingFactorsCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct computeDiminishingFactorsReturn {
+        #[allow(missing_docs)]
+        pub _0: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<computeDiminishingFactorsCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: computeDiminishingFactorsCall) -> Self {
+                    (value.epochIndex, value.count)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for computeDiminishingFactorsCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        epochIndex: tuple.0,
+                        count: tuple.1,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (bool,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<computeDiminishingFactorsReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: computeDiminishingFactorsReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for computeDiminishingFactorsReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for computeDiminishingFactorsCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = bool;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "computeDiminishingFactors(uint256,uint256)";
+            const SELECTOR: [u8; 4] = [17u8, 123u8, 40u8, 14u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.count),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        ret,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: computeDiminishingFactorsReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: computeDiminishingFactorsReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `decayFactor()` and selector `0x20fb3016`.
 ```solidity
 function decayFactor() external view returns (UD60x18);
@@ -2697,6 +2958,175 @@ function deposit(uint256 epoch) external payable;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `diminishingFactor(uint256,uint256)` and selector `0xd04742ec`.
+```solidity
+function diminishingFactor(uint256 epochIndex, uint256 appchainId) external view returns (UD60x18 diminishingFactor);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct diminishingFactorCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub appchainId: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`diminishingFactor(uint256,uint256)`](diminishingFactorCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct diminishingFactorReturn {
+        #[allow(missing_docs)]
+        pub diminishingFactor: <UD60x18 as alloy::sol_types::SolType>::RustType,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<diminishingFactorCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: diminishingFactorCall) -> Self {
+                    (value.epochIndex, value.appchainId)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for diminishingFactorCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        epochIndex: tuple.0,
+                        appchainId: tuple.1,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (UD60x18,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                <UD60x18 as alloy::sol_types::SolType>::RustType,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<diminishingFactorReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: diminishingFactorReturn) -> Self {
+                    (value.diminishingFactor,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for diminishingFactorReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { diminishingFactor: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for diminishingFactorCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = <UD60x18 as alloy::sol_types::SolType>::RustType;
+            type ReturnTuple<'a> = (UD60x18,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "diminishingFactor(uint256,uint256)";
+            const SELECTOR: [u8; 4] = [208u8, 71u8, 66u8, 236u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.appchainId),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (<UD60x18 as alloy_sol_types::SolType>::tokenize(ret),)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: diminishingFactorReturn = r.into();
+                        r.diminishingFactor
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: diminishingFactorReturn = r.into();
+                        r.diminishingFactor
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `epochTotal(uint256)` and selector `0x1e0e8489`.
 ```solidity
 function epochTotal(uint256 epochIndex) external view returns (uint256 epochTotal);
@@ -2845,6 +3275,162 @@ function epochTotal(uint256 epochIndex) external view returns (uint256 epochTota
                     .map(|r| {
                         let r: epochTotalReturn = r.into();
                         r.epochTotal
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `epochTotalDiminishingFactor(uint256)` and selector `0x42394e8e`.
+```solidity
+function epochTotalDiminishingFactor(uint256 epochIndex) external view returns (UD60x18 epochTotalDiminishingFactor);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct epochTotalDiminishingFactorCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`epochTotalDiminishingFactor(uint256)`](epochTotalDiminishingFactorCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct epochTotalDiminishingFactorReturn {
+        #[allow(missing_docs)]
+        pub epochTotalDiminishingFactor: <UD60x18 as alloy::sol_types::SolType>::RustType,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<epochTotalDiminishingFactorCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: epochTotalDiminishingFactorCall) -> Self {
+                    (value.epochIndex,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for epochTotalDiminishingFactorCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { epochIndex: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (UD60x18,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                <UD60x18 as alloy::sol_types::SolType>::RustType,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<epochTotalDiminishingFactorReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: epochTotalDiminishingFactorReturn) -> Self {
+                    (value.epochTotalDiminishingFactor,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for epochTotalDiminishingFactorReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        epochTotalDiminishingFactor: tuple.0,
+                    }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for epochTotalDiminishingFactorCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = <UD60x18 as alloy::sol_types::SolType>::RustType;
+            type ReturnTuple<'a> = (UD60x18,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "epochTotalDiminishingFactor(uint256)";
+            const SELECTOR: [u8; 4] = [66u8, 57u8, 78u8, 142u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (<UD60x18 as alloy_sol_types::SolType>::tokenize(ret),)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: epochTotalDiminishingFactorReturn = r.into();
+                        r.epochTotalDiminishingFactor
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: epochTotalDiminishingFactorReturn = r.into();
+                        r.epochTotalDiminishingFactor
                     })
             }
         }
@@ -3130,6 +3716,179 @@ function gasDataProvider() external view returns (address);
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
                         let r: gasDataProviderReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `getAppchainTotalReward(uint256,uint256)` and selector `0xd85b8744`.
+```solidity
+function getAppchainTotalReward(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getAppchainTotalRewardCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub appchainId: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`getAppchainTotalReward(uint256,uint256)`](getAppchainTotalRewardCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct getAppchainTotalRewardReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getAppchainTotalRewardCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getAppchainTotalRewardCall) -> Self {
+                    (value.epochIndex, value.appchainId)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getAppchainTotalRewardCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        epochIndex: tuple.0,
+                        appchainId: tuple.1,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<getAppchainTotalRewardReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: getAppchainTotalRewardReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for getAppchainTotalRewardReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for getAppchainTotalRewardCall {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "getAppchainTotalReward(uint256,uint256)";
+            const SELECTOR: [u8; 4] = [216u8, 91u8, 135u8, 68u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.appchainId),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: getAppchainTotalRewardReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: getAppchainTotalRewardReturn = r.into();
                         r._0
                     })
             }
@@ -3735,177 +4494,6 @@ function owner() external view returns (address);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `preComputeDiminishingFactors(uint256,uint256)` and selector `0x226263f4`.
-```solidity
-function preComputeDiminishingFactors(uint256 epochIndex, uint256 _batchSize) external returns (bool isComplete);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct preComputeDiminishingFactorsCall {
-        #[allow(missing_docs)]
-        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub _batchSize: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`preComputeDiminishingFactors(uint256,uint256)`](preComputeDiminishingFactorsCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct preComputeDiminishingFactorsReturn {
-        #[allow(missing_docs)]
-        pub isComplete: bool,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<preComputeDiminishingFactorsCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: preComputeDiminishingFactorsCall) -> Self {
-                    (value.epochIndex, value._batchSize)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for preComputeDiminishingFactorsCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {
-                        epochIndex: tuple.0,
-                        _batchSize: tuple.1,
-                    }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (bool,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<preComputeDiminishingFactorsReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: preComputeDiminishingFactorsReturn) -> Self {
-                    (value.isComplete,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for preComputeDiminishingFactorsReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { isComplete: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for preComputeDiminishingFactorsCall {
-            type Parameters<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Uint<256>,
-            );
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "preComputeDiminishingFactors(uint256,uint256)";
-            const SELECTOR: [u8; 4] = [34u8, 98u8, 99u8, 244u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self._batchSize),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: preComputeDiminishingFactorsReturn = r.into();
-                        r.isComplete
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: preComputeDiminishingFactorsReturn = r.into();
-                        r.isComplete
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `preComputeIndex(uint256)` and selector `0xe8f91e49`.
 ```solidity
 function preComputeIndex(uint256 epochIndex) external view returns (uint256 preComputeIndex);
@@ -4056,6 +4644,164 @@ function preComputeIndex(uint256 epochIndex) external view returns (uint256 preC
                     .map(|r| {
                         let r: preComputeIndexReturn = r.into();
                         r.preComputeIndex
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `remainingAppchainsPlusOne(uint256)` and selector `0x6789a628`.
+```solidity
+function remainingAppchainsPlusOne(uint256 epochIndex) external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct remainingAppchainsPlusOneCall {
+        #[allow(missing_docs)]
+        pub epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`remainingAppchainsPlusOne(uint256)`](remainingAppchainsPlusOneCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct remainingAppchainsPlusOneReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<remainingAppchainsPlusOneCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: remainingAppchainsPlusOneCall) -> Self {
+                    (value.epochIndex,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for remainingAppchainsPlusOneCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { epochIndex: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<remainingAppchainsPlusOneReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: remainingAppchainsPlusOneReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for remainingAppchainsPlusOneReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for remainingAppchainsPlusOneCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "remainingAppchainsPlusOne(uint256)";
+            const SELECTOR: [u8; 4] = [103u8, 137u8, 166u8, 40u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.epochIndex),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: remainingAppchainsPlusOneReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: remainingAppchainsPlusOneReturn = r.into();
+                        r._0
                     })
             }
         }
@@ -5086,15 +5832,23 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         START_TIMESTAMP(START_TIMESTAMPCall),
         #[allow(missing_docs)]
+        computeDiminishingFactors(computeDiminishingFactorsCall),
+        #[allow(missing_docs)]
         decayFactor(decayFactorCall),
         #[allow(missing_docs)]
         deposit(depositCall),
         #[allow(missing_docs)]
+        diminishingFactor(diminishingFactorCall),
+        #[allow(missing_docs)]
         epochTotal(epochTotalCall),
+        #[allow(missing_docs)]
+        epochTotalDiminishingFactor(epochTotalDiminishingFactorCall),
         #[allow(missing_docs)]
         feeMultiplier(feeMultiplierCall),
         #[allow(missing_docs)]
         gasDataProvider(gasDataProviderCall),
+        #[allow(missing_docs)]
+        getAppchainTotalReward(getAppchainTotalRewardCall),
         #[allow(missing_docs)]
         getCurrentEpoch(getCurrentEpochCall),
         #[allow(missing_docs)]
@@ -5104,9 +5858,9 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         owner(ownerCall),
         #[allow(missing_docs)]
-        preComputeDiminishingFactors(preComputeDiminishingFactorsCall),
-        #[allow(missing_docs)]
         preComputeIndex(preComputeIndexCall),
+        #[allow(missing_docs)]
+        remainingAppchainsPlusOne(remainingAppchainsPlusOneCall),
         #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
         #[allow(missing_docs)]
@@ -5132,13 +5886,15 @@ function transferOwnership(address newOwner) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [1u8, 117u8, 226u8, 59u8],
+            [17u8, 123u8, 40u8, 14u8],
             [26u8, 142u8, 114u8, 107u8],
             [30u8, 14u8, 132u8, 137u8],
             [30u8, 106u8, 49u8, 29u8],
             [32u8, 251u8, 48u8, 22u8],
-            [34u8, 98u8, 99u8, 244u8],
+            [66u8, 57u8, 78u8, 142u8],
             [81u8, 86u8, 3u8, 231u8],
             [91u8, 53u8, 208u8, 87u8],
+            [103u8, 137u8, 166u8, 40u8],
             [113u8, 80u8, 24u8, 166u8],
             [120u8, 28u8, 217u8, 157u8],
             [141u8, 165u8, 203u8, 91u8],
@@ -5147,7 +5903,9 @@ function transferOwnership(address newOwner) external;
             [182u8, 181u8, 95u8, 37u8],
             [184u8, 201u8, 5u8, 157u8],
             [185u8, 125u8, 217u8, 226u8],
+            [208u8, 71u8, 66u8, 236u8],
             [213u8, 23u8, 109u8, 35u8],
+            [216u8, 91u8, 135u8, 68u8],
             [229u8, 167u8, 14u8, 247u8],
             [232u8, 249u8, 30u8, 73u8],
             [238u8, 153u8, 32u8, 92u8],
@@ -5158,7 +5916,7 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for RewardPoolBaseCalls {
         const NAME: &'static str = "RewardPoolBaseCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 21usize;
+        const COUNT: usize = 25usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -5171,18 +5929,30 @@ function transferOwnership(address newOwner) external;
                 Self::START_TIMESTAMP(_) => {
                     <START_TIMESTAMPCall as alloy_sol_types::SolCall>::SELECTOR
                 }
+                Self::computeDiminishingFactors(_) => {
+                    <computeDiminishingFactorsCall as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::decayFactor(_) => {
                     <decayFactorCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::deposit(_) => <depositCall as alloy_sol_types::SolCall>::SELECTOR,
+                Self::diminishingFactor(_) => {
+                    <diminishingFactorCall as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::epochTotal(_) => {
                     <epochTotalCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::epochTotalDiminishingFactor(_) => {
+                    <epochTotalDiminishingFactorCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::feeMultiplier(_) => {
                     <feeMultiplierCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::gasDataProvider(_) => {
                     <gasDataProviderCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::getAppchainTotalReward(_) => {
+                    <getAppchainTotalRewardCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::getCurrentEpoch(_) => {
                     <getCurrentEpochCall as alloy_sol_types::SolCall>::SELECTOR
@@ -5194,11 +5964,11 @@ function transferOwnership(address newOwner) external;
                     <getEpochStartCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::owner(_) => <ownerCall as alloy_sol_types::SolCall>::SELECTOR,
-                Self::preComputeDiminishingFactors(_) => {
-                    <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::SELECTOR
-                }
                 Self::preComputeIndex(_) => {
                     <preComputeIndexCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::remainingAppchainsPlusOne(_) => {
+                    <remainingAppchainsPlusOneCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::renounceOwnership(_) => {
                     <renounceOwnershipCall as alloy_sol_types::SolCall>::SELECTOR
@@ -5252,6 +6022,17 @@ function transferOwnership(address newOwner) external;
                     getEpochStart
                 },
                 {
+                    fn computeDiminishingFactors(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <computeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::computeDiminishingFactors)
+                    }
+                    computeDiminishingFactors
+                },
+                {
                     fn setStakeMultiplier(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -5296,15 +6077,15 @@ function transferOwnership(address newOwner) external;
                     decayFactor
                 },
                 {
-                    fn preComputeDiminishingFactors(
+                    fn epochTotalDiminishingFactor(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
-                        <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <epochTotalDiminishingFactorCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
                             )
-                            .map(RewardPoolBaseCalls::preComputeDiminishingFactors)
+                            .map(RewardPoolBaseCalls::epochTotalDiminishingFactor)
                     }
-                    preComputeDiminishingFactors
+                    epochTotalDiminishingFactor
                 },
                 {
                     fn PRE_COMPUTE_COMPLETE(
@@ -5327,6 +6108,17 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseCalls::stakeMultiplier)
                     }
                     stakeMultiplier
+                },
+                {
+                    fn remainingAppchainsPlusOne(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <remainingAppchainsPlusOneCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::remainingAppchainsPlusOne)
+                    }
+                    remainingAppchainsPlusOne
                 },
                 {
                     fn renounceOwnership(
@@ -5413,6 +6205,17 @@ function transferOwnership(address newOwner) external;
                     getCurrentEpoch
                 },
                 {
+                    fn diminishingFactor(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <diminishingFactorCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::diminishingFactor)
+                    }
+                    diminishingFactor
+                },
+                {
                     fn getEpochEnd(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -5422,6 +6225,17 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseCalls::getEpochEnd)
                     }
                     getEpochEnd
+                },
+                {
+                    fn getAppchainTotalReward(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <getAppchainTotalRewardCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::getAppchainTotalReward)
+                    }
+                    getAppchainTotalReward
                 },
                 {
                     fn feeMultiplier(
@@ -5499,6 +6313,17 @@ function transferOwnership(address newOwner) external;
                     getEpochStart
                 },
                 {
+                    fn computeDiminishingFactors(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <computeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::computeDiminishingFactors)
+                    }
+                    computeDiminishingFactors
+                },
+                {
                     fn setStakeMultiplier(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -5543,15 +6368,15 @@ function transferOwnership(address newOwner) external;
                     decayFactor
                 },
                 {
-                    fn preComputeDiminishingFactors(
+                    fn epochTotalDiminishingFactor(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
-                        <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <epochTotalDiminishingFactorCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
                             )
-                            .map(RewardPoolBaseCalls::preComputeDiminishingFactors)
+                            .map(RewardPoolBaseCalls::epochTotalDiminishingFactor)
                     }
-                    preComputeDiminishingFactors
+                    epochTotalDiminishingFactor
                 },
                 {
                     fn PRE_COMPUTE_COMPLETE(
@@ -5574,6 +6399,17 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseCalls::stakeMultiplier)
                     }
                     stakeMultiplier
+                },
+                {
+                    fn remainingAppchainsPlusOne(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <remainingAppchainsPlusOneCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::remainingAppchainsPlusOne)
+                    }
+                    remainingAppchainsPlusOne
                 },
                 {
                     fn renounceOwnership(
@@ -5664,6 +6500,17 @@ function transferOwnership(address newOwner) external;
                     getCurrentEpoch
                 },
                 {
+                    fn diminishingFactor(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <diminishingFactorCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::diminishingFactor)
+                    }
+                    diminishingFactor
+                },
+                {
                     fn getEpochEnd(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
@@ -5673,6 +6520,17 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseCalls::getEpochEnd)
                     }
                     getEpochEnd
+                },
+                {
+                    fn getAppchainTotalReward(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseCalls> {
+                        <getAppchainTotalRewardCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseCalls::getAppchainTotalReward)
+                    }
+                    getAppchainTotalReward
                 },
                 {
                     fn feeMultiplier(
@@ -5747,6 +6605,11 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
+                Self::computeDiminishingFactors(inner) => {
+                    <computeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::decayFactor(inner) => {
                     <decayFactorCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -5755,8 +6618,18 @@ function transferOwnership(address newOwner) external;
                 Self::deposit(inner) => {
                     <depositCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
+                Self::diminishingFactor(inner) => {
+                    <diminishingFactorCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::epochTotal(inner) => {
                     <epochTotalCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
+                }
+                Self::epochTotalDiminishingFactor(inner) => {
+                    <epochTotalDiminishingFactorCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
                 }
                 Self::feeMultiplier(inner) => {
                     <feeMultiplierCall as alloy_sol_types::SolCall>::abi_encoded_size(
@@ -5765,6 +6638,11 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::gasDataProvider(inner) => {
                     <gasDataProviderCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::getAppchainTotalReward(inner) => {
+                    <getAppchainTotalRewardCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -5786,13 +6664,13 @@ function transferOwnership(address newOwner) external;
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
-                Self::preComputeDiminishingFactors(inner) => {
-                    <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                Self::preComputeIndex(inner) => {
+                    <preComputeIndexCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
-                Self::preComputeIndex(inner) => {
-                    <preComputeIndexCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                Self::remainingAppchainsPlusOne(inner) => {
+                    <remainingAppchainsPlusOneCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -5854,6 +6732,12 @@ function transferOwnership(address newOwner) external;
                         out,
                     )
                 }
+                Self::computeDiminishingFactors(inner) => {
+                    <computeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::decayFactor(inner) => {
                     <decayFactorCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
@@ -5863,8 +6747,20 @@ function transferOwnership(address newOwner) external;
                 Self::deposit(inner) => {
                     <depositCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
+                Self::diminishingFactor(inner) => {
+                    <diminishingFactorCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::epochTotal(inner) => {
                     <epochTotalCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::epochTotalDiminishingFactor(inner) => {
+                    <epochTotalDiminishingFactorCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -5877,6 +6773,12 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::gasDataProvider(inner) => {
                     <gasDataProviderCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::getAppchainTotalReward(inner) => {
+                    <getAppchainTotalRewardCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -5902,14 +6804,14 @@ function transferOwnership(address newOwner) external;
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
-                Self::preComputeDiminishingFactors(inner) => {
-                    <preComputeDiminishingFactorsCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::preComputeIndex(inner) => {
+                    <preComputeIndexCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
                 }
-                Self::preComputeIndex(inner) => {
-                    <preComputeIndexCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::remainingAppchainsPlusOne(inner) => {
+                    <remainingAppchainsPlusOneCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -6758,6 +7660,19 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, START_TIMESTAMPCall, N> {
             self.call_builder(&START_TIMESTAMPCall)
         }
+        ///Creates a new call builder for the [`computeDiminishingFactors`] function.
+        pub fn computeDiminishingFactors(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+            count: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, computeDiminishingFactorsCall, N> {
+            self.call_builder(
+                &computeDiminishingFactorsCall {
+                    epochIndex,
+                    count,
+                },
+            )
+        }
         ///Creates a new call builder for the [`decayFactor`] function.
         pub fn decayFactor(
             &self,
@@ -6771,12 +7686,36 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, depositCall, N> {
             self.call_builder(&depositCall { epoch })
         }
+        ///Creates a new call builder for the [`diminishingFactor`] function.
+        pub fn diminishingFactor(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+            appchainId: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, diminishingFactorCall, N> {
+            self.call_builder(
+                &diminishingFactorCall {
+                    epochIndex,
+                    appchainId,
+                },
+            )
+        }
         ///Creates a new call builder for the [`epochTotal`] function.
         pub fn epochTotal(
             &self,
             epochIndex: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, epochTotalCall, N> {
             self.call_builder(&epochTotalCall { epochIndex })
+        }
+        ///Creates a new call builder for the [`epochTotalDiminishingFactor`] function.
+        pub fn epochTotalDiminishingFactor(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, epochTotalDiminishingFactorCall, N> {
+            self.call_builder(
+                &epochTotalDiminishingFactorCall {
+                    epochIndex,
+                },
+            )
         }
         ///Creates a new call builder for the [`feeMultiplier`] function.
         pub fn feeMultiplier(
@@ -6789,6 +7728,19 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<&P, gasDataProviderCall, N> {
             self.call_builder(&gasDataProviderCall)
+        }
+        ///Creates a new call builder for the [`getAppchainTotalReward`] function.
+        pub fn getAppchainTotalReward(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+            appchainId: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, getAppchainTotalRewardCall, N> {
+            self.call_builder(
+                &getAppchainTotalRewardCall {
+                    epochIndex,
+                    appchainId,
+                },
+            )
         }
         ///Creates a new call builder for the [`getCurrentEpoch`] function.
         pub fn getCurrentEpoch(
@@ -6814,25 +7766,23 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn owner(&self) -> alloy_contract::SolCallBuilder<&P, ownerCall, N> {
             self.call_builder(&ownerCall)
         }
-        ///Creates a new call builder for the [`preComputeDiminishingFactors`] function.
-        pub fn preComputeDiminishingFactors(
-            &self,
-            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
-            _batchSize: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, preComputeDiminishingFactorsCall, N> {
-            self.call_builder(
-                &preComputeDiminishingFactorsCall {
-                    epochIndex,
-                    _batchSize,
-                },
-            )
-        }
         ///Creates a new call builder for the [`preComputeIndex`] function.
         pub fn preComputeIndex(
             &self,
             epochIndex: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, preComputeIndexCall, N> {
             self.call_builder(&preComputeIndexCall { epochIndex })
+        }
+        ///Creates a new call builder for the [`remainingAppchainsPlusOne`] function.
+        pub fn remainingAppchainsPlusOne(
+            &self,
+            epochIndex: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, remainingAppchainsPlusOneCall, N> {
+            self.call_builder(
+                &remainingAppchainsPlusOneCall {
+                    epochIndex,
+                },
+            )
         }
         ///Creates a new call builder for the [`renounceOwnership`] function.
         pub fn renounceOwnership(
