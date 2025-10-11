@@ -3,13 +3,11 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
-import {GasAggregator} from "src/staking/GasAggregator.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {RequireCompositeModule} from "src/requirement-modules/RequireCompositeModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
-import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
 
@@ -42,15 +40,6 @@ contract SyndicateFactoryTest is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
-
-        // Deploy and set GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        GasAggregator gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-
-        vm.prank(admin);
-        factory.setGasAggregator(IGasAggregator(address(gasAggregator)));
     }
 
     function testCreateSequencingChainWithRequireAndModule() public {
@@ -75,7 +64,6 @@ contract SyndicateFactoryTest is Test {
 
         // Verify sequencer setup
         assertEq(address(sequencingChain), sequencingChainAddress);
-        assertEq(sequencingChain.appchainId(), appchainId);
 
         // Verify permission module setup
         assertEq(address(sequencingChain.permissionRequirementModule()), permissionModuleAddress);
@@ -104,7 +92,6 @@ contract SyndicateFactoryTest is Test {
 
         // Verify sequencer setup
         assertEq(address(sequencingChain), sequencingChainAddress);
-        assertEq(sequencingChain.appchainId(), appchainId);
 
         // Verify permission module setup
         assertEq(address(sequencingChain.permissionRequirementModule()), permissionModuleAddress);
@@ -123,7 +110,6 @@ contract SyndicateFactoryTest is Test {
         assertEq(actualChainId, appchainId);
 
         SyndicateSequencingChain sequencingChain = SyndicateSequencingChain(sequencingChainAddress);
-        assertEq(sequencingChain.appchainId(), appchainId);
         assertEq(address(sequencingChain.permissionRequirementModule()), permissionModuleAddress);
         assertEq(permissionModule.owner(), admin);
     }
@@ -142,8 +128,6 @@ contract SyndicateFactoryTest is Test {
             differentChainId, admin, IRequirementModule(address(permissionModule2))
         );
 
-        assertEq(SyndicateSequencingChain(sequencingChain1).appchainId(), appchainId);
-        assertEq(SyndicateSequencingChain(sequencingChain2).appchainId(), differentChainId);
         assertEq(actualChainId1, appchainId);
         assertEq(actualChainId2, differentChainId);
     }
@@ -175,7 +159,6 @@ contract SyndicateFactoryTest is Test {
 
         assertTrue(sequencingChainAddress != address(0));
         assertEq(actualChainId, customChainId);
-        assertEq(SyndicateSequencingChain(sequencingChainAddress).appchainId(), customChainId);
     }
 
     function testCreateSequencingChainAddressIsDeterministic() public {
@@ -188,13 +171,6 @@ contract SyndicateFactoryTest is Test {
         );
 
         assertEq(sequencingChainAddress, expectedAddress);
-    }
-
-    function testGetProxyBytecode() public view {
-        bytes memory bytecode = factory.getProxyBytecode();
-        bytes memory expectedBytecode =
-            abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(factory.stubImplementation(), ""));
-        assertEq(bytecode, expectedBytecode);
     }
 
     function testCreateMultipleSequencingChainsWithCustomIds() public {
@@ -578,13 +554,6 @@ contract SyndicateFactoryTest is Test {
         factory.createSyndicateSequencingChain(0, address(0), permissionModule);
     }
 
-    function testCreateSequencingChainDeterministicRevertsOnZeroPermissionModule() public {
-        address chainAdmin = address(0x789);
-
-        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChain(0, chainAdmin, IRequirementModule(address(0)));
-    }
-
     function testCreateSyndicateSequencingChainWithCustomIdAdminOnly() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
         address chainAdmin = address(0x789);
@@ -738,15 +707,6 @@ contract SyndicateFactoryTest is Test {
         }
     }
 
-    // ================== STUB IMPLEMENTATION TESTS ==================
-
-    function testStubImplementationConsistency() public view {
-        // Test that stub implementation address is deterministic
-        address computedStub = factory.computeStubImplementationAddress();
-        address actualStub = factory.stubImplementation();
-        assertEq(computedStub, actualStub);
-    }
-
     // ================== COMPREHENSIVE INTEGRATION TESTS ==================
 
     function testFullFactoryLifecycle() public {
@@ -814,7 +774,7 @@ contract SyndicateFactoryTest is Test {
     function testZeroAddressValidation() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
 
-        // Test all creation methods with zero admin
+        // Test creation methods with zero admin
         vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         factory.createSyndicateSequencingChainWithCustomId(1001, address(0), permissionModule);
@@ -822,21 +782,10 @@ contract SyndicateFactoryTest is Test {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         factory.createSyndicateSequencingChain(0, address(0), permissionModule);
 
+        // Test creation method with zero chain id
         vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChainWithCustomId(1002, address(0), permissionModule);
-
-        // Test all creation methods with zero permission module
-        vm.prank(admin);
-        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChainWithCustomId(1003, admin, IRequirementModule(address(0)));
-
-        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(0)));
-
-        vm.prank(admin);
-        vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
-        factory.createSyndicateSequencingChainWithCustomId(1004, admin, IRequirementModule(address(0)));
+        factory.createSyndicateSequencingChainWithCustomId(0, address(1), permissionModule);
     }
 
     // ================== EDGE CASE TESTS ==================
@@ -895,88 +844,5 @@ contract SyndicateFactoryTest is Test {
         assertEq(chainId1, chainId2);
         assertTrue(chainId1 > 0);
         assertTrue(chainId1 < 10 ** 18); // Within reasonable bounds
-    }
-
-    // ================== VERSION TRACKING TESTS ==================
-
-    function testInitialVersion() public view {
-        assertEq(factory.version(), 1, "Initial version should be 1");
-    }
-
-    function testUpdateVersion() public {
-        vm.prank(admin);
-        factory.updateVersion(11);
-
-        assertEq(factory.version(), 11, "Version should be updated to 11");
-    }
-
-    function testUpdateVersionOnlyAdmin() public {
-        vm.prank(nonAdmin);
-        vm.expectRevert();
-        factory.updateVersion(11);
-    }
-
-    function testUpdateVersionWithDifferentFormats() public {
-        uint256[] memory versions = new uint256[](5);
-        versions[0] = 11;
-        versions[1] = 22;
-        versions[2] = 23;
-        versions[3] = 31;
-        versions[4] = 102520;
-
-        for (uint256 i = 0; i < versions.length; i++) {
-            vm.prank(admin);
-            factory.updateVersion(versions[i]);
-            assertEq(factory.version(), versions[i], "Version should match updated value");
-        }
-    }
-
-    function testVersionPersistsAfterOperations() public {
-        // Update version
-        vm.prank(admin);
-        factory.updateVersion(15);
-
-        // Perform other operations
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-        vm.prank(admin);
-        factory.createSyndicateSequencingChainWithCustomId(12345, admin, permissionModule);
-
-        // Version should still be the same
-        assertEq(factory.version(), 15, "Version should persist after operations");
-    }
-
-    // ================== GAS AGGREGATOR UPDATE TESTS ==================
-
-    function testUpdateGasAggregatorOnAppchain() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        // Create an appchain first
-        vm.prank(admin);
-        (address sequencingChainAddress, uint256 chainId) =
-            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
-
-        // Verify initial gas aggregator is set
-        SyndicateSequencingChain sequencingChain = SyndicateSequencingChain(sequencingChainAddress);
-        address initialGasAggregator = address(sequencingChain.gasAggregator());
-        assertEq(initialGasAggregator, address(factory.gasAggregator()));
-
-        // Update gas aggregator on factory
-        address newGasAggregator = address(0x999);
-        vm.prank(admin);
-        factory.setGasAggregator(IGasAggregator(newGasAggregator));
-
-        // Update gas aggregator on the appchain (anyone can call this)
-        vm.prank(nonAdmin);
-        factory.updateGasAggregatorOnAppchain(chainId);
-
-        // Verify the appchain's gas aggregator was updated
-        assertEq(address(sequencingChain.gasAggregator()), newGasAggregator);
-    }
-
-    function testUpdateGasAggregatorOnAppchainChainIdNotFound() public {
-        uint256 nonExistentChainId = 99999;
-
-        vm.expectRevert(SyndicateFactory.ChainIdNotFound.selector);
-        factory.updateGasAggregatorOnAppchain(nonExistentChainId);
     }
 }

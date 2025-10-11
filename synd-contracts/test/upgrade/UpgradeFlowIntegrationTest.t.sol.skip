@@ -44,11 +44,9 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     // V1 Contracts
     SyndicateFactory factoryV1;
     SyndicateFactory factoryProxy;
-    GasAggregator gasAggregatorV1;
-    GasAggregator gasAggregatorProxy;
     SyndicateSequencingChain chainImpl;
     MinimalUUPSStub stub;
-    AlwaysAllowedModule permissionModule;
+    AlwaysAllowedModule permissionModule = AlwaysAllowedModule(address(1));
 
     // Created chains
     SyndicateSequencingChain chain1;
@@ -90,54 +88,12 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         factoryProxy = SyndicateFactory(address(factoryProxyContract));
         console2.log("Factory proxy deployed:", address(factoryProxy));
 
-        // 3. Deploy GasAggregator implementation
-        gasAggregatorV1 = new GasAggregator();
-        console2.log("GasAggregator implementation deployed:", address(gasAggregatorV1));
-
-        // 4. Deploy MinimalUUPSStub
-        stub = new MinimalUUPSStub();
-        console2.log("MinimalUUPSStub deployed:", address(stub));
-
-        // 5. Deploy GasAggregator proxy with stub (mimicking deployment script)
-        bytes memory gasAggProxyBytecode =
-            abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(address(stub), ""));
-        address gasAggProxyAddr;
-        assembly {
-            gasAggProxyAddr := create(0, add(gasAggProxyBytecode, 0x20), mload(gasAggProxyBytecode))
-        }
-        gasAggregatorProxy = GasAggregator(gasAggProxyAddr);
-        console2.log("GasAggregator proxy deployed:", address(gasAggregatorProxy));
-
-        // 6. Upgrade GasAggregator proxy to real implementation and initialize
-        bytes memory gasAggInitData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)",
-            ADMIN,
-            address(factoryProxy),
-            address(0), // chainImpl will be set by factory
-            1 // start epoch
-        );
-
-        (bool success,) = address(gasAggregatorProxy).call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggregatorV1), gasAggInitData)
-        );
-        require(success, "GasAggregator initialization failed");
-        console2.log("GasAggregator initialized");
-
-        // 7. Set GasAggregator on factory
-        factoryProxy.setGasAggregator(IGasAggregator(address(gasAggregatorProxy)));
-        console2.log("GasAggregator set on factory");
-
-        // 8. Deploy permission module
-        permissionModule = new AlwaysAllowedModule();
-        console2.log("Permission module deployed:", address(permissionModule));
-
         vm.stopPrank();
 
         // Verify deployment
         assertTrue(
             factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN), "Admin should have DEFAULT_ADMIN_ROLE"
         );
-        assertEq(address(factoryProxy.gasAggregator()), address(gasAggregatorProxy), "GasAggregator should be set");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -147,20 +103,12 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     function test_InitialDeployment() public view {
         // Verify factory
         assertTrue(address(factoryProxy) != address(0), "Factory should be deployed");
-        assertEq(factoryProxy.version(), 1, "Factory version should be 1");
-
-        // Verify gas aggregator
-        assertTrue(address(gasAggregatorProxy) != address(0), "GasAggregator should be deployed");
-        assertEq(gasAggregatorProxy.version(), "1.0.0", "GasAggregator version should be 1.0.0");
+        assertEq(factoryProxy.VERSION(), 1_000_000, "Factory version should be 1");
 
         // Verify admin
         assertTrue(
             factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN),
             "Admin should have DEFAULT_ADMIN_ROLE on factory"
-        );
-        assertTrue(
-            gasAggregatorProxy.hasRole(gasAggregatorProxy.DEFAULT_ADMIN_ROLE(), ADMIN),
-            "Admin should have DEFAULT_ADMIN_ROLE on gas aggregator"
         );
     }
 
@@ -183,12 +131,10 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         console2.log("Chain ID:", chainId);
 
         // Verify chain
-        assertEq(chain1.appchainId(), chainId, "Chain ID should match");
         assertEq(chain1.owner(), ADMIN, "Chain owner should be admin");
         assertEq(
             address(chain1.permissionRequirementModule()), address(permissionModule), "Permission module should match"
         );
-        assertTrue(chain1.gasTrackingEnabled(), "Gas tracking should be enabled");
 
         vm.stopPrank();
     }
@@ -210,9 +156,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
 
         vm.prank(USER);
         chain1.processTransaction(txData);
-
-        // Verify the transaction was processed by checking gas tracking
-        assertTrue(chain1.gasTrackingEnabled(), "Gas tracking should still be enabled");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -221,8 +164,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
 
     function test_UpgradeFactoryToV2() public {
         // Store pre-upgrade state
-        uint256 preUpgradeVersion = factoryProxy.version();
-        address preGasAggregator = address(factoryProxy.gasAggregator());
+        uint256 preUpgradeVersion = factoryProxy.VERSION();
 
         vm.startPrank(ADMIN);
 
@@ -240,8 +182,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         vm.stopPrank();
 
         // Verify storage preserved
-        assertEq(factoryProxy.version(), preUpgradeVersion, "Version should be preserved");
-        assertEq(address(factoryProxy.gasAggregator()), preGasAggregator, "GasAggregator should be preserved");
+        assertEq(factoryProxy.VERSION(), preUpgradeVersion, "Version should be preserved");
         assertTrue(factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN), "Admin role should be preserved");
 
         // Verify new V2 functionality
@@ -263,7 +204,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         chain1 = SyndicateSequencingChain(chainAddress);
 
         // Store pre-upgrade state
-        uint256 preAppchainId = chain1.appchainId();
         address preOwner = chain1.owner();
         address prePermissionModule = address(chain1.permissionRequirementModule());
 
@@ -287,7 +227,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         vm.stopPrank();
 
         // Verify storage preserved
-        assertEq(chainProxyV2.appchainId(), preAppchainId, "AppchainId should be preserved");
         assertEq(chainProxyV2.owner(), preOwner, "Owner should be preserved");
         assertEq(
             address(chainProxyV2.permissionRequirementModule()),
@@ -368,7 +307,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         console2.log("=== Step 8: Old functionality verified ===");
 
         // 9. Verify all storage preserved
-        assertEq(chainProxyV2.appchainId(), chainId, "AppchainId should be preserved");
         assertEq(chainProxyV2.owner(), ADMIN, "Owner should be preserved");
         assertTrue(
             factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN), "Factory admin role should be preserved"
@@ -452,14 +390,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         );
         chain1 = SyndicateSequencingChain(chainAddress);
 
-        address testEmissionsReceiver = address(0x9999);
-        chain1.setEmissionsReceiver(testEmissionsReceiver);
-        chain1.setAllowGasTrackingBanOnUpgrade(true);
-
         // Capture all storage
-        uint256 preAppchainId = chain1.appchainId();
-        address preEmissionsReceiver = chain1.getEmissionsReceiver();
-        bool preAllowGasTrackingBan = chain1.allowGasTrackingBanOnUpgrade();
         address preOwner = chain1.owner();
 
         // Upgrade
@@ -471,13 +402,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         vm.stopPrank();
 
         // Verify ALL storage preserved
-        assertEq(chainProxyV2.appchainId(), preAppchainId, "AppchainId must be preserved");
-        assertEq(chainProxyV2.getEmissionsReceiver(), preEmissionsReceiver, "EmissionsReceiver must be preserved");
-        assertEq(
-            chainProxyV2.allowGasTrackingBanOnUpgrade(),
-            preAllowGasTrackingBan,
-            "AllowGasTrackingBanOnUpgrade must be preserved"
-        );
         assertEq(chainProxyV2.owner(), preOwner, "Owner must be preserved");
     }
 }

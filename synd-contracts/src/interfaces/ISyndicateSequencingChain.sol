@@ -4,9 +4,6 @@ pragma solidity 0.8.28;
 /// @title ISyndicateSequencingChain
 /// @notice Interface for the SyndicateSequencingChain contract
 interface ISyndicateSequencingChain {
-    /// @notice The ID of the App chain that this contract is sequencing transactions for
-    function appchainId() external view returns (uint256);
-
     function encodeTransaction(bytes calldata data) external returns (bytes memory);
 
     /// @notice Process a signed transaction.

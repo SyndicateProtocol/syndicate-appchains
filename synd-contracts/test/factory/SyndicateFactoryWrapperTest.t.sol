@@ -55,15 +55,6 @@ contract SyndicateFactoryWrapperTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         syndicateFactory = SyndicateFactory(address(proxy));
 
-        // Deploy and set GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        GasAggregator gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-
-        vm.prank(admin);
-        syndicateFactory.setGasAggregator(IGasAggregator(address(gasAggregator)));
-
         // Deploy module factories
         andFactory = new RequireAndModuleFactory(admin);
         orFactory = new RequireOrModuleFactory(admin);
@@ -106,7 +97,6 @@ contract SyndicateFactoryWrapperTest is Test {
         assertEq(module.owner(), user1);
 
         SyndicateSequencingChain chain = SyndicateSequencingChain(sequencingChain);
-        assertEq(chain.appchainId(), appchainId);
         assertEq(address(chain.permissionRequirementModule()), permissionModule);
     }
 
@@ -135,7 +125,6 @@ contract SyndicateFactoryWrapperTest is Test {
         assertEq(module.owner(), user1);
 
         SyndicateSequencingChain chain = SyndicateSequencingChain(sequencingChain);
-        assertEq(chain.appchainId(), appchainId);
         assertEq(address(chain.permissionRequirementModule()), permissionModule);
     }
 

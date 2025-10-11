@@ -109,56 +109,8 @@ contract DeploySyndicateFactoryDeterministic is Script {
         console2.log("Deterministic deployment successful!");
         console2.log("SyndicateFactory address (consistent across all chains):", proxyAddress);
 
-        // Step 3: Deploy GasAggregator using the same deterministic pattern
-        console2.log("\n=== Deploying GasAggregator ===");
-
-        // Deploy GasAggregator implementation deterministically
-        bytes memory gasAggImplementationBytecode = type(GasAggregator).creationCode;
-        bytes32 gasAggImplementationSalt = keccak256(abi.encodePacked(DEPLOYMENT_SALT, "gasagg_implementation"));
-        address gasAggImplementationAddress =
-            _deployDeterministic(gasAggImplementationBytecode, gasAggImplementationSalt);
-        console2.log("GasAggregator implementation deployed to:", gasAggImplementationAddress);
-
-        // Deploy MinimalUUPSStub deterministically
-        bytes memory stubBytecode = type(MinimalUUPSStub).creationCode;
-        bytes32 stubSalt = keccak256(abi.encodePacked(DEPLOYMENT_SALT, "stub"));
-        address stubAddress = _deployDeterministic(stubBytecode, stubSalt);
-        console2.log("MinimalUUPSStub deployed to:", stubAddress);
-
-        // Deploy proxy with stub (empty initialization)
-        bytes memory gasAggProxyBytecode =
-            abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(stubAddress, ""));
-        bytes32 gasAggProxySalt = keccak256(abi.encodePacked(DEPLOYMENT_SALT, "gasagg_proxy"));
-        address gasAggProxyAddress = _deployDeterministic(gasAggProxyBytecode, gasAggProxySalt);
-        console2.log("GasAggregator proxy deployed to:", gasAggProxyAddress);
-
-        // Upgrade proxy to GasAggregator implementation and initialize
-        bytes memory gasAggInitData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)", INITIAL_OWNER, proxyAddress, factory.syndicateChainImpl(), 1
-        );
-
-        (bool success, bytes memory returnData) = gasAggProxyAddress.call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", gasAggImplementationAddress, gasAggInitData)
-        );
-
-        if (!success) {
-            console2.log("GasAggregator initialization failed");
-            if (returnData.length > 0) {
-                console2.logBytes(returnData);
-            }
-            revert("GasAggregator initialization failed");
-        }
-
-        console2.log("GasAggregator initialized successfully");
-
-        // Step 4: Set GasAggregator on the factory
-        console2.log("\n=== Setting GasAggregator on Factory ===");
-        factory.setGasAggregator(IGasAggregator(gasAggProxyAddress));
-        console2.log("GasAggregator set on factory");
-
         console2.log("\n=== Deployment Complete ===");
         console2.log("SyndicateFactory:", proxyAddress);
-        console2.log("GasAggregator:", gasAggProxyAddress);
 
         vm.stopBroadcast();
     }

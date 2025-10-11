@@ -36,8 +36,7 @@ abstract contract SequencingModuleChecker is Initializable, OwnableUpgradeable, 
     }
 
     function permissionRequirementModule() public view returns (IPermissionModule) {
-        SequencingModuleStorage storage $ = _getSequencingModuleStorage();
-        return $.permissionRequirementModule;
+        return _getSequencingModuleStorage().permissionRequirementModule;
     }
 
     function __SequencingModuleChecker_init(address admin, address _permissionRequirementModule)
@@ -46,6 +45,8 @@ abstract contract SequencingModuleChecker is Initializable, OwnableUpgradeable, 
     {
         __Ownable_init(admin);
         _getSequencingModuleStorage().permissionRequirementModule = IPermissionModule(_permissionRequirementModule);
+
+        emit RequirementModuleUpdated(_permissionRequirementModule);
     }
 
     /// @notice Updates the requirement module

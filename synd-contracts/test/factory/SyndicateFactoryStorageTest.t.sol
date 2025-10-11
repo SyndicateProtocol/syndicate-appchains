@@ -20,13 +20,6 @@ contract SyndicateFactoryStorageTest is Test {
     RequireAndModule public permissionModule;
     address public admin;
 
-    // Storage slots for validation - these should match the actual storage layout
-    uint256 constant APPCHAIN_CONTRACTS_SLOT = 0;
-    uint256 constant CHAIN_IDS_SLOT = 1;
-    uint256 constant STUB_IMPLEMENTATION_SLOT = 2;
-    uint256 constant SYNDICATE_CHAIN_IMPL_SLOT = 3;
-    uint256 constant SENDER_NONCES_SLOT = 4; // Our deterministic nonce variable
-
     function setUp() public {
         vm.warp(1754089200 + 1 days); // after epoch start
 
@@ -39,21 +32,6 @@ contract SyndicateFactoryStorageTest is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
-        // Deploy and set GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        GasAggregator gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-
-        vm.prank(admin);
-        factory.setGasAggregator(IGasAggregator(address(gasAggregator)));
-    }
-
-    /// @notice Test that validates the current storage layout matches expected slots
-    function testStorageLayoutValidation() public {
-        assertTrue(
-            address(uint160(uint256(vm.load(address(factory), bytes32(STUB_IMPLEMENTATION_SLOT))))) != address(0)
-        );
     }
 
     /// @notice Test that demonstrates traditional vs namespaced storage approaches
@@ -83,85 +61,6 @@ contract SyndicateFactoryStorageTest is Test {
         // Let's verify the values through the contract interface instead
         assertEq(namespaced.getValue1(), 42);
         assertEq(namespaced.getValue2(), 84);
-    }
-
-    /// @notice Test storage collision detection
-    function testStorageCollisionDetection() public {
-        // Create a snapshot of current storage layout
-        StorageSnapshot memory snapshot = _takeStorageSnapshot();
-
-        // Create a deterministic chain (modifies storage)
-        address testSender = address(0x456);
-        vm.prank(testSender);
-        factory.createSyndicateSequencingChain(0, admin, permissionModule);
-
-        // Verify storage snapshot values remain unchanged for core variables
-        StorageSnapshot memory newSnapshot = _takeStorageSnapshot();
-
-        assertEq(snapshot.stubImplementation, newSnapshot.stubImplementation);
-        // The senderNonces mapping was updated, but other core storage should be unchanged
-    }
-
-    /// @notice Test that new variables don't accidentally overwrite existing ones
-    function testNewVariableIsolation() public {
-        // Verify our new senderNonces variable doesn't interfere with existing ones
-        address sender1 = address(0x111);
-        address sender2 = address(0x222);
-
-        // Record initial state
-        address initialStubImpl = factory.stubImplementation();
-
-        // Use the new deterministic functionality
-        vm.prank(sender1);
-        factory.createSyndicateSequencingChain(0, admin, permissionModule);
-
-        vm.prank(sender2);
-        factory.createSyndicateSequencingChain(0, admin, permissionModule);
-
-        // Verify existing variables weren't affected
-        assertEq(factory.stubImplementation(), initialStubImpl);
-    }
-
-    /// @notice Fuzz test for storage integrity
-    function testFuzzStorageIntegrity(address sender1, address sender2) public {
-        // Simplified fuzz test
-        vm.assume(sender1 != address(0));
-        vm.assume(sender2 != address(0));
-        vm.assume(sender1 != sender2);
-
-        // Record initial storage state
-        address initialStubImpl = factory.stubImplementation();
-
-        // Process two senders with different deterministic chains
-        vm.prank(sender1);
-        try factory.createSyndicateSequencingChain(0, admin, permissionModule) {
-            // Success - verify chain was created
-            assertTrue(true);
-        } catch {
-            // Failure is acceptable (e.g., collision, zero address, etc.)
-        }
-
-        vm.prank(sender2);
-        try factory.createSyndicateSequencingChain(0, admin, permissionModule) {
-            // Success - verify chain was created
-            assertTrue(true);
-        } catch {
-            // Failure is acceptable (e.g., collision, zero address, etc.)
-        }
-
-        // Verify core storage wasn't corrupted
-        assertEq(factory.stubImplementation(), initialStubImpl);
-    }
-
-    /// @notice Helper function to take a storage snapshot
-    function _takeStorageSnapshot() internal view returns (StorageSnapshot memory) {
-        return StorageSnapshot({
-            stubImplementation: address(uint160(uint256(vm.load(address(factory), bytes32(STUB_IMPLEMENTATION_SLOT)))))
-        });
-    }
-
-    struct StorageSnapshot {
-        address stubImplementation;
     }
 }
 

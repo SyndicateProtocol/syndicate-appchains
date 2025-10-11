@@ -47,15 +47,10 @@ contract StorageUpgradeTest is Test {
     SyndicateSequencingChainTestingUpgradeability syndicateV2;
     ERC1967Proxy proxy;
     MockFactory factory;
-    MockGasAggregator gasAggregator;
 
     // Storage verification data
     struct OriginalStorageData {
-        uint256 appchainId;
-        address emissionsReceiver;
-        bool allowGasTrackingBanOnUpgrade;
         address permissionModule;
-        bool gasTrackingEnabled;
     }
 
     event TransactionProcessed(address indexed sender, bytes data);
@@ -64,9 +59,8 @@ contract StorageUpgradeTest is Test {
 
     function setUp() public {
         vm.warp(1754089200 + 1 days); // after epoch start
-        // Deploy mock factory and gas aggregator normally for testing
+        // Deploy mock factory normally for testing
         factory = new MockFactory();
-        gasAggregator = new MockGasAggregator();
 
         vm.startPrank(address(factory));
 
@@ -74,20 +68,11 @@ contract StorageUpgradeTest is Test {
         syndicateV1 = new SyndicateSequencingChain();
 
         // Deploy proxy pointing to V1
-        bytes memory initData = abi.encodeCall(
-            SyndicateSequencingChain.initialize,
-            (ADMIN, address(factory), address(gasAggregator), PERMISSION_MODULE, TEST_APPCHAIN_ID, 0)
-        );
+        bytes memory initData = abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE));
 
         proxy = new ERC1967Proxy(address(syndicateV1), initData);
         syndicateV1 = SyndicateSequencingChain(address(proxy));
 
-        vm.stopPrank();
-
-        // Switch to admin to set emissions receiver
-        vm.startPrank(ADMIN);
-        syndicateV1.setEmissionsReceiver(EMISSIONS_RECEIVER);
-        // Gas aggregator is now hardcoded - no setup needed
         vm.stopPrank();
     }
 
@@ -100,13 +85,8 @@ contract StorageUpgradeTest is Test {
         vm.startPrank(ADMIN);
 
         // Capture original storage state
-        OriginalStorageData memory originalData = OriginalStorageData({
-            appchainId: syndicateV1.appchainId(),
-            emissionsReceiver: syndicateV1.getEmissionsReceiver(),
-            allowGasTrackingBanOnUpgrade: syndicateV1.allowGasTrackingBanOnUpgrade(),
-            permissionModule: address(syndicateV1.permissionRequirementModule()),
-            gasTrackingEnabled: syndicateV1.gasTrackingEnabled()
-        });
+        OriginalStorageData memory originalData =
+            OriginalStorageData({permissionModule: address(syndicateV1.permissionRequirementModule())});
 
         // Deploy V2 implementation
         syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();
@@ -118,22 +98,10 @@ contract StorageUpgradeTest is Test {
         syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
 
         // Verify all original storage is preserved
-        assertEq(syndicateV2.appchainId(), originalData.appchainId, "appchainId should be preserved");
-        assertEq(
-            syndicateV2.getEmissionsReceiver(), originalData.emissionsReceiver, "emissionsReceiver should be preserved"
-        );
-        assertEq(
-            syndicateV2.allowGasTrackingBanOnUpgrade(),
-            originalData.allowGasTrackingBanOnUpgrade,
-            "allowGasTrackingBanOnUpgrade should be preserved"
-        );
         assertEq(
             address(syndicateV2.permissionRequirementModule()),
             originalData.permissionModule,
             "permissionRequirementModule should be preserved"
-        );
-        assertEq(
-            syndicateV2.gasTrackingEnabled(), originalData.gasTrackingEnabled, "gasTrackingEnabled should be preserved"
         );
 
         vm.stopPrank();
@@ -285,43 +253,5 @@ contract StorageUpgradeTest is Test {
         vm.warp(block.timestamp + 6); // Wait longer than minTimeBetweenTxs (5)
         vm.prank(replayTester);
         syndicateV2.processTransaction(txData);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        STORAGE COLLISION TESTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Test that there are no storage collisions between V1 and V2
-    function testNoStorageCollisions() public {
-        vm.startPrank(ADMIN);
-
-        // Set specific values in V1
-        syndicateV1.setAllowGasTrackingBanOnUpgrade(true);
-
-        // Deploy V2 and upgrade
-        syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();
-        syndicateV1.upgradeToAndCall(address(syndicateV2), "");
-        syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
-
-        // Verify original values are still intact
-        assertTrue(syndicateV2.allowGasTrackingBanOnUpgrade(), "V1 storage should not be affected by V2 upgrade");
-
-        // Set new V2 values
-        syndicateV2.setMaxGasPerTransaction(999999);
-        syndicateV2.setMaxTransactionsPerBatch(77);
-        syndicateV2.setMinTimeBetweenTxs(123);
-
-        // Verify V1 storage is still intact after V2 modifications
-        assertTrue(
-            syndicateV2.allowGasTrackingBanOnUpgrade(), "V1 storage should not be affected by V2 storage modifications"
-        );
-        assertEq(syndicateV2.appchainId(), TEST_APPCHAIN_ID, "V1 storage should remain intact");
-
-        // Verify V2 storage is working correctly
-        assertEq(syndicateV2.maxGasPerTransaction(), 999999, "V2 storage should work correctly");
-        assertEq(syndicateV2.maxTransactionsPerBatch(), 77, "V2 namespaced storage should work correctly");
-        assertEq(syndicateV2.minTimeBetweenTxs(), 123, "V2 storage should work correctly");
-
-        vm.stopPrank();
     }
 }

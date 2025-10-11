@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {SyndicateFactory, ILegacyAppchain} from "src/factory/SyndicateFactory.sol";
+import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
@@ -11,24 +11,13 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {GasAggregator} from "src/staking/GasAggregator.sol";
 import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
+import {SyndicateProxy} from "src/SyndicateProxy.sol";
 
 contract MockLegacyAppchain {
-    mapping(uint256 => uint256) public tokensPerEpoch;
-    bool public shouldRevert;
+    mapping(uint256 => uint256) public tokensUsedPerEpoch;
 
     function setTokensForEpoch(uint256 epoch, uint256 tokens) external {
-        tokensPerEpoch[epoch] = tokens;
-    }
-
-    function getTokensForEpoch(uint256 epoch) external view returns (uint256) {
-        if (shouldRevert) {
-            revert("Mock revert");
-        }
-        return tokensPerEpoch[epoch];
-    }
-
-    function setShouldRevert(bool _shouldRevert) external {
-        shouldRevert = _shouldRevert;
+        tokensUsedPerEpoch[epoch] = tokens;
     }
 }
 
@@ -70,14 +59,6 @@ contract SyndicateFactoryMigrationTest is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
-        // Deploy and set GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        GasAggregator gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-
-        vm.prank(admin);
-        factory.setGasAggregator(IGasAggregator(address(gasAggregator)));
 
         // Deploy mock legacy appchain with code
         mockLegacyAppchain = new MockLegacyAppchain();
@@ -100,9 +81,8 @@ contract SyndicateFactoryMigrationTest is Test {
         emit AppchainMigrated(address(mockLegacyAppchain), expectedAddress, appchainId, currentEpoch, gasTokens);
 
         vm.prank(admin);
-        address newSyndicateChain = factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(mockLegacyAppchain)), appchainId, admin, permissionModule
-        );
+        address newSyndicateChain =
+            factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId, admin, permissionModule);
 
         // Verify deployment
         assertTrue(newSyndicateChain != address(0));
@@ -112,11 +92,11 @@ contract SyndicateFactoryMigrationTest is Test {
 
         // Verify the new sequencing chain has correct setup
         SyndicateSequencingChain sequencingChain = SyndicateSequencingChain(newSyndicateChain);
-        assertEq(sequencingChain.appchainId(), appchainId);
         assertEq(address(sequencingChain.permissionRequirementModule()), address(permissionModule));
 
         // Verify gas tokens were migrated
-        assertEq(sequencingChain.getTokensForEpoch(currentEpoch), gasTokens);
+        gasTokens -= gasTokens & 0xffff;
+        assertEq(SyndicateProxy(payable(address(sequencingChain))).tokensUsedPerEpoch(currentEpoch), gasTokens);
     }
 
     function testMigrateLegacyAppchainSuccess() public {
@@ -128,7 +108,7 @@ contract SyndicateFactoryMigrationTest is Test {
     }
 
     function testMigrateLegacyAppchainWithLargeGasTokens() public {
-        _testMigrateLegacyAppchain(type(uint256).max / 2);
+        _testMigrateLegacyAppchain(type(uint128).max / 2);
     }
 
     function testMigrateLegacyAppchainMultipleChains() public {
@@ -150,15 +130,13 @@ contract SyndicateFactoryMigrationTest is Test {
 
         // Migrate first chain
         vm.prank(admin);
-        address newChain1 = factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(legacyAppchain1)), appchainId1, admin, permissionModule
-        );
+        address newChain1 =
+            factory.migrateLegacyAppchain(address(legacyAppchain1), appchainId1, admin, permissionModule);
 
         // Migrate second chain
         vm.prank(admin);
-        address newChain2 = factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(legacyAppchain2)), appchainId2, admin, permissionModule2
-        );
+        address newChain2 =
+            factory.migrateLegacyAppchain(address(legacyAppchain2), appchainId2, admin, permissionModule2);
 
         // Verify both migrations
         assertTrue(newChain1 != address(0));
@@ -168,10 +146,8 @@ contract SyndicateFactoryMigrationTest is Test {
         SyndicateSequencingChain chain1 = SyndicateSequencingChain(newChain1);
         SyndicateSequencingChain chain2 = SyndicateSequencingChain(newChain2);
 
-        assertEq(chain1.getTokensForEpoch(currentEpoch), gasTokens1);
-        assertEq(chain2.getTokensForEpoch(currentEpoch), gasTokens2);
-        assertEq(chain1.appchainId(), appchainId1);
-        assertEq(chain2.appchainId(), appchainId2);
+        assertEq(SyndicateProxy(payable(address(chain1))).tokensUsedPerEpoch(currentEpoch), gasTokens1);
+        assertEq(SyndicateProxy(payable(address(chain2))).tokensUsedPerEpoch(currentEpoch), gasTokens2);
     }
 
     function testMigrateLegacyAppchainPreservesGasCounterAcrossEpochs() public {
@@ -183,42 +159,37 @@ contract SyndicateFactoryMigrationTest is Test {
         mockLegacyAppchain.setTokensForEpoch(previousEpoch, 500 ether);
 
         vm.prank(admin);
-        address newSyndicateChain = factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(mockLegacyAppchain)), appchainId, admin, permissionModule
-        );
+        address newSyndicateChain =
+            factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId, admin, permissionModule);
 
         // Verify only current epoch tokens are migrated
-        SyndicateSequencingChain sequencingChain = SyndicateSequencingChain(newSyndicateChain);
-        assertEq(sequencingChain.getTokensForEpoch(currentEpoch), legacyGasTokens);
+        SyndicateProxy sequencingChain = SyndicateProxy(payable(newSyndicateChain));
+        assertEq(sequencingChain.tokensUsedPerEpoch(currentEpoch), legacyGasTokens);
     }
 
     // Error condition tests
     function testMigrateLegacyAppchainRevertsWithZeroLegacyAddress() public {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         vm.prank(admin);
-        factory.migrateLegacyAppchain(ILegacyAppchain(address(0)), appchainId, admin, permissionModule);
+        factory.migrateLegacyAppchain(address(0), appchainId, admin, permissionModule);
     }
 
     function testMigrateLegacyAppchainRevertsWithZeroAdmin() public {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         vm.prank(admin);
-        factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(mockLegacyAppchain)), appchainId, address(0), permissionModule
-        );
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId, address(0), permissionModule);
     }
 
     function testMigrateLegacyAppchainRevertsWithZeroPermissionModule() public {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         vm.prank(admin);
-        factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(mockLegacyAppchain)), appchainId, admin, IRequirementModule(address(0))
-        );
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId, admin, IRequirementModule(address(0)));
     }
 
     function testMigrateLegacyAppchainRevertsWithZeroChainId() public {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         vm.prank(admin);
-        factory.migrateLegacyAppchain(ILegacyAppchain(address(mockLegacyAppchain)), 0, admin, permissionModule);
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), 0, admin, permissionModule);
     }
 
     function testMigrateLegacyAppchainRevertsWithExistingChainId() public {
@@ -229,7 +200,7 @@ contract SyndicateFactoryMigrationTest is Test {
         // Now try to migrate to the same ID - should fail
         vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
         vm.prank(admin);
-        factory.migrateLegacyAppchain(ILegacyAppchain(address(mockLegacyAppchain)), appchainId, admin, permissionModule);
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId, admin, permissionModule);
     }
 
     function testMigrateLegacyAppchainRevertsWithInvalidAppchainAddress() public {
@@ -238,7 +209,7 @@ contract SyndicateFactoryMigrationTest is Test {
 
         vm.expectRevert(SyndicateFactory.InvalidAppchainAddress.selector);
         vm.prank(admin);
-        factory.migrateLegacyAppchain(ILegacyAppchain(invalidAppchain), appchainId, admin, permissionModule);
+        factory.migrateLegacyAppchain(invalidAppchain, appchainId, admin, permissionModule);
     }
 
     function testMigrateLegacyAppchainRevertsWhenPaused() public {
@@ -251,7 +222,7 @@ contract SyndicateFactoryMigrationTest is Test {
 
         vm.expectRevert(); // Pausable will revert
         vm.prank(admin);
-        factory.migrateLegacyAppchain(ILegacyAppchain(address(mockLegacyAppchain)), appchainId, admin, permissionModule);
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId, admin, permissionModule);
     }
 
     function testMigrateLegacyAppchainRevertsWithNonAdmin() public {
@@ -260,17 +231,7 @@ contract SyndicateFactoryMigrationTest is Test {
 
         vm.expectRevert(); // AccessControl will revert
         vm.prank(nonAdmin);
-        factory.migrateLegacyAppchain(ILegacyAppchain(address(mockLegacyAppchain)), appchainId, admin, permissionModule);
-    }
-
-    function testMigrateLegacyAppchainHandlesGasTokensCallFailure() public {
-        // Set up the mock to revert when getTokensForEpoch is called
-        mockLegacyAppchain.setShouldRevert(true);
-
-        // The migration should fail when trying to get gas tokens
-        vm.expectRevert("Mock revert");
-        vm.prank(admin);
-        factory.migrateLegacyAppchain(ILegacyAppchain(address(mockLegacyAppchain)), appchainId, admin, permissionModule);
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId, admin, permissionModule);
     }
 
     function testMigrateLegacyAppchainCannotReuseAfterMigration() public {
@@ -279,15 +240,13 @@ contract SyndicateFactoryMigrationTest is Test {
 
         // First migration should succeed
         vm.prank(admin);
-        factory.migrateLegacyAppchain(ILegacyAppchain(address(mockLegacyAppchain)), appchainId, admin, permissionModule);
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId, admin, permissionModule);
 
         // Trying to migrate again to same chain ID should fail
         uint256 appchainId2 = appchainId; // Same ID
         vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
         vm.prank(admin);
-        factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(mockLegacyAppchain)), appchainId2, admin, permissionModule
-        );
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), appchainId2, admin, permissionModule);
     }
 
     function testMigrateLegacyAppchainDifferentAdminsAndPermissionModules() public {
@@ -299,7 +258,7 @@ contract SyndicateFactoryMigrationTest is Test {
 
         vm.prank(admin);
         address newSyndicateChain = factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(mockLegacyAppchain)), appchainId, differentAdmin, differentPermissionModule
+            address(mockLegacyAppchain), appchainId, differentAdmin, differentPermissionModule
         );
 
         SyndicateSequencingChain sequencingChain = SyndicateSequencingChain(newSyndicateChain);
@@ -321,8 +280,6 @@ contract SyndicateFactoryMigrationTest is Test {
         // Try to migrate to the same chain ID that was created deterministically - should fail
         vm.expectRevert(SyndicateFactory.ChainIdAlreadyExists.selector);
         vm.prank(admin);
-        factory.migrateLegacyAppchain(
-            ILegacyAppchain(address(mockLegacyAppchain)), deterministicChainId, admin, permissionModule
-        );
+        factory.migrateLegacyAppchain(address(mockLegacyAppchain), deterministicChainId, admin, permissionModule);
     }
 }

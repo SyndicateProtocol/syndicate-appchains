@@ -5,7 +5,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ISyndicateSequencingChain} from "src/interfaces/ISyndicateSequencingChain.sol";
 import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
-import {GasCounter} from "src/staking/GasCounter.sol";
 import "./SequencingModuleCheckerTestingUpgradeability.sol";
 
 /// @custom:storage-location erc7201:syndicate.storage.SyndicateSequencingChain
@@ -29,7 +28,6 @@ contract SyndicateSequencingChainTestingUpgradeability is
     Initializable,
     SequencingModuleCheckerTestingUpgradeability,
     ISyndicateSequencingChain,
-    GasCounter,
     UUPSUpgradeable
 {
     error NoTxData();
@@ -121,8 +119,6 @@ contract SyndicateSequencingChainTestingUpgradeability is
         $.gasAggregator = IGasAggregator(_gasAggregator);
         $.version = "1.0.0";
 
-        // Enable gas tracking
-        _enableGasTracking();
         // Set default to false for new deployments
         $.allowGasTrackingBanOnUpgrade = false;
 
@@ -236,14 +232,6 @@ contract SyndicateSequencingChainTestingUpgradeability is
     /*//////////////////////////////////////////////////////////////
                          GAS TRACKING ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    function disableGasTracking() external onlyOwner {
-        _disableGasTracking();
-    }
-
-    function enableGasTracking() external onlyOwner {
-        _enableGasTracking();
-    }
 
     function setAllowGasTrackingBanOnUpgrade(bool _allowGasTrackingBanOnUpgrade) external onlyOwner {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();

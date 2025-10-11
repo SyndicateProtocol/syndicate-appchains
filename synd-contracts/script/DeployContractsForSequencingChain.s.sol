@@ -35,14 +35,6 @@ contract DeploySyndicateFactory is Script {
         syndicateFactory = SyndicateFactory(address(proxy));
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
 
-        // Deploy and set GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        GasAggregator gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-        syndicateFactory.setGasAggregator(IGasAggregator(address(gasAggregator)));
-        console.log("Deployed GasAggregator", address(gasAggregator));
-
         requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
 
@@ -70,7 +62,6 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
         vm.startBroadcast();
 
         appchainId = 0; // TODO: Set the App chain ID
-        address gasAggregator = vm.envOr("GAS_AGGREGATOR_ADDR", address(0));
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
         // Deploy permission module first
@@ -79,7 +70,7 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
 
         // Deploy sequencer with permission module
         sequencingChain = new SyndicateSequencingChain();
-        sequencingChain.initialize(admin, address(0), gasAggregator, address(permissionModule), appchainId, 0);
+        sequencingChain.initialize(admin,  address(permissionModule));
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 
         // Deploy and add always allowed module
