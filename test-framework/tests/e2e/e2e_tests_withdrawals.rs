@@ -222,7 +222,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     seq_start_block_hash,
                     l1_start_batch_acc,
                     l1_oracle_address,
-                    false,
+                    Address::ZERO,
                     1, // challenge_window_duration - 1 second
                     2, // slow_duration - 2 seconds
                     key_mgr_addr,
