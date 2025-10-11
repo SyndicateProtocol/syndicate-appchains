@@ -15,7 +15,7 @@ contract MockSyndicateSequencingChain is ISyndicateSequencingChain {
         revert("unimplemented");
     }
 
-    function appchainId() external view returns (uint256) {
+    function appchainId() external pure returns (uint256) {
         revert("unimplemented");
     }
 

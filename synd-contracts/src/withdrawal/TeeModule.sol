@@ -87,9 +87,10 @@ contract TeeModule is AccessControlEnumerable {
     // Immutable state variables
     IAssertionPoster public immutable poster;
     IBridge public immutable bridge;
-    // the l1 block contract or bridge from the l1 chain to the sequencing chain (when the settlement chain is the same as the l1 chain)
-    address public immutable l1BlockOrBridge;
-    bool public immutable isL1Chain;
+    // the l1 block contract
+    IL1Block public immutable l1Block;
+    // the l1 bridge contract from the l1 chain to the sequencing chain (when the settlement chain is the same as the l1 chain)
+    IBridge public immutable l1Bridge;
 
     // TEE variables
     ITeeKeyManager public teeKeyManager;
@@ -112,8 +113,8 @@ contract TeeModule is AccessControlEnumerable {
      * @param appStartBlockHash_ The starting block hash of the appchain
      * @param seqStartBlockHash_ The starting block hash of the sequencing chain
      * @param l1StartBatchAcc_ The sequencing chain start batch accumulator
-     * @param l1BlockOrBridge_ Address of the l1 block contract - 0x4200000000000000000000000000000000000015 for bedrock rollups - or the l1 <-> sequencing chain bridge if the settlement chain is the same as the l1 chain.
-     * @param isL1Chain_ True if l1BlockOrBridge is the bridge address and false if it is the l1 block contract address instead
+     * @param l1Block_ Address of the l1 block contract - 0x4200000000000000000000000000000000000015 for bedrock rollups
+     * @param l1Bridge_ Address of the l1 <-> sequencing chain bridge if the settlement chain is the same as the l1 chain.
      * @param challengeWindowDuration_ The duration of the challenge window in seconds
      * @param teeKeyManager_ The address of the TEE key manager contract
      * Note that the AssertionPoster must be owned by the TeeModule for closing the challenge window to work properly
@@ -125,8 +126,8 @@ contract TeeModule is AccessControlEnumerable {
         bytes32 appStartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
         bytes32 seqStartBlockHash_, //#olympix-ignore-no-parameter-validation-in-constructor
         bytes32 l1StartBatchAcc_, //#olympix-ignore-no-parameter-validation-in-constructor
-        address l1BlockOrBridge_,
-        bool isL1Chain_,
+        address l1Block_,
+        IBridge l1Bridge_,
         uint64 challengeWindowDuration_, //#olympix-ignore-no-parameter-validation-in-constructor
         uint64 slowDuration_,
         ITeeKeyManager teeKeyManager_
@@ -134,27 +135,26 @@ contract TeeModule is AccessControlEnumerable {
         require(
             slowDuration_ > challengeWindowDuration_, "slow duration must be greater than challenge window duration"
         );
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         challengeWindowDuration = challengeWindowDuration_;
         slowDuration = slowDuration_;
-        l1BlockOrBridge = l1BlockOrBridge_;
-        isL1Chain = isL1Chain_;
+        l1Block = IL1Block(l1Block_);
+        l1Bridge = l1Bridge_;
         teeTrustedInput.configHash = configHash_;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        require(
+            address(l1Bridge) == address(0) || l1Bridge.sequencerMessageCount() > 0,
+            "sequencing chain must have at least one batch"
+        );
 
-        if (isL1Chain) {
-            require(
-                l1BlockOrBridge != address(0x4200000000000000000000000000000000000015), "unexpected seq bridge address"
-            );
-            require(
-                IBridge(l1BlockOrBridge).sequencerMessageCount() > 0, "sequencing chain must have at least one batch"
-            );
-        } else {
-            require(
-                IL1Block(l1BlockOrBridge).timestamp() > 0 && IL1Block(l1BlockOrBridge).hash() > 0,
-                "l1 block contract invalid"
-            );
-        }
+        require(
+            address(l1Block) == address(0) || (l1Block.timestamp() > 0 && l1Block.hash() > 0),
+            "l1 block contract invalid"
+        );
+
+        require(
+            address(l1Bridge) != address(0) || address(l1Block) != address(0), "both l1Block and l1Bridge are unset"
+        );
 
         require(address(poster_).code.length > 0, "poster address does not have any code");
         poster = poster_;
@@ -175,14 +175,18 @@ contract TeeModule is AccessControlEnumerable {
 
         // l1 chain
         teeTrustedInput.l1StartBatchAcc = l1StartBatchAcc_;
-        if (isL1Chain) {
-            teeTrustedInput.l1EndHash =
-                IBridge(l1BlockOrBridge).sequencerInboxAccs(IBridge(l1BlockOrBridge).sequencerMessageCount() - 1);
+        if (address(l1Bridge) != address(0)) {
+            teeTrustedInput.l1EndHash = l1Bridge.sequencerInboxAccs(l1Bridge.sequencerMessageCount() - 1);
         } else {
-            teeTrustedInput.l1EndHash = IL1Block(l1BlockOrBridge).hash();
+            teeTrustedInput.l1EndHash = l1Block.hash();
         }
 
         emit TeeInput(teeTrustedInput);
+    }
+
+    // legacy function, may be removed later on
+    function isL1Chain() external view returns (bool) {
+        return address(l1Bridge) != address(0);
     }
 
     function pendingAssertionsCount() external view returns (uint256) {
@@ -193,18 +197,17 @@ contract TeeModule is AccessControlEnumerable {
         require(pendingAssertions.length == 1, "cannot close challenge window - wrong number of assertions");
 
         require(
-            (isL1Chain ? uint64(block.timestamp) : IL1Block(l1BlockOrBridge).timestamp())
+            (address(l1Block) == address(0) ? uint64(block.timestamp) : l1Block.timestamp())
                 > challengeWindowStart + challengeWindowDuration,
             "cannot close challenge window - insufficient time has passed"
         );
 
         // l1 chain
         teeTrustedInput.l1StartBatchAcc = pendingAssertions[0].l1BatchAcc;
-        if (isL1Chain) {
-            teeTrustedInput.l1EndHash =
-                IBridge(l1BlockOrBridge).sequencerInboxAccs(IBridge(l1BlockOrBridge).sequencerMessageCount() - 1);
+        if (address(l1Bridge) != address(0)) {
+            teeTrustedInput.l1EndHash = l1Bridge.sequencerInboxAccs(l1Bridge.sequencerMessageCount() - 1);
         } else {
-            teeTrustedInput.l1EndHash = IL1Block(l1BlockOrBridge).hash();
+            teeTrustedInput.l1EndHash = l1Block.hash();
         }
 
         // sequencing chain
@@ -237,7 +240,6 @@ contract TeeModule is AccessControlEnumerable {
         bytes32 assertionHash = hashObject(assertion);
         bytes32 payloadHash = keccak256(abi.encodePacked(hashObject(teeTrustedInput), assertionHash));
         require(teeKeyManager.isKeyValid(payloadHash.recover(signature)), "invalid tee signature");
-        require(!isL1Chain || assertion.l1BatchAcc == teeTrustedInput.l1EndHash, "unexpected l1 end batch acc");
         pendingAssertions.push(assertion);
         if (pendingAssertions.length == 1) {
             challengeWindowStart = uint64(block.timestamp);
