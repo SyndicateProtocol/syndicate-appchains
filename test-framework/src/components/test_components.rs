@@ -19,11 +19,11 @@ use alloy::{
 };
 use contract_bindings::synd::{
     assertion_poster::AssertionPoster,
-    erc1967_proxy::ERC1967Proxy,
     i_inbox::IInbox,
     i_upgrade_executor::IUpgradeExecutor,
     r#always_allowed_module::AlwaysAllowedModule,
     rollup::Rollup,
+    syndicate_proxy::SyndicateProxy,
     syndicate_sequencing_chain::SyndicateSequencingChain::{
         self, SyndicateSequencingChainInstance,
     },
@@ -258,42 +258,26 @@ impl TestComponents {
         let _ = SyndicateSequencingChain::deploy_builder(&seq_provider).send().await?;
         let sequencing_contract_address_impl = seq_provider.default_signer_address().create(0);
 
-        let _ = ERC1967Proxy::deploy_builder(
-            &seq_provider,
-            sequencing_contract_address_impl,
-            Bytes::new(),
-        )
-        .send()
-        .await?;
+        let _ = SyndicateProxy::deploy_builder(&seq_provider).send().await?;
         let sequencing_contract_address = seq_provider.default_signer_address().create(1);
 
         let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         let always_allowed_module_address = seq_provider.default_signer_address().create(2);
 
         // Setup the sequencing contract
-        let provider_clone = seq_provider.clone();
+        let _ = SyndicateProxy::new(sequencing_contract_address, &seq_provider)
+            .initializeProxy(sequencing_contract_address_impl, 0, 0)
+            .send()
+            .await?;
         let sequencing_contract =
-            SyndicateSequencingChain::new(sequencing_contract_address, provider_clone);
+            SyndicateSequencingChain::new(sequencing_contract_address, seq_provider.clone());
         let _ = sequencing_contract
-            .initialize(
-                seq_provider.default_signer_address(),
-                address!("0x0000000000000000000000000000000000000001"), // factory
-                address!("0x0000000000000000000000000000000000000001"), // gas aggregator
-                always_allowed_module_address,
-                U256::from(options.appchain_chain_id),
-                U256::ZERO,
-            )
+            .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()
             .await?;
 
         match options.base_chains_type {
-            BaseChainsType::Anvil => {
-                mine_block(&seq_provider, 0).await?;
-            }
-            BaseChainsType::PreLoaded(_) => {
-                // disable gas tracking, otherwise there will be an underflow error with anvil
-                // timstamp 0
-                let _ = sequencing_contract.disableGasTracking().send().await?;
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
                 mine_block(&seq_provider, 0).await?;
             }
             _ => {}

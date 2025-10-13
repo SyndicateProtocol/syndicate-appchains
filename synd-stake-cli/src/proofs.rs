@@ -15,7 +15,7 @@ use contract_bindings::synd::{
     gas_aggregator::GasAggregator::{self, GasAggregatorInstance},
     gas_archive::GasArchive::{self, GasArchiveInstance},
     syndicate_factory::SyndicateFactory::{self},
-    syndicate_sequencing_chain::SyndicateSequencingChain,
+    syndicate_proxy::SyndicateProxy,
 };
 use shared::{
     parse::{parse_address, parse_url},
@@ -400,21 +400,13 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
             override_addr
         };
 
-        let appchain =
-            SyndicateSequencingChain::new(contract_addr, gas_aggregator.provider().clone());
+        let appchain = SyndicateProxy::new(contract_addr, gas_aggregator.provider().clone());
         tokens.push(
             appchain
-                .getTokensForEpoch(epoch)
+                .tokensUsedPerEpoch(epoch)
                 .call()
                 .await
                 .unwrap_or_else(|e| panic!("failed to get tokens for epoch {epoch}: {e}")),
-        );
-        emissions_receivers.push(
-            appchain
-                .getEmissionsReceiver()
-                .call()
-                .await
-                .unwrap_or_else(|e| panic!("failed to get emissions receiver: {e}")),
         );
     }
     (appchains, tokens, emissions_receivers)
