@@ -32,26 +32,6 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     constructor(address admin, address staking, address gas) RewardPoolBase(admin, staking, gas) {}
 
     /**
-     * @notice Modifier that restricts function access to the SyndStaking contract only
-     * @dev Used for claimFor() function to ensure only authorized contract can claim on behalf of users
-     */
-    modifier onlyStakingContract() {
-        if (msg.sender != address(stakingContract)) {
-            revert UnauthorizedCaller();
-        }
-        _;
-    }
-
-    /**
-     * @notice Deposit rewards for a specific epoch
-     * @dev Anyone can deposit rewards for any epoch. Rewards are additive.
-     * @param epochIndex The epoch index to deposit rewards for
-     */
-    function deposit(uint256 epochIndex) external payable override nonReentrant {
-        _deposit(epochIndex);
-    }
-
-    /**
      * @notice Claim rewards for a specific user on a specific appchain in a specific epoch
      * @dev Users can claim their proportional share of rewards based on their stake on the appchain.
      *      Rewards are calculated as: (user stake / total appchain stake) * appchain total rewards
@@ -76,8 +56,8 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     function claimFor(uint256 epochIndex, address user, address destination, uint256 appchainId)
         external
         nonReentrant
-        onlyStakingContract
     {
+        require(msg.sender == address(stakingContract), UnauthorizedCaller());
         _claim(epochIndex, user, destination, appchainId);
     }
 
