@@ -73,9 +73,9 @@ pub async fn gas_agg(args: &GasAggArgs) {
         .unwrap_or_else(|e| panic!("Failed to connect to RPC URL '{}': {}", args.rpc_url, e));
 
     let gas_aggregator = GasAggregator::new(args.gas_aggregator_address, provider);
-    if gas_aggregator.pendingEpoch().call().await.unwrap_or_else(|e| {
+    if gas_aggregator.currentEpoch().call().await.unwrap_or_else(|e| {
         panic!(
-            "Failed to call pendingEpoch on gas aggregator contract: {e}
+            "Failed to call currentEpoch on gas aggregator contract: {e}
     "
         )
     }) == gas_aggregator.getCurrentEpoch().call().await.unwrap_or_else(|e| {
