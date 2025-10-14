@@ -11,6 +11,7 @@ import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {MockGasProvider} from "./MockGasProvider.t.sol";
 import {EmissionsReceiver} from "src/staking/EmissionsReceiver.sol";
+import {GasArchive} from "src/staking/GasArchive.sol";
 
 contract AppchainPoolTest is Test {
     SyndStaking public staking;
@@ -286,7 +287,7 @@ contract AppchainPoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(appchainDest1);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         appchainPool.claim(currentEpoch, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -302,7 +303,7 @@ contract AppchainPoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(appchainDest1);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         appchainPool.claim(currentEpoch + 1, appchainId1, address(appchainDest1));
         vm.stopPrank();
     }
@@ -558,7 +559,7 @@ contract AppchainPoolTest is Test {
         // Expect revert on getClaimableAmount for current
         vm.expectRevert();
         appchainPool.computeDiminishingFactors(currentEpoch, 0);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         appchainPool.getClaimableAmount(currentEpoch, appchainId1);
 
         // Future epoch should also revert

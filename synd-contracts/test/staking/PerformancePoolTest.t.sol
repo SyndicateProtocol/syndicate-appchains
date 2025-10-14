@@ -10,6 +10,7 @@ import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 import {MockGasProvider} from "./MockGasProvider.t.sol";
+import {GasArchive} from "src/staking/GasArchive.sol";
 
 contract PerformancePoolTest is Test {
     SyndStaking public staking;
@@ -268,7 +269,7 @@ contract PerformancePoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(user1);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         performancePool.claim(currentEpoch, user1, appchainId1);
         vm.stopPrank();
     }
@@ -282,7 +283,7 @@ contract PerformancePoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(user1);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         performancePool.claim(currentEpoch + 1, user1, appchainId1);
         vm.stopPrank();
     }
@@ -390,7 +391,7 @@ contract PerformancePoolTest is Test {
 
         // Should revert with ClaimNotAvailable when amount is 0
         vm.startPrank(address(staking));
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(PerformancePool.MissingDiminishingFactors.selector);
         performancePool.claimFor(epoch, user1, user2, appchainId1);
         vm.stopPrank();
     }
@@ -557,7 +558,7 @@ contract PerformancePoolTest is Test {
         performancePool.computeDiminishingFactors(currentEpoch, 0);
 
         // Expect revert on getClaimableAmount for current
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         performancePool.getClaimableAmount(currentEpoch, user1, appchainId1);
 
         // Future epoch should also revert

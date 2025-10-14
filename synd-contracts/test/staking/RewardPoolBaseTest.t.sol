@@ -136,23 +136,22 @@ contract RewardPoolBaseTest is Test {
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
     }
 
-    // getting rewards should revert until diminishing factor computations are complete
     function test_computePartial() public {
         setupStake(30 ether, 20 ether, 10 ether);
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 60 ether, 50 ether, 40 ether);
+        rewardPoolBase.deposit{value: 100 ether}(epoch);
+
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId2), 33578634284580271148);
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
 
         assertFalse(rewardPoolBase.computeDiminishingFactors(epoch, 1));
 
-        rewardPoolBase.deposit{value: 100 ether}(epoch);
-
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
-        rewardPoolBase.getAppchainTotalReward(epoch, appchainId1);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
-        rewardPoolBase.getAppchainTotalReward(epoch, appchainId2);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
-        rewardPoolBase.getAppchainTotalReward(epoch, appchainId3);
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId2), 33578634284580271148);
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
     }
 
     function test_computeLargeBatch() public {

@@ -55,6 +55,8 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
     /// @dev Accumulates all deposits for each epoch
     mapping(uint256 epochIndex => uint256 epochTotal) public epochTotal;
 
+    // @notice When remainingAppchainsPlusOne is set to 1, this indicates the diminishing
+    // factor calculations are complete for the epoch
     mapping(uint256 epochIndex => uint256) public remainingAppchainsPlusOne;
 
     /// @notice Cache for per-epoch/appchain diminishing factors
@@ -86,6 +88,8 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
     event ClaimSuccess(
         uint256 indexed epochIndex, uint256 indexed appchainId, address indexed destination, uint256 amount
     );
+
+    error AllDiminishingFactorsComputed();
 
     /// @notice Error thrown when attempting to claim from an unavailable epoch
     /// @dev Epoch must be past and have funding to be claimable
@@ -122,13 +126,15 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
         emit EpochDeposit(epoch, msg.value);
     }
 
-    // Compute appchain reward factors
-    // To check if the computation is complete, call remainingAppchainsPlusOne(epochIndex)
-    // and ensure the return value is 1.
-    // It also returns true when computations are complete.
-    function computeDiminishingFactors(uint256 epochIndex, uint256 count) external returns (bool) {
+    /**
+     * @notice Compute appchain reward factors
+     * @dev To check if the computation is complete, call remainingAppchainsPlusOne(epochIndex)
+     * and ensure the return value is 1.
+     * @return True when computations are complete, false otherwise
+     */
+    function computeDiminishingFactors(uint256 epochIndex, uint256 count) public returns (bool) {
         uint256 remainingPlusOne = remainingAppchainsPlusOne[epochIndex];
-        require(remainingPlusOne != 1, "all diminishing factors computed");
+        require(remainingPlusOne != 1, AllDiminishingFactorsComputed());
 
         if (remainingPlusOne == 0) {
             remainingPlusOne = gasDataProvider.getAppchainCount(epochIndex) + 1;
@@ -156,25 +162,36 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
             return true;
         }
 
-        uint256[] memory appchainId;
+        uint256[] memory appchainIds;
         uint256[] memory appchainGasFees;
-        (appchainId, appchainGasFees) =
+        (appchainIds, appchainGasFees) =
             gasDataProvider.getAppchainInfo(epochIndex, remainingAppchainsPlusOne[epochIndex] - 1, count);
         UD60x18 dfSum = epochTotalDiminishingFactor[epochIndex];
         for (uint256 i = 0; i < count; i++) {
-            UD60x18 appchainStake = convert(stakingContract.getAppchainStake(epochIndex, appchainId[i]));
-            UD60x18 feeShare = convert(appchainGasFees[i]).mul(feeMultiplier).div(totalGasFees);
-            UD60x18 stakeShare = appchainStake.mul(stakeMultiplier).div(totalStake);
-            UD60x18 dominance = feeShare.add(stakeShare);
-            UD60x18 df = (convert(1).add(decayFactor.mul(dominance))).ln();
+            uint256 appchainId = appchainIds[i];
+            UD60x18 df = _computeDiminishingFactor(
+                stakingContract.getAppchainStake(epochIndex, appchainId), totalStake, appchainGasFees[i], totalGasFees
+            );
             if (!df.isZero()) {
-                diminishingFactor[epochIndex][appchainId[i]] = df;
+                diminishingFactor[epochIndex][appchainId] = df;
                 dfSum = dfSum.add(df);
             }
         }
         epochTotalDiminishingFactor[epochIndex] = dfSum;
 
         return remainingAppchainsPlusOne[epochIndex] == 1;
+    }
+
+    function _computeDiminishingFactor(
+        uint256 appchainStake,
+        UD60x18 totalStake,
+        uint256 appchainGasFee,
+        UD60x18 totalGasFees
+    ) internal view returns (UD60x18) {
+        UD60x18 feeShare = convert(appchainGasFee).mul(feeMultiplier).div(totalGasFees);
+        UD60x18 stakeShare = convert(appchainStake).mul(stakeMultiplier).div(totalStake);
+        UD60x18 dominance = feeShare.add(stakeShare);
+        return (convert(1).add(decayFactor.mul(dominance))).ln();
     }
 
     /**
@@ -187,10 +204,50 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
      * @return The total reward amount for the appchain in the epoch
      */
     function getAppchainTotalReward(uint256 epochIndex, uint256 appchainId) public view returns (uint256) {
-        require(remainingAppchainsPlusOne[epochIndex] == 1 && epochTotal[epochIndex] > 0, ClaimNotAvailable());
-        UD60x18 df = diminishingFactor[epochIndex][appchainId];
-        if (df.isZero()) return 0;
-        return convert(convert(epochTotal[epochIndex]).mul(df).div(epochTotalDiminishingFactor[epochIndex]));
+        require(epochTotal[epochIndex] > 0, ClaimNotAvailable());
+        UD60x18 df;
+        UD60x18 dfSum = epochTotalDiminishingFactor[epochIndex];
+        uint256 remainingPlusOne = remainingAppchainsPlusOne[epochIndex];
+        if (remainingPlusOne == 1) {
+            df = diminishingFactor[epochIndex][appchainId];
+            if (df.isZero()) return 0;
+        } else {
+            uint256 count;
+            if (remainingPlusOne == 0) {
+                count = gasDataProvider.getAppchainCount(epochIndex);
+            } else {
+                count = remainingPlusOne - 1;
+            }
+            UD60x18 totalStake = convert(stakingContract.getTotalStake(epochIndex));
+            if (totalStake.isZero()) return 0;
+            UD60x18 totalGasFees = convert(gasDataProvider.getTotalGasFees(epochIndex));
+            if (totalGasFees.isZero()) return 0;
+            uint256[] memory appchainIds;
+            uint256[] memory appchainGasFees;
+            (appchainIds, appchainGasFees) = gasDataProvider.getAppchainInfo(epochIndex, 0, count);
+            bool dfSet = false;
+            for (uint256 i = 0; i < count; i++) {
+                uint256 id = appchainIds[i];
+                UD60x18 factor = _computeDiminishingFactor(
+                    stakingContract.getAppchainStake(epochIndex, id), totalStake, appchainGasFees[i], totalGasFees
+                );
+                if (appchainId == id) {
+                    if (factor.isZero()) return 0;
+                    df = factor;
+                    dfSet = true;
+                }
+                dfSum = dfSum.add(factor);
+            }
+            if (!dfSet) {
+                uint256 appchainGasFee = gasDataProvider.getAppchainGasFees(epochIndex, appchainId);
+                df = _computeDiminishingFactor(
+                    stakingContract.getAppchainStake(epochIndex, appchainId), totalStake, appchainGasFee, totalGasFees
+                );
+                if (df.isZero()) return 0;
+            }
+        }
+
+        return convert(convert(epochTotal[epochIndex]).mul(df).div(dfSum));
     }
 
     /*//////////////////////////////////////////////////////////////

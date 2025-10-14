@@ -23,6 +23,8 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     /// @dev Only the SyndStaking contract can call claimFor() function
     error UnauthorizedCaller();
 
+    error MissingDiminishingFactors();
+
     /**
      * @notice Constructor to initialize the PerformancePool
      * @param admin The address to be granted admin privileges
@@ -55,6 +57,14 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     }
 
     /**
+     * @notice Variant of claim that reverts if diminishing factors need to be computed
+     */
+    function claimWithoutCompute(uint256 epochIndex, uint256 appchainId, address destination) external nonReentrant {
+        require(remainingAppchainsPlusOne[epochIndex] == 1, MissingDiminishingFactors());
+        _claim(epochIndex, msg.sender, destination, appchainId);
+    }
+
+    /**
      * @notice Claim rewards on behalf of a user (only callable by SyndStaking contract)
      * @dev This function allows the SyndStaking contract to claim rewards on behalf of users.
      *      This is used when users claim rewards through the main staking interface.
@@ -69,6 +79,7 @@ contract PerformancePool is IUserPool, RewardPoolBase {
         nonReentrant
         onlyStakingContract
     {
+        require(remainingAppchainsPlusOne[epochIndex] == 1, MissingDiminishingFactors());
         _claim(epochIndex, user, destination, appchainId);
     }
 
@@ -83,6 +94,10 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     function _claim(uint256 epochIndex, address user, address destination, uint256 appchainId) internal {
         if (destination == address(0)) {
             revert InvalidDestination();
+        }
+
+        if (remainingAppchainsPlusOne[epochIndex] != 1) {
+            computeDiminishingFactors(epochIndex, 0);
         }
 
         uint256 amount = getClaimableAmount(epochIndex, user, appchainId);

@@ -46,6 +46,8 @@ contract AppchainPool is RewardPoolBase {
     // @notice Error thrown when a contract does not have code
     error NoCode();
 
+    error MissingDiminishingFactors();
+
     /**
      * @notice Constructor to initialize the AppchainPool
      * @param admin The address to be granted admin privileges
@@ -67,11 +69,14 @@ contract AppchainPool is RewardPoolBase {
      * @param destination The destination address to send the rewards to
      * @custom:security Only the configured rewards receiver can call this function
      */
-    function claim(uint256 epochIndex, uint256 appchainId, address destination) external nonReentrant {
+    function claim(uint256 epochIndex, uint256 appchainId, address destination) public nonReentrant {
         // Only the configured receiver can claim.
         require(msg.sender == emissionsReceiver.appchainEmissionsReceiver(appchainId), InvalidClaimer());
-
         require(destination != address(0), InvalidDestination());
+
+        if (remainingAppchainsPlusOne[epochIndex] != 1) {
+            computeDiminishingFactors(epochIndex, 0);
+        }
 
         uint256 amount = getClaimableAmount(epochIndex, appchainId);
         if (amount == 0) revert ClaimNotAvailable();
@@ -80,6 +85,14 @@ contract AppchainPool is RewardPoolBase {
         Address.sendValue(payable(destination), amount);
 
         emit ClaimSuccess(epochIndex, appchainId, destination, amount);
+    }
+
+    /**
+     * @notice Variant of claim that reverts if diminishing factors need to be computed
+     */
+    function claimWithoutCompute(uint256 epochIndex, uint256 appchainId, address destination) external {
+        require(remainingAppchainsPlusOne[epochIndex] == 1, MissingDiminishingFactors());
+        claim(epochIndex, appchainId, destination);
     }
 
     /**

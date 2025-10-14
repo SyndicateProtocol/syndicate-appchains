@@ -5,6 +5,8 @@ import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 
 /// @notice Mock gas provider: programmable per-epoch fees + active IDs
 contract MockGasProvider is IGasDataProvider {
+    error NotArchivedEpoch();
+
     // epoch => total fees
     mapping(uint256 => uint256) public totals;
     // epoch => appchainId => fees
@@ -88,7 +90,7 @@ contract MockGasProvider is IGasDataProvider {
     }
 
     function getAppchainCount(uint256 epochIndex) external view returns (uint256) {
-        require(idsByEpoch[epochIndex].length > 0);
+        require(idsByEpoch[epochIndex].length > 0, NotArchivedEpoch());
         return idsByEpoch[epochIndex].length;
     }
 
