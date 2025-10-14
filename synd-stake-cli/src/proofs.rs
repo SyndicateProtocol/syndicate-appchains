@@ -165,7 +165,6 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
             .await
             .unwrap_or_else(|e| panic!("failed to get current epoch: {e}"))
             .saturating_sub(U256::from(1)),
-        None => U256::from(0),
     };
 
     let mut epoch_data_hash = gas_archive
