@@ -189,9 +189,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
     function getAppchainTotalReward(uint256 epochIndex, uint256 appchainId) public view returns (uint256) {
         require(remainingAppchainsPlusOne[epochIndex] == 1 && epochTotal[epochIndex] > 0, ClaimNotAvailable());
         UD60x18 df = diminishingFactor[epochIndex][appchainId];
-        if (df.isZero()) {
-            return 0;
-        }
+        if (df.isZero()) return 0;
         return convert(convert(epochTotal[epochIndex]).mul(df).div(epochTotalDiminishingFactor[epochIndex]));
     }
 
