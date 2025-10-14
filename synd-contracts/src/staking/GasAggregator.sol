@@ -225,28 +225,29 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
         uint256 epoch = getCurrentEpoch();
         require(epoch > currentEpoch, EpochNotOver(currentEpoch, epoch));
 
-        uint256 count = _appchains.length() - aggregateIndex;
-        require(count > 0, NoChainsAdded());
-        if (maxAppchainsToQuery < count) {
-            count = maxAppchainsToQuery;
-            nextAggregateIndex = aggregateIndex + count;
+        uint256 appchainToQuery = _appchains.length() - aggregateIndex;
+        require(appchainToQuery > 0, NoChainsAdded());
+        if (maxAppchainsToQuery < appchainToQuery) {
+            appchainToQuery = maxAppchainsToQuery;
+            nextAggregateIndex = aggregateIndex + appchainToQuery;
         }
 
         uint256 chainIdCount = prevChainIds.length;
         require(chainIdCount == prevTokens.length, InvalidDataHash());
         if (aggregateIndex == 0) {
+            // If this is the first time we are aggregating, the arrays of previous data should be empty
             require(chainIdCount == 0, InvalidDataHash());
         }
 
-        chainIds = new uint256[](chainIdCount + count);
-        tokens = new uint256[](chainIdCount + count);
+        chainIds = new uint256[](chainIdCount + appchainToQuery);
+        tokens = new uint256[](chainIdCount + appchainToQuery);
 
         for (uint256 i = 0; i < chainIdCount; i++) {
             chainIds[i] = prevChainIds[i];
             tokens[i] = prevTokens[i];
         }
 
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < appchainToQuery; i++) {
             uint256 chainId = _appchains.at(aggregateIndex + i);
             uint256 gasUsed = ISyndicateProxy(appchainContract[chainId]).tokensUsedPerEpoch(currentEpoch);
             // ignore appchains with no gas usage in the epoch
@@ -383,8 +384,13 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
 }
 
 library GasAggregatorUtils {
-    // select the top-n elements from key, value arrays via quick select and truncate the arrays
-    // average O(n) runtime complexity, can be O(n2) for pathological input
+    /**
+     * @notice Select the top-n elements from key, value arrays via quick select and truncate the arrays
+     * @dev Average O(n) runtime complexity, can be O(n2) for pathological input
+     * @param keys The array of keys
+     * @param values The array of values
+     * @param n The number of elements to select
+     */
     function select(uint256[] memory keys, uint256[] memory values, uint256 n) internal pure {
         require(keys.length == values.length && n <= values.length);
 
@@ -415,7 +421,11 @@ library GasAggregatorUtils {
         }
     }
 
-    // quick sort key, value arrays
+    /**
+     * @notice Quick sort key, value arrays in-place
+     * @param keys The array of keys
+     * @param values The array of values
+     */
     function sort(uint256[] memory keys, uint256[] memory values) internal pure {
         require(keys.length == values.length);
 
@@ -425,8 +435,13 @@ library GasAggregatorUtils {
         }
     }
 
-    // simple, unoptimized quick sort implementation
-    // normally quick sort falls back to insertion sort for small lists
+    /**
+     * @notice Simple, unoptimized quick sort implementation
+     * @dev Normally quick sort falls back to insertion sort for small lists
+     * @param begin Pointer to the start value to sort
+     * @param end Pointer past the end value to sort
+     * @param offset Memory offset of the keys array from the values one
+     */
     function _quickSort(uint256 begin, uint256 end, uint256 offset) private pure {
         unchecked {
             while (end - begin > 0x20) {
@@ -442,13 +457,18 @@ library GasAggregatorUtils {
         }
     }
 
-    // Hoare partitioning algorithm
-    // Return the partition index in range [begin + 0x20, end)
-    // such that the ranges [begin, index) and [index, end) are partially sorted
-    // and each range contains at least one element.
-    // This function handles duplicate elements well - the pivot is selected
-    // near the middle of the range when duplicates are present.
-    // It makes a single pass through the data and does n/6 swaps on average.
+    /**
+     * @notice Hoare partitioning algorithm
+     * @param begin Pointer to the start value to partition
+     * @param end Pointer past the end value to partition
+     * @param offset Memory offset of the keys array from the values one
+     * @return The partition index in range [begin + 0x20, end)
+     *         such that the ranges [begin, index) and [index, end) are partially sorted
+     *         and each range contains at least one element.
+     * @dev This function handles duplicate elements well - the pivot is selected
+     *         near the middle of the range when duplicates are present.
+     *         It makes a single pass through the data and does n/6 swaps on average.
+     */
     function _partition(uint256 begin, uint256 end, uint256 offset) private pure returns (uint256) {
         unchecked {
             // the midpoint rounds up and is always greater than begin
@@ -480,6 +500,8 @@ library GasAggregatorUtils {
 
     /**
      * @dev Swaps the elements in memory location `ptr1` and `ptr2`, and `ptr1 + offset`, `ptr2 + offset`.
+     * @param val1 The value of ptr1
+     * @param val2 The value of ptr2
      */
     function _swapWithOffset(uint256 ptr1, uint256 val1, uint256 ptr2, uint256 val2, uint256 offset) private pure {
         assembly {

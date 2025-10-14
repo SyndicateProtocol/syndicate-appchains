@@ -43,6 +43,9 @@ contract AppchainPool is RewardPoolBase {
     /// @dev Only the address returned by appchainRewardsReceiver() can claim for an appchain
     error InvalidClaimer();
 
+    // @notice Error thrown when a contract does not have code
+    error NoCode();
+
     /**
      * @notice Constructor to initialize the AppchainPool
      * @param admin The address to be granted admin privileges
@@ -51,7 +54,7 @@ contract AppchainPool is RewardPoolBase {
      * @param emissions The address of the emissions receiver contract
      */
     constructor(address admin, address staking, address gas, address emissions) RewardPoolBase(admin, staking, gas) {
-        require(emissions.code.length > 0);
+        require(emissions.code.length > 0, NoCode());
         emissionsReceiver = IEmissionsReceiver(emissions);
     }
 
