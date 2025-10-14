@@ -62,19 +62,12 @@ contract SyndicateSequencingChainTestSetUp is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
 
-        // Deploy and set GasAggregator
-        GasAggregator gasAggImpl = new GasAggregator();
-        MinimalUUPSStub stub = new MinimalUUPSStub();
-        ERC1967Proxy gasAggProxy = new ERC1967Proxy(address(stub), "");
-        bytes memory gasAggInitData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)", admin, address(factory), factory.syndicateChainImpl(), 1
-        );
-        (bool success,) = address(gasAggProxy).call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
-        );
-        require(success, "GasAgg init failed");
-
-        factory.setGasAggregator(IGasAggregator(address(gasAggProxy)));
+        // Deploy and set GasAggregator (non-upgradeable)
+        uint256 startEpoch = 1;
+        uint256 addChainFee = 5 ether;
+        uint256 maxAppchainsToQuery = 100;
+        gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
+        factory.setGasAggregator(IGasAggregator(address(gasAggregator)));
 
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
@@ -213,10 +206,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
             admin, address(factory), address(gasAggregator), address(permissionModule), 1, 0
         );
 
-        // Allow the implementation
-        vm.prank(address(factory));
-        gasAggregator.notifyNewImplementation(chainImpl);
-
+        // Note: GasAggregator no longer tracks allowed implementations
         vm.prank(admin);
         UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
     }
@@ -233,20 +223,12 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.startPrank(admin);
 
-        GasAggregator gasAggImpl = new GasAggregator();
-        MinimalUUPSStub stub = new MinimalUUPSStub();
-        ERC1967Proxy testGasAggProxy = new ERC1967Proxy(address(stub), "");
-        bytes memory gasAggInitData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)",
-            admin,
-            address(testFactory),
-            testFactory.syndicateChainImpl(),
-            1
-        );
-        address(testGasAggProxy).call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
-        );
-        testFactory.setGasAggregator(IGasAggregator(address(testGasAggProxy)));
+        // Deploy GasAggregator (non-upgradeable)
+        uint256 startEpoch = 1;
+        uint256 addChainFee = 5 ether;
+        uint256 maxAppchainsToQuery = 100;
+        GasAggregator testGasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
+        testFactory.setGasAggregator(IGasAggregator(address(testGasAggregator)));
 
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
@@ -305,16 +287,13 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
-        // newImpl is not allowed by default
-
-        // Upgrade should revert with allowGasTrackingBan=false
-        // Set allowGasTrackingBanOnUpgrade to false
+        // Note: GasAggregator no longer tracks allowed implementations
+        // All upgrades are now allowed regardless of allowGasTrackingBanOnUpgrade setting
         vm.prank(admin);
         SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
 
-        // Attempt upgrade - should fail
+        // Attempt upgrade - should now succeed (no implementation checking)
         vm.prank(admin);
-        vm.expectRevert(SyndicateSequencingChain.UpgradeWouldResultInGasTrackingBan.selector);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
     }
 
@@ -353,21 +332,12 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.startPrank(admin);
 
-        GasAggregator gasAggImpl = new GasAggregator();
-        MinimalUUPSStub stub = new MinimalUUPSStub();
-        ERC1967Proxy testGasAggProxy = new ERC1967Proxy(address(stub), "");
-        bytes memory gasAggInitData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)",
-            admin,
-            address(testFactory),
-            testFactory.syndicateChainImpl(),
-            1
-        );
-        address(testGasAggProxy).call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
-        );
-
-        testFactory.setGasAggregator(IGasAggregator(address(testGasAggProxy)));
+        // Deploy GasAggregator (non-upgradeable)
+        uint256 startEpoch2 = 1;
+        uint256 addChainFee2 = 5 ether;
+        uint256 maxAppchainsToQuery2 = 100;
+        GasAggregator testGasAggregator2 = new GasAggregator(startEpoch2, addChainFee2, maxAppchainsToQuery2);
+        testFactory.setGasAggregator(IGasAggregator(address(testGasAggregator2)));
 
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
@@ -388,22 +358,20 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.prank(admin);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl1), "");
 
-        // Verify impl2 upgrade fails with allowGasTrackingBan=false
+        // Note: GasAggregator no longer tracks allowed implementations
+        // All upgrades are now allowed regardless of implementation
         vm.prank(admin);
-        vm.expectRevert(SyndicateSequencingChain.UpgradeWouldResultInGasTrackingBan.selector);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
-
-        // Verify that the chain is NOT blacklisted on the gas aggregator
-        assertFalse(GasAggregator(address(testFactory.gasAggregator())).bannedAppchains(123));
 
         // Set allowGasTrackingBanOnUpgrade to true
         vm.prank(admin);
         SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(true);
 
-        // Verify impl2 upgrade succeds, but blacklists the chain on the gas aggregator
+        // Verify impl2 upgrade succeeds (no longer blacklists on gas aggregator)
         vm.startPrank(admin);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
-        assertTrue(GasAggregator(address(testFactory.gasAggregator())).bannedAppchains(123));
+        // Note: GasAggregator no longer has bannedAppchains tracking
+        // assertTrue(GasAggregator(address(testFactory.gasAggregator())).bannedAppchains(123));
         vm.stopPrank();
     }
 

@@ -232,22 +232,9 @@ contract SyndicateSequencingChain is
     /// @dev Required by UUPSUpgradeable to restrict upgradeability to the owner.
     /// @param _newImplementation The address of the new implementation contract.
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        IGasAggregator gasAggr = $.gasAggregator;
-
-        // Check if upgrade protection is enabled and implementation is allowed
-        if (!$.allowGasTrackingBanOnUpgrade) {
-            bool isAllowed = gasAggr.allowedImplementations(_newImplementation);
-            if (!isAllowed) {
-                revert UpgradeWouldResultInGasTrackingBan();
-            }
-        }
-
-        // Notify gas aggregator about the upgrade
-        try gasAggr.notifyChainUpgrade(appchainId(), _newImplementation) {}
-        catch {
-            emit GasAggregatorNotificationFailed(address(gasAggr));
-        }
+        // Note: GasAggregator no longer tracks allowed implementations or bans chains
+        // The allowGasTrackingBanOnUpgrade setting is kept for backwards compatibility but has no effect
+        // SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
     }
 
     /// @notice Encode transaction data with L2 message type prefix

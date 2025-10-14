@@ -82,24 +82,14 @@ contract UpgradeGasAggregator is Script {
 
         vm.startBroadcast();
 
-        // Deploy new implementation
-        console2.log("Deploying new implementation...");
-        GasAggregator newImplementation = new GasAggregator();
-        console2.log("New implementation:", address(newImplementation));
-        console2.log("");
+        // NOTE: GasAggregator is no longer upgradeable (changed from UUPS to regular Ownable pattern)
+        // This script is deprecated and kept for reference only
 
-        // Upgrade the proxy
-        console2.log("Upgrading proxy to new implementation...");
-        GasAggregator gasAggregator = GasAggregator(gasAggregatorAddress);
-        gasAggregator.upgradeToAndCall(address(newImplementation), "");
+        // Deploy new implementation
+        console2.log("ERROR: GasAggregator is no longer upgradeable!");
+        console2.log("Deploy a new GasAggregator contract instead of upgrading.");
+        revert("GasAggregator is not upgradeable");
 
         vm.stopBroadcast();
-
-        // Verify upgrade
-        string memory version = gasAggregator.version();
-        console2.log("=== Upgrade Complete ===");
-        console2.log("Proxy:", gasAggregatorAddress);
-        console2.log("Implementation:", address(newImplementation));
-        console2.log("Version:", version);
     }
 }

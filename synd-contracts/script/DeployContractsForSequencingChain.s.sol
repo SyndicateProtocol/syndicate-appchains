@@ -35,23 +35,13 @@ contract DeploySyndicateFactory is Script {
         syndicateFactory = SyndicateFactory(address(proxy));
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
 
-        // Deploy and set GasAggregator
-        GasAggregator gasAggImpl = new GasAggregator();
-        MinimalUUPSStub stub = new MinimalUUPSStub();
-        ERC1967Proxy gasAggProxy = new ERC1967Proxy(address(stub), "");
-        bytes memory gasAggInitData = abi.encodeWithSignature(
-            "initialize(address,address,address,uint256)",
-            admin,
-            address(syndicateFactory),
-            syndicateFactory.syndicateChainImpl(),
-            1
-        );
-        (bool success,) = address(gasAggProxy).call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(gasAggImpl), gasAggInitData)
-        );
-        require(success, "GasAgg init failed");
-        syndicateFactory.setGasAggregator(IGasAggregator(address(gasAggProxy)));
-        console.log("Deployed GasAggregator", address(gasAggProxy));
+        // Deploy and set GasAggregator (non-upgradeable)
+        uint256 startEpoch = 1;
+        uint256 addChainFee = 5 ether;
+        uint256 maxAppchainsToQuery = 100;
+        GasAggregator gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
+        syndicateFactory.setGasAggregator(IGasAggregator(address(gasAggregator)));
+        console.log("Deployed GasAggregator", address(gasAggregator));
 
         requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
