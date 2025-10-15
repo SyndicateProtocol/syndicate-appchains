@@ -35,6 +35,7 @@ contract UpgradeSequencingChain is Script {
     function run() external {
         address chainAddress = vm.envAddress("CHAIN_ADDRESS");
         address factoryAddress = vm.envAddress("FACTORY_ADDRESS");
+        address forwarderAddress = vm.envAddress("FORWARDER_ADDRESS");
 
         console2.log("=== Upgrading SyndicateSequencingChain ===");
         console2.log("Chain proxy:", chainAddress);
@@ -45,7 +46,7 @@ contract UpgradeSequencingChain is Script {
 
         // Deploy new implementation
         console2.log("Deploying new implementation...");
-        SyndicateSequencingChain newImplementation = new SyndicateSequencingChain();
+        SyndicateSequencingChain newImplementation = new SyndicateSequencingChain(forwarderAddress);
         console2.log("New implementation:", address(newImplementation));
         console2.log("");
 

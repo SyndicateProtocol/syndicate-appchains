@@ -61,16 +61,16 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
     function run() public {
         vm.startBroadcast();
 
-        appchainId = 0; // TODO: Set the App chain ID
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
+        address forwarder = vm.envAddress("FOWARDER_ADDR");
 
         // Deploy permission module first
         permissionModule = new RequireAndModule(admin);
         console.log("Deployed RequireAndModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencingChain = new SyndicateSequencingChain();
-        sequencingChain.initialize(admin,  address(permissionModule));
+        sequencingChain = new SyndicateSequencingChain(forwarder);
+        sequencingChain.initialize(admin, address(permissionModule));
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 
         // Deploy and add always allowed module

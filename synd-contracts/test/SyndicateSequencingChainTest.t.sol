@@ -168,7 +168,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testUpgradeBadguy() public {
-        address chainImpl = address(new SyndicateSequencingChain());
+        address chainImpl = address(new SyndicateSequencingChain(address(0)));
         address chainProxy = address(new SyndicateProxy());
         SyndicateProxy(payable(chainProxy)).initializeProxy(chainImpl, 0, 0);
         SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule));
@@ -180,7 +180,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testUpgradeOwner() public {
-        address chainImpl = address(new SyndicateSequencingChain());
+        address chainImpl = address(new SyndicateSequencingChain(address(0)));
         address chainProxy = address(new SyndicateProxy());
         SyndicateProxy(payable(chainProxy)).initializeProxy(chainImpl, 0, 0);
         SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule));
@@ -190,7 +190,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testUpgradeAuthorizationOnlyOwner() public {
-        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain(address(0));
 
         // Deploy chain through factory
         RequireAndModule testPermissionModule = new RequireAndModule(admin);

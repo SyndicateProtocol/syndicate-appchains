@@ -8,7 +8,7 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 /// @dev This demonstrates safe upgrade patterns:
 ///      - Traditional storage: New variables appended at end
 ///      - Namespaced storage: New fields in ERC-7201 namespace
-contract SyndicateSequencingChainUpgradeV2 is SyndicateSequencingChain {
+contract SyndicateSequencingChainUpgradeV2 is SyndicateSequencingChain(address(0)) {
     /*//////////////////////////////////////////////////////////////
                     NEW V2 STORAGE - APPENDED SAFELY
     //////////////////////////////////////////////////////////////*/

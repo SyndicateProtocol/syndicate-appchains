@@ -50,6 +50,7 @@ contract SyndicateSequencingChain is
     UUPSUpgradeable
 {
     uint256 public constant VERSION = 1_000_000; // 1.0.0 (major * 1_000_000 + minor * 1_000 + patch)
+    address public immutable forwarder;
 
     /*//////////////////////////////////////////////////////////////
                             ERRORS
@@ -87,8 +88,14 @@ contract SyndicateSequencingChain is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Disables initializers to prevent the implementation contract from being initialized
-    constructor() {
+    constructor(address _forwarder) {
+        forwarder = _forwarder;
         _disableInitializers();
+    }
+
+    function setOwner(address owner) external {
+        require(msg.sender == forwarder);
+        _transferOwnership(owner);
     }
 
     function getInitializedVersion() external view returns (uint64) {
@@ -98,7 +105,7 @@ contract SyndicateSequencingChain is
     /// @notice Initializes the SyndicateSequencingChain contract
     /// @dev This function can only be called once during proxy deployment. It sets up all the core functionality
     ///      including ownership, permission modules, gas tracking, and appchain identification.
-    /// @param admin The address to be set as the contract owner (receives DEFAULT_ADMIN_ROLE)
+    /// @param admin The address to be set as the contract owner
     /// @param _permissionRequirementModule The address of the permission requirement module or address(1) to allow all transactions
     function initialize(address admin, address _permissionRequirementModule) external initializer {
         if (admin == address(0)) revert ZeroAddress();

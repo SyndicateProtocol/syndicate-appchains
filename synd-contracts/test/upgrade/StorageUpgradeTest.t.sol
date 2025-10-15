@@ -65,7 +65,7 @@ contract StorageUpgradeTest is Test {
         vm.startPrank(address(factory));
 
         // Deploy V1 implementation
-        syndicateV1 = new SyndicateSequencingChain();
+        syndicateV1 = new SyndicateSequencingChain(address(0));
 
         // Deploy proxy pointing to V1
         bytes memory initData = abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE));

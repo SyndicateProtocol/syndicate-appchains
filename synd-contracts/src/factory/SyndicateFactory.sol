@@ -73,10 +73,6 @@ contract SyndicateFactory is
     /// @param chainId The chain ID that was marked as used
     event ChainIdManuallyMarked(uint256 indexed chainId);
 
-    /// @notice Emitted when a new implementation is added to the allowed list
-    /// @param implementation The address of the implementation that was added
-    event ImplementationAdded(address indexed implementation);
-
     /// @notice Emitted when a deterministic chainID is generated for a user
     /// @param sender The address that requested the chain ID generation
     /// @param nonce The nonce used in the chain ID generation
@@ -124,8 +120,7 @@ contract SyndicateFactory is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         // Deploy the real implementation and make it the default for new appchains
-        syndicateChainImpl = address(new SyndicateSequencingChain());
-        emit ImplementationAdded(syndicateChainImpl);
+        syndicateChainImpl = address(new SyndicateSequencingChain(address(0)));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -273,14 +268,12 @@ contract SyndicateFactory is
 
     /// @notice Set the implementation for new sequencing contract deployments (admin only)
     /// @dev Updates the default implementation used for new appchain deployments.
-    ///      Also attempts to notify the gas aggregator about the new implementation for tracking purposes.
     /// @param newImplementation The implementation address to use as default for new deployments
     function setSyndicateSequencingChainImplementation(address newImplementation)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         syndicateChainImpl = newImplementation;
-        emit ImplementationAdded(syndicateChainImpl);
     }
 
     /// @notice Migrates a legacy appchain to a new deployment while preserving gas counter data
