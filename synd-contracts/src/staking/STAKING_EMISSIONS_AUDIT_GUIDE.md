@@ -460,7 +460,7 @@ This logarithmic approach ensures:
 function getAppchainTotalReward(uint256 epochIndex, uint256 appchainId) public view returns (uint256)
 
 // Pre-compute diminishing factors for gas efficiency
-function preComputeDiminishingFactors(uint256 epochIndex, uint256 startIndex, uint256 count) external
+function computeDiminishingFactors(uint256 epochIndex, uint256 startIndex, uint256 count) external
 ```
 
 ---

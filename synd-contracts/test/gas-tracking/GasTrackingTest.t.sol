@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {GasAggregator} from "../../src/staking/GasAggregator.sol";
+import {GasAggregator, GasAggregatorUtils} from "../../src/staking/GasAggregator.sol";
 import {EpochTracker} from "../../src/staking/EpochTracker.sol";
 import {SyndicateFactory} from "../../src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
@@ -11,25 +11,14 @@ import {AlwaysAllowedModule} from "../../src/sequencing-modules/AlwaysAllowedMod
 import {RequireAndModule} from "../../src/requirement-modules/RequireAndModule.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
+import {Comparators} from "@openzeppelin/contracts/utils/Comparators.sol";
 
 contract MockGasCounter {
     mapping(uint256 => uint256) public tokensUsedPerEpoch;
 
     function setTokensForEpoch(uint256 epoch, uint256 tokens) external {
         tokensUsedPerEpoch[epoch] = tokens;
-    }
-}
-
-contract GasAggregatorUtils is GasAggregator {
-    constructor() GasAggregator(1, 0, 0) {}
-
-    function quickSort(uint256[] memory keys, uint256[] memory values)
-        public
-        pure
-        returns (uint256[] memory, uint256[] memory)
-    {
-        _quickSort(keys, values);
-        return (keys, values);
     }
 }
 
@@ -62,6 +51,7 @@ contract GasAggregatorTest is Test {
         assertEq(gasAggregator.currentEpoch(), 1);
 
         vm.warp(gasAggregator.getEpochStart(1));
+        assertEq(gasAggregator.getCurrentEpoch(), 1);
     }
 
     /// @notice Helper function to set up chain overrides and add chains to the aggregator
@@ -133,8 +123,23 @@ contract GasAggregatorTest is Test {
         mockGasCounter2.setTokensForEpoch(epoch, gasUsage[1]);
 
         // Move to next epoch
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(block.timestamp + EPOCH_DURATION);
 
+        // Simulate aggregation
+        uint256 nextAggregateIndex;
+        uint256[] memory chainIds;
+        uint256[] memory tokens;
+        (nextAggregateIndex, chainIds, tokens) =
+            gasAggregator.simulateAggregateTokens(0, new uint256[](0), new uint256[](0));
+        require(nextAggregateIndex == 0);
+        require(chainIds.length == chains.length);
+        require(gasUsage.length == tokens.length);
+        for (uint256 i = 0; i < chains.length; i++) {
+            require(chains[i] == chainIds[i]);
+            require(gasUsage[i] == tokens[i]);
+        }
+
+        // Aggregate
         vm.expectEmit(true, false, false, true);
         emit GasAggregator.AggregatedTokens(epoch, chains, gasUsage);
         gasAggregator.aggregateTokens(new uint256[](0), new uint256[](0));
@@ -168,7 +173,7 @@ contract GasAggregatorTest is Test {
         mockGasCounter3.setTokensForEpoch(epoch, gasUsage[2]);
 
         // Move to next epoch
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(block.timestamp + EPOCH_DURATION);
 
         // Aggregate
         uint256[] memory prevChainIds;
@@ -210,13 +215,7 @@ contract GasAggregatorTest is Test {
         assertEq(gasAggregator.currentEpoch(), epoch + 1);
         assertEq(gasAggregator.aggregatedEpochDataHash(epoch), keccak256(abi.encode(topChains, topGas)));
 
-        // Simulate aggregation
-        (chunk, prevChainIds, prevGas) = gasAggregator.simulateAggregateTokens(chunk, prevChainIds, prevGas);
-        assertEq(chunk, 0);
-        assertEq(prevChainIds.length, 1);
-        assertEq(prevChainIds[0], 2);
-        assertEq(prevGas.length, 1);
-        assertEq(prevGas[0], 101);
+        assertFalse(gasAggregator.paused());
     }
 
     function test_UnpauseDuringAggregation() public {
@@ -240,7 +239,7 @@ contract GasAggregatorTest is Test {
         mockGasCounter2.setTokensForEpoch(epoch, gasUsage[1]);
 
         // Move to next epoch
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(block.timestamp + EPOCH_DURATION);
 
         // Aggregate
         uint256[] memory prevChainIds;
@@ -283,11 +282,13 @@ contract GasAggregatorTest is Test {
         gasAggregator.aggregateTokens(prevChainIds, prevGas);
         assertEq(gasAggregator.currentEpoch(), epoch + 1);
         assertEq(gasAggregator.aggregatedEpochDataHash(epoch), keccak256(abi.encode(topChains, topGas)));
+
+        assertFalse(gasAggregator.paused());
     }
 
     function test_EdgeCase_EmptyAppchainList() public {
         // Move to next epoch
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(block.timestamp + EPOCH_DURATION);
 
         // Should fail
         vm.expectRevert(GasAggregator.NoChainsAdded.selector);
@@ -295,16 +296,25 @@ contract GasAggregatorTest is Test {
     }
 
     function test_EdgeCase_EpochNotOver() public {
-        // Move to next epoch
+        // Aggregate at start of epoch, should fail
+        vm.expectRevert(abi.encodeWithSelector(GasAggregator.EpochNotOver.selector, 1, 1));
+        gasAggregator.simulateAggregateTokens(0, new uint256[](0), new uint256[](0));
+
+        vm.expectRevert(abi.encodeWithSelector(GasAggregator.EpochNotOver.selector, 1, 1));
+        gasAggregator.aggregateTokens(new uint256[](0), new uint256[](0));
+
+        // Move to the end of the epoch
         vm.warp(block.timestamp + EPOCH_DURATION - 1);
 
-        // Should fail
-        vm.expectRevert(GasAggregator.EpochNotOver.selector);
+        // Should still fail
+        vm.expectRevert(abi.encodeWithSelector(GasAggregator.EpochNotOver.selector, 1, 1));
+        gasAggregator.simulateAggregateTokens(0, new uint256[](0), new uint256[](0));
+
+        vm.expectRevert(abi.encodeWithSelector(GasAggregator.EpochNotOver.selector, 1, 1));
         gasAggregator.aggregateTokens(new uint256[](0), new uint256[](0));
     }
 
-    function test_quickSort() public {
-        GasAggregatorUtils utils = new GasAggregatorUtils();
+    function test_quickSort() public pure {
         uint256[] memory keys = new uint256[](5);
         keys[0] = 0;
         keys[1] = 1;
@@ -317,12 +327,13 @@ contract GasAggregatorTest is Test {
         values[2] = 1;
         values[3] = type(uint256).max;
         values[4] = 3;
-        (keys, values) = utils.quickSort(keys, values);
+        GasAggregatorUtils.sort(keys, values);
 
         assertEq(keys.length, 5);
         assertEq(keys[0], 3);
-        assertEq(keys[1], 0);
-        assertEq(keys[2], 4);
+        assert(keys[1] == 4 || keys[1] == 0);
+        assert(keys[2] == 4 || keys[2] == 0);
+        assert(keys[1] != keys[2]);
         assertEq(keys[3], 2);
         assertEq(keys[4], 1);
 
@@ -332,5 +343,122 @@ contract GasAggregatorTest is Test {
         assertEq(values[2], 3);
         assertEq(values[3], 1);
         assertEq(values[4], 0);
+    }
+
+    function test_quickSelect() public pure {
+        uint256[] memory keys = new uint256[](5);
+        keys[0] = 0;
+        keys[1] = 1;
+        keys[2] = 2;
+        keys[3] = 3;
+        keys[4] = 4;
+        uint256[] memory values = new uint256[](5);
+        values[0] = 3;
+        values[1] = 0;
+        values[2] = 1;
+        values[3] = type(uint256).max;
+        values[4] = 3;
+        GasAggregatorUtils.select(keys, values, 1);
+
+        assertEq(keys.length, 1);
+        assertEq(keys[0], 3);
+        assertEq(values.length, 1);
+        assertEq(values[0], type(uint256).max);
+    }
+
+    function test_utilsGasComparisonSorted() public view {
+        uint256[] memory v1 = new uint256[](100);
+        uint256[] memory v2 = new uint256[](100);
+        uint256[] memory k = new uint256[](100);
+        for (uint256 i = 0; i < v1.length; i++) {
+            v1[i] = v1.length - i;
+            v2[i] = v1[i];
+        }
+        uint256 gasUsed = gasleft();
+        GasAggregatorUtils.sort(k, v1);
+        console.log("utils.sort", gasUsed - gasleft());
+        gasUsed = gasleft();
+        Arrays.sort(v2, Comparators.gt);
+        console.log("arrays.sort", gasUsed - gasleft());
+        for (uint256 i = 0; i < v1.length; i++) {
+            assertEq(v1[i], v2[i]);
+        }
+        uint256[] memory v3 = new uint256[](200);
+        uint256[] memory k3 = new uint256[](200);
+        for (uint256 i = 0; i < v3.length; i++) {
+            v3[i] = v3.length - i;
+        }
+        gasUsed = gasleft();
+        GasAggregatorUtils.select(k3, v3, 100);
+        console.log("utils.select", gasUsed - gasleft());
+    }
+
+    function test_utilsGasComparisonRandom() public {
+        uint256 utilsGasUsed;
+        uint256 utilsMaxGasUsed;
+        uint256 arraysGasUsed;
+        uint256 arraysMaxGasUsed;
+        uint256[] memory v1 = new uint256[](100);
+        uint256[] memory v2 = new uint256[](100);
+        uint256[] memory k = new uint256[](100);
+        for (uint256 j = 0; j < 500; j++) {
+            for (uint256 i = 0; i < v1.length; i++) {
+                v1[i] = vm.randomUint();
+                v2[i] = v1[i];
+            }
+            uint256 gasUsed = gasleft();
+            GasAggregatorUtils.sort(k, v1);
+            gasUsed -= gasleft();
+            if (gasUsed > utilsMaxGasUsed) {
+                utilsMaxGasUsed = gasUsed;
+            }
+            utilsGasUsed += gasUsed;
+            gasUsed = gasleft();
+            Arrays.sort(v2, Comparators.gt);
+            gasUsed -= gasleft();
+            if (gasUsed > arraysMaxGasUsed) {
+                arraysMaxGasUsed = gasUsed;
+            }
+            arraysGasUsed += gasUsed;
+            for (uint256 i = 0; i < v1.length; i++) {
+                assertEq(v1[i], v2[i]);
+            }
+        }
+        utilsGasUsed /= 500;
+        arraysGasUsed /= 500;
+        console.log("utils.sort", utilsGasUsed, utilsMaxGasUsed);
+        console.log("arrays.sort", arraysGasUsed, arraysMaxGasUsed);
+
+        uint256 selectGasUsed;
+        uint256 selectMaxGasUsed;
+        uint256[] memory v3 = new uint256[](200);
+        uint256[] memory v4 = new uint256[](200);
+        uint256[] memory k3 = new uint256[](200);
+        for (uint256 j = 0; j < 500; j++) {
+            for (uint256 i = 0; i < v3.length; i++) {
+                v3[i] = vm.randomUint();
+                v4[i] = v3[i];
+            }
+            uint256 gasUsed = gasleft();
+            GasAggregatorUtils.select(k3, v3, 100);
+            gasUsed -= gasleft();
+            if (gasUsed > selectMaxGasUsed) {
+                selectMaxGasUsed = gasUsed;
+            }
+            selectGasUsed += gasUsed;
+            assertEq(v3.length, 100);
+            assertEq(k3.length, 100);
+            Arrays.sort(v3, Comparators.gt);
+            Arrays.sort(v4, Comparators.gt);
+            for (uint256 i = 0; i < v3.length; i++) {
+                assertEq(v3[i], v4[i]);
+            }
+            assembly {
+                mstore(v3, 200)
+                mstore(k3, 200)
+            }
+        }
+        selectGasUsed /= 500;
+        console.log("utils.select", selectGasUsed, selectMaxGasUsed);
     }
 }

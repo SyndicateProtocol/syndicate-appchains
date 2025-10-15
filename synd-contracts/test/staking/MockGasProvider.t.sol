@@ -5,6 +5,8 @@ import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 
 /// @notice Mock gas provider: programmable per-epoch fees + active IDs
 contract MockGasProvider is IGasDataProvider {
+    error NotArchivedEpoch();
+
     // epoch => total fees
     mapping(uint256 => uint256) public totals;
     // epoch => appchainId => fees
@@ -47,14 +49,17 @@ contract MockGasProvider is IGasDataProvider {
     }
 
     function getTotalGasFees(uint256 epochIndex) external view returns (uint256) {
+        require(idsByEpoch[epochIndex].length > 0);
         return totals[epochIndex];
     }
 
     function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256) {
+        require(idsByEpoch[epochIndex].length > 0);
         return fee[epochIndex][appchainId];
     }
 
     function getAppchainIds(uint256 epochIndex) external view returns (uint256[] memory) {
+        require(idsByEpoch[epochIndex].length > 0);
         return idsByEpoch[epochIndex];
     }
 
@@ -82,5 +87,24 @@ contract MockGasProvider is IGasDataProvider {
         }
 
         return result;
+    }
+
+    function getAppchainCount(uint256 epochIndex) external view returns (uint256) {
+        require(idsByEpoch[epochIndex].length > 0, NotArchivedEpoch());
+        return idsByEpoch[epochIndex].length;
+    }
+
+    function getAppchainInfo(uint256 epochIndex, uint256 startIndex, uint256 count)
+        external
+        view
+        returns (uint256[] memory chainId, uint256[] memory gasUsed)
+    {
+        require(idsByEpoch[epochIndex].length > 0);
+        chainId = new uint256[](count);
+        gasUsed = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            chainId[i] = idsByEpoch[epochIndex][startIndex + i];
+            gasUsed[i] = fee[epochIndex][chainId[i]];
+        }
     }
 }

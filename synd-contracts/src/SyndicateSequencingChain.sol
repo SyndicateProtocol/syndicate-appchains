@@ -139,6 +139,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         }
         super.transferOwnership(newOwner);
     }
+
     /*//////////////////////////////////////////////////////////////
                          GAS TRACKING ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/

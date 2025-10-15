@@ -46,7 +46,14 @@ contract Rollup {
         deliverMessage(
             INITIALIZATION_MSG_TYPE,
             address(0),
-            abi.encodePacked(chainId, /* initMsgVersion */ uint8(1), /* currentDataCost */ uint256(0), chainConfig)
+            abi.encodePacked(
+                chainId,
+                /* initMsgVersion */
+                uint8(1),
+                /* currentDataCost */
+                uint256(0),
+                chainConfig
+            )
         );
         // post a batch containing the initialization message
         postBatch(hex"000b00800203", 0, 0, 0, 0);
