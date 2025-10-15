@@ -16,12 +16,7 @@ contract MockAttestationDocVerifier is IAttestationDocVerifier {
         bytes calldata,
         /*_publicValues*/
         bytes calldata /*_proofBytes*/
-    )
-        external
-        view
-        override
-        returns (address)
-    {
+    ) external view override returns (address) {
         if (shouldRevert) {
             revert("MockAttestationDocVerifier: Forced revert");
         }

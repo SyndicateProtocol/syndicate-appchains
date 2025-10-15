@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {
-    SyndicateSequencingChain,
-    L2MessageType_SignedTx,
-    SequencingModuleChecker
+    SyndicateSequencingChain, L2MessageType_SignedTx, SequencingModuleChecker
 } from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";

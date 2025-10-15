@@ -82,21 +82,20 @@ contract ArbConfigManager is Ownable {
         deployedConfigs[chainId] = proxyAddress;
 
         // Initialize the proxy contract
-        ArbChainConfig(proxyAddress)
-            .initialize(
-                owner,
-                chainId,
-                sequencingChainId,
-                arbitrumBridgeAddress,
-                arbitrumInboxAddress,
-                settlementDelay,
-                settlementStartBlock,
-                sequencingContractAddress,
-                sequencingStartBlock,
-                initialAppchainOwner,
-                sequencingChainRpcUrl,
-                appchainBlockExplorerUrl
-            );
+        ArbChainConfig(proxyAddress).initialize(
+            owner,
+            chainId,
+            sequencingChainId,
+            arbitrumBridgeAddress,
+            arbitrumInboxAddress,
+            settlementDelay,
+            settlementStartBlock,
+            sequencingContractAddress,
+            sequencingStartBlock,
+            initialAppchainOwner,
+            sequencingChainRpcUrl,
+            appchainBlockExplorerUrl
+        );
 
         emit ArbChainConfigCreated(chainId, proxyAddress);
 

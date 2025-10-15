@@ -25,9 +25,8 @@ contract ReentrantContract {
             hasReentered = true;
             // Try to reenter - this should be prevented
             try staking.withdraw(2, address(this)) {
-            // This should not succeed
-            }
-                catch {
+                // This should not succeed
+            } catch {
                 // Expected to fail
             }
         }

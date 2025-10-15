@@ -131,17 +131,16 @@ contract L2Relayer is AccessControl {
         uint256 callValue = amount - gasCost;
 
         // We use unsafe so the refunder address doesnt get aliased
-        IArbBridge(arbBridge)
-            .unsafeCreateRetryableTicket(
-                destination,
-                callValue,
-                0, // Always 0 for custom gas token chains
-                refunder,
-                refunder,
-                gasLimit,
-                maxFeePerGas,
-                amount,
-                abi.encodeWithSelector(IPool.deposit.selector, epochIndex)
-            );
+        IArbBridge(arbBridge).unsafeCreateRetryableTicket(
+            destination,
+            callValue,
+            0, // Always 0 for custom gas token chains
+            refunder,
+            refunder,
+            gasLimit,
+            maxFeePerGas,
+            amount,
+            abi.encodeWithSelector(IPool.deposit.selector, epochIndex)
+        );
     }
 }

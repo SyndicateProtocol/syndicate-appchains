@@ -25,12 +25,13 @@ contract ArbConfigManagerFactory {
         // Step 2: Deploy using CREATE2
         address deployedAddress;
         assembly {
-            deployedAddress := create2(
-                0, // No ETH sent with deployment
-                add(bytecode, 0x20), // Actual bytecode starts after length prefix (32 bytes)
-                mload(bytecode), // Length of bytecode
-                salt // Salt for deterministic address
-            )
+            deployedAddress :=
+                create2(
+                    0, // No ETH sent with deployment
+                    add(bytecode, 0x20), // Actual bytecode starts after length prefix (32 bytes)
+                    mload(bytecode), // Length of bytecode
+                    salt // Salt for deterministic address
+                )
 
             if iszero(deployedAddress) { revert(0, 0) } // Revert if deployment failed
         }

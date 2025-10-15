@@ -522,8 +522,9 @@ contract SyndStaking is EpochTracker, ReentrancyGuard, Pausable, Ownable {
         }
 
         for (uint256 i = 0; i < claims.length; i++) {
-            IUserPool(claims[i].poolAddress)
-                .claimFor(claims[i].epochIndex, msg.sender, destination, claims[i].appchainId);
+            IUserPool(claims[i].poolAddress).claimFor(
+                claims[i].epochIndex, msg.sender, destination, claims[i].appchainId
+            );
         }
     }
 
