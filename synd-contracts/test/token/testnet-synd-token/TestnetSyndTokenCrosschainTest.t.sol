@@ -376,5 +376,6 @@ contract TestnetSyndTokenCrosschainTest is Test {
 
 // Mock contract to test bridge validation
 contract MockBridge {
-// Empty contract that can be used as a bridge for testing
-}
+    // Empty contract that can be used as a bridge for testing
+
+    }

@@ -33,6 +33,8 @@ contract AppchainPool is RewardPoolBase {
     /// @dev All rewards are subject to this vesting schedule
     uint256 public constant VESTING_DURATION = 365 days;
 
+    /// @notice The address of the emissions receiver contract
+    /// @dev Only the address returned by appchainRewardsReceiver() can claim for an appchain
     IEmissionsReceiver public immutable emissionsReceiver;
 
     /// @notice Mapping from epoch index and appchain ID to amount already claimed

@@ -131,11 +131,7 @@ contract RequireCompositeModuleFactory is AccessControl, Pausable {
     /// @param admin The admin address for the module
     /// @param salt The salt for deterministic deployment
     /// @return module The deployed module address
-    function createRequireCompositeModule(address admin, bytes32 salt)
-        external
-        whenNotPaused
-        returns (address module)
-    {
+    function createRequireCompositeModule(address admin, bytes32 salt) external whenNotPaused returns (address module) {
         if (admin == address(0)) revert ZeroAddress();
 
         bytes memory bytecode = abi.encodePacked(type(RequireCompositeModule).creationCode, abi.encode(admin));

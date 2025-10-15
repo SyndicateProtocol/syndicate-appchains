@@ -691,16 +691,16 @@ contract TeeModuleTest is Test {
                     initialL1EndHash
                 )
             )
-                != keccak256(
-                    abi.encodePacked(
-                        updatedConfigHash,
-                        updatedAppStart,
-                        updatedSeqStart,
-                        updatedDelayedAcc,
-                        updatedL1BatchAcc,
-                        updatedL1EndHash
-                    )
-                ),
+            != keccak256(
+                abi.encodePacked(
+                    updatedConfigHash,
+                    updatedAppStart,
+                    updatedSeqStart,
+                    updatedDelayedAcc,
+                    updatedL1BatchAcc,
+                    updatedL1EndHash
+                )
+            ),
             "TeeTrustedInput hash should be different after state updates"
         );
     }
@@ -760,10 +760,7 @@ contract TeeModuleTest is Test {
         returns (PendingAssertion memory)
     {
         return PendingAssertion({
-            appBlockHash: appBlockHash,
-            appSendRoot: appSendRoot,
-            seqBlockHash: seqBlockHash,
-            l1BatchAcc: l1BatchAcc
+            appBlockHash: appBlockHash, appSendRoot: appSendRoot, seqBlockHash: seqBlockHash, l1BatchAcc: l1BatchAcc
         });
     }
 
