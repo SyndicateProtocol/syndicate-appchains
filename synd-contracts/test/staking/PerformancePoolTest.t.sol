@@ -391,7 +391,7 @@ contract PerformancePoolTest is Test {
 
         // Should revert with ClaimNotAvailable when amount is 0
         vm.startPrank(address(staking));
-        vm.expectRevert(PerformancePool.MissingDiminishingFactors.selector);
+        vm.expectRevert(RewardPoolBase.RewardComputationNotComplete.selector);
         performancePool.claimFor(epoch, user1, user2, appchainId1);
         vm.stopPrank();
     }

@@ -46,8 +46,6 @@ contract AppchainPool is RewardPoolBase {
     // @notice Error thrown when a contract does not have code
     error NoCode();
 
-    error MissingDiminishingFactors();
-
     /**
      * @notice Constructor to initialize the AppchainPool
      * @param admin The address to be granted admin privileges
@@ -89,9 +87,12 @@ contract AppchainPool is RewardPoolBase {
 
     /**
      * @notice Variant of claim that reverts if diminishing factors need to be computed
+     * @param epochIndex The epoch index to claim rewards for
+     * @param appchainId The appchain ID to claim rewards for
+     * @param destination The destination address to send the rewards to
      */
     function claimWithoutCompute(uint256 epochIndex, uint256 appchainId, address destination) external {
-        require(remainingAppchainsPlusOne[epochIndex] == 1, MissingDiminishingFactors());
+        require(remainingAppchainsPlusOne[epochIndex] == 1, RewardComputationNotComplete());
         claim(epochIndex, appchainId, destination);
     }
 

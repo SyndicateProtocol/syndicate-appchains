@@ -19,7 +19,7 @@ import {IPool} from "src/staking/interfaces/IPool.sol";
  * Key Features:
  * - Diminishing returns algorithm to prevent centralization
  * - Configurable weights for fee and stake multipliers
- * - Caching system for gas-efficient calculations
+ * - Pre-computed diminishing factors for gas-efficient calculations
  * - Shared reward calculation logic across pool types
  *
  * Algorithm Overview:
@@ -89,6 +89,8 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
         uint256 indexed epochIndex, uint256 indexed appchainId, address indexed destination, uint256 amount
     );
 
+    /// @notice Error thrown when trying to compute diminishing factors when they are already computed
+    /// @dev Used to indicate that the diminishing factors are already computed
     error AllDiminishingFactorsComputed();
 
     /// @notice Error thrown when attempting to claim from an unavailable epoch
@@ -102,6 +104,10 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
     /// @notice Error thrown when destination address is zero
     /// @dev Prevents sending rewards to zero address
     error InvalidDestination();
+
+    /// @notice Error thrown when reward calculation is not complete
+    /// @dev Used to indicate that the reward calculation is not complete
+    error RewardComputationNotComplete();
 
     /**
      * @notice Constructor to initialize the RewardPoolBase
@@ -182,6 +188,12 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
         return remainingAppchainsPlusOne[epochIndex] == 1;
     }
 
+    /// @notice Helper function to compute the diminishing factor
+    /// @param appchainStake The stake of the appchain
+    /// @param totalStake The total stake of all appchains
+    /// @param appchainGasFee The gas fee of the appchain
+    /// @param totalGasFees The total gas fees of all appchains
+    /// @return The diminishing factor for the appchain
     function _computeDiminishingFactor(
         uint256 appchainStake,
         UD60x18 totalStake,
@@ -210,7 +222,6 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
         uint256 remainingPlusOne = remainingAppchainsPlusOne[epochIndex];
         if (remainingPlusOne == 1) {
             df = diminishingFactor[epochIndex][appchainId];
-            if (df.isZero()) return 0;
         } else {
             uint256 count;
             if (remainingPlusOne == 0) {
@@ -225,7 +236,6 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
             uint256[] memory appchainIds;
             uint256[] memory appchainGasFees;
             (appchainIds, appchainGasFees) = gasDataProvider.getAppchainInfo(epochIndex, 0, count);
-            bool dfSet = false;
             for (uint256 i = 0; i < count; i++) {
                 uint256 id = appchainIds[i];
                 UD60x18 factor = _computeDiminishingFactor(
@@ -234,18 +244,15 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
                 if (appchainId == id) {
                     if (factor.isZero()) return 0;
                     df = factor;
-                    dfSet = true;
                 }
                 dfSum = dfSum.add(factor);
             }
-            if (!dfSet) {
-                uint256 appchainGasFee = gasDataProvider.getAppchainGasFees(epochIndex, appchainId);
-                df = _computeDiminishingFactor(
-                    stakingContract.getAppchainStake(epochIndex, appchainId), totalStake, appchainGasFee, totalGasFees
-                );
-                if (df.isZero()) return 0;
+            // If the diminishing factor was not seen in the remaining appchains, it must have been pre-computed
+            if (df.isZero()) {
+                df = diminishingFactor[epochIndex][appchainId];
             }
         }
+        if (df.isZero()) return 0;
 
         return convert(convert(epochTotal[epochIndex]).mul(df).div(dfSum));
     }

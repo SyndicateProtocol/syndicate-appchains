@@ -15,6 +15,7 @@ interface RewardPoolBase {
     error PRBMath_UD60x18_Convert_Overflow(uint256 x);
     error PRBMath_UD60x18_Log_InputTooSmall(UD60x18 x);
     error ReentrancyGuardReentrantCall();
+    error RewardComputationNotComplete();
     error ZeroAddress();
     error ZeroEpochIndex();
 
@@ -615,6 +616,11 @@ interface RewardPoolBase {
   {
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RewardComputationNotComplete",
     "inputs": []
   },
   {
@@ -1602,6 +1608,81 @@ error ReentrancyGuardReentrantCall();
             > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "ReentrancyGuardReentrantCall()";
             const SELECTOR: [u8; 4] = [62u8, 229u8, 174u8, 181u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `RewardComputationNotComplete()` and selector `0x87f43894`.
+```solidity
+error RewardComputationNotComplete();
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct RewardComputationNotComplete;
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<RewardComputationNotComplete>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: RewardComputationNotComplete) -> Self {
+                ()
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for RewardComputationNotComplete {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for RewardComputationNotComplete {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "RewardComputationNotComplete()";
+            const SELECTOR: [u8; 4] = [135u8, 244u8, 56u8, 148u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -6967,6 +7048,8 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         ReentrancyGuardReentrantCall(ReentrancyGuardReentrantCall),
         #[allow(missing_docs)]
+        RewardComputationNotComplete(RewardComputationNotComplete),
+        #[allow(missing_docs)]
         ZeroAddress(ZeroAddress),
         #[allow(missing_docs)]
         ZeroEpochIndex(ZeroEpochIndex),
@@ -6989,6 +7072,7 @@ function transferOwnership(address newOwner) external;
             [81u8, 115u8, 100u8, 141u8],
             [85u8, 80u8, 16u8, 245u8],
             [99u8, 160u8, 87u8, 120u8],
+            [135u8, 244u8, 56u8, 148u8],
             [172u8, 107u8, 5u8, 245u8],
             [214u8, 147u8, 104u8, 212u8],
             [217u8, 46u8, 35u8, 61u8],
@@ -6998,7 +7082,7 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for RewardPoolBaseErrors {
         const NAME: &'static str = "RewardPoolBaseErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 12usize;
+        const COUNT: usize = 13usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -7031,6 +7115,9 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::ReentrancyGuardReentrantCall(_) => {
                     <ReentrancyGuardReentrantCall as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::RewardComputationNotComplete(_) => {
+                    <RewardComputationNotComplete as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::ZeroAddress(_) => {
                     <ZeroAddress as alloy_sol_types::SolError>::SELECTOR
@@ -7155,6 +7242,17 @@ function transferOwnership(address newOwner) external;
                             .map(RewardPoolBaseErrors::PRBMath_MulDiv_Overflow)
                     }
                     PRBMath_MulDiv_Overflow
+                },
+                {
+                    fn RewardComputationNotComplete(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <RewardComputationNotComplete as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::RewardComputationNotComplete)
+                    }
+                    RewardComputationNotComplete
                 },
                 {
                     fn InvalidDestination(
@@ -7307,6 +7405,17 @@ function transferOwnership(address newOwner) external;
                     PRBMath_MulDiv_Overflow
                 },
                 {
+                    fn RewardComputationNotComplete(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
+                        <RewardComputationNotComplete as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(RewardPoolBaseErrors::RewardComputationNotComplete)
+                    }
+                    RewardComputationNotComplete
+                },
+                {
                     fn InvalidDestination(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<RewardPoolBaseErrors> {
@@ -7403,6 +7512,11 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
+                Self::RewardComputationNotComplete(inner) => {
+                    <RewardComputationNotComplete as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::ZeroAddress(inner) => {
                     <ZeroAddress as alloy_sol_types::SolError>::abi_encoded_size(inner)
                 }
@@ -7472,6 +7586,12 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::ReentrancyGuardReentrantCall(inner) => {
                     <ReentrancyGuardReentrantCall as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::RewardComputationNotComplete(inner) => {
+                    <RewardComputationNotComplete as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )

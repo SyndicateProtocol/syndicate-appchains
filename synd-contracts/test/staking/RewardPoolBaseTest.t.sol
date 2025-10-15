@@ -148,6 +148,9 @@ contract RewardPoolBaseTest is Test {
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
 
         assertFalse(rewardPoolBase.computeDiminishingFactors(epoch, 1));
+        assertEq(convert(rewardPoolBase.diminishingFactor(epoch, appchainId1)), 0);
+        assertEq(convert(rewardPoolBase.diminishingFactor(epoch, appchainId2)), 0);
+        assertEq(convert(rewardPoolBase.diminishingFactor(epoch, appchainId3)), 0);
 
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId2), 33578634284580271148);
