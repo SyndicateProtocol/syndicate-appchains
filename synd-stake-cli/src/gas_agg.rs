@@ -11,6 +11,7 @@ use shared::{
     types::new_provider,
 };
 use tracing::{error, info};
+use url::Url;
 
 /// Arguments for the `gas-agg` command.
 ///
@@ -38,7 +39,7 @@ pub struct GasAggArgs {
 
     /// The RPC URL to use for the transaction.
     #[arg(short = 'r', long, env = "RPC_URL", default_value = "", value_parser = parse_url)]
-    pub rpc_url: String,
+    pub rpc_url: Url,
 }
 
 /// Aggregates gas usage from appchains.
@@ -99,7 +100,7 @@ pub async fn gas_agg(args: &GasAggArgs) {
         info!("Aggregating gas...");
         match GasAggregator::new(
             args.gas_aggregator_address,
-            new_provider(args.rpc_url.as_str(), &args.private_key).await,
+            new_provider(&args.rpc_url, &args.private_key).await,
         )
         .aggregateTokens(Vec::<U256>::new(), Vec::<U256>::new())
         .send()

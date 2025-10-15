@@ -22,16 +22,17 @@ use shared::{
     types::new_provider,
 };
 use tracing::{debug, info};
+use url::Url;
 
 /// Arguments for updating base and ethereum block hashes
 #[derive(Args, Debug)]
 pub struct UpdateBaseAndEthereumBlockHashesArgs {
     /// Base chain RPC URL
     #[arg(long, env = "BASE_RPC_URL", value_parser = parse_url)]
-    pub base_rpc_url: String,
+    pub base_rpc_url: Url,
     /// Staking appchain RPC URL (will be used to wait for new block hashes)
     #[arg(long, env = "STAKING_APPCHAIN_RPC_URL", value_parser = parse_url)]
-    pub staking_appchain_rpc_url: String,
+    pub staking_appchain_rpc_url: Url,
     /// Private key for signing transactions
     #[arg(long, env = "PRIVATE_KEY")]
     pub private_key: String,
@@ -117,13 +118,13 @@ async fn wait_for_block_hashes_updated<P: Provider>(
 pub struct SubmitGasProofsArgs {
     /// Sequencing chain RPC URL
     #[arg(long, env = "SEQ_CHAIN_RPC_URL", value_parser = parse_url)]
-    pub seq_chain_rpc_url: String,
+    pub seq_chain_rpc_url: Url,
     /// Ethereum RPC URL
     #[arg(long, env = "ETHEREUM_RPC_URL", value_parser = parse_url)]
-    pub ethereum_rpc_url: String,
+    pub ethereum_rpc_url: Url,
     /// Staking aoppchain RPC URL
     #[arg(long, env = "STAKING_APPCHAIN_RPC_URL", value_parser = parse_url)]
-    pub staking_appchain_rpc_url: String,
+    pub staking_appchain_rpc_url: Url,
     /// Private key for signing transactions
     #[arg(long, env = "PRIVATE_KEY")]
     pub private_key: String,
@@ -179,12 +180,13 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         info!("epoch data hash not yet submitted for epoch {epoch} on seq chain {seq_chain_id}. Submitting...");
         // get the latest known ethereum block hash from the gas archive by querying KnownBlockHash
         // events
-        let filter = gas_archive.KnownBlockHash_filter();
+        let filter = gas_archive.KnownBlockHash_filter().from_block(BlockNumberOrTag::Number(3525));
         let logs = filter
             .query()
             .await
             .unwrap_or_else(|e| panic!("failed to get KnownBlockHash events: {e}"));
 
+        info!("KnownBlockHash events: {logs:?}");
         let eth_block_hash = if let Some((log, _)) = logs.last() {
             log.ethBlockHash
         } else {
@@ -230,11 +232,14 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
             .get_logs(&filter)
             .await
             .unwrap_or_else(|e| panic!("failed to get logs from ethereum provider: {e}"));
+        // info!("logs {:#?}", logs.len());
         let last_log =
             logs.last().unwrap_or_else(|| panic!("No events found that update the send root"));
         let sendroot_event = SendRootUpdated::decode_log_data(last_log.data())
             .unwrap_or_else(|e| panic!("failed to decode SendRootUpdated event: {e}"));
 
+        // info!("sendroot_event {:#?}, {:#?}", sendroot_event.l2BlockHash,
+        // sendroot_event.outputRoot);
         let send_root_storage_slot = gas_archive
             .SEND_ROOT_STORAGE_SLOT()
             .call()
@@ -292,6 +297,23 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
             )
         ); // sanity check
 
+        // info!("seq_chain_id: {seq_chain_id}");
+        // info!("sendroot_event.outputRoot: {0:?}", sendroot_event.outputRoot);
+        // info!("rlp_encoded_eth_block_header: {0:?}", rlp_encoded_eth_block_header);
+        // info!(
+        //     "seq_chain_block_hash_proof.account_proof: {:#?}",
+        //     seq_chain_block_hash_proof.account_proof
+        // );
+        // info!(
+        //     "seq_chain_block_hash_proof.storage_proof: {:#?}",
+        //     seq_chain_block_hash_proof.storage_proof
+        // );
+        // info!("rlp_encoded_seq_block_header: {0:?}", rlp_encoded_seq_block_header);
+        // info!("epoch_data_hash_proof.account_proof: {0:?}", epoch_data_hash_proof.account_proof);
+        // info!(
+        //     "seq_chain_block_hash_proof.storage_proof: {0:?}",
+        //     seq_chain_block_hash_proof.storage_proof
+        // );
         let receipt = gas_archive
             .confirmEpochDataHash(
                 U256::from(seq_chain_id),
@@ -407,16 +429,16 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
 pub struct UpdateAndSubmitProofsArgs {
     /// Base chain RPC URL
     #[arg(long, env = "BASE_RPC_URL", value_parser = parse_url)]
-    pub base_rpc_url: String,
+    pub base_rpc_url: Url,
     /// Sequencing chain RPC URL
     #[arg(long, env = "SEQ_CHAIN_RPC_URL", value_parser = parse_url)]
-    pub seq_chain_rpc_url: String,
+    pub seq_chain_rpc_url: Url,
     /// Ethereum RPC URL
     #[arg(long, env = "ETHEREUM_RPC_URL", value_parser = parse_url)]
-    pub ethereum_rpc_url: String,
+    pub ethereum_rpc_url: Url,
     /// Staking appchain RPC URL
     #[arg(long, env = "STAKING_APPCHAIN_RPC_URL", value_parser = parse_url)]
-    pub staking_appchain_rpc_url: String,
+    pub staking_appchain_rpc_url: Url,
     /// Private key for signing transactions
     #[arg(long, env = "PRIVATE_KEY")]
     pub private_key: String,

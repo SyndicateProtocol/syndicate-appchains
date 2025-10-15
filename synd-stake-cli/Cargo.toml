@@ -22,5 +22,6 @@ reqwest = { workspace = true }
 shared = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
+url = { workspace = true }
 [lints]
 workspace = true
