@@ -129,9 +129,6 @@ pub struct SubmitGasProofsArgs {
     /// Address of the gas archive contract
     #[arg(long, value_parser=parse_address)]
     pub gas_archive_address: Address,
-    /// Epoch number (will default to the latest finalized epoch if not provided)
-    #[arg(long)]
-    pub epoch: Option<u64>,
 }
 
 /// Submits gas proofs to confirm epoch data hash on the `GasArchive` contract
@@ -156,15 +153,11 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         .unwrap_or_else(|e| panic!("failed to get gas aggregator address: {e}"));
     let gas_aggregator = GasAggregator::new(gas_aggregator_address, seq_provider.clone());
 
-    let epoch = match args.epoch {
-        Some(epoch) => U256::from(epoch),
-        None => gas_aggregator
-            .getCurrentEpoch()
-            .call()
-            .await
-            .unwrap_or_else(|e| panic!("failed to get current epoch: {e}"))
-            .saturating_sub(U256::from(1)),
-    };
+    let epoch = gas_archive
+        .epoch()
+        .call()
+        .await
+        .unwrap_or_else(|e| panic!("failed to get current epoch: {e}"));
 
     let mut epoch_data_hash = gas_archive
         .epochVerifiedDataHash(epoch, U256::from(seq_chain_id))
@@ -198,6 +191,8 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
             .call()
             .await
             .unwrap_or_else(|e| panic!("failed to get outbox contract address: {e}"));
+
+        info!("outbox contract address: {outbox_contract_addr}");
 
         let epoch_data_hash_storage_slot_index =
             gas_archive.GAS_AGGREGATOR_STORAGE_LOCATION().call().await.unwrap_or_else(|e| {
@@ -391,9 +386,6 @@ pub struct UpdateAndSubmitProofsArgs {
     /// Address of the gas archive contract
     #[arg(long, value_parser=parse_address)]
     pub gas_archive_address: Address,
-    /// Epoch number (will default to the latest finalized epoch if not provided)
-    #[arg(long)]
-    pub epoch: Option<u64>,
 }
 
 /// Updates base and ethereum block hashes, then submits gas proofs to confirm epoch data hash
@@ -424,7 +416,6 @@ pub async fn update_and_submit_proofs(args: &UpdateAndSubmitProofsArgs) {
         staking_appchain_rpc_url: args.staking_appchain_rpc_url.clone(),
         private_key: args.private_key.clone(),
         gas_archive_address: args.gas_archive_address,
-        epoch: args.epoch,
     };
 
     info!("Step 2: Submitting gas proofs");
