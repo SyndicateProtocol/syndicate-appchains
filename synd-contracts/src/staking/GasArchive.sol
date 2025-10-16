@@ -21,8 +21,12 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     /*//////////////////////////////////////////////////////////////
                             CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Storage slot of aggregatedEpochDataHash in GasAggregator (slot 0) (see `forge inspect GasAggregator storageLayout`)
-    uint256 public constant AGGREGATED_EPOCH_DATA_HASH_SLOT = 0;
+
+    /// @notice ERC-7201 storage slot for GasAggregator-specific data
+    /// @dev Generated using: cast index-erc7201 syndicate.storage.GasAggregator
+    bytes32 public constant GAS_AGGREGATOR_STORAGE_LOCATION =
+        0xb7dfb3be9e2ba9b0349e11a21cd1baebde23ce111dd0651619b69a6e26aa0600;
+
     uint256 public constant HEADER_STATE_ROOT_INDEX = 3;
     uint256 public constant STORAGE_ROOT_ACCOUNT_FIELDS_INDEX = 2;
 
@@ -235,7 +239,7 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             accountProof: accountProof,
             storageProof: storageProof,
             account: seqChainGasAggregator[chainID],
-            storageSlot: keccak256(abi.encode(epoch, AGGREGATED_EPOCH_DATA_HASH_SLOT))
+            storageSlot: keccak256(abi.encode(epoch, GAS_AGGREGATOR_STORAGE_LOCATION))
         });
 
         require(verifiedEpochDataHash != bytes32(0), EmptyDataHash());
