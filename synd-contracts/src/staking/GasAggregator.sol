@@ -14,6 +14,15 @@ interface ISyndicateProxy {
     function tokensUsedPerEpoch(uint256 epoch) external view returns (uint256);
 }
 
+/// @notice Storage struct for GasAggregator using ERC-7201 namespaced storage pattern
+/// @dev This struct contains all the state variables specific to the sequencing chain functionality.
+///      Using ERC-7201 ensures storage slots don't conflict during upgrades.
+/// @custom:storage-location erc7201:syndicate.storage.GasAggregator
+struct GasAggregatorStorage {
+    /// @dev Stores the final hash for each completed epoch.
+    mapping(uint256 => bytes32) aggregatedEpochDataHash;
+}
+
 /**
  * @title GasAggregator
  * @notice Aggregates gas usage data from appchains
@@ -32,15 +41,6 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
     /// @notice Version of the GasAggregator contract (updatable during upgrades)
     /// @dev Semantic version string to track contract upgrades and compatibility
     uint256 public constant VERSION = 1_000_000; // 1.0.0 (major * 1_000_000 + minor * 1_000 + patch)
-
-    /*//////////////////////////////////////////////////////////////
-                            FIXED STORAGE SLOTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// SLOT 0: aggregatedEpochDataHash
-    /// @notice Storage slot is 0 for aggregatedEpochDataHash in GasAggregator (see `forge inspect GasAggregator storageLayout`)
-    /// @dev Stores the final hash for each completed epoch.
-    mapping(uint256 => bytes32) public aggregatedEpochDataHash;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -210,7 +210,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
             return;
         }
 
-        aggregatedEpochDataHash[currentEpoch] = pendingDataHash;
+        _getGasAggregatorStorage().aggregatedEpochDataHash[currentEpoch] = pendingDataHash;
         pendingDataHash = 0;
         emit AggregatedTokens(currentEpoch, chainIds, tokens);
         currentEpoch++;
@@ -380,6 +380,30 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
         currentAggregateIndex = 0;
         pendingDataHash = 0;
         _unpause();
+    }
+
+    ////// NAMESPACE STORAGE //////
+
+    /// @notice ERC-7201 storage slot for GasAggregator-specific data
+    /// @dev Generated using: cast index-erc7201 syndicate.storage.GasAggregator
+    ///      This ensures the storage slot doesn't conflict with inherited contracts
+    bytes32 public constant GAS_AGGREGATOR_STORAGE_LOCATION =
+        0xb7dfb3be9e2ba9b0349e11a21cd1baebde23ce111dd0651619b69a6e26aa0600;
+
+    /// @notice Internal function to access the ERC-7201 namespaced storage
+    /// @dev Uses inline assembly to access the specific storage slot for this contract's data
+    /// @return $ Storage pointer to the GasAggregatorStorage struct
+    function _getGasAggregatorStorage() private pure returns (GasAggregatorStorage storage $) {
+        assembly {
+            $.slot := GAS_AGGREGATOR_STORAGE_LOCATION
+        }
+    }
+
+    /// @notice Get the aggregated epoch data hash
+    /// @return The hash of the aggregated epoch data
+    function aggregatedEpochDataHash(uint256 epoch) public view returns (bytes32) {
+        GasAggregatorStorage storage $ = _getGasAggregatorStorage();
+        return $.aggregatedEpochDataHash[epoch];
     }
 }
 

@@ -277,7 +277,7 @@ pub async fn new_provider(rpc_url: &Url, private_key: &str) -> FilledProvider {
             PrivateKeySigner::from_str(private_key)
                 .unwrap_or_else(|e| panic!("invalid private key: {e}")),
         ))
-        .connect(&rpc_url.to_string())
+        .connect(rpc_url.as_ref())
         .await
         .unwrap_or_else(|e| panic!("unable to create provider: {e}"))
 }
