@@ -1,9 +1,6 @@
 //! The `gas-agg` module contains the functions for aggregating gas usage from appchains.
 
-use alloy::{
-    primitives::{Address, U256},
-    providers::ProviderBuilder,
-};
+use alloy::primitives::{Address, U256};
 use clap::Args;
 use contract_bindings::synd::gas_aggregator::GasAggregator;
 use shared::{
@@ -63,12 +60,10 @@ pub struct GasAggArgs {
 #[allow(clippy::cognitive_complexity)]
 pub async fn gas_agg(args: &GasAggArgs) {
     // TODO (ENG-2111): Use shared provider function
-    let provider = ProviderBuilder::new()
-        .connect(args.rpc_url.as_str())
-        .await
-        .unwrap_or_else(|e| panic!("Failed to connect to RPC URL '{}': {}", args.rpc_url, e));
-
-    let gas_aggregator = GasAggregator::new(args.gas_aggregator_address, provider);
+    let gas_aggregator = GasAggregator::new(
+        args.gas_aggregator_address,
+        new_provider(&args.rpc_url, &args.private_key).await,
+    );
     if gas_aggregator.currentEpoch().call().await.unwrap_or_else(|e| {
         panic!(
             "Failed to call currentEpoch on gas aggregator contract: {e}
