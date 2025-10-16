@@ -15,8 +15,8 @@ interface ISyndicateProxy {
 }
 
 /// @notice Storage struct for GasAggregator using ERC-7201 namespaced storage pattern
-/// @dev This struct contains all the state variables specific to the sequencing chain functionality.
-///      Using ERC-7201 ensures storage slots don't conflict during upgrades.
+/// @dev This struct is used to store the aggregated epoch data hash.
+/// @dev Using ERC-7201 ensures storage slots don't conflict during upgrades.
 /// @custom:storage-location erc7201:syndicate.storage.GasAggregator
 struct GasAggregatorStorage {
     /// @dev Stores the final hash for each completed epoch.
@@ -382,7 +382,9 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
         _unpause();
     }
 
-    ////// NAMESPACE STORAGE //////
+    /*//////////////////////////////////////////////////////////////
+                            NAMESPACE STORAGE
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice ERC-7201 storage slot for GasAggregator-specific data
     /// @dev Generated using: cast index-erc7201 syndicate.storage.GasAggregator

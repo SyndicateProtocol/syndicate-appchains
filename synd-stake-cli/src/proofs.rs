@@ -238,8 +238,6 @@ pub async fn submit_gas_proofs(args: &SubmitGasProofsArgs) {
         let sendroot_event = SendRootUpdated::decode_log_data(last_log.data())
             .unwrap_or_else(|e| panic!("failed to decode SendRootUpdated event: {e}"));
 
-        // info!("sendroot_event {:#?}, {:#?}", sendroot_event.l2BlockHash,
-        // sendroot_event.outputRoot);
         let send_root_storage_slot = gas_archive
             .SEND_ROOT_STORAGE_SLOT()
             .call()
