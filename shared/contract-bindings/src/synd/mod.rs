@@ -139,7 +139,6 @@ pub mod r#gas_archive_test;
 pub mod r#gas_archive_test_helper;
 pub mod r#gas_counter;
 pub mod r#gas_aggregator_test;
-pub mod r#gas_aggregator_utils;
 pub mod r#mock_appchain_factory;
 pub mod r#mock_gas_counter;
 pub mod r#global_state_lib;
