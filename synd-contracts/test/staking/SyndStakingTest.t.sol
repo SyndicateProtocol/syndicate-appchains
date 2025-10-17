@@ -1178,6 +1178,7 @@ contract SyndStakingTest is Test {
         appchainIds[0] = appchainId1;
         gasFees[0] = 100 ether; // Set gas fees for appchainId1
         gasProvider.setFees(2, appchainIds, gasFees);
+        performancePool.computeDiminishingFactors(2, 0);
 
         // Deposit rewards to both pools
         basePool.deposit{value: 50 ether}(2);
@@ -1230,6 +1231,7 @@ contract SyndStakingTest is Test {
         appchainIds[0] = appchainId1;
         gasFees[0] = 100 ether; // Set gas fees for appchainId1
         gasProvider.setFees(2, appchainIds, gasFees);
+        performancePool.computeDiminishingFactors(2, 0);
 
         // Deposit rewards to both pools
         basePool.deposit{value: 100 ether}(2);
@@ -1289,6 +1291,7 @@ contract SyndStakingTest is Test {
         appchainIds[0] = appchainId1;
         gasFees[0] = 100 ether; // Set gas fees for appchainId1
         gasProvider.setFees(2, appchainIds, gasFees);
+        performancePool.computeDiminishingFactors(2, 0);
 
         // Deposit rewards to both pools
         basePool.deposit{value: 50 ether}(2);

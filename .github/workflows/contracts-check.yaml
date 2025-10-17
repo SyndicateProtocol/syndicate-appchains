@@ -37,7 +37,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.3.5
 
       - name: Show Forge version
         run: |
@@ -64,7 +64,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: "1.21"
 
       - name: Install abigen
         run: |
@@ -75,7 +75,7 @@ jobs:
         run: |
           make -C shared create-contract-bindings
           git diff --quiet || (echo "Error: Rust contract bindings are out of date. Please run 'make -C shared create-contract-bindings' to update them." && exit 1)
-          
+
       # Needs to be the last job step
       - name: Notify Slack on Failure
         # Only notify for workflow_run failures on main branch (not PRs)

@@ -13,6 +13,7 @@ use shared::{
     types::new_provider,
 };
 use tracing::{error, info};
+use url::Url;
 
 /// Arguments for the `mint` command.
 ///
@@ -40,7 +41,7 @@ pub struct MintArgs {
 
     /// The RPC URL to use for the transaction.
     #[arg(short = 'r', long, env = "RPC_URL", default_value = "https://eth.drpc.org", value_parser = parse_url)]
-    pub rpc_url: String,
+    pub rpc_url: Url,
 }
 
 /// Mints emissions to the staking system.

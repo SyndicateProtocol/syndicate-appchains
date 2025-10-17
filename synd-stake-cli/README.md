@@ -83,7 +83,6 @@ synd-stake-cli gas-agg \\
   --private-key <PRIVATE_KEY> \\
   --gas-aggregator-address <GAS_AGGREGATOR_ADDRESS> \\
   --rpc-url <SEQUENCING_CHAIN_RPC_URL> \\
-  [--sim]  # Optional: run in simulation mode
 ```
 
 **Environment Variables:**
@@ -111,15 +110,13 @@ event SendRootUpdated(bytes32 indexed outputRoot, bytes32 indexed l2BlockHash);
 
 ### Step 3: Update Block Hashes
 
-After the settlement period, update the known Ethereum and Base block hashes on the staking appchain.
-
 ```bash
 synd-stake-cli update-base-and-ethereum-block-hashes \\
   --base-rpc-url <BASE_RPC_URL> \\
   --private-key <PRIVATE_KEY> \\
   --relayer-address <BLOCK_HASH_RELAYER_ADDRESS> \\
   --gas-archive-address <GAS_ARCHIVE_ADDRESS> \\
-  [--appchain-rpc-url <STAKING_APPCHAIN_RPC_URL>]  # Optional: wait for confirmation
+  [--staking-appchain-rpc-url <STAKING_APPCHAIN_RPC_URL>]  # Optional: wait for confirmation
 ```
 
 **Environment Variables:**
@@ -139,8 +136,6 @@ synd-stake-cli update-base-and-ethereum-block-hashes \\
 
 ### Step 4: Submit Gas Proofs
 
-Finally, submit Merkle-Patricia proofs to validate the gas aggregation data.
-
 ```bash
 synd-stake-cli submit-gas-proofs \\
   --seq-chain-rpc-url <SEQUENCING_CHAIN_RPC_URL> \\
@@ -148,7 +143,6 @@ synd-stake-cli submit-gas-proofs \\
   --staking-appchain-rpc-url <STAKING_APPCHAIN_RPC_URL> \\
   --private-key <PRIVATE_KEY> \\
   --gas-archive-address <GAS_ARCHIVE_ADDRESS> \\
-  [--epoch <EPOCH_NUMBER>]  # Optional: defaults to latest finalized epoch
 ```
 
 **Environment Variables:**

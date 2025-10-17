@@ -7721,6 +7721,7 @@ dependencies = [
  "shared",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]

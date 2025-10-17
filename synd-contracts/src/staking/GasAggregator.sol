@@ -14,6 +14,15 @@ interface ISyndicateProxy {
     function tokensUsedPerEpoch(uint256 epoch) external view returns (uint256);
 }
 
+/// @notice Storage struct for GasAggregator using ERC-7201 namespaced storage pattern
+/// @dev This struct is used to store the aggregated epoch data hash.
+/// @dev Using ERC-7201 ensures storage slots don't conflict during upgrades.
+/// @custom:storage-location erc7201:syndicate.storage.GasAggregator
+struct GasAggregatorStorage {
+    /// @dev Stores the final hash for each completed epoch.
+    mapping(uint256 => bytes32) aggregatedEpochDataHash;
+}
+
 /**
  * @title GasAggregator
  * @notice Aggregates gas usage data from appchains
@@ -31,16 +40,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
 
     /// @notice Version of the GasAggregator contract (updatable during upgrades)
     /// @dev Semantic version string to track contract upgrades and compatibility
-    string public constant VERSION = "1.0.0";
-
-    /*//////////////////////////////////////////////////////////////
-                            FIXED STORAGE SLOTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// SLOT 0: aggregatedEpochDataHash
-    /// @notice Storage slot is 0 for aggregatedEpochDataHash in GasAggregator (see `forge inspect GasAggregator storageLayout`)
-    /// @dev Stores the final hash for each completed epoch.
-    mapping(uint256 => bytes32) public aggregatedEpochDataHash;
+    uint256 public constant VERSION = 1_000_000; // 1.0.0 (major * 1_000_000 + minor * 1_000 + patch)
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -96,7 +96,10 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
     error ChainNotFound(uint256 chainId);
     error FactoryAlreadySet();
     error NoChainsAdded();
-    error EpochNotOver();
+
+    /// @notice Error thrown when attempting to aggregate an epoch that hasn't ended
+    /// @dev Prevents aggregation of current or future epochs
+    error EpochNotOver(uint256 epoch, uint256 currentEpoch);
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -186,7 +189,6 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
      * Pause contract while aggregating. Unpause when finished.
      */
     function aggregateTokens(uint256[] calldata prevChainIds, uint256[] calldata prevTokens) external {
-        require(getCurrentEpoch() > currentEpoch, EpochNotOver());
         if (currentAggregateIndex == 0) {
             // If this is the first time we are aggregating, pause the contract till we are done
             _pause();
@@ -208,7 +210,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
             return;
         }
 
-        aggregatedEpochDataHash[currentEpoch] = pendingDataHash;
+        _getGasAggregatorStorage().aggregatedEpochDataHash[currentEpoch] = pendingDataHash;
         pendingDataHash = 0;
         emit AggregatedTokens(currentEpoch, chainIds, tokens);
         currentEpoch++;
@@ -220,51 +222,52 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
         uint256[] calldata prevChainIds,
         uint256[] calldata prevTokens
     ) public view returns (uint256 nextAggregateIndex, uint256[] memory chainIds, uint256[] memory tokens) {
-        uint256 count = _appchains.length() - aggregateIndex;
-        require(count > 0, NoChainsAdded());
-        if (maxAppchainsToQuery < count) {
-            count = maxAppchainsToQuery;
-            nextAggregateIndex = aggregateIndex + count;
-        }
-        chainIds = new uint256[](count);
-        tokens = new uint256[](count);
-        for (uint256 i = 0; i < count; i++) {
-            chainIds[i] = _appchains.at(aggregateIndex + i);
-            tokens[i] = ISyndicateProxy(appchainContract[chainIds[i]]).tokensUsedPerEpoch(currentEpoch);
+        uint256 epoch = getCurrentEpoch();
+        require(epoch > currentEpoch, EpochNotOver(currentEpoch, epoch));
+
+        uint256 appchainToQuery = _appchains.length() - aggregateIndex;
+        require(appchainToQuery > 0, NoChainsAdded());
+        if (maxAppchainsToQuery < appchainToQuery) {
+            appchainToQuery = maxAppchainsToQuery;
+            nextAggregateIndex = aggregateIndex + appchainToQuery;
         }
 
-        // If we are aggregating the first chunk, we can skip the merge sort
+        uint256 chainIdCount = prevChainIds.length;
+        require(chainIdCount == prevTokens.length, InvalidDataHash());
         if (aggregateIndex == 0) {
-            require(prevChainIds.length == 0, InvalidDataHash());
-            require(prevTokens.length == 0, InvalidDataHash());
-            // don't bother sorting if there is only one chunk
-            if (nextAggregateIndex > 0) {
-                _quickSort(chainIds, tokens);
-            }
-            // the first chunk does not need to be merged
-            return (nextAggregateIndex, chainIds, tokens);
+            // If this is the first time we are aggregating, the arrays of previous data should be empty
+            require(chainIdCount == 0, InvalidDataHash());
         }
 
-        _quickSort(chainIds, tokens);
-        uint256[] memory newChainIds = new uint256[](maxAppchainsToQuery);
-        uint256[] memory newTokens = new uint256[](maxAppchainsToQuery);
+        chainIds = new uint256[](chainIdCount + appchainToQuery);
+        tokens = new uint256[](chainIdCount + appchainToQuery);
 
-        // merge sort the sorted data
-        uint256 prevIndex = 0;
-        uint256 index = 0;
-        for (uint256 i = 0; i < maxAppchainsToQuery; i++) {
-            if (index == count || prevTokens[prevIndex] >= tokens[index]) {
-                newTokens[i] = prevTokens[prevIndex];
-                newChainIds[i] = prevChainIds[prevIndex];
-                prevIndex++;
-            } else {
-                newTokens[i] = tokens[index];
-                newChainIds[i] = chainIds[index];
-                index++;
+        for (uint256 i = 0; i < chainIdCount; i++) {
+            chainIds[i] = prevChainIds[i];
+            tokens[i] = prevTokens[i];
+        }
+
+        for (uint256 i = 0; i < appchainToQuery; i++) {
+            uint256 chainId = _appchains.at(aggregateIndex + i);
+            uint256 gasUsed = ISyndicateProxy(appchainContract[chainId]).tokensUsedPerEpoch(currentEpoch);
+            // ignore appchains with no gas usage in the epoch
+            if (gasUsed > 0) {
+                chainIds[chainIdCount] = chainId;
+                tokens[chainIdCount] = gasUsed;
+                chainIdCount++;
             }
         }
 
-        return (nextAggregateIndex, newChainIds, newTokens);
+        // truncate arrays
+        assembly {
+            mstore(chainIds, chainIdCount)
+            mstore(tokens, chainIdCount)
+        }
+
+        // select the top n appchains
+        if (chainIdCount > maxAppchainsToQuery) {
+            GasAggregatorUtils.select(chainIds, tokens, maxAppchainsToQuery);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -380,49 +383,170 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
     }
 
     /*//////////////////////////////////////////////////////////////
-                         INTERNAL FUNCTIONS
+                            NAMESPACE STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    // sort key, value arrays by values from high to low
-    function _quickSort(uint256[] memory keys, uint256[] memory values) internal pure {
+    /// @notice ERC-7201 storage slot for GasAggregator-specific data
+    /// @dev Generated using: cast index-erc7201 syndicate.storage.GasAggregator
+    ///      This ensures the storage slot doesn't conflict with inherited contracts
+    bytes32 public constant GAS_AGGREGATOR_STORAGE_LOCATION =
+        0xb7dfb3be9e2ba9b0349e11a21cd1baebde23ce111dd0651619b69a6e26aa0600;
+
+    /// @notice Internal function to access the ERC-7201 namespaced storage
+    /// @dev Uses inline assembly to access the specific storage slot for this contract's data
+    /// @return $ Storage pointer to the GasAggregatorStorage struct
+    function _getGasAggregatorStorage() private pure returns (GasAggregatorStorage storage $) {
+        assembly {
+            $.slot := GAS_AGGREGATOR_STORAGE_LOCATION
+        }
+    }
+
+    /// @notice Get the aggregated epoch data hash
+    /// @return The hash of the aggregated epoch data
+    function aggregatedEpochDataHash(uint256 epoch) public view returns (bytes32) {
+        GasAggregatorStorage storage $ = _getGasAggregatorStorage();
+        return $.aggregatedEpochDataHash[epoch];
+    }
+}
+
+library GasAggregatorUtils {
+    /**
+     * @notice Select the top-n elements from key, value arrays via quick select and truncate the arrays
+     * @dev Average O(n) runtime complexity, can be O(n2) for pathological input
+     * @param keys The array of keys
+     * @param values The array of values
+     * @param n The number of elements to select
+     */
+    function select(uint256[] memory keys, uint256[] memory values, uint256 n) internal pure {
+        require(keys.length == values.length && n <= values.length);
+
         unchecked {
-            _quickSort(_begin(values), _end(values), _begin(keys) - _begin(values));
+            uint256 begin = _begin(values);
+            uint256 end = begin + 0x20 * values.length;
+            uint256 targetEnd = begin + 0x20 * n;
+            uint256 offset = _begin(keys) - begin;
+
+            while (end > targetEnd) {
+                // partition the range
+                uint256 index = _partition(begin, end, offset);
+
+                // if the partition point lies inside the range, adjust the start index
+                // otherwise, adjust the end index
+                if (index < targetEnd) {
+                    begin = index;
+                } else {
+                    end = index;
+                }
+            }
+        }
+
+        // truncate array lengths
+        assembly {
+            mstore(keys, n)
+            mstore(values, n)
         }
     }
 
     /**
-     * Fork of the openzeppelin array _quickSort function that also swaps an offset array
-     * @dev Performs a quick sort of a segment of memory. The segment sorted starts at `begin` (inclusive), and stops
-     * at end (exclusive). Sorting follows the `comp` comparator.
-     *
-     * Invariant: `begin <= end`. This is the case when initially called by {sort} and is preserved in subcalls.
-     *
-     * IMPORTANT: Memory locations between `begin` and `end` are not validated/zeroed. This function should
-     * be used only if the limits are within a memory array.
+     * @notice Quick sort key, value arrays in-place
+     * @param keys The array of keys
+     * @param values The array of values
      */
-    function _quickSort(uint256 begin, uint256 end, uint256 offset) internal pure {
+    function sort(uint256[] memory keys, uint256[] memory values) internal pure {
+        require(keys.length == values.length);
+
         unchecked {
-            if (end - begin < 0x40) return;
+            uint256 begin = _begin(values);
+            _quickSort(begin, begin + 0x20 * values.length, _begin(keys) - begin);
+        }
+    }
 
-            // Use first element as pivot
-            uint256 pivot = _mload(begin);
-            // Position where the pivot should be at the end of the loop
-            uint256 pos = begin;
+    /**
+     * @notice Simple, unoptimized quick sort implementation
+     * @dev Normally quick sort falls back to insertion sort for small lists
+     * @param begin Pointer to the start value to sort
+     * @param end Pointer past the end value to sort
+     * @param offset Memory offset of the keys array from the values one
+     */
+    function _quickSort(uint256 begin, uint256 end, uint256 offset) private pure {
+        unchecked {
+            while (end - begin > 0x20) {
+                // partition the range
+                uint256 index = _partition(begin, end, offset);
 
-            for (uint256 it = begin + 0x20; it < end; it += 0x20) {
-                if (_mload(it) > pivot) {
-                    // If the value stored at the iterator's position comes before the pivot, we increment the
-                    // position of the pivot and move the value there.
-                    pos += 0x20;
-                    _swap(pos, it);
-                    _swap(pos + offset, it + offset);
-                }
+                // recur
+                _quickSort(begin, index, offset);
+
+                // manually tail recur, solidity does not automatically optimize this
+                begin = index;
             }
+        }
+    }
 
-            _swap(begin, pos); // Swap pivot into place
-            _swap(begin + offset, pos + offset);
-            _quickSort(begin, pos, offset); // Sort the left side of the pivot
-            _quickSort(pos + 0x20, end, offset); // Sort the right side of the pivot
+    /**
+     * @notice Hoare partitioning algorithm
+     * @param begin Pointer to the start value to partition
+     * @param end Pointer past the end value to partition
+     * @param offset Memory offset of the keys array from the values one
+     * @return The partition index in range [begin + 0x20, end)
+     *         such that the ranges [begin, index) and [index, end) are partially sorted
+     *         and each range contains at least one element.
+     * @dev This function handles duplicate elements well - the pivot is selected
+     *         near the middle of the range when duplicates are present.
+     *         It makes a single pass through the data and does n/6 swaps on average.
+     */
+    function _partition(uint256 begin, uint256 end, uint256 offset) private pure returns (uint256) {
+        unchecked {
+            // the midpoint rounds up and is always greater than begin
+            // this ensures an index greater than begin will be returned
+            uint256 mid = (begin + end) / 64 * 32;
+            uint256 pivot = _mload(mid);
+            begin -= 0x20;
+            while (true) {
+                uint256 begin_value;
+                do {
+                    begin += 0x20;
+                    begin_value = _mload(begin);
+                } while (begin_value > pivot);
+
+                uint256 end_value;
+                do {
+                    end -= 0x20;
+                    end_value = _mload(end);
+                } while (end_value < pivot);
+
+                if (begin >= end) {
+                    return begin;
+                }
+
+                _swapWithOffset(begin, begin_value, end, end_value, offset);
+            }
+        }
+    }
+
+    /**
+     * @dev Swaps the elements in memory location `ptr1` and `ptr2`, and `ptr1 + offset`, `ptr2 + offset`.
+     * @param val1 The value of ptr1
+     * @param val2 The value of ptr2
+     */
+    function _swapWithOffset(uint256 ptr1, uint256 val1, uint256 ptr2, uint256 val2, uint256 offset) private pure {
+        assembly {
+            mstore(ptr1, val2)
+            mstore(ptr2, val1)
+        }
+        unchecked {
+            _swap(ptr1 + offset, ptr2 + offset);
+        }
+    }
+
+    /**
+     * @dev Swaps the elements memory location `ptr1` and `ptr2`.
+     */
+    function _swap(uint256 ptr1, uint256 ptr2) private pure {
+        assembly {
+            let value1 := mload(ptr1)
+            mstore(ptr1, mload(ptr2))
+            mstore(ptr2, value1)
         }
     }
 
@@ -436,33 +560,11 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
     }
 
     /**
-     * @dev Pointer to the memory location of the first memory word (32bytes) after `array`. This is the memory word
-     * that comes just after the last element of the array.
-     */
-    function _end(uint256[] memory array) internal pure returns (uint256 ptr) {
-        unchecked {
-            return _begin(array) + array.length * 0x20;
-        }
-    }
-
-    /**
      * @dev Load memory word (as a uint256) at location `ptr`.
      */
     function _mload(uint256 ptr) internal pure returns (uint256 value) {
         assembly {
             value := mload(ptr)
-        }
-    }
-
-    /**
-     * @dev Swaps the elements memory location `ptr1` and `ptr2`.
-     */
-    function _swap(uint256 ptr1, uint256 ptr2) internal pure {
-        assembly {
-            let value1 := mload(ptr1)
-            let value2 := mload(ptr2)
-            mstore(ptr1, value2)
-            mstore(ptr2, value1)
         }
     }
 }
