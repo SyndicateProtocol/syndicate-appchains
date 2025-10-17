@@ -1,11 +1,40 @@
-
-╭--------------------+---------+------+--------+-------+---------------------------------------------------╮
-| Name               | Type    | Slot | Offset | Bytes | Contract                                          |
-+==========================================================================================================+
-| stubImplementation | address | 0    | 0      | 20    | src/factory/SyndicateFactory.sol:SyndicateFactory |
-|--------------------+---------+------+--------+-------+---------------------------------------------------|
-| syndicateChainImpl | address | 1    | 0      | 20    | src/factory/SyndicateFactory.sol:SyndicateFactory |
-|--------------------+---------+------+--------+-------+---------------------------------------------------|
-| version            | uint256 | 2    | 0      | 32    | src/factory/SyndicateFactory.sol:SyndicateFactory |
-╰--------------------+---------+------+--------+-------+---------------------------------------------------╯
-
+{
+  "storage": [
+    {
+      "astId": 3092,
+      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+      "label": "stubImplementation",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_address"
+    },
+    {
+      "astId": 3095,
+      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+      "label": "syndicateChainImpl",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_address"
+    },
+    {
+      "astId": 3098,
+      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+      "label": "version",
+      "offset": 0,
+      "slot": "2",
+      "type": "t_uint256"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": "20"
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": "32"
+    }
+  }
+}

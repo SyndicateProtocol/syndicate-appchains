@@ -1,31 +1,125 @@
-
-╭-------------------------------------+---------+------+--------+-------+----------------------------------------------╮
-| Name                                | Type    | Slot | Offset | Bytes | Contract                                     |
-+======================================================================================================================+
-| owner                               | address | 0    | 0      | 20    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| INITIAL_APPCHAIN_OWNER              | address | 1    | 0      | 20    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| ARBITRUM_BRIDGE_ADDRESS             | address | 2    | 0      | 20    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| ARBITRUM_INBOX_ADDRESS              | address | 3    | 0      | 20    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| SEQUENCING_CONTRACT_ADDRESS         | address | 4    | 0      | 20    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| CHAIN_ID                            | uint256 | 5    | 0      | 32    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| SEQUENCING_CHAIN_ID                 | uint256 | 6    | 0      | 32    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| SETTLEMENT_DELAY                    | uint256 | 7    | 0      | 32    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| SETTLEMENT_START_BLOCK              | uint256 | 8    | 0      | 32    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| SEQUENCING_START_BLOCK              | uint256 | 9    | 0      | 32    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL | string  | 10   | 0      | 32    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| APPCHAIN_BLOCK_EXPLORER_URL         | string  | 11   | 0      | 32    | src/config/ArbChainConfig.sol:ArbChainConfig |
-|-------------------------------------+---------+------+--------+-------+----------------------------------------------|
-| version                             | string  | 12   | 0      | 32    | src/config/ArbChainConfig.sol:ArbChainConfig |
-╰-------------------------------------+---------+------+--------+-------+----------------------------------------------╯
-
+{
+  "storage": [
+    {
+      "astId": 276,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "owner",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_address"
+    },
+    {
+      "astId": 278,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "INITIAL_APPCHAIN_OWNER",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_address"
+    },
+    {
+      "astId": 280,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "ARBITRUM_BRIDGE_ADDRESS",
+      "offset": 0,
+      "slot": "2",
+      "type": "t_address"
+    },
+    {
+      "astId": 282,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "ARBITRUM_INBOX_ADDRESS",
+      "offset": 0,
+      "slot": "3",
+      "type": "t_address"
+    },
+    {
+      "astId": 284,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "SEQUENCING_CONTRACT_ADDRESS",
+      "offset": 0,
+      "slot": "4",
+      "type": "t_address"
+    },
+    {
+      "astId": 286,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "CHAIN_ID",
+      "offset": 0,
+      "slot": "5",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 288,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "SEQUENCING_CHAIN_ID",
+      "offset": 0,
+      "slot": "6",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 290,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "SETTLEMENT_DELAY",
+      "offset": 0,
+      "slot": "7",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 292,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "SETTLEMENT_START_BLOCK",
+      "offset": 0,
+      "slot": "8",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 294,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "SEQUENCING_START_BLOCK",
+      "offset": 0,
+      "slot": "9",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 296,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL",
+      "offset": 0,
+      "slot": "10",
+      "type": "t_string_storage"
+    },
+    {
+      "astId": 298,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "APPCHAIN_BLOCK_EXPLORER_URL",
+      "offset": 0,
+      "slot": "11",
+      "type": "t_string_storage"
+    },
+    {
+      "astId": 301,
+      "contract": "src/config/ArbChainConfig.sol:ArbChainConfig",
+      "label": "version",
+      "offset": 0,
+      "slot": "12",
+      "type": "t_string_storage"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": "20"
+    },
+    "t_string_storage": {
+      "encoding": "bytes",
+      "label": "string",
+      "numberOfBytes": "32"
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": "32"
+    }
+  }
+}

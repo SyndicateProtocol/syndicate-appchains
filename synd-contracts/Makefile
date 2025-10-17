@@ -142,11 +142,10 @@ storage-layout-clean :; rm -rf .storage-layouts out/build-info
 storage-layout-update :; @echo "Updating storage layout..." && \
 	$(MAKE) storage-layout-clean && \
 	mkdir -p .storage-layouts && \
-	forge build && \
-	forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.json && \
-	forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.json && \
-	forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.json && \
-	echo "✅ Storage layout updated"
+	forge inspect --json SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.json && \
+	forge inspect --json SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.json && \
+	forge inspect --json ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.json && \
+	echo "✅ Storage layouts updated"
 
 ## 🚀 Deployment & Upgrade Commands
 ## See docs/upgrade/README.md for detailed guide
