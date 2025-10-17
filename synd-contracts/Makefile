@@ -106,7 +106,6 @@ storage-layout-baseline :; @echo "Creating storage layout baseline..." && \
 	forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.baseline.json && \
 	forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.baseline.json && \
 	forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.baseline.json && \
-	forge inspect GasAggregator storageLayout > .storage-layouts/GasAggregator.baseline.json && \
 	echo "✅ Storage layout baselines created"
 
 # Compare current storage layout against baseline
@@ -115,8 +114,7 @@ storage-layout-compare :; @echo "Comparing storage layouts..." && \
 	forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.current.json && \
 	forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.current.json && \
 	forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.current.json && \
-	forge inspect GasAggregator storageLayout > .storage-layouts/GasAggregator.current.json && \
-	for contract in SyndicateFactory SyndicateSequencingChain ArbChainConfig GasAggregator; do \
+	for contract in SyndicateFactory SyndicateSequencingChain ArbChainConfig; do \
 		if [ -f .storage-layouts/$$contract.baseline.json ]; then \
 			echo "Comparing $$contract..."; \
 			if ! cmp -s .storage-layouts/$$contract.baseline.json .storage-layouts/$$contract.current.json; then \
