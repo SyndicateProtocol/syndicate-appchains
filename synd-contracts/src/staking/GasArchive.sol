@@ -21,8 +21,12 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     /*//////////////////////////////////////////////////////////////
                             CONSTANTS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Storage slot of aggregatedEpochDataHash in GasAggregator (slot 0) (see `forge inspect GasAggregator storageLayout`)
-    uint256 public constant AGGREGATED_EPOCH_DATA_HASH_SLOT = 0;
+
+    /// @notice ERC-7201 storage slot for GasAggregator-specific data
+    /// @dev Generated using: cast index-erc7201 syndicate.storage.GasAggregator
+    bytes32 public constant GAS_AGGREGATOR_STORAGE_LOCATION =
+        0xb7dfb3be9e2ba9b0349e11a21cd1baebde23ce111dd0651619b69a6e26aa0600;
+
     uint256 public constant HEADER_STATE_ROOT_INDEX = 3;
     uint256 public constant STORAGE_ROOT_ACCOUNT_FIELDS_INDEX = 2;
 
@@ -51,6 +55,7 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     uint256 public epoch;
 
     /// @notice list of sequencing chains
+    // The chains are enumerable to make it easy to tell which chains are tracked by the archiver
     EnumerableSet.UintSet seqChains;
 
     /// @notice tracks the remaining chains for the epoch
@@ -234,7 +239,7 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             accountProof: accountProof,
             storageProof: storageProof,
             account: seqChainGasAggregator[chainID],
-            storageSlot: keccak256(abi.encode(epoch, AGGREGATED_EPOCH_DATA_HASH_SLOT))
+            storageSlot: keccak256(abi.encode(epoch, GAS_AGGREGATOR_STORAGE_LOCATION))
         });
 
         require(verifiedEpochDataHash != bytes32(0), EmptyDataHash());
@@ -259,9 +264,14 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         require(epochVerifiedDataHash[epoch][seqChainID] == keccak256(abi.encode(appchains, tokens)), InvalidData());
 
         for (uint256 i = 0; i < appchains.length; i++) {
-            appchainIDs[epoch].add(appchains[i]);
-            totalGasFees[epoch] += tokens[i];
-            appchainGasFees[epoch][appchains[i]] += tokens[i];
+            uint256 gasUsed = tokens[i];
+            // ignore appchains with no gas
+            if (gasUsed > 0) {
+                uint256 appchain = appchains[i];
+                appchainIDs[epoch].add(appchain);
+                totalGasFees[epoch] += gasUsed;
+                appchainGasFees[epoch][appchain] += gasUsed;
+            }
         }
 
         epochChainDataSubmitted[epoch][seqChainID] = true;
@@ -279,7 +289,7 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Authorize contract upgrades (admin only)
-    /// @dev Required by UUPSUpgradeable. Only admins can upgrade this contract.
+    /// @dev Required by UUPSUpgradeable. Only the owner can upgrade this contract.
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /// @notice Retrieves a storage slot value using Merkle Patricia proofs (can be obtained from `eth_getProof`)
@@ -352,60 +362,34 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         }
     }
 
-    function getAppchainIds(uint256 epochIndex, uint256 startIndex, uint256 pageSize)
-        external
-        view
-        returns (uint256[] memory chainIDs)
-    {
+    function getAppchainCount(uint256 epochIndex) external view returns (uint256) {
         require(epochIndex < epoch, NotArchivedEpoch());
-        bytes32[] memory ids = appchainIDs[epochIndex]._inner._values;
-        uint256 idsLength = ids.length;
-
-        // Handle edge cases
-        if (startIndex >= idsLength) {
-            return new uint256[](0);
-        }
-
-        // Calculate actual size efficiently
-        uint256 actualSize;
-        unchecked {
-            uint256 remaining = idsLength - startIndex;
-            actualSize = pageSize == 0 || pageSize > remaining ? remaining : pageSize;
-        }
-
-        // Use assembly for zero-copy optimization when possible
-        if (startIndex == 0 && actualSize == idsLength) {
-            // Return entire array with zero-copy assembly trick
-            assembly {
-                chainIDs := ids
-            }
-            return chainIDs;
-        }
-
-        // For partial arrays, use assembly for efficient copying
-        assembly {
-            // Allocate memory for result array
-            chainIDs := mload(0x40)
-            let resultPtr := add(chainIDs, 0x20)
-
-            // Store array length
-            mstore(chainIDs, actualSize)
-
-            // Calculate source pointer (skip array length + startIndex * 32)
-            let sourcePtr := add(add(ids, 0x20), mul(startIndex, 0x20))
-
-            // Copy data efficiently in 32-byte chunks
-            let copySize := mul(actualSize, 0x20)
-            let i := 0
-            for {} lt(i, copySize) { i := add(i, 0x20) } { mstore(add(resultPtr, i), mload(add(sourcePtr, i))) }
-
-            // Update free memory pointer
-            mstore(0x40, add(resultPtr, copySize))
-        }
+        return appchainIDs[epochIndex].length();
     }
 
     function sequencingChainCount() external view returns (uint256) {
         return seqChains.length();
+    }
+
+    // when count is zero, returns the full list of results
+    // count can be greater than the number of appchains that exist
+    function getAppchainInfo(uint256 epochIndex, uint256 startIndex, uint256 count)
+        external
+        view
+        returns (uint256[] memory chainIds, uint256[] memory gasUsed)
+    {
+        require(epochIndex < epoch, NotArchivedEpoch());
+        uint256 maxCount = appchainIDs[epochIndex].length() - startIndex;
+        if (count == 0 || count > maxCount) {
+            count = maxCount;
+        }
+        chainIds = new uint256[](count);
+        gasUsed = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            uint256 chainId = appchainIDs[epochIndex].at(startIndex + i);
+            chainIds[i] = chainId;
+            gasUsed[i] = appchainGasFees[epochIndex][chainId];
+        }
     }
 
     function getSequencingChainIds() external view returns (uint256[] memory chainIDs) {
