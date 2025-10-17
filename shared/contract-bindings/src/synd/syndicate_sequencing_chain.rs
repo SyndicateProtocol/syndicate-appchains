@@ -8,7 +8,6 @@ interface SyndicateSequencingChain {
     error ERC1967InvalidImplementation(address implementation);
     error ERC1967NonPayable();
     error FailedCall();
-    error GasStartLessThanGasLeft(uint256 gasStart, uint256 gasLeft);
     error GasTrackingAlreadyDisabled();
     error GasTrackingAlreadyEnabled();
     error InvalidInitialization();
@@ -645,22 +644,6 @@ interface SyndicateSequencingChain {
   },
   {
     "type": "error",
-    "name": "GasStartLessThanGasLeft",
-    "inputs": [
-      {
-        "name": "gasStart",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "gasLeft",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "GasTrackingAlreadyDisabled",
     "inputs": []
   },
@@ -1161,100 +1144,6 @@ error FailedCall();
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
-            }
-            #[inline]
-            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
-                <Self::Parameters<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Self::new)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Custom error with signature `GasStartLessThanGasLeft(uint256,uint256)` and selector `0xff9d5d3d`.
-```solidity
-error GasStartLessThanGasLeft(uint256 gasStart, uint256 gasLeft);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct GasStartLessThanGasLeft {
-        #[allow(missing_docs)]
-        pub gasStart: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub gasLeft: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[doc(hidden)]
-        type UnderlyingSolTuple<'a> = (
-            alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
-        );
-        #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = (
-            alloy::sol_types::private::primitives::aliases::U256,
-            alloy::sol_types::private::primitives::aliases::U256,
-        );
-        #[cfg(test)]
-        #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(
-            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-        ) {
-            match _t {
-                alloy_sol_types::private::AssertTypeEq::<
-                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                >(_) => {}
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<GasStartLessThanGasLeft> for UnderlyingRustTuple<'_> {
-            fn from(value: GasStartLessThanGasLeft) -> Self {
-                (value.gasStart, value.gasLeft)
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for GasStartLessThanGasLeft {
-            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {
-                    gasStart: tuple.0,
-                    gasLeft: tuple.1,
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolError for GasStartLessThanGasLeft {
-            type Parameters<'a> = UnderlyingSolTuple<'a>;
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "GasStartLessThanGasLeft(uint256,uint256)";
-            const SELECTOR: [u8; 4] = [255u8, 157u8, 93u8, 61u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.gasStart),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.gasLeft),
-                )
             }
             #[inline]
             fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
@@ -8730,8 +8619,6 @@ function version() external view returns (uint256);
         #[allow(missing_docs)]
         FailedCall(FailedCall),
         #[allow(missing_docs)]
-        GasStartLessThanGasLeft(GasStartLessThanGasLeft),
-        #[allow(missing_docs)]
         GasTrackingAlreadyDisabled(GasTrackingAlreadyDisabled),
         #[allow(missing_docs)]
         GasTrackingAlreadyEnabled(GasTrackingAlreadyEnabled),
@@ -8782,14 +8669,13 @@ function version() external view returns (uint256);
             [220u8, 116u8, 20u8, 88u8],
             [224u8, 124u8, 141u8, 186u8],
             [249u8, 46u8, 232u8, 169u8],
-            [255u8, 157u8, 93u8, 61u8],
         ];
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for SyndicateSequencingChainErrors {
         const NAME: &'static str = "SyndicateSequencingChainErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 18usize;
+        const COUNT: usize = 17usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -8807,9 +8693,6 @@ function version() external view returns (uint256);
                 }
                 Self::FailedCall(_) => {
                     <FailedCall as alloy_sol_types::SolError>::SELECTOR
-                }
-                Self::GasStartLessThanGasLeft(_) => {
-                    <GasStartLessThanGasLeft as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::GasTrackingAlreadyDisabled(_) => {
                     <GasTrackingAlreadyDisabled as alloy_sol_types::SolError>::SELECTOR
@@ -9057,17 +8940,6 @@ function version() external view returns (uint256);
                     }
                     InvalidInitialization
                 },
-                {
-                    fn GasStartLessThanGasLeft(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<SyndicateSequencingChainErrors> {
-                        <GasStartLessThanGasLeft as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                            )
-                            .map(SyndicateSequencingChainErrors::GasStartLessThanGasLeft)
-                    }
-                    GasStartLessThanGasLeft
-                },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
                 return Err(
@@ -9289,17 +9161,6 @@ function version() external view returns (uint256);
                     }
                     InvalidInitialization
                 },
-                {
-                    fn GasStartLessThanGasLeft(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<SyndicateSequencingChainErrors> {
-                        <GasStartLessThanGasLeft as alloy_sol_types::SolError>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(SyndicateSequencingChainErrors::GasStartLessThanGasLeft)
-                    }
-                    GasStartLessThanGasLeft
-                },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
                 return Err(
@@ -9334,11 +9195,6 @@ function version() external view returns (uint256);
                 }
                 Self::FailedCall(inner) => {
                     <FailedCall as alloy_sol_types::SolError>::abi_encoded_size(inner)
-                }
-                Self::GasStartLessThanGasLeft(inner) => {
-                    <GasStartLessThanGasLeft as alloy_sol_types::SolError>::abi_encoded_size(
-                        inner,
-                    )
                 }
                 Self::GasTrackingAlreadyDisabled(inner) => {
                     <GasTrackingAlreadyDisabled as alloy_sol_types::SolError>::abi_encoded_size(
@@ -9427,12 +9283,6 @@ function version() external view returns (uint256);
                 }
                 Self::FailedCall(inner) => {
                     <FailedCall as alloy_sol_types::SolError>::abi_encode_raw(inner, out)
-                }
-                Self::GasStartLessThanGasLeft(inner) => {
-                    <GasStartLessThanGasLeft as alloy_sol_types::SolError>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
                 }
                 Self::GasTrackingAlreadyDisabled(inner) => {
                     <GasTrackingAlreadyDisabled as alloy_sol_types::SolError>::abi_encode_raw(

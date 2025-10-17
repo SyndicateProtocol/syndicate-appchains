@@ -196,9 +196,7 @@ contract SyndicateSequencingChainTestingUpgradeability is
                         EMISSIONS & OWNERSHIP
     //////////////////////////////////////////////////////////////*/
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
-        
-    }
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /*//////////////////////////////////////////////////////////////
                          GAS TRACKING ADMIN FUNCTIONS

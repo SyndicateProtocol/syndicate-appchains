@@ -62,16 +62,13 @@ contract StorageUpgradeTest is Test {
         syndicateV1 = new SyndicateSequencingChain();
 
         // Deploy proxy pointing to V1
-        bytes memory initData = abi.encodeCall(
-            SyndicateSequencingChain.initialize,
-            (ADMIN, PERMISSION_MODULE, TEST_APPCHAIN_ID)
-        );
+        bytes memory initData =
+            abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE, TEST_APPCHAIN_ID));
 
         proxy = new ERC1967Proxy(address(syndicateV1), initData);
         syndicateV1 = SyndicateSequencingChain(address(proxy));
 
         vm.stopPrank();
-
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -99,7 +96,11 @@ contract StorageUpgradeTest is Test {
 
         // Verify all original storage is preserved
         assertEq(syndicateV2.appchainId(), originalData.appchainId, "appchainId should be preserved");
-        assertEq(address(syndicateV2.permissionRequirementModule()), originalData.permissionModule, "permissionRequirementModule should be preserved");
+        assertEq(
+            address(syndicateV2.permissionRequirementModule()),
+            originalData.permissionModule,
+            "permissionRequirementModule should be preserved"
+        );
 
         vm.stopPrank();
     }
@@ -259,7 +260,6 @@ contract StorageUpgradeTest is Test {
     /// @notice Test that there are no storage collisions between V1 and V2
     function testNoStorageCollisions() public {
         vm.startPrank(ADMIN);
-
 
         // Deploy V2 and upgrade
         syndicateV2 = new SyndicateSequencingChainTestingUpgradeability();

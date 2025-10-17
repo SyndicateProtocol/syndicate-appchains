@@ -8,17 +8,12 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-    import {MinimalUUPSStub} from "./MinimalUUPSStub.sol";
+import {MinimalUUPSStub} from "./MinimalUUPSStub.sol";
 
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts
 /// @dev Uses UUPS proxy pattern for upgradeability and CREATE2 pattern for deterministic deployments
-contract SyndicateFactory is
-    Initializable,
-    AccessControlUpgradeable,
-    PausableUpgradeable,
-    UUPSUpgradeable
-{
+contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -200,22 +195,17 @@ contract SyndicateFactory is
     /// @param admin The admin address that will own the new appchain
     /// @param permissionModule The permission module to control access to the appchain
     /// @return sequencingChain The address of the deployed and initialized sequencing chain
-    function _doCreateChain(
-        uint256 chainId,
-        address admin,
-        IRequirementModule permissionModule
-    ) internal returns (address sequencingChain) {
+    function _doCreateChain(uint256 chainId, address admin, IRequirementModule permissionModule)
+        internal
+        returns (address sequencingChain)
+    {
         // Deploy the sequencing chain using consistent proxy bytecode for deterministic addresses
         bytes memory consistentBytecode = getProxyBytecode();
         sequencingChain = Create2.deploy(0, bytes32(chainId), consistentBytecode);
 
         // Upgrade the proxy to use the latest implementation (instead of the stub)
-        bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,uint256)",
-            admin,
-            address(permissionModule),
-            chainId
-        );
+        bytes memory initData =
+            abi.encodeWithSignature("initialize(address,address,uint256)", admin, address(permissionModule), chainId);
         (bool upgradeSuccess,) = sequencingChain.call(
             abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
         );
