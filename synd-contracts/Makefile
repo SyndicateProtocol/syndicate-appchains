@@ -138,6 +138,16 @@ storage-layout-compare :; @echo "Comparing storage layouts..." && \
 # Clean storage layout artifacts
 storage-layout-clean :; rm -rf .storage-layouts out/build-info
 
+# Update storage layout
+storage-layout-update :; @echo "Updating storage layout..." && \
+	$(MAKE) storage-layout-clean && \
+	mkdir -p .storage-layouts && \
+	forge build && \
+	forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.json && \
+	forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.json && \
+	forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.json && \
+	echo "✅ Storage layout updated"
+
 ## 🚀 Deployment & Upgrade Commands
 ## See docs/upgrade/README.md for detailed guide
 
