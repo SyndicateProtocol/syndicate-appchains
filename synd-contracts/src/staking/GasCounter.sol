@@ -47,6 +47,7 @@ abstract contract GasCounter is EpochTracker {
     //////////////////////////////////////////////////////////////*/
     error GasTrackingAlreadyEnabled();
     error GasTrackingAlreadyDisabled();
+    error GasStartLessThanGasLeft(uint256 gasStart, uint256 gasLeft);
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS

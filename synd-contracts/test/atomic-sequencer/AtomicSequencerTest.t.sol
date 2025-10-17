@@ -58,13 +58,6 @@ contract AtomicSequencerTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         SyndicateFactory factory = SyndicateFactory(address(proxy));
 
-        // Deploy and set GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        GasAggregator gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-        factory.setGasAggregator(IGasAggregator(address(gasAggregator)));
-
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
         return SyndicateSequencingChain(chainAddress);

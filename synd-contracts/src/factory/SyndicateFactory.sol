@@ -8,10 +8,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {IGasAggregator} from "../interfaces/IGasAggregator.sol";
-import {EpochTracker} from "../staking/EpochTracker.sol";
-import {MinimalUUPSStub} from "./MinimalUUPSStub.sol";
-import {ILegacyAppchain} from "../interfaces/ILegacyAppchain.sol";
+    import {MinimalUUPSStub} from "./MinimalUUPSStub.sol";
 
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts
@@ -20,16 +17,11 @@ contract SyndicateFactory is
     Initializable,
     AccessControlUpgradeable,
     PausableUpgradeable,
-    UUPSUpgradeable,
-    EpochTracker
+    UUPSUpgradeable
 {
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Mapping from appchain ID to the sequencing contract address
-    /// @dev Used to track all deployed appchains and prevent duplicates
-    mapping(uint256 appchainId => address sequencingContractAddress) public appchainContracts;
 
     /// @notice Stub implementation for consistent proxy deployment
     /// @dev This address is computed deterministically and never changes to ensure consistent CREATE2 addresses
@@ -38,10 +30,6 @@ contract SyndicateFactory is
     /// @notice Current implementation address used for new deployments
     /// @dev This can be updated by admins to use newer versions of SyndicateSequencingChain
     address public syndicateChainImpl;
-
-    /// @notice Gas aggregator contract for tracking appchain gas usage
-    /// @dev Used to notify about new appchains and implementation changes
-    IGasAggregator public gasAggregator;
 
     /// @notice Version of the SyndicateFactory contract
     /// @dev Used to track the current version of the factory contract
@@ -58,16 +46,7 @@ contract SyndicateFactory is
     error ChainIdAlreadyExists();
 
     /// @notice Thrown when the proxy upgrade to the latest implementation fails
-    error FailedToUpgradeToLatestImplementation();
-
-    /// @notice Thrown when the provided legacy appchain address is invalid (no code deployed)
-    error InvalidAppchainAddress();
-
-    /// @notice Thrown when the provided chain ID is not found in the appchains mapping
-    error ChainIdNotFound();
-
-    /// @notice Thrown when the gas aggregator is not set but required for certain operations
-    error GasAggregatorNotSet();
+    error FailedToInitializeSyndicateSequencingChain();
 
     /*//////////////////////////////////////////////////////////////
                              EVENTS
@@ -80,10 +59,6 @@ contract SyndicateFactory is
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
     );
 
-    /// @notice Emitted when a chain ID is manually marked as used (currently unused)
-    /// @param chainId The chain ID that was marked as used
-    event ChainIdManuallyMarked(uint256 indexed chainId);
-
     /// @notice Emitted when a new implementation is added to the allowed list
     /// @param implementation The address of the implementation that was added
     event ImplementationAdded(address indexed implementation);
@@ -93,24 +68,6 @@ contract SyndicateFactory is
     /// @param nonce The nonce used in the chain ID generation
     /// @param chainId The resulting deterministic chain ID
     event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
-
-    /// @notice Emitted when gas aggregator notification fails during implementation updates
-    /// @dev This is a non-critical failure that doesn't prevent the operation from completing
-    event GasAggregatorNotificationFailed();
-
-    /// @notice Emitted when an appchain is migrated from a legacy implementation
-    /// @param oldAppchainContract The address of the legacy appchain being migrated
-    /// @param newAppchainContract The address of the newly deployed appchain
-    /// @param appchainId The chain ID assigned to the new appchain
-    /// @param epoch The epoch during which the migration occurred
-    /// @param migratedGasTokensUsedForCurrentEpoch Gas tokens used data migrated from the legacy chain
-    event AppchainMigrated(
-        address indexed oldAppchainContract,
-        address indexed newAppchainContract,
-        uint256 indexed appchainId,
-        uint256 epoch,
-        uint256 migratedGasTokensUsedForCurrentEpoch
-    );
 
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -139,7 +96,7 @@ contract SyndicateFactory is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         // Set initial version
-        version = 1;
+        version = 1_000_000; // 1.0.0
 
         // Deploy minimal stub implementation using CREATE2 for deterministic address
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
@@ -174,14 +131,14 @@ contract SyndicateFactory is
         chainId = generateDeterministicChainId(msg.sender, nonce);
 
         // Validate chain ID is not already used
-        if (appchainContracts[chainId] != address(0)) {
+        if (isChainIdUsed(chainId)) {
             revert ChainIdAlreadyExists();
         }
 
         // Emit deterministic chainID generation event
         emit DeterministicChainIdGenerated(msg.sender, nonce, chainId);
 
-        return (_doCreateChain(chainId, admin, permissionModule, 0), chainId);
+        return (_doCreateChain(chainId, admin, permissionModule), chainId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -191,7 +148,7 @@ contract SyndicateFactory is
     /// @notice Computes the address where a sequencing chain will be deployed
     /// @param chainId The chain ID to compute the address for
     /// @return The computed address
-    function computeSequencingChainAddress(uint256 chainId) external view returns (address) {
+    function computeSequencingChainAddress(uint256 chainId) public view returns (address) {
         return Create2.computeAddress(bytes32(chainId), keccak256(getProxyBytecode()));
     }
 
@@ -212,9 +169,9 @@ contract SyndicateFactory is
 
     /// @notice Check if a chain ID has been used
     /// @param chainId The chain ID to check
-    /// @return 1 if used, 0 if available
+    /// @return true if used, false if available
     function isChainIdUsed(uint256 chainId) public view returns (bool) {
-        return appchainContracts[chainId] != address(0);
+        return computeSequencingChainAddress(chainId).code.length > 0;
     }
 
     /// @notice Generate deterministic chainID from sender address and nonce
@@ -233,14 +190,6 @@ contract SyndicateFactory is
         }
     }
 
-    /// @notice Update the gas aggregator address on an appchain
-    /// @param chainId The chain ID of the appchain to update
-    function updateGasAggregatorOnAppchain(uint256 chainId) external {
-        address chainContract = appchainContracts[chainId];
-        if (chainContract == address(0)) revert ChainIdNotFound();
-        SyndicateSequencingChain(chainContract).setGasAggregator(gasAggregator);
-    }
-
     /*//////////////////////////////////////////////////////////////
                          INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -250,36 +199,28 @@ contract SyndicateFactory is
     /// @param chainId The chain ID to use for the new appchain
     /// @param admin The admin address that will own the new appchain
     /// @param permissionModule The permission module to control access to the appchain
-    /// @param gasTokensUsedForCurrentEpoch Gas tokens to initialize with (used for legacy migrations)
     /// @return sequencingChain The address of the deployed and initialized sequencing chain
     function _doCreateChain(
         uint256 chainId,
         address admin,
-        IRequirementModule permissionModule,
-        uint256 gasTokensUsedForCurrentEpoch
+        IRequirementModule permissionModule
     ) internal returns (address sequencingChain) {
         // Deploy the sequencing chain using consistent proxy bytecode for deterministic addresses
         bytes memory consistentBytecode = getProxyBytecode();
         sequencingChain = Create2.deploy(0, bytes32(chainId), consistentBytecode);
 
-        // Store the mapping of appchain ID to contract address
-        appchainContracts[chainId] = sequencingChain;
-
         // Upgrade the proxy to use the latest implementation (instead of the stub)
         bytes memory initData = abi.encodeWithSignature(
-            "initialize(address,address,address,address,uint256,uint256)",
+            "initialize(address,address,uint256)",
             admin,
-            address(this),
-            address(gasAggregator),
             address(permissionModule),
-            chainId,
-            gasTokensUsedForCurrentEpoch
+            chainId
         );
         (bool upgradeSuccess,) = sequencingChain.call(
             abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
         );
         if (!upgradeSuccess) {
-            revert FailedToUpgradeToLatestImplementation();
+            revert FailedToInitializeSyndicateSequencingChain();
         }
 
         emit SyndicateSequencingChainCreated(chainId, sequencingChain, address(permissionModule));
@@ -309,16 +250,12 @@ contract SyndicateFactory is
             revert ZeroAddress(); // Reusing this error for zero chainID
         }
 
-        if (gasAggregator == IGasAggregator(address(0))) {
-            revert GasAggregatorNotSet(); // Gas aggregator must be set before creating chains
-        }
-
         // Validate chain ID is not already used
-        if (appchainContracts[customChainId] != address(0)) {
+        if (isChainIdUsed(customChainId)) {
             revert ChainIdAlreadyExists();
         }
 
-        return (_doCreateChain(customChainId, admin, permissionModule, 0), customChainId);
+        return (_doCreateChain(customChainId, admin, permissionModule), customChainId);
     }
 
     /// @notice Authorizes upgrades to new implementations (admin only)
@@ -343,69 +280,11 @@ contract SyndicateFactory is
 
     /// @notice Set the implementation for new sequencing contract deployments (admin only)
     /// @dev Updates the default implementation used for new appchain deployments.
-    ///      Also attempts to notify the gas aggregator about the new implementation for tracking purposes.
     /// @param newImplementation The implementation address to use as default for new deployments
     function setSyndicateSequencingChainImplementation(address newImplementation)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         syndicateChainImpl = newImplementation;
-        try gasAggregator.notifyNewImplementation(newImplementation) {}
-        catch {
-            emit GasAggregatorNotificationFailed();
-        }
-    }
-
-    /// @notice Set the gas aggregator contract address (admin only)
-    /// @dev Updates the gas aggregator used for tracking appchain gas usage.
-    ///      This should only be changed if the gas aggregator contract is replaced.
-    /// @param newGasAggregator The new gas aggregator contract address
-    function setGasAggregator(IGasAggregator newGasAggregator) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (address(newGasAggregator) == address(0)) revert ZeroAddress();
-        gasAggregator = newGasAggregator;
-    }
-
-    /// @notice Migrates a legacy appchain to a new deployment while preserving gas counter data
-    /// @param legacyAppchain The address of the existing appchain contract to migrate from
-    /// @param appchainId The chain ID for the new appchain deployment
-    /// @param admin The admin address for the new appchain
-    /// @param permissionModule The permission module for the new appchain
-    /// @return newSyndicateChain The address of the newly deployed appchain
-    function migrateLegacyAppchain(
-        ILegacyAppchain legacyAppchain,
-        uint256 appchainId,
-        address admin,
-        IRequirementModule permissionModule
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused returns (address newSyndicateChain) {
-        if (address(legacyAppchain) == address(0) || admin == address(0) || address(permissionModule) == address(0)) {
-            revert ZeroAddress();
-        }
-        if (appchainId == 0) {
-            revert ZeroAddress();
-        }
-        if (appchainContracts[appchainId] != address(0)) {
-            revert ChainIdAlreadyExists();
-        }
-
-        // Verify the legacy appchain exists by checking if there's actually code at the address
-        uint256 codeSize;
-        assembly {
-            codeSize := extcodesize(legacyAppchain)
-        }
-        if (codeSize == 0) {
-            revert InvalidAppchainAddress();
-        }
-
-        // Extract tokens used for gas from the legacy appchain for the current epoch
-        uint256 epoch = getCurrentEpoch();
-        uint256 gasTokensUsedForCurrentEpoch = legacyAppchain.getTokensForEpoch(epoch);
-
-        // Create the new appchain with migrated gas data
-        newSyndicateChain = _doCreateChain(appchainId, admin, permissionModule, gasTokensUsedForCurrentEpoch);
-        emit AppchainMigrated(
-            address(legacyAppchain), newSyndicateChain, appchainId, epoch, gasTokensUsedForCurrentEpoch
-        );
-
-        return newSyndicateChain;
     }
 }
