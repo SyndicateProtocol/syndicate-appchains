@@ -56,7 +56,7 @@ jobs:
           # Extract current storage layouts for upgradeable contracts
           echo "📊 Extracting current storage layouts..."
 
-          CONTRACTS="SyndicateFactory SyndicateSequencingChain ArbChainConfig GasAggregator"
+          CONTRACTS="SyndicateFactory SyndicateSequencingChain ArbChainConfig"
           VALIDATION_FAILED=false
 
           for contract in $CONTRACTS; do
@@ -87,8 +87,8 @@ jobs:
                 echo "✅ $contract: Storage layout unchanged"
               fi
             else
-              echo "⚠️  $contract: No baseline found - creating new baseline"
-              cp .storage-layouts-current/$contract.json .storage-layouts/$contract.json
+              echo "❌  $contract: No baseline found"
+              VALIDATION_FAILED=true
             fi
           done
 
@@ -100,7 +100,7 @@ jobs:
             echo "If these changes are intentional:"
             echo "1. Ensure you understand the implications"
             echo "2. Consider if this requires a new deployment instead of an upgrade"
-            echo "3. Update storage layout baselines by committing the new .storage-layouts/ files"
+            echo "3. Update storage layout baselines by running 'make storage-layout-update'"
             exit 1
           else
             echo ""
