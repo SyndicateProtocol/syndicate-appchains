@@ -364,7 +364,7 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
         .call()
         .await
         .unwrap_or_else(|e| panic!("failed to get tracked chain IDs: {e}"));
-    let (mut tokens, mut emissions_receivers) = (vec![], vec![]);
+    let mut tokens = vec![];
 
     for chain_id in appchains.iter().copied() {
         // Prefer any explicit override set in the aggregator; otherwise use factory computation
