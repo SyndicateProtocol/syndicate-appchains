@@ -10,8 +10,6 @@ methods {
     function gasTrackingEnabled() external returns (bool) envfree;
     function disableGasTracking() external;
     function enableGasTracking() external;
-    function emissionsReceiver() external returns (address) envfree;
-    function getEmissionsReceiver() external returns (address) envfree;
     function encodeTransaction(bytes) external returns (bytes) envfree;
     // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
@@ -21,32 +19,28 @@ methods {
 /*
  * Rule: Initialization rules
  */
-rule initializeOnce(address admin, address factory, address gasAggregator, address module, uint256 appchainId, uint256 gasTokensUsed) {
+rule initializeOnce(address admin, address module, uint256 appchainId) {
     env e;
     require admin != 0;
-    require factory != 0;
-    require gasAggregator != 0;
     require appchainId != 0;
     require e.msg.sender != currentContract;
     // First initialization
-    initialize@withrevert(e, admin, factory, gasAggregator, module, appchainId, gasTokensUsed);
+    initialize@withrevert(e, admin, module, appchainId);
     bool firstInit = !lastReverted;
     // Try to initialize again
-    initialize@withrevert(e, admin, factory, gasAggregator, module, appchainId, gasTokensUsed);
+    initialize@withrevert(e, admin, module, appchainId);
     assert firstInit => lastReverted, "Contract initialized more than once";
 }
 
 /*
  * Rule: Initialization sets correct values
  */
-rule initializationCorrect(address admin, address factory, address gasAggregator, address module, uint256 appchainId, uint256 gasTokensUsed) {
+rule initializationCorrect(address admin, address module, uint256 appchainId) {
     env e;
     require admin != 0;
-    require factory != 0;
-    require gasAggregator != 0;
     require appchainId != 0;
     require e.msg.sender != currentContract;
-    initialize(e, admin, factory, gasAggregator, module, appchainId, gasTokensUsed);
+    initialize(e, admin, module, appchainId);
     assert permissionRequirementModule() == module, "Permission module not set correctly";
     assert owner() == admin, "Admin not set correctly";
     assert appchainId() == appchainId, "AppchainId not set correctly";
@@ -56,18 +50,16 @@ rule initializationCorrect(address admin, address factory, address gasAggregator
 /*
  * Rule: AppchainId is set correctly after initialization
  */
-rule appchainIdSetAfterInit(address admin, address factory, address gasAggregator, address module, uint256 chainId, uint256 gasTokensUsed) {
+rule appchainIdSetAfterInit(address admin, address module, uint256 chainId) {
     env e;
     require admin != 0;
-    require factory != 0;
-    require gasAggregator != 0;
     require chainId != 0;
     require e.msg.sender != currentContract;
     // Before initialization, appchainId should be 0
     require getInitializedVersion() == 0;
     require appchainId() == 0;
     // Initialize the contract
-    initialize(e, admin, factory, gasAggregator, module, chainId, gasTokensUsed);
+    initialize(e, admin, module, chainId);
     // After initialization, appchainId should be set to the provided value
     assert appchainId() == chainId, "AppchainId not set correctly after initialization";
     assert appchainId() != 0, "AppchainId should not be zero after initialization";
@@ -195,27 +187,3 @@ rule onlyOwnerCanUpgrade(address newImplementation, bytes data) {
     // If successful, must have been owner
     assert !lastReverted => e.msg.sender == contractOwner, "Non-owner performed upgrade";
 }
-
-/*
- * Rule : Only owner can set emissions receiver
- */
-rule onlyOwnerCanSetEmissionsReceiver(address newReceiver) {
-    env e;
-    require getInitializedVersion() > 0;
-    // Try to set emissions receiver
-    setEmissionsReceiver@withrevert(e, newReceiver);
-    // If successful, must have been owner
-    assert !lastReverted => e.msg.sender == owner(), "Non-owner set emissions receiver";
-}
-
-/*
- * Rule : Emissions receiver getter consistency
- */
-rule emissionsReceiverConsistency() {
-    require getInitializedVersion() > 0;
-    address receiver = emissionsReceiver();
-    address effectiveReceiver = getEmissionsReceiver();
-    assert receiver == 0 => effectiveReceiver == owner(), "When no explicit receiver set, should return owner";
-    assert receiver != 0 => effectiveReceiver == receiver, "When explicit receiver set, should return that receiver";
-}
-
