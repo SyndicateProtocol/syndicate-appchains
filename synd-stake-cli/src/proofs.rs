@@ -14,7 +14,6 @@ use contract_bindings::synd::{
     block_hash_relayer::BlockHashRelayer,
     gas_aggregator::GasAggregator::{self, GasAggregatorInstance},
     gas_archive::GasArchive::{self, GasArchiveInstance},
-    syndicate_factory::SyndicateFactory::{self},
     syndicate_sequencing_chain::SyndicateSequencingChain,
 };
 use shared::{
@@ -360,31 +359,22 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
     let logs = filter.query().await.unwrap_or_else(|e| panic!("failed to get logs: {e}"));
     assert_eq!(logs.len(), 1);
 
-    let getAppchainsAndContractsReturn { _chainIDs: appchains, _contracts: appchain_contracts } =
-        factory
-            .getAppchainsAndContracts()
-            .call()
-            .await
-            .unwrap_or_else(|e| panic!("failed to get appchains and contracts: {e}"));
+    let appchains = gas_aggregator
+        .getTrackedChainIds()
+        .call()
+        .await
+        .unwrap_or_else(|e| panic!("failed to get tracked chain IDs: {e}"));
     let (mut tokens, mut emissions_receivers) = (vec![], vec![]);
 
     for chain_id in appchains.iter().copied() {
         // Prefer any explicit override set in the aggregator; otherwise use factory computation
-        let override_addr =
-            gas_aggregator.appchainContractOverrides(chain_id).call().await.unwrap_or_else(|e| {
+        let appchain_addr =
+            gas_aggregator.appchainContract(chain_id).call().await.unwrap_or_else(|e| {
                 panic!("failed to get appchain contract override for {chain_id}: {e}")
             });
 
-        let contract_addr = if override_addr == Address::ZERO {
-            factory.computeSequencingChainAddress(chain_id).call().await.unwrap_or_else(|e| {
-                panic!("failed to compute sequencing chain address for {chain_id}: {e}")
-            })
-        } else {
-            override_addr
-        };
-
         let appchain =
-            SyndicateSequencingChain::new(contract_addr, gas_aggregator.provider().clone());
+            SyndicateSequencingChain::new(appchain_addr, gas_aggregator.provider().clone());
         tokens.push(
             appchain
                 .getTokensForEpoch(epoch)
@@ -392,15 +382,8 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
                 .await
                 .unwrap_or_else(|e| panic!("failed to get tokens for epoch {epoch}: {e}")),
         );
-        emissions_receivers.push(
-            appchain
-                .getEmissionsReceiver()
-                .call()
-                .await
-                .unwrap_or_else(|e| panic!("failed to get emissions receiver: {e}")),
-        );
     }
-    (appchains, tokens, emissions_receivers)
+    (appchains, tokens)
 }
 
 /// Arguments for running both `update_base_and_ethereum_block_hashes` and `submit_gas_proofs`
