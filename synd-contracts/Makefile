@@ -91,54 +91,46 @@ airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_AD
 
 ## Storage Layout Validation Commands
 
-# Create storage layout baseline (run this on main branch)
-
 # Simple storage layout validation for upgradeable contracts
 storage-layout-check :; @echo "Validating storage layouts for upgradeable contracts..." && \
-	forge build && \
-	$(MAKE) storage-layout-baseline && \
-	$(MAKE) storage-layout-compare && \
-	echo "Storage layout validation passed!"
-
-# Create baseline storage layout
-storage-layout-baseline :; @echo "Creating storage layout baseline..." && \
+	contracts=(SyndicateFactory SyndicateSequencingChain ArbChainConfig) && \
 	mkdir -p .storage-layouts && \
-	forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.baseline.json && \
-	forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.baseline.json && \
-	forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.baseline.json && \
-	forge inspect GasAggregator storageLayout > .storage-layouts/GasAggregator.baseline.json && \
-	echo "✅ Storage layout baselines created"
-
-# Compare current storage layout against baseline
-storage-layout-compare :; @echo "Comparing storage layouts..." && \
-	mkdir -p .storage-layouts && \
-	forge inspect SyndicateFactory storageLayout > .storage-layouts/SyndicateFactory.current.json && \
-	forge inspect SyndicateSequencingChain storageLayout > .storage-layouts/SyndicateSequencingChain.current.json && \
-	forge inspect ArbChainConfig storageLayout > .storage-layouts/ArbChainConfig.current.json && \
-	forge inspect GasAggregator storageLayout > .storage-layouts/GasAggregator.current.json && \
-	for contract in SyndicateFactory SyndicateSequencingChain ArbChainConfig GasAggregator; do \
-		if [ -f .storage-layouts/$$contract.baseline.json ]; then \
-			echo "Comparing $$contract..."; \
-			if ! cmp -s .storage-layouts/$$contract.baseline.json .storage-layouts/$$contract.current.json; then \
-				echo "❌ STORAGE LAYOUT CHANGED: $$contract"; \
+	for contract in "$${contracts[@]}"; do \
+    	forge inspect --json "$${contract}" storageLayout > ".storage-layouts/$${contract}.temp.json"; \
+	done && \
+	for contract in "$${contracts[@]}"; do \
+		if [ -f ".storage-layouts/$${contract}.json" ]; then \
+			echo "Comparing $${contract}..."; \
+			if ! cmp -s ".storage-layouts/$${contract}.json" ".storage-layouts/$${contract}.temp.json"; then \
+				echo "❌ STORAGE LAYOUT CHANGED: $${contract}"; \
 				echo "Baseline:"; \
-				cat .storage-layouts/$$contract.baseline.json; \
+				cat ".storage-layouts/$${contract}.json"; \
 				echo "Current:"; \
-				cat .storage-layouts/$$contract.current.json; \
+				cat ".storage-layouts/$${contract}.temp.json"; \
 				echo "This change could corrupt storage during upgrades!"; \
 				exit 1; \
 			else \
-				echo "✅ $$contract: Storage layout unchanged"; \
+				echo "✅ $${contract}: Storage layout unchanged"; \
 			fi; \
 		else \
-			echo "ℹ️  $$contract: No baseline found, creating baseline..."; \
-			cp .storage-layouts/$$contract.current.json .storage-layouts/$$contract.baseline.json; \
+			echo "ℹ️  $${contract}: No contract found, skipping..."; \
 		fi; \
 	done && \
+	rm -f .storage-layouts/*.temp.json && \
 	echo "✅ All storage layouts are safe for upgrades"
 
 # Clean storage layout artifacts
 storage-layout-clean :; rm -rf .storage-layouts out/build-info
+
+# Update storage layout
+storage-layout-update :; @echo "Updating storage layout..." && \
+	$(MAKE) storage-layout-clean && \
+	mkdir -p .storage-layouts && \
+	contracts=(SyndicateFactory SyndicateSequencingChain ArbChainConfig) && \
+	for contract in "$${contracts[@]}"; do \
+		forge inspect --json "$${contract}" storageLayout > ".storage-layouts/$${contract}.json"; \
+	done && \
+	echo "✅ Storage layouts updated"
 
 ## 🚀 Deployment & Upgrade Commands
 ## See docs/upgrade/README.md for detailed guide

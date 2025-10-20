@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
-import {GasAggregator} from "src/staking/GasAggregator.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
@@ -42,15 +41,6 @@ contract SyndicateFactoryTest is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
-
-        // Deploy and set GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        GasAggregator gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-
-        vm.prank(admin);
-        factory.setGasAggregator(IGasAggregator(address(gasAggregator)));
     }
 
     function testCreateSequencingChainWithRequireAndModule() public {
@@ -378,11 +368,6 @@ contract SyndicateFactoryTest is Test {
         assertTrue(factory.hasRole(DEFAULT_ADMIN_ROLE, admin));
 
         assertFalse(factory.hasRole(DEFAULT_ADMIN_ROLE, nonAdmin));
-    }
-
-    function testPublicVariables() public view {
-        // Test that variables are publicly accessible
-        assertEq(factory.appchainContracts(appchainId), address(0));
     }
 
     function testInitializeWithZeroAddressReverts() public {
@@ -900,7 +885,7 @@ contract SyndicateFactoryTest is Test {
     // ================== VERSION TRACKING TESTS ==================
 
     function testInitialVersion() public view {
-        assertEq(factory.version(), 1, "Initial version should be 1");
+        assertEq(factory.version(), 1_000_000, "Initial version should be 1.0.0");
     }
 
     function testUpdateVersion() public {
@@ -943,40 +928,5 @@ contract SyndicateFactoryTest is Test {
 
         // Version should still be the same
         assertEq(factory.version(), 15, "Version should persist after operations");
-    }
-
-    // ================== GAS AGGREGATOR UPDATE TESTS ==================
-
-    function testUpdateGasAggregatorOnAppchain() public {
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-
-        // Create an appchain first
-        vm.prank(admin);
-        (address sequencingChainAddress, uint256 chainId) =
-            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
-
-        // Verify initial gas aggregator is set
-        SyndicateSequencingChain sequencingChain = SyndicateSequencingChain(sequencingChainAddress);
-        address initialGasAggregator = address(sequencingChain.gasAggregator());
-        assertEq(initialGasAggregator, address(factory.gasAggregator()));
-
-        // Update gas aggregator on factory
-        address newGasAggregator = address(0x999);
-        vm.prank(admin);
-        factory.setGasAggregator(IGasAggregator(newGasAggregator));
-
-        // Update gas aggregator on the appchain (anyone can call this)
-        vm.prank(nonAdmin);
-        factory.updateGasAggregatorOnAppchain(chainId);
-
-        // Verify the appchain's gas aggregator was updated
-        assertEq(address(sequencingChain.gasAggregator()), newGasAggregator);
-    }
-
-    function testUpdateGasAggregatorOnAppchainChainIdNotFound() public {
-        uint256 nonExistentChainId = 99999;
-
-        vm.expectRevert(SyndicateFactory.ChainIdNotFound.selector);
-        factory.updateGasAggregatorOnAppchain(nonExistentChainId);
     }
 }

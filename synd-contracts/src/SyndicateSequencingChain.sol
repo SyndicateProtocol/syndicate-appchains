@@ -18,20 +18,9 @@ struct SyndicateSequencingChainStorage {
     /// @notice The ID of the App chain that this contract is sequencing transactions for
     /// @dev This is set during initialization and never changes
     uint256 appchainId;
-    /// @notice The address that receives emissions for this sequencing chain
-    /// @dev If set to address(0), emissions go to the contract owner
-    address emissionsReceiver;
-    /// @notice Whether to allow gas tracking ban on upgrade (defaults to false for security)
-    /// @dev When false, prevents upgrades to implementations not allowed by the gas aggregator
-    bool allowGasTrackingBanOnUpgrade;
-    /// @notice Gas aggregator contract for tracking gas usage across epochs
-    /// @dev Used to report gas usage and receive notifications about implementation changes
-    IGasAggregator gasAggregator;
-    /// @notice Address of the factory that created this sequencing chain
-    address factory;
     /// @notice Version of the SyndicateSequencingChain contract (updatable during upgrades)
-    /// @dev Semantic version string to track implementation upgrades
-    string version;
+    /// @dev Version number to track implementation upgrades
+    uint256 version;
 }
 
 /// @title SyndicateSequencingChain
@@ -103,39 +92,9 @@ contract SyndicateSequencingChain is
         return $.appchainId;
     }
 
-    /// @notice Get the configured emissions receiver address
-    /// @dev Returns the specific receiver if set, or address(0) if using default (owner)
-    /// @return The address configured to receive emissions, or address(0) for default behavior
-    function emissionsReceiver() public view returns (address) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.emissionsReceiver;
-    }
-
-    /// @notice Check if gas tracking ban on upgrade is allowed
-    /// @dev When false, prevents upgrades to implementations not approved by the gas aggregator
-    /// @return True if upgrades that would cause gas tracking bans are allowed
-    function allowGasTrackingBanOnUpgrade() public view returns (bool) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.allowGasTrackingBanOnUpgrade;
-    }
-
-    /// @notice Get the gas aggregator contract address
-    /// @return The gas aggregator contract interface
-    function gasAggregator() public view returns (IGasAggregator) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.gasAggregator;
-    }
-
-    /// @notice Get the factory address that created this sequencing chain
-    /// @return The factory address
-    function factory() public view returns (address) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.factory;
-    }
-
     /// @notice Get the current version of this contract implementation
     /// @return The semantic version string of this contract
-    function version() public view returns (string memory) {
+    function version() public view returns (uint256) {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         return $.version;
     }
@@ -150,15 +109,8 @@ contract SyndicateSequencingChain is
     /// @notice Thrown when the transaction or sender is not allowed by the permission module
     error TransactionOrSenderNotAllowed();
 
-    /// @notice Thrown when an upgrade would result in gas tracking being banned
-    /// @dev This protects against upgrades to non-approved implementations when protection is enabled
-    error UpgradeWouldResultInGasTrackingBan();
-
     /// @notice Thrown when a zero address is provided where a valid address is required
     error ZeroAddress();
-
-    /// @notice Thrown when a non-factory address tries to call a factory-only function
-    error OnlyFactory();
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS
@@ -168,15 +120,6 @@ contract SyndicateSequencingChain is
     /// @param sender The address that submitted the transaction
     /// @param data The transaction data that was processed
     event TransactionProcessed(address indexed sender, bytes data);
-
-    /// @notice Emitted when the emissions receiver is updated
-    /// @param oldReceiver The previous emissions receiver address
-    /// @param newReceiver The new emissions receiver address
-    event EmissionsReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
-
-    /// @notice Emitted when the gas aggregator notification failed
-    /// @param gasAggregator The address of the gas aggregator
-    event GasAggregatorNotificationFailed(address indexed gasAggregator);
 
     /*//////////////////////////////////////////////////////////////
                             FUNCTIONS
@@ -195,21 +138,13 @@ contract SyndicateSequencingChain is
     /// @dev This function can only be called once during proxy deployment. It sets up all the core functionality
     ///      including ownership, permission modules, gas tracking, and appchain identification.
     /// @param admin The address to be set as the contract owner (receives DEFAULT_ADMIN_ROLE)
-    /// @param _gasAggregator The gas aggregator contract for tracking gas usage across epochs
     /// @param _permissionRequirementModule The address of the permission requirement module or address(0) to allow all transactions
     /// @param _appchainId The unique identifier for the application chain this contract sequences for (must not be 0)
-    /// @param _gasTokensUsedForCurrentEpoch The amount of gas tokens already used for the current epoch (used for legacy migrations, 0 for new chains)
-    function initialize(
-        address admin,
-        address _factory,
-        address _gasAggregator,
-        address _permissionRequirementModule,
-        uint256 _appchainId,
-        uint256 _gasTokensUsedForCurrentEpoch
-    ) external initializer {
+    function initialize(address admin, address _permissionRequirementModule, uint256 _appchainId)
+        external
+        initializer
+    {
         if (admin == address(0)) revert ZeroAddress();
-        if (_factory == address(0)) revert ZeroAddress();
-        if (_gasAggregator == address(0)) revert ZeroAddress();
         require(_appchainId != 0, "App chain ID cannot be 0");
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
         __UUPSUpgradeable_init();
@@ -217,15 +152,7 @@ contract SyndicateSequencingChain is
 
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.appchainId = _appchainId;
-        $.allowGasTrackingBanOnUpgrade = false;
-        $.version = "1.0.0";
-        $.gasAggregator = IGasAggregator(_gasAggregator);
-        $.factory = _factory;
-
-        // Set initial gas usage for migrations (0 for new chains)
-        if (_gasTokensUsedForCurrentEpoch > 0) {
-            _getGasCounterStorage().tokensUsedPerEpoch[getCurrentEpoch()] = _gasTokensUsedForCurrentEpoch;
-        }
+        $.version = 1_000_000; // 1.0.0
     }
 
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
@@ -296,49 +223,10 @@ contract SyndicateSequencingChain is
                          EMISSIONS RECEIVER ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Set the emissions receiver address
-    /// @dev Only callable by the contract owner. Setting to address(0) reverts to using the owner as receiver.
-    /// @param _emissionsReceiver The address to receive emissions, or address(0) to use owner
-    function setEmissionsReceiver(address _emissionsReceiver) external onlyOwner {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        address oldReceiver = $.emissionsReceiver;
-        $.emissionsReceiver = _emissionsReceiver;
-
-        if ($.emissionsReceiver != address(0)) {
-            emit EmissionsReceiverUpdated(oldReceiver, _emissionsReceiver);
-        } else {
-            emit EmissionsReceiverUpdated(oldReceiver, owner());
-        }
-    }
-
-    /// @notice Get the effective emissions receiver address
-    /// @dev Returns the configured emissionsReceiver if set, otherwise returns the contract owner.
-    ///      This is the address that should actually receive emissions from the system.
-    /// @return The address that should receive emissions for this sequencing chain
-    function getEmissionsReceiver() external view returns (address) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.emissionsReceiver == address(0) ? owner() : $.emissionsReceiver;
-    }
-
-    /// @notice Override transferOwnership to emit EmissionsReceiverUpdated event when appropriate
-    /// @dev When emissionsReceiver is not explicitly set (address(0)), transferring ownership
-    ///      effectively changes the emissions receiver, so we emit the event for transparency.
-    ///      This ensures emissions tracking remains accurate across ownership changes.
-    /// @param newOwner The address of the new owner
-    function transferOwnership(address newOwner) public override onlyOwner {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-
-        // If using default emissions receiver (owner), emit event about the change
-        if ($.emissionsReceiver == address(0)) {
-            emit EmissionsReceiverUpdated(owner(), newOwner);
-        }
-        super.transferOwnership(newOwner);
-    }
-
-    /// @notice Updates the contract version string (owner only, typically called during upgrades)
+    /// @notice Updates the contract version (owner only, typically called during upgrades)
     /// @dev This is for tracking and debugging purposes, allowing operators to identify which version is running.
-    /// @param newVersion The new semantic version string (e.g., "1.1.0")
-    function updateVersion(string calldata newVersion) external onlyOwner {
+    /// @param newVersion The new version number (e.g., 1_100_000 for 1.1.0)
+    function updateVersion(uint256 newVersion) external onlyOwner {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.version = newVersion;
     }
@@ -357,24 +245,5 @@ contract SyndicateSequencingChain is
     /// @dev Only callable by the contract owner
     function enableGasTracking() external onlyOwner {
         _enableGasTracking();
-    }
-
-    /// @notice Set whether to allow gas tracking ban on upgrade
-    /// @dev Only callable by the contract owner. When set to false (default), upgrades to non-approved
-    ///      implementations will be blocked to maintain gas tracking eligibility. When true, allows
-    ///      upgrades that might result in gas tracking being banned.
-    /// @param _allowGasTrackingBanOnUpgrade Whether to allow upgrades that would result in gas tracking bans
-    function setAllowGasTrackingBanOnUpgrade(bool _allowGasTrackingBanOnUpgrade) external onlyOwner {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        $.allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
-    }
-
-    /// @notice Set the gas aggregator address
-    /// @dev Only callable by the factory contract
-    /// @param newGasAggregator The address of the new gas aggregator
-    function setGasAggregator(IGasAggregator newGasAggregator) external {
-        if (msg.sender != _getSyndicateSequencingChainStorage().factory) revert OnlyFactory();
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        $.gasAggregator = newGasAggregator;
     }
 }

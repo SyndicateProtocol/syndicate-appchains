@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {L2MessageType_SignedTx, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
-import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
-import {GasAggregator} from "src/staking/GasAggregator.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
@@ -51,7 +49,6 @@ contract SyndicateSequencingChainTestSetUp is Test {
     RequireAndModule public permissionModule;
     RequireOrModule public permissionModuleAny;
     address public admin;
-    GasAggregator public gasAggregator;
 
     function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
@@ -61,13 +58,6 @@ contract SyndicateSequencingChainTestSetUp is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
-
-        // Deploy and set GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        gasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-        factory.setGasAggregator(IGasAggregator(address(gasAggregator)));
 
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
@@ -83,7 +73,6 @@ contract SyndicateSequencingChainTestSetUp is Test {
         permissionModule = new RequireAndModule(admin);
         permissionModuleAny = new RequireOrModule(admin);
         chain = deployFromFactory(permissionModule);
-        gasAggregator = GasAggregator(address(factory.gasAggregator()));
     }
 }
 
@@ -181,17 +170,13 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
 
         vm.expectRevert("App chain ID cannot be 0");
-        SyndicateSequencingChain(chainProxy).initialize(
-            admin, address(factory), address(gasAggregator), address(permissionModule), 0, 0
-        );
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 0);
     }
 
     function testUpgradeBadguy() public {
         address chainImpl = address(new SyndicateSequencingChain());
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(
-            admin, address(factory), address(gasAggregator), address(permissionModule), 1, 0
-        );
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
 
         address badguy = makeAddr("badguy");
         vm.prank(badguy);
@@ -202,99 +187,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     function testUpgradeOwner() public {
         address chainImpl = address(new SyndicateSequencingChain());
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(
-            admin, address(factory), address(gasAggregator), address(permissionModule), 1, 0
-        );
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
 
-        // Note: GasAggregator no longer tracks allowed implementations
         vm.prank(admin);
         UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
-    }
-
-    function testUpgradeWithAllowedImplementation() public {
-        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
-
-        // Deploy chain through factory
-        RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory implementation2 = new SyndicateFactory();
-        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
-        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
-        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
-
-        vm.startPrank(admin);
-
-        // Deploy GasAggregator (non-upgradeable)
-        uint256 startEpoch = 1;
-        uint256 addChainFee = 5 ether;
-        uint256 maxAppchainsToQuery = 100;
-        GasAggregator testGasAggregator = new GasAggregator(startEpoch, addChainFee, maxAppchainsToQuery);
-        testFactory.setGasAggregator(IGasAggregator(address(testGasAggregator)));
-
-        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
-        vm.stopPrank();
-
-        // Allow the new implementation
-        vm.prank(admin);
-        testFactory.setSyndicateSequencingChainImplementation(address(newImpl));
-
-        // Upgrade should succeed since we mock the allowlist check
-        // Set allowGasTrackingBanOnUpgrade to false (default is true)
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
-
-        // Perform the upgrade
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
-    }
-
-    function testUpgradeWithDisallowedImplementationAllowBan() public {
-        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
-
-        // Deploy chain through factory
-        RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory implementation2 = new SyndicateFactory();
-        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
-        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
-        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
-
-        vm.startPrank(admin);
-        testFactory.setGasAggregator(IGasAggregator(address(gasAggregator)));
-        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
-        vm.stopPrank();
-
-        // Upgrade should succeed with allowGasTrackingBan=true even though implementation not allowed
-        // Set allowGasTrackingBanOnUpgrade to true (this is the default)
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(true);
-
-        // Perform the upgrade
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
-    }
-
-    function testUpgradeWithDisallowedImplementationRevertsBan() public {
-        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
-
-        // Deploy chain through factory
-        RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory implementation2 = new SyndicateFactory();
-        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
-        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
-        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
-
-        vm.startPrank(admin);
-        testFactory.setGasAggregator(IGasAggregator(address(gasAggregator)));
-        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
-        vm.stopPrank();
-
-        // Note: GasAggregator no longer tracks allowed implementations
-        // All upgrades are now allowed regardless of allowGasTrackingBanOnUpgrade setting
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
-
-        // Attempt upgrade - should now succeed (no implementation checking)
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
     }
 
     function testUpgradeAuthorizationOnlyOwner() public {
@@ -308,8 +204,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
-
-        testFactory.setGasAggregator(IGasAggregator(address(gasAggregator)));
 
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
@@ -332,13 +226,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.startPrank(admin);
 
-        // Deploy GasAggregator (non-upgradeable)
-        uint256 startEpoch2 = 1;
-        uint256 addChainFee2 = 5 ether;
-        uint256 maxAppchainsToQuery2 = 100;
-        GasAggregator testGasAggregator2 = new GasAggregator(startEpoch2, addChainFee2, maxAppchainsToQuery2);
-        testFactory.setGasAggregator(IGasAggregator(address(testGasAggregator2)));
-
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
@@ -351,27 +238,12 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         testFactory.setSyndicateSequencingChainImplementation(address(impl1));
 
         // Verify impl1 upgrade works
-        // Set allowGasTrackingBanOnUpgrade to false first
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(false);
-
         vm.prank(admin);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl1), "");
 
-        // Note: GasAggregator no longer tracks allowed implementations
         // All upgrades are now allowed regardless of implementation
         vm.prank(admin);
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
-
-        // Set allowGasTrackingBanOnUpgrade to true
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).setAllowGasTrackingBanOnUpgrade(true);
-
-        // Verify impl2 upgrade succeeds (no longer blacklists on gas aggregator)
-        vm.startPrank(admin);
-        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
-        // Note: GasAggregator no longer has bannedAppchains tracking
-        // assertTrue(GasAggregator(address(testFactory.gasAggregator())).bannedAppchains(123));
         vm.stopPrank();
     }
 
@@ -510,72 +382,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.expectRevert(SyndicateSequencingChain.NoTxData.selector);
         chain.processTransactionsBulk(emptyArray);
     }
-
-    function testEmissionsReceiver() public {
-        // Test defaults to owner
-        assertEq(chain.getEmissionsReceiver(), admin);
-
-        // Test only owner can set it
-        address newReceiver = address(0x999);
-        address nonOwner = address(0x123);
-        vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
-        chain.setEmissionsReceiver(newReceiver);
-
-        // Test owner can set it and it returns correct value with proper event
-        vm.prank(admin);
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(address(0), newReceiver);
-        chain.setEmissionsReceiver(newReceiver);
-        assertEq(chain.getEmissionsReceiver(), newReceiver);
-
-        // falls back to owner if emissionsReceiver is set to address(0)
-        vm.prank(admin);
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(newReceiver, admin);
-        chain.setEmissionsReceiver(address(0));
-        assertEq(chain.getEmissionsReceiver(), admin);
-    }
-
-    function testTransferOwnershipEmitsEmissionsReceiverUpdated() public {
-        // Test that transferOwnership emits EmissionsReceiverUpdated when emissionsReceiver is not set
-        address newOwner = address(0x888);
-
-        vm.prank(admin);
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(admin, newOwner);
-        chain.transferOwnership(newOwner);
-
-        // Verify the emissions receiver changed
-        assertEq(chain.getEmissionsReceiver(), newOwner);
-        assertEq(chain.owner(), newOwner);
-
-        // Test that transferOwnership does NOT emit EmissionsReceiverUpdated when emissionsReceiver is explicitly set
-        address explicitReceiver = address(0x777);
-        vm.prank(newOwner);
-        chain.setEmissionsReceiver(explicitReceiver);
-
-        address anotherNewOwner = address(0x666);
-        vm.prank(newOwner);
-        // Should NOT emit EmissionsReceiverUpdated
-        vm.recordLogs();
-        chain.transferOwnership(anotherNewOwner);
-
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        // Should only have OwnershipTransferred event, not EmissionsReceiverUpdated
-        bool foundEmissionsEvent = false;
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == keccak256("EmissionsReceiverUpdated(address,address)")) {
-                foundEmissionsEvent = true;
-                break;
-            }
-        }
-        assertFalse(foundEmissionsEvent, "Should not emit EmissionsReceiverUpdated when explicit receiver is set");
-
-        // Verify emissions receiver stayed the same
-        assertEq(chain.getEmissionsReceiver(), explicitReceiver);
-        assertEq(chain.owner(), anotherNewOwner);
-    }
 }
 
 contract SyndicateSequencingChainViewRequireAllTest is SyndicateSequencingChainTestSetUp {
@@ -629,14 +435,14 @@ contract SyndicateSequencingChainViewRequireAnyTest is SyndicateSequencingChainT
     // ================== VERSION TRACKING TESTS ==================
 
     function testInitialVersionInSyndicateSequencingChain() public view {
-        assertEq(chain.version(), "1.0.0", "Initial version should be 1.0.0");
+        assertEq(chain.version(), 1_000_000, "Initial version should be 1.0.0");
     }
 
     function testUpdateVersionInSyndicateSequencingChain() public {
         vm.prank(admin);
-        chain.updateVersion("1.5.0");
+        chain.updateVersion(1_500_000); // 1.5.0
 
-        assertEq(chain.version(), "1.5.0", "Version should be updated to 1.5.0");
+        assertEq(chain.version(), 1_500_000, "Version should be updated to 1.5.0");
     }
 
     function testUpdateVersionOnlyOwner() public {
@@ -644,89 +450,30 @@ contract SyndicateSequencingChainViewRequireAnyTest is SyndicateSequencingChainT
 
         vm.prank(nonOwner);
         vm.expectRevert(); // Ownable error
-        chain.updateVersion("1.1.0");
+        chain.updateVersion(1_100_000); // 1.1.0
     }
 
     function testVersionPersistsAfterOperations() public {
         // Update version
         vm.prank(admin);
-        chain.updateVersion("2.1.0");
+        chain.updateVersion(2_100_000); // 2.1.0
 
         // Perform chain operations
         vm.prank(admin);
-        chain.setEmissionsReceiver(address(0x1234));
+        chain.transferOwnership(address(0x2));
 
         // Version should still be the same
-        assertEq(chain.version(), "2.1.0", "Version should persist after operations");
+        assertEq(chain.version(), 2_100_000, "Version should persist after operations");
     }
 
     function testVersionUsesNamespacedStorage() public {
         // Test that version is properly stored in namespaced storage
         // and doesn't interfere with other storage variables
         vm.prank(admin);
-        chain.updateVersion("3.2.1");
+        chain.updateVersion(3_210_000); // 3.2.1
 
         // Other storage should remain intact
         assertEq(chain.appchainId(), 10042001, "AppchainId should remain intact");
-        assertEq(chain.version(), "3.2.1", "Version should be correctly stored");
-    }
-
-    // ================== GAS AGGREGATOR ACCESS CONTROL TESTS ==================
-
-    function testSetGasAggregatorOnlyFactory() public {
-        address newGasAggregator = address(0x999);
-
-        // Only factory should be able to call setGasAggregator
-        vm.prank(address(factory));
-        chain.setGasAggregator(IGasAggregator(newGasAggregator));
-
-        // Verify the gas aggregator was updated
-        assertEq(address(chain.gasAggregator()), newGasAggregator);
-    }
-
-    function testSetGasAggregatorOnlyFactoryReverts() public {
-        address newGasAggregator = address(0x999);
-
-        // Admin should not be able to call setGasAggregator directly
-        vm.prank(admin);
-        vm.expectRevert(SyndicateSequencingChain.OnlyFactory.selector);
-        chain.setGasAggregator(IGasAggregator(newGasAggregator));
-
-        // Random address should not be able to call setGasAggregator
-        address randomCaller = address(0x123);
-        vm.prank(randomCaller);
-        vm.expectRevert(SyndicateSequencingChain.OnlyFactory.selector);
-        chain.setGasAggregator(IGasAggregator(newGasAggregator));
-
-        // Non-admin should not be able to call setGasAggregator
-        address nonAdmin = address(0x456);
-        vm.prank(nonAdmin);
-        vm.expectRevert(SyndicateSequencingChain.OnlyFactory.selector);
-        chain.setGasAggregator(IGasAggregator(newGasAggregator));
-    }
-
-    function testSetGasAggregatorUpdatesStorage() public {
-        address originalGasAggregator = address(chain.gasAggregator());
-        address newGasAggregator = address(0x777);
-
-        // Verify original gas aggregator
-        assertEq(originalGasAggregator, address(factory.gasAggregator()));
-
-        // Update gas aggregator via factory
-        vm.prank(address(factory));
-        chain.setGasAggregator(IGasAggregator(newGasAggregator));
-
-        // Verify storage was updated
-        assertEq(address(chain.gasAggregator()), newGasAggregator);
-        assertTrue(address(chain.gasAggregator()) != originalGasAggregator);
-    }
-
-    function testSetGasAggregatorWithZeroAddress() public {
-        // Factory should be able to set gas aggregator to zero address if needed
-        vm.prank(address(factory));
-        chain.setGasAggregator(IGasAggregator(address(0)));
-
-        // Verify storage was updated
-        assertEq(address(chain.gasAggregator()), address(0));
+        assertEq(chain.version(), 3_210_000, "Version should be correctly stored");
     }
 }

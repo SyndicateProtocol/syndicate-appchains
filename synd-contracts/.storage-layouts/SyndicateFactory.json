@@ -1,43 +1,27 @@
 {
   "storage": [
     {
-      "astId": 3468,
-      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
-      "label": "appchainContracts",
-      "offset": 0,
-      "slot": "0",
-      "type": "t_mapping(t_uint256,t_address)"
-    },
-    {
-      "astId": 3471,
+      "astId": 3092,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "stubImplementation",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_address"
+    },
+    {
+      "astId": 3095,
+      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
+      "label": "syndicateChainImpl",
       "offset": 0,
       "slot": "1",
       "type": "t_address"
     },
     {
-      "astId": 3474,
-      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
-      "label": "syndicateChainImpl",
-      "offset": 0,
-      "slot": "2",
-      "type": "t_address"
-    },
-    {
-      "astId": 3478,
-      "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
-      "label": "gasAggregator",
-      "offset": 0,
-      "slot": "3",
-      "type": "t_contract(IGasAggregator)4279"
-    },
-    {
-      "astId": 3481,
+      "astId": 3098,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "version",
       "offset": 0,
-      "slot": "4",
+      "slot": "2",
       "type": "t_uint256"
     }
   ],
@@ -46,18 +30,6 @@
       "encoding": "inplace",
       "label": "address",
       "numberOfBytes": "20"
-    },
-    "t_contract(IGasAggregator)4279": {
-      "encoding": "inplace",
-      "label": "contract IGasAggregator",
-      "numberOfBytes": "20"
-    },
-    "t_mapping(t_uint256,t_address)": {
-      "encoding": "mapping",
-      "key": "t_uint256",
-      "label": "mapping(uint256 => address)",
-      "numberOfBytes": "32",
-      "value": "t_address"
     },
     "t_uint256": {
       "encoding": "inplace",

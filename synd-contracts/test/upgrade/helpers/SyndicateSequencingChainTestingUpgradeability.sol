@@ -12,14 +12,8 @@ import "./SequencingModuleCheckerTestingUpgradeability.sol";
 struct SyndicateSequencingChainStorage {
     /// @notice The ID of the App chain that this contract is sequencing transactions for.
     uint256 appchainId;
-    /// @notice The address that receives emissions for this sequencing chain
-    address emissionsReceiver;
-    /// @notice Whether to allow gas tracking ban on upgrade (defaults to true for backwards compatibility)
-    bool allowGasTrackingBanOnUpgrade;
-    /// @notice Gas aggregator contract
-    IGasAggregator gasAggregator;
     /// @notice Version of the SyndicateSequencingChain contract (updatable during upgrades)
-    string version;
+    uint256 version;
 }
 
 /// @title SyndicateSequencingChainTestingUpgradeability
@@ -54,22 +48,7 @@ contract SyndicateSequencingChainTestingUpgradeability is
         return $.appchainId;
     }
 
-    function emissionsReceiver() public view returns (address) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.emissionsReceiver;
-    }
-
-    function allowGasTrackingBanOnUpgrade() public view returns (bool) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.allowGasTrackingBanOnUpgrade;
-    }
-
-    function gasAggregator() public view returns (IGasAggregator) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.gasAggregator;
-    }
-
-    function version() public view returns (string memory) {
+    function version() public view returns (uint256) {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         return $.version;
     }
@@ -117,14 +96,10 @@ contract SyndicateSequencingChainTestingUpgradeability is
         // Initialize namespaced storage variables
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.appchainId = _appchainId;
-        $.emissionsReceiver = _emissionsReceiver;
-        $.gasAggregator = IGasAggregator(_gasAggregator);
-        $.version = "1.0.0";
+        $.version = 1_000_000; // 1.0.0
 
         // Enable gas tracking
         _enableGasTracking();
-        // Set default to false for new deployments
-        $.allowGasTrackingBanOnUpgrade = false;
 
         // Initialize new V2 fields with default values
         maxGasPerTransaction = 1000000; // 1M gas default
@@ -221,17 +196,7 @@ contract SyndicateSequencingChainTestingUpgradeability is
                         EMISSIONS & OWNERSHIP
     //////////////////////////////////////////////////////////////*/
 
-    function getEmissionsReceiver() public view returns (address) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.emissionsReceiver == address(0) ? owner() : $.emissionsReceiver;
-    }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        if (!$.allowGasTrackingBanOnUpgrade) {
-            require($.allowGasTrackingBanOnUpgrade, "Upgrade would result in gas tracking ban");
-        }
-    }
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /*//////////////////////////////////////////////////////////////
                          GAS TRACKING ADMIN FUNCTIONS
@@ -243,11 +208,6 @@ contract SyndicateSequencingChainTestingUpgradeability is
 
     function enableGasTracking() external onlyOwner {
         _enableGasTracking();
-    }
-
-    function setAllowGasTrackingBanOnUpgrade(bool _allowGasTrackingBanOnUpgrade) external onlyOwner {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        $.allowGasTrackingBanOnUpgrade = _allowGasTrackingBanOnUpgrade;
     }
 
     /*//////////////////////////////////////////////////////////////
