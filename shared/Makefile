@@ -5,14 +5,14 @@ create-contract-bindings-rust:
 	git submodule update --remote ../synd-contracts/lib/nitro-contracts # needs specific branch
 	git submodule status --recursive
 	rm -rf ../synd-contracts/out contract-bindings/src/synd/*
-	cd ../synd-contracts  && forge bind --alloy --force
-	cp -r ../synd-contracts/out/bindings/src/* contract-bindings/src/synd
-	mv contract-bindings/src/synd/lib.rs contract-bindings/src/synd/mod.rs
+	cd ../synd-contracts  && forge bind --alloy --module --force --skip test --skip script --skip Mock --skip Helper --skip lib
+	cp -r ../synd-contracts/out/bindings/* contract-bindings/src/synd
 
 .PHONY: create-withdrawal-contract-bindings-go
 create-withdrawal-contract-bindings-go:
+	# NOTE: 99% of the time this task is executed in sequence after `create-contract-bindings-rust`. Let's skip building here to save time.
 	# 1) build everything so that Forge knows about TeeModule
-	cd ../synd-contracts && forge build --force
+	# cd ../synd-contracts && forge build --force --skip test --skip script --skip Mock --skip Helper
 
 	# 2) ensure our build-out dir exists in the appchains repo
 	mkdir -p ../shared/contract-bindings/src/withdrawals-go
