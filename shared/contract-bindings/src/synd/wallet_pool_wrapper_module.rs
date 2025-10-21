@@ -330,6 +330,7 @@ error AddressNotAllowed();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -403,6 +404,7 @@ error NotAdmin();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -476,6 +478,7 @@ error ZeroSequencerAddressNotAllowed();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -1135,6 +1138,7 @@ constructor(address _admin);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1212,6 +1216,7 @@ function addToAllowlist(address user) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1243,6 +1248,7 @@ function addToAllowlist(address user) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1358,6 +1364,7 @@ function admin() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1389,6 +1396,7 @@ function admin() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1504,6 +1512,7 @@ function allowlist(address user) external view returns (bool isAllowed);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1535,6 +1544,7 @@ function allowlist(address user) external view returns (bool isAllowed);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -1658,6 +1668,7 @@ function isAllowed(address proposer, address, bytes memory) external view return
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1701,6 +1712,7 @@ function isAllowed(address proposer, address, bytes memory) external view return
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -1827,6 +1839,7 @@ function processTransaction(address _SyndicateSequencingChain, bytes memory data
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
@@ -1869,6 +1882,7 @@ function processTransaction(address _SyndicateSequencingChain, bytes memory data
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1990,6 +2004,7 @@ function processTransactionsBulk(address _SyndicateSequencingChain, bytes[] memo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
@@ -2032,6 +2047,7 @@ function processTransactionsBulk(address _SyndicateSequencingChain, bytes[] memo
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2153,6 +2169,7 @@ function removeFromAllowlist(address user) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -2186,6 +2203,7 @@ function removeFromAllowlist(address user) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2299,6 +2317,7 @@ function transferAdmin(address newAdmin) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -2330,6 +2349,7 @@ function transferAdmin(address newAdmin) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2416,6 +2436,7 @@ function transferAdmin(address newAdmin) external;
         }
     };
     ///Container for all the [`WalletPoolWrapperModule`](self) function calls.
+    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum WalletPoolWrapperModuleCalls {
@@ -2436,7 +2457,6 @@ function transferAdmin(address newAdmin) external;
         #[allow(missing_docs)]
         transferAdmin(transferAdminCall),
     }
-    #[automatically_derived]
     impl WalletPoolWrapperModuleCalls {
         /// All the selectors of this enum.
         ///
@@ -2454,6 +2474,48 @@ function transferAdmin(address newAdmin) external;
             [248u8, 81u8, 164u8, 64u8],
             [248u8, 232u8, 110u8, 206u8],
         ];
+        /// The names of the variants in the same order as `SELECTORS`.
+        pub const VARIANT_NAMES: &'static [&'static str] = &[
+            ::core::stringify!(removeFromAllowlist),
+            ::core::stringify!(processTransaction),
+            ::core::stringify!(transferAdmin),
+            ::core::stringify!(isAllowed),
+            ::core::stringify!(allowlist),
+            ::core::stringify!(processTransactionsBulk),
+            ::core::stringify!(admin),
+            ::core::stringify!(addToAllowlist),
+        ];
+        /// The signatures in the same order as `SELECTORS`.
+        pub const SIGNATURES: &'static [&'static str] = &[
+            <removeFromAllowlistCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <processTransactionCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <transferAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <isAllowedCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <allowlistCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <processTransactionsBulkCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <adminCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <addToAllowlistCall as alloy_sol_types::SolCall>::SIGNATURE,
+        ];
+        /// Returns the signature for the given selector, if known.
+        #[inline]
+        pub fn signature_by_selector(
+            selector: [u8; 4usize],
+        ) -> ::core::option::Option<&'static str> {
+            match Self::SELECTORS.binary_search(&selector) {
+                ::core::result::Result::Ok(idx) => {
+                    ::core::option::Option::Some(Self::SIGNATURES[idx])
+                }
+                ::core::result::Result::Err(_) => ::core::option::Option::None,
+            }
+        }
+        /// Returns the enum variant name for the given selector, if known.
+        #[inline]
+        pub fn name_by_selector(
+            selector: [u8; 4usize],
+        ) -> ::core::option::Option<&'static str> {
+            let sig = Self::signature_by_selector(selector)?;
+            sig.split_once('(').map(|(name, _)| name)
+        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for WalletPoolWrapperModuleCalls {
@@ -2796,6 +2858,7 @@ function transferAdmin(address newAdmin) external;
         }
     }
     ///Container for all the [`WalletPoolWrapperModule`](self) custom errors.
+    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum WalletPoolWrapperModuleErrors {
@@ -2806,7 +2869,6 @@ function transferAdmin(address newAdmin) external;
         #[allow(missing_docs)]
         ZeroSequencerAddressNotAllowed(ZeroSequencerAddressNotAllowed),
     }
-    #[automatically_derived]
     impl WalletPoolWrapperModuleErrors {
         /// All the selectors of this enum.
         ///
@@ -2819,6 +2881,38 @@ function transferAdmin(address newAdmin) external;
             [117u8, 255u8, 204u8, 35u8],
             [123u8, 250u8, 75u8, 159u8],
         ];
+        /// The names of the variants in the same order as `SELECTORS`.
+        pub const VARIANT_NAMES: &'static [&'static str] = &[
+            ::core::stringify!(AddressNotAllowed),
+            ::core::stringify!(ZeroSequencerAddressNotAllowed),
+            ::core::stringify!(NotAdmin),
+        ];
+        /// The signatures in the same order as `SELECTORS`.
+        pub const SIGNATURES: &'static [&'static str] = &[
+            <AddressNotAllowed as alloy_sol_types::SolError>::SIGNATURE,
+            <ZeroSequencerAddressNotAllowed as alloy_sol_types::SolError>::SIGNATURE,
+            <NotAdmin as alloy_sol_types::SolError>::SIGNATURE,
+        ];
+        /// Returns the signature for the given selector, if known.
+        #[inline]
+        pub fn signature_by_selector(
+            selector: [u8; 4usize],
+        ) -> ::core::option::Option<&'static str> {
+            match Self::SELECTORS.binary_search(&selector) {
+                ::core::result::Result::Ok(idx) => {
+                    ::core::option::Option::Some(Self::SIGNATURES[idx])
+                }
+                ::core::result::Result::Err(_) => ::core::option::Option::None,
+            }
+        }
+        /// Returns the enum variant name for the given selector, if known.
+        #[inline]
+        pub fn name_by_selector(
+            selector: [u8; 4usize],
+        ) -> ::core::option::Option<&'static str> {
+            let sig = Self::signature_by_selector(selector)?;
+            sig.split_once('(').map(|(name, _)| name)
+        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for WalletPoolWrapperModuleErrors {
@@ -2993,6 +3087,7 @@ function transferAdmin(address newAdmin) external;
         }
     }
     ///Container for all the [`WalletPoolWrapperModule`](self) events.
+    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum WalletPoolWrapperModuleEvents {
@@ -3007,7 +3102,6 @@ function transferAdmin(address newAdmin) external;
         #[allow(missing_docs)]
         WalletPoolWrapperTransactionSent(WalletPoolWrapperTransactionSent),
     }
-    #[automatically_derived]
     impl WalletPoolWrapperModuleEvents {
         /// All the selectors of this enum.
         ///
@@ -3042,6 +3136,42 @@ function transferAdmin(address newAdmin) external;
                 69u8, 181u8, 227u8, 46u8, 10u8, 223u8, 103u8, 231u8, 158u8, 198u8,
             ],
         ];
+        /// The names of the variants in the same order as `SELECTORS`.
+        pub const VARIANT_NAMES: &'static [&'static str] = &[
+            ::core::stringify!(UserAdded),
+            ::core::stringify!(WalletPoolWrapperBulkTransactionsSent),
+            ::core::stringify!(WalletPoolWrapperTransactionSent),
+            ::core::stringify!(UserRemoved),
+            ::core::stringify!(AdminTransferred),
+        ];
+        /// The signatures in the same order as `SELECTORS`.
+        pub const SIGNATURES: &'static [&'static str] = &[
+            <UserAdded as alloy_sol_types::SolEvent>::SIGNATURE,
+            <WalletPoolWrapperBulkTransactionsSent as alloy_sol_types::SolEvent>::SIGNATURE,
+            <WalletPoolWrapperTransactionSent as alloy_sol_types::SolEvent>::SIGNATURE,
+            <UserRemoved as alloy_sol_types::SolEvent>::SIGNATURE,
+            <AdminTransferred as alloy_sol_types::SolEvent>::SIGNATURE,
+        ];
+        /// Returns the signature for the given selector, if known.
+        #[inline]
+        pub fn signature_by_selector(
+            selector: [u8; 32usize],
+        ) -> ::core::option::Option<&'static str> {
+            match Self::SELECTORS.binary_search(&selector) {
+                ::core::result::Result::Ok(idx) => {
+                    ::core::option::Option::Some(Self::SIGNATURES[idx])
+                }
+                ::core::result::Result::Err(_) => ::core::option::Option::None,
+            }
+        }
+        /// Returns the enum variant name for the given selector, if known.
+        #[inline]
+        pub fn name_by_selector(
+            selector: [u8; 32usize],
+        ) -> ::core::option::Option<&'static str> {
+            let sig = Self::signature_by_selector(selector)?;
+            sig.split_once('(').map(|(name, _)| name)
+        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for WalletPoolWrapperModuleEvents {
@@ -3156,9 +3286,9 @@ See the [wrapper's documentation](`WalletPoolWrapperModuleInstance`) for more de
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> WalletPoolWrapperModuleInstance<P, N> {
-        WalletPoolWrapperModuleInstance::<P, N>::new(address, provider)
+        WalletPoolWrapperModuleInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -3170,12 +3300,12 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _admin: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<WalletPoolWrapperModuleInstance<P, N>>,
     > {
-        WalletPoolWrapperModuleInstance::<P, N>::deploy(provider, _admin)
+        WalletPoolWrapperModuleInstance::<P, N>::deploy(__provider, _admin)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -3187,10 +3317,10 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
         _admin: alloy::sol_types::private::Address,
     ) -> alloy_contract::RawCallBuilder<P, N> {
-        WalletPoolWrapperModuleInstance::<P, N>::deploy_builder(provider, _admin)
+        WalletPoolWrapperModuleInstance::<P, N>::deploy_builder(__provider, _admin)
     }
     /**A [`WalletPoolWrapperModule`](self) instance.
 
@@ -3222,7 +3352,6 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -3233,11 +3362,11 @@ See the [wrapper's documentation](`WalletPoolWrapperModuleInstance`) for more de
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -3248,10 +3377,10 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
             _admin: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<WalletPoolWrapperModuleInstance<P, N>> {
-            let call_builder = Self::deploy_builder(provider, _admin);
+            let call_builder = Self::deploy_builder(__provider, _admin);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -3262,11 +3391,11 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            provider: P,
+            __provider: P,
             _admin: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
@@ -3310,7 +3439,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -3394,7 +3522,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,

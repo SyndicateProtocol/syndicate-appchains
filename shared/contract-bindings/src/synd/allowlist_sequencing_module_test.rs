@@ -42,6 +42,7 @@ struct FuzzArtifactSelector { string artifact; bytes4[] selectors; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::String,
             alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::FixedBytes<4>>,
@@ -266,6 +267,7 @@ struct FuzzInterface { address addr; string[] artifacts; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
@@ -492,6 +494,7 @@ struct FuzzSelector { address addr; bytes4[] selectors; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::FixedBytes<4>>,
@@ -704,9 +707,9 @@ See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> StdInvariantInstance<P, N> {
-        StdInvariantInstance::<P, N>::new(address, provider)
+        StdInvariantInstance::<P, N>::new(address, __provider)
     }
     /**A [`StdInvariant`](self) instance.
 
@@ -733,7 +736,6 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -744,11 +746,11 @@ See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -785,7 +787,6 @@ See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
         }
     }
     /// Function calls.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -802,7 +803,6 @@ See the [wrapper's documentation](`StdInvariantInstance`) for more details.*/
         }
     }
     /// Event filters.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -4409,6 +4409,7 @@ function IS_TEST() external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4440,6 +4441,7 @@ function IS_TEST() external view returns (bool);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -4554,6 +4556,7 @@ function excludeArtifacts() external view returns (string[] memory excludedArtif
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4587,6 +4590,7 @@ function excludeArtifacts() external view returns (string[] memory excludedArtif
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -4713,6 +4717,7 @@ function excludeContracts() external view returns (address[] memory excludedCont
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4746,6 +4751,7 @@ function excludeContracts() external view returns (address[] memory excludedCont
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -4872,6 +4878,7 @@ function excludeSelectors() external view returns (StdInvariant.FuzzSelector[] m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4905,6 +4912,7 @@ function excludeSelectors() external view returns (StdInvariant.FuzzSelector[] m
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<StdInvariant::FuzzSelector>,
             );
@@ -5033,6 +5041,7 @@ function excludeSenders() external view returns (address[] memory excludedSender
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5064,6 +5073,7 @@ function excludeSenders() external view returns (address[] memory excludedSender
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -5186,6 +5196,7 @@ function failed() external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5217,6 +5228,7 @@ function failed() external view returns (bool);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -5324,6 +5336,7 @@ function setUp() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5355,6 +5368,7 @@ function setUp() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5466,6 +5480,7 @@ function targetArtifactSelectors() external view returns (StdInvariant.FuzzArtif
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5499,6 +5514,7 @@ function targetArtifactSelectors() external view returns (StdInvariant.FuzzArtif
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<StdInvariant::FuzzArtifactSelector>,
             );
@@ -5627,6 +5643,7 @@ function targetArtifacts() external view returns (string[] memory targetedArtifa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5658,6 +5675,7 @@ function targetArtifacts() external view returns (string[] memory targetedArtifa
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -5784,6 +5802,7 @@ function targetContracts() external view returns (address[] memory targetedContr
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5815,6 +5834,7 @@ function targetContracts() external view returns (address[] memory targetedContr
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -5941,6 +5961,7 @@ function targetInterfaces() external view returns (StdInvariant.FuzzInterface[] 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5974,6 +5995,7 @@ function targetInterfaces() external view returns (StdInvariant.FuzzInterface[] 
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<StdInvariant::FuzzInterface>,
             );
@@ -6102,6 +6124,7 @@ function targetSelectors() external view returns (StdInvariant.FuzzSelector[] me
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6133,6 +6156,7 @@ function targetSelectors() external view returns (StdInvariant.FuzzSelector[] me
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<StdInvariant::FuzzSelector>,
             );
@@ -6261,6 +6285,7 @@ function targetSenders() external view returns (address[] memory targetedSenders
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6292,6 +6317,7 @@ function targetSenders() external view returns (address[] memory targetedSenders
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -6407,6 +6433,7 @@ function testAdminCanAddToAllowlist() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6440,6 +6467,7 @@ function testAdminCanAddToAllowlist() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6548,6 +6576,7 @@ function testAdminCanRemoveFromAllowlist() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6581,6 +6610,7 @@ function testAdminCanRemoveFromAllowlist() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6689,6 +6719,7 @@ function testConstructorSetsCorrectValues() external view;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6722,6 +6753,7 @@ function testConstructorSetsCorrectValues() external view;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6830,6 +6862,7 @@ function testIsAllowedForAllowedAddress() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6863,6 +6896,7 @@ function testIsAllowedForAllowedAddress() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6971,6 +7005,7 @@ function testIsNotAllowedForNonAllowedAddress() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7004,6 +7039,7 @@ function testIsNotAllowedForNonAllowedAddress() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7112,6 +7148,7 @@ function testNonAdminCannotAddToAllowlist() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7145,6 +7182,7 @@ function testNonAdminCannotAddToAllowlist() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7253,6 +7291,7 @@ function testNonAdminCannotRemoveFromAllowlist() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7286,6 +7325,7 @@ function testNonAdminCannotRemoveFromAllowlist() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7394,6 +7434,7 @@ function testRevertsOnZeroAddressConstructor() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7427,6 +7468,7 @@ function testRevertsOnZeroAddressConstructor() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7535,6 +7577,7 @@ function testRevertsOnZeroAddressTransferAdmin() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7568,6 +7611,7 @@ function testRevertsOnZeroAddressTransferAdmin() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7676,6 +7720,7 @@ function testTransferAdminEmitsEvent() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7709,6 +7754,7 @@ function testTransferAdminEmitsEvent() external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -7795,6 +7841,7 @@ function testTransferAdminEmitsEvent() external;
         }
     };
     ///Container for all the [`AllowlistSequencingModuleTest`](self) function calls.
+    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum AllowlistSequencingModuleTestCalls {
@@ -7845,7 +7892,6 @@ function testTransferAdminEmitsEvent() external;
         #[allow(missing_docs)]
         testTransferAdminEmitsEvent(testTransferAdminEmitsEventCall),
     }
-    #[automatically_derived]
     impl AllowlistSequencingModuleTestCalls {
         /// All the selectors of this enum.
         ///
@@ -7878,6 +7924,78 @@ function testTransferAdminEmitsEvent() external;
             [250u8, 118u8, 38u8, 212u8],
             [253u8, 175u8, 38u8, 159u8],
         ];
+        /// The names of the variants in the same order as `SELECTORS`.
+        pub const VARIANT_NAMES: &'static [&'static str] = &[
+            ::core::stringify!(setUp),
+            ::core::stringify!(testIsAllowedForAllowedAddress),
+            ::core::stringify!(testIsNotAllowedForNonAllowedAddress),
+            ::core::stringify!(excludeSenders),
+            ::core::stringify!(testRevertsOnZeroAddressConstructor),
+            ::core::stringify!(testRevertsOnZeroAddressTransferAdmin),
+            ::core::stringify!(targetInterfaces),
+            ::core::stringify!(testNonAdminCannotAddToAllowlist),
+            ::core::stringify!(targetSenders),
+            ::core::stringify!(targetContracts),
+            ::core::stringify!(targetArtifactSelectors),
+            ::core::stringify!(testAdminCanAddToAllowlist),
+            ::core::stringify!(testAdminCanRemoveFromAllowlist),
+            ::core::stringify!(targetArtifacts),
+            ::core::stringify!(targetSelectors),
+            ::core::stringify!(testTransferAdminEmitsEvent),
+            ::core::stringify!(excludeSelectors),
+            ::core::stringify!(excludeArtifacts),
+            ::core::stringify!(failed),
+            ::core::stringify!(testConstructorSetsCorrectValues),
+            ::core::stringify!(excludeContracts),
+            ::core::stringify!(IS_TEST),
+            ::core::stringify!(testNonAdminCannotRemoveFromAllowlist),
+        ];
+        /// The signatures in the same order as `SELECTORS`.
+        pub const SIGNATURES: &'static [&'static str] = &[
+            <setUpCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testIsAllowedForAllowedAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testIsNotAllowedForNonAllowedAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <excludeSendersCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testRevertsOnZeroAddressConstructorCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testRevertsOnZeroAddressTransferAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <targetInterfacesCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testNonAdminCannotAddToAllowlistCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <targetSendersCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <targetContractsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <targetArtifactSelectorsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testAdminCanAddToAllowlistCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testAdminCanRemoveFromAllowlistCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <targetArtifactsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <targetSelectorsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testTransferAdminEmitsEventCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <excludeSelectorsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <excludeArtifactsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <failedCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testConstructorSetsCorrectValuesCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <excludeContractsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <IS_TESTCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <testNonAdminCannotRemoveFromAllowlistCall as alloy_sol_types::SolCall>::SIGNATURE,
+        ];
+        /// Returns the signature for the given selector, if known.
+        #[inline]
+        pub fn signature_by_selector(
+            selector: [u8; 4usize],
+        ) -> ::core::option::Option<&'static str> {
+            match Self::SELECTORS.binary_search(&selector) {
+                ::core::result::Result::Ok(idx) => {
+                    ::core::option::Option::Some(Self::SIGNATURES[idx])
+                }
+                ::core::result::Result::Err(_) => ::core::option::Option::None,
+            }
+        }
+        /// Returns the enum variant name for the given selector, if known.
+        #[inline]
+        pub fn name_by_selector(
+            selector: [u8; 4usize],
+        ) -> ::core::option::Option<&'static str> {
+            let sig = Self::signature_by_selector(selector)?;
+            sig.split_once('(').map(|(name, _)| name)
+        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for AllowlistSequencingModuleTestCalls {
@@ -8794,6 +8912,7 @@ function testTransferAdminEmitsEvent() external;
         }
     }
     ///Container for all the [`AllowlistSequencingModuleTest`](self) events.
+    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum AllowlistSequencingModuleTestEvents {
@@ -8848,7 +8967,6 @@ function testTransferAdminEmitsEvent() external;
         #[allow(missing_docs)]
         logs(logs),
     }
-    #[automatically_derived]
     impl AllowlistSequencingModuleTestEvents {
         /// All the selectors of this enum.
         ///
@@ -8983,6 +9101,82 @@ function testTransferAdminEmitsEvent() external;
                 92u8, 141u8, 4u8, 113u8, 164u8, 103u8, 225u8, 140u8, 233u8, 202u8, 177u8,
             ],
         ];
+        /// The names of the variants in the same order as `SELECTORS`.
+        pub const VARIANT_NAMES: &'static [&'static str] = &[
+            ::core::stringify!(log_named_array_0),
+            ::core::stringify!(log_string),
+            ::core::stringify!(log_int),
+            ::core::stringify!(UserAdded),
+            ::core::stringify!(log_bytes),
+            ::core::stringify!(log_named_string),
+            ::core::stringify!(log_uint),
+            ::core::stringify!(log_named_int),
+            ::core::stringify!(log_named_array_2),
+            ::core::stringify!(log_array_2),
+            ::core::stringify!(log),
+            ::core::stringify!(log_named_decimal_int),
+            ::core::stringify!(log_address),
+            ::core::stringify!(log_array_1),
+            ::core::stringify!(log_named_address),
+            ::core::stringify!(log_named_array_1),
+            ::core::stringify!(log_named_bytes32),
+            ::core::stringify!(log_named_uint),
+            ::core::stringify!(log_named_bytes),
+            ::core::stringify!(logs),
+            ::core::stringify!(log_bytes32),
+            ::core::stringify!(UserRemoved),
+            ::core::stringify!(log_named_decimal_uint),
+            ::core::stringify!(AdminTransferred),
+            ::core::stringify!(log_array_0),
+        ];
+        /// The signatures in the same order as `SELECTORS`.
+        pub const SIGNATURES: &'static [&'static str] = &[
+            <log_named_array_0 as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_string as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_int as alloy_sol_types::SolEvent>::SIGNATURE,
+            <UserAdded as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_bytes as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_string as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_uint as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_int as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_array_2 as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_array_2 as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_decimal_int as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_address as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_array_1 as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_address as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_array_1 as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_bytes32 as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_uint as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_bytes as alloy_sol_types::SolEvent>::SIGNATURE,
+            <logs as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_bytes32 as alloy_sol_types::SolEvent>::SIGNATURE,
+            <UserRemoved as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_named_decimal_uint as alloy_sol_types::SolEvent>::SIGNATURE,
+            <AdminTransferred as alloy_sol_types::SolEvent>::SIGNATURE,
+            <log_array_0 as alloy_sol_types::SolEvent>::SIGNATURE,
+        ];
+        /// Returns the signature for the given selector, if known.
+        #[inline]
+        pub fn signature_by_selector(
+            selector: [u8; 32usize],
+        ) -> ::core::option::Option<&'static str> {
+            match Self::SELECTORS.binary_search(&selector) {
+                ::core::result::Result::Ok(idx) => {
+                    ::core::option::Option::Some(Self::SIGNATURES[idx])
+                }
+                ::core::result::Result::Err(_) => ::core::option::Option::None,
+            }
+        }
+        /// Returns the enum variant name for the given selector, if known.
+        #[inline]
+        pub fn name_by_selector(
+            selector: [u8; 32usize],
+        ) -> ::core::option::Option<&'static str> {
+            let sig = Self::signature_by_selector(selector)?;
+            sig.split_once('(').map(|(name, _)| name)
+        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for AllowlistSequencingModuleTestEvents {
@@ -9355,9 +9549,9 @@ See the [wrapper's documentation](`AllowlistSequencingModuleTestInstance`) for m
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> AllowlistSequencingModuleTestInstance<P, N> {
-        AllowlistSequencingModuleTestInstance::<P, N>::new(address, provider)
+        AllowlistSequencingModuleTestInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -9369,11 +9563,11 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<AllowlistSequencingModuleTestInstance<P, N>>,
     > {
-        AllowlistSequencingModuleTestInstance::<P, N>::deploy(provider)
+        AllowlistSequencingModuleTestInstance::<P, N>::deploy(__provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -9384,8 +9578,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     pub fn deploy_builder<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        AllowlistSequencingModuleTestInstance::<P, N>::deploy_builder(provider)
+    >(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        AllowlistSequencingModuleTestInstance::<P, N>::deploy_builder(__provider)
     }
     /**A [`AllowlistSequencingModuleTest`](self) instance.
 
@@ -9417,7 +9611,6 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -9428,11 +9621,11 @@ See the [wrapper's documentation](`AllowlistSequencingModuleTestInstance`) for m
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -9443,9 +9636,9 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
         ) -> alloy_contract::Result<AllowlistSequencingModuleTestInstance<P, N>> {
-            let call_builder = Self::deploy_builder(provider);
+            let call_builder = Self::deploy_builder(__provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -9455,9 +9648,9 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 ::core::clone::Clone::clone(&BYTECODE),
             )
         }
@@ -9496,7 +9689,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -9669,7 +9861,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
