@@ -70,8 +70,8 @@ contract SyndicateSequencingChain is
 
     /// @notice ERC-7201 storage slot for SyndicateSequencingChain-specific data
     /// @dev Generated using: cast keccak "erc7201:syndicate.storage.SyndicateSequencingChain"
-    ///      This ensures the storage slot doesn't conflict with inherited contracts
-    // cast index-erc7201 syndicate.storage.SyndicateSequencingChain
+    /// This ensures the storage slot doesn't conflict with inherited contracts
+    /// cast index-erc7201 syndicate.storage.SyndicateSequencingChain
     bytes32 public constant SYNDICATE_SEQUENCING_CHAIN_STORAGE_LOCATION =
         0xc541a3613bd22a8da1c897658e95c42e6bb9158c83d62ac963646ba27200a400;
 
