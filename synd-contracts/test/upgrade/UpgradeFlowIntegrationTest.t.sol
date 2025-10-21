@@ -26,6 +26,8 @@ import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.so
 ///      3. Upgrade factory to V2
 ///      4. Upgrade sequencing chain to V2
 ///      5. Verify all storage preserved and new functionality works
+/// @dev This test runs as a fork test against risa_devnet
+/// @dev Run with: forge test --match-contract UpgradeFlowIntegrationTest --fork-url risa_devnet -vv
 contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     /*//////////////////////////////////////////////////////////////
                             TEST CONSTANTS
@@ -70,6 +72,13 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public {
+        // Create fork from risa_devnet
+        vm.createSelectFork("risa_devnet");
+
+        // Fund test accounts with native currency
+        vm.deal(ADMIN, 100 ether);
+        vm.deal(USER, 100 ether);
+
         // Set timestamp to start of epoch 1 + 1 day to ensure we're in a valid epoch
         vm.warp(getEpochStart(1) + 1 days);
 
@@ -218,7 +227,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     function test_UpgradeSequencingChainToV2() public {
         // Create chain first
         vm.prank(ADMIN);
-        (address chainAddress, uint256 chainId) = factoryProxy.createSyndicateSequencingChain(
+        (address chainAddress,) = factoryProxy.createSyndicateSequencingChain(
             TEST_NONCE_1, ADMIN, IRequirementModule(address(permissionModule))
         );
         chain1 = SyndicateSequencingChain(chainAddress);

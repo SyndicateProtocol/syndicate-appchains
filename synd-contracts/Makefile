@@ -195,5 +195,13 @@ upgrade-sequencing-chain :; @echo "⚠️  Run 'make storage-layout-check' first
 	--broadcast \
 	-vv
 
+## Fork Testing Commands
+
+# Run upgrade integration tests against risa_devnet fork
+test-upgrade-fork :; forge test --match-contract UpgradeFlowIntegrationTest --fork-url risa_devnet -vv
+
+# Run upgrade integration tests against risa_devnet fork (verbose)
+test-upgrade-fork-verbose :; forge test --match-contract UpgradeFlowIntegrationTest --fork-url risa_devnet -vvvv
+
 # Deploy emissions contracts
 deploy-emissions :; forge script script/DeployStakingContracts.s.sol:DeployStakingContracts --private-key ${PRIVATE_KEY} --rpc-url eth --broadcast -vvv
