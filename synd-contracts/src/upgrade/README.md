@@ -52,7 +52,7 @@ Running `make deploy-factory` deploys:
 
 ```
 ✅ SyndicateFactory (proxy + implementation)
-  ├── ✅ GasAggregator (proxy + implementation) - AUTOMATIC!
+  ├── ✅ GasAggregator (non-upgradeable contract) - AUTOMATIC!
   ├── ✅ SyndicateSequencingChain implementation - AUTOMATIC!
   └── ✅ MinimalUUPSStub - AUTOMATIC!
 ```
@@ -60,6 +60,8 @@ Running `make deploy-factory` deploys:
 You only manually deploy:
 - **SyndicateFactory** (everything else is automatic)
 - **ArbConfigManager** (optional, only if using Arbitrum)
+
+**Note:** GasAggregator is no longer upgradeable (changed from UUPS proxy pattern to simple contract deployment)
 
 ### Step 1: Configure Environment
 
@@ -102,9 +104,7 @@ Add to your `.env`:
 
 ```bash
 FACTORY_ADDRESS=0x5678...  # From output above
-
-# Get GasAggregator address
-GAS_AGGREGATOR_ADDRESS=$(cast call $FACTORY_ADDRESS "gasAggregator()(address)" --rpc-url $RPC_URL)
+GAS_AGGREGATOR_ADDRESS=0xabcd...  # From deployment output
 ```
 
 ### Optional: Deploy ArbConfigManager
@@ -175,9 +175,10 @@ make storage-layout-check
 ```
 ✅ SyndicateFactory: Storage layout unchanged
 ✅ SyndicateSequencingChain: Storage layout unchanged
-✅ GasAggregator: Storage layout unchanged
 ✅ All storage layouts are safe for upgrades
 ```
+
+**Note:** GasAggregator is no longer checked as it's not upgradeable.
 
 If you see `❌ STORAGE LAYOUT CHANGED`, **STOP and review changes!**
 
@@ -206,13 +207,14 @@ Implementation: 0xdef0...
 Version: 1.1.0
 ```
 
-### Upgrade GasAggregator
+### ~~Upgrade GasAggregator~~ (No Longer Supported)
 
-```bash
-make upgrade-gas-aggregator
-```
+**GasAggregator is non-upgradeable.** If you need to upgrade it, you must:
+1. Deploy a new GasAggregator contract
+2. Update all references to point to the new contract
+3. Migrate tracked chains to the new instance
 
-Same process as factory upgrade.
+This is intentional to keep the gas aggregation logic simple and immutable.
 
 ### Upgrade Sequencing Chain
 
@@ -224,15 +226,13 @@ CHAIN_ADDRESS=0x9abc... make upgrade-sequencing-chain
 **What happens:**
 1. Deploys new implementation
 2. Sets it as default in factory (for new chains)
-3. Notifies GasAggregator about new implementation
-4. Upgrades the specific chain
+3. Upgrades the specific chain
 
 **Output:**
 ```
 === Upgrading SyndicateSequencingChain ===
 Deploying new implementation...
 Setting as default implementation in factory...
-Factory updated, GasAggregator notified
 
 Upgrading chain proxy...
 
@@ -267,8 +267,8 @@ done
 # Factory version
 cast call $FACTORY_ADDRESS "version()(string)" --rpc-url $RPC_URL
 
-# GasAggregator version
-cast call $GAS_AGGREGATOR_ADDRESS "version()(string)" --rpc-url $RPC_URL
+# GasAggregator version (constant)
+cast call $GAS_AGGREGATOR_ADDRESS "VERSION()(uint256)" --rpc-url $RPC_URL
 
 # Chain version
 cast call $CHAIN_ADDRESS "version()(string)" --rpc-url $RPC_URL
@@ -288,17 +288,14 @@ cast call $FACTORY_ADDRESS \
 ### Get Contract Addresses
 
 ```bash
-# GasAggregator from factory
-cast call $FACTORY_ADDRESS "gasAggregator()(address)" --rpc-url $RPC_URL
-
-# All chain IDs
-cast call $FACTORY_ADDRESS "chainIDs()(uint256[])" --rpc-url $RPC_URL
-
-# Specific chain address
-cast call $FACTORY_ADDRESS "appchainContracts(uint256)(address)" 1 --rpc-url $RPC_URL
-
-# Current implementation
+# Current sequencing chain implementation
 cast call $FACTORY_ADDRESS "syndicateChainImpl()(address)" --rpc-url $RPC_URL
+
+# Check if chain ID is used
+cast call $FACTORY_ADDRESS "isChainIdUsed(uint256)(bool)" 1 --rpc-url $RPC_URL
+
+# Compute sequencing chain address
+cast call $FACTORY_ADDRESS "computeSequencingChainAddress(uint256)(address)" 1 --rpc-url $RPC_URL
 ```
 
 ---
@@ -374,7 +371,6 @@ make create-sequencing-chain     # Create new sequencing chain
 
 # Upgrades
 make upgrade-factory             # Upgrade SyndicateFactory
-make upgrade-gas-aggregator      # Upgrade GasAggregator
 make upgrade-sequencing-chain    # Upgrade sequencing chain
 
 # Validation

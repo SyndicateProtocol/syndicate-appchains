@@ -39,7 +39,7 @@ contract SyndicateFactoryStorageTest is Test {
     }
 
     /// @notice Test that validates the current storage layout matches expected slots
-    function testStorageLayoutValidation() public {
+    function testStorageLayoutValidation() public view {
         assertTrue(
             address(uint160(uint256(vm.load(address(factory), bytes32(STUB_IMPLEMENTATION_SLOT))))) != address(0)
         );

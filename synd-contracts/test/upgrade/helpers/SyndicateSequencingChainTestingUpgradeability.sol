@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ISyndicateSequencingChain} from "src/interfaces/ISyndicateSequencingChain.sol";
-import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {GasCounter} from "src/staking/GasCounter.sol";
 import "./SequencingModuleCheckerTestingUpgradeability.sol";
 
@@ -82,13 +81,10 @@ contract SyndicateSequencingChainTestingUpgradeability is
                         INITIALIZATION
     //////////////////////////////////////////////////////////////*/
 
-    function initialize(
-        address admin,
-        address _gasAggregator,
-        address _permissionRequirementModule,
-        address _emissionsReceiver,
-        uint256 _appchainId
-    ) external initializer {
+    function initialize(address admin, address, address _permissionRequirementModule, address, uint256 _appchainId)
+        external
+        initializer
+    {
         // Initialize parent contracts
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
         __UUPSUpgradeable_init();
@@ -156,6 +152,7 @@ contract SyndicateSequencingChainTestingUpgradeability is
         external
         onlyWhenAllowed(data)
         checkReplayProtection // NEW: Check replay protection
+
     {
         if (data.length == 0) {
             revert NoTxData();
@@ -172,6 +169,7 @@ contract SyndicateSequencingChainTestingUpgradeability is
     function processTransactionsBulk(bytes[] calldata data)
         external
         checkReplayProtection // NEW: Check replay protection
+
     {
         // Check permission for bulk transaction
         bytes memory bulkData = abi.encode(data);
