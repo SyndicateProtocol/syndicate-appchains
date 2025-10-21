@@ -1,7 +1,7 @@
 {
   "storage": [
     {
-      "astId": 3092,
+      "astId": 3090,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "stubImplementation",
       "offset": 0,
@@ -9,7 +9,7 @@
       "type": "t_address"
     },
     {
-      "astId": 3095,
+      "astId": 3093,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "syndicateChainImpl",
       "offset": 0,
@@ -17,7 +17,7 @@
       "type": "t_address"
     },
     {
-      "astId": 3098,
+      "astId": 3096,
       "contract": "src/factory/SyndicateFactory.sol:SyndicateFactory",
       "label": "version",
       "offset": 0,
