@@ -4,8 +4,6 @@ pragma solidity 0.8.28;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {ISyndicateSequencingChain} from "../interfaces/ISyndicateSequencingChain.sol";
-import {GasCounter} from "./GasCounter.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {EpochTracker} from "./EpochTracker.sol";
 

@@ -4,14 +4,11 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {SyndicateFactoryWrapper} from "src/factory/SyndicateFactoryWrapper.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
-import {GasAggregator} from "src/staking/GasAggregator.sol";
-import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {RequireAndModuleFactory, RequireOrModuleFactory} from "src/factory/PermissionModuleFactories.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
 
 contract SyndicateFactoryWrapperTest is Test {
     SyndicateFactoryWrapper public wrapper;

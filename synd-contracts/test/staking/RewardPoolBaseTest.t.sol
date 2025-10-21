@@ -6,8 +6,7 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
-import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
-import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
+import {convert} from "@prb/math/src/UD60x18.sol";
 import {MockGasProvider} from "./MockGasProvider.t.sol";
 
 contract MockRewardPoolBase is RewardPoolBase {

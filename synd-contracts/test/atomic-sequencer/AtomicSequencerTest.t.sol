@@ -8,9 +8,6 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
-import {GasAggregator} from "src/staking/GasAggregator.sol";
-import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 
 contract MockIsAllowed is IPermissionModule {
     bool allowed;

@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {BasePool} from "src/staking/BasePool.sol";
 import {PerformancePool} from "src/staking/PerformancePool.sol";
-import {EpochTracker} from "src/staking/EpochTracker.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
 import {MockGasProvider} from "./MockGasProvider.t.sol";
 
 contract ReentrantContract {

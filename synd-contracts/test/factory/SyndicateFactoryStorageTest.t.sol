@@ -5,9 +5,6 @@ import {Test} from "forge-std/Test.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {GasAggregator} from "src/staking/GasAggregator.sol";
-import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
-import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
 
 /**
  * @title SyndicateFactoryStorageTest

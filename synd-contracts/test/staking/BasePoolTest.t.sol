@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {BasePool} from "src/staking/BasePool.sol";
-import {EpochTracker} from "src/staking/EpochTracker.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 

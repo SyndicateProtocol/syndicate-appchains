@@ -4,13 +4,6 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {GasAggregator, GasAggregatorUtils} from "../../src/staking/GasAggregator.sol";
-import {EpochTracker} from "../../src/staking/EpochTracker.sol";
-import {SyndicateFactory} from "../../src/factory/SyndicateFactory.sol";
-import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
-import {AlwaysAllowedModule} from "../../src/sequencing-modules/AlwaysAllowedModule.sol";
-import {RequireAndModule} from "../../src/requirement-modules/RequireAndModule.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
 import {Comparators} from "@openzeppelin/contracts/utils/Comparators.sol";
 
