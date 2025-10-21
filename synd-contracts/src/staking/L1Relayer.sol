@@ -146,8 +146,9 @@ contract L1Relayer is AccessControl {
      * @dev Uses the configured minimum gas limit for the message execution
      */
     function _relay(address destination, uint256 epochIndex) internal {
-        IOPMessageRelayer(opMessageRelayer).sendMessage(
-            l2Relayer, abi.encodeWithSelector(IL2Relayer.relay.selector, destination, epochIndex), minGasLimit
-        );
+        IOPMessageRelayer(opMessageRelayer)
+            .sendMessage(
+                l2Relayer, abi.encodeWithSelector(IL2Relayer.relay.selector, destination, epochIndex), minGasLimit
+            );
     }
 }

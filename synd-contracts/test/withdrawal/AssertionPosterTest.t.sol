@@ -708,7 +708,11 @@ contract MockRollup {
         bytes32, /* prevAssertionHash */
         AssertionState calldata, /* state */
         bytes32 /* inboxAcc */
-    ) external view returns (bytes32) {
+    )
+        external
+        view
+        returns (bytes32)
+    {
         return _computedAssertionHash;
     }
 
