@@ -54,7 +54,10 @@ interface ISyndStaking is IEpochTracker {
      * @param appchainId The ID of the appchain
      * @return The user's stake amount for the specified appchain and epoch
      */
-    function getUserAppchainStake(uint256 epochIndex, address user, uint256 appchainId) external view returns (uint256);
+    function getUserAppchainStake(uint256 epochIndex, address user, uint256 appchainId)
+        external
+        view
+        returns (uint256);
 
     /**
      * @notice Get the current epoch index

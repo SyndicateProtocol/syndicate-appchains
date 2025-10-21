@@ -134,15 +134,14 @@ contract OptimismBridgeProxy is BaseBridgeProxy {
         IERC20(token).forceApprove(bridgeTarget, amount);
 
         // Call the Optimism bridge - if it fails, the entire transaction reverts automatically
-        IOptimismBridge(bridgeTarget)
-            .depositERC20To(
-                token, // L1 token address
-                l2Token, // L2 token address
-                _recipient, // Recipient on L2
-                amount, // Amount to bridge
-                _gas, // Gas limit for L2 transaction
-                "" // No additional data
-            );
+        IOptimismBridge(bridgeTarget).depositERC20To(
+            token, // L1 token address
+            l2Token, // L2 token address
+            _recipient, // Recipient on L2
+            amount, // Amount to bridge
+            _gas, // Gas limit for L2 transaction
+            "" // No additional data
+        );
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -41,7 +41,6 @@ contract TestnetSyndTokenCrosschain is SyndicateTokenCrosschain {
      */
     constructor(address defaultAdmin, address minter)
         SyndicateTokenCrosschain(defaultAdmin, defaultAdmin) // Use admin as treasury for testnet
-
     {
         // Override token metadata for testnet
         // Note: We can't override name/symbol in constructor due to ERC20 limitations

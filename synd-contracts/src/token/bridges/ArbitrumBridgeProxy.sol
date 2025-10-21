@@ -163,10 +163,7 @@ contract ArbitrumBridgeProxy is BaseBridgeProxy {
         bytes memory bridgeData = abi.encode(maxSubmissionCost, "");
 
         // Call the Arbitrum bridge - if it fails, the entire transaction reverts automatically
-        IArbitrumBridge(bridgeTarget)
-        .outboundTransferCustomRefund{
-            value: ethValue
-        }(
+        IArbitrumBridge(bridgeTarget).outboundTransferCustomRefund{value: ethValue}(
             token, // L1 token address
             address(this), // Refund address (this contract)
             _recipient, // Recipient on L2

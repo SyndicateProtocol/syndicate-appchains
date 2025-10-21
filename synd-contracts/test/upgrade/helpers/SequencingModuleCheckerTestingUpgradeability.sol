@@ -20,7 +20,11 @@ struct SequencingModuleStorage {
 
 /// @title SequencingModuleCheckerTestingUpgradeability
 /// @notice Upgraded version with additional storage fields - tests namespaced storage safety
-abstract contract SequencingModuleCheckerTestingUpgradeability is Initializable, OwnableUpgradeable, IPermissionModule {
+abstract contract SequencingModuleCheckerTestingUpgradeability is
+    Initializable,
+    OwnableUpgradeable,
+    IPermissionModule
+{
     event RequirementModuleUpdated(address indexed newModule);
     event MaxTransactionsPerBatchUpdated(uint256 newMax);
     event BatchProcessingToggled(bool enabled);

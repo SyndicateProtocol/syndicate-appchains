@@ -5,9 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
-import {
-    SyndicateSequencingChainTestingUpgradeability
-} from "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
+import {SyndicateSequencingChainTestingUpgradeability} from
+    "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
 
 /// @notice Mock factory contract for testing upgrades
 contract MockFactory {
@@ -80,7 +79,8 @@ contract StorageUpgradeTest is Test {
 
         // Capture original storage state
         OriginalStorageData memory originalData = OriginalStorageData({
-            appchainId: syndicateV1.appchainId(), permissionModule: address(syndicateV1.permissionRequirementModule())
+            appchainId: syndicateV1.appchainId(),
+            permissionModule: address(syndicateV1.permissionRequirementModule())
         });
 
         // Deploy V2 implementation

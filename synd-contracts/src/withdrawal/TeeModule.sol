@@ -230,7 +230,9 @@ contract TeeModule is AccessControlEnumerable {
         return challengeWindowStart + challengeWindowDuration;
     }
 
-    function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature, address rewardAddr) public {
+    function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature, address rewardAddr)
+        public
+    {
         require(signature.length == 65, "invalid signature length");
         bytes32 assertionHash = hashObject(assertion);
         bytes32 payloadHash = keccak256(abi.encodePacked(hashObject(teeTrustedInput), assertionHash));

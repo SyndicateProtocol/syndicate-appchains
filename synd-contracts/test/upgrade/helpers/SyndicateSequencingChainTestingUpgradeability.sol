@@ -152,7 +152,6 @@ contract SyndicateSequencingChainTestingUpgradeability is
         external
         onlyWhenAllowed(data)
         checkReplayProtection // NEW: Check replay protection
-
     {
         if (data.length == 0) {
             revert NoTxData();
@@ -169,7 +168,6 @@ contract SyndicateSequencingChainTestingUpgradeability is
     function processTransactionsBulk(bytes[] calldata data)
         external
         checkReplayProtection // NEW: Check replay protection
-
     {
         // Check permission for bulk transaction
         bytes memory bulkData = abi.encode(data);
