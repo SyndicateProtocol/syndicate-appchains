@@ -29,7 +29,6 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
  *      make storage-layout-check
  *
  * @dev Note: Setting new default implementation in factory requires DEFAULT_ADMIN_ROLE
- *            The GasAggregator will be notified of the new allowed implementation
  */
 contract UpgradeSequencingChain is Script {
     function run() external {
@@ -49,11 +48,11 @@ contract UpgradeSequencingChain is Script {
         console2.log("New implementation:", address(newImplementation));
         console2.log("");
 
-        // Set as default in factory (notifies GasAggregator)
+        // Set as default in factory
         console2.log("Setting as default implementation in factory...");
         SyndicateFactory factory = SyndicateFactory(factoryAddress);
         factory.setSyndicateSequencingChainImplementation(address(newImplementation));
-        console2.log("Factory updated, GasAggregator notified");
+        console2.log("Factory updated");
         console2.log("");
 
         // Upgrade the specific chain

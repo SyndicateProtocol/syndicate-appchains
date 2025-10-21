@@ -26,27 +26,28 @@ make deploy-factory
 ```
 
 **Save the Factory address to `.env`:**
+
 ```bash
 FACTORY_ADDRESS=0x... # From output
 ```
 
-## Step 3: Get GasAggregator Address (30 seconds)
+## Step 3: Save GasAggregator Address (30 seconds)
+
+The GasAggregator address will be in the deployment output from Step 2.
 
 ```bash
-# Get GasAggregator address
-cast call $FACTORY_ADDRESS "gasAggregator()(address)" --rpc-url $RPC_URL
-
 # Add to .env
-echo "GAS_AGGREGATOR_ADDRESS=0x..." >> .env
+echo "GAS_AGGREGATOR_ADDRESS=0x..." >> .env  # From deployment output
 ```
 
 ## Step 4: Create Your First Chain (1 minute)
 
 ```bash
-APPCHAIN_ID=1 make create-sequencing-chain
+NONCE=1 make create-sequencing-chain
 ```
 
 **Save the chain address to `.env`:**
+
 ```bash
 CHAIN_ADDRESS=0x... # From output
 ```
@@ -54,6 +55,7 @@ CHAIN_ADDRESS=0x... # From output
 ## Done! 🎉
 
 You now have:
+
 - ✅ SyndicateFactory deployed
 - ✅ GasAggregator deployed (automatic)
 - ✅ Your first sequencing chain created
@@ -63,20 +65,22 @@ You now have:
 ## What's Next?
 
 ### Create More Chains
+
 ```bash
-APPCHAIN_ID=2 make create-sequencing-chain
-APPCHAIN_ID=3 make create-sequencing-chain
+NONCE=2 make create-sequencing-chain
+NONCE=3 make create-sequencing-chain
 ```
 
 ### When You Need to Upgrade
+
 ```bash
 # Always check storage first!
 make storage-layout-check
 
 # Then upgrade
 make upgrade-factory
-make upgrade-gas-aggregator
 make upgrade-sequencing-chain
+
 ```
 
 ---
@@ -95,7 +99,6 @@ make create-sequencing-chain     # Create new chain
 # Upgrades
 make storage-layout-check        # ⚠️ ALWAYS run first!
 make upgrade-factory             # Upgrade factory
-make upgrade-gas-aggregator      # Upgrade aggregator
 make upgrade-sequencing-chain    # Upgrade chain
 ```
 
@@ -104,6 +107,7 @@ make upgrade-sequencing-chain    # Upgrade chain
 ## Need Help?
 
 📖 **Detailed guides:**
+
 - [README.md](./README.md) - Complete guide with examples
 - [ENVIRONMENT.md](./ENVIRONMENT.md) - Environment variables
 - [UPGRADE_SAFETY.md](./UPGRADE_SAFETY.md) - Safety best practices
@@ -113,6 +117,7 @@ make upgrade-sequencing-chain    # Upgrade chain
 ---
 
 **Pro tip:** Test everything on a local fork first!
+
 ```bash
 # Terminal 1
 anvil --fork-url $RPC_URL

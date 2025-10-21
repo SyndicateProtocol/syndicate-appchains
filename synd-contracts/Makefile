@@ -184,18 +184,8 @@ upgrade-factory :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
 	--broadcast \
 	-vv
 
-# Upgrade GasAggregator to new implementation
-# Required env: GAS_AGGREGATOR_ADDRESS, ADMIN_ADDRESS
-upgrade-gas-aggregator :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
-	forge script script/upgrade/UpgradeContracts.s.sol:UpgradeGasAggregator \
-	--rpc-url ${RPC_URL} \
-	--account ${ACCOUNT} \
-	--sender ${DEV_PUB_ADDRESS} \
-	--broadcast \
-	-vv
-
 # Upgrade SyndicateSequencingChain to new implementation
-# Sets new default in factory and notifies GasAggregator
+# Sets new default in factory
 # Required env: CHAIN_ADDRESS, FACTORY_ADDRESS
 upgrade-sequencing-chain :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
 	forge script script/upgrade/UpgradeSequencingChain.s.sol \

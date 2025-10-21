@@ -26,7 +26,6 @@ import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.so
 ///      3. Upgrade factory to V2
 ///      4. Upgrade sequencing chain to V2
 ///      5. Verify all storage preserved and new functionality works
-/// @dev NOTE: GasAggregator is now non-upgradeable as of the refactor to remove UUPS pattern
 contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     /*//////////////////////////////////////////////////////////////
                             TEST CONSTANTS
@@ -88,7 +87,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         console2.log("Factory proxy deployed:", address(factoryProxy));
 
         // 3. Deploy GasAggregator (non-upgradeable)
-        // Note: GasAggregator is now a simple non-upgradeable contract, independent of factory
         gasAggregator = new GasAggregator(
             1, // start epoch
             5 ether, // addChainFee

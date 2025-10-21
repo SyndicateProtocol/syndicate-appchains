@@ -53,10 +53,9 @@ This checklist ensures safe upgrades of UUPS-based contracts in the Syndicate sy
 - [ ] Version tracking updated if applicable
 
 ### Factory Integration (SyndicateSequencingChain)
-- [ ] New implementation added to `allowedImplementations` list
+- [ ] New implementation set in factory via `setSyndicateSequencingChainImplementation`
 - [ ] Factory admin approval for new implementation
 - [ ] Decision: Make new implementation the default?
-- [ ] Gas tracking compatibility verified
 
 ## Upgrade Process
 
@@ -76,13 +75,12 @@ factory.upgradeToAndCall(newImplementation, "");
 - [ ] Monitor upgrade transaction confirmation
 
 ### Sequencing Chain Upgrade
-```solidity  
+```solidity
 // Owner calls upgradeToAndCall on chain
 sequencingChain.upgradeToAndCall(newImplementation, "");
 ```
 - [ ] Verify caller is chain owner
-- [ ] Implementation must be in factory's allowed list
-- [ ] Chain will be banned from gas tracking if implementation not allowed
+- [ ] Implementation should be set in factory first (best practice)
 
 ## Storage Layout Examples
 

@@ -31,6 +31,7 @@ contract Example {
 ### Adding Variables at the End
 
 **✅ SAFE:**
+
 ```solidity
 // Before
 contract Example {
@@ -49,6 +50,7 @@ contract Example {
 ### Adding New Functions
 
 **✅ SAFE:**
+
 ```solidity
 // Adding new functions is always safe
 function newFunction() external { }
@@ -57,6 +59,7 @@ function newFunction() external { }
 ### Modifying Function Logic
 
 **✅ SAFE:**
+
 ```solidity
 // Changing function code is safe
 function existing() external {
@@ -71,6 +74,7 @@ function existing() external {
 ### Removing Variables
 
 **❌ DANGEROUS:**
+
 ```solidity
 // Before
 contract Example {
@@ -89,6 +93,7 @@ contract Example {
 ### Reordering Variables
 
 **❌ DANGEROUS:**
+
 ```solidity
 // Before
 contract Example {
@@ -106,6 +111,7 @@ contract Example {
 ### Changing Variable Types
 
 **❌ DANGEROUS:**
+
 ```solidity
 // Before
 contract Example {
@@ -121,6 +127,7 @@ contract Example {
 ### Inserting Variables
 
 **❌ DANGEROUS:**
+
 ```solidity
 // Before
 contract Example {
@@ -158,14 +165,15 @@ make storage-layout-check
 ```
 
 **Good output:**
+
 ```
 ✅ SyndicateFactory: Storage layout unchanged
 ✅ SyndicateSequencingChain: Storage layout unchanged
-✅ GasAggregator: Storage layout unchanged
 ✅ All storage layouts are safe for upgrades
 ```
 
 **Bad output:**
+
 ```
 ❌ STORAGE LAYOUT CHANGED: SyndicateFactory
 This change could corrupt storage during upgrades!
@@ -178,7 +186,7 @@ This change could corrupt storage during upgrades!
 forge inspect SyndicateFactory storageLayout
 
 # See specific contract
-forge inspect GasAggregator storageLayout
+forge inspect SyndicateSequencingChain storageLayout
 ```
 
 ---
@@ -351,6 +359,7 @@ contract Dynamic {
 **Prevention is key** - there's no safe recovery from storage corruption.
 
 If it happens:
+
 1. Pause contracts immediately
 2. Assess damage extent
 3. Consider redeployment with migration
@@ -359,6 +368,7 @@ If it happens:
 ### Rollback (Only if Safe)
 
 Rollback is only safe if:
+
 - Old implementation still available
 - No storage layout changes
 - No breaking changes in data
